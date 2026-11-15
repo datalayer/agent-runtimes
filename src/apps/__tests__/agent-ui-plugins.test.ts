@@ -7,8 +7,9 @@
  * The chat's UI (the user, 15 November 2026): the agent's own `ui`, then the
  * `ui` of each MCP server it runs, each skill it enabled, each backend tool
  * it carries — each once, none from a component left out, only what needs no
- * connection for an anonymous visitor; and the seed agents get theirs from
- * what they use.
+ * connection for an anonymous visitor, what needs one drawn locked in its
+ * place (the Marketer's *Sign in to LinkedIn*); and the seed agents get
+ * theirs from what they use.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -18,10 +19,17 @@ import {
   agentUiChromeOf,
   agentUiIdsOf,
   agentUiPluginsFor,
+  lockedUiOf,
+  lockedUiPluginsFor,
   placementOf,
 } from '../agentUiPlugins';
+import { appPreset } from '../apps/AppRenderer';
+import { ANONYMOUS_WORDS } from '../../chat/anonymous/anonymousMode';
+import { APP_CATALOGUE } from '../../specs/apps';
 import { listUI } from '../../specs/ui';
 import { loopPlugins } from '../presets';
+
+const LOCKED = '@datalayer/loop-plugin-locked-ui';
 
 const nameOf = (ref: unknown): string =>
   (ref as { name?: string; plugin?: { name: string } }).name ??
@@ -228,5 +236,63 @@ describe('the six seed agents (UP-12)', () => {
       const visitor = agentUiChromeOf(choices, { anonymous: true });
       expect(Object.values(visitor).flat().length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('what a visitor sees locked (the user, 15 November 2026)', () => {
+  const marketer = () => agentUiChoicesOf('worker-marketer');
+
+  it('words each chrome UI that needs a connection, once, from every server and skill', () => {
+    const locked = lockedUiOf(marketer());
+    expect(locked).toEqual(
+      expect.arrayContaining([
+        ANONYMOUS_WORDS.locked.linkedin,
+        ANONYMOUS_WORDS.locked.social,
+        ANONYMOUS_WORDS.locked.x,
+      ]),
+    );
+    // LinkedIn's link and its browser session say the same: one chip.
+    expect(locked).toHaveLength(3);
+    // Message UIs (post previews, a purchase) are no chip; nothing to lock: no group.
+    expect(lockedUiOf(agentUiChoicesOf('worker-shopper'))).toEqual([]);
+    expect(lockedUiPluginsFor(agentUiChoicesOf('worker-shopper'))).toEqual([]);
+  });
+
+  it('is one group in the title bar', async () => {
+    const { registrationOf } = await import('./fixtures/uiPluginRegistrations');
+    const registration = await registrationOf(() =>
+      lockedUiPluginsFor(marketer()),
+    );
+    expect(registration.slots).toEqual(['loop.chatHeader']);
+  });
+
+  it('is mounted by the preset for a visitor, never for a person signed in', () => {
+    const visitor = loopPlugins({
+      datalayerAgentSpecId: 'worker-marketer',
+      runAsAnonymous: true,
+    }).map(nameOf);
+    expect(visitor).toContain(LOCKED);
+    expect(visitor).not.toContain('@datalayer/loop-plugin-x-budget');
+    const signedIn = loopPlugins({
+      target: 'datalayer',
+      datalayerAgentSpecId: 'worker-marketer',
+    }).map(nameOf);
+    expect(signedIn).not.toContain(LOCKED);
+    expect(signedIn).toContain('@datalayer/loop-plugin-x-budget');
+  });
+
+  it('comes with the demo Marketer’s agent on the visitors’ path, though its app names only the chat', () => {
+    const app = APP_CATALOGUE['demo-marketer'];
+    expect(app.agent).toMatch(/^worker-marketer/);
+    expect(appPreset(app, { visitor: true }).plugins.map(nameOf)).toContain(
+      LOCKED,
+    );
+    expect(
+      appPreset(app, { kept: { visitor: true } }).plugins.map(nameOf),
+    ).toContain(LOCKED);
+    expect(appPreset(app).plugins.map(nameOf)).not.toContain(LOCKED);
+    expect(
+      appPreset(app, { kept: { visitor: false } }).plugins.map(nameOf),
+    ).not.toContain(LOCKED);
   });
 });

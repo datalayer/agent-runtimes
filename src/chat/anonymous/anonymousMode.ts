@@ -69,6 +69,17 @@ export const ANONYMOUS_WORDS = {
   disabled: 'Disabled',
   mcpDisabled: 'MCP servers are disabled without an account',
   skillsDisabled: 'Skills are disabled without an account',
+  /**
+   * A UI the agent brings that needs the person's own connection, drawn
+   * locked for a visitor (`apps/plugins/locked-ui`): what its chip says.
+   */
+  locked: {
+    linkedin: 'Sign in to LinkedIn',
+    social: 'Sign in to link X, Bluesky',
+    x: 'Sign in to post on X',
+  },
+  /** The locked chips' title: why they are locked. */
+  lockedWhy: 'Needs an account: sign in to use it with this agent.',
 } as const;
 
 /** `maxTurns` as the chat takes it: a whole number above none, else no limit. */

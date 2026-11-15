@@ -34,9 +34,11 @@ import {
   agentUiChoicesOf,
   agentUiChromeOf,
   agentUiPluginsFor,
+  lockedUiOf,
   placementOf,
   type AgentUiChoice,
 } from '../apps/agentUiPlugins';
+import { LockedUiChips } from '../apps/plugins/locked-ui';
 import type { ChromePlacement } from '../apps/toolCards/chrome';
 import {
   ToolResultsContext,
@@ -203,7 +205,11 @@ export interface ChatProps extends ChatCommonProps {
    */
   uiPlugins?: readonly string[];
 
-  /** The chat is an anonymous visitor's: `uiPlugins` keeps only those that need no connection. */
+  /**
+   * The chat is an anonymous visitor's: `uiPlugins` keeps only those that
+   * need no connection, and those that need one and go in the chrome are
+   * drawn locked in the header, each signing the visitor in.
+   */
   uiPluginsAnonymous?: boolean;
 
   /**
@@ -886,7 +892,28 @@ export function Chat({
   useEffect(() => {
     void agentUiPlatform?.start();
   }, [agentUiPlatform]);
-  const headerChrome = chromeOf('header');
+  // To a visitor, what needs their own connection, locked: *Sign in to
+  // LinkedIn*… — of every server and skill the spec names, whatever runs
+  // (a visitor's runtime never runs those).
+  const lockedUi = useMemo(
+    () =>
+      uiPluginsAnonymous
+        ? lockedUiOf(
+            givenUiPlugins ? uiChoices : agentUiChoicesOf(uiAgentSpecId),
+          )
+        : [],
+    [uiChoices, uiPluginsAnonymous, givenUiPlugins, uiAgentSpecId],
+  );
+  const chromeShown = chromeOf('header');
+  const headerChrome =
+    lockedUi.length > 0 ? (
+      <>
+        {chromeShown}
+        <LockedUiChips labels={lockedUi} />
+      </>
+    ) : (
+      chromeShown
+    );
   const mergedHeaderActions = useMemo(
     () =>
       menuDrawn || sessionPlace || headerChrome ? (
@@ -909,6 +936,7 @@ export function Chat({
       menuDrawn,
       sessionPlace,
       uiChrome,
+      lockedUi,
       headerActions,
       threadId,
       chatThread?.id,

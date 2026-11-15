@@ -25,6 +25,12 @@
  * An anonymous visitor gets only those that need no connection of the
  * person's (`needsConnection: false`): the cards that draw what the agent
  * passed, never the linked accounts, the X budget, a post or a purchase.
+ * What needs one and has a place in the chat's chrome is drawn locked
+ * instead, not hidden (the user, 14–15 November 2026: "if tools/features
+ * are not available, indicate it visually so user is tempted to sign up /
+ * sign in"): its entry's `locked` words, one chip each in the title bar,
+ * each signing the visitor in (`lockedUiOf`, `lockedUiPluginsFor`,
+ * `apps/plugins/locked-ui`).
  *
  * @module apps/agentUiPlugins
  */
@@ -35,6 +41,7 @@ import { AGENTSPECS } from '../specs/agents';
 import { getSkillSpec } from '../specs/skills';
 import { UI_CATALOGUE } from '../specs/ui';
 import type { UiChoice } from '../types/agentspecs';
+import { ANONYMOUS_WORDS } from '../chat/anonymous/anonymousMode';
 import {
   CHROME_SLOTS,
   isChromePlacement,
@@ -58,6 +65,7 @@ import {
   linkedInLinkPlugin,
 } from './plugins/linkedin-link';
 import { LinkedInPostPreviewPlugin } from './plugins/linkedin-post-preview';
+import { lockedUiPlugin } from './plugins/locked-ui';
 import { OdooContextChip, odooContextPlugin } from './plugins/odoo-context';
 import { PapPurchasePlugin } from './plugins/pap-purchase';
 import { ProductComparisonPlugin } from './plugins/product-comparison';
@@ -83,6 +91,11 @@ export type { UiPlacement, ChromePlacement } from './toolCards/chrome';
 export type AgentUiPlugin = {
   /** Whether it needs the person's own connection: kept from a visitor. */
   needsConnection: boolean;
+  /**
+   * What it says, drawn locked for a visitor, when it needs a connection and
+   * has a place in the chat's chrome: its chip signs the visitor in.
+   */
+  locked?: string;
   /** Its card in the conversation, when it has one. */
   message?: PluginRef;
   /** Its plugin for a chrome placement, when it has one (a Loop workspace). */
@@ -96,12 +109,14 @@ export const AGENT_UI_PLUGINS: Readonly<Record<string, AgentUiPlugin>> = {
   // The Marketer.
   'social-accounts': {
     needsConnection: true,
+    locked: ANONYMOUS_WORDS.locked.social,
     chrome: socialAccountsPlugin,
     Chrome: SocialAccountsChips,
     message: SocialAccountsMessagePlugin,
   },
   'x-budget': {
     needsConnection: true,
+    locked: ANONYMOUS_WORDS.locked.x,
     chrome: xBudgetPlugin,
     Chrome: () => XBudgetChip({}),
   },
@@ -116,9 +131,11 @@ export const AGENT_UI_PLUGINS: Readonly<Record<string, AgentUiPlugin>> = {
   },
   'linkedin-link': {
     needsConnection: true,
+    locked: ANONYMOUS_WORDS.locked.linkedin,
     chrome: linkedInLinkPlugin,
     Chrome: () => LinkedInLinkButton({}),
   },
+
   // The Shopper.
   'product-comparison': {
     needsConnection: false,
@@ -182,6 +199,14 @@ export const PRESET_UI = new Set([
   'pap-sign-in',
   'browser-session',
 ]);
+
+/**
+ * What a visitor sees locked of the preset's UI a spec names (it has no
+ * `AGENT_UI_PLUGINS` entry): the linkedin MCP server's browser session.
+ */
+export const PRESET_UI_LOCKED: Readonly<Record<string, string>> = {
+  'browser-session': ANONYMOUS_WORDS.locked.linkedin,
+};
 
 /** A UI the chat injects, where it goes. */
 export type AgentUiChoice = {
@@ -358,6 +383,46 @@ export function agentUiChromeOf(
     }
   }
   return placed;
+}
+
+/**
+ * What a visitor sees locked of these UIs (the user, 15 November 2026): the
+ * `locked` words of each that needs a connection and goes in the chat's
+ * chrome, each once, in the order named. Message UIs (a post preview, a
+ * purchase) have no place before the agent answers, and are left out.
+ */
+export function lockedUiOf(
+  given: ReadonlyArray<string | UiChoice | AgentUiChoice> | undefined,
+): string[] {
+  const labels: string[] = [];
+  for (const choice of (given ?? []).map(asChoice)) {
+    const entry = AGENT_UI_PLUGINS[choice.plugin];
+    const locked = entry
+      ? entry.needsConnection
+        ? entry.locked
+        : undefined
+      : PRESET_UI_LOCKED[choice.plugin];
+    if (
+      locked &&
+      isChromePlacement(choice.placement) &&
+      !labels.includes(locked)
+    ) {
+      labels.push(locked);
+    }
+  }
+  return labels;
+}
+
+/**
+ * For a visitor, the plugin drawing these UIs' locked chips in the chat's
+ * title bar (`@datalayer/loop-plugin-locked-ui`); none when nothing is
+ * locked.
+ */
+export function lockedUiPluginsFor(
+  given: ReadonlyArray<string | UiChoice | AgentUiChoice> | undefined,
+): PluginRef[] {
+  const labels = lockedUiOf(given);
+  return labels.length > 0 ? [lockedUiPlugin(labels)] : [];
 }
 
 /** The plugin of a UI at its default placement: what its UI spec says it registers. */

@@ -9,7 +9,8 @@
  * `uiPlugins` with `x-budget` draws the same chip). It reads the Marketer's
  * `x-api-budget` guardrail back from the runtimes service and counts
  * nothing itself: the guardrail prices each X call and refuses one past the
- * budget. Never for an anonymous visitor (no token, no X).
+ * budget. Never for an anonymous visitor (no token, no X): *Sign in to post
+ * on X* is drawn locked in its place (`locked-ui`).
  *
  * @module apps/plugins/x-budget
  */

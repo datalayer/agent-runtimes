@@ -75,7 +75,11 @@ import {
 } from '../plugins/canvas-blocks';
 import { LoopEmbed, type LoopEmbedProps } from '../embed/LoopEmbed';
 import type { LoopPresetOptions } from '../presets';
-import { agentUiPluginsFor } from '../agentUiPlugins';
+import {
+  agentUiChoicesOf,
+  agentUiPluginsFor,
+  lockedUiPluginsFor,
+} from '../agentUiPlugins';
 import { dumpAppspec } from './appspec';
 import { defineAppActivityPlugin } from '../plugins/app-activity';
 import { AppElementsPlugin } from '../plugins/app-elements';
@@ -399,6 +403,12 @@ export function appPreset(
      * in, that nothing is kept (R-30).
      */
     kept?: { visitor: boolean };
+    /**
+     * Run for an anonymous visitor (`datalayerVisitors`), deployed or not:
+     * its UI that needs no connection, and what needs one locked in the
+     * title bar. Unsaid, `kept.visitor`.
+     */
+    visitor?: boolean;
   } = {},
 ): AppPreset {
   if (app.kind === 'decision') {
@@ -421,6 +431,7 @@ export function appPreset(
   // The blocks its Canvas offers: those of the UI plugins not turned off.
   const off = new Set((options.pluginsOff ?? []).map(canvasBlocksPluginName));
   const blocks = CANVAS_BLOCK_PLUGINS.filter(plugin => !off.has(plugin.name));
+  const visitor = options.visitor ?? options.kept?.visitor ?? false;
   return {
     plugins: [
       defineAppPlugin(app, shown),
@@ -463,9 +474,19 @@ export function appPreset(
       // Its agent's own UI plugins, as its `ui` names them (the Marketer's
       // post previews, the Shopper's basket…): to a visitor, only those
       // that need no connection of theirs.
-      ...agentUiPluginsFor(app.ui, {
-        anonymous: options.kept?.visitor ?? false,
-      }),
+      ...agentUiPluginsFor(app.ui, { anonymous: visitor }),
+      // To a visitor, what its agent would bring that needs their own
+      // connection — its spec's `ui` and every MCP server's and skill's,
+      // optional ones too, whatever it runs — locked in the title bar, each
+      // signing them in (the user, 15 November 2026: the Marketer's
+      // *Sign in to LinkedIn*). The workspace allocates a bootstrap spec,
+      // not this one: the application's agent is named here.
+      ...(visitor
+        ? lockedUiPluginsFor([
+            ...(app.ui ?? []),
+            ...(app.agent ? agentUiChoicesOf(agentIdOf(app)) : []),
+          ])
+        : []),
     ],
     workspace: appLayoutOptions(app),
   };
@@ -614,6 +635,7 @@ export function AppRenderer({
     (): AppPreset | { problem: string } => {
       try {
         return appPreset(app, {
+          visitor,
           page,
           pluginsOff,
           sidebar,

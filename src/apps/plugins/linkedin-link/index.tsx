@@ -11,7 +11,7 @@
  * LinkedIn tools (`social-post-linkedin`, `social-comment-linkedin`, the
  * user, 15 November 2026), not by an agent: any agent posting to LinkedIn
  * through IAM gets it. Nothing drawn once linked, nor for a visitor (no
- * token). The `linkedin` MCP server's own sign-in is `browser-session`'s.
+ * token: *Sign in to LinkedIn* is drawn locked in its place, `locked-ui`). The `linkedin` MCP server's own sign-in is `browser-session`'s.
  *
  * @module apps/plugins/linkedin-link
  */

@@ -169,6 +169,8 @@ export const NOT_UI: Record<string, string> = {
     'A sidebar of the checkpoints example, not mounted by the Loop editor or an application.',
   'a2ui-scene': 'A scene of the A2UI examples, cast per example.',
   'pap-example': 'A page of the PAP examples, cast per example.',
+  'locked-ui':
+    'What a visitor sees locked of the UI an agent brings (each its own UI spec), cast per agent with their words.',
   'agent-a2a':
     'An agent capability (which agent answers, and its openers), not a part of the interface.',
   'agent-a2ui':

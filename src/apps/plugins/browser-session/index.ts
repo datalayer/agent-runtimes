@@ -12,7 +12,8 @@
  * It contributes *Sign in to LinkedIn* to the chat's title bar
  * (`LoopSlots.chatHeader`; `Chat`'s `browserSessions` draws the same button), drawn only when the runtime's agents use the
  * linkedin server and it holds no live session, never for an anonymous
- * visitor. The button opens the runtime's own browser at LinkedIn's login,
+ * visitor (who gets *Sign in to LinkedIn* locked instead, signing them in to
+ * Datalayer: `locked-ui`). The button opens the runtime's own browser at LinkedIn's login,
  * in a dialog; *Done* keeps the session on that runtime, for that server
  * alone (`agent_runtimes.mcp.browser_session`).
  *

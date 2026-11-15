@@ -67,7 +67,11 @@ import { DocumentExtension, NotebookExtension } from './extensions';
 import { LoopPageLayoutPlugin, type PageSize } from './plugins/page-layout';
 import type { ResumedThread, ThemeOverrides } from '../types/chat';
 import { maxTurnsOf } from '../chat/anonymous/anonymousMode';
-import { agentUiChoicesOf, agentUiPluginsFor } from './agentUiPlugins';
+import {
+  agentUiChoicesOf,
+  agentUiPluginsFor,
+  lockedUiPluginsFor,
+} from './agentUiPlugins';
 import type { UiChoice } from '../types/agentspecs';
 
 export type LoopPresetOptions = {
@@ -292,7 +296,9 @@ export type LoopPresetOptions = {
    * basket… Unsaid, those of the spec the workspace creates
    * (`datalayerAgentSpecId`, else `localAgentSpec`). An anonymous visitor
    * (`runAsAnonymous`, `datalayerVisitors`) gets only those that need no
-   * connection of theirs.
+   * connection of theirs, and those that need one and go in the chat's
+   * chrome drawn locked in the title bar, each signing them in
+   * (`lockedUiPluginsFor`).
    */
   uiPlugins?: ReadonlyArray<string | UiChoice>;
 };
@@ -355,6 +361,10 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     firstPromptHook,
     uiPlugins,
   } = options;
+  // The agent's own UI, and whether a visitor's chat draws it.
+  const agentUi =
+    uiPlugins ?? agentUiChoicesOf(datalayerAgentSpecId ?? localAgentSpec);
+  const visitorUi = runAsAnonymous || Boolean(datalayerVisitors);
   const defaultEditor = askedEditor ?? (editors ? 'notebook' : 'none');
 
   // A workspace without a conversation: the theme, the shell's points, and
@@ -420,17 +430,18 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     // own renderer and binding, beside the surfaces rather than inside them.
     PapSignInPlugin,
     // *Sign in to LinkedIn* in the runtime's own browser, where its agents use
-    // the linkedin server and it holds no session: nothing drawn otherwise.
+    // the linkedin server and it holds no session: nothing drawn otherwise —
+    // a visitor gets it locked below instead.
     BrowserSessionPlugin,
     // A coding agent's diff and terminal, where its tool results carry them:
     // two renderers, no binding — the display says what it is.
     ShieldDisplaysPlugin,
     // The agent's own: what its spec names under `ui` — each draws one of
     // its tools or one fact, so every other chat stays as it was.
-    ...agentUiPluginsFor(
-      uiPlugins ?? agentUiChoicesOf(datalayerAgentSpecId ?? localAgentSpec),
-      { anonymous: runAsAnonymous || Boolean(datalayerVisitors) },
-    ),
+    ...agentUiPluginsFor(agentUi, { anonymous: visitorUi }),
+    // To a visitor, what of it needs their own connection, locked in the
+    // title bar: *Sign in to LinkedIn*, *Sign in to post on X*…
+    ...(visitorUi ? lockedUiPluginsFor(agentUi) : []),
     // An XLSX the agent gives, read-only in Cells in its message: the
     // renderer loads Cells when a workbook is drawn, so it costs a chat
     // with none nothing.
