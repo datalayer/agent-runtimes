@@ -255,7 +255,7 @@ def _dl_host(raw):
             "HOME": os.environ.get("HOME", "/home/datalayer"),
             "PATH": "/opt/linkedin-mcp/bin:/usr/local/bin:/usr/bin:/bin",
             "LANG": "C.UTF-8",
-            "PLAYWRIGHT_BROWSERS_PATH": os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "/opt/playwright"),
+            "PLAYWRIGHT_BROWSERS_PATH": "/opt/playwright",
             "USER_DATA_DIR": profile,
         }
         env.update(args.get("env") or {})
