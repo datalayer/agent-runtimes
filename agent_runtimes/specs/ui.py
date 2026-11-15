@@ -1239,6 +1239,28 @@ APP_RULES_UI_0_0_1 = UISpec(
     components=[],
 )
 
+BROWSER_SESSION_UI_0_0_1 = UISpec(
+    id="browser-session",
+    version="0.0.1",
+    name="Browser sessions",
+    description="Sign in to LinkedIn in your runtime's own browser, from the chat, so that its MCP server reads and acts through your session (the user, 15 November 2026).",
+    emoji="🌐",
+    octicon="browser",
+    plugin="@datalayer/loop-plugin-browser-session",
+    folder="browser-session",
+    per=None,
+    contributions=UiContributionsSpec(
+        slots=["loop.chatHeader"],
+        points=[],
+        commands=[],
+    ),
+    contribution_points=[],
+    settings={},
+    renderers=[],
+    catalog="",
+    components=[],
+)
+
 CANVAS_BLOCKS_UI_0_0_1 = UISpec(
     id="canvas-blocks",
     version="0.0.1",
@@ -1892,6 +1914,7 @@ UI_CATALOGUE: Dict[str, UISpec] = {
     "app-elements": APP_ELEMENTS_UI_0_0_1,
     "app-page": APP_PAGE_UI_0_0_1,
     "app-rules": APP_RULES_UI_0_0_1,
+    "browser-session": BROWSER_SESSION_UI_0_0_1,
     "canvas-blocks": CANVAS_BLOCKS_UI_0_0_1,
     "canvas-parts": CANVAS_PARTS_UI_0_0_1,
     "chat-extras": CHAT_EXTRAS_UI_0_0_1,

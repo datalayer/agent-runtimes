@@ -52,6 +52,7 @@ import { NotebookToolbarPlugin } from '../../plugins/notebook-toolbar';
 import { NotebookViewPlugin } from '../../plugins/notebook-view';
 import { LoopPageLayoutPlugin } from '../../plugins/page-layout';
 import { PapSignInPlugin } from '../../plugins/pap-sign-in';
+import { BrowserSessionPlugin } from '../../plugins/browser-session';
 import { PromptPlugin } from '../../plugins/prompt';
 import { SpreadsheetPlugin } from '../../plugins/spreadsheet';
 import { SpreadsheetViewPlugin } from '../../plugins/spreadsheet-view';
@@ -125,6 +126,7 @@ export const HOW_TO_MOUNT: Record<string, Mount> = {
   'notebook-view': () => [NotebookViewPlugin],
   'page-layout': () => [LoopPageLayoutPlugin],
   'pap-sign-in': () => [PapSignInPlugin],
+  'browser-session': () => [BrowserSessionPlugin],
   prompt: () => [PromptPlugin],
   spreadsheet: () => [SpreadsheetPlugin],
   'spreadsheet-view': () => [SpreadsheetViewPlugin],

@@ -22,7 +22,8 @@ describe('an agent’s optional servers and skills', () => {
 
   it('are the catalogue’s: one network at least, neither search nor the repositories', () => {
     expect(marketer.optional).toEqual({
-      mcpServers: ['x', 'bluesky', 'discord'],
+      // The linkedin server on a browser session (agentspecs 0.0.191).
+      mcpServers: ['x', 'bluesky', 'discord', 'linkedin'],
       skills: ['crawl', 'github'],
       // Set up by an X, Bluesky or LinkedIn account linked in Settings
       // (agentspecs 0.0.189, LinkedIn 0.0.190).
@@ -37,6 +38,7 @@ describe('an agent’s optional servers and skills', () => {
           'x',
           'bluesky',
           'discord',
+          'linkedin',
           'social-post-x',
           'social-post-bluesky',
           'social-post-linkedin',
@@ -46,9 +48,11 @@ describe('an agent’s optional servers and skills', () => {
     expect(
       isAgentspecComponentOptional(marketer, 'backendTool', 'social-post-x'),
     ).toBe(true);
-    expect(marketer.mcpServers.map(server => server.id)).not.toContain(
-      'linkedin',
-    );
+    // The linkedin server, optional, on a browser session (agentspecs 0.0.191).
+    expect(marketer.mcpServers.map(server => server.id)).toContain('linkedin');
+    expect(
+      isAgentspecComponentOptional(marketer, 'mcpServer', 'linkedin:0.0.1'),
+    ).toBe(true);
     expect(isAgentspecComponentOptional(marketer, 'mcpServer', 'x:0.0.1')).toBe(
       true,
     );
@@ -81,6 +85,7 @@ describe('an agent’s optional servers and skills', () => {
         'x',
         'bluesky',
         'discord',
+        'linkedin',
         'social-post-x',
         'social-post-bluesky',
         'social-post-linkedin',

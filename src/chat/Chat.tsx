@@ -38,6 +38,7 @@ import type {
 import { ChatBase } from './base/ChatBase';
 import { AgentDetails } from '../agents/AgentDetails';
 import { SessionActionsMenu } from '../apps/plugins/chat/SessionActionsMenu';
+import { BrowserSessionButton } from '../apps/plugins/browser-session/BrowserSessionButton';
 import type { SessionActionContext } from '../apps/core';
 import { appSessionsClient } from '../portable/sessions';
 import { openThread, THREAD_WORDS } from '../portable/thread';
@@ -168,6 +169,14 @@ export interface ChatProps extends ChatCommonProps {
 
   /** Hands the chat's send, stop, new-chat and thread to the host (`ChatBase`'s). */
   onSendReady?: ChatBaseProps['onSendReady'];
+
+  /**
+   * *Sign in to LinkedIn* in the header, when the runtime at `baseUrl` (asked
+   * with `authToken`) has agents using the linkedin server and holds no live
+   * session: the browser-session plugin's button (the user, 15 November
+   * 2026). A person's own chat sets it; never an anonymous visitor's.
+   */
+  browserSessions?: boolean;
 
   /**
    * Transport to use — REQUIRED.
@@ -405,6 +414,7 @@ export function Chat({
   thread: givenThread,
   sessionActions,
   onSendReady,
+  browserSessions = false,
   onToolCallUpdate,
 }: ChatProps) {
   const resolvedAgentId =
@@ -758,22 +768,36 @@ export function Chat({
     [sessionsClient],
   );
   const menuDrawn = Boolean(sessionActions && reactor);
+  const sessionPlace = useMemo(
+    () =>
+      browserSessions && baseUrl
+        ? {
+            serverUrl: baseUrl,
+            ...(authTokenProp ? { token: authTokenProp } : {}),
+          }
+        : undefined,
+    [browserSessions, baseUrl, authTokenProp],
+  );
   const mergedHeaderActions = useMemo(
     () =>
-      menuDrawn ? (
+      menuDrawn || sessionPlace ? (
         <Box display="inline-flex" alignItems="center" gap={2}>
+          {sessionPlace ? <BrowserSessionButton place={sessionPlace} /> : null}
           {headerActions}
-          <SessionActionsMenu
-            uid={threadId || chatThread?.id || undefined}
-            describe={describeSession}
-            context={sessionContext}
-          />
+          {menuDrawn ? (
+            <SessionActionsMenu
+              uid={threadId || chatThread?.id || undefined}
+              describe={describeSession}
+              context={sessionContext}
+            />
+          ) : null}
         </Box>
       ) : (
         headerActions
       ),
     [
       menuDrawn,
+      sessionPlace,
       headerActions,
       threadId,
       chatThread?.id,

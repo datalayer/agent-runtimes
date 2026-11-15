@@ -1294,6 +1294,59 @@ class MCPLifecycleManager:
         task.add_done_callback(self._tasks.discard)
         return True
 
+    def knows(self, server_id: str) -> bool:
+        """
+        Whether this runtime was asked for a server: running, starting, failed
+        or started once and stopped.
+
+        Parameters
+        ----------
+        server_id : str
+            The server's id.
+
+        Returns
+        -------
+        bool
+            True when the runtime's agents use it.
+        """
+        return (
+            server_id in self._configs
+            or server_id in self._catalog_servers
+            or server_id in self._config_servers
+            or server_id in self._failed_servers
+            or server_id in self._starting_servers
+        )
+
+    async def restart(self, server_id: str) -> bool:
+        """
+        Stop a server and start it again the way it was first started, at once.
+
+        What a browser session signed in for its server asks
+        (``agent_runtimes.mcp.browser_session``): the server reads the session
+        as it starts, so it is started again without waiting for
+        :data:`RETRY_SECONDS`.
+
+        Parameters
+        ----------
+        server_id : str
+            The server's id.
+
+        Returns
+        -------
+        bool
+            Whether it runs again.
+        """
+        await self.stop_server(server_id)
+        self._failed_servers.pop(server_id, None)
+        self._failure_reasons.pop(server_id, None)
+        self._retried_at.pop(server_id, None)
+        instance = await self.start_server(
+            server_id,
+            config=self._configs.get(server_id),
+            extra_env=self._extra_envs.get(server_id),
+        )
+        return instance is not None
+
     def get_running_server(
         self, server_id: str, is_config: bool | None = None
     ) -> MCPServerInstance | None:

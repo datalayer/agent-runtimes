@@ -1282,6 +1282,28 @@ export const APP_RULES_UI_0_0_1: UISpec = {
   components: [],
 };
 
+export const BROWSER_SESSION_UI_0_0_1: UISpec = {
+  id: 'browser-session',
+  version: '0.0.1',
+  name: 'Browser sessions',
+  description:
+    "Sign in to LinkedIn in your runtime's own browser, from the chat, so that its MCP server reads and acts through your session (the user, 15 November 2026).",
+  emoji: '🌐',
+  octicon: 'browser',
+  plugin: '@datalayer/loop-plugin-browser-session',
+  folder: 'browser-session',
+  contributions: {
+    slots: ['loop.chatHeader'],
+    points: [],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
 export const CANVAS_BLOCKS_UI_0_0_1: UISpec = {
   id: 'canvas-blocks',
   version: '0.0.1',
@@ -1932,6 +1954,7 @@ export const UI_CATALOGUE: Record<string, UISpec> = {
   'app-elements': APP_ELEMENTS_UI_0_0_1,
   'app-page': APP_PAGE_UI_0_0_1,
   'app-rules': APP_RULES_UI_0_0_1,
+  'browser-session': BROWSER_SESSION_UI_0_0_1,
   'canvas-blocks': CANVAS_BLOCKS_UI_0_0_1,
   'canvas-parts': CANVAS_PARTS_UI_0_0_1,
   'chat-extras': CHAT_EXTRAS_UI_0_0_1,

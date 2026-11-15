@@ -58,6 +58,7 @@ from .routes import (
     agui_router,
     app_plugins_router,
     apps_router,
+    browser_sessions_router,
     checkpoints_router,
     configure_router,
     evals_adapters_router,
@@ -1677,6 +1678,8 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     if acp_router is not None:
         app.include_router(acp_router, prefix=config.api_prefix)
     app.include_router(configure_router, prefix=config.api_prefix)
+    # A person's browser session for an MCP server, signed in from the chat.
+    app.include_router(browser_sessions_router, prefix=config.api_prefix)
     # The conversation as the server saw it. The companion reads it to
     # rehydrate a restored checkpoint, and the terminal to catch up on what
     # the other end of a shared session did — both were getting a 404, since

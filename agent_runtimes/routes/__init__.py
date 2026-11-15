@@ -54,6 +54,7 @@ from .agui import (
 )
 from .app_plugins import router as app_plugins_router
 from .apps import router as apps_router
+from .browser_sessions import router as browser_sessions_router
 from .checkpoints import router as checkpoints_router
 from .configure import router as configure_router
 from .harnesses import router as harnesses_router
@@ -96,6 +97,7 @@ __all__ = [
     "agui_router",
     "cancel_agui_thread",
     "cancel_agui_threads",
+    "browser_sessions_router",
     "checkpoints_router",
     "notifications_router",
     "configure_router",

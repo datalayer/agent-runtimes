@@ -1,6 +1,6 @@
 {
   "name": "@datalayer/agent-runtimes",
-  "version": "1.6.54",
+  "version": "1.6.55",
   "type": "module",
   "workspaces": [
     ".",
@@ -153,7 +153,7 @@
     "@ai-sdk/react": "4.0.93",
     "@anthropic-ai/sdk": "^0.52.0",
     "@datalayer/agent-teams": "^1.0.0",
-    "@datalayer/core": "^1.2.18",
+    "@datalayer/core": "^1.2.30",
     "@datalayer/cells": "^1.0.3",
     "@datalayer/decks": "^1.0.4",
     "@datalayer/design": "^1.0.10",

@@ -39,7 +39,8 @@ def _having(names: Iterable[str]):
 def test_the_catalogue_says_what_the_marketer_and_the_shopper_start_without():
     marketer = get_agent_spec("worker-marketer")
     assert marketer is not None and marketer.optional is not None
-    assert marketer.optional.mcp_servers == ["x", "bluesky", "discord"]
+    # The linkedin server, on a browser session signed in from the chat (agentspecs 0.0.191).
+    assert marketer.optional.mcp_servers == ["x", "bluesky", "discord", "linkedin"]
     assert marketer.optional.skills == ["crawl", "github"]
     # Its posting tools, set up by a linked account (agentspecs 0.0.189), count for a network.
     assert marketer.optional.backend_tools == [
@@ -53,13 +54,15 @@ def test_the_catalogue_says_what_the_marketer_and_the_shopper_start_without():
             "x",
             "bluesky",
             "discord",
+            "linkedin",
             "social-post-x",
             "social-post-bluesky",
             "social-post-linkedin",
         ]
     ]
-    # LinkedIn through IAM (agentspecs 0.0.190), never the browser-session server; it reads nothing back.
-    assert "linkedin" not in [server.id for server in marketer.mcp_servers]
+    # LinkedIn through IAM (agentspecs 0.0.190), and the linkedin server on a browser session
+    # signed in from the chat (0.0.191): without it, it reads nothing back.
+    assert "linkedin" in [server.id for server in marketer.mcp_servers]
     assert "read nothing back" in " ".join((marketer.system_prompt or "").split())
     shopper = get_agent_spec("worker-shopper")
     assert shopper is not None and shopper.optional is not None
@@ -88,10 +91,11 @@ def test_an_optional_one_is_never_refused_and_the_group_wants_one_network():
     group = [sentence for sentence in nothing if "one at least of" in sentence]
     assert group == [
         "Marketer is not set up: it needs one at least of the MCP server bluesky, "
-        "the MCP server discord, the MCP server x, the backend tool social-post-bluesky, "
-        "the backend tool social-post-linkedin, "
+        "the MCP server discord, the MCP server linkedin, the MCP server x, "
+        "the backend tool social-post-bluesky, the backend tool social-post-linkedin, "
         "the backend tool social-post-x, and none was given its secrets: add those of "
-        "one to the account's secrets or link its account in Settings, then configure it again."
+        "one to the account's secrets or link its account in Settings, or sign in to "
+        "LinkedIn from its chat, then configure it again."
     ]
     for server, names in NETWORKS.items():
         one = declared.missing(_having(names), who="Marketer")
@@ -99,6 +103,24 @@ def test_an_optional_one_is_never_refused_and_the_group_wants_one_network():
     # Half of Bluesky's secrets is not Bluesky set up.
     half = declared.missing(_having(["BLUESKY_IDENTIFIER"]), who="Marketer")
     assert any("one at least of" in sentence for sentence in half)
+
+
+def test_linkedin_counts_for_the_group_once_its_browser_session_is_held(
+    tmp_path, monkeypatch
+):
+    """The linkedin server needs no secret: it counts once signed in, and is never left out."""
+    from agent_runtimes.mcp import browser_session
+
+    monkeypatch.setenv("USER_DATA_DIR", str(tmp_path / ".linkedin-mcp" / "profile"))
+    declared = declared_secrets(get_agent_spec("worker-marketer"))
+    assert "linkedin" not in declared.left_out(_having([])).servers
+    assert any("one at least of" in s for s in declared.missing(_having([]), who="M"))
+    browser_session.write_linkedin_session(
+        [{"name": "li_at", "value": "v", "domain": ".www.linkedin.com", "path": "/"}]
+    )
+    assert not any(
+        "one at least of" in s for s in declared.missing(_having([]), who="M")
+    )
 
 
 def test_what_is_not_set_up_is_left_out_and_said():

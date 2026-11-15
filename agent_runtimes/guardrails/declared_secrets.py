@@ -520,6 +520,23 @@ class DeclaredSecrets:
             return any(account_linked(account) for account in self.linked[consumer])
         return all(available(name) for name in self.consumers.get(consumer, ()))
 
+    def _counts(self, consumer: str, available: Callable[[str], bool]) -> bool:
+        """
+        Whether a group's consumer is set up, for the group.
+
+        A server read through a person's browser session (the linkedin server,
+        15 November 2026) needs no secret, so it would always count: it counts
+        once the runtime holds that session, signed in from the chat. It is
+        still started, never left out, so that the chat offers the sign-in.
+        """
+        from agent_runtimes.mcp.browser_session import provider_of_server, session_state
+
+        if consumer.startswith(server_consumer("")):
+            provider = provider_of_server(consumer[len(server_consumer("")) :])
+            if provider is not None:
+                return session_state(provider) == "signed-in"
+        return self._set_up(consumer, available)
+
     def missing(self, available: Callable[[str], bool], who: str) -> List[str]:
         """Why ``who`` cannot be set up, a sentence per secret that is not there."""
         sentences: List[str] = []
@@ -534,7 +551,7 @@ class DeclaredSecrets:
                         "(or set it before a local run), then configure it again."
                     )
         for group in self.at_least_one:
-            if not any(self._set_up(consumer, available) for consumer in group):
+            if not any(self._counts(consumer, available) for consumer in group):
                 sentences.append(
                     f"{who} is not set up: it needs one at least of "
                     f"{', '.join(sorted(group))}, and none was given its "
@@ -542,6 +559,11 @@ class DeclaredSecrets:
                     + (
                         " or link its account in Settings"
                         if any(consumer in self.linked for consumer in group)
+                        else ""
+                    )
+                    + (
+                        ", or sign in to LinkedIn from its chat"
+                        if server_consumer("linkedin") in group
                         else ""
                     )
                     + ", then configure it again."

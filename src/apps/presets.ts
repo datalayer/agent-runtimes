@@ -50,6 +50,7 @@ import {
 import { ChatHeaderPlugin } from './plugins/chat-header';
 import { A2uiSurfacePlugin } from './plugins/a2ui-surface';
 import { PapSignInPlugin } from './plugins/pap-sign-in';
+import { BrowserSessionPlugin } from './plugins/browser-session';
 import { ShieldDisplaysPlugin } from './plugins/shield-displays';
 import { AgentOutputsXlsxPlugin } from './plugins/agent-outputs/xlsx';
 import { ChatViewPlugin } from './plugins/chat-view';
@@ -406,6 +407,9 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     // *Sign in at a company*, where the gateway's `pap_sign_in` answers: its
     // own renderer and binding, beside the surfaces rather than inside them.
     PapSignInPlugin,
+    // *Sign in to LinkedIn* in the runtime's own browser, where its agents use
+    // the linkedin server and it holds no session: nothing drawn otherwise.
+    BrowserSessionPlugin,
     // A coding agent's diff and terminal, where its tool results carry them:
     // two renderers, no binding — the display says what it is.
     ShieldDisplaysPlugin,

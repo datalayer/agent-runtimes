@@ -597,6 +597,27 @@ class ChromiumBrowser:
             await asyncio.sleep(0.1)
             return await self._seen()
 
+    async def cookies(self, urls: List[str]) -> List[Dict[str, Any]]:
+        """
+        The cookies the browser would send to ``urls``, as DevTools gives them.
+
+        What a browser session hands an MCP server that reads its own
+        (``agent_runtimes.mcp.browser_session``): never logged.
+
+        Parameters
+        ----------
+        urls : list of str
+            The addresses whose cookies are asked for.
+
+        Returns
+        -------
+        list of dict
+            DevTools' cookies: name, value, domain, path, expires, httpOnly,
+            secure, sameSite.
+        """
+        answer = await self._connection.send("Network.getCookies", {"urls": urls})
+        return list((answer or {}).get("cookies") or [])
+
     @property
     def alive(self) -> bool:
         """Tell whether the browser and its connection are up."""

@@ -929,17 +929,18 @@ LINKEDIN_MCP_SERVER_0_0_1 = MCPServer(
     tools=[],
     env={
         "UV_HTTP_TIMEOUT": "300",
+        "HEADLESS": "true",
     },
     required_env_vars=[],
     tags=["social", "linkedin", "jobs", "messaging"],
     documentation_url="https://github.com/stickerdaniel/linkedin-mcp-server",
     signup_url="https://www.linkedin.com/signup",
     api_key_url="https://github.com/stickerdaniel/linkedin-mcp-server#installation",
-    setup="No key: the server uses a signed-in browser session. On your own machine, run `uvx mcp-server-linkedin --login` once (or `--import-from-browser`) and it keeps the session under `~/.linkedin-mcp`; a runtime needs that directory mounted — see [its README](https://github.com/stickerdaniel/linkedin-mcp-server#installation). LinkedIn restricts automated access: use an account you can afford to see restricted.",
+    setup="No key: the server uses your signed-in LinkedIn session. In the chat, press Sign in to LinkedIn: LinkedIn's login opens in your runtime's own browser, you sign in there, and the server reads and acts through that session, kept on that runtime alone and gone when it ends. On your own machine, `uvx mcp-server-linkedin --login` does the same. LinkedIn restricts automated access: use an account you can afford to see restricted.",
     install=InstallSpec(
         type="python",
         command="uv tool install --python 3.12 mcp-server-linkedin",
-        note="Needs uv (`pip install uv`); the runtime image installs it the same way. It reads a signed-in browser session mounted at ~/.linkedin-mcp.",
+        note="Needs uv (`pip install uv`) and a glibc Linux, macOS or Windows (its browser driver, patchright, publishes no musl build). It reads the browser session the chat's Sign in to LinkedIn writes under ~/.linkedin-mcp.",
     ),
     actions={
         "tools": {
