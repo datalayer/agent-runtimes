@@ -144,7 +144,10 @@ export function agentUiIdsOf(
   specId: string | undefined,
   components: AgentUiComponents = {},
 ): string[] {
-  const spec = specId ? AGENTSPECS[specId] : undefined;
+  // By its id, with or without its version (`worker-marketer:0.0.1`).
+  const spec = specId
+    ? (AGENTSPECS[specId] ?? AGENTSPECS[bare(specId)])
+    : undefined;
   if (!spec) {
     return [];
   }
