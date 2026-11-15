@@ -373,6 +373,29 @@ def create_codemode_toolset(
                     else:
                         server_env[env_key] = env_value
 
+            # A server the pod's Jupyter container runs (linkedin on the Alpine
+            # image, agent_runtimes.mcp.jupyter_host) is reached where it
+            # listens: its command cannot run here.
+            from agent_runtimes.mcp.jupyter_host import hosted_url
+
+            hosted = hosted_url(mcp_server.id)
+            if hosted:
+                registry.add_server(
+                    MCPServerConfig(
+                        name=normalized_name,
+                        url=hosted,
+                        command="",
+                        args=[],
+                        env={},
+                        enabled=mcp_server.enabled,
+                    )
+                )
+                logger.info(
+                    f"Added MCP server to codemode registry: {normalized_name} "
+                    "(in the Jupyter container)"
+                )
+                continue
+
             registry.add_server(
                 MCPServerConfig(
                     name=normalized_name,

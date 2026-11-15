@@ -67,6 +67,12 @@ BROWSER_WAIT = 60.0
 
 _LOCK: Optional[asyncio.Lock] = None
 
+#: Where each server the Jupyter container runs listens, by its id, while it runs.
+_HOSTED: Dict[str, str] = {}
+
+#: The port each server last listened on, asked for again at its next start.
+_PORTS: Dict[str, int] = {}
+
 
 class JupyterHostFailed(RuntimeError):
     """The Jupyter container did not do what it was asked, in a sentence."""
@@ -250,7 +256,11 @@ def _dl_host(raw):
     if do == "start-server":
         kill("server")
         private_dir(root)
-        port = free_port()
+        # The port it had, when free again: codemode's registry keeps the
+        # server's address, so a restart (after a sign-in) keeps it too.
+        port = int(args.get("port") or 0)
+        if not port or listens(port):
+            port = free_port()
         env = {
             "HOME": os.environ.get("HOME", "/home/datalayer"),
             "PATH": "/opt/linkedin-mcp/bin:/usr/local/bin:/usr/bin:/bin",
@@ -459,6 +469,7 @@ async def start_server(server_id: str, env: Dict[str, str]) -> str:
         env=env,
         wait=SERVER_WAIT,
         session_cookie=provider.session_cookie if provider else "",
+        port=_PORTS.get(server_id, 0),
     )
     if "port" not in answer:
         tail = str(answer.get("tail") or "").strip()
@@ -473,7 +484,20 @@ async def start_server(server_id: str, env: Dict[str, str]) -> str:
         server_id,
         answer["port"],
     )
-    return f"http://127.0.0.1:{int(answer['port'])}/mcp"
+    _PORTS[server_id] = int(answer["port"])
+    url = f"http://127.0.0.1:{int(answer['port'])}/mcp"
+    _HOSTED[server_id] = url
+    return url
+
+
+def hosted_url(server_id: str) -> str:
+    """
+    Where a server the Jupyter container runs listens, or ``""``.
+
+    What codemode's registry is given in place of the server's command: on
+    the Alpine image that command (``uvx mcp-server-linkedin``) cannot run.
+    """
+    return _HOSTED.get(server_id, "")
 
 
 async def stop_server(server_id: str) -> None:
@@ -481,6 +505,7 @@ async def stop_server(server_id: str) -> None:
     from agent_runtimes.mcp.browser_session import provider_of_server
 
     provider = provider_of_server(server_id)
+    _HOSTED.pop(server_id, None)
     try:
         await call(
             "stop-server", timeout=60, provider=provider.id if provider else server_id
@@ -571,6 +596,7 @@ __all__ = [
     "call",
     "cell",
     "forget",
+    "hosted_url",
     "hosts",
     "jupyter_url",
     "keep_session",

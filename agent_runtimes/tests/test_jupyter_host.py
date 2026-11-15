@@ -284,3 +284,32 @@ def test_the_lifecycle_runs_linkedin_in_jupyter_only_there(
     assert MCPLifecycleManager._in_jupyter("tavily") is False
     monkeypatch.setattr(sessions, "on_musl", lambda: False)
     assert MCPLifecycleManager._in_jupyter("linkedin") is False
+
+
+def test_a_hosted_server_keeps_its_address_for_codemode(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Codemode reaches it where it listens, the same port after a restart."""
+    asked: List[Dict[str, Any]] = []
+
+    async def call(
+        operation: str, timeout: float = 0, **arguments: Any
+    ) -> Dict[str, Any]:
+        asked.append({"do": operation, **arguments})
+        return (
+            {"port": arguments.get("port") or 41234}
+            if operation == "start-server"
+            else {}
+        )
+
+    monkeypatch.setattr(jupyter_host, "call", call)
+    monkeypatch.setattr(jupyter_host, "_HOSTED", {})
+    monkeypatch.setattr(jupyter_host, "_PORTS", {})
+    url = asyncio.run(jupyter_host.start_server("linkedin", {"HEADLESS": "true"}))
+    assert url == "http://127.0.0.1:41234/mcp"
+    assert jupyter_host.hosted_url("linkedin") == url
+    asyncio.run(jupyter_host.stop_server("linkedin"))
+    assert jupyter_host.hosted_url("linkedin") == ""
+    asyncio.run(jupyter_host.start_server("linkedin", {"HEADLESS": "true"}))
+    assert asked[-1]["port"] == 41234
+    assert jupyter_host.hosted_url("linkedin") == url
