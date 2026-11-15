@@ -806,7 +806,13 @@ class MCPLifecycleManager:
                 self._failed_servers[server_id] = problem
                 return None
 
-            await self._seed_browser_session(server_id)
+            refused = await self._seed_browser_session(server_id)
+            if refused:
+                # LinkedIn refused the session pasted in Settings: not started,
+                # its tools left out with why; Sign in in the chat starts it again.
+                logger.warning(f"✗ {refused}")
+                self._failed_servers[server_id] = refused
+                return None
 
             if remote:
                 # Reached at its url, no process: its headers sent with
@@ -1191,7 +1197,7 @@ class MCPLifecycleManager:
         return sentence or error_detail
 
     @staticmethod
-    async def _seed_browser_session(server_id: str) -> None:
+    async def _seed_browser_session(server_id: str) -> str:
         """
         Write the person's session pasted in Settings as the server's, before its first start.
 
@@ -1199,12 +1205,23 @@ class MCPLifecycleManager:
         ``LINKEDIN_LI_AT`` when the runtime was given it (the user, 15 November
         2026). What fails is said by its name alone, and the server starts
         anyway: the chat's Sign in stays.
+
+        Returns
+        -------
+        str
+            Why the server is not started — LinkedIn refused that session and
+            none was signed in from the chat since — or ``""``.
         """
-        from agent_runtimes.mcp.browser_session import provider_of_server, seed
+        from agent_runtimes.mcp.browser_session import (
+            provider_of_server,
+            seed,
+            settings_refused,
+            settings_refused_reason,
+        )
 
         provider = provider_of_server(server_id)
         if provider is None:
-            return
+            return ""
         try:
             await seed(provider)
         except Exception as error:  # noqa: BLE001 - never the value: its name alone
@@ -1212,6 +1229,7 @@ class MCPLifecycleManager:
                 f"The {provider.name} session in Settings was not written: "
                 f"{type(error).__name__}"
             )
+        return settings_refused_reason(provider) if settings_refused(provider) else ""
 
     @staticmethod
     def _in_jupyter(server_id: str) -> bool:

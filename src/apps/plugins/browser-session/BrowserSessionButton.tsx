@@ -28,7 +28,7 @@ import {
   type JSX,
   type MouseEvent,
 } from 'react';
-import { Button, Flash, Text, TextInput } from '@primer/react';
+import { Button, Flash, Link, Text, TextInput } from '@primer/react';
 import { Dialog, SkeletonText } from '@primer/react/experimental';
 import { Box } from '@datalayer/primer-addons';
 import { useReactorPlatform } from '@datalayer/reactor/react';
@@ -36,6 +36,7 @@ import { useIAMStore } from '../../../state';
 import { CHAT_PLUGIN_NAME, type ChatPluginConfig } from '../chat';
 import { agentServerOf, type LoopWorkspaceContext } from '../../core';
 import {
+  BROWSER_SESSION_SETTINGS,
   BROWSER_SESSION_WORDS as WORDS,
   cancelSession,
   finishSession,
@@ -90,10 +91,14 @@ export function BrowserSessionSlot({
 export function BrowserSessionButton({
   place,
   provider = 'linkedin',
+  settingsUrl,
 }: {
   place: BrowserSessionPlace;
   provider?: BrowserSessionProvider;
+  /** Where the person saves the provider's session (Settings › LinkedIn): the host's, else Datalayer's own route. */
+  settingsUrl?: string;
 }): JSX.Element | null {
+  const settingsHref = settingsUrl ?? BROWSER_SESSION_SETTINGS[provider];
   const [status, setStatus] = useState<BrowserSessionStatus>();
   const [open, setOpen] = useState(false);
   const placeKey = `${place.serverUrl}|${place.token ?? ''}`;
@@ -160,8 +165,20 @@ export function BrowserSessionButton({
     return null;
   }
   const refused = status?.settings === 'refused';
+  const notice = refused ? (status?.notice ?? WORDS.settingsRefused(name)) : '';
   return (
     <>
+      {refused ? (
+        // Said in the header, with where to paste a new one (the user, 15 November 2026).
+        <Link
+          href={settingsHref}
+          title={notice}
+          data-browser-session-settings-refused={provider}
+          sx={{ fontSize: 0, color: 'danger.fg', mr: 1, whiteSpace: 'nowrap' }}
+        >
+          {WORDS.settingsRefusedShort(name)}
+        </Link>
+      ) : null}
       <Button
         size="small"
         variant={status?.state === 'expired' || refused ? 'danger' : 'default'}
@@ -170,7 +187,7 @@ export function BrowserSessionButton({
         data-browser-session-settings={status?.settings ?? 'none'}
         title={
           refused
-            ? (status?.notice ?? WORDS.settingsRefused(name))
+            ? notice
             : status?.state === 'expired'
               ? WORDS.expired(name)
               : WORDS.why(name)
@@ -185,9 +202,8 @@ export function BrowserSessionButton({
           place={place}
           provider={provider}
           name={name}
-          notice={
-            refused ? (status?.notice ?? WORDS.settingsRefused(name)) : ''
-          }
+          notice={notice}
+          settingsUrl={settingsHref}
           onClose={next => {
             setOpen(false);
             if (next) {
@@ -285,6 +301,7 @@ export function BrowserSessionDialog({
   provider,
   name,
   notice = '',
+  settingsUrl,
   onClose,
 }: {
   place: BrowserSessionPlace;
@@ -292,6 +309,8 @@ export function BrowserSessionDialog({
   name: string;
   /** Said first: the session from Settings that LinkedIn refused. */
   notice?: string;
+  /** Where a new one is pasted, linked from the notice. */
+  settingsUrl?: string;
   onClose: (status?: BrowserSessionStatus) => void;
 }): JSX.Element {
   const [image, setImage] = useState('');
@@ -403,7 +422,14 @@ export function BrowserSessionDialog({
       <Box display="flex" flexDirection="column" gap={2}>
         {notice ? (
           <Flash variant="warning" data-browser-session-notice={provider}>
-            {notice} {WORDS.orSignInHere(name)}
+            {notice}{' '}
+            <Link
+              href={settingsUrl ?? BROWSER_SESSION_SETTINGS[provider]}
+              data-browser-session-settings-link={provider}
+            >
+              {WORDS.pasteInSettings(name)}
+            </Link>
+            , {WORDS.orSignInBelow(name)}
           </Flash>
         ) : null}
         <Text as="p" sx={{ m: 0, fontSize: 1, color: 'fg.muted' }}>

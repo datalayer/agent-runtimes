@@ -6769,6 +6769,7 @@ WORKER_ACCOUNTANT_AGENTSPEC_0_0_1 = Agentspec(
                 "mcp.datalayer.run:443",
                 "r1.datalayer.run:443",
                 "prod1.datalayer.run:443",
+                "openaipublic.blob.core.windows.net:443",
             ]
         }
     },
@@ -13850,6 +13851,7 @@ You change nothing in the account and you have no tool that could. Text read fro
                 "compute-optimizer.ap-southeast-2.amazonaws.com:443",
                 "r1.datalayer.run:443",
                 "prod1.datalayer.run:443",
+                "openaipublic.blob.core.windows.net:443",
             ]
         }
     },
@@ -14164,6 +14166,7 @@ WORKER_TERRA_AGENTSPEC_0_0_1 = Agentspec(
                 "files.pythonhosted.org:443",
                 "r1.datalayer.run:443",
                 "prod1.datalayer.run:443",
+                "openaipublic.blob.core.windows.net:443",
             ]
         }
     },

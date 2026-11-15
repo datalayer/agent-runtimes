@@ -223,8 +223,8 @@ def probe_li_at(value: str, timeout: float = 15.0) -> str:
     One read of the feed, its redirect not followed: LinkedIn answers a live
     session with the page, and a dead one by deleting it (``Set-Cookie:
     li_at=delete me``, ``Max-Age=0``; seen 15 November 2026 with a fake value)
-    or with its login (``refused``). Anything
-    else — its bot wall (999), a challenge, no network — is ``unchecked``, and
+    or with its login or a checkpoint (``refused``). Anything
+    else — its bot wall (999), no network — is ``unchecked``, and
     the session is kept: the server says more when it reads. Its standard
     library alone: the Jupyter container runs this very function. Never says
     any part of the value.
@@ -273,7 +273,8 @@ def probe_li_at(value: str, timeout: float = 15.0) -> str:
     if status == 200:
         return "accepted"
     if 300 <= status < 400 and any(
-        word in location for word in ("/login", "/authwall", "/uas/login", "/signup")
+        word in location
+        for word in ("/login", "/authwall", "/uas/login", "/signup", "/checkpoint")
     ):
         return "refused"
     return "unchecked"
@@ -535,6 +536,28 @@ _SIGNED_OUT: Set[str] = set()
 def settings_refused_words(provider: SessionProvider) -> str:
     """What the chat says when LinkedIn sent the pasted session to its login."""
     return f"Your {provider.name} session in Settings no longer works: paste a new one."
+
+
+def settings_refused(provider: SessionProvider) -> bool:
+    """
+    Whether LinkedIn refused the session pasted in Settings, and none was signed in since.
+
+    The server is then not started (``MCPLifecycleManager._seed_browser_session``):
+    its tools would fail at each call; without them the agent says it cannot
+    read LinkedIn, the chat's header says why, and *Sign in to LinkedIn* stays.
+    """
+    return _SETTINGS.get(provider.id) == "refused" and session_state(provider) != (
+        "signed-in"
+    )
+
+
+def settings_refused_reason(provider: SessionProvider) -> str:
+    """What the server's failure says, to the agent's host and the chat."""
+    return (
+        f"{provider.name} reading is unavailable on this runtime: "
+        f"{settings_refused_words(provider)} (Settings › {provider.name}), "
+        f"or sign in to {provider.name} from the chat."
+    )
 
 
 def settings_cookie(provider: SessionProvider) -> str:
@@ -812,6 +835,8 @@ __all__ = [
     "seed",
     "session_origin",
     "settings_cookie",
+    "settings_refused",
+    "settings_refused_reason",
     "settings_cookie_of",
     "screenshot",
     "session_state",

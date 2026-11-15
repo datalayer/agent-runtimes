@@ -22,6 +22,11 @@ export const BROWSER_SESSION_PROVIDERS = ['linkedin'] as const;
 
 export type BrowserSessionProvider = (typeof BROWSER_SESSION_PROVIDERS)[number];
 
+/** Where the person saves each provider's session for their runtimes (Settings › LinkedIn, the user, 15 November 2026). */
+export const BROWSER_SESSION_SETTINGS: Readonly<
+  Record<BrowserSessionProvider, string>
+> = { linkedin: '/settings/linkedin' };
+
 /** The page's size in the runtime's browser, in CSS pixels (`apps/browser.py`). */
 export const BROWSER_PAGE = { width: 1280, height: 800 } as const;
 
@@ -85,6 +90,10 @@ export const BROWSER_SESSION_WORDS = {
     `Signed in to ${name} on this runtime: its tools read and act through your session.`,
   settingsRefused: (name: string) =>
     `Your ${name} session in Settings no longer works: paste a new one.`,
+  settingsRefusedShort: (name: string) =>
+    `${name} session in Settings no longer works`,
+  pasteInSettings: (name: string) => `Paste a new one in Settings › ${name}`,
+  orSignInBelow: (name: string) => `or sign in to ${name} below.`,
   orSignInHere: (name: string) =>
     `Paste a new one in Settings › ${name}, or sign in to ${name} below.`,
   signOutWhat: (name: string) =>

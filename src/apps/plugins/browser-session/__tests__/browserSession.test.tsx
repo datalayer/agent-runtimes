@@ -238,8 +238,20 @@ describe('the session pasted in Settings › LinkedIn (the user, 15 November 202
     expect(button.getAttribute('data-browser-session-settings')).toBe(
       'refused',
     );
+    // Said in the header too, linked to Settings › LinkedIn.
+    const header = screen.getByRole('link', {
+      name: 'LinkedIn session in Settings no longer works',
+    });
+    expect(header.getAttribute('href')).toBe('/settings/linkedin');
+    expect(header.getAttribute('title')).toBe(notice);
     fireEvent.click(button);
     expect(await screen.findByText(new RegExp(notice))).toBeTruthy();
+    expect(
+      screen
+        .getByRole('link', { name: 'Paste a new one in Settings › LinkedIn' })
+        .getAttribute('href'),
+    ).toBe('/settings/linkedin');
+    // The interactive sign-in stays the other way.
     expect(await screen.findByRole('button', { name: 'Done' })).toBeTruthy();
     vi.unstubAllGlobals();
   });

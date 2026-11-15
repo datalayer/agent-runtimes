@@ -227,7 +227,7 @@ DELETED = (
         (302, "https://www.linkedin.com/uas/login?session_redirect=x", (), "refused"),
         (303, "https://www.linkedin.com/authwall?trk=x", (), "refused"),
         (999, "", (), "unchecked"),
-        (302, "https://www.linkedin.com/checkpoint/challenge", (), "unchecked"),
+        (302, "https://www.linkedin.com/checkpoint/challenge", (), "refused"),
     ],
 )
 def test_linkedin_is_asked_once_and_its_login_means_refused(
@@ -439,3 +439,79 @@ def test_with_it_the_marketer_has_its_one_network(
     )
     assert declared.missing(lambda name: False, who="m")
     assert declared.missing(lambda name: name == "LINKEDIN_LI_AT", who="m") == []
+
+
+# --- refused end to end: a fake LinkedIn that deletes the fake session ----------------------
+
+
+def _linkedin_deleting(monkeypatch: pytest.MonkeyPatch) -> List[str]:
+    """LinkedIn as it answered a fake li_at on 15 November 2026: the session deleted."""
+    import http.client
+
+    asked: List[str] = []
+
+    class Connection:
+        def __init__(self, host: str, **_: Any) -> None:
+            asked.append(host)
+
+        def request(self, method: str, path: str, headers: Dict[str, str]) -> None:
+            pass
+
+        def getresponse(self) -> _Answer:
+            return _Answer(302, "https://www.linkedin.com/feed/", DELETED)
+
+        def close(self) -> None:
+            pass
+
+    monkeypatch.setattr(http.client, "HTTPSConnection", Connection)
+    return asked
+
+
+def test_a_refused_session_is_not_written_said_and_the_server_left_out(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from agent_runtimes.mcp.lifecycle import MCPLifecycleManager
+
+    monkeypatch.setattr(sessions, "on_musl", lambda: False)
+    monkeypatch.setattr(sessions, "_server_known", lambda provider: True)
+    monkeypatch.setenv("USER_DATA_DIR", str(tmp_path / "linkedin-mcp" / "profile"))
+    monkeypatch.setenv("LINKEDIN_LI_AT", FAKE)
+    asked = _linkedin_deleting(monkeypatch)
+    reason = asyncio.run(MCPLifecycleManager._seed_browser_session("linkedin"))
+    assert asked == ["www.linkedin.com"]
+    # Nothing written for the server.
+    assert not (tmp_path / "linkedin-mcp" / "cookies.json").exists()
+    # The agent's host and the chat are told why its LinkedIn tools are not there.
+    assert reason.startswith("LinkedIn reading is unavailable on this runtime:")
+    assert (
+        "Your LinkedIn session in Settings no longer works: paste a new one." in reason
+    )
+    assert "sign in to LinkedIn from the chat" in reason
+    assert FAKE not in reason
+    status = sessions.status(sessions.LINKEDIN)
+    assert status["settings"] == "refused"
+    assert (
+        status["notice"]
+        == "Your LinkedIn session in Settings no longer works: paste a new one."
+    )
+    # Sign in to LinkedIn stays offered, and a later start is refused the same way.
+    assert status["offered"] is True and status["state"] == "none"
+    assert asyncio.run(MCPLifecycleManager._seed_browser_session("linkedin")) == reason
+    assert asked == ["www.linkedin.com"]  # asked once
+
+
+def test_signed_in_from_the_chat_after_a_refusal_the_server_starts(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from agent_runtimes.mcp.lifecycle import MCPLifecycleManager
+
+    monkeypatch.setattr(sessions, "on_musl", lambda: False)
+    monkeypatch.setenv("USER_DATA_DIR", str(tmp_path / "linkedin-mcp" / "profile"))
+    monkeypatch.setenv("LINKEDIN_LI_AT", FAKE)
+    _linkedin_deleting(monkeypatch)
+    assert asyncio.run(MCPLifecycleManager._seed_browser_session("linkedin"))
+    # As Done writes a session signed in from the chat.
+    sessions.write_linkedin_session(
+        [{"name": "li_at", "value": "signed-in-here", "domain": ".www.linkedin.com"}]
+    )
+    assert asyncio.run(MCPLifecycleManager._seed_browser_session("linkedin")) == ""
