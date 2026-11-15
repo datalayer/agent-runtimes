@@ -31,8 +31,15 @@ import {
   type Marks,
 } from '../../marks';
 
-/** A tool's mark, as the leading visual of its row. */
-function LeadingMark({ marks }: { marks: Marks }) {
+/**
+ * A tool's mark, as the leading visual of its row: on the name's line.
+ *
+ * Called as a function, never drawn as a component of its own: `ActionList.Item`
+ * places a leading visual by finding `ActionList.LeadingVisual` among its
+ * direct children, and one wrapped in a component of ours was not found —
+ * drawn in the label instead, the mark on one line and the name under it.
+ */
+function leadingMark(marks: Marks) {
   return hasMark(marks) ? (
     <ActionList.LeadingVisual>
       <SpecMark icon={marks.icon} emoji={marks.emoji} size={16} />
@@ -165,7 +172,7 @@ export function ToolsMenu({
               <ActionList.Group title="Tools">
                 {availableTools.map(tool => (
                   <ActionList.Item key={tool.id} disabled>
-                    <LeadingMark marks={marksOfRuntimeTool(tool.name)} />
+                    {leadingMark(marksOfRuntimeTool(tool.name))}
                     {tool.name}
                   </ActionList.Item>
                 ))}
@@ -180,7 +187,7 @@ export function ToolsMenu({
               <ActionList.Group title="Frontend tools">
                 {availableFrontendTools.map(tool => (
                   <ActionList.Item key={tool.id} disabled>
-                    <LeadingMark marks={marksOfFrontendTool(tool.name)} />
+                    {leadingMark(marksOfFrontendTool(tool.name))}
                     {tool.name}
                   </ActionList.Item>
                 ))}

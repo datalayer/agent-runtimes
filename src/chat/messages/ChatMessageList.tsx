@@ -47,6 +47,7 @@ import { Box } from '@datalayer/primer-addons';
 import { streamdownCodeBlockStyles } from '../styles/streamdownStyles';
 import { ChatMarkdown, type ChatDensity } from './ChatMarkdown';
 import { ToolCallDisplay } from '../tools/ToolCallDisplay';
+import { AnonymousToolSignIn } from '../anonymous/AnonymousChat';
 import { marksOfToolCall, skillIdOfCall, type MarkedMcpServer } from '../marks';
 import { TypingDots } from '../indicators/TypingDots';
 import { TurnFooter } from './TurnFooter';
@@ -759,6 +760,9 @@ function DefaultToolCallRenderer({
         summary={item.summary}
         density={density}
       />
+      {/* Refused for want of an account, in an anonymous conversation:
+       *Sign in to use* it, at this turn. */}
+      <AnonymousToolSignIn call={item} />
       {isSubagentDelegation && (
         <SubagentChatPanel
           toolCallId={item.toolCallId}

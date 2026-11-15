@@ -72,7 +72,7 @@ describe('an application in the chat', () => {
   it('is switched off, with the reason, when its host says there is nothing to talk to (R-27)', () => {
     expect(chat).toContain('const ambient = useChatAvailability();');
     expect(chat).toMatch(
-      /const chatDisabled =\s+gateBlocked \|\|\s+keyExpired \|\|\s+Boolean\(inPageRefusal\) \|\|\s+Boolean\(noRuntime\) \|\|\s+ambient\.disabled;/,
+      /const chatDisabled =\s+anonymousValidating \|\|\s+Boolean\(anonymousRefused\) \|\|\s+gateBlocked \|\|\s+keyExpired \|\|\s+Boolean\(inPageRefusal\) \|\|\s+Boolean\(noRuntime\) \|\|\s+ambient\.disabled;/,
     );
     expect(chat).toContain(
       '(ambient.disabled ? ambient.disableReason : undefined)',

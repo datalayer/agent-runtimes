@@ -28,6 +28,8 @@ import type {
   McpToolsetsStatusResponse,
 } from '../../types/mcp';
 import { MCP_STATUS_COLORS, MCP_STATUS_LABELS } from '../../types/mcp';
+import { ANONYMOUS_WORDS } from '../anonymous/anonymousChat';
+import { DisabledIndicator } from './DisabledIndicator';
 
 /* ── Props ─────────────────────────────────────────────── */
 
@@ -39,6 +41,12 @@ export interface McpStatusIndicatorProps {
   apiBase?: string;
   /** @deprecated — Only used when `data` is not provided. */
   authToken?: string;
+  /**
+   * An anonymous visitor's conversation: the agent's MCP servers, by name,
+   * each listed *Disabled* under a dot in the warning colour, in place of
+   * their state.
+   */
+  disabled?: string[];
 }
 
 /* ── Helpers ───────────────────────────────────────────── */
@@ -90,10 +98,23 @@ function useInjectKeyframes() {
 /* ── Component ─────────────────────────────────────────── */
 
 export function McpStatusIndicator({
-  data: wsData,
-  apiBase,
-  authToken,
+  disabled,
+  ...props
 }: McpStatusIndicatorProps) {
+  return disabled ? (
+    <DisabledIndicator
+      names={disabled}
+      title={ANONYMOUS_WORDS.mcpDisabled}
+      kind="mcp"
+    />
+  ) : (
+    <McpStateIndicator {...props} />
+  );
+}
+
+function McpStateIndicator({
+  data: wsData,
+}: Omit<McpStatusIndicatorProps, 'disabled'>) {
   useInjectKeyframes();
 
   // REST polling removed — data comes exclusively via WS `agent.snapshot`.

@@ -105,6 +105,10 @@ export function LoopEmbed({
    */
   const firstPromptHookRef = useRef(preset.firstPromptHook);
   firstPromptHookRef.current = preset.firstPromptHook;
+  // *Sign in* for an anonymous visitor, through a ref for the same reason.
+  const onSignInRef = useRef(preset.onSignIn);
+  onSignInRef.current = preset.onSignIn;
+  const hasOnSignIn = Boolean(preset.onSignIn);
 
   // Built once: rebuilding would restart every plugin on each render.
   const reactor = useMemo(
@@ -116,6 +120,7 @@ export function LoopEmbed({
           // asked for a frame should not also have to remember the plugin.
           windowFrame: preset.windowFrame || frameTitle !== undefined,
           firstPromptHook: () => firstPromptHookRef.current?.(),
+          onSignIn: hasOnSignIn ? () => onSignInRef.current?.() : undefined,
         }),
         ...plugins,
       ]),
@@ -135,6 +140,10 @@ export function LoopEmbed({
       preset.presence?.welcome,
       preset.presence?.paused,
       preset.showTokenUsage,
+      preset.runAsAnonymous,
+      preset.maxTurns,
+      preset.signInUrl,
+      hasOnSignIn,
       // Its voice by its content, the packages that hear aside (functions),
       // and its token aside: a renewed sign-in must not restart the workspace.
       JSON.stringify({

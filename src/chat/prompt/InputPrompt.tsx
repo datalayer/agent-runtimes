@@ -326,6 +326,12 @@ export interface InputPromptProps {
   authToken?: string;
   /** Pre-fetched MCP status from WebSocket — bypasses REST polling */
   mcpStatusData?: McpToolsetsStatusResponse | null;
+  /**
+   * An anonymous visitor's conversation (the user, 15 November 2026): the
+   * agent's MCP servers and skills, by name, which the indicators list as
+   * disabled, in the warning colour.
+   */
+  anonymousDisabled?: { mcpServers: string[]; skills: string[] };
 }
 
 // ---------------------------------------------------------------------------
@@ -402,6 +408,7 @@ export function InputPrompt({
   apiBase,
   authToken,
   mcpStatusData,
+  anonymousDisabled,
 }: InputPromptProps) {
   const chatText = useChatWords();
   const isKernelBusy = kernelStatus === 'busy';
@@ -548,11 +555,17 @@ export function InputPrompt({
               apiBase={apiBase}
               authToken={authToken}
               data={mcpStatusData}
+              {...(anonymousDisabled
+                ? { disabled: anonymousDisabled.mcpServers }
+                : {})}
             />
             <SkillsStatusIndicator
               skillsCount={skills.length}
               enabledCount={enabledSkills.size}
               loading={skillsLoading}
+              {...(anonymousDisabled
+                ? { disabled: anonymousDisabled.skills }
+                : {})}
             />
           </>
         }

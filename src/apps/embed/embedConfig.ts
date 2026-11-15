@@ -62,6 +62,12 @@ export const EMBED_ATTRIBUTES = {
     'The language the visitor reads the application in, as BCP 47 tags it (fr, pt-BR): its translation into it, and the chat’s own words; the visitor’s browser’s by default.',
   'user-token':
     'A token your server signed with the deployment’s secret, naming your user (HS256: sub, name, exp at most an hour away): what an application that says user: signed opens its session with.',
+  anonymous:
+    'true or false: whether a public application talked to without an account shows the limited preview — the box with the turns left and Sign in, the temporary key’s clock, Anonymous in the footer, its MCP servers and skills listed disabled; true by default.',
+  'max-turns':
+    'The turns a visitor without an account has today, as the preview counts and shows them (10 for Datalayer’s demos); unsaid, the preview counts none and only Datalayer’s own limits apply.',
+  'sign-in':
+    'Where the preview’s Sign in goes: an address; Datalayer’s sign-in page by default, brought back to this page.',
 } as const;
 
 export type EmbedAttribute = keyof typeof EMBED_ATTRIBUTES;
@@ -284,6 +290,69 @@ export function languageOf(
     );
   }
   return text;
+}
+
+/**
+ * Whether a visitor without an account is shown the limited preview (the
+ * user, 15 November 2026): on unless the host writes `anonymous="false"`.
+ */
+export function anonymousOf(value: string | null | undefined): boolean {
+  return (
+    oneOf(value, ['true', 'false'] as const, 'a value of anonymous') !== 'false'
+  );
+}
+
+/**
+ * The turns a visitor has today as the preview counts them: a whole number
+ * above none, else refused in a sentence. Unsaid, none: no limit counted.
+ */
+export function maxTurnsAttributeOf(
+  value: string | null | undefined,
+): number | undefined {
+  const text = value?.trim();
+  if (!text) {
+    return undefined;
+  }
+  const turns = Number(text);
+  if (!/^\d+$/.test(text) || !Number.isInteger(turns) || turns < 1) {
+    throw new EmbedAttributeError(
+      `datalayer-app: "${text}" is not a number of turns; max-turns is a whole number, such as 10.`,
+    );
+  }
+  return turns;
+}
+
+/**
+ * Where the preview's *Sign in* goes: the host's address (http or https),
+ * else Datalayer's sign-in page at `origin`, brought back to `page` — by its
+ * path when it is on that origin, else by its address.
+ */
+export function signInOf(
+  value: string | null | undefined,
+  origin: string,
+  page: {
+    href: string;
+    origin: string;
+    pathname: string;
+    search: string;
+    hash: string;
+  },
+): string {
+  const text = value?.trim();
+  if (text) {
+    if (!/^https?:\/\//.test(text)) {
+      throw new EmbedAttributeError(
+        `datalayer-app: "${text}" is not an address to sign in at; sign-in is an http or https address.`,
+      );
+    }
+    return text;
+  }
+  const base = origin.replace(/\/+$/, '');
+  const back =
+    page.origin === base
+      ? `${page.pathname}${page.search}${page.hash}`
+      : page.href;
+  return `${base}/signin?post_auth_redirect=${encodeURIComponent(back)}`;
 }
 
 /** The height of an inline application, in pixels. */

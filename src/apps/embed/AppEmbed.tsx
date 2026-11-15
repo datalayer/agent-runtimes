@@ -143,6 +143,20 @@ export type AppEmbedProps = {
    */
   visitors?: DatalayerVisitors;
   /**
+   * With `visitors`, run as an anonymous visitor (the user, 15 November
+   * 2026): the chat draws the limited preview — the box with the turns left
+   * and *Sign in*, the temporary key's clock, *Anonymous* in the footer, the
+   * MCP servers and skills listed disabled. What the element gives a public
+   * application unless its host writes `anonymous="false"`.
+   */
+  runAsAnonymous?: boolean;
+  /** With `runAsAnonymous`, the turns a visitor has today as the preview counts them; none: no limit counted. */
+  maxTurns?: number;
+  /** With `runAsAnonymous`, where *Sign in* goes. */
+  signInUrl?: string;
+  /** With `runAsAnonymous`, what *Sign in* does, in place of `signInUrl` (a React host). */
+  onSignIn?: () => void;
+  /**
    * Where its voice runs (VO-18): Datalayer's speech service and
    * the browser's models, in every mode, when its Appspec's `interface.voice`
    * is on — the microphone in its composer, its answers heard, asked with
@@ -501,7 +515,14 @@ export type AppFloatingProps = {
   renderer?: Partial<
     Pick<
       AppRendererProps,
-      'pluginsOff' | 'datalayerVisitors' | 'datalayerKept' | 'speech'
+      | 'pluginsOff'
+      | 'datalayerVisitors'
+      | 'datalayerKept'
+      | 'speech'
+      | 'runAsAnonymous'
+      | 'maxTurns'
+      | 'signInUrl'
+      | 'onSignIn'
     >
   >;
   /** What the page gives the application (D-10). */
@@ -699,6 +720,10 @@ export function AppEmbed({
   instance,
   embedToken,
   visitors,
+  runAsAnonymous = false,
+  maxTurns,
+  signInUrl,
+  onSignIn,
   speech,
   height = 640,
   ownPortal = false,
@@ -713,15 +738,25 @@ export function AppEmbed({
   const bridge = useHostBridge(app, shownAs === 'inline' ? host : undefined);
   // Where a visitor without an account runs it (D-07), and where its voice
   // runs (VO-18): one object, so that the renderer never reads a change.
+  // A visitor's limited preview with it (the user, 15 November 2026).
+  const anonymous = Boolean(visitors && runAsAnonymous);
   const renderer = useMemo(
     () =>
       visitors || speech
         ? {
             ...(visitors ? { datalayerVisitors: visitors } : {}),
+            ...(anonymous
+              ? {
+                  runAsAnonymous: true,
+                  ...(maxTurns ? { maxTurns } : {}),
+                  ...(signInUrl ? { signInUrl } : {}),
+                  ...(onSignIn ? { onSignIn } : {}),
+                }
+              : {}),
             ...(speech ? { speech } : {}),
           }
         : undefined,
-    [visitors, speech],
+    [visitors, speech, anonymous, maxTurns, signInUrl, onSignIn],
   );
   const kept = useEmbedSession({ app, serverUrl, embedToken, resume });
   // Window messages from the page, on the host's own server (P-25).

@@ -84,8 +84,11 @@ import {
   embedLookOf,
   embedTokenDeployment,
   inlineHeightOf,
+  anonymousOf,
   languageOf,
+  maxTurnsAttributeOf,
   resumeOf,
+  signInOf,
   runnable,
   type EmbedAttribute,
   type EmbedInputs,
@@ -690,10 +693,28 @@ export function defineDatalayerAppElement(
       let look: EmbedLook;
       let resume: boolean;
       let language: string | undefined;
+      // A public application talked to without an account: the limited
+      // preview, the turns it counts and where Sign in goes (the user,
+      // 15 November 2026).
+      let preview:
+        | { runAsAnonymous: true; maxTurns?: number; signInUrl: string }
+        | undefined;
       try {
         look = embedLookOf(this.inputs(), source.app);
         resume = resumeOf(this.getAttribute('resume'));
         language = languageOf(this.getAttribute('language'));
+        if (source.visitors && anonymousOf(this.getAttribute('anonymous'))) {
+          const maxTurns = maxTurnsAttributeOf(this.getAttribute('max-turns'));
+          preview = {
+            runAsAnonymous: true,
+            ...(maxTurns ? { maxTurns } : {}),
+            signInUrl: signInOf(
+              this.getAttribute('sign-in'),
+              this.originUrl(),
+              window.location,
+            ),
+          };
+        }
       } catch (error) {
         this.say((error as Error).message);
         return;
@@ -733,6 +754,7 @@ export function defineDatalayerAppElement(
             // A public application for a visitor without an account: on the
             // visitors' runtime, with a visitor's token (D-07, R-30).
             {...(source.visitors ? { visitors: source.visitors } : {})}
+            {...(preview ?? {})}
             // Its voice, when its Appspec says one (VO-18): ai-agents'
             // speech service; the microphone needs the page's
             // Permissions-Policy to allow it.

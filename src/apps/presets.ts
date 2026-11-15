@@ -65,6 +65,7 @@ import { WindowFramePlugin } from './plugins/window-frame';
 import { DocumentExtension, NotebookExtension } from './extensions';
 import { LoopPageLayoutPlugin, type PageSize } from './plugins/page-layout';
 import type { ResumedThread, ThemeOverrides } from '../types/chat';
+import { maxTurnsOf } from '../chat/anonymous/anonymousChat';
 
 export type LoopPresetOptions = {
   /** Where the agent runtimes service is. */
@@ -195,6 +196,22 @@ export type LoopPresetOptions = {
   colorMode?: 'light' | 'dark';
   /** Who is answering, as the person meets them (T-08). */
   presence?: ChatPresence;
+  /**
+   * Run as an anonymous visitor (the user, 15 November 2026): the chat
+   * mints the temporary key itself on the visitors' runtime
+   * (`datalayerVisitors`) and draws the limited preview — see
+   * `ChatPluginConfig.anonymous`.
+   */
+  runAsAnonymous?: boolean;
+  /**
+   * With `runAsAnonymous`, the turns a visitor has today, as the chat counts
+   * and shows them; unsaid, the chat enforces no limit (the runtime's holds).
+   */
+  maxTurns?: number;
+  /** With `runAsAnonymous`, where *Sign in* goes; Datalayer's sign-in page, back here, unsaid. */
+  signInUrl?: string;
+  /** With `runAsAnonymous`, what *Sign in* does, in place of going to `signInUrl`. */
+  onSignIn?: () => void;
   /** Whether the counters are shown under the prompt; on unless said. */
   showTokenUsage?: boolean;
   /** Its voice, when it has one: the chat's `voice`. */
@@ -309,6 +326,10 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     themeOverrides,
     colorMode,
     presence,
+    runAsAnonymous = false,
+    maxTurns,
+    signInUrl,
+    onSignIn,
     showTokenUsage,
     voice,
     thread,
@@ -357,6 +378,17 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
       themeOverrides,
       colorMode,
       presence,
+      ...(runAsAnonymous
+        ? {
+            anonymous: {
+              ...(maxTurnsOf(maxTurns)
+                ? { maxTurns: maxTurnsOf(maxTurns) }
+                : {}),
+              ...(signInUrl ? { signInUrl } : {}),
+              ...(onSignIn ? { onSignIn } : {}),
+            },
+          }
+        : {}),
       showTokenUsage,
       ...(voice ? { voice } : {}),
       ...(thread ? { thread } : {}),

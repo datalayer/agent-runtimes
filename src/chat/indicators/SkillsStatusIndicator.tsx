@@ -16,11 +16,19 @@
 import { useEffect, useMemo } from 'react';
 import { Tooltip } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
+import { ANONYMOUS_WORDS } from '../anonymous/anonymousChat';
+import { DisabledIndicator } from './DisabledIndicator';
 
 export interface SkillsStatusIndicatorProps {
   skillsCount: number;
   enabledCount: number;
   loading?: boolean;
+  /**
+   * An anonymous visitor's conversation: the agent's skills, by name, each
+   * listed *Disabled* under a dot in the warning colour, in place of their
+   * state.
+   */
+  disabled?: string[];
 }
 
 type SkillsAggregateStatus = 'none' | 'loading' | 'inactive' | 'active';
@@ -76,10 +84,25 @@ function buildTooltip(
 }
 
 export function SkillsStatusIndicator({
+  disabled,
+  ...props
+}: SkillsStatusIndicatorProps) {
+  return disabled ? (
+    <DisabledIndicator
+      names={disabled}
+      title={ANONYMOUS_WORDS.skillsDisabled}
+      kind="skills"
+    />
+  ) : (
+    <SkillsStateIndicator {...props} />
+  );
+}
+
+function SkillsStateIndicator({
   skillsCount,
   enabledCount,
   loading = false,
-}: SkillsStatusIndicatorProps) {
+}: Omit<SkillsStatusIndicatorProps, 'disabled'>) {
   useInjectKeyframes();
 
   const aggregate = useMemo(

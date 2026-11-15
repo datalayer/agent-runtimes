@@ -105,6 +105,20 @@ import {
 import { useIAMStore } from '../../../state';
 import { useVisitorToken } from '../../apps/visitorToken';
 import {
+  ANONYMOUS_MINUTES,
+  ANONYMOUS_WORDS,
+  type ChatAnonymous,
+} from '../../../chat/anonymous/anonymousChat';
+import {
+  AnonymousChatProvider,
+  AnonymousFooterLabel,
+  AnonymousKeyClock,
+  AnonymousPreviewBox,
+  useAnonymousSignIn,
+  useAnonymousTurns,
+  type AnonymousChatState,
+} from '../../../chat/anonymous/AnonymousChat';
+import {
   AGENTS_PLUGIN_NAME,
   type AgentsConfig,
   type AgentsOutput,
@@ -239,6 +253,9 @@ const FULLSCREEN_HINT_PERIOD_MS = 1400;
  * face is drawn at (T-19, `--loop-face-large`, 72px).
  */
 const FACE_LARGE = parseInt(loopShapeVars['--loop-face-large'], 10);
+
+/** No anonymous visitor: one object, so that the sign-in hook never reads a change. */
+const NO_ANONYMOUS: ChatAnonymous = {};
 
 export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const chatText = useChatWords();
@@ -1487,20 +1504,59 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     agentServerUrl === undefined
       ? noRuntimeSaid(workspace.sandbox, chatText)
       : undefined;
+  /*
+   * Without an account (R-30) the application runs on the visitors'
+   * runtime, which answers a visitor's token for it and nobody signed in.
+   */
+  const visitors =
+    reactor.getConfig<AgentsConfig>(AGENTS_PLUGIN_NAME)?.datalayerVisitors;
+  const visitor = useVisitorToken(visitors);
+  /*
+   * Run as an anonymous visitor (the user, 15 November 2026): the prompt
+   * closed while the temporary key is asked for and checked — minted, and
+   * the application's agent made on the visitors' runtime — then open until
+   * the turns the host counts or the conversation's minutes are spent.
+   */
+  const anonymousConfig = config?.anonymous;
+  const anonymousTurns = useAnonymousTurns(anonymousConfig?.maxTurns);
+  const anonymousValidating = Boolean(
+    anonymousConfig &&
+    visitors &&
+    !visitor.error &&
+    workspace.sandbox.state !== 'error' &&
+    (!visitor.token || agentServerUrl === undefined),
+  );
+  const anonymousRefused = anonymousConfig ? anonymousTurns.refused : '';
+  // A turn taken each time the agent sets to work on a question.
+  const anonymousWasBusy = useRef(false);
+  const takeAnonymousTurn = anonymousTurns.take;
+  useEffect(() => {
+    if (anonymousConfig && busy && !anonymousWasBusy.current) {
+      takeAnonymousTurn();
+    }
+    anonymousWasBusy.current = busy;
+  }, [anonymousConfig, busy, takeAnonymousTurn]);
+  const signInAnonymous = useAnonymousSignIn(anonymousConfig ?? NO_ANONYMOUS);
   const chatDisabled =
+    anonymousValidating ||
+    Boolean(anonymousRefused) ||
     gateBlocked ||
     keyExpired ||
     Boolean(inPageRefusal) ||
     Boolean(noRuntime) ||
     ambient.disabled;
-  const disabledReason = keyExpired
-    ? expiredKeyIsTemporary
-      ? chatText.demoKeyExpired
-      : chatText.keyExpired
-    : (inPageRefusal ??
-      noRuntime ??
-      gateReason ??
-      (ambient.disabled ? ambient.disableReason : undefined));
+  const disabledReason = anonymousValidating
+    ? ANONYMOUS_WORDS.validating
+    : anonymousRefused
+      ? anonymousRefused
+      : keyExpired
+        ? expiredKeyIsTemporary
+          ? chatText.demoKeyExpired
+          : chatText.keyExpired
+        : (inPageRefusal ??
+          noRuntime ??
+          gateReason ??
+          (ambient.disabled ? ambient.disableReason : undefined));
 
   /*
    * The prompt's text, held here rather than inside `InputPrompt`.
@@ -1672,9 +1728,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * Without an account (R-30) the application runs on the visitors'
    * runtime, which answers a visitor's token for it and nobody signed in.
    */
-  const visitors =
-    reactor.getConfig<AgentsConfig>(AGENTS_PLUGIN_NAME)?.datalayerVisitors;
-  const visitor = useVisitorToken(visitors);
+  // `visitors` and `visitor` are read above, with the anonymous visitor's state.
   // An embedded application's own token, for a visitor the platform does
   // not know (R-20): it runs a session of its deployment, and no more.
   const embedToken =
@@ -2202,6 +2256,36 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * The surface is the plugin's: no contribution, no composer, which is the
    * honest outcome for a workspace mounted without one.
    */
+  const HeaderComponent = headerEntries[0]?.value.Component;
+  const headerShown = !config?.hideHeader && !!HeaderComponent;
+  /*
+   * What the agent has that a visitor cannot use (the user, 15 November
+   * 2026): its MCP servers and skills, as its spec declares them — the
+   * visitors' runtime starts none of them, allowing no connection.
+   */
+  const anonymousDisabled = useMemo(
+    () => ({
+      mcpServers: (spec?.mcpServers ?? []).map(
+        server => server.name || server.id,
+      ),
+      skills: (spec?.skills ?? []).map(skill => skill.name || skill.id),
+    }),
+    [spec],
+  );
+  const anonymousState: AnonymousChatState | null = anonymousConfig
+    ? {
+        ...anonymousTurns,
+        refused: anonymousRefused,
+        config: anonymousConfig,
+        name: presence?.name ?? member?.name ?? spec?.name ?? '',
+        validating: anonymousValidating,
+        headerShown,
+        minutes: ANONYMOUS_MINUTES,
+        disabledMcpServers: anonymousDisabled.mcpServers,
+        disabledSkills: anonymousDisabled.skills,
+        signIn: signInAnonymous,
+      }
+    : null;
   const composerProps: InputPromptProps = {
     onSend: () => void handleSend(draft),
     input: draft,
@@ -2258,8 +2342,12 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         <ReactorSlot slot={LoopSlots.inpromptMenu} props={{ workspace }} />
       ) : undefined,
     footerExtras:
-      promptActions.length > 0 || (voice && voice.input !== 'off') ? (
+      anonymousConfig ||
+      promptActions.length > 0 ||
+      (voice && voice.input !== 'off') ? (
         <>
+          {/* Who is talking: nobody signed in (the user, 15 November 2026). */}
+          {anonymousConfig ? <AnonymousFooterLabel /> : null}
           {promptActions.length > 0 ? (
             <ReactorSlot slot={LoopSlots.promptAction} props={{ workspace }} />
           ) : null}
@@ -2353,10 +2441,10 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     isA2AProtocol: false,
     hasConfigData: !!configQuery.data,
     hasSkillsData: !!skillsQuery.data,
+    // What a visitor cannot use, listed disabled in the warning colour.
+    ...(anonymousConfig ? { anonymousDisabled } : {}),
   };
   const ComposerComponent = composerEntries[0]?.value.Component;
-  const HeaderComponent = headerEntries[0]?.value.Component;
-  const headerShown = !config?.hideHeader && !!HeaderComponent;
   const prompt = ComposerComponent ? (
     <ComposerComponent workspace={workspace} composer={composerProps} />
   ) : null;
@@ -2774,6 +2862,12 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                       drawn: an empty `ReactorSlot` is still an element, and
                       three of them would space a header out around nothing. */}
                   {workspace.chatHeaderActions}
+                  {/* The temporary key's clock (the user, 15 November 2026). */}
+                  {anonymousState &&
+                  !anonymousState.validating &&
+                  !anonymousState.refused ? (
+                    <AnonymousKeyClock state={anonymousState} />
+                  ) : null}
                   {/* The thread's menu (MH-F08): what the `loop.session.action`
                       registry holds and applies to this session, read when
                       it opens — nothing for a thread that is no session. */}
@@ -3011,88 +3105,95 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   ) : null;
 
   return (
-    <Box
-      ref={viewRef}
-      sx={{
-        height: '100%',
-        minHeight: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        // The positioned root the expiry panel below covers.
-        position: 'relative',
-        /*
+    <AnonymousChatProvider value={anonymousState}>
+      <Box
+        ref={viewRef}
+        sx={{
+          height: '100%',
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          // The positioned root the expiry panel below covers.
+          position: 'relative',
+          /*
           A background of its own once it is full screen, in both modes.
 
           The element is promoted out of whatever was painting behind it — the
           browser's top layer, or the page — and a workspace that inherited its
           canvas from an ancestor would arrive transparent over black.
         */
-        ...(fullScreen ? { bg: 'canvas.default' } : null),
-        // The fallback, for a host where the API was refused, or where
-        // `fullScreenTopOffset` asked for the overlay outright. Covers as
-        // much as the nearest transformed ancestor allows; see the note
-        // above. `top` leaves room for a host's own fixed header rather than
-        // `inset: 0`'s full viewport — 0 (no offset given) is the same rect
-        // either way.
-        ...(fullScreen && !usingFullscreenApi.current
-          ? {
-              position: 'fixed',
-              top: fullScreenTopOffsetPx,
-              right: 0,
-              bottom: 0,
-              left: 0,
-              // Over the `height: '100%'` above, which would otherwise win
-              // over `top`/`bottom` and push the bottom off the window.
-              height: 'auto',
-              zIndex: 1000,
-            }
-          : null),
-      }}
-    >
-      {layout ? (
-        <layout.Component
-          workspace={workspace}
-          editors={editorsEl}
-          hasEditor={!!active}
-          transcript={transcriptEl}
-          prompt={promptHidden ? null : prompt}
-          chips={promptHidden ? null : chipsEl}
-          picker={pickerEl}
-          transient={transientEl}
-        />
-      ) : (
-        <>
-          {/*
+          ...(fullScreen ? { bg: 'canvas.default' } : null),
+          // The fallback, for a host where the API was refused, or where
+          // `fullScreenTopOffset` asked for the overlay outright. Covers as
+          // much as the nearest transformed ancestor allows; see the note
+          // above. `top` leaves room for a host's own fixed header rather than
+          // `inset: 0`'s full viewport — 0 (no offset given) is the same rect
+          // either way.
+          ...(fullScreen && !usingFullscreenApi.current
+            ? {
+                position: 'fixed',
+                top: fullScreenTopOffsetPx,
+                right: 0,
+                bottom: 0,
+                left: 0,
+                // Over the `height: '100%'` above, which would otherwise win
+                // over `top`/`bottom` and push the bottom off the window.
+                height: 'auto',
+                zIndex: 1000,
+              }
+            : null),
+        }}
+      >
+        {/* The limited preview, on top (the user, 15 November 2026). */}
+        {anonymousState ? (
+          <Box flex="0 0 auto">
+            <AnonymousPreviewBox state={anonymousState} />
+          </Box>
+        ) : null}
+        {layout ? (
+          <layout.Component
+            workspace={workspace}
+            editors={editorsEl}
+            hasEditor={!!active}
+            transcript={transcriptEl}
+            prompt={promptHidden ? null : prompt}
+            chips={promptHidden ? null : chipsEl}
+            picker={pickerEl}
+            transient={transientEl}
+          />
+        ) : (
+          <>
+            {/*
             The prompt on top, when the host asked for it: the same composer
             the bottom placement renders, first in the column so it spans the
             workspace above the editors, with the openers as chips under it.
           */}
-          {topPrompt && !promptHidden ? (
+            {topPrompt && !promptHidden ? (
+              <Box
+                flex="0 0 auto"
+                borderBottom="1px solid"
+                borderColor="border.default"
+              >
+                {prompt}
+                {chipsEl}
+              </Box>
+            ) : null}
+            {pickerEl}
             <Box
-              flex="0 0 auto"
-              borderBottom="1px solid"
-              borderColor="border.default"
+              flex="1 1 auto"
+              minHeight={0}
+              display="flex"
+              // The hidden editors position themselves against this row.
+              position="relative"
             >
-              {prompt}
-              {chipsEl}
+              {editorsEl}
+              {transcriptEl}
             </Box>
-          ) : null}
-          {pickerEl}
-          <Box
-            flex="1 1 auto"
-            minHeight={0}
-            display="flex"
-            // The hidden editors position themselves against this row.
-            position="relative"
-          >
-            {editorsEl}
-            {transcriptEl}
-          </Box>
-          {transientEl}
-          {besideChat || promptHidden || topPrompt ? null : prompt}
-        </>
-      )}
-      {/*
+            {transientEl}
+            {besideChat || promptHidden || topPrompt ? null : prompt}
+          </>
+        )}
+        {/*
         Over the whole workspace, not over the conversation alone.
 
         The panel used to sit inside the transcript, which was where the
@@ -3108,30 +3209,31 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         back exactly as they left them, rather than a fresh workspace that
         has forgotten the question they just asked.
       */}
-      {keyExpired ? (
-        <Box
-          position="absolute"
-          inset={0}
-          zIndex={5}
-          bg="canvas.default"
-          display="flex"
-          flexDirection="column"
-          minHeight={0}
-        >
-          <AnonymousKeyExpired
-            agentName={member?.name ?? spec?.name}
-            // On the browser target the kernel is in this page and owes the
-            // inference service nothing, so the notebook is genuinely
-            // unaffected and the panel may say so.
-            sandboxStillRuns={inPage}
-            temporary={expiredKeyIsTemporary}
-            // The trial key is spent once somebody signs in, and a session
-            // left `expired` would keep this panel over a working chat.
-            onSignedIn={() => useAnonymousSessionStore.getState().clear()}
-          />
-        </Box>
-      ) : null}
-    </Box>
+        {keyExpired ? (
+          <Box
+            position="absolute"
+            inset={0}
+            zIndex={5}
+            bg="canvas.default"
+            display="flex"
+            flexDirection="column"
+            minHeight={0}
+          >
+            <AnonymousKeyExpired
+              agentName={member?.name ?? spec?.name}
+              // On the browser target the kernel is in this page and owes the
+              // inference service nothing, so the notebook is genuinely
+              // unaffected and the panel may say so.
+              sandboxStillRuns={inPage}
+              temporary={expiredKeyIsTemporary}
+              // The trial key is spent once somebody signs in, and a session
+              // left `expired` would keep this panel over a working chat.
+              onSignedIn={() => useAnonymousSessionStore.getState().clear()}
+            />
+          </Box>
+        ) : null}
+      </Box>
+    </AnonymousChatProvider>
   );
 }
 

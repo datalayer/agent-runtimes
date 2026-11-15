@@ -720,15 +720,30 @@ export function AppRenderer({
     speech?.token,
     speech?.modelsUrl,
   ]);
+  /*
+   * Run as an anonymous visitor (the user, 15 November 2026): on the
+   * visitors' runtime, where the chat mints the temporary key itself — a host
+   * that says anonymous and names no visitors' runtime is told, not run.
+   */
+  const anonymousProblem =
+    embed.runAsAnonymous && !embed.datalayerVisitors
+      ? 'Run as an anonymous visitor, an application runs on the visitors’ runtime: its host names none (datalayerVisitors).'
+      : undefined;
   const problem =
-    'problem' in preset
+    anonymousProblem ??
+    ('problem' in preset
       ? preset.problem
       : 'problem' in agent
         ? agent.problem
         : 'problem' in voice
           ? voice.problem
-          : undefined;
-  if ('problem' in preset || 'problem' in agent || 'problem' in voice) {
+          : undefined);
+  if (
+    anonymousProblem ||
+    'problem' in preset ||
+    'problem' in agent ||
+    'problem' in voice
+  ) {
     return (
       <div role="status" style={{ padding: 16 }}>
         {problem}

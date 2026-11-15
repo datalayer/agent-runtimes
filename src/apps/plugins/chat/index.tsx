@@ -16,6 +16,7 @@ import {
   SyncIcon,
 } from '@primer/octicons-react';
 import { contribution, definePlugin } from '@datalayer/reactor';
+import type { ChatAnonymous } from '../../../chat/anonymous/anonymousChat';
 import type { ToolbarItem } from '@datalayer/primer-addons';
 import {
   LoopAgentGate,
@@ -136,6 +137,15 @@ export type ChatPluginConfig = {
    * application sets its own.
    */
   presence?: ChatPresence;
+  /**
+   * Run as an anonymous visitor (the user, 15 November 2026): the box on
+   * top with the turns left and *Sign in*, the temporary key's clock in the
+   * header, *Anonymous* in the footer, the MCP servers and skills listed
+   * disabled, *Sign in to use* a tool refused for want of an account, and the
+   * prompt closed while the key is checked and once the turns or the minutes
+   * are spent. Set from `runAsAnonymous` (`loopPlugins`).
+   */
+  anonymous?: ChatAnonymous;
   /**
    * The conversation to go on with (D-13): an embedded application's
    * session, reattached after its page reloaded, and what it holds.
