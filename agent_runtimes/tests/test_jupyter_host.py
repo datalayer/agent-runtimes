@@ -24,7 +24,12 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from agent_runtimes.apps import browser as browsers
-from agent_runtimes.apps.browser import CHROMIUM_FLAGS, ChromiumBrowser, PageSeen
+from agent_runtimes.apps.browser import (
+    CHROMIUM_FLAGS,
+    SIGNIN_FLAGS,
+    ChromiumBrowser,
+    PageSeen,
+)
 from agent_runtimes.mcp import browser_session as sessions
 from agent_runtimes.mcp import jupyter_host
 from agent_runtimes.mcp.lifecycle import MCPLifecycleManager
@@ -93,19 +98,123 @@ def test_a_server_not_installed_is_said(sessions_root: Path) -> None:
     assert "not installed" in answer["error"]
 
 
+FAKE_XVFB = """#!/bin/sh
+# Makes its display's socket, as Xvfb does, and waits.
+touch "{x11}/X${{1#:}}"
+exec sleep 600
+"""
+
+FAKE_CHROME = """#!{python}
+import json, os, sys, time
+if "--version" in sys.argv:
+    print("Chromium 141.0.7390.54")
+    sys.exit(0)
+with open({record!r}, "w") as written:
+    json.dump({{"argv": sys.argv[1:], "display": os.environ.get("DISPLAY"),
+               "wayland": os.environ.get("WAYLAND_DISPLAY")}}, written)
+profile = [a.split("=", 1)[1] for a in sys.argv if a.startswith("--user-data-dir=")][0]
+with open(os.path.join(profile, "DevToolsActivePort"), "w") as port:
+    port.write("9555\\n/devtools/browser/x\\n")
+time.sleep(600)
+"""
+
+
+def test_the_sign_in_browser_starts_headful_on_a_display_of_its_own(
+    sessions_root: Path, tmp_path: Path
+) -> None:
+    """Xvfb first, then Chromium on it, with no headless flag: no browser, no network."""
+    x11 = tmp_path / "x" / ".X11-unix"
+    x11.mkdir(parents=True)
+    (x11 / "X99").touch()  # A display already taken is passed over.
+    xvfb = tmp_path / "bin" / "Xvfb"
+    xvfb.parent.mkdir()
+    xvfb.write_text(FAKE_XVFB.format(x11=x11))
+    record = tmp_path / "chrome.json"
+    chrome = tmp_path / "chromium-1" / "chrome-linux" / "chrome"
+    chrome.parent.mkdir(parents=True)
+    chrome.write_text(FAKE_CHROME.format(python=sys.executable, record=str(record)))
+    for executable in (xvfb, chrome):
+        executable.chmod(0o755)
+    started, _ = run_cell(
+        "start-browser",
+        provider="linkedin",
+        browsers=str(tmp_path / "chromium-*" / "chrome-linux*" / "chrome"),
+        flags=list(SIGNIN_FLAGS),
+        wait=20,
+        xvfb=[str(xvfb)],
+        x11=str(x11),
+        screen=jupyter_host.SCREEN,
+    )
+    try:
+        assert started == {"port": 9555, "display": ":100"}
+        ran = json.loads(record.read_text())
+        assert ran["display"] == ":100"
+        assert ran["wayland"] is None
+        argv = ran["argv"]
+        assert not any(flag.startswith("--headless") for flag in argv)
+        assert "--enable-automation" not in argv
+        assert "--disable-blink-features=AutomationControlled" in argv
+        assert any(
+            flag.startswith("--user-agent=")
+            and "Chrome/141.0.0.0" in flag
+            and "Headless" not in flag
+            for flag in argv
+        )
+        assert "--window-size=1280,900" in argv
+        assert argv[-1] == "about:blank"
+        xvfb_pid = int((sessions_root / "linkedin" / "xvfb.pid").read_text())
+        os.kill(xvfb_pid, 0)
+    finally:
+        stopped, _ = run_cell("stop-browser", provider="linkedin")
+    assert stopped == {"stopped": True}
+    assert not (sessions_root / "linkedin" / "xvfb.pid").exists()
+    assert not (sessions_root / "linkedin" / "browser.pid").exists()
+
+
+def test_a_missing_xvfb_is_said(sessions_root: Path, tmp_path: Path) -> None:
+    chrome = tmp_path / "chromium-1" / "chrome-linux" / "chrome"
+    chrome.parent.mkdir(parents=True)
+    chrome.write_text("#!/bin/sh\n")
+    chrome.chmod(0o755)
+    answer, _ = run_cell(
+        "start-browser",
+        provider="linkedin",
+        browsers=str(chrome),
+        flags=list(SIGNIN_FLAGS),
+        wait=5,
+        xvfb=["no-such-xvfb"],
+        x11=str(tmp_path),
+        screen=jupyter_host.SCREEN,
+    )
+    assert answer == {
+        "error": "no-such-xvfb is not installed in this Jupyter container"
+    }
+
+
+def test_the_sign_in_flags_are_headful_and_never_automation() -> None:
+    assert "--headless=new" in CHROMIUM_FLAGS
+    assert not any(flag.startswith("--headless") for flag in SIGNIN_FLAGS)
+    assert "--enable-automation" not in SIGNIN_FLAGS
+    assert "--remote-debugging-port=0" in SIGNIN_FLAGS
+
+
 @pytest.mark.skipif(not glob.glob(LOCAL_CHROMIUM), reason="no local Chromium")
+@pytest.mark.skipif(not os.path.exists("/usr/bin/Xvfb"), reason="no local Xvfb")
 def test_signed_in_in_a_browser_there_the_cookies_stay_there(
     sessions_root: Path,
 ) -> None:
-    """The browser runs there, is driven from here; the cookies never come here."""
+    """The browser runs there, headful on Xvfb, is driven from here; the cookies never come here."""
 
     async def scenario() -> None:
         started, _ = run_cell(
             "start-browser",
             provider="linkedin",
             browsers=LOCAL_CHROMIUM,
-            flags=list(CHROMIUM_FLAGS),
+            flags=list(SIGNIN_FLAGS),
             wait=60,
+            xvfb=jupyter_host.XVFB_COMMAND,
+            x11=jupyter_host.X11_SOCKETS,
+            screen=jupyter_host.SCREEN,
         )
         stopped: List[bool] = []
 
@@ -113,8 +222,10 @@ def test_signed_in_in_a_browser_there_the_cookies_stay_there(
             run_cell("stop-browser", provider="linkedin")
             stopped.append(True)
 
-        browser = await ChromiumBrowser.attach(started["port"], stop)
+        browser = await ChromiumBrowser.attach(started["port"], stop, humane=True)
         assert browser.devtools_port == started["port"]
+        assert await browser._evaluate("navigator.webdriver") is False
+        assert "Headless" not in await browser._evaluate("navigator.userAgent")
         await browser._connection.send(
             "Network.setCookie",
             {
@@ -209,8 +320,10 @@ def alpine_with_jupyter(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
     monkeypatch.setattr(jupyter_host, "call", call)
     made: List[FakeBrowser] = []
 
-    async def attach(port: int, on_close: Any) -> FakeBrowser:
+    async def attach(port: int, on_close: Any, humane: bool = False) -> FakeBrowser:
         assert port == 9333
+        # The sign-in browser is clicked and typed as a hand would.
+        assert humane is True
         made.append(FakeBrowser())
         return made[-1]
 
@@ -259,6 +372,15 @@ def test_signing_in_there_keeps_the_session_there(
     started = test_client.post("/api/v1/configure/browser-sessions/linkedin/start")
     assert started.status_code == 200
     assert made[0].opened == ["https://www.linkedin.com/login"]
+    # Headful, on the Jupyter container's virtual display.
+    start = next(
+        arguments for operation, arguments in calls if operation == "start-browser"
+    )
+    assert start["flags"] == list(SIGNIN_FLAGS)
+    assert not any(flag.startswith("--headless") for flag in start["flags"])
+    assert "--enable-automation" not in start["flags"]
+    assert start["xvfb"] == ["Xvfb"]
+    assert start["screen"] == jupyter_host.SCREEN
 
     done = test_client.post("/api/v1/configure/browser-sessions/linkedin/finish").json()
     assert done["state"] == "signed-in"

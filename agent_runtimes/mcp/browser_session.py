@@ -12,7 +12,8 @@ How a session is made, on the person's own runtime:
 
 1. *Sign in to LinkedIn*, in the chat (the ``browser-session`` reactor plugin),
    starts the runtime's own headless Chromium — the one an application's
-   computer browses with (``agent_runtimes.apps.browser``) — at LinkedIn's
+   computer browses with (``agent_runtimes.apps.browser``); on a cloud runtime,
+   one headful on the Jupyter container's virtual display — at LinkedIn's
    login page, and the chat draws it: its screenshot, and the person's clicks,
    typing and keys sent back (:func:`start`, :func:`step`).
 2. The person signs in there, as on any page; a second factor is answered the
@@ -411,16 +412,19 @@ def _factory(provider: SessionProvider) -> Optional[Any]:
     """Where the sign-in browser starts: the Jupyter container, or here."""
     if not in_jupyter(provider):
         return None
-    from agent_runtimes.apps.browser import CHROMIUM_FLAGS, ChromiumBrowser
+    from agent_runtimes.apps.browser import SIGNIN_FLAGS, ChromiumBrowser
     from agent_runtimes.mcp import jupyter_host
 
     async def launch() -> Browser:
-        port = await jupyter_host.start_browser(provider.id, list(CHROMIUM_FLAGS))
+        # Headful on the Jupyter container's virtual display, clicked and
+        # typed as a hand would: reCAPTCHA Enterprise scored the headless one,
+        # clicked in an instant and typed with no key, a bot (r1, 15 November 2026).
+        port = await jupyter_host.start_browser(provider.id, list(SIGNIN_FLAGS))
 
         async def stop() -> None:
             await jupyter_host.stop_browser(provider.id)
 
-        return await ChromiumBrowser.attach(port, stop)
+        return await ChromiumBrowser.attach(port, stop, humane=True)
 
     return launch
 

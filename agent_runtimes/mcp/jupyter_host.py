@@ -22,9 +22,9 @@ What runs there:
 - the catalogue's ``linkedin`` MCP server (``mcp-server-linkedin``, whose
   browser driver, patchright, has no musl build), over Streamable HTTP bound to
   127.0.0.1 on a port chosen at its start (:func:`start_server`);
-- the headless Chromium a person signs in to LinkedIn with, driven over its
-  DevTools port from agent-runtimes as its own browser is
-  (:func:`start_browser`);
+- the Chromium a person signs in to LinkedIn with, headful on a virtual
+  display (Xvfb) started with it, driven over its DevTools port from
+  agent-runtimes as its own browser is (:func:`start_browser`);
 - the session it leaves: the cookies are read off that browser and written
   *in the Jupyter container*, under :data:`SESSIONS_ROOT` (0600 in 0700, outside
   the home, so neither the file browser nor a snapshot of the home sees it),
@@ -57,6 +57,14 @@ SERVER_COMMANDS: Dict[str, List[str]] = {"linkedin": ["mcp-server-linkedin"]}
 
 #: The browsers the Jupyter image carries (Playwright's, patchright's).
 BROWSERS_GLOB = "/opt/playwright/chromium-*/chrome-linux*/chrome"
+
+#: The virtual display the sign-in browser runs headful on: Xvfb, its sockets'
+#: directory (its lock files are beside it), and the screen, larger than the
+#: browser's window as a person's is. reCAPTCHA Enterprise scored the headless
+#: browser a bot on LinkedIn's sign-in (r1, 15 November 2026).
+XVFB_COMMAND = ["Xvfb"]
+X11_SOCKETS = "/tmp/.X11-unix"  # nosec B108 - X's own, in the Jupyter container
+SCREEN = "1920x1080x24"
 
 #: How the answer of a cell is told apart from what else it printed.
 MARK = "__datalayer_jupyter_host__"
@@ -289,14 +297,33 @@ def _dl_host(raw):
         answer = {"stopped": kill("server")}
     elif do == "start-browser":
         kill("browser")
+        kill("xvfb")
         signin = os.path.join(root, "signin")
         shutil.rmtree(signin, ignore_errors=True)
         private_dir(root)
         private_dir(signin)
         found = sorted(glob.glob(args["browsers"]))
+        x11 = args["x11"]
+        def display_free(number):
+            return not os.path.exists(os.path.join(x11, "X%d" % number)) and not os.path.exists(
+                os.path.join(os.path.dirname(x11), ".X%d-lock" % number))
         if not found:
             answer = {"error": "no Chromium in this Jupyter container"}
+        elif shutil.which(args["xvfb"][0], path="/usr/local/bin:/usr/bin:/bin") is None:
+            answer = {"error": "%s is not installed in this Jupyter container" % args["xvfb"][0]}
         else:
+            # Headful, on a virtual display of its own: reCAPTCHA Enterprise
+            # scores a headless browser a bot.
+            number = [n for n in range(99, 300) if display_free(n)][0]
+            display = ":%d" % number
+            xvfb, xlog = started("xvfb", list(args["xvfb"]) + [display, "-screen", "0", args["screen"], "-nolisten", "tcp"], {"PATH": "/usr/local/bin:/usr/bin:/bin", "LANG": "C.UTF-8"})
+            deadline = time.time() + args["wait"]
+            while time.time() < deadline and xvfb.poll() is None and not os.path.exists(os.path.join(x11, "X%d" % number)):
+                time.sleep(0.05)
+            if xvfb.poll() is not None or not os.path.exists(os.path.join(x11, "X%d" % number)):
+                kill("xvfb")
+                answer = {"error": "its display did not start", "tail": tail(xlog)}
+        if not answer:
             # As a person's Chrome says itself: LinkedIn's bot check (Cloudflare)
             # holds a browser saying HeadlessChrome on "Just a moment..." for
             # good, and lets the same one through under its regular name.
@@ -310,7 +337,7 @@ def _dl_host(raw):
                 "--disable-blink-features=AutomationControlled",
             ]
             command = [found[-1]] + list(args["flags"]) + regular + ["--user-data-dir=" + signin, "about:blank"]
-            process, log = started("browser", command, {"HOME": os.environ.get("HOME", "/home/datalayer"), "PATH": "/usr/bin:/bin", "LANG": "C.UTF-8"})
+            process, log = started("browser", command, {"HOME": os.environ.get("HOME", "/home/datalayer"), "PATH": "/usr/bin:/bin", "LANG": "C.UTF-8", "DISPLAY": display})
             written = os.path.join(signin, "DevToolsActivePort")
             deadline = time.time() + args["wait"]
             port = 0
@@ -324,12 +351,14 @@ def _dl_host(raw):
                     break
                 time.sleep(0.05)
             if port:
-                answer = {"port": port}
+                answer = {"port": port, "display": display}
             else:
                 kill("browser")
+                kill("xvfb")
                 answer = {"error": "its browser did not start", "tail": tail(log)}
     elif do == "stop-browser":
         kill("browser")
+        kill("xvfb")
         shutil.rmtree(os.path.join(root, "signin"), ignore_errors=True)
         answer = {"stopped": True}
     elif do == "keep-session":
@@ -518,14 +547,17 @@ async def stop_server(server_id: str) -> None:
 
 
 async def start_browser(provider_id: str, flags: List[str]) -> int:
-    """Start a headless Chromium in the Jupyter container, its DevTools port."""
+    """Start a Chromium on a virtual display in the Jupyter container, its DevTools port."""
     answer = await call(
         "start-browser",
-        timeout=BROWSER_WAIT + 60,
+        timeout=2 * BROWSER_WAIT + 60,
         provider=provider_id,
         browsers=BROWSERS_GLOB,
         flags=flags,
         wait=BROWSER_WAIT,
+        xvfb=XVFB_COMMAND,
+        x11=X11_SOCKETS,
+        screen=SCREEN,
     )
     if "port" not in answer:
         raise JupyterHostFailed(
