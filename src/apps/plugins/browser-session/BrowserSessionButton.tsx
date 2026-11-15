@@ -150,6 +150,19 @@ export function BrowserSessionButton({
 }
 
 /**
+ * The sign-in dialog nearly as wide as the window, so the provider's page is
+ * read at close to its own size (1280 × 800), not shrunk into xlarge's 960
+ * pixels (the user, 15 November 2026: "showing the linkedin page too small").
+ */
+export const BROWSER_SESSION_DIALOG_SX = {
+  '&&&': {
+    width: 'min(1400px, calc(100vw - 32px))',
+    maxWidth: 'calc(100vw - 32px)',
+    maxHeight: 'calc(100vh - 32px)',
+  },
+} as const;
+
+/**
  * The runtime's browser at the provider's login, drawn from its screenshots,
  * the person's steps sent back.
  */
@@ -259,6 +272,7 @@ export function BrowserSessionDialog({
       title={WORDS.signIn(name)}
       onClose={() => void cancel()}
       width="xlarge"
+      sx={BROWSER_SESSION_DIALOG_SX}
       footerButtons={[
         { content: WORDS.cancel, onClick: () => void cancel() },
         {
@@ -280,7 +294,13 @@ export function BrowserSessionDialog({
           borderColor="border.default"
           borderRadius={2}
           overflow="hidden"
-          sx={{ aspectRatio: '1280 / 800' }}
+          width="100%"
+          mx="auto"
+          sx={{
+            aspectRatio: '1280 / 800',
+            // As large as the window's height leaves room for, the page's own shape kept.
+            maxWidth: 'calc((100vh - 300px) * 1.6)',
+          }}
           data-browser-session-page={provider}
         >
           {image ? (

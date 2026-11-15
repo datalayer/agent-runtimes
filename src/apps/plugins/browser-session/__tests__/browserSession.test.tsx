@@ -29,6 +29,7 @@ import {
   stepSession,
   type BrowserSessionStatus,
 } from '..';
+import { BROWSER_SESSION_DIALOG_SX } from '../BrowserSessionButton';
 import { loopPlugins } from '../../../presets';
 
 afterEach(cleanup);
@@ -123,6 +124,17 @@ function draw(
   );
   return fetcher;
 }
+
+describe('the sign-in dialog', () => {
+  it('is nearly as wide as the window, not xlarge’s 960 pixels, so the page is read at close to its size (the user, 15 November 2026)', () => {
+    expect(BROWSER_SESSION_DIALOG_SX['&&&'].width).toBe(
+      'min(1400px, calc(100vw - 32px))',
+    );
+    expect(BROWSER_SESSION_DIALOG_SX['&&&'].maxHeight).toBe(
+      'calc(100vh - 32px)',
+    );
+  });
+});
 
 describe('Sign in to LinkedIn', () => {
   it('is drawn while no session is held, and opens the runtime’s browser at the login', async () => {
