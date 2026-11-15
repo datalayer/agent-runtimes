@@ -58,7 +58,7 @@ import { SpreadsheetPlugin } from '../../plugins/spreadsheet';
 import { SpreadsheetViewPlugin } from '../../plugins/spreadsheet-view';
 import { SubagentActivityPlugin } from '../../plugins/subagent-activity';
 import { WindowFramePlugin } from '../../plugins/window-frame';
-import { AGENT_UI_PLUGINS } from '../../agentUiPlugins';
+import { AGENT_UI_PLUGINS, defaultPluginOf } from '../../agentUiPlugins';
 
 /** An application of the catalogue with a page, and a component of its developer's. */
 export const FIXTURE_APP: AppSpec = (() => {
@@ -136,10 +136,7 @@ export const HOW_TO_MOUNT: Record<string, Mount> = {
   // The UI the agents, their MCP servers, skills and tools bring (15
   // November 2026): each its own plugin, by its UI spec's id.
   ...Object.fromEntries(
-    Object.entries(AGENT_UI_PLUGINS).map(([id, entry]) => [
-      id,
-      () => [entry.plugin],
-    ]),
+    Object.keys(AGENT_UI_PLUGINS).map(id => [id, () => [defaultPluginOf(id)!]]),
   ),
 };
 

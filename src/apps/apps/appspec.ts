@@ -312,6 +312,9 @@ const uiChoices = (value: unknown): UiChoice[] =>
     ? value.filter(isData).map(item => ({
         plugin: text(item.plugin),
         ...(text(item.renderer) ? { renderer: text(item.renderer) } : {}),
+        ...(text(item.placement)
+          ? { placement: text(item.placement) as UiChoice['placement'] }
+          : {}),
       }))
     : [];
 
@@ -1644,6 +1647,18 @@ export function uiProblems(app: Pick<AppSpec, 'ui' | 'enabled'>): string[] {
       );
       continue;
     }
+    if (choice.placement !== undefined) {
+      const allowed = spec.placements ?? [];
+      if (allowed.length === 0) {
+        problems.push(
+          `The UI plugin ${spec.name} ('${id}') has no place in the chat: it takes no \`placement\`.`,
+        );
+      } else if (!allowed.includes(choice.placement)) {
+        problems.push(
+          `The UI plugin ${spec.name} ('${id}') does not go in the chat's ${choice.placement}: in its ${allowed.join(', ')} only.`,
+        );
+      }
+    }
     if (choice.renderer === undefined) {
       continue;
     }
@@ -2137,11 +2152,11 @@ export function dumpAppspec(app: AppSpec): Data {
     .list('protocols', app.protocols)
     .list(
       'ui',
-      app.ui.map(choice =>
-        choice.renderer
-          ? { plugin: choice.plugin, renderer: choice.renderer }
-          : { plugin: choice.plugin },
-      ),
+      app.ui.map(choice => ({
+        plugin: choice.plugin,
+        ...(choice.renderer ? { renderer: choice.renderer } : {}),
+        ...(choice.placement ? { placement: choice.placement } : {}),
+      })),
     )
     .part('pap', dumpPap(app.pap))
     .part('pact', dumpPact(app.pact))

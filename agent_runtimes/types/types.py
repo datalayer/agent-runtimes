@@ -393,6 +393,13 @@ class UISpec(BaseModel):
         default_factory=list,
         description="The UI renderers it may be exposed through, ids of `agentspecs/ui-renderers`",
     )
+    placements: List[str] = Field(
+        default_factory=list,
+        description=(
+            "Where in the chat it may go, its default first: header, toolbar, footer, "
+            "banner, panel or message (agentspecs 0.0.197)"
+        ),
+    )
     catalog: str = Field(
         default="", description="The catalog its components are written in"
     )
@@ -428,6 +435,10 @@ class UiChoiceSpec(BaseModel):
     renderer: Optional[str] = Field(
         default=None,
         description="The UI renderer of `agentspecs/ui-renderers` it is exposed through, by id",
+    )
+    placement: Optional[str] = Field(
+        default=None,
+        description="Where in the chat it goes, one of its spec's placements; its default unsaid",
     )
 
     @model_validator(mode="before")

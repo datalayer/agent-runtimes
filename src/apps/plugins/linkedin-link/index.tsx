@@ -4,8 +4,8 @@
  */
 
 /**
- * `@datalayer/loop-plugin-linkedin-link` — *Link LinkedIn in Settings*, in
- * the chat's title bar, while the person's LinkedIn is not linked through
+ * `@datalayer/loop-plugin-linkedin-link` — *Link LinkedIn in Settings*,
+ * above the conversation (its `banner` placement; or the title bar), while the person's LinkedIn is not linked through
  * Datalayer (IAM's `/social/accounts`) or its 60-day grant lapsed
  * (*Reconnect LinkedIn in Settings*). Brought by the `datalayer-social`
  * LinkedIn tools (`social-post-linkedin`, `social-comment-linkedin`, the
@@ -20,12 +20,10 @@ import type { JSX } from 'react';
 import { useEffect, useState } from 'react';
 import { Button } from '@primer/react';
 import { LinkIcon } from '@primer/octicons-react';
-import { definePlugin } from '@datalayer/reactor';
-import type { ReactorPlugin } from '@datalayer/reactor';
 import { useCoreStore } from '@datalayer/core';
 import { useIAMStore } from '@datalayer/core/lib/state';
 import { requestDatalayerAPI } from '@datalayer/core/lib/api/DatalayerApi';
-import { LoopSlots } from '../../core';
+import { defineChromePlugin } from '../../toolCards/chrome';
 import { record } from '../../toolCards/kit';
 
 export const LINKEDIN_LINK_PLUGIN_NAME = '@datalayer/loop-plugin-linkedin-link';
@@ -108,24 +106,17 @@ export function LinkedInLinkSlot(): JSX.Element | null {
   return <LinkedInLinkButton />;
 }
 
-export const LinkedInLinkPlugin = definePlugin({
-  name: LINKEDIN_LINK_PLUGIN_NAME,
+/** The plugin for a placement: `banner` (its default) or `header`. */
+export const linkedInLinkPlugin = defineChromePlugin({
+  id: 'linkedin-link',
   displayName: 'Link LinkedIn',
   description:
-    'Link LinkedIn in Settings, in the chat’s title bar, while the person’s LinkedIn is not linked through Datalayer or needs connecting again.',
+    'Link LinkedIn in Settings, above the conversation, while the person’s LinkedIn is not linked through Datalayer or needs connecting again.',
   octicon: 'link',
   emoji: '\u{1F517}',
-  build() {
-    return {
-      components: [
-        {
-          slot: LoopSlots.chatHeader,
-          id: 'linkedin-link',
-          Component: LinkedInLinkSlot as never,
-        },
-      ],
-    };
-  },
-}) as unknown as ReactorPlugin<Record<string, never>, unknown, unknown>;
+  Component: () => LinkedInLinkButton({}),
+});
+
+export const LinkedInLinkPlugin = linkedInLinkPlugin('banner');
 
 export default LinkedInLinkPlugin;

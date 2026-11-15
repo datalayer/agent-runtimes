@@ -67,7 +67,8 @@ import { DocumentExtension, NotebookExtension } from './extensions';
 import { LoopPageLayoutPlugin, type PageSize } from './plugins/page-layout';
 import type { ResumedThread, ThemeOverrides } from '../types/chat';
 import { maxTurnsOf } from '../chat/anonymous/anonymousMode';
-import { agentUiPluginsFor, uiPluginIdsOfSpec } from './agentUiPlugins';
+import { agentUiChoicesOf, agentUiPluginsFor } from './agentUiPlugins';
+import type { UiChoice } from '../types/agentspecs';
 
 export type LoopPresetOptions = {
   /** Where the agent runtimes service is. */
@@ -293,7 +294,7 @@ export type LoopPresetOptions = {
    * (`runAsAnonymous`, `datalayerVisitors`) gets only those that need no
    * connection of theirs.
    */
-  uiPlugins?: readonly string[];
+  uiPlugins?: ReadonlyArray<string | UiChoice>;
 };
 
 /**
@@ -427,7 +428,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     // The agent's own: what its spec names under `ui` — each draws one of
     // its tools or one fact, so every other chat stays as it was.
     ...agentUiPluginsFor(
-      uiPlugins ?? uiPluginIdsOfSpec(datalayerAgentSpecId ?? localAgentSpec),
+      uiPlugins ?? agentUiChoicesOf(datalayerAgentSpecId ?? localAgentSpec),
       { anonymous: runAsAnonymous || Boolean(datalayerVisitors) },
     ),
     // An XLSX the agent gives, read-only in Cells in its message: the

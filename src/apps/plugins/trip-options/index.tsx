@@ -4,18 +4,18 @@
  */
 
 /**
- * `@datalayer/loop-plugin-trip-options` — the Voyager's three options, one
- * card each: the dates and nights, the price, what stands out, and a link to
- * the offer. *Choose this one* sends the choice back as the person's next
- * turn; nothing is booked from it. Draws `show_trip_options`.
+ * `@datalayer/loop-plugin-trip-options` — the Voyager's three options, as a
+ * message drawn by the A2UI renderer, one card each: the dates and nights,
+ * the price, what stands out, a link to the offer, and **Choose this one**,
+ * which sends the choice back as the person's next turn. Nothing is booked.
+ * Draws `show_trip_options`.
  *
  * @module apps/plugins/trip-options
  */
 
 import type { JSX } from 'react';
 import { useState } from 'react';
-import { Button, Heading, Link, Text } from '@primer/react';
-import { Box } from '@datalayer/primer-addons';
+import type { A2uiClientAction } from '@a2ui/web_core/v0_9';
 import type { ToolCallRenderContext } from '../../../types/chat';
 import {
   CardSkeleton,
@@ -25,7 +25,8 @@ import {
   submitCard,
   useToolCardSend,
 } from '../../toolCards/kit';
-import { readTripOptions } from './read';
+import { A2uiCard, type CardSpec } from '../../toolCards/a2uiCard';
+import { readTripOptions, type TripOption } from './read';
 
 export const TRIP_OPTIONS_PLUGIN_NAME = '@datalayer/loop-plugin-trip-options';
 
@@ -34,10 +35,65 @@ export const TRIP_OPTIONS_WORDS = {
   writing: 'Looking for trips…',
   nights: (nights: number) => (nights === 1 ? '1 night' : `${nights} nights`),
   choose: 'Choose this one',
-  chosen: 'Chosen',
+  chosen: (title: string) => `Chosen: ${title}`,
   offer: 'See the offer',
   nothingBooked: 'Nothing is booked until you say so.',
 } as const;
+
+/** The action **Choose this one** sends. */
+export const CHOOSE_TRIP_ACTION = 'choose_trip';
+
+/** The options as an A2UI card: a section each, with its choice. */
+export function tripOptionsCard(
+  options: TripOption[],
+  id: string,
+  state: { choose?: boolean; chosen?: string } = {},
+): CardSpec {
+  const chosen = options.find(option => option.id === state.chosen);
+  return {
+    id: `trips-${id}`,
+    title: TRIP_OPTIONS_WORDS.label,
+    captions: [
+      chosen
+        ? TRIP_OPTIONS_WORDS.chosen(chosen.title)
+        : TRIP_OPTIONS_WORDS.nothingBooked,
+    ],
+    sections: options.map(option => ({
+      id: option.id,
+      title: option.title,
+      ...(option.image
+        ? { image: { url: option.image, alt: option.title } }
+        : {}),
+      lines: [
+        [
+          option.dates,
+          option.nights !== undefined
+            ? TRIP_OPTIONS_WORDS.nights(option.nights)
+            : '',
+        ]
+          .filter(Boolean)
+          .join(' · '),
+        ...(option.price !== undefined
+          ? [`**${money(option.price, option.currency)}**`]
+          : []),
+        ...(option.summary ? [option.summary] : []),
+        ...option.highlights.map(highlight => `- ${highlight}`),
+        ...(option.url ? [`[${TRIP_OPTIONS_WORDS.offer}](${option.url})`] : []),
+      ].filter(Boolean),
+      actions:
+        state.choose && !chosen
+          ? [
+              {
+                name: CHOOSE_TRIP_ACTION,
+                label: TRIP_OPTIONS_WORDS.choose,
+                context: { id: option.id },
+                primary: true,
+              },
+            ]
+          : [],
+    })),
+  };
+}
 
 export function TripOptionsCard({
   context,
@@ -58,114 +114,31 @@ export function TripOptionsCard({
       <CardSkeleton label={TRIP_OPTIONS_WORDS.writing} />
     );
   }
+  const onAction = (action: A2uiClientAction) => {
+    const option = options.find(
+      each => each.id === String((action.context ?? {}).id ?? ''),
+    );
+    if (action.name !== CHOOSE_TRIP_ACTION || !option || !send) {
+      return;
+    }
+    if (
+      submitCard(send, {
+        title: TRIP_OPTIONS_WORDS.label,
+        values: { chosen: option.title, id: option.id },
+      })
+    ) {
+      setChosen(option.id);
+    }
+  };
   return (
-    <Box as="section" aria-label={TRIP_OPTIONS_WORDS.label} my={2} width="100%">
-      <Box
-        display="grid"
-        gridTemplateColumns={['1fr', 'repeat(auto-fit, minmax(200px, 1fr))']}
-        gridGap={2}
-      >
-        {options.map(option => (
-          <Box
-            as="article"
-            key={option.id}
-            aria-label={option.title}
-            p={3}
-            border="1px solid"
-            borderColor={
-              chosen === option.id ? 'accent.emphasis' : 'border.default'
-            }
-            borderRadius={2}
-            bg="canvas.subtle"
-            display="flex"
-            flexDirection="column"
-            gap={1}
-          >
-            {option.image ? (
-              <Box
-                as="img"
-                src={option.image}
-                alt=""
-                width="100%"
-                height={120}
-                borderRadius={2}
-                sx={{ objectFit: 'cover' }}
-              />
-            ) : null}
-            <Heading as="h4" sx={{ fontSize: 2 }}>
-              {option.title}
-            </Heading>
-            <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-              {[
-                option.dates,
-                option.nights !== undefined
-                  ? TRIP_OPTIONS_WORDS.nights(option.nights)
-                  : '',
-              ]
-                .filter(Boolean)
-                .join(' · ')}
-            </Text>
-            {option.price !== undefined ? (
-              <Text sx={{ fontSize: 3, fontWeight: 'bold' }}>
-                {money(option.price, option.currency)}
-              </Text>
-            ) : null}
-            {option.summary ? (
-              <Text sx={{ fontSize: 1 }}>{option.summary}</Text>
-            ) : null}
-            {option.highlights.length > 0 ? (
-              <Box as="ul" pl={3} my={1} sx={{ fontSize: 1 }}>
-                {option.highlights.map(highlight => (
-                  <li key={highlight}>{highlight}</li>
-                ))}
-              </Box>
-            ) : null}
-            <Box
-              mt="auto"
-              display="flex"
-              gap={2}
-              alignItems="center"
-              flexWrap="wrap"
-            >
-              {send && read.done ? (
-                <Button
-                  size="small"
-                  variant={chosen === option.id ? 'primary' : 'default'}
-                  disabled={Boolean(chosen)}
-                  onClick={() => {
-                    if (
-                      submitCard(send, {
-                        title: TRIP_OPTIONS_WORDS.label,
-                        values: { chosen: option.title, id: option.id },
-                      })
-                    ) {
-                      setChosen(option.id);
-                    }
-                  }}
-                >
-                  {chosen === option.id
-                    ? TRIP_OPTIONS_WORDS.chosen
-                    : TRIP_OPTIONS_WORDS.choose}
-                </Button>
-              ) : null}
-              {option.url ? (
-                <Link
-                  href={option.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  sx={{ fontSize: 1 }}
-                >
-                  {TRIP_OPTIONS_WORDS.offer}
-                </Link>
-              ) : null}
-            </Box>
-          </Box>
-        ))}
-      </Box>
-      <Text as="p" sx={{ mt: 1, mb: 0, fontSize: 0, color: 'fg.muted' }}>
-        {TRIP_OPTIONS_WORDS.nothingBooked}
-      </Text>
-    </Box>
+    <A2uiCard
+      spec={tripOptionsCard(options, context.toolCallId, {
+        choose: Boolean(send) && read.done,
+        chosen,
+      })}
+      onAction={onAction}
+      maxWidth={720}
+    />
   );
 }
 

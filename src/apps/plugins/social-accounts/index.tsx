@@ -15,6 +15,11 @@
  */
 
 import type { JSX } from 'react';
+import { useEffect, useState } from 'react';
+import { useCoreStore } from '@datalayer/core';
+import { useIAMStore } from '@datalayer/core/lib/state';
+import { requestDatalayerAPI } from '@datalayer/core/lib/api/DatalayerApi';
+import { Chip, defineChromePlugin } from '../../toolCards/chrome';
 import { Label, Link, Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import type { ToolCallRenderContext } from '../../../types/chat';
@@ -125,7 +130,8 @@ export function SocialAccountsCard({
   );
 }
 
-export const SocialAccountsPlugin = defineToolCardPlugin({
+/** In a message: drawn where `social_accounts` answers. */
+export const SocialAccountsMessagePlugin = defineToolCardPlugin({
   id: 'social-accounts',
   displayName: 'Linked social accounts',
   description:
@@ -135,6 +141,67 @@ export const SocialAccountsPlugin = defineToolCardPlugin({
   tools: ['social_accounts'],
   Card: SocialAccountsCard,
 });
+
+/**
+ * In the chat's title bar (its default placement): one chip per network,
+ * read from IAM's `/social/accounts` with the person's own token (no token
+ * is ever named there); nothing for a visitor nor while it is read.
+ */
+export function SocialAccountsChips(): JSX.Element | null {
+  const { configuration } = useCoreStore();
+  const { token } = useIAMStore();
+  const iamUrl = String(configuration?.iamUrl || '');
+  const [answer, setAnswer] = useState<Record<string, unknown> | null>();
+  useEffect(() => {
+    if (!token || !iamUrl) {
+      return undefined;
+    }
+    const controller = new AbortController();
+    requestDatalayerAPI<Record<string, unknown>>({
+      url: `${iamUrl.replace(/\/$/, '')}/api/iam/v1/social/accounts`,
+      method: 'GET',
+      token,
+      signal: controller.signal,
+    })
+      .then(setAnswer)
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setAnswer(null);
+        }
+      });
+    return () => controller.abort();
+  }, [token, iamUrl]);
+  if (!token || !answer) {
+    return null;
+  }
+  return (
+    <Box display="inline-flex" gap={1} data-social-accounts-chips="">
+      {readSocialAccounts(answer).map(account => (
+        <Chip
+          key={account.network}
+          attention={account.state !== 'linked'}
+          title={`${SOCIAL_NETWORK_NAMES[account.network]}: ${SOCIAL_ACCOUNTS_WORDS.states[account.state]}${account.who ? ` (${account.who})` : ''}`}
+          data={account.network}
+        >
+          {`${SOCIAL_NETWORK_NAMES[account.network]} ${account.state === 'linked' ? '✓' : account.state === 'not-linked' ? '–' : '!'}`}
+        </Chip>
+      ))}
+    </Box>
+  );
+}
+
+/** The plugin for a placement: `header` (its default); `message` is `SocialAccountsMessagePlugin`. */
+export const socialAccountsPlugin = defineChromePlugin({
+  id: 'social-accounts',
+  displayName: 'Linked social accounts',
+  description:
+    'Which of X, Bluesky and LinkedIn the person linked, in the chat’s title bar.',
+  octicon: 'person',
+  emoji: '\u{1FAAA}',
+  Component: SocialAccountsChips,
+});
+
+export const SocialAccountsPlugin = socialAccountsPlugin('header');
 
 export {
   SOCIAL_NETWORKS,

@@ -40,6 +40,7 @@ A2UI_SURFACE_UI_0_0_1 = UISpec(
     contribution_points=[],
     settings={},
     renderers=["a2ui"],
+    placements=["message"],
     catalog="a2ui/v0.9",
     components=[
         ComponentSpec(
@@ -1081,6 +1082,7 @@ A2UI_VIEW_UI_0_0_1 = UISpec(
     contribution_points=[],
     settings={},
     renderers=["a2ui"],
+    placements=[],
     catalog="",
     components=[],
 )
@@ -1103,6 +1105,7 @@ AGENTSPECS_UI_0_0_1 = UISpec(
     contribution_points=[],
     settings={},
     renderers=[],
+    placements=[],
     catalog="",
     components=[],
 )
@@ -1125,6 +1128,7 @@ APP_ACTIVITY_UI_0_0_1 = UISpec(
     contribution_points=[],
     settings={},
     renderers=[],
+    placements=[],
     catalog="",
     components=[],
 )
@@ -1147,6 +1151,7 @@ APP_COMPONENTS_UI_0_0_1 = UISpec(
     contribution_points=[],
     settings={},
     renderers=["a2ui"],
+    placements=[],
     catalog="",
     components=[],
 )
@@ -1169,6 +1174,7 @@ APP_COMPUTER_UI_0_0_1 = UISpec(
     contribution_points=[],
     settings={},
     renderers=[],
+    placements=[],
     catalog="",
     components=[],
 )
@@ -1191,6 +1197,7 @@ APP_ELEMENTS_UI_0_0_1 = UISpec(
     contribution_points=[],
     settings={},
     renderers=["a2ui"],
+    placements=[],
     catalog="",
     components=[],
 )
@@ -1213,6 +1220,7 @@ APP_PAGE_UI_0_0_1 = UISpec(
     contribution_points=[],
     settings={},
     renderers=["a2ui", "mcp-apps"],
+    placements=[],
     catalog="",
     components=[],
 )
@@ -1235,6 +1243,30 @@ APP_RULES_UI_0_0_1 = UISpec(
     contribution_points=[],
     settings={},
     renderers=[],
+    placements=[],
+    catalog="",
+    components=[],
+)
+
+AWS_SAVINGS_BADGE_UI_0_0_1 = UISpec(
+    id="aws-savings-badge",
+    version="0.0.1",
+    name="Savings found",
+    description="This session's estimated monthly savings and the AWS account they were found in, in the chat's title bar, read from the recommendations recorded (record_recommendation, list_recommendations).",
+    emoji="💸",
+    octicon="graph",
+    plugin="@datalayer/loop-plugin-aws-savings-badge",
+    folder="aws-savings-badge",
+    per=None,
+    contributions=UiContributionsSpec(
+        slots=["loop.chatHeader"],
+        points=[],
+        commands=[],
+    ),
+    contribution_points=[],
+    settings={},
+    renderers=[],
+    placements=["header", "footer"],
     catalog="",
     components=[],
 )
@@ -1256,7 +1288,8 @@ AWS_SAVINGS_UI_0_0_1 = UISpec(
     ),
     contribution_points=[],
     settings={},
-    renderers=[],
+    renderers=["a2ui"],
+    placements=["message"],
     catalog="",
     components=[],
 )
@@ -1278,7 +1311,31 @@ BANK_RECONCILIATION_UI_0_0_1 = UISpec(
     ),
     contribution_points=[],
     settings={},
+    renderers=["a2ui"],
+    placements=["message"],
+    catalog="",
+    components=[],
+)
+
+BASKET_TOTAL_UI_0_0_1 = UISpec(
+    id="basket-total",
+    version="0.0.1",
+    name="Basket total",
+    description="The basket the agent is putting together, in the chat's title bar: how many items and its total, read from the last basket it showed (show_basket).",
+    emoji="🛒",
+    octicon="package",
+    plugin="@datalayer/loop-plugin-basket-total",
+    folder="basket-total",
+    per=None,
+    contributions=UiContributionsSpec(
+        slots=["loop.chatHeader"],
+        points=[],
+        commands=[],
+    ),
+    contribution_points=[],
+    settings={},
     renderers=[],
+    placements=["header", "footer"],
     catalog="",
     components=[],
 )
@@ -1300,7 +1357,8 @@ BLUESKY_POST_PREVIEW_UI_0_0_1 = UISpec(
     ),
     contribution_points=[],
     settings={},
-    renderers=[],
+    renderers=["a2ui"],
+    placements=["message"],
     catalog="",
     components=[],
 )
@@ -1323,6 +1381,7 @@ BROWSER_SESSION_UI_0_0_1 = UISpec(
     contribution_points=[],
     settings={},
     renderers=[],
+    placements=["header"],
     catalog="",
     components=[],
 )
@@ -1345,6 +1404,7 @@ CANVAS_BLOCKS_UI_0_0_1 = UISpec(
     contribution_points=[],
     settings={},
     renderers=[],
+    placements=[],
     catalog="",
     components=[],
 )
@@ -1367,6 +1427,7 @@ CANVAS_PARTS_UI_0_0_1 = UISpec(
     contribution_points=[],
     settings={},
     renderers=[],
+    placements=[],
     catalog="",
     components=[],
 )
@@ -1389,6 +1450,7 @@ CHAT_EXTRAS_UI_0_0_1 = UISpec(
     contribution_points=[],
     settings={},
     renderers=[],
+    placements=[],
     catalog="",
     components=[],
 )
@@ -1411,6 +1473,7 @@ CHAT_HEADER_UI_0_0_1 = UISpec(
     contribution_points=[],
     settings={},
     renderers=[],
+    placements=[],
     catalog="",
     components=[],
 )
@@ -1433,6 +1496,7 @@ CHAT_VIEW_UI_0_0_1 = UISpec(
     contribution_points=[],
     settings={},
     renderers=[],
+    placements=[],
     catalog="",
     components=[],
 )
@@ -1547,6 +1611,7 @@ CHAT_UI_0_0_1 = UISpec(
         },
     },
     renderers=[],
+    placements=[],
     catalog="",
     components=[],
 )
@@ -1569,6 +1634,7 @@ COMMANDS_UI_0_0_1 = UISpec(
     contribution_points=[],
     settings={},
     renderers=[],
+    placements=[],
     catalog="",
     components=[],
 )
@@ -1591,6 +1657,7 @@ DOCUMENT_TOOLBAR_UI_0_0_1 = UISpec(
     contribution_points=["loop.document.toolbar.item"],
     settings={},
     renderers=[],
+    placements=[],
     catalog="",
     components=[],
 )
@@ -1613,6 +1680,7 @@ DOCUMENT_VIEW_UI_0_0_1 = UISpec(
     contribution_points=[],
     settings={},
     renderers=[],
+    placements=[],
     catalog="",
     components=[],
 )
@@ -1635,6 +1703,30 @@ DOCUMENT_UI_0_0_1 = UISpec(
     contribution_points=["loop.document.opening", "loop.document.toolbar"],
     settings={},
     renderers=[],
+    placements=[],
+    catalog="",
+    components=[],
+)
+
+EARTH_AREA_UI_0_0_1 = UISpec(
+    id="earth-area",
+    version="0.0.1",
+    name="Area and dates",
+    description="The area and the dates Terra searched, in the chat's title bar, read from its last scene search (search_earth_datagranules, show_scenes).",
+    emoji="🗺️",
+    octicon="location",
+    plugin="@datalayer/loop-plugin-earth-area",
+    folder="earth-area",
+    per=None,
+    contributions=UiContributionsSpec(
+        slots=["loop.chatHeader"],
+        points=[],
+        commands=[],
+    ),
+    contribution_points=[],
+    settings={},
+    renderers=[],
+    placements=["header", "footer"],
     catalog="",
     components=[],
 )
@@ -1656,7 +1748,8 @@ EARTH_INDEX_UI_0_0_1 = UISpec(
     ),
     contribution_points=[],
     settings={},
-    renderers=[],
+    renderers=["a2ui"],
+    placements=["message"],
     catalog="",
     components=[],
 )
@@ -1678,7 +1771,8 @@ EARTH_SCENES_UI_0_0_1 = UISpec(
     ),
     contribution_points=[],
     settings={},
-    renderers=[],
+    renderers=["a2ui"],
+    placements=["message"],
     catalog="",
     components=[],
 )
@@ -1701,6 +1795,7 @@ INPUT_PROMPT_UI_0_0_1 = UISpec(
     contribution_points=["loop.prompt.panel"],
     settings={},
     renderers=[],
+    placements=[],
     catalog="",
     components=[],
 )
@@ -1716,13 +1811,14 @@ LINKEDIN_LINK_UI_0_0_1 = UISpec(
     folder="linkedin-link",
     per=None,
     contributions=UiContributionsSpec(
-        slots=["loop.chatHeader"],
+        slots=["loop.chatBanner"],
         points=[],
         commands=[],
     ),
     contribution_points=[],
     settings={},
     renderers=[],
+    placements=["banner", "header"],
     catalog="",
     components=[],
 )
@@ -1744,7 +1840,8 @@ LINKEDIN_POST_PREVIEW_UI_0_0_1 = UISpec(
     ),
     contribution_points=[],
     settings={},
-    renderers=[],
+    renderers=["a2ui"],
+    placements=["message"],
     catalog="",
     components=[],
 )
@@ -1767,6 +1864,7 @@ MODELS_UI_0_0_1 = UISpec(
     contribution_points=[],
     settings={},
     renderers=[],
+    placements=[],
     catalog="",
     components=[],
 )
@@ -1789,6 +1887,7 @@ NOTEBOOK_TOOLBAR_UI_0_0_1 = UISpec(
     contribution_points=["loop.notebook.toolbar.item"],
     settings={},
     renderers=[],
+    placements=[],
     catalog="",
     components=[],
 )
@@ -1811,6 +1910,7 @@ NOTEBOOK_VIEW_UI_0_0_1 = UISpec(
     contribution_points=[],
     settings={},
     renderers=[],
+    placements=[],
     catalog="",
     components=[],
 )
@@ -1833,6 +1933,30 @@ NOTEBOOK_UI_0_0_1 = UISpec(
     contribution_points=["loop.notebook.opening", "loop.notebook.toolbar"],
     settings={},
     renderers=[],
+    placements=[],
+    catalog="",
+    components=[],
+)
+
+ODOO_CONTEXT_UI_0_0_1 = UISpec(
+    id="odoo-context",
+    version="0.0.1",
+    name="Odoo company and period",
+    description="The Odoo company the agent works in and the period it reads, in the chat's title bar, from what Odoo answered (odoo_get_context) and the balances it showed.",
+    emoji="🏢",
+    octicon="briefcase",
+    plugin="@datalayer/loop-plugin-odoo-context",
+    folder="odoo-context",
+    per=None,
+    contributions=UiContributionsSpec(
+        slots=["loop.chatHeader"],
+        points=[],
+        commands=[],
+    ),
+    contribution_points=[],
+    settings={},
+    renderers=[],
+    placements=["header", "footer"],
     catalog="",
     components=[],
 )
@@ -1917,6 +2041,7 @@ PAGE_LAYOUT_UI_0_0_1 = UISpec(
         },
     },
     renderers=[],
+    placements=[],
     catalog="",
     components=[],
 )
@@ -1939,6 +2064,7 @@ PAP_PURCHASE_UI_0_0_1 = UISpec(
     contribution_points=[],
     settings={},
     renderers=[],
+    placements=["message"],
     catalog="",
     components=[],
 )
@@ -1961,6 +2087,7 @@ PAP_SIGN_IN_UI_0_0_1 = UISpec(
     contribution_points=[],
     settings={},
     renderers=["mcp-ui"],
+    placements=["message"],
     catalog="",
     components=[],
 )
@@ -1982,7 +2109,8 @@ PRODUCT_COMPARISON_UI_0_0_1 = UISpec(
     ),
     contribution_points=[],
     settings={},
-    renderers=[],
+    renderers=["a2ui"],
+    placements=["message"],
     catalog="",
     components=[],
 )
@@ -2005,6 +2133,7 @@ PROMPT_UI_0_0_1 = UISpec(
     contribution_points=[],
     settings={},
     renderers=[],
+    placements=[],
     catalog="",
     components=[],
 )
@@ -2026,7 +2155,8 @@ SHOPPING_BASKET_UI_0_0_1 = UISpec(
     ),
     contribution_points=[],
     settings={},
-    renderers=[],
+    renderers=["a2ui"],
+    placements=["message"],
     catalog="",
     components=[],
 )
@@ -2042,13 +2172,14 @@ SOCIAL_ACCOUNTS_UI_0_0_1 = UISpec(
     folder="social-accounts",
     per=None,
     contributions=UiContributionsSpec(
-        slots=[],
-        points=["reactor.ui.renderer", "reactor.ui.toolBinding"],
+        slots=["loop.chatHeader"],
+        points=[],
         commands=[],
     ),
     contribution_points=[],
     settings={},
     renderers=[],
+    placements=["header", "message"],
     catalog="",
     components=[],
 )
@@ -2071,6 +2202,7 @@ SPREADSHEET_VIEW_UI_0_0_1 = UISpec(
     contribution_points=[],
     settings={},
     renderers=[],
+    placements=[],
     catalog="",
     components=[],
 )
@@ -2093,6 +2225,7 @@ SPREADSHEET_UI_0_0_1 = UISpec(
     contribution_points=[],
     settings={},
     renderers=[],
+    placements=[],
     catalog="",
     components=[],
 )
@@ -2115,6 +2248,7 @@ STRIPE_CHECKOUT_UI_0_0_1 = UISpec(
     contribution_points=[],
     settings={},
     renderers=["a2ui"],
+    placements=["message"],
     catalog="",
     components=[],
 )
@@ -2137,6 +2271,7 @@ SUBAGENT_ACTIVITY_UI_0_0_1 = UISpec(
     contribution_points=[],
     settings={},
     renderers=[],
+    placements=[],
     catalog="",
     components=[],
 )
@@ -2159,6 +2294,7 @@ TRIAL_BALANCE_UI_0_0_1 = UISpec(
     contribution_points=[],
     settings={},
     renderers=[],
+    placements=["message"],
     catalog="",
     components=[],
 )
@@ -2181,6 +2317,7 @@ TRIP_BUDGET_UI_0_0_1 = UISpec(
     contribution_points=[],
     settings={},
     renderers=[],
+    placements=["message"],
     catalog="",
     components=[],
 )
@@ -2203,6 +2340,7 @@ TRIP_ITINERARY_UI_0_0_1 = UISpec(
     contribution_points=[],
     settings={},
     renderers=[],
+    placements=["message"],
     catalog="",
     components=[],
 )
@@ -2224,7 +2362,31 @@ TRIP_OPTIONS_UI_0_0_1 = UISpec(
     ),
     contribution_points=[],
     settings={},
+    renderers=["a2ui"],
+    placements=["message"],
+    catalog="",
+    components=[],
+)
+
+TRIP_SUMMARY_UI_0_0_1 = UISpec(
+    id="trip-summary",
+    version="0.0.1",
+    name="Trip being planned",
+    description="The trip being planned, in the chat's title bar: where and when, and its budget so far, read from the trip the agent showed (show_itinerary, show_trip_options, show_trip_budget).",
+    emoji="🧭",
+    octicon="paper-airplane",
+    plugin="@datalayer/loop-plugin-trip-summary",
+    folder="trip-summary",
+    per=None,
+    contributions=UiContributionsSpec(
+        slots=["loop.chatHeader"],
+        points=[],
+        commands=[],
+    ),
+    contribution_points=[],
+    settings={},
     renderers=[],
+    placements=["header", "footer"],
     catalog="",
     components=[],
 )
@@ -2247,6 +2409,7 @@ VAT_SUMMARY_UI_0_0_1 = UISpec(
     contribution_points=[],
     settings={},
     renderers=[],
+    placements=["message"],
     catalog="",
     components=[],
 )
@@ -2269,6 +2432,7 @@ WINDOW_FRAME_UI_0_0_1 = UISpec(
     contribution_points=[],
     settings={},
     renderers=[],
+    placements=[],
     catalog="",
     components=[],
 )
@@ -2291,6 +2455,7 @@ X_BUDGET_UI_0_0_1 = UISpec(
     contribution_points=[],
     settings={},
     renderers=[],
+    placements=["header", "footer"],
     catalog="",
     components=[],
 )
@@ -2312,7 +2477,8 @@ X_POST_PREVIEW_UI_0_0_1 = UISpec(
     ),
     contribution_points=[],
     settings={},
-    renderers=[],
+    renderers=["a2ui"],
+    placements=["message"],
     catalog="",
     components=[],
 )
@@ -2332,8 +2498,10 @@ UI_CATALOGUE: Dict[str, UISpec] = {
     "app-elements": APP_ELEMENTS_UI_0_0_1,
     "app-page": APP_PAGE_UI_0_0_1,
     "app-rules": APP_RULES_UI_0_0_1,
+    "aws-savings-badge": AWS_SAVINGS_BADGE_UI_0_0_1,
     "aws-savings": AWS_SAVINGS_UI_0_0_1,
     "bank-reconciliation": BANK_RECONCILIATION_UI_0_0_1,
+    "basket-total": BASKET_TOTAL_UI_0_0_1,
     "bluesky-post-preview": BLUESKY_POST_PREVIEW_UI_0_0_1,
     "browser-session": BROWSER_SESSION_UI_0_0_1,
     "canvas-blocks": CANVAS_BLOCKS_UI_0_0_1,
@@ -2346,6 +2514,7 @@ UI_CATALOGUE: Dict[str, UISpec] = {
     "document-toolbar": DOCUMENT_TOOLBAR_UI_0_0_1,
     "document-view": DOCUMENT_VIEW_UI_0_0_1,
     "document": DOCUMENT_UI_0_0_1,
+    "earth-area": EARTH_AREA_UI_0_0_1,
     "earth-index": EARTH_INDEX_UI_0_0_1,
     "earth-scenes": EARTH_SCENES_UI_0_0_1,
     "input-prompt": INPUT_PROMPT_UI_0_0_1,
@@ -2355,6 +2524,7 @@ UI_CATALOGUE: Dict[str, UISpec] = {
     "notebook-toolbar": NOTEBOOK_TOOLBAR_UI_0_0_1,
     "notebook-view": NOTEBOOK_VIEW_UI_0_0_1,
     "notebook": NOTEBOOK_UI_0_0_1,
+    "odoo-context": ODOO_CONTEXT_UI_0_0_1,
     "page-layout": PAGE_LAYOUT_UI_0_0_1,
     "pap-purchase": PAP_PURCHASE_UI_0_0_1,
     "pap-sign-in": PAP_SIGN_IN_UI_0_0_1,
@@ -2370,6 +2540,7 @@ UI_CATALOGUE: Dict[str, UISpec] = {
     "trip-budget": TRIP_BUDGET_UI_0_0_1,
     "trip-itinerary": TRIP_ITINERARY_UI_0_0_1,
     "trip-options": TRIP_OPTIONS_UI_0_0_1,
+    "trip-summary": TRIP_SUMMARY_UI_0_0_1,
     "vat-summary": VAT_SUMMARY_UI_0_0_1,
     "window-frame": WINDOW_FRAME_UI_0_0_1,
     "x-budget": X_BUDGET_UI_0_0_1,

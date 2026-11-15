@@ -5,7 +5,7 @@
 
 /**
  * `@datalayer/loop-plugin-x-budget` — what is left of the person's X budget
- * today, in the chat's title bar (`LoopSlots.chatHeader`; `Chat`'s
+ * today, in the chat's title bar or under the prompt (its placement; `Chat`'s
  * `uiPlugins` with `x-budget` draws the same chip). It reads the Marketer's
  * `x-api-budget` guardrail back from the runtimes service and counts
  * nothing itself: the guardrail prices each X call and refuses one past the
@@ -14,32 +14,23 @@
  * @module apps/plugins/x-budget
  */
 
-import { definePlugin } from '@datalayer/reactor';
-import type { ReactorPlugin } from '@datalayer/reactor';
-import { LoopSlots } from '../../core';
-import { XBudgetSlot } from './XBudgetChip';
+import { defineChromePlugin } from '../../toolCards/chrome';
+import { XBudgetChip } from './XBudgetChip';
 
 export const X_BUDGET_PLUGIN_NAME = '@datalayer/loop-plugin-x-budget';
 
-export const XBudgetPlugin = definePlugin({
-  name: X_BUDGET_PLUGIN_NAME,
+/** The plugin for a placement: `header` (its default) or `footer`. */
+export const xBudgetPlugin = defineChromePlugin({
+  id: 'x-budget',
   displayName: 'X budget',
   description:
     'What is left of the person’s X budget today, read from the agent’s X budget guardrail.',
   octicon: 'meter',
   emoji: '\u{1F4B2}',
-  build() {
-    return {
-      components: [
-        {
-          slot: LoopSlots.chatHeader,
-          id: 'x-budget',
-          Component: XBudgetSlot as never,
-        },
-      ],
-    };
-  },
-}) as unknown as ReactorPlugin<Record<string, never>, unknown, unknown>;
+  Component: () => XBudgetChip({}),
+});
+
+export const XBudgetPlugin = xBudgetPlugin('header');
 
 export { XBudgetChip, XBudgetSlot, X_BUDGET_REFRESH_MS } from './XBudgetChip';
 export * from './xBudget';

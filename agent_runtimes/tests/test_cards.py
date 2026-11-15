@@ -132,4 +132,4 @@ def test_each_show_tool_is_a_catalogue_backend_tool_bringing_its_card():
         assert spec is not None, tool_id
         assert spec.runtime.method == method and spec.approval == "auto"
         assert callable(getattr(cards, method))
-        assert [choice.plugin for choice in spec.ui] == [plugin]
+        assert spec.ui[0].plugin == plugin

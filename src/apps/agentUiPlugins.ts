@@ -29,76 +29,146 @@
  * @module apps/agentUiPlugins
  */
 
+import type { ComponentType } from 'react';
 import type { PluginRef } from '@datalayer/reactor';
 import { AGENTSPECS } from '../specs/agents';
 import { getSkillSpec } from '../specs/skills';
+import { UI_CATALOGUE } from '../specs/ui';
 import type { UiChoice } from '../types/agentspecs';
+import {
+  CHROME_SLOTS,
+  isChromePlacement,
+  type ChromeComponentProps,
+  type ChromePlacement,
+  type UiPlacement,
+} from './toolCards/chrome';
 import { AwsSavingsPlugin } from './plugins/aws-savings';
+import {
+  AwsSavingsBadge,
+  awsSavingsBadgePlugin,
+} from './plugins/aws-savings-badge';
 import { BankReconciliationPlugin } from './plugins/bank-reconciliation';
+import { BasketTotalChip, basketTotalPlugin } from './plugins/basket-total';
 import { BlueskyPostPreviewPlugin } from './plugins/bluesky-post-preview';
+import { EarthAreaChip, earthAreaPlugin } from './plugins/earth-area';
 import { EarthIndexPlugin } from './plugins/earth-index';
 import { EarthScenesPlugin } from './plugins/earth-scenes';
-import { LinkedInLinkPlugin } from './plugins/linkedin-link';
+import {
+  LinkedInLinkButton,
+  linkedInLinkPlugin,
+} from './plugins/linkedin-link';
 import { LinkedInPostPreviewPlugin } from './plugins/linkedin-post-preview';
+import { OdooContextChip, odooContextPlugin } from './plugins/odoo-context';
 import { PapPurchasePlugin } from './plugins/pap-purchase';
 import { ProductComparisonPlugin } from './plugins/product-comparison';
 import { ShoppingBasketPlugin } from './plugins/shopping-basket';
-import { SocialAccountsPlugin } from './plugins/social-accounts';
+import {
+  SocialAccountsChips,
+  SocialAccountsMessagePlugin,
+  socialAccountsPlugin,
+} from './plugins/social-accounts';
 import { StripeCheckoutPlugin } from './plugins/stripe-checkout';
 import { TrialBalancePlugin } from './plugins/trial-balance';
 import { TripBudgetPlugin } from './plugins/trip-budget';
 import { TripItineraryPlugin } from './plugins/trip-itinerary';
 import { TripOptionsPlugin } from './plugins/trip-options';
+import { TripSummaryChip, tripSummaryPlugin } from './plugins/trip-summary';
 import { VatSummaryPlugin } from './plugins/vat-summary';
-import { XBudgetPlugin } from './plugins/x-budget';
+import { XBudgetChip } from './plugins/x-budget/XBudgetChip';
+import { xBudgetPlugin } from './plugins/x-budget';
 import { XPostPreviewPlugin } from './plugins/x-post-preview';
 
+export type { UiPlacement, ChromePlacement } from './toolCards/chrome';
+
 export type AgentUiPlugin = {
-  plugin: PluginRef;
   /** Whether it needs the person's own connection: kept from a visitor. */
   needsConnection: boolean;
+  /** Its card in the conversation, when it has one. */
+  message?: PluginRef;
+  /** Its plugin for a chrome placement, when it has one (a Loop workspace). */
+  chrome?: (placement: ChromePlacement) => PluginRef;
+  /** What it draws in the chat's chrome (`Chat`, outside a Loop workspace). */
+  Chrome?: ComponentType<ChromeComponentProps>;
 };
 
 /** Each agent UI plugin, by its UI spec's id. */
 export const AGENT_UI_PLUGINS: Readonly<Record<string, AgentUiPlugin>> = {
   // The Marketer.
-  'social-accounts': { plugin: SocialAccountsPlugin, needsConnection: true },
-  'x-budget': { plugin: XBudgetPlugin, needsConnection: true },
-  'x-post-preview': { plugin: XPostPreviewPlugin, needsConnection: true },
-  'bluesky-post-preview': {
-    plugin: BlueskyPostPreviewPlugin,
+  'social-accounts': {
     needsConnection: true,
+    chrome: socialAccountsPlugin,
+    Chrome: SocialAccountsChips,
+    message: SocialAccountsMessagePlugin,
+  },
+  'x-budget': {
+    needsConnection: true,
+    chrome: xBudgetPlugin,
+    Chrome: () => XBudgetChip({}),
+  },
+  'x-post-preview': { needsConnection: true, message: XPostPreviewPlugin },
+  'bluesky-post-preview': {
+    needsConnection: true,
+    message: BlueskyPostPreviewPlugin,
   },
   'linkedin-post-preview': {
-    plugin: LinkedInPostPreviewPlugin,
     needsConnection: true,
+    message: LinkedInPostPreviewPlugin,
   },
-  'linkedin-link': { plugin: LinkedInLinkPlugin, needsConnection: true },
-  // Stripe (test mode).
-  'stripe-checkout': { plugin: StripeCheckoutPlugin, needsConnection: true },
+  'linkedin-link': {
+    needsConnection: true,
+    chrome: linkedInLinkPlugin,
+    Chrome: () => LinkedInLinkButton({}),
+  },
   // The Shopper.
   'product-comparison': {
-    plugin: ProductComparisonPlugin,
     needsConnection: false,
+    message: ProductComparisonPlugin,
   },
-  'shopping-basket': { plugin: ShoppingBasketPlugin, needsConnection: false },
-  'pap-purchase': { plugin: PapPurchasePlugin, needsConnection: true },
+  'shopping-basket': { needsConnection: false, message: ShoppingBasketPlugin },
+  'basket-total': {
+    needsConnection: false,
+    chrome: basketTotalPlugin,
+    Chrome: BasketTotalChip,
+  },
+  'pap-purchase': { needsConnection: true, message: PapPurchasePlugin },
   // The Accountant.
   'bank-reconciliation': {
-    plugin: BankReconciliationPlugin,
     needsConnection: false,
+    message: BankReconciliationPlugin,
   },
-  'trial-balance': { plugin: TrialBalancePlugin, needsConnection: false },
-  'vat-summary': { plugin: VatSummaryPlugin, needsConnection: false },
+  'trial-balance': { needsConnection: false, message: TrialBalancePlugin },
+  'vat-summary': { needsConnection: false, message: VatSummaryPlugin },
+  'odoo-context': {
+    needsConnection: false,
+    chrome: odooContextPlugin,
+    Chrome: OdooContextChip,
+  },
   // The Voyager.
-  'trip-options': { plugin: TripOptionsPlugin, needsConnection: false },
-  'trip-itinerary': { plugin: TripItineraryPlugin, needsConnection: false },
-  'trip-budget': { plugin: TripBudgetPlugin, needsConnection: false },
+  'trip-options': { needsConnection: false, message: TripOptionsPlugin },
+  'trip-itinerary': { needsConnection: false, message: TripItineraryPlugin },
+  'trip-budget': { needsConnection: false, message: TripBudgetPlugin },
+  'trip-summary': {
+    needsConnection: false,
+    chrome: tripSummaryPlugin,
+    Chrome: TripSummaryChip,
+  },
   // Terra.
-  'earth-scenes': { plugin: EarthScenesPlugin, needsConnection: false },
-  'earth-index': { plugin: EarthIndexPlugin, needsConnection: false },
+  'earth-scenes': { needsConnection: false, message: EarthScenesPlugin },
+  'earth-index': { needsConnection: false, message: EarthIndexPlugin },
+  'earth-area': {
+    needsConnection: false,
+    chrome: earthAreaPlugin,
+    Chrome: EarthAreaChip,
+  },
   // The Steward for AWS.
-  'aws-savings': { plugin: AwsSavingsPlugin, needsConnection: false },
+  'aws-savings': { needsConnection: false, message: AwsSavingsPlugin },
+  'aws-savings-badge': {
+    needsConnection: false,
+    chrome: awsSavingsBadgePlugin,
+    Chrome: AwsSavingsBadge,
+  },
+  // Stripe (test mode).
+  'stripe-checkout': { needsConnection: true, message: StripeCheckoutPlugin },
 };
 
 /**
@@ -113,13 +183,21 @@ export const PRESET_UI = new Set([
   'browser-session',
 ]);
 
-/** Ids, each once, in the order first named. */
-function once(ids: Iterable<string>): string[] {
-  return [...new Set(ids)];
-}
+/** A UI the chat injects, where it goes. */
+export type AgentUiChoice = {
+  plugin: string;
+  placement: UiPlacement;
+  renderer?: string;
+};
 
-const pluginsOf = (choices: readonly UiChoice[] | undefined): string[] =>
-  (choices ?? []).map(choice => choice.plugin);
+/** Where a UI goes: its declaration's placement, else its spec's first, else a message. */
+export function placementOf(choice: UiChoice): UiPlacement {
+  return (
+    choice.placement ??
+    UI_CATALOGUE[choice.plugin]?.placements?.[0] ??
+    'message'
+  );
+}
 
 /** What the chat knows of the agent's components while it runs. */
 export type AgentUiComponents = {
@@ -134,16 +212,18 @@ export type AgentUiComponents = {
 const bare = (id: string): string => id.split(':')[0];
 
 /**
- * The chat's UI, by id (the user, 15 November 2026: "Add the ability for
- * the mcp and skills to define a list of ui that will also be injected"):
- * the agent's own `ui`, then the `ui` of each MCP server running, then that
- * of each skill enabled, then that of each backend tool it carries — each
- * once, in that order. An optional server or skill left out brings none.
+ * The chat's UI, each where it goes (the user, 15 November 2026: "Add the
+ * ability for the mcp and skills to define a list of ui that will also be
+ * injected", then "make sure ui can be used to be injected in the chat
+ * itself (toolbar, header...) or as chat message (a2ui)"): the agent's own
+ * `ui`, then the `ui` of each MCP server running, of each skill enabled, of
+ * each backend tool it carries — each plugin once, at the first placement
+ * named. An optional server or skill left out brings none.
  */
-export function agentUiIdsOf(
+export function agentUiChoicesOf(
   specId: string | undefined,
   components: AgentUiComponents = {},
-): string[] {
+): AgentUiChoice[] {
   // By its id, with or without its version (`worker-marketer:0.0.1`).
   const spec = specId
     ? (AGENTSPECS[specId] ?? AGENTSPECS[bare(specId)])
@@ -170,14 +250,34 @@ export function agentUiIdsOf(
       !leftOut.has(skill.id) &&
       (enabledSkills === undefined || enabledSkills.has(skill.id)),
   );
-  return once([
-    ...pluginsOf(spec.ui),
-    ...servers.flatMap(server => pluginsOf(server.ui)),
-    ...skills.flatMap(skill => pluginsOf(getSkillSpec(skill.id)?.ui)),
-    ...((spec.backendTools ?? []) as Array<{ ui?: UiChoice[] } | undefined>)
-      .filter(Boolean)
-      .flatMap(tool => pluginsOf(tool?.ui)),
-  ]);
+  const named: UiChoice[] = [
+    ...(spec.ui ?? []),
+    ...servers.flatMap(server => server.ui ?? []),
+    ...skills.flatMap(skill => getSkillSpec(skill.id)?.ui ?? []),
+    ...(spec.backendTools ?? []).filter(Boolean).flatMap(tool => tool.ui ?? []),
+  ];
+  const seen = new Set<string>();
+  const choices: AgentUiChoice[] = [];
+  for (const choice of named) {
+    if (seen.has(choice.plugin)) {
+      continue;
+    }
+    seen.add(choice.plugin);
+    choices.push({
+      plugin: choice.plugin,
+      placement: placementOf(choice),
+      ...(choice.renderer ? { renderer: choice.renderer } : {}),
+    });
+  }
+  return choices;
+}
+
+/** The chat's UI, by id, in order (`agentUiChoicesOf` without the placements). */
+export function agentUiIdsOf(
+  specId: string | undefined,
+  components: AgentUiComponents = {},
+): string[] {
+  return agentUiChoicesOf(specId, components).map(choice => choice.plugin);
 }
 
 /** The UI plugin ids of an agent spec: its own and its components'. */
@@ -185,28 +285,82 @@ export function uiPluginIdsOfSpec(specId: string | undefined): string[] {
   return agentUiIdsOf(specId);
 }
 
+const asChoice = (given: string | UiChoice | AgentUiChoice): AgentUiChoice =>
+  typeof given === 'string'
+    ? { plugin: given, placement: placementOf({ plugin: given }) }
+    : { ...given, placement: placementOf(given) };
+
 /**
- * The agent UI plugins among these ids, each once, in the order named; ids
- * the preset mounts anyway (`chat`, `a2ui-surface`…) or unknown are passed
- * over. For an anonymous visitor, only those that need no connection.
+ * The Reactor plugins of these UIs, each once, in the order named, each for
+ * its placement: a message UI's card plugin, a chrome UI's plugin in its
+ * placement's slot. Ids the preset mounts anyway (`chat`, `a2ui-surface`…),
+ * unknown, or placed where the chat has no slot (`panel`) are passed over.
+ * For an anonymous visitor, only those that need no connection.
  */
 export function agentUiPluginsFor(
-  ids: readonly string[] | undefined,
+  given: ReadonlyArray<string | UiChoice | AgentUiChoice> | undefined,
   options: { anonymous?: boolean } = {},
 ): PluginRef[] {
   const seen = new Set<string>();
   const plugins: PluginRef[] = [];
-  for (const id of ids ?? []) {
-    const entry = AGENT_UI_PLUGINS[id];
+  for (const choice of (given ?? []).map(asChoice)) {
+    const entry = AGENT_UI_PLUGINS[choice.plugin];
     if (
       !entry ||
-      seen.has(id) ||
+      seen.has(choice.plugin) ||
       (options.anonymous && entry.needsConnection)
     ) {
       continue;
     }
-    seen.add(id);
-    plugins.push(entry.plugin);
+    let plugin: PluginRef | undefined;
+    if (choice.placement === 'message') {
+      plugin = entry.message;
+    } else if (
+      isChromePlacement(choice.placement) &&
+      CHROME_SLOTS[choice.placement]
+    ) {
+      plugin = entry.chrome?.(choice.placement);
+    }
+    if (plugin) {
+      seen.add(choice.plugin);
+      plugins.push(plugin);
+    }
   }
   return plugins;
+}
+
+/** The chrome UIs of these choices, by placement, for a `Chat` to draw. */
+export function agentUiChromeOf(
+  given: ReadonlyArray<string | UiChoice | AgentUiChoice> | undefined,
+  options: { anonymous?: boolean } = {},
+): Record<ChromePlacement, string[]> {
+  const placed: Record<ChromePlacement, string[]> = {
+    header: [],
+    toolbar: [],
+    footer: [],
+    banner: [],
+    panel: [],
+  };
+  for (const choice of (given ?? []).map(asChoice)) {
+    if (!isChromePlacement(choice.placement)) {
+      continue;
+    }
+    const entry = AGENT_UI_PLUGINS[choice.plugin];
+    const preset = PRESET_UI.has(choice.plugin);
+    if (
+      (!entry?.Chrome && !preset) ||
+      (options.anonymous && (entry?.needsConnection ?? true))
+    ) {
+      continue;
+    }
+    if (!placed[choice.placement].includes(choice.plugin)) {
+      placed[choice.placement].push(choice.plugin);
+    }
+  }
+  return placed;
+}
+
+/** The plugin of a UI at its default placement: what its UI spec says it registers. */
+export function defaultPluginOf(id: string): PluginRef | undefined {
+  return agentUiPluginsFor([id])[0];
 }

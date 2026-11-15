@@ -836,6 +836,7 @@ function ChatBaseInner({
   renderMessageFooter,
   notebookToolSurfacesId,
   footerContent,
+  toolbarExtras,
   welcome,
   trailingContent,
   voice,
@@ -5310,8 +5311,9 @@ function ChatBaseInner({
   const inputToolbar = showInput ? (
     <InputPrompt
       footerExtras={
-        voiceRefused || voiceSayCaption ? (
+        voiceRefused || voiceSayCaption || toolbarExtras ? (
           <>
+            {toolbarExtras}
             {voiceSayCaption}
             {voiceRefused}
             {voiceControl}

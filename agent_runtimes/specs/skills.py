@@ -41,7 +41,7 @@ ACCOUNTING_SKILL_SPEC_0_0_1 = SkillSpec(
     emoji="🧮",
     enabled=True,
     ui=[
-        {"plugin": "bank-reconciliation"},
+        {"plugin": "bank-reconciliation", "renderer": "a2ui"},
         {"plugin": "trial-balance"},
         {"plugin": "vat-summary"},
     ],
@@ -137,7 +137,7 @@ FARE_AND_STAY_COMPARISON_SKILL_SPEC_0_0_1 = SkillSpec(
     icon="@primer/octicons-react:arrow-switch",
     emoji="⚖️",
     enabled=True,
-    ui=[{"plugin": "trip-options"}, {"plugin": "trip-budget"}],
+    ui=[{"plugin": "trip-options", "renderer": "a2ui"}, {"plugin": "trip-budget"}],
 )
 
 GITHUB_SKILL_SPEC_0_0_1 = SkillSpec(
@@ -276,7 +276,11 @@ TRAVEL_PLANNING_SKILL_SPEC_0_0_1 = SkillSpec(
     icon="@primer/octicons-react:milestone",
     emoji="🧭",
     enabled=True,
-    ui=[{"plugin": "trip-itinerary"}, {"plugin": "trip-budget"}],
+    ui=[
+        {"plugin": "trip-itinerary"},
+        {"plugin": "trip-budget"},
+        {"plugin": "trip-summary"},
+    ],
 )
 
 VIDEO_SKILL_SPEC_0_0_1 = SkillSpec(

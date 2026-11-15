@@ -1662,6 +1662,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const promptActions = useSlotComponents(LoopSlots.promptAction);
   // Same question for the chat's own title bar, which plugins may add to.
   const chatHeaderItems = useSlotComponents(LoopSlots.chatHeader);
+  // And for the band above the conversation (an agent's `banner` UI).
+  const chatBannerItems = useSlotComponents(LoopSlots.chatBanner);
 
   const footerAgents = useMemo<FooterAgent[]>(
     () =>
@@ -2738,8 +2740,19 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
               // its name (T-08); an agent's chat keeps its header as it is.
               headerContent={
                 // Not *Ready* with no runtime: the header says why instead.
-                presence && !noRuntime ? (
-                  <PresenceLine state={presenceNow} />
+                // Then the agent's `banner` UI, above the conversation.
+                (presence && !noRuntime) || chatBannerItems.length > 0 ? (
+                  <>
+                    {presence && !noRuntime ? (
+                      <PresenceLine state={presenceNow} />
+                    ) : null}
+                    {chatBannerItems.length > 0 ? (
+                      <ReactorSlot
+                        slot={LoopSlots.chatBanner}
+                        props={{ workspace }}
+                      />
+                    ) : null}
+                  </>
                 ) : undefined
               }
               emptyState={{

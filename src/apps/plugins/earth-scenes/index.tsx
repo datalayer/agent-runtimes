@@ -5,24 +5,22 @@
 
 /**
  * `@datalayer/loop-plugin-earth-scenes` — the satellite scenes Terra found,
- * by date: each with its collection, sensor and cloud cover as the catalogue
- * gave them, the area and the dates searched. Draws `show_scenes`.
+ * by date, as a message drawn by the A2UI renderer: each with its collection,
+ * sensor and cloud cover as the catalogue gave them, the area and the dates
+ * searched. Draws `show_scenes`.
  *
  * @module apps/plugins/earth-scenes
  */
 
 import type { JSX } from 'react';
-import { Link, Text } from '@primer/react';
-import { Box } from '@datalayer/primer-addons';
 import type { ToolCallRenderContext } from '../../../types/chat';
 import {
-  CardFrame,
   CardSkeleton,
-  CardTable,
   cardData,
   defineToolCardPlugin,
 } from '../../toolCards/kit';
-import { readEarthScenes, type EarthScene } from './read';
+import { A2uiCard, type CardSpec } from '../../toolCards/a2uiCard';
+import { readEarthScenes, type EarthScenes } from './read';
 
 export const EARTH_SCENES_PLUGIN_NAME = '@datalayer/loop-plugin-earth-scenes';
 
@@ -33,30 +31,39 @@ export const EARTH_SCENES_WORDS = {
     [area, period, maxCloud !== undefined ? `up to ${maxCloud}% cloud` : '']
       .filter(Boolean)
       .join(' · '),
-  cloud: (cover: number) => `${cover.toFixed(0)}% cloud cover`,
+  count: (count: number) => (count === 1 ? '1 scene' : `${count} scenes`),
 } as const;
 
-/** A bar as long as the cloud cover, the figure beside it. */
-function CloudBar({ cover }: { cover?: number }): JSX.Element | null {
-  if (cover === undefined) {
-    return null;
-  }
-  return (
-    <Box display="flex" alignItems="center" gap={1} justifyContent="flex-end">
-      <Box
-        width={48}
-        height={6}
-        bg="neutral.muted"
-        borderRadius={2}
-        overflow="hidden"
-        aria-label={EARTH_SCENES_WORDS.cloud(cover)}
-        role="img"
-      >
-        <Box width={`${cover}%`} height="100%" bg="fg.muted" />
-      </Box>
-      <Text sx={{ fontSize: 0, fontFamily: 'mono' }}>{cover.toFixed(0)}%</Text>
-    </Box>
+/** The scenes as an A2UI card: a table by date. */
+export function scenesCard(found: EarthScenes, id: string): CardSpec {
+  const searched = EARTH_SCENES_WORDS.searched(
+    found.area,
+    found.period,
+    found.maxCloud,
   );
+  return {
+    id: `scenes-${id}`,
+    title: EARTH_SCENES_WORDS.title,
+    captions: [
+      EARTH_SCENES_WORDS.count(found.scenes.length),
+      ...(searched ? [searched] : []),
+    ],
+    table: {
+      columns: ['Date', 'Collection', 'Sensor', 'Cloud cover'],
+      rows: found.scenes.map(scene => ({
+        Date: scene.date,
+        Collection: scene.collection,
+        Sensor: scene.sensor,
+        'Cloud cover':
+          scene.cloudCover === undefined
+            ? ''
+            : `${scene.cloudCover.toFixed(0)}%`,
+      })),
+    },
+    lines: found.scenes
+      .filter(scene => scene.url)
+      .map(scene => `[${scene.date} ${scene.collection}](${scene.url})`),
+  };
 }
 
 export function EarthScenesCard({
@@ -76,49 +83,7 @@ export function EarthScenesCard({
       <CardSkeleton label={EARTH_SCENES_WORDS.writing} />
     );
   }
-  const searched = EARTH_SCENES_WORDS.searched(
-    found.area,
-    found.period,
-    found.maxCloud,
-  );
-  return (
-    <CardFrame
-      title={EARTH_SCENES_WORDS.title}
-      subtitle={searched || undefined}
-    >
-      <CardTable<EarthScene>
-        caption={`${found.scenes.length} scenes`}
-        rows={found.scenes}
-        rowKey={row => row.id}
-        columns={[
-          {
-            key: 'date',
-            title: 'Date',
-            cell: row =>
-              row.url ? (
-                <Link href={row.url} target="_blank" rel="noreferrer">
-                  {row.date}
-                </Link>
-              ) : (
-                row.date
-              ),
-          },
-          {
-            key: 'collection',
-            title: 'Collection',
-            cell: row => row.collection,
-          },
-          { key: 'sensor', title: 'Sensor', cell: row => row.sensor },
-          {
-            key: 'cloud',
-            title: 'Cloud cover',
-            align: 'right',
-            cell: row => <CloudBar cover={row.cloudCover} />,
-          },
-        ]}
-      />
-    </CardFrame>
-  );
+  return <A2uiCard spec={scenesCard(found, context.toolCallId)} />;
 }
 
 export const EarthScenesPlugin = defineToolCardPlugin({

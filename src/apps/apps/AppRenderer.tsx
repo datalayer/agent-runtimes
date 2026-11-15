@@ -463,10 +463,9 @@ export function appPreset(
       // Its agent's own UI plugins, as its `ui` names them (the Marketer's
       // post previews, the Shopper's basket…): to a visitor, only those
       // that need no connection of theirs.
-      ...agentUiPluginsFor(
-        app.ui.map(choice => choice.plugin),
-        { anonymous: options.kept?.visitor ?? false },
-      ),
+      ...agentUiPluginsFor(app.ui, {
+        anonymous: options.kept?.visitor ?? false,
+      }),
     ],
     workspace: appLayoutOptions(app),
   };

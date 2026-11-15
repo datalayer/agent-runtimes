@@ -10,17 +10,18 @@
  * `x-post-preview`, `bluesky-post-preview` and `linkedin-post-preview`,
  * one plugin per network so that an agent declares only where it posts.
  *
- * The Approve and Reject stay the chat's (`defaultUI`): this card shows what
- * is approved, it never decides.
+ * Drawn by the A2UI renderer (`a2uiCard`). The Approve and Reject stay the
+ * chat's (`defaultUI`), under it: this card shows what is approved, it never
+ * decides.
  *
  * @module apps/toolCards/postPreview
  */
 
 import type { JSX } from 'react';
-import { Label, Link, Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import type { ToolCallRenderContext } from '../../types/chat';
 import { record, safeImage, safeUrl, words, wordsList } from './kit';
+import { A2uiCard, type CardSpec } from './a2uiCard';
 
 export type PostNetwork = 'x' | 'bluesky' | 'linkedin';
 
@@ -95,6 +96,33 @@ export function readPostPreview(
   };
 }
 
+/** The post as an A2UI card: what it says, how long, what it answers, where it went. */
+export function postPreviewCard(preview: PostPreview, id: string): CardSpec {
+  const limit = POST_LIMITS[preview.network];
+  const image = preview.images[0] ? safeImage(preview.images[0]) : '';
+  return {
+    id: `post-${id}`,
+    title: POST_PREVIEW_WORDS[preview.kind](limit.name),
+    captions: [
+      POST_PREVIEW_WORDS.length(preview.length, limit.chars),
+      ...(preview.answering
+        ? [`${POST_PREVIEW_WORDS.answering}: ${preview.answering}`]
+        : []),
+      ...(preview.images.length > 0
+        ? [POST_PREVIEW_WORDS.images(preview.images.length)]
+        : []),
+    ],
+    ...(image ? { image: { url: image, alt: '' } } : {}),
+    lines: [
+      preview.text,
+      ...(preview.tooLong ? [POST_PREVIEW_WORDS.tooLong(limit.chars)] : []),
+      ...(preview.postedUrl
+        ? [`[${POST_PREVIEW_WORDS.posted}](${preview.postedUrl})`]
+        : []),
+    ],
+  };
+}
+
 export function PostPreviewCard({
   network,
   context,
@@ -111,101 +139,12 @@ export function PostPreviewCard({
   if (!preview.text) {
     return <>{context.defaultUI}</>;
   }
-  const limit = POST_LIMITS[network];
-  const title = POST_PREVIEW_WORDS[preview.kind](limit.name);
   return (
-    <Box width="100%">
-      <Box
-        as="section"
-        aria-label={title}
-        my={2}
-        p={3}
-        border="1px solid"
-        borderColor="border.default"
-        borderRadius={2}
-        bg="canvas.default"
+    <Box width="100%" data-post-preview={network}>
+      <A2uiCard
+        spec={postPreviewCard(preview, context.toolCallId)}
         maxWidth={560}
-        data-post-preview={network}
-      >
-        <Box
-          display="flex"
-          alignItems="center"
-          justifyContent="space-between"
-          mb={2}
-          gap={2}
-        >
-          <Label>{title}</Label>
-          <Text
-            sx={{
-              fontSize: 0,
-              fontFamily: 'mono',
-              color: preview.tooLong ? 'danger.fg' : 'fg.muted',
-            }}
-          >
-            {POST_PREVIEW_WORDS.length(preview.length, limit.chars)}
-          </Text>
-        </Box>
-        {preview.answering ? (
-          <Text
-            as="div"
-            sx={{
-              fontSize: 0,
-              color: 'fg.muted',
-              mb: 1,
-              wordBreak: 'break-all',
-            }}
-          >
-            {POST_PREVIEW_WORDS.answering}: {preview.answering}
-          </Text>
-        ) : null}
-        <Text
-          as="p"
-          sx={{
-            m: 0,
-            fontSize: 1,
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word',
-          }}
-        >
-          {preview.text}
-        </Text>
-        {preview.images.length > 0 ? (
-          <Box display="flex" gap={1} mt={2} flexWrap="wrap">
-            {preview.images.slice(0, limit.images).map((image, index) => (
-              <Box
-                as="img"
-                key={index}
-                src={safeImage(image)}
-                alt=""
-                width={96}
-                height={96}
-                borderRadius={2}
-                sx={{ objectFit: 'cover' }}
-              />
-            ))}
-            <Text
-              sx={{ fontSize: 0, color: 'fg.muted', alignSelf: 'flex-end' }}
-            >
-              {POST_PREVIEW_WORDS.images(preview.images.length)}
-            </Text>
-          </Box>
-        ) : null}
-        {preview.tooLong ? (
-          <Text as="div" sx={{ mt: 2, fontSize: 0, color: 'danger.fg' }}>
-            {POST_PREVIEW_WORDS.tooLong(limit.chars)}
-          </Text>
-        ) : null}
-        {preview.postedUrl ? (
-          <Link
-            href={preview.postedUrl}
-            target="_blank"
-            rel="noreferrer"
-            sx={{ display: 'inline-block', mt: 2, fontSize: 1 }}
-          >
-            {POST_PREVIEW_WORDS.posted}
-          </Link>
-        ) : null}
-      </Box>
+      />
       {context.defaultUI}
     </Box>
   );

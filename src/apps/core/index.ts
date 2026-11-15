@@ -1265,6 +1265,12 @@ export const LoopSlots = {
    * before it draws anything, so an unfilled slot costs nothing.
    */
   chatHeader: 'loop.chatHeader',
+  /**
+   * Above the conversation, under the chat's title bar: a band, as the
+   * anonymous preview's box stands (the `banner` placement of an agent's UI,
+   * 15 November 2026: *Link LinkedIn in Settings*). Empty, nothing drawn.
+   */
+  chatBanner: 'loop.chatBanner',
   /** Buttons beside the prompt. */
   promptAction: 'loop.promptAction',
   /**

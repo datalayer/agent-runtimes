@@ -12,14 +12,19 @@
 
 // @vitest-environment jsdom
 import * as React from 'react';
-import { cleanup, fireEvent, render } from '@testing-library/react';
+import { act, cleanup, fireEvent, render } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ToolCallRenderContext } from '../../types/chat';
 import { ToolCardSendContext } from '../toolCards/kit';
 import { readPostPreview } from '../toolCards/postPreview';
 import { ShoppingBasketCard } from '../plugins/shopping-basket';
-import { BankReconciliationCard } from '../plugins/bank-reconciliation';
-import { TripOptionsCard } from '../plugins/trip-options';
+import {
+  APPROVE_MATCH_ACTION,
+  readReconciliation,
+  reconciliationCard,
+} from '../plugins/bank-reconciliation';
+import { readTripOptions, tripOptionsCard } from '../plugins/trip-options';
+import { cardMessages } from '../toolCards/a2uiCard';
 import { readItinerary } from '../plugins/trip-itinerary';
 import { readTripBudget } from '../plugins/trip-budget';
 import { readVatSummary } from '../plugins/vat-summary';
@@ -55,27 +60,33 @@ const contextOf = (
     defaultUI: <span data-testid="row">the chat's row</span>,
   }) as ToolCallRenderContext;
 
-describe('a card drawn from a tool call', () => {
-  it('draws the basket from what the agent passed, its total summed here', () => {
+describe('a message drawn by the A2UI renderer', () => {
+  it('draws the basket as an A2UI surface and sends Buy as the person’s turn', async () => {
+    const send = vi.fn(() => true);
     const view = render(
-      <ShoppingBasketCard
-        context={contextOf(
-          'show_basket',
-          {
+      <ToolCardSendContext.Provider value={send}>
+        <ShoppingBasketCard
+          context={contextOf('show_basket', {}, 'complete', {
+            shown: 'basket',
+            currency: 'USD',
+            shipping: 4,
             items: [
               { title: 'Boots', price: 80, quantity: 1 },
               { title: 'Socks', price: 5.5, quantity: 2 },
             ],
-            currency: 'USD',
-            shipping: 4,
-          },
-          'inProgress' as never,
-        )}
-      />,
+          })}
+        />
+      </ToolCardSendContext.Provider>,
     );
-    expect(
-      view.container.querySelector('[data-basket-total]')?.textContent,
-    ).toContain('USD 95.00');
+    expect(view.container.querySelector('[data-a2ui-card]')).toBeTruthy();
+    const buy = await view.findByRole('button', { name: 'Buy' });
+    expect(await view.findByText(/Total: USD 95\.00/)).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(buy);
+    });
+    expect((send.mock.calls[0] as unknown as [string])[0]).toContain(
+      'Buy this basket',
+    );
   });
 
   it('keeps the chat’s row for a refusal', () => {
@@ -92,58 +103,49 @@ describe('a card drawn from a tool call', () => {
     expect(view.getByTestId('row')).toBeTruthy();
   });
 
-  it('sends the matches the person approved as their next turn', () => {
-    const send = vi.fn(() => true);
-    const view = render(
-      <ToolCardSendContext.Provider value={send}>
-        <BankReconciliationCard
-          context={contextOf('show_reconciliation', {}, 'complete', {
-            shown: 'reconciliation',
-            currency: 'EUR',
-            lines: [
-              {
-                id: 'b1',
-                label: 'ACME',
-                amount: 120,
-                invoice: 'INV/1',
-                invoice_amount: 100,
-              },
-              { id: 'b2', label: 'Fee', amount: -5 },
-            ],
-          })}
-        />
-      </ToolCardSendContext.Provider>,
+  it('writes Approve per match, Choose per trip, and the savings, as A2UI', () => {
+    const reconciliation = reconciliationCard(
+      readReconciliation({
+        currency: 'EUR',
+        lines: [
+          {
+            id: 'b1',
+            label: 'ACME',
+            amount: 120,
+            invoice: 'INV/1',
+            invoice_amount: 100,
+          },
+          { id: 'b2', label: 'Fee', amount: -5 },
+        ],
+      }),
+      'c1',
+      { approve: true },
     );
-    fireEvent.click(view.getByLabelText('Approve ACME against INV/1'));
-    fireEvent.click(view.getByText('Approve 1 match'));
-    expect(send).toHaveBeenCalledTimes(1);
-    const sent = (send.mock.calls[0] as unknown as [string])[0];
-    expect(sent).toContain('a2ui-submission');
-    expect(sent).toContain('"approved": [\n      "b1"');
-    expect(view.getByText(/Sent: the agent reconciles/)).toBeTruthy();
-  });
-
-  it('offers three trips at most and sends the one chosen', () => {
-    const send = vi.fn(() => true);
-    const view = render(
-      <ToolCardSendContext.Provider value={send}>
-        <TripOptionsCard
-          context={contextOf('show_trip_options', {}, 'complete', {
-            shown: 'trip-options',
-            options: [1, 2, 3, 4].map(n => ({
-              id: `o${n}`,
-              title: `Trip ${n}`,
-              price: 100 * n,
-              currency: 'EUR',
-            })),
-          })}
-        />
-      </ToolCardSendContext.Provider>,
+    expect(
+      reconciliation.sections?.map(section => section.actions?.length),
+    ).toEqual([1, 0]);
+    expect(reconciliation.sections?.[0].actions?.[0]).toMatchObject({
+      name: APPROVE_MATCH_ACTION,
+      context: { line: 'b1', invoice: 'INV/1' },
+    });
+    const trips = tripOptionsCard(
+      readTripOptions({
+        options: [1, 2, 3, 4].map(n => ({ id: `o${n}`, title: `Trip ${n}` })),
+      }),
+      'c2',
+      { choose: true },
     );
-    expect(view.queryByText('Trip 4')).toBeNull();
-    fireEvent.click(view.getAllByText('Choose this one')[1]);
-    expect((send.mock.calls[0] as unknown as [string])[0]).toContain('Trip 2');
-    expect(view.getByText('Chosen')).toBeTruthy();
+    expect(trips.sections).toHaveLength(3);
+    expect(
+      tripOptionsCard(
+        readTripOptions({ options: [{ id: 'o1', title: 'Trip 1' }] }),
+        'c2',
+        { choose: true, chosen: 'o1' },
+      ).sections?.[0].actions,
+    ).toEqual([]);
+    const messages = JSON.stringify(cardMessages(reconciliation, 'catalog'));
+    expect(messages).toContain('"component":"Button"');
+    expect(messages).toContain(APPROVE_MATCH_ACTION);
   });
 });
 

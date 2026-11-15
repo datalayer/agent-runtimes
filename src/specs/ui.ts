@@ -32,6 +32,7 @@ export const A2UI_SURFACE_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: ['a2ui'],
+  placements: ['message'],
   catalog: 'a2ui/v0.9',
   components: [
     {
@@ -1121,6 +1122,7 @@ export const A2UI_VIEW_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: ['a2ui'],
+  placements: [],
   catalog: '',
   components: [],
 };
@@ -1142,6 +1144,7 @@ export const AGENTSPECS_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
+  placements: [],
   catalog: '',
   components: [],
 };
@@ -1165,6 +1168,7 @@ export const APP_ACTIVITY_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
+  placements: [],
   catalog: '',
   components: [],
 };
@@ -1188,6 +1192,7 @@ export const APP_COMPONENTS_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: ['a2ui'],
+  placements: [],
   catalog: '',
   components: [],
 };
@@ -1211,6 +1216,7 @@ export const APP_COMPUTER_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
+  placements: [],
   catalog: '',
   components: [],
 };
@@ -1233,6 +1239,7 @@ export const APP_ELEMENTS_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: ['a2ui'],
+  placements: [],
   catalog: '',
   components: [],
 };
@@ -1255,6 +1262,7 @@ export const APP_PAGE_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: ['a2ui', 'mcp-apps'],
+  placements: [],
   catalog: '',
   components: [],
 };
@@ -1278,6 +1286,30 @@ export const APP_RULES_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
+  placements: [],
+  catalog: '',
+  components: [],
+};
+
+export const AWS_SAVINGS_BADGE_UI_0_0_1: UISpec = {
+  id: 'aws-savings-badge',
+  version: '0.0.1',
+  name: 'Savings found',
+  description:
+    "This session's estimated monthly savings and the AWS account they were found in, in the chat's title bar, read from the recommendations recorded (record_recommendation, list_recommendations).",
+  emoji: '💸',
+  octicon: 'graph',
+  plugin: '@datalayer/loop-plugin-aws-savings-badge',
+  folder: 'aws-savings-badge',
+  contributions: {
+    slots: ['loop.chatHeader'],
+    points: [],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  placements: ['header', 'footer'],
   catalog: '',
   components: [],
 };
@@ -1299,7 +1331,8 @@ export const AWS_SAVINGS_UI_0_0_1: UISpec = {
   },
   contributionPoints: [],
   settings: {},
-  renderers: [],
+  renderers: ['a2ui'],
+  placements: ['message'],
   catalog: '',
   components: [],
 };
@@ -1321,7 +1354,31 @@ export const BANK_RECONCILIATION_UI_0_0_1: UISpec = {
   },
   contributionPoints: [],
   settings: {},
+  renderers: ['a2ui'],
+  placements: ['message'],
+  catalog: '',
+  components: [],
+};
+
+export const BASKET_TOTAL_UI_0_0_1: UISpec = {
+  id: 'basket-total',
+  version: '0.0.1',
+  name: 'Basket total',
+  description:
+    "The basket the agent is putting together, in the chat's title bar: how many items and its total, read from the last basket it showed (show_basket).",
+  emoji: '🛒',
+  octicon: 'package',
+  plugin: '@datalayer/loop-plugin-basket-total',
+  folder: 'basket-total',
+  contributions: {
+    slots: ['loop.chatHeader'],
+    points: [],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
   renderers: [],
+  placements: ['header', 'footer'],
   catalog: '',
   components: [],
 };
@@ -1343,7 +1400,8 @@ export const BLUESKY_POST_PREVIEW_UI_0_0_1: UISpec = {
   },
   contributionPoints: [],
   settings: {},
-  renderers: [],
+  renderers: ['a2ui'],
+  placements: ['message'],
   catalog: '',
   components: [],
 };
@@ -1366,6 +1424,7 @@ export const BROWSER_SESSION_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
+  placements: ['header'],
   catalog: '',
   components: [],
 };
@@ -1389,6 +1448,7 @@ export const CANVAS_BLOCKS_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
+  placements: [],
   catalog: '',
   components: [],
 };
@@ -1412,6 +1472,7 @@ export const CANVAS_PARTS_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
+  placements: [],
   catalog: '',
   components: [],
 };
@@ -1434,6 +1495,7 @@ export const CHAT_EXTRAS_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
+  placements: [],
   catalog: '',
   components: [],
 };
@@ -1456,6 +1518,7 @@ export const CHAT_HEADER_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
+  placements: [],
   catalog: '',
   components: [],
 };
@@ -1477,6 +1540,7 @@ export const CHAT_VIEW_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
+  placements: [],
   catalog: '',
   components: [],
 };
@@ -1597,6 +1661,7 @@ export const CHAT_UI_0_0_1: UISpec = {
     },
   },
   renderers: [],
+  placements: [],
   catalog: '',
   components: [],
 };
@@ -1618,6 +1683,7 @@ export const COMMANDS_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
+  placements: [],
   catalog: '',
   components: [],
 };
@@ -1639,6 +1705,7 @@ export const DOCUMENT_TOOLBAR_UI_0_0_1: UISpec = {
   contributionPoints: ['loop.document.toolbar.item'],
   settings: {},
   renderers: [],
+  placements: [],
   catalog: '',
   components: [],
 };
@@ -1660,6 +1727,7 @@ export const DOCUMENT_VIEW_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
+  placements: [],
   catalog: '',
   components: [],
 };
@@ -1681,6 +1749,30 @@ export const DOCUMENT_UI_0_0_1: UISpec = {
   contributionPoints: ['loop.document.opening', 'loop.document.toolbar'],
   settings: {},
   renderers: [],
+  placements: [],
+  catalog: '',
+  components: [],
+};
+
+export const EARTH_AREA_UI_0_0_1: UISpec = {
+  id: 'earth-area',
+  version: '0.0.1',
+  name: 'Area and dates',
+  description:
+    "The area and the dates Terra searched, in the chat's title bar, read from its last scene search (search_earth_datagranules, show_scenes).",
+  emoji: '🗺️',
+  octicon: 'location',
+  plugin: '@datalayer/loop-plugin-earth-area',
+  folder: 'earth-area',
+  contributions: {
+    slots: ['loop.chatHeader'],
+    points: [],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  placements: ['header', 'footer'],
   catalog: '',
   components: [],
 };
@@ -1702,7 +1794,8 @@ export const EARTH_INDEX_UI_0_0_1: UISpec = {
   },
   contributionPoints: [],
   settings: {},
-  renderers: [],
+  renderers: ['a2ui'],
+  placements: ['message'],
   catalog: '',
   components: [],
 };
@@ -1724,7 +1817,8 @@ export const EARTH_SCENES_UI_0_0_1: UISpec = {
   },
   contributionPoints: [],
   settings: {},
-  renderers: [],
+  renderers: ['a2ui'],
+  placements: ['message'],
   catalog: '',
   components: [],
 };
@@ -1746,6 +1840,7 @@ export const INPUT_PROMPT_UI_0_0_1: UISpec = {
   contributionPoints: ['loop.prompt.panel'],
   settings: {},
   renderers: [],
+  placements: [],
   catalog: '',
   components: [],
 };
@@ -1761,13 +1856,14 @@ export const LINKEDIN_LINK_UI_0_0_1: UISpec = {
   plugin: '@datalayer/loop-plugin-linkedin-link',
   folder: 'linkedin-link',
   contributions: {
-    slots: ['loop.chatHeader'],
+    slots: ['loop.chatBanner'],
     points: [],
     commands: [],
   },
   contributionPoints: [],
   settings: {},
   renderers: [],
+  placements: ['banner', 'header'],
   catalog: '',
   components: [],
 };
@@ -1789,7 +1885,8 @@ export const LINKEDIN_POST_PREVIEW_UI_0_0_1: UISpec = {
   },
   contributionPoints: [],
   settings: {},
-  renderers: [],
+  renderers: ['a2ui'],
+  placements: ['message'],
   catalog: '',
   components: [],
 };
@@ -1811,6 +1908,7 @@ export const MODELS_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
+  placements: [],
   catalog: '',
   components: [],
 };
@@ -1832,6 +1930,7 @@ export const NOTEBOOK_TOOLBAR_UI_0_0_1: UISpec = {
   contributionPoints: ['loop.notebook.toolbar.item'],
   settings: {},
   renderers: [],
+  placements: [],
   catalog: '',
   components: [],
 };
@@ -1853,6 +1952,7 @@ export const NOTEBOOK_VIEW_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
+  placements: [],
   catalog: '',
   components: [],
 };
@@ -1874,6 +1974,30 @@ export const NOTEBOOK_UI_0_0_1: UISpec = {
   contributionPoints: ['loop.notebook.opening', 'loop.notebook.toolbar'],
   settings: {},
   renderers: [],
+  placements: [],
+  catalog: '',
+  components: [],
+};
+
+export const ODOO_CONTEXT_UI_0_0_1: UISpec = {
+  id: 'odoo-context',
+  version: '0.0.1',
+  name: 'Odoo company and period',
+  description:
+    "The Odoo company the agent works in and the period it reads, in the chat's title bar, from what Odoo answered (odoo_get_context) and the balances it showed.",
+  emoji: '🏢',
+  octicon: 'briefcase',
+  plugin: '@datalayer/loop-plugin-odoo-context',
+  folder: 'odoo-context',
+  contributions: {
+    slots: ['loop.chatHeader'],
+    points: [],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  placements: ['header', 'footer'],
   catalog: '',
   components: [],
 };
@@ -1963,6 +2087,7 @@ export const PAGE_LAYOUT_UI_0_0_1: UISpec = {
     },
   },
   renderers: [],
+  placements: [],
   catalog: '',
   components: [],
 };
@@ -1985,6 +2110,7 @@ export const PAP_PURCHASE_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
+  placements: ['message'],
   catalog: '',
   components: [],
 };
@@ -2007,6 +2133,7 @@ export const PAP_SIGN_IN_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: ['mcp-ui'],
+  placements: ['message'],
   catalog: '',
   components: [],
 };
@@ -2028,7 +2155,8 @@ export const PRODUCT_COMPARISON_UI_0_0_1: UISpec = {
   },
   contributionPoints: [],
   settings: {},
-  renderers: [],
+  renderers: ['a2ui'],
+  placements: ['message'],
   catalog: '',
   components: [],
 };
@@ -2051,6 +2179,7 @@ export const PROMPT_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
+  placements: [],
   catalog: '',
   components: [],
 };
@@ -2072,7 +2201,8 @@ export const SHOPPING_BASKET_UI_0_0_1: UISpec = {
   },
   contributionPoints: [],
   settings: {},
-  renderers: [],
+  renderers: ['a2ui'],
+  placements: ['message'],
   catalog: '',
   components: [],
 };
@@ -2088,13 +2218,14 @@ export const SOCIAL_ACCOUNTS_UI_0_0_1: UISpec = {
   plugin: '@datalayer/loop-plugin-social-accounts',
   folder: 'social-accounts',
   contributions: {
-    slots: [],
-    points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
+    slots: ['loop.chatHeader'],
+    points: [],
     commands: [],
   },
   contributionPoints: [],
   settings: {},
   renderers: [],
+  placements: ['header', 'message'],
   catalog: '',
   components: [],
 };
@@ -2117,6 +2248,7 @@ export const SPREADSHEET_VIEW_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
+  placements: [],
   catalog: '',
   components: [],
 };
@@ -2138,6 +2270,7 @@ export const SPREADSHEET_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
+  placements: [],
   catalog: '',
   components: [],
 };
@@ -2160,6 +2293,7 @@ export const STRIPE_CHECKOUT_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: ['a2ui'],
+  placements: ['message'],
   catalog: '',
   components: [],
 };
@@ -2182,6 +2316,7 @@ export const SUBAGENT_ACTIVITY_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
+  placements: [],
   catalog: '',
   components: [],
 };
@@ -2204,6 +2339,7 @@ export const TRIAL_BALANCE_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
+  placements: ['message'],
   catalog: '',
   components: [],
 };
@@ -2226,6 +2362,7 @@ export const TRIP_BUDGET_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
+  placements: ['message'],
   catalog: '',
   components: [],
 };
@@ -2248,6 +2385,7 @@ export const TRIP_ITINERARY_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
+  placements: ['message'],
   catalog: '',
   components: [],
 };
@@ -2269,7 +2407,31 @@ export const TRIP_OPTIONS_UI_0_0_1: UISpec = {
   },
   contributionPoints: [],
   settings: {},
+  renderers: ['a2ui'],
+  placements: ['message'],
+  catalog: '',
+  components: [],
+};
+
+export const TRIP_SUMMARY_UI_0_0_1: UISpec = {
+  id: 'trip-summary',
+  version: '0.0.1',
+  name: 'Trip being planned',
+  description:
+    "The trip being planned, in the chat's title bar: where and when, and its budget so far, read from the trip the agent showed (show_itinerary, show_trip_options, show_trip_budget).",
+  emoji: '🧭',
+  octicon: 'paper-airplane',
+  plugin: '@datalayer/loop-plugin-trip-summary',
+  folder: 'trip-summary',
+  contributions: {
+    slots: ['loop.chatHeader'],
+    points: [],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
   renderers: [],
+  placements: ['header', 'footer'],
   catalog: '',
   components: [],
 };
@@ -2292,6 +2454,7 @@ export const VAT_SUMMARY_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
+  placements: ['message'],
   catalog: '',
   components: [],
 };
@@ -2314,6 +2477,7 @@ export const WINDOW_FRAME_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
+  placements: [],
   catalog: '',
   components: [],
 };
@@ -2336,6 +2500,7 @@ export const X_BUDGET_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
+  placements: ['header', 'footer'],
   catalog: '',
   components: [],
 };
@@ -2357,7 +2522,8 @@ export const X_POST_PREVIEW_UI_0_0_1: UISpec = {
   },
   contributionPoints: [],
   settings: {},
-  renderers: [],
+  renderers: ['a2ui'],
+  placements: ['message'],
   catalog: '',
   components: [],
 };
@@ -2372,8 +2538,10 @@ export const UI_CATALOGUE: Record<string, UISpec> = {
   'app-elements': APP_ELEMENTS_UI_0_0_1,
   'app-page': APP_PAGE_UI_0_0_1,
   'app-rules': APP_RULES_UI_0_0_1,
+  'aws-savings-badge': AWS_SAVINGS_BADGE_UI_0_0_1,
   'aws-savings': AWS_SAVINGS_UI_0_0_1,
   'bank-reconciliation': BANK_RECONCILIATION_UI_0_0_1,
+  'basket-total': BASKET_TOTAL_UI_0_0_1,
   'bluesky-post-preview': BLUESKY_POST_PREVIEW_UI_0_0_1,
   'browser-session': BROWSER_SESSION_UI_0_0_1,
   'canvas-blocks': CANVAS_BLOCKS_UI_0_0_1,
@@ -2386,6 +2554,7 @@ export const UI_CATALOGUE: Record<string, UISpec> = {
   'document-toolbar': DOCUMENT_TOOLBAR_UI_0_0_1,
   'document-view': DOCUMENT_VIEW_UI_0_0_1,
   document: DOCUMENT_UI_0_0_1,
+  'earth-area': EARTH_AREA_UI_0_0_1,
   'earth-index': EARTH_INDEX_UI_0_0_1,
   'earth-scenes': EARTH_SCENES_UI_0_0_1,
   'input-prompt': INPUT_PROMPT_UI_0_0_1,
@@ -2395,6 +2564,7 @@ export const UI_CATALOGUE: Record<string, UISpec> = {
   'notebook-toolbar': NOTEBOOK_TOOLBAR_UI_0_0_1,
   'notebook-view': NOTEBOOK_VIEW_UI_0_0_1,
   notebook: NOTEBOOK_UI_0_0_1,
+  'odoo-context': ODOO_CONTEXT_UI_0_0_1,
   'page-layout': PAGE_LAYOUT_UI_0_0_1,
   'pap-purchase': PAP_PURCHASE_UI_0_0_1,
   'pap-sign-in': PAP_SIGN_IN_UI_0_0_1,
@@ -2410,6 +2580,7 @@ export const UI_CATALOGUE: Record<string, UISpec> = {
   'trip-budget': TRIP_BUDGET_UI_0_0_1,
   'trip-itinerary': TRIP_ITINERARY_UI_0_0_1,
   'trip-options': TRIP_OPTIONS_UI_0_0_1,
+  'trip-summary': TRIP_SUMMARY_UI_0_0_1,
   'vat-summary': VAT_SUMMARY_UI_0_0_1,
   'window-frame': WINDOW_FRAME_UI_0_0_1,
   'x-budget': X_BUDGET_UI_0_0_1,

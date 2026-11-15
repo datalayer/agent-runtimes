@@ -30,6 +30,7 @@ import {
   AgentUiPlatformContext,
   PlatformDisplay,
 } from '../../apps/toolCards/kit';
+import { ToolResultsContext } from '../../apps/toolCards/toolResults';
 import {
   resolveToolResult,
   type Display,
@@ -815,6 +816,12 @@ export function ChatMessageList({
   // A `Chat` given its agent's own UI plugins draws from their platform
   // (`apps/agentUiPlugins`); every other chat from the page's reactor.
   const agentUiPlatform = useContext(AgentUiPlatformContext);
+  // The calls answered, for the agent's UI in the chat's chrome to read
+  // (`apps/toolCards/toolResults`): the header chips say only what came back.
+  const toolResults = useContext(ToolResultsContext);
+  useEffect(() => {
+    toolResults.record(displayItems as never);
+  }, [toolResults, displayItems]);
   const pagePlatform = useOptionalReactorPlatform();
   const platform = agentUiPlatform ?? pagePlatform;
   useSyncExternalStore(

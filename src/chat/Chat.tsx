@@ -29,9 +29,19 @@ import { useConnectedIdentities } from '../identity';
 import { useOptionalReactorPlatform } from '@datalayer/reactor/react';
 import { buildReactorFromPlugins } from '@datalayer/reactor';
 import { AgentUiPlatformContext } from '../apps/toolCards/kit';
-import { agentUiIdsOf, agentUiPluginsFor } from '../apps/agentUiPlugins';
-import { XBudgetChip } from '../apps/plugins/x-budget/XBudgetChip';
-import { LinkedInLinkButton } from '../apps/plugins/linkedin-link';
+import {
+  AGENT_UI_PLUGINS,
+  agentUiChoicesOf,
+  agentUiChromeOf,
+  agentUiPluginsFor,
+  placementOf,
+  type AgentUiChoice,
+} from '../apps/agentUiPlugins';
+import type { ChromePlacement } from '../apps/toolCards/chrome';
+import {
+  ToolResultsContext,
+  ToolResultsStore,
+} from '../apps/toolCards/toolResults';
 import type {
   ChatBaseProps,
   ChatCommonProps,
@@ -807,54 +817,81 @@ export function Chat({
         .sort()
         .join(',')
     : undefined;
-  const uiPlugins = useMemo(
+  const uiChoices = useMemo<AgentUiChoice[]>(
     () =>
-      givenUiPlugins ??
-      agentUiIdsOf(uiAgentSpecId, {
-        running:
-          runningKey === undefined
-            ? undefined
-            : runningKey.split(',').filter(Boolean),
-      }),
+      givenUiPlugins
+        ? givenUiPlugins.map(plugin => ({
+            plugin,
+            placement: placementOf({ plugin }),
+          }))
+        : agentUiChoicesOf(uiAgentSpecId, {
+            running:
+              runningKey === undefined
+                ? undefined
+                : runningKey.split(',').filter(Boolean),
+          }),
     [givenUiPlugins, uiAgentSpecId, runningKey],
   );
-  const uiPluginsKey = uiPlugins.join(',');
+  const uiPluginsKey = uiChoices
+    .map(choice => `${choice.plugin}@${choice.placement}`)
+    .join(',');
+  // Where each chrome UI goes (`header`, `toolbar`, `footer`, `banner`).
+  const uiChrome = useMemo(
+    () => agentUiChromeOf(uiChoices, { anonymous: uiPluginsAnonymous }),
+    [uiChoices, uiPluginsAnonymous],
+  );
+  // This chat's answered calls, for its chrome to read.
+  const toolResults = useMemo(() => new ToolResultsStore(), []);
+  const chromeOf = (placement: ChromePlacement) => {
+    const ids = uiChrome[placement].filter(id => id !== 'browser-session');
+    return ids.length > 0 ? (
+      <Box
+        display="inline-flex"
+        alignItems="center"
+        gap={1}
+        flexWrap="wrap"
+        data-chat-ui-placement={placement}
+      >
+        {ids.map(id => {
+          const Chrome = AGENT_UI_PLUGINS[id]?.Chrome;
+          return Chrome ? <Chrome key={id} placement={placement} /> : null;
+        })}
+      </Box>
+    ) : null;
+  };
   const sessionPlace = useMemo(
     () =>
-      (browserSessions ||
-        (!uiPluginsAnonymous && uiPlugins.includes('browser-session'))) &&
+      (browserSessions || uiChrome.header.includes('browser-session')) &&
       baseUrl
         ? {
             serverUrl: baseUrl,
             ...(authTokenProp ? { token: authTokenProp } : {}),
           }
         : undefined,
-    [browserSessions, uiPluginsAnonymous, uiPlugins, baseUrl, authTokenProp],
+    [browserSessions, uiChrome, baseUrl, authTokenProp],
   );
   /*
    * The agent's own UI plugins (`uiPlugins`), on a platform of this chat's:
    * built once per list, started so their renderers and bindings register.
    */
   const agentUiPlatform = useMemo(() => {
-    const plugins = agentUiPluginsFor(uiPlugins, {
-      anonymous: uiPluginsAnonymous,
-    });
+    // The message UIs: their cards drawn where their tools land.
+    const plugins = agentUiPluginsFor(
+      uiChoices.filter(choice => choice.placement === 'message'),
+      { anonymous: uiPluginsAnonymous },
+    );
     return plugins.length > 0 ? buildReactorFromPlugins(plugins) : null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uiPluginsKey, uiPluginsAnonymous]);
   useEffect(() => {
     void agentUiPlatform?.start();
   }, [agentUiPlatform]);
-  const xBudgetChip = !uiPluginsAnonymous && uiPlugins.includes('x-budget');
-  // *Link LinkedIn in Settings*, brought by the datalayer-social LinkedIn tools.
-  const linkedInLink =
-    !uiPluginsAnonymous && uiPlugins.includes('linkedin-link');
+  const headerChrome = chromeOf('header');
   const mergedHeaderActions = useMemo(
     () =>
-      menuDrawn || sessionPlace || xBudgetChip || linkedInLink ? (
+      menuDrawn || sessionPlace || headerChrome ? (
         <Box display="inline-flex" alignItems="center" gap={2}>
-          {xBudgetChip ? <XBudgetChip /> : null}
-          {linkedInLink ? <LinkedInLinkButton /> : null}
+          {headerChrome}
           {sessionPlace ? <BrowserSessionButton place={sessionPlace} /> : null}
           {headerActions}
           {menuDrawn ? (
@@ -871,8 +908,7 @@ export function Chat({
     [
       menuDrawn,
       sessionPlace,
-      xBudgetChip,
-      linkedInLink,
+      uiChrome,
       headerActions,
       threadId,
       chatThread?.id,
@@ -953,225 +989,238 @@ export function Chat({
   }
 
   return (
-    <AgentUiPlatformContext.Provider value={agentUiPlatform}>
-      <ThemeProvider>
-        <QueryClientProvider client={queryClient}>
-          <Box
-            className={className}
-            position="relative"
-            height={height}
-            bg="canvas.default"
-            display="flex"
-            flexDirection="column"
-          >
-            {/* Agent details view - shown/hidden via CSS to preserve chat state */}
+    <ToolResultsContext.Provider value={toolResults}>
+      <AgentUiPlatformContext.Provider value={agentUiPlatform}>
+        <ThemeProvider>
+          <QueryClientProvider client={queryClient}>
             <Box
-              display={showDetails ? 'flex' : 'none'}
+              className={className}
+              position="relative"
+              height={height}
+              bg="canvas.default"
+              display="flex"
               flexDirection="column"
-              height="100%"
             >
-              <AgentDetails
-                name={title || 'AI Agent'}
-                icon={brandIcon}
-                protocol={transportName}
-                url={protocolConfig?.endpoint || baseUrl}
-                messageCount={messageCount}
-                agentId={agentId}
-                apiBase={baseUrl}
-                identityProviders={identityProviders}
-                onIdentityConnect={onIdentityConnect}
-                onIdentityDisconnect={onIdentityDisconnect}
-                onBack={handleBackFromDetails}
-                mcpStatusData={mcpStatusData}
-                codemodeStatusData={codemodeStatusData}
-              />
-            </Box>
-            {/* Chat view - shown/hidden via CSS to preserve message state */}
-            <Box
-              display={showDetails ? 'none' : 'flex'}
-              flexDirection="column"
-              height="100%"
-            >
-              {/* Error banner for sandbox/connection issues */}
-              {errorBanner && (
-                <Box
-                  display="flex"
-                  alignItems="center"
-                  gap={2}
-                  px={3}
-                  py={2}
-                  bg={
-                    errorBanner.variant === 'warning'
-                      ? 'attention.subtle'
-                      : 'danger.subtle'
-                  }
-                  borderBottom="1px solid"
-                  borderColor={
-                    errorBanner.variant === 'warning'
-                      ? 'attention.muted'
-                      : 'danger.muted'
-                  }
-                >
-                  <AlertIcon
-                    size={16}
-                    fill={
+              {/* Agent details view - shown/hidden via CSS to preserve chat state */}
+              <Box
+                display={showDetails ? 'flex' : 'none'}
+                flexDirection="column"
+                height="100%"
+              >
+                <AgentDetails
+                  name={title || 'AI Agent'}
+                  icon={brandIcon}
+                  protocol={transportName}
+                  url={protocolConfig?.endpoint || baseUrl}
+                  messageCount={messageCount}
+                  agentId={agentId}
+                  apiBase={baseUrl}
+                  identityProviders={identityProviders}
+                  onIdentityConnect={onIdentityConnect}
+                  onIdentityDisconnect={onIdentityDisconnect}
+                  onBack={handleBackFromDetails}
+                  mcpStatusData={mcpStatusData}
+                  codemodeStatusData={codemodeStatusData}
+                />
+              </Box>
+              {/* Chat view - shown/hidden via CSS to preserve message state */}
+              <Box
+                display={showDetails ? 'none' : 'flex'}
+                flexDirection="column"
+                height="100%"
+              >
+                {/* Error banner for sandbox/connection issues */}
+                {errorBanner && (
+                  <Box
+                    display="flex"
+                    alignItems="center"
+                    gap={2}
+                    px={3}
+                    py={2}
+                    bg={
                       errorBanner.variant === 'warning'
-                        ? 'attention.fg'
-                        : 'danger.fg'
+                        ? 'attention.subtle'
+                        : 'danger.subtle'
                     }
-                  />
-                  <Text
-                    sx={{
-                      fontSize: 1,
-                      color:
+                    borderBottom="1px solid"
+                    borderColor={
+                      errorBanner.variant === 'warning'
+                        ? 'attention.muted'
+                        : 'danger.muted'
+                    }
+                  >
+                    <AlertIcon
+                      size={16}
+                      fill={
                         errorBanner.variant === 'warning'
                           ? 'attention.fg'
-                          : 'danger.fg',
-                      flex: 1,
-                    }}
+                          : 'danger.fg'
+                      }
+                    />
+                    <Text
+                      sx={{
+                        fontSize: 1,
+                        color:
+                          errorBanner.variant === 'warning'
+                            ? 'attention.fg'
+                            : 'danger.fg',
+                        flex: 1,
+                      }}
+                    >
+                      {errorBanner.message}
+                    </Text>
+                  </Box>
+                )}
+                {threadSaid || actionSaid ? (
+                  // What opening the thread, or a menu entry, said: a refusal
+                  // as the runtime said it, a swap's sentence — until dismissed.
+                  <Box
+                    display="flex"
+                    alignItems="center"
+                    gap={2}
+                    px={3}
+                    py={2}
+                    bg="attention.subtle"
+                    borderBottom="1px solid"
+                    borderColor="attention.muted"
+                    data-testid="chat-thread-said"
                   >
-                    {errorBanner.message}
-                  </Text>
-                </Box>
-              )}
-              {threadSaid || actionSaid ? (
-                // What opening the thread, or a menu entry, said: a refusal
-                // as the runtime said it, a swap's sentence — until dismissed.
-                <Box
-                  display="flex"
-                  alignItems="center"
-                  gap={2}
-                  px={3}
-                  py={2}
-                  bg="attention.subtle"
-                  borderBottom="1px solid"
-                  borderColor="attention.muted"
-                  data-testid="chat-thread-said"
-                >
-                  <Text sx={{ fontSize: 1, color: 'attention.fg', flex: 1 }}>
-                    {actionSaid || threadSaid}
-                  </Text>
-                  <Button
-                    size="small"
-                    variant="invisible"
-                    onClick={() => setActionSaid('')}
+                    <Text sx={{ fontSize: 1, color: 'attention.fg', flex: 1 }}>
+                      {actionSaid || threadSaid}
+                    </Text>
+                    <Button
+                      size="small"
+                      variant="invisible"
+                      onClick={() => setActionSaid('')}
+                    >
+                      Dismiss
+                    </Button>
+                  </Box>
+                ) : null}
+                {opening ? (
+                  <Text
+                    as="p"
+                    role="status"
+                    sx={{ m: 0, p: 3, fontSize: 1, color: 'fg.muted' }}
                   >
-                    Dismiss
-                  </Button>
-                </Box>
-              ) : null}
-              {opening ? (
-                <Text
-                  as="p"
-                  role="status"
-                  sx={{ m: 0, p: 3, fontSize: 1, color: 'fg.muted' }}
-                >
-                  {THREAD_WORDS.opening}
-                </Text>
-              ) : (
-                <ChatBase
-                  // Another thread is another conversation: remounted on its id.
-                  key={chatThread?.id ?? 'own'}
-                  thread={threadForBase}
-                  onSendReady={handleSendReady}
-                  onToolCallUpdate={onToolCallUpdate}
-                  title={title}
-                  subtitle={subtitle}
-                  brandIcon={brandIcon}
-                  showHeader={showHeader}
-                  protocol={protocolConfig}
-                  placeholder={placeholder}
-                  description={description}
-                  suggestions={suggestions}
-                  submitOnSuggestionClick={submitOnSuggestionClick}
-                  autoFocus={autoFocus}
-                  runtimeId={runtimeId}
-                  historyEndpoint={historyEndpoint}
-                  pendingPrompt={pendingPrompt}
-                  showInformation={showInformation}
-                  onInformationClick={handleInformationClick}
-                  headerContent={headerContent}
-                  headerActions={mergedHeaderActions}
-                  showModelSelector={showModelSelector}
-                  showToolsMenu={showToolsMenu}
-                  showInput={showInput}
-                  disableInputPrompt={disableInputPrompt}
-                  disabled={disabled}
-                  disableReason={disableReason}
-                  overlay={overlay}
-                  launching={launching}
-                  launchingMessage={launchingMessage}
-                  autoConnect={autoConnect}
-                  showSkillsMenu={showSkillsMenu}
-                  showTokenUsage={showTokenUsage}
-                  codemodeEnabled={codemodeEnabled}
-                  onToggleCodemode={onToggleCodemode}
-                  initialModel={initialModel}
-                  availableModels={availableModels}
-                  mcpServers={mcpServers}
-                  initialSkills={initialSkills}
-                  connectedIdentities={identitiesForChat}
-                  onNewChat={handleNewChat}
-                  onMessagesChange={handleMessagesChange}
-                  headerButtons={headerButtons}
-                  avatarConfig={avatarConfig}
-                  backgroundColor="canvas.default"
-                  focusTrigger={focusTrigger}
-                  chatViewMode={chatViewMode}
-                  onChatViewModeChange={onChatViewModeChange}
-                  frontendTools={frontendTools}
-                  enableEphemeralNotebook={enableEphemeralNotebook}
-                  initialEphemeralNotebookOpen={initialEphemeralNotebookOpen}
-                  onEphemeralNotebookOpenChange={onEphemeralNotebookOpenChange}
-                  enableEphemeralDocument={enableEphemeralDocument}
-                  initialEphemeralSurfaceMode={initialEphemeralSurfaceMode}
-                  onEphemeralSurfaceModeChange={onEphemeralSurfaceModeChange}
-                  collapsed={collapsed}
-                  onExpandFromCollapsed={onExpandFromCollapsed}
-                  ephemeralNotebookToolbar={ephemeralNotebookToolbar}
-                  ephemeralNotebookToolbarExtraItems={
-                    ephemeralNotebookToolbarExtraItems
-                  }
-                  ephemeralDocumentToolbarExtraItems={
-                    ephemeralDocumentToolbarExtraItems
-                  }
-                  ephemeralNotebookCollaborationProvider={
-                    ephemeralNotebookCollaborationProvider
-                  }
-                  ephemeralNotebookCollaborationDocumentId={
-                    ephemeralNotebookCollaborationDocumentId
-                  }
-                  ephemeralDocumentCollaboration={
-                    ephemeralDocumentCollaboration
-                  }
-                  ephemeralRuntimeOverride={ephemeralRuntimeOverride}
-                  onToolCallStart={onToolCallStart}
-                  onToolCallComplete={onToolCallComplete}
-                  hideMessagesAfterToolUI={hideMessagesAfterToolUI}
-                  contextSnapshot={contextSnapshot}
-                  mcpStatusData={mcpStatusData}
-                  sandboxStatusData={sandboxStatusData}
-                  kernel={kernel}
-                  kernelIndicatorPlacement={kernelIndicatorPlacement}
-                  kernelIndicatorPosition={kernelIndicatorPosition}
-                  kernelEnvironmentName={kernelEnvironmentName}
-                  kernelCpu={kernelCpu}
-                  kernelMemory={kernelMemory}
-                  kernelGpu={kernelGpu}
-                  themeVariant={themeVariant}
-                  colorMode={colorMode}
-                  showToolApprovalBanner={showToolApprovalBanner}
-                  pendingApprovals={pendingApprovals}
-                  onApproveApproval={onApproveApproval}
-                  onRejectApproval={onRejectApproval}
-                  disableInternalJupyterTheme={disableInternalJupyterTheme}
-                />
-              )}
+                    {THREAD_WORDS.opening}
+                  </Text>
+                ) : (
+                  <ChatBase
+                    // Another thread is another conversation: remounted on its id.
+                    key={chatThread?.id ?? 'own'}
+                    thread={threadForBase}
+                    onSendReady={handleSendReady}
+                    onToolCallUpdate={onToolCallUpdate}
+                    title={title}
+                    subtitle={subtitle}
+                    brandIcon={brandIcon}
+                    showHeader={showHeader}
+                    protocol={protocolConfig}
+                    placeholder={placeholder}
+                    description={description}
+                    suggestions={suggestions}
+                    submitOnSuggestionClick={submitOnSuggestionClick}
+                    autoFocus={autoFocus}
+                    runtimeId={runtimeId}
+                    historyEndpoint={historyEndpoint}
+                    pendingPrompt={pendingPrompt}
+                    showInformation={showInformation}
+                    onInformationClick={handleInformationClick}
+                    headerContent={
+                      headerContent || uiChrome.banner.length > 0 ? (
+                        <>
+                          {headerContent}
+                          {chromeOf('banner')}
+                        </>
+                      ) : undefined
+                    }
+                    footerContent={chromeOf('footer') ?? undefined}
+                    toolbarExtras={chromeOf('toolbar') ?? undefined}
+                    headerActions={mergedHeaderActions}
+                    showModelSelector={showModelSelector}
+                    showToolsMenu={showToolsMenu}
+                    showInput={showInput}
+                    disableInputPrompt={disableInputPrompt}
+                    disabled={disabled}
+                    disableReason={disableReason}
+                    overlay={overlay}
+                    launching={launching}
+                    launchingMessage={launchingMessage}
+                    autoConnect={autoConnect}
+                    showSkillsMenu={showSkillsMenu}
+                    showTokenUsage={showTokenUsage}
+                    codemodeEnabled={codemodeEnabled}
+                    onToggleCodemode={onToggleCodemode}
+                    initialModel={initialModel}
+                    availableModels={availableModels}
+                    mcpServers={mcpServers}
+                    initialSkills={initialSkills}
+                    connectedIdentities={identitiesForChat}
+                    onNewChat={handleNewChat}
+                    onMessagesChange={handleMessagesChange}
+                    headerButtons={headerButtons}
+                    avatarConfig={avatarConfig}
+                    backgroundColor="canvas.default"
+                    focusTrigger={focusTrigger}
+                    chatViewMode={chatViewMode}
+                    onChatViewModeChange={onChatViewModeChange}
+                    frontendTools={frontendTools}
+                    enableEphemeralNotebook={enableEphemeralNotebook}
+                    initialEphemeralNotebookOpen={initialEphemeralNotebookOpen}
+                    onEphemeralNotebookOpenChange={
+                      onEphemeralNotebookOpenChange
+                    }
+                    enableEphemeralDocument={enableEphemeralDocument}
+                    initialEphemeralSurfaceMode={initialEphemeralSurfaceMode}
+                    onEphemeralSurfaceModeChange={onEphemeralSurfaceModeChange}
+                    collapsed={collapsed}
+                    onExpandFromCollapsed={onExpandFromCollapsed}
+                    ephemeralNotebookToolbar={ephemeralNotebookToolbar}
+                    ephemeralNotebookToolbarExtraItems={
+                      ephemeralNotebookToolbarExtraItems
+                    }
+                    ephemeralDocumentToolbarExtraItems={
+                      ephemeralDocumentToolbarExtraItems
+                    }
+                    ephemeralNotebookCollaborationProvider={
+                      ephemeralNotebookCollaborationProvider
+                    }
+                    ephemeralNotebookCollaborationDocumentId={
+                      ephemeralNotebookCollaborationDocumentId
+                    }
+                    ephemeralDocumentCollaboration={
+                      ephemeralDocumentCollaboration
+                    }
+                    ephemeralRuntimeOverride={ephemeralRuntimeOverride}
+                    onToolCallStart={onToolCallStart}
+                    onToolCallComplete={onToolCallComplete}
+                    hideMessagesAfterToolUI={hideMessagesAfterToolUI}
+                    contextSnapshot={contextSnapshot}
+                    mcpStatusData={mcpStatusData}
+                    sandboxStatusData={sandboxStatusData}
+                    kernel={kernel}
+                    kernelIndicatorPlacement={kernelIndicatorPlacement}
+                    kernelIndicatorPosition={kernelIndicatorPosition}
+                    kernelEnvironmentName={kernelEnvironmentName}
+                    kernelCpu={kernelCpu}
+                    kernelMemory={kernelMemory}
+                    kernelGpu={kernelGpu}
+                    themeVariant={themeVariant}
+                    colorMode={colorMode}
+                    showToolApprovalBanner={showToolApprovalBanner}
+                    pendingApprovals={pendingApprovals}
+                    onApproveApproval={onApproveApproval}
+                    onRejectApproval={onRejectApproval}
+                    disableInternalJupyterTheme={disableInternalJupyterTheme}
+                  />
+                )}
+              </Box>
             </Box>
-          </Box>
-        </QueryClientProvider>
-      </ThemeProvider>
-    </AgentUiPlatformContext.Provider>
+          </QueryClientProvider>
+        </ThemeProvider>
+      </AgentUiPlatformContext.Provider>
+    </ToolResultsContext.Provider>
   );
 }
 

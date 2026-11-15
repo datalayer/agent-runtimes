@@ -4,28 +4,31 @@
  */
 
 /**
- * `@datalayer/loop-plugin-shopping-basket` — the Shopper's basket: each item
- * with its seller, quantity and price, the shipping, the total summed here,
- * and the seller's checkout when there is no connection to buy through.
- * Draws `show_basket`. Nothing is bought from it: a purchase is approved on
- * the company's own terms (`pap-purchase`).
+ * `@datalayer/loop-plugin-shopping-basket` — the Shopper's basket, as a
+ * message drawn by the A2UI renderer: each item with its seller, quantity
+ * and price, the shipping, the total summed here. **Buy** sends *buy this
+ * basket* as the person's next turn: the agent then proposes the purchase at
+ * the company, which is approved on its exact terms (`pap-purchase`), or
+ * gives the seller's checkout. Nothing is bought from the card itself.
+ * Draws `show_basket`.
  *
  * @module apps/plugins/shopping-basket
  */
 
 import type { JSX } from 'react';
-import { Box } from '@datalayer/primer-addons';
-import { Link, Text } from '@primer/react';
+import { useState } from 'react';
+import type { A2uiClientAction } from '@a2ui/web_core/v0_9';
 import type { ToolCallRenderContext } from '../../../types/chat';
 import {
-  CardFrame,
   CardSkeleton,
-  CardTable,
   cardData,
   defineToolCardPlugin,
   money,
+  submitCard,
+  useToolCardSend,
 } from '../../toolCards/kit';
-import { readBasket, type BasketItem } from './read';
+import { A2uiCard, type CardSpec } from '../../toolCards/a2uiCard';
+import { readBasket, type Basket } from './read';
 
 export const SHOPPING_BASKET_PLUGIN_NAME =
   '@datalayer/loop-plugin-shopping-basket';
@@ -39,13 +42,70 @@ export const SHOPPING_BASKET_WORDS = {
   nothingBought:
     'Nothing is bought until you approve the exact purchase: the items, the seller and the total.',
   checkout: 'Pay at the seller’s checkout',
+  buy: 'Buy',
+  asked: 'Asked: approve the purchase when the agent shows it.',
+  form: 'Buy this basket',
 } as const;
+
+/** The action **Buy** sends. */
+export const BUY_ACTION = 'buy_basket';
+
+/** The basket as an A2UI card. */
+export function basketCard(
+  basket: Basket,
+  id: string,
+  options: { buy?: boolean; asked?: boolean } = {},
+): CardSpec {
+  const { currency } = basket;
+  return {
+    id: `basket-${id}`,
+    title: SHOPPING_BASKET_WORDS.title,
+    captions: basket.note ? [basket.note] : [],
+    table: {
+      columns: ['Item', 'Qty', 'Price'],
+      rows: basket.items.map(item => ({
+        Item: [item.title, item.variant, item.seller]
+          .filter(Boolean)
+          .join(' · '),
+        Qty: String(item.quantity),
+        Price: money(item.price, currency),
+      })),
+    },
+    lines: [
+      ...(basket.shipping !== undefined
+        ? [
+            `${SHOPPING_BASKET_WORDS.shipping}: ${money(basket.shipping, currency)}`,
+          ]
+        : []),
+      `**${SHOPPING_BASKET_WORDS.total}: ${money(basket.total, currency)}**`,
+      ...(basket.partial ? [SHOPPING_BASKET_WORDS.partial] : []),
+      options.asked
+        ? SHOPPING_BASKET_WORDS.asked
+        : SHOPPING_BASKET_WORDS.nothingBought,
+      ...(basket.checkoutUrl
+        ? [`[${SHOPPING_BASKET_WORDS.checkout}](${basket.checkoutUrl})`]
+        : []),
+    ],
+    actions:
+      options.buy && !options.asked
+        ? [
+            {
+              name: BUY_ACTION,
+              label: SHOPPING_BASKET_WORDS.buy,
+              primary: true,
+            },
+          ]
+        : [],
+  };
+}
 
 export function ShoppingBasketCard({
   context,
 }: {
   context: ToolCallRenderContext;
 }): JSX.Element {
+  const send = useToolCardSend();
+  const [asked, setAsked] = useState(false);
   const read = cardData(context);
   if (!read) {
     return <>{context.defaultUI}</>;
@@ -58,81 +118,27 @@ export function ShoppingBasketCard({
       <CardSkeleton label={SHOPPING_BASKET_WORDS.writing} />
     );
   }
-  const { currency } = basket;
+  const onAction = (action: A2uiClientAction) => {
+    if (action.name === BUY_ACTION && send) {
+      setAsked(
+        submitCard(send, {
+          title: SHOPPING_BASKET_WORDS.form,
+          values: {
+            items: basket.items.map(item => `${item.quantity} × ${item.title}`),
+            total: money(basket.total, basket.currency),
+          },
+        }),
+      );
+    }
+  };
   return (
-    <CardFrame
-      title={SHOPPING_BASKET_WORDS.title}
-      subtitle={basket.note || undefined}
-    >
-      <CardTable<BasketItem>
-        caption={`${basket.items.length} items`}
-        rows={basket.items}
-        rowKey={(row, index) => `${row.title}-${index}`}
-        columns={[
-          {
-            key: 'title',
-            title: 'Item',
-            cell: row => (
-              <>
-                {row.url ? (
-                  <Link href={row.url} target="_blank" rel="noreferrer">
-                    {row.title}
-                  </Link>
-                ) : (
-                  row.title
-                )}
-                {row.variant || row.seller ? (
-                  <Text as="div" sx={{ color: 'fg.muted', fontSize: 0 }}>
-                    {[row.variant, row.seller].filter(Boolean).join(' · ')}
-                  </Text>
-                ) : null}
-              </>
-            ),
-          },
-          {
-            key: 'quantity',
-            title: 'Qty',
-            align: 'right',
-            cell: row => row.quantity,
-          },
-          {
-            key: 'price',
-            title: 'Price',
-            align: 'right',
-            cell: row => money(row.price, currency),
-          },
-        ]}
-      />
-      <Box
-        display="flex"
-        justifyContent="flex-end"
-        flexDirection="column"
-        alignItems="flex-end"
-        mt={2}
-      >
-        {basket.shipping !== undefined ? (
-          <Text sx={{ fontSize: 1 }}>
-            {SHOPPING_BASKET_WORDS.shipping}: {money(basket.shipping, currency)}
-          </Text>
-        ) : null}
-        <Text sx={{ fontSize: 2, fontWeight: 'bold' }} data-basket-total>
-          {SHOPPING_BASKET_WORDS.total}: {money(basket.total, currency)}
-        </Text>
-        {basket.partial ? (
-          <Text sx={{ fontSize: 0, color: 'attention.fg' }}>
-            {SHOPPING_BASKET_WORDS.partial}
-          </Text>
-        ) : null}
-      </Box>
-      <Text as="p" sx={{ mt: 2, mb: 0, fontSize: 0, color: 'fg.muted' }}>
-        {SHOPPING_BASKET_WORDS.nothingBought}
-      </Text>
-      {basket.checkoutUrl ? (
-        <Link href={basket.checkoutUrl} target="_blank" rel="noreferrer">
-          {SHOPPING_BASKET_WORDS.checkout}
-        </Link>
-      ) : null}
-    </CardFrame>
+    <A2uiCard
+      spec={basketCard(basket, context.toolCallId, {
+        buy: Boolean(send) && read.done,
+        asked,
+      })}
+      onAction={onAction}
+    />
   );
 }
 

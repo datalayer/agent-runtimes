@@ -155,6 +155,14 @@ export interface UISpec {
   settings: Record<string, unknown>;
   /** The UI renderers it may be exposed through, ids of `agentspecs/ui-renderers`. */
   renderers: string[];
+  /**
+   * Where in the chat it may go, its default first (agentspecs 0.0.197): the
+   * chat's chrome — `header`, `toolbar`, `footer`, `banner`, `panel` — or a
+   * `message`. None for a part of the workspace itself.
+   */
+  placements?: Array<
+    'header' | 'toolbar' | 'footer' | 'banner' | 'panel' | 'message'
+  >;
   /** The catalog its components are written in. */
   catalog: string;
   /** The visual components it renders. */
@@ -183,6 +191,8 @@ export interface UiChoice {
   plugin: string;
   /** The UI renderer of `agentspecs/ui-renderers` it is exposed through, by id. */
   renderer?: string;
+  /** Where in the chat it goes, one of its spec's `placements`; its default unsaid. */
+  placement?: 'header' | 'toolbar' | 'footer' | 'banner' | 'panel' | 'message';
 }
 
 /** The layer of an agent's visit a protocol answers. */

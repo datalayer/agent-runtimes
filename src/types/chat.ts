@@ -1337,6 +1337,12 @@ export interface ChatBaseProps {
   footerContent?: ReactNode;
 
   /**
+   * Controls at the trailing edge of the input toolbar, beside the session's
+   * menus: the agent's `toolbar` UI (`apps/agentUiPlugins`).
+   */
+  toolbarExtras?: ReactNode;
+
+  /**
    * The agent's welcome, said as the first message of the history: drawn as
    * the chat draws the agent's messages, and never sent nor kept. The floating
    * assistant's balloon opens on it (T-23).

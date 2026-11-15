@@ -14,8 +14,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   AGENT_UI_PLUGINS,
+  agentUiChoicesOf,
+  agentUiChromeOf,
   agentUiIdsOf,
   agentUiPluginsFor,
+  placementOf,
 } from '../agentUiPlugins';
 import { listUI } from '../../specs/ui';
 import { loopPlugins } from '../presets';
@@ -134,5 +137,96 @@ describe('the seed agents’ UI', () => {
       runAsAnonymous: true,
     }).map(nameOf);
     expect(visitor).not.toContain('@datalayer/loop-plugin-x-budget');
+  });
+});
+
+describe('where each UI goes (UP-11)', () => {
+  it('mounts each chrome placement in its slot', async () => {
+    const { registrationOf } = await import('./fixtures/uiPluginRegistrations');
+    const slotsOf = async (plugin: string, placement: string) =>
+      (
+        await registrationOf(() =>
+          agentUiPluginsFor([{ plugin, placement: placement as never }]),
+        )
+      ).slots;
+    expect(await slotsOf('x-budget', 'header')).toEqual(['loop.chatHeader']);
+    expect(await slotsOf('x-budget', 'footer')).toEqual(['loop.status']);
+    expect(await slotsOf('linkedin-link', 'banner')).toEqual([
+      'loop.chatBanner',
+    ]);
+    expect(await slotsOf('trip-summary', 'header')).toEqual([
+      'loop.chatHeader',
+    ]);
+    // A message UI binds its tools rather than fill a slot.
+    const message = await registrationOf(() =>
+      agentUiPluginsFor([{ plugin: 'shopping-basket', placement: 'message' }]),
+    );
+    expect(message.slots).toEqual([]);
+    expect(message.points).toEqual([
+      'reactor.ui.renderer',
+      'reactor.ui.toolBinding',
+    ]);
+    // No panel in the chat yet: nothing mounted rather than a misplaced chip.
+    expect(
+      agentUiPluginsFor([{ plugin: 'x-budget', placement: 'panel' }]),
+    ).toEqual([]);
+  });
+
+  it('places each UI as declared, else as its spec says first', () => {
+    const marketer = agentUiChoicesOf('worker-marketer');
+    const placed = Object.fromEntries(
+      marketer.map(choice => [choice.plugin, choice.placement]),
+    );
+    expect(placed).toMatchObject({
+      'x-budget': 'header',
+      'social-accounts': 'header',
+      'linkedin-link': 'banner',
+      'browser-session': 'header',
+      'x-post-preview': 'message',
+    });
+    expect(placementOf({ plugin: 'x-budget', placement: 'footer' })).toBe(
+      'footer',
+    );
+    const chrome = agentUiChromeOf(marketer);
+    expect(chrome.header).toEqual(
+      expect.arrayContaining([
+        'x-budget',
+        'social-accounts',
+        'browser-session',
+      ]),
+    );
+    expect(chrome.banner).toEqual(['linkedin-link']);
+    expect(agentUiChromeOf(marketer, { anonymous: true }).header).toEqual([]);
+  });
+
+  it('takes a UI out of its slot when its server goes', () => {
+    const voyager = (running: string[]) =>
+      agentUiChromeOf(agentUiChoicesOf('worker-terra', { running })).header;
+    expect(voyager(['earthdata'])).toContain('earth-area');
+    expect(voyager([])).not.toContain('earth-area');
+  });
+});
+
+describe('the six seed agents (UP-12)', () => {
+  it.each([
+    'worker-marketer',
+    'worker-shopper',
+    'worker-accountant',
+    'worker-voyager',
+    'worker-terra',
+    'worker-steward-aws',
+  ])('%s has UI in the chat and an A2UI message', agent => {
+    const choices = agentUiChoicesOf(agent);
+    expect(choices.some(choice => choice.placement !== 'message')).toBe(true);
+    expect(
+      choices.some(
+        choice => choice.placement === 'message' && choice.renderer === 'a2ui',
+      ),
+    ).toBe(true);
+    // A visitor still gets a chrome UI and an A2UI message that need no connection.
+    if (agent !== 'worker-marketer') {
+      const visitor = agentUiChromeOf(choices, { anonymous: true });
+      expect(Object.values(visitor).flat().length).toBeGreaterThan(0);
+    }
   });
 });
