@@ -13,6 +13,7 @@ from typing import Dict, List
 
 from agent_runtimes.types import BackendToolRuntimeSpec, BackendToolSpec
 
+
 # ============================================================================
 # Backend Tool Definitions
 # ============================================================================
@@ -385,6 +386,7 @@ LIST_RECOMMENDATIONS_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     description="List the recommendations recorded in this session, highest estimated saving first, by kind (cost or fix) and state, with the sum of their estimated monthly savings.",
     tags=["recommendations", "steward"],
     enabled=True,
+    ui=[{"plugin": "aws-savings"}],
     approval="auto",
     timeout=None,
     requires_approval=False,
@@ -423,6 +425,7 @@ RECORD_RECOMMENDATION_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     description="Record one recommendation — a cost saving or a technical fix — with the evidence it rests on (each read's source, call, time and values), its estimate and how it was computed, its confidence and its fix as a reviewable change with its rollback; refused when any of them is missing.",
     tags=["recommendations", "steward"],
     enabled=True,
+    ui=[{"plugin": "a2ui-surface", "renderer": "a2ui"}],
     approval="auto",
     timeout=None,
     requires_approval=False,
@@ -492,6 +495,206 @@ RUNTIME_SENSITIVE_ECHO_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     emoji="🛡️",
 )
 
+SHOW_BASKET_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
+    id="show-basket",
+    version="0.0.1",
+    name="Show Basket",
+    description="Show the person the basket — each item with its seller, quantity and price, the shipping, and the total summed by the tool. Nothing is bought by showing it. Drawn by the shopping-basket UI plugin.",
+    tags=["shopping", "card", "shopper"],
+    enabled=True,
+    ui=[{"plugin": "shopping-basket"}],
+    approval="auto",
+    timeout=None,
+    requires_approval=False,
+    runtime=BackendToolRuntimeSpec(
+        language="python",
+        package="agent_runtimes.tools.cards",
+        method="show_basket",
+    ),
+    icon="@primer/octicons-react:package",
+    emoji="🛒",
+)
+
+SHOW_COMPARISON_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
+    id="show-comparison",
+    version="0.0.1",
+    name="Show Comparison",
+    description="Show the person the products compared, side by side — price, variant, availability, rating and seller — and the one you would pick with why. Drawn as a table by the product-comparison UI plugin.",
+    tags=["shopping", "card", "shopper"],
+    enabled=True,
+    ui=[{"plugin": "product-comparison"}],
+    approval="auto",
+    timeout=None,
+    requires_approval=False,
+    runtime=BackendToolRuntimeSpec(
+        language="python",
+        package="agent_runtimes.tools.cards",
+        method="show_comparison",
+    ),
+    icon="@primer/octicons-react:table",
+    emoji="📊",
+)
+
+SHOW_INDEX_RESULT_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
+    id="show-index-result",
+    version="0.0.1",
+    name="Show Index Result",
+    description="Show the person an index computed from the pixels (NDVI, NDWI, NBR) over an area on each date, the change between the dates, its map and what limits the reading. Drawn by the earth-index UI plugin.",
+    tags=["earth-observation", "card", "terra"],
+    enabled=True,
+    ui=[{"plugin": "earth-index"}],
+    approval="auto",
+    timeout=None,
+    requires_approval=False,
+    runtime=BackendToolRuntimeSpec(
+        language="python",
+        package="agent_runtimes.tools.cards",
+        method="show_index_result",
+    ),
+    icon="@primer/octicons-react:graph",
+    emoji="🌿",
+)
+
+SHOW_ITINERARY_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
+    id="show-itinerary",
+    version="0.0.1",
+    name="Show Itinerary",
+    description="Show the person the trip day by day, each stop with its time and its place on a map. Drawn by the trip-itinerary UI plugin.",
+    tags=["travel", "card", "voyager"],
+    enabled=True,
+    ui=[{"plugin": "trip-itinerary"}],
+    approval="auto",
+    timeout=None,
+    requires_approval=False,
+    runtime=BackendToolRuntimeSpec(
+        language="python",
+        package="agent_runtimes.tools.cards",
+        method="show_itinerary",
+    ),
+    icon="@primer/octicons-react:calendar",
+    emoji="🗺️",
+)
+
+SHOW_RECONCILIATION_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
+    id="show-reconciliation",
+    version="0.0.1",
+    name="Show Reconciliation",
+    description="Show the person bank lines beside the invoices they would settle, with the difference and a confidence; the person approves the matches and sends them back. Drawn by the bank-reconciliation UI plugin.",
+    tags=["accounting", "card", "accountant"],
+    enabled=True,
+    ui=[{"plugin": "bank-reconciliation"}],
+    approval="auto",
+    timeout=None,
+    requires_approval=False,
+    runtime=BackendToolRuntimeSpec(
+        language="python",
+        package="agent_runtimes.tools.cards",
+        method="show_reconciliation",
+    ),
+    icon="@primer/octicons-react:git-compare",
+    emoji="🧾",
+)
+
+SHOW_SCENES_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
+    id="show-scenes",
+    version="0.0.1",
+    name="Show Scenes",
+    description="Show the person the satellite scenes found, by date, each with its collection, sensor and cloud cover as the catalogue gave them. Drawn by the earth-scenes UI plugin.",
+    tags=["earth-observation", "card", "terra"],
+    enabled=True,
+    ui=[{"plugin": "earth-scenes"}],
+    approval="auto",
+    timeout=None,
+    requires_approval=False,
+    runtime=BackendToolRuntimeSpec(
+        language="python",
+        package="agent_runtimes.tools.cards",
+        method="show_scenes",
+    ),
+    icon="@primer/octicons-react:globe",
+    emoji="🛰️",
+)
+
+SHOW_TRIAL_BALANCE_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
+    id="show-trial-balance",
+    version="0.0.1",
+    name="Show Trial Balance",
+    description="Show the person a trial balance for a period — each account's debit, credit and balance, the totals summed by the tool and whether they agree. Drawn by the trial-balance UI plugin.",
+    tags=["accounting", "card", "accountant"],
+    enabled=True,
+    ui=[{"plugin": "trial-balance"}],
+    approval="auto",
+    timeout=None,
+    requires_approval=False,
+    runtime=BackendToolRuntimeSpec(
+        language="python",
+        package="agent_runtimes.tools.cards",
+        method="show_trial_balance",
+    ),
+    icon="@primer/octicons-react:law",
+    emoji="⚖️",
+)
+
+SHOW_TRIP_BUDGET_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
+    id="show-trip-budget",
+    version="0.0.1",
+    name="Show Trip Budget",
+    description="Show the person what the trip costs, line by line, quotes apart from estimates, the total summed by the tool and what is left of their budget. Drawn by the trip-budget UI plugin.",
+    tags=["travel", "card", "voyager"],
+    enabled=True,
+    ui=[{"plugin": "trip-budget"}],
+    approval="auto",
+    timeout=None,
+    requires_approval=False,
+    runtime=BackendToolRuntimeSpec(
+        language="python",
+        package="agent_runtimes.tools.cards",
+        method="show_trip_budget",
+    ),
+    icon="@primer/octicons-react:credit-card",
+    emoji="💰",
+)
+
+SHOW_TRIP_OPTIONS_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
+    id="show-trip-options",
+    version="0.0.1",
+    name="Show Trip Options",
+    description="Show the person up to three trips, one card each with dates, price and highlights, to choose from; the choice comes back as their next turn. Nothing is booked. Drawn by the trip-options UI plugin.",
+    tags=["travel", "card", "voyager"],
+    enabled=True,
+    ui=[{"plugin": "trip-options"}],
+    approval="auto",
+    timeout=None,
+    requires_approval=False,
+    runtime=BackendToolRuntimeSpec(
+        language="python",
+        package="agent_runtimes.tools.cards",
+        method="show_trip_options",
+    ),
+    icon="@primer/octicons-react:briefcase",
+    emoji="🧳",
+)
+
+SHOW_VAT_SUMMARY_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
+    id="show-vat-summary",
+    version="0.0.1",
+    name="Show VAT Summary",
+    description="Show the person the VAT for a period — the return's boxes with base and tax, what is due and deductible, and the net to pay or to be refunded. Nothing is filed. Drawn by the vat-summary UI plugin.",
+    tags=["accounting", "card", "accountant", "vat"],
+    enabled=True,
+    ui=[{"plugin": "vat-summary"}],
+    approval="auto",
+    timeout=None,
+    requires_approval=False,
+    runtime=BackendToolRuntimeSpec(
+        language="python",
+        package="agent_runtimes.tools.cards",
+        method="show_vat_summary",
+    ),
+    icon="@primer/octicons-react:checklist",
+    emoji="💶",
+)
+
 SOCIAL_ACCOUNTS_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     id="social-accounts",
     version="0.0.1",
@@ -499,6 +702,7 @@ SOCIAL_ACCOUNTS_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     description="Read which of X, Bluesky and LinkedIn the person linked in Settings, and the handle or name of each, through Datalayer's IAM; no account's token ever reaches the agent.",
     tags=["social", "datalayer-social"],
     enabled=True,
+    ui=[{"plugin": "social-accounts"}],
     approval="auto",
     timeout=None,
     requires_approval=False,
@@ -518,6 +722,7 @@ SOCIAL_COMMENT_LINKEDIN_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     description="Comment as the person under one LinkedIn post they name by its address, through Datalayer's IAM; it waits for the person's approval every time.",
     tags=["social", "linkedin", "datalayer-social"],
     enabled=True,
+    ui=[{"plugin": "linkedin-post-preview"}, {"plugin": "linkedin-link"}],
     approval="manual",
     timeout=None,
     requires_approval=True,
@@ -598,6 +803,7 @@ SOCIAL_POST_BLUESKY_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     description="Publish one post on the person's own Bluesky account, linked in Settings, with up to four PNG or JPEG images and their alt text, through Datalayer's IAM; it waits for the person's approval every time.",
     tags=["social", "bluesky", "datalayer-social"],
     enabled=True,
+    ui=[{"plugin": "bluesky-post-preview"}],
     approval="manual",
     timeout=None,
     requires_approval=True,
@@ -618,6 +824,7 @@ SOCIAL_POST_LINKEDIN_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     description="Publish one post on the person's own LinkedIn profile, linked in Settings, with one PNG or JPEG image and its alt text, through Datalayer's IAM; it waits for the person's approval every time.",
     tags=["social", "linkedin", "datalayer-social"],
     enabled=True,
+    ui=[{"plugin": "linkedin-post-preview"}, {"plugin": "linkedin-link"}],
     approval="manual",
     timeout=None,
     requires_approval=True,
@@ -638,6 +845,7 @@ SOCIAL_POST_X_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     description="Publish one post on the person's own X account, linked in Settings, with up to four PNG or JPEG images, through Datalayer's IAM; it waits for the person's approval every time.",
     tags=["social", "x", "datalayer-social"],
     enabled=True,
+    ui=[{"plugin": "x-post-preview"}],
     approval="manual",
     timeout=None,
     requires_approval=True,
@@ -698,6 +906,7 @@ SOCIAL_REPLY_BLUESKY_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     description="Reply as the person under one Bluesky post they or the agent named by its address, through Datalayer's IAM; it waits for the person's approval every time.",
     tags=["social", "bluesky", "datalayer-social"],
     enabled=True,
+    ui=[{"plugin": "bluesky-post-preview"}],
     approval="manual",
     timeout=None,
     requires_approval=True,
@@ -718,6 +927,7 @@ SOCIAL_REPLY_X_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     description="Reply as the person under one X post, through Datalayer's IAM; it waits for the person's approval every time. A reply costs Datalayer USD 0.015 at X, USD 0.20 with a link, held to the person's X budget.",
     tags=["social", "x", "datalayer-social"],
     enabled=True,
+    ui=[{"plugin": "x-post-preview"}],
     approval="manual",
     timeout=None,
     requires_approval=True,
@@ -820,6 +1030,16 @@ BACKEND_TOOL_CATALOG: Dict[str, BackendToolSpec] = {
     "runtime-echo": RUNTIME_ECHO_BACKEND_TOOL_SPEC_0_0_1,
     "runtime-send-mail": RUNTIME_SEND_MAIL_BACKEND_TOOL_SPEC_0_0_1,
     "runtime-sensitive-echo": RUNTIME_SENSITIVE_ECHO_BACKEND_TOOL_SPEC_0_0_1,
+    "show-basket": SHOW_BASKET_BACKEND_TOOL_SPEC_0_0_1,
+    "show-comparison": SHOW_COMPARISON_BACKEND_TOOL_SPEC_0_0_1,
+    "show-index-result": SHOW_INDEX_RESULT_BACKEND_TOOL_SPEC_0_0_1,
+    "show-itinerary": SHOW_ITINERARY_BACKEND_TOOL_SPEC_0_0_1,
+    "show-reconciliation": SHOW_RECONCILIATION_BACKEND_TOOL_SPEC_0_0_1,
+    "show-scenes": SHOW_SCENES_BACKEND_TOOL_SPEC_0_0_1,
+    "show-trial-balance": SHOW_TRIAL_BALANCE_BACKEND_TOOL_SPEC_0_0_1,
+    "show-trip-budget": SHOW_TRIP_BUDGET_BACKEND_TOOL_SPEC_0_0_1,
+    "show-trip-options": SHOW_TRIP_OPTIONS_BACKEND_TOOL_SPEC_0_0_1,
+    "show-vat-summary": SHOW_VAT_SUMMARY_BACKEND_TOOL_SPEC_0_0_1,
     "social-accounts": SOCIAL_ACCOUNTS_BACKEND_TOOL_SPEC_0_0_1,
     "social-comment-linkedin": SOCIAL_COMMENT_LINKEDIN_BACKEND_TOOL_SPEC_0_0_1,
     "social-follow-bluesky": SOCIAL_FOLLOW_BLUESKY_BACKEND_TOOL_SPEC_0_0_1,

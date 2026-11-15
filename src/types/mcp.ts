@@ -6,6 +6,7 @@
 /**
  * A tool provided by an MCP server.
  */
+import type { UiChoice } from './agentspecs';
 import type { InstallSpec } from './skills';
 export interface MCPServerTool {
   /** Tool name/identifier */
@@ -32,6 +33,11 @@ export interface MCPServerAuth {
  * Configuration for an MCP server.
  */
 export interface MCPServer {
+  /**
+   * The UI plugins it brings to the chat that uses it (agentspecs 0.0.196):
+   * injected after the agent's own while it is in use (`apps/agentUiPlugins`).
+   */
+  ui?: UiChoice[];
   /** Unique server identifier */
   id: string;
   /** Version */

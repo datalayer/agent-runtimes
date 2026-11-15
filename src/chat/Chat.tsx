@@ -27,6 +27,11 @@ import { Box } from '@datalayer/primer-addons';
 import type { OAuthProvider, OAuthProviderConfig, Identity } from '../identity';
 import { useConnectedIdentities } from '../identity';
 import { useOptionalReactorPlatform } from '@datalayer/reactor/react';
+import { buildReactorFromPlugins } from '@datalayer/reactor';
+import { AgentUiPlatformContext } from '../apps/toolCards/kit';
+import { agentUiIdsOf, agentUiPluginsFor } from '../apps/agentUiPlugins';
+import { XBudgetChip } from '../apps/plugins/x-budget/XBudgetChip';
+import { LinkedInLinkButton } from '../apps/plugins/linkedin-link';
 import type {
   ChatBaseProps,
   ChatCommonProps,
@@ -177,6 +182,27 @@ export interface ChatProps extends ChatCommonProps {
    * 2026). A person's own chat sets it; never an anonymous visitor's.
    */
   browserSessions?: boolean;
+
+  /**
+   * The agent's own UI plugins, by the ids its spec names under `ui`
+   * (`apps/agentUiPlugins`): the Marketer's linked accounts, X budget and
+   * post previews, the Shopper's basket, the Accountant's reconciliation…
+   * Mounted on a platform of the chat's own, so the transcript draws their
+   * tools and the header their chips without a Loop workspace around it.
+   * With `uiPluginsAnonymous`, only those that need no connection.
+   */
+  uiPlugins?: readonly string[];
+
+  /** The chat is an anonymous visitor's: `uiPlugins` keeps only those that need no connection. */
+  uiPluginsAnonymous?: boolean;
+
+  /**
+   * The agent spec whose UI the chat injects when `uiPlugins` is unsaid:
+   * its own `ui`, then that of each MCP server running (`mcpStatusData`'s
+   * ready servers once initialized), each skill and each backend tool
+   * (`agentUiIdsOf`). A server that stops takes its UI with it.
+   */
+  uiAgentSpecId?: string;
 
   /**
    * Transport to use — REQUIRED.
@@ -415,6 +441,9 @@ export function Chat({
   sessionActions,
   onSendReady,
   browserSessions = false,
+  uiPlugins: givenUiPlugins,
+  uiPluginsAnonymous = false,
+  uiAgentSpecId,
   onToolCallUpdate,
 }: ChatProps) {
   const resolvedAgentId =
@@ -768,20 +797,64 @@ export function Chat({
     [sessionsClient],
   );
   const menuDrawn = Boolean(sessionActions && reactor);
+  // The agent's own UI and its components' (`agentUiIdsOf`), by id.
+  // The servers the runtime runs for it (starting, started or failed to
+  // start: in use); one removed takes its UI with it.
+  const runningKey = mcpStatusData?.initialized
+    ? (mcpStatusData.servers ?? [])
+        .filter(server => server.status !== 'none')
+        .map(server => server.id)
+        .sort()
+        .join(',')
+    : undefined;
+  const uiPlugins = useMemo(
+    () =>
+      givenUiPlugins ??
+      agentUiIdsOf(uiAgentSpecId, {
+        running:
+          runningKey === undefined
+            ? undefined
+            : runningKey.split(',').filter(Boolean),
+      }),
+    [givenUiPlugins, uiAgentSpecId, runningKey],
+  );
+  const uiPluginsKey = uiPlugins.join(',');
   const sessionPlace = useMemo(
     () =>
-      browserSessions && baseUrl
+      (browserSessions ||
+        (!uiPluginsAnonymous && uiPlugins.includes('browser-session'))) &&
+      baseUrl
         ? {
             serverUrl: baseUrl,
             ...(authTokenProp ? { token: authTokenProp } : {}),
           }
         : undefined,
-    [browserSessions, baseUrl, authTokenProp],
+    [browserSessions, uiPluginsAnonymous, uiPlugins, baseUrl, authTokenProp],
   );
+  /*
+   * The agent's own UI plugins (`uiPlugins`), on a platform of this chat's:
+   * built once per list, started so their renderers and bindings register.
+   */
+  const agentUiPlatform = useMemo(() => {
+    const plugins = agentUiPluginsFor(uiPlugins, {
+      anonymous: uiPluginsAnonymous,
+    });
+    return plugins.length > 0 ? buildReactorFromPlugins(plugins) : null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uiPluginsKey, uiPluginsAnonymous]);
+  useEffect(() => {
+    void agentUiPlatform?.start();
+  }, [agentUiPlatform]);
+  const xBudgetChip = !uiPluginsAnonymous && uiPlugins.includes('x-budget');
+  // *Link LinkedIn in Settings*, brought by the datalayer-social LinkedIn tools.
+  const linkedInLink =
+    !uiPluginsAnonymous && uiPlugins.includes('linkedin-link');
   const mergedHeaderActions = useMemo(
     () =>
-      menuDrawn || sessionPlace ? (
+      menuDrawn || sessionPlace || xBudgetChip || linkedInLink ? (
         <Box display="inline-flex" alignItems="center" gap={2}>
+          {xBudgetChip ? <XBudgetChip /> : null}
+          {linkedInLink ? <LinkedInLinkButton /> : null}
           {sessionPlace ? <BrowserSessionButton place={sessionPlace} /> : null}
           {headerActions}
           {menuDrawn ? (
@@ -798,6 +871,8 @@ export function Chat({
     [
       menuDrawn,
       sessionPlace,
+      xBudgetChip,
+      linkedInLink,
       headerActions,
       threadId,
       chatThread?.id,
@@ -878,221 +953,225 @@ export function Chat({
   }
 
   return (
-    <ThemeProvider>
-      <QueryClientProvider client={queryClient}>
-        <Box
-          className={className}
-          position="relative"
-          height={height}
-          bg="canvas.default"
-          display="flex"
-          flexDirection="column"
-        >
-          {/* Agent details view - shown/hidden via CSS to preserve chat state */}
+    <AgentUiPlatformContext.Provider value={agentUiPlatform}>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
           <Box
-            display={showDetails ? 'flex' : 'none'}
+            className={className}
+            position="relative"
+            height={height}
+            bg="canvas.default"
+            display="flex"
             flexDirection="column"
-            height="100%"
           >
-            <AgentDetails
-              name={title || 'AI Agent'}
-              icon={brandIcon}
-              protocol={transportName}
-              url={protocolConfig?.endpoint || baseUrl}
-              messageCount={messageCount}
-              agentId={agentId}
-              apiBase={baseUrl}
-              identityProviders={identityProviders}
-              onIdentityConnect={onIdentityConnect}
-              onIdentityDisconnect={onIdentityDisconnect}
-              onBack={handleBackFromDetails}
-              mcpStatusData={mcpStatusData}
-              codemodeStatusData={codemodeStatusData}
-            />
-          </Box>
-          {/* Chat view - shown/hidden via CSS to preserve message state */}
-          <Box
-            display={showDetails ? 'none' : 'flex'}
-            flexDirection="column"
-            height="100%"
-          >
-            {/* Error banner for sandbox/connection issues */}
-            {errorBanner && (
-              <Box
-                display="flex"
-                alignItems="center"
-                gap={2}
-                px={3}
-                py={2}
-                bg={
-                  errorBanner.variant === 'warning'
-                    ? 'attention.subtle'
-                    : 'danger.subtle'
-                }
-                borderBottom="1px solid"
-                borderColor={
-                  errorBanner.variant === 'warning'
-                    ? 'attention.muted'
-                    : 'danger.muted'
-                }
-              >
-                <AlertIcon
-                  size={16}
-                  fill={
+            {/* Agent details view - shown/hidden via CSS to preserve chat state */}
+            <Box
+              display={showDetails ? 'flex' : 'none'}
+              flexDirection="column"
+              height="100%"
+            >
+              <AgentDetails
+                name={title || 'AI Agent'}
+                icon={brandIcon}
+                protocol={transportName}
+                url={protocolConfig?.endpoint || baseUrl}
+                messageCount={messageCount}
+                agentId={agentId}
+                apiBase={baseUrl}
+                identityProviders={identityProviders}
+                onIdentityConnect={onIdentityConnect}
+                onIdentityDisconnect={onIdentityDisconnect}
+                onBack={handleBackFromDetails}
+                mcpStatusData={mcpStatusData}
+                codemodeStatusData={codemodeStatusData}
+              />
+            </Box>
+            {/* Chat view - shown/hidden via CSS to preserve message state */}
+            <Box
+              display={showDetails ? 'none' : 'flex'}
+              flexDirection="column"
+              height="100%"
+            >
+              {/* Error banner for sandbox/connection issues */}
+              {errorBanner && (
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  gap={2}
+                  px={3}
+                  py={2}
+                  bg={
                     errorBanner.variant === 'warning'
-                      ? 'attention.fg'
-                      : 'danger.fg'
+                      ? 'attention.subtle'
+                      : 'danger.subtle'
                   }
-                />
-                <Text
-                  sx={{
-                    fontSize: 1,
-                    color:
+                  borderBottom="1px solid"
+                  borderColor={
+                    errorBanner.variant === 'warning'
+                      ? 'attention.muted'
+                      : 'danger.muted'
+                  }
+                >
+                  <AlertIcon
+                    size={16}
+                    fill={
                       errorBanner.variant === 'warning'
                         ? 'attention.fg'
-                        : 'danger.fg',
-                    flex: 1,
-                  }}
+                        : 'danger.fg'
+                    }
+                  />
+                  <Text
+                    sx={{
+                      fontSize: 1,
+                      color:
+                        errorBanner.variant === 'warning'
+                          ? 'attention.fg'
+                          : 'danger.fg',
+                      flex: 1,
+                    }}
+                  >
+                    {errorBanner.message}
+                  </Text>
+                </Box>
+              )}
+              {threadSaid || actionSaid ? (
+                // What opening the thread, or a menu entry, said: a refusal
+                // as the runtime said it, a swap's sentence — until dismissed.
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  gap={2}
+                  px={3}
+                  py={2}
+                  bg="attention.subtle"
+                  borderBottom="1px solid"
+                  borderColor="attention.muted"
+                  data-testid="chat-thread-said"
                 >
-                  {errorBanner.message}
-                </Text>
-              </Box>
-            )}
-            {threadSaid || actionSaid ? (
-              // What opening the thread, or a menu entry, said: a refusal
-              // as the runtime said it, a swap's sentence — until dismissed.
-              <Box
-                display="flex"
-                alignItems="center"
-                gap={2}
-                px={3}
-                py={2}
-                bg="attention.subtle"
-                borderBottom="1px solid"
-                borderColor="attention.muted"
-                data-testid="chat-thread-said"
-              >
-                <Text sx={{ fontSize: 1, color: 'attention.fg', flex: 1 }}>
-                  {actionSaid || threadSaid}
-                </Text>
-                <Button
-                  size="small"
-                  variant="invisible"
-                  onClick={() => setActionSaid('')}
+                  <Text sx={{ fontSize: 1, color: 'attention.fg', flex: 1 }}>
+                    {actionSaid || threadSaid}
+                  </Text>
+                  <Button
+                    size="small"
+                    variant="invisible"
+                    onClick={() => setActionSaid('')}
+                  >
+                    Dismiss
+                  </Button>
+                </Box>
+              ) : null}
+              {opening ? (
+                <Text
+                  as="p"
+                  role="status"
+                  sx={{ m: 0, p: 3, fontSize: 1, color: 'fg.muted' }}
                 >
-                  Dismiss
-                </Button>
-              </Box>
-            ) : null}
-            {opening ? (
-              <Text
-                as="p"
-                role="status"
-                sx={{ m: 0, p: 3, fontSize: 1, color: 'fg.muted' }}
-              >
-                {THREAD_WORDS.opening}
-              </Text>
-            ) : (
-              <ChatBase
-                // Another thread is another conversation: remounted on its id.
-                key={chatThread?.id ?? 'own'}
-                thread={threadForBase}
-                onSendReady={handleSendReady}
-                onToolCallUpdate={onToolCallUpdate}
-                title={title}
-                subtitle={subtitle}
-                brandIcon={brandIcon}
-                showHeader={showHeader}
-                protocol={protocolConfig}
-                placeholder={placeholder}
-                description={description}
-                suggestions={suggestions}
-                submitOnSuggestionClick={submitOnSuggestionClick}
-                autoFocus={autoFocus}
-                runtimeId={runtimeId}
-                historyEndpoint={historyEndpoint}
-                pendingPrompt={pendingPrompt}
-                showInformation={showInformation}
-                onInformationClick={handleInformationClick}
-                headerContent={headerContent}
-                headerActions={mergedHeaderActions}
-                showModelSelector={showModelSelector}
-                showToolsMenu={showToolsMenu}
-                showInput={showInput}
-                disableInputPrompt={disableInputPrompt}
-                disabled={disabled}
-                disableReason={disableReason}
-                overlay={overlay}
-                launching={launching}
-                launchingMessage={launchingMessage}
-                autoConnect={autoConnect}
-                showSkillsMenu={showSkillsMenu}
-                showTokenUsage={showTokenUsage}
-                codemodeEnabled={codemodeEnabled}
-                onToggleCodemode={onToggleCodemode}
-                initialModel={initialModel}
-                availableModels={availableModels}
-                mcpServers={mcpServers}
-                initialSkills={initialSkills}
-                connectedIdentities={identitiesForChat}
-                onNewChat={handleNewChat}
-                onMessagesChange={handleMessagesChange}
-                headerButtons={headerButtons}
-                avatarConfig={avatarConfig}
-                backgroundColor="canvas.default"
-                focusTrigger={focusTrigger}
-                chatViewMode={chatViewMode}
-                onChatViewModeChange={onChatViewModeChange}
-                frontendTools={frontendTools}
-                enableEphemeralNotebook={enableEphemeralNotebook}
-                initialEphemeralNotebookOpen={initialEphemeralNotebookOpen}
-                onEphemeralNotebookOpenChange={onEphemeralNotebookOpenChange}
-                enableEphemeralDocument={enableEphemeralDocument}
-                initialEphemeralSurfaceMode={initialEphemeralSurfaceMode}
-                onEphemeralSurfaceModeChange={onEphemeralSurfaceModeChange}
-                collapsed={collapsed}
-                onExpandFromCollapsed={onExpandFromCollapsed}
-                ephemeralNotebookToolbar={ephemeralNotebookToolbar}
-                ephemeralNotebookToolbarExtraItems={
-                  ephemeralNotebookToolbarExtraItems
-                }
-                ephemeralDocumentToolbarExtraItems={
-                  ephemeralDocumentToolbarExtraItems
-                }
-                ephemeralNotebookCollaborationProvider={
-                  ephemeralNotebookCollaborationProvider
-                }
-                ephemeralNotebookCollaborationDocumentId={
-                  ephemeralNotebookCollaborationDocumentId
-                }
-                ephemeralDocumentCollaboration={ephemeralDocumentCollaboration}
-                ephemeralRuntimeOverride={ephemeralRuntimeOverride}
-                onToolCallStart={onToolCallStart}
-                onToolCallComplete={onToolCallComplete}
-                hideMessagesAfterToolUI={hideMessagesAfterToolUI}
-                contextSnapshot={contextSnapshot}
-                mcpStatusData={mcpStatusData}
-                sandboxStatusData={sandboxStatusData}
-                kernel={kernel}
-                kernelIndicatorPlacement={kernelIndicatorPlacement}
-                kernelIndicatorPosition={kernelIndicatorPosition}
-                kernelEnvironmentName={kernelEnvironmentName}
-                kernelCpu={kernelCpu}
-                kernelMemory={kernelMemory}
-                kernelGpu={kernelGpu}
-                themeVariant={themeVariant}
-                colorMode={colorMode}
-                showToolApprovalBanner={showToolApprovalBanner}
-                pendingApprovals={pendingApprovals}
-                onApproveApproval={onApproveApproval}
-                onRejectApproval={onRejectApproval}
-                disableInternalJupyterTheme={disableInternalJupyterTheme}
-              />
-            )}
+                  {THREAD_WORDS.opening}
+                </Text>
+              ) : (
+                <ChatBase
+                  // Another thread is another conversation: remounted on its id.
+                  key={chatThread?.id ?? 'own'}
+                  thread={threadForBase}
+                  onSendReady={handleSendReady}
+                  onToolCallUpdate={onToolCallUpdate}
+                  title={title}
+                  subtitle={subtitle}
+                  brandIcon={brandIcon}
+                  showHeader={showHeader}
+                  protocol={protocolConfig}
+                  placeholder={placeholder}
+                  description={description}
+                  suggestions={suggestions}
+                  submitOnSuggestionClick={submitOnSuggestionClick}
+                  autoFocus={autoFocus}
+                  runtimeId={runtimeId}
+                  historyEndpoint={historyEndpoint}
+                  pendingPrompt={pendingPrompt}
+                  showInformation={showInformation}
+                  onInformationClick={handleInformationClick}
+                  headerContent={headerContent}
+                  headerActions={mergedHeaderActions}
+                  showModelSelector={showModelSelector}
+                  showToolsMenu={showToolsMenu}
+                  showInput={showInput}
+                  disableInputPrompt={disableInputPrompt}
+                  disabled={disabled}
+                  disableReason={disableReason}
+                  overlay={overlay}
+                  launching={launching}
+                  launchingMessage={launchingMessage}
+                  autoConnect={autoConnect}
+                  showSkillsMenu={showSkillsMenu}
+                  showTokenUsage={showTokenUsage}
+                  codemodeEnabled={codemodeEnabled}
+                  onToggleCodemode={onToggleCodemode}
+                  initialModel={initialModel}
+                  availableModels={availableModels}
+                  mcpServers={mcpServers}
+                  initialSkills={initialSkills}
+                  connectedIdentities={identitiesForChat}
+                  onNewChat={handleNewChat}
+                  onMessagesChange={handleMessagesChange}
+                  headerButtons={headerButtons}
+                  avatarConfig={avatarConfig}
+                  backgroundColor="canvas.default"
+                  focusTrigger={focusTrigger}
+                  chatViewMode={chatViewMode}
+                  onChatViewModeChange={onChatViewModeChange}
+                  frontendTools={frontendTools}
+                  enableEphemeralNotebook={enableEphemeralNotebook}
+                  initialEphemeralNotebookOpen={initialEphemeralNotebookOpen}
+                  onEphemeralNotebookOpenChange={onEphemeralNotebookOpenChange}
+                  enableEphemeralDocument={enableEphemeralDocument}
+                  initialEphemeralSurfaceMode={initialEphemeralSurfaceMode}
+                  onEphemeralSurfaceModeChange={onEphemeralSurfaceModeChange}
+                  collapsed={collapsed}
+                  onExpandFromCollapsed={onExpandFromCollapsed}
+                  ephemeralNotebookToolbar={ephemeralNotebookToolbar}
+                  ephemeralNotebookToolbarExtraItems={
+                    ephemeralNotebookToolbarExtraItems
+                  }
+                  ephemeralDocumentToolbarExtraItems={
+                    ephemeralDocumentToolbarExtraItems
+                  }
+                  ephemeralNotebookCollaborationProvider={
+                    ephemeralNotebookCollaborationProvider
+                  }
+                  ephemeralNotebookCollaborationDocumentId={
+                    ephemeralNotebookCollaborationDocumentId
+                  }
+                  ephemeralDocumentCollaboration={
+                    ephemeralDocumentCollaboration
+                  }
+                  ephemeralRuntimeOverride={ephemeralRuntimeOverride}
+                  onToolCallStart={onToolCallStart}
+                  onToolCallComplete={onToolCallComplete}
+                  hideMessagesAfterToolUI={hideMessagesAfterToolUI}
+                  contextSnapshot={contextSnapshot}
+                  mcpStatusData={mcpStatusData}
+                  sandboxStatusData={sandboxStatusData}
+                  kernel={kernel}
+                  kernelIndicatorPlacement={kernelIndicatorPlacement}
+                  kernelIndicatorPosition={kernelIndicatorPosition}
+                  kernelEnvironmentName={kernelEnvironmentName}
+                  kernelCpu={kernelCpu}
+                  kernelMemory={kernelMemory}
+                  kernelGpu={kernelGpu}
+                  themeVariant={themeVariant}
+                  colorMode={colorMode}
+                  showToolApprovalBanner={showToolApprovalBanner}
+                  pendingApprovals={pendingApprovals}
+                  onApproveApproval={onApproveApproval}
+                  onRejectApproval={onRejectApproval}
+                  disableInternalJupyterTheme={disableInternalJupyterTheme}
+                />
+              )}
+            </Box>
           </Box>
-        </Box>
-      </QueryClientProvider>
-    </ThemeProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
+    </AgentUiPlatformContext.Provider>
   );
 }
 

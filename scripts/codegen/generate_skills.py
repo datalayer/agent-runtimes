@@ -163,6 +163,12 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 f"    icon={icon},",
                 f"    emoji={emoji},",
                 f"    enabled={spec.get('enabled', False)},",
+                # The UI plugins it brings to the chat (agentspecs 0.0.196).
+                *(
+                    [f"    ui={json.dumps(list(spec['ui']), ensure_ascii=False)},"]
+                    if spec.get("ui")
+                    else []
+                ),
                 ")",
                 "",
             ]
@@ -333,6 +339,11 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 f"  icon: {icon},",
                 f"  emoji: {emoji},",
                 f"  enabled: {str(spec.get('enabled', False)).lower()},",
+                *(
+                    [f"  ui: {json.dumps(list(spec['ui']), ensure_ascii=False)},"]
+                    if spec.get("ui")
+                    else []
+                ),
                 "};",
                 "",
             ]

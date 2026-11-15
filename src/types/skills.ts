@@ -10,6 +10,7 @@
  * - `enabled`: enabled, SKILL.md loading pending
  * - `loaded`: SKILL.md loaded, included in the LLM system prompt
  */
+import type { UiChoice } from './agentspecs';
 export type SkillStatus = 'available' | 'enabled' | 'loaded';
 
 /**
@@ -84,6 +85,11 @@ export interface SkillsResponse {
  *   containing `SKILL.md` (relative to the configured skills folder).
  */
 export interface SkillSpec {
+  /**
+   * The UI plugins it brings to the chat that uses it (agentspecs 0.0.196):
+   * injected after the agent's own while it is in use (`apps/agentUiPlugins`).
+   */
+  ui?: UiChoice[];
   /** Unique skill identifier */
   id: string;
   /** Skill version */

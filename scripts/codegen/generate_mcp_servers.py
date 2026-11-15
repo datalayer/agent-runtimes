@@ -190,6 +190,9 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             lines.append(f"    env={env_formatted},")
 
         lines.append(f"    required_env_vars={envvars_formatted},")
+        # The UI plugins it brings to the chat (agentspecs 0.0.196).
+        if spec.get("ui"):
+            lines.append(f"    ui={json.dumps(list(spec['ui']), ensure_ascii=False)},")
         # What the code its tools write reads in the code sandbox: given there
         # when the account has them, never required (R-19).
         sandbox_envvars = spec.get("sandbox_envvars", [])
@@ -397,6 +400,11 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 "  isAvailable: false,",
                 "  tools: [],",
                 f"  requiredEnvVars: {envvars_formatted},",
+                *(
+                    [f"  ui: {json.dumps(list(spec['ui']), ensure_ascii=False)},"]
+                    if spec.get("ui")
+                    else []
+                ),
                 *(
                     [f"  tags: {json.dumps(list(spec['tags']), ensure_ascii=False)},"]
                     if spec.get("tags")

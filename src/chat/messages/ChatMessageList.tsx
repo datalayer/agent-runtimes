@@ -23,8 +23,13 @@ import {
   useMemo,
   useRef,
   useSyncExternalStore,
+  useContext,
 } from 'react';
 import { useOptionalReactorPlatform } from '@datalayer/reactor/react';
+import {
+  AgentUiPlatformContext,
+  PlatformDisplay,
+} from '../../apps/toolCards/kit';
 import {
   resolveToolResult,
   type Display,
@@ -807,7 +812,11 @@ export function ChatMessageList({
    * and a tool nobody claims keeps the chat's own row. Subscribed to the
    * platform's revision, so a plugin enabled later redraws the transcript.
    */
-  const platform = useOptionalReactorPlatform();
+  // A `Chat` given its agent's own UI plugins draws from their platform
+  // (`apps/agentUiPlugins`); every other chat from the page's reactor.
+  const agentUiPlatform = useContext(AgentUiPlatformContext);
+  const pagePlatform = useOptionalReactorPlatform();
+  const platform = agentUiPlatform ?? pagePlatform;
   useSyncExternalStore(
     platform?.subscribe ?? NO_SUBSCRIPTION,
     () => platform?.getRevision() ?? 0,
@@ -969,11 +978,20 @@ export function ChatMessageList({
           })
         : undefined;
       const toolUI = display ? (
-        <ReactorDisplay
-          display={display}
-          context={{ ...context, defaultUI }}
-          fallback={defaultUI}
-        />
+        agentUiPlatform ? (
+          <PlatformDisplay
+            platform={agentUiPlatform}
+            display={display}
+            context={{ ...context, defaultUI }}
+            fallback={defaultUI}
+          />
+        ) : (
+          <ReactorDisplay
+            display={display}
+            context={{ ...context, defaultUI }}
+            fallback={defaultUI}
+          />
+        )
       ) : (
         defaultUI
       );

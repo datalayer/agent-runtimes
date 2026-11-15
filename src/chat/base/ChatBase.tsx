@@ -62,6 +62,10 @@ import { useConversationStore } from '../../stores/conversationStore';
 import type { ChatMessage } from '../../types/messages';
 import { askedOf } from '../../portable/records';
 import { extractChatMessagesFromFullContext } from './fullContextMessages';
+import {
+  ToolCardSendContext,
+  type ToolCardSend,
+} from '../../apps/toolCards/kit';
 import { generateMessageId, createUserMessage } from '../../types/messages';
 import type { ProtocolConfig, ProtocolEvent } from '../../types/protocol';
 import type { BaseProtocolAdapter } from '../../protocols';
@@ -4601,6 +4605,16 @@ function ChatBaseInner({
     [handleSend],
   );
 
+  // What an agent's own UI plugin's card sends as the person's next turn
+  // (*Choose this trip*, *Approve these matches*): `apps/toolCards`.
+  const sendFromCard = useCallback<ToolCardSend>(
+    message => {
+      void handleSend(message);
+      return true;
+    },
+    [handleSend],
+  );
+
   // ---- handleNewChat ----
   const handleNewChat = useCallback(() => {
     resetConversation();
@@ -5187,43 +5201,45 @@ function ChatBaseInner({
       mx="auto"
       bg="canvas.default"
     >
-      <ChatMessageList
-        displayItems={welcomedItems}
-        actOn={protocol?.uiSocket ? actOnDisplay : undefined}
-        upload={protocol?.uiFiles ? uploadToConversation : undefined}
-        isLoading={isLoading}
-        isStreaming={isStreaming}
-        showLoadingIndicator={showLoadingIndicator}
-        hideMessagesAfterToolUI={hideMessagesAfterToolUI}
-        avatarConfig={defaultAvatarConfig}
-        padding={padding}
-        // Tool calls are drawn by the page's Reactor plugins; a named
-        // notebook's cell surfaces stand in for the default row of its tools,
-        // so every chat with a headless notebook gets the same transcript.
-        notebookToolSurfacesId={notebookToolSurfacesId}
-        approvalConfig={approvalConfig}
-        messagesEndRef={messagesEndRef as React.RefObject<HTMLDivElement>}
-        onRespond={handleRespond}
-        showTurnFooters={showTurnFooter}
-        renderMessageFooter={readAloudFooter}
-        saidMessageId={saidId}
-        agentUsage={agentUsage}
-        onRemoveItems={handleRemoveItems}
-        mcpServers={filteredMcpServers}
-        emptyContent={
-          launching ? null : (
-            <ChatEmptyState
-              emptyState={emptyState}
-              brandIcon={brandIcon}
-              description={resolvedDescription}
-              suggestions={resolvedSuggestions}
-              submitOnSuggestionClick={submitOnSuggestionClick}
-              onSuggestionSubmit={handleSuggestionSubmit}
-              onSuggestionFill={handleSuggestionFill}
-            />
-          )
-        }
-      />
+      <ToolCardSendContext.Provider value={sendFromCard}>
+        <ChatMessageList
+          displayItems={welcomedItems}
+          actOn={protocol?.uiSocket ? actOnDisplay : undefined}
+          upload={protocol?.uiFiles ? uploadToConversation : undefined}
+          isLoading={isLoading}
+          isStreaming={isStreaming}
+          showLoadingIndicator={showLoadingIndicator}
+          hideMessagesAfterToolUI={hideMessagesAfterToolUI}
+          avatarConfig={defaultAvatarConfig}
+          padding={padding}
+          // Tool calls are drawn by the page's Reactor plugins; a named
+          // notebook's cell surfaces stand in for the default row of its tools,
+          // so every chat with a headless notebook gets the same transcript.
+          notebookToolSurfacesId={notebookToolSurfacesId}
+          approvalConfig={approvalConfig}
+          messagesEndRef={messagesEndRef as React.RefObject<HTMLDivElement>}
+          onRespond={handleRespond}
+          showTurnFooters={showTurnFooter}
+          renderMessageFooter={readAloudFooter}
+          saidMessageId={saidId}
+          agentUsage={agentUsage}
+          onRemoveItems={handleRemoveItems}
+          mcpServers={filteredMcpServers}
+          emptyContent={
+            launching ? null : (
+              <ChatEmptyState
+                emptyState={emptyState}
+                brandIcon={brandIcon}
+                description={resolvedDescription}
+                suggestions={resolvedSuggestions}
+                submitOnSuggestionClick={submitOnSuggestionClick}
+                onSuggestionSubmit={handleSuggestionSubmit}
+                onSuggestionFill={handleSuggestionFill}
+              />
+            )
+          }
+        />
+      </ToolCardSendContext.Provider>
       {trailingContent}
     </Box>
   );

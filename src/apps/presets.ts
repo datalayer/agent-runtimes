@@ -67,6 +67,7 @@ import { DocumentExtension, NotebookExtension } from './extensions';
 import { LoopPageLayoutPlugin, type PageSize } from './plugins/page-layout';
 import type { ResumedThread, ThemeOverrides } from '../types/chat';
 import { maxTurnsOf } from '../chat/anonymous/anonymousMode';
+import { agentUiPluginsFor, uiPluginIdsOfSpec } from './agentUiPlugins';
 
 export type LoopPresetOptions = {
   /** Where the agent runtimes service is. */
@@ -284,6 +285,15 @@ export type LoopPresetOptions = {
    * when it fires.
    */
   firstPromptHook?: () => void;
+  /**
+   * The agent's own UI plugins, by the ids its spec names under `ui`
+   * (`agentUiPlugins`): the Marketer's post previews, the Shopper's
+   * basket… Unsaid, those of the spec the workspace creates
+   * (`datalayerAgentSpecId`, else `localAgentSpec`). An anonymous visitor
+   * (`runAsAnonymous`, `datalayerVisitors`) gets only those that need no
+   * connection of theirs.
+   */
+  uiPlugins?: readonly string[];
 };
 
 /**
@@ -342,6 +352,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     pluginsPanel = false,
     windowFrame = false,
     firstPromptHook,
+    uiPlugins,
   } = options;
   const defaultEditor = askedEditor ?? (editors ? 'notebook' : 'none');
 
@@ -413,6 +424,12 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     // A coding agent's diff and terminal, where its tool results carry them:
     // two renderers, no binding — the display says what it is.
     ShieldDisplaysPlugin,
+    // The agent's own: what its spec names under `ui` — each draws one of
+    // its tools or one fact, so every other chat stays as it was.
+    ...agentUiPluginsFor(
+      uiPlugins ?? uiPluginIdsOfSpec(datalayerAgentSpecId ?? localAgentSpec),
+      { anonymous: runAsAnonymous || Boolean(datalayerVisitors) },
+    ),
     // An XLSX the agent gives, read-only in Cells in its message: the
     // renderer loads Cells when a workbook is drawn, so it costs a chat
     // with none nothing.

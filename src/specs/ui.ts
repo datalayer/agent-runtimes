@@ -1282,6 +1282,72 @@ export const APP_RULES_UI_0_0_1: UISpec = {
   components: [],
 };
 
+export const AWS_SAVINGS_UI_0_0_1: UISpec = {
+  id: 'aws-savings',
+  version: '0.0.1',
+  name: 'AWS savings',
+  description:
+    'The recommended savings, largest first, each with its evidence, its state and its estimated monthly saving, and their sum (list_recommendations).',
+  emoji: '💸',
+  octicon: 'list-ordered',
+  plugin: '@datalayer/loop-plugin-aws-savings',
+  folder: 'aws-savings',
+  contributions: {
+    slots: [],
+    points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const BANK_RECONCILIATION_UI_0_0_1: UISpec = {
+  id: 'bank-reconciliation',
+  version: '0.0.1',
+  name: 'Bank reconciliation',
+  description:
+    'Bank lines beside the invoices they would settle, with the difference and how sure the agent is; you tick the matches you approve and send them back (show_reconciliation).',
+  emoji: '🧾',
+  octicon: 'git-compare',
+  plugin: '@datalayer/loop-plugin-bank-reconciliation',
+  folder: 'bank-reconciliation',
+  contributions: {
+    slots: [],
+    points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const BLUESKY_POST_PREVIEW_UI_0_0_1: UISpec = {
+  id: 'bluesky-post-preview',
+  version: '0.0.1',
+  name: 'Bluesky post preview',
+  description:
+    'A post or reply on Bluesky as it will stand there, with its length against the 300 characters Bluesky takes and its images, above its approval (post_to_bluesky, reply_on_bluesky).',
+  emoji: '🦋',
+  octicon: 'megaphone',
+  plugin: '@datalayer/loop-plugin-bluesky-post-preview',
+  folder: 'bluesky-post-preview',
+  contributions: {
+    slots: [],
+    points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
 export const BROWSER_SESSION_UI_0_0_1: UISpec = {
   id: 'browser-session',
   version: '0.0.1',
@@ -1619,6 +1685,50 @@ export const DOCUMENT_UI_0_0_1: UISpec = {
   components: [],
 };
 
+export const EARTH_INDEX_UI_0_0_1: UISpec = {
+  id: 'earth-index',
+  version: '0.0.1',
+  name: 'Index and change',
+  description:
+    'An index computed from the pixels (NDVI, NDWI, NBR) over an area on each date, the change between the dates, its map and what limits the reading (show_index_result).',
+  emoji: '🌿',
+  octicon: 'graph',
+  plugin: '@datalayer/loop-plugin-earth-index',
+  folder: 'earth-index',
+  contributions: {
+    slots: [],
+    points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const EARTH_SCENES_UI_0_0_1: UISpec = {
+  id: 'earth-scenes',
+  version: '0.0.1',
+  name: 'Satellite scenes',
+  description:
+    'The satellite scenes found, by date, each with its collection, sensor and cloud cover as the catalogue gave them (show_scenes).',
+  emoji: '🛰️',
+  octicon: 'globe',
+  plugin: '@datalayer/loop-plugin-earth-scenes',
+  folder: 'earth-scenes',
+  contributions: {
+    slots: [],
+    points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
 export const INPUT_PROMPT_UI_0_0_1: UISpec = {
   id: 'input-prompt',
   version: '0.0.1',
@@ -1634,6 +1744,50 @@ export const INPUT_PROMPT_UI_0_0_1: UISpec = {
     commands: [],
   },
   contributionPoints: ['loop.prompt.panel'],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const LINKEDIN_LINK_UI_0_0_1: UISpec = {
+  id: 'linkedin-link',
+  version: '0.0.1',
+  name: 'Link LinkedIn',
+  description:
+    "Link LinkedIn in Settings, in the chat's title bar, while your LinkedIn is not linked through Datalayer or its 60-day grant lapsed; brought by the datalayer-social LinkedIn tools, never for an anonymous visitor.",
+  emoji: '🔗',
+  octicon: 'link',
+  plugin: '@datalayer/loop-plugin-linkedin-link',
+  folder: 'linkedin-link',
+  contributions: {
+    slots: ['loop.chatHeader'],
+    points: [],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const LINKEDIN_POST_PREVIEW_UI_0_0_1: UISpec = {
+  id: 'linkedin-post-preview',
+  version: '0.0.1',
+  name: 'LinkedIn post preview',
+  description:
+    'A post or comment on LinkedIn as it will stand there, with its length and its image, above its approval (post_to_linkedin, comment_on_linkedin).',
+  emoji: '💼',
+  octicon: 'megaphone',
+  plugin: '@datalayer/loop-plugin-linkedin-post-preview',
+  folder: 'linkedin-post-preview',
+  contributions: {
+    slots: [],
+    points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
+    commands: [],
+  },
+  contributionPoints: [],
   settings: {},
   renderers: [],
   catalog: '',
@@ -1813,6 +1967,28 @@ export const PAGE_LAYOUT_UI_0_0_1: UISpec = {
   components: [],
 };
 
+export const PAP_PURCHASE_UI_0_0_1: UISpec = {
+  id: 'pap-purchase',
+  version: '0.0.1',
+  name: 'Approve a purchase',
+  description:
+    "A company's operation you approve, in the chat: the company, its summary and every term, the exact revision and until when it holds, above the chat's own approval (pap_confirm).",
+  emoji: '💳',
+  octicon: 'credit-card',
+  plugin: '@datalayer/loop-plugin-pap-purchase',
+  folder: 'pap-purchase',
+  contributions: {
+    slots: [],
+    points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
 export const PAP_SIGN_IN_UI_0_0_1: UISpec = {
   id: 'pap-sign-in',
   version: '0.0.1',
@@ -1835,6 +2011,28 @@ export const PAP_SIGN_IN_UI_0_0_1: UISpec = {
   components: [],
 };
 
+export const PRODUCT_COMPARISON_UI_0_0_1: UISpec = {
+  id: 'product-comparison',
+  version: '0.0.1',
+  name: 'Product comparison',
+  description:
+    'The products the agent compared, side by side — price, variant, availability, rating and seller — and the one it would pick with why (show_comparison).',
+  emoji: '📊',
+  octicon: 'table',
+  plugin: '@datalayer/loop-plugin-product-comparison',
+  folder: 'product-comparison',
+  contributions: {
+    slots: [],
+    points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
 export const PROMPT_UI_0_0_1: UISpec = {
   id: 'prompt',
   version: '0.0.1',
@@ -1849,6 +2047,50 @@ export const PROMPT_UI_0_0_1: UISpec = {
     slots: ['loop.promptAction'],
     points: ['loop.command'],
     commands: ['new', 'prompt'],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const SHOPPING_BASKET_UI_0_0_1: UISpec = {
+  id: 'shopping-basket',
+  version: '0.0.1',
+  name: 'Shopping basket',
+  description:
+    'The basket the agent put together: each item, its seller and price, the shipping and the total summed by the tool; nothing is bought from it (show_basket).',
+  emoji: '🛒',
+  octicon: 'package',
+  plugin: '@datalayer/loop-plugin-shopping-basket',
+  folder: 'shopping-basket',
+  contributions: {
+    slots: [],
+    points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const SOCIAL_ACCOUNTS_UI_0_0_1: UISpec = {
+  id: 'social-accounts',
+  version: '0.0.1',
+  name: 'Linked social accounts',
+  description:
+    'Which of X, Bluesky and LinkedIn you linked, as whom, and whether each posts, reads or needs connecting again: drawn where the Marketer reads your accounts (social_accounts).',
+  emoji: '🪪',
+  octicon: 'person',
+  plugin: '@datalayer/loop-plugin-social-accounts',
+  folder: 'social-accounts',
+  contributions: {
+    slots: [],
+    points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
+    commands: [],
   },
   contributionPoints: [],
   settings: {},
@@ -1900,6 +2142,28 @@ export const SPREADSHEET_UI_0_0_1: UISpec = {
   components: [],
 };
 
+export const STRIPE_CHECKOUT_UI_0_0_1: UISpec = {
+  id: 'stripe-checkout',
+  version: '0.0.1',
+  name: 'Stripe checkout',
+  description:
+    "A Stripe Checkout Session the agent created, as an A2UI card: its line items, total and currency, test mode said; Checkout opens Stripe's own page, where the person pays — no card data is ever typed in the chat — and the session's status (paid, open or expired) shows when they are back. A live session is refused.",
+  emoji: '💳',
+  octicon: 'credit-card',
+  plugin: '@datalayer/loop-plugin-stripe-checkout',
+  folder: 'stripe-checkout',
+  contributions: {
+    slots: [],
+    points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: ['a2ui'],
+  catalog: '',
+  components: [],
+};
+
 export const SUBAGENT_ACTIVITY_UI_0_0_1: UISpec = {
   id: 'subagent-activity',
   version: '0.0.1',
@@ -1913,6 +2177,116 @@ export const SUBAGENT_ACTIVITY_UI_0_0_1: UISpec = {
   contributions: {
     slots: ['loop.inpromptMenu'],
     points: [],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const TRIAL_BALANCE_UI_0_0_1: UISpec = {
+  id: 'trial-balance',
+  version: '0.0.1',
+  name: 'Trial balance',
+  description:
+    "Each account's debit, credit and balance for a period, with the totals and whether they agree (show_trial_balance).",
+  emoji: '⚖️',
+  octicon: 'law',
+  plugin: '@datalayer/loop-plugin-trial-balance',
+  folder: 'trial-balance',
+  contributions: {
+    slots: [],
+    points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const TRIP_BUDGET_UI_0_0_1: UISpec = {
+  id: 'trip-budget',
+  version: '0.0.1',
+  name: 'Trip budget',
+  description:
+    'What the trip costs, line by line, quotes apart from estimates, the total and what is left of your budget (show_trip_budget).',
+  emoji: '💰',
+  octicon: 'credit-card',
+  plugin: '@datalayer/loop-plugin-trip-budget',
+  folder: 'trip-budget',
+  contributions: {
+    slots: [],
+    points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const TRIP_ITINERARY_UI_0_0_1: UISpec = {
+  id: 'trip-itinerary',
+  version: '0.0.1',
+  name: 'Trip itinerary',
+  description:
+    'The trip day by day: each stop with its time and place, and the place on a map (show_itinerary).',
+  emoji: '🗺️',
+  octicon: 'calendar',
+  plugin: '@datalayer/loop-plugin-trip-itinerary',
+  folder: 'trip-itinerary',
+  contributions: {
+    slots: [],
+    points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const TRIP_OPTIONS_UI_0_0_1: UISpec = {
+  id: 'trip-options',
+  version: '0.0.1',
+  name: 'Trip options',
+  description:
+    'Up to three trips side by side, each with its dates, price and highlights; you choose one and the choice goes back to the agent (show_trip_options).',
+  emoji: '🧳',
+  octicon: 'briefcase',
+  plugin: '@datalayer/loop-plugin-trip-options',
+  folder: 'trip-options',
+  contributions: {
+    slots: [],
+    points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const VAT_SUMMARY_UI_0_0_1: UISpec = {
+  id: 'vat-summary',
+  version: '0.0.1',
+  name: 'VAT summary',
+  description:
+    "The VAT return's boxes for a period, what is due and deductible, and the net to pay or to be refunded; nothing is filed from it (show_vat_summary).",
+  emoji: '💶',
+  octicon: 'checklist',
+  plugin: '@datalayer/loop-plugin-vat-summary',
+  folder: 'vat-summary',
+  contributions: {
+    slots: [],
+    points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
     commands: [],
   },
   contributionPoints: [],
@@ -1944,6 +2318,50 @@ export const WINDOW_FRAME_UI_0_0_1: UISpec = {
   components: [],
 };
 
+export const X_BUDGET_UI_0_0_1: UISpec = {
+  id: 'x-budget',
+  version: '0.0.1',
+  name: 'X budget',
+  description:
+    "What is left of your X budget today, in the chat's title bar, read from the agent's X budget guardrail (x-api-budget); never for an anonymous visitor.",
+  emoji: '💲',
+  octicon: 'meter',
+  plugin: '@datalayer/loop-plugin-x-budget',
+  folder: 'x-budget',
+  contributions: {
+    slots: ['loop.chatHeader'],
+    points: [],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const X_POST_PREVIEW_UI_0_0_1: UISpec = {
+  id: 'x-post-preview',
+  version: '0.0.1',
+  name: 'X post preview',
+  description:
+    'A post or reply on X as it will stand there, with its length against the 280 characters X takes and its images, above its approval (post_to_x, reply_on_x).',
+  emoji: '𝕏',
+  octicon: 'megaphone',
+  plugin: '@datalayer/loop-plugin-x-post-preview',
+  folder: 'x-post-preview',
+  contributions: {
+    slots: [],
+    points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
 export const UI_CATALOGUE: Record<string, UISpec> = {
   'a2ui-surface': A2UI_SURFACE_UI_0_0_1,
   'a2ui-view': A2UI_VIEW_UI_0_0_1,
@@ -1954,6 +2372,9 @@ export const UI_CATALOGUE: Record<string, UISpec> = {
   'app-elements': APP_ELEMENTS_UI_0_0_1,
   'app-page': APP_PAGE_UI_0_0_1,
   'app-rules': APP_RULES_UI_0_0_1,
+  'aws-savings': AWS_SAVINGS_UI_0_0_1,
+  'bank-reconciliation': BANK_RECONCILIATION_UI_0_0_1,
+  'bluesky-post-preview': BLUESKY_POST_PREVIEW_UI_0_0_1,
   'browser-session': BROWSER_SESSION_UI_0_0_1,
   'canvas-blocks': CANVAS_BLOCKS_UI_0_0_1,
   'canvas-parts': CANVAS_PARTS_UI_0_0_1,
@@ -1965,18 +2386,34 @@ export const UI_CATALOGUE: Record<string, UISpec> = {
   'document-toolbar': DOCUMENT_TOOLBAR_UI_0_0_1,
   'document-view': DOCUMENT_VIEW_UI_0_0_1,
   document: DOCUMENT_UI_0_0_1,
+  'earth-index': EARTH_INDEX_UI_0_0_1,
+  'earth-scenes': EARTH_SCENES_UI_0_0_1,
   'input-prompt': INPUT_PROMPT_UI_0_0_1,
+  'linkedin-link': LINKEDIN_LINK_UI_0_0_1,
+  'linkedin-post-preview': LINKEDIN_POST_PREVIEW_UI_0_0_1,
   models: MODELS_UI_0_0_1,
   'notebook-toolbar': NOTEBOOK_TOOLBAR_UI_0_0_1,
   'notebook-view': NOTEBOOK_VIEW_UI_0_0_1,
   notebook: NOTEBOOK_UI_0_0_1,
   'page-layout': PAGE_LAYOUT_UI_0_0_1,
+  'pap-purchase': PAP_PURCHASE_UI_0_0_1,
   'pap-sign-in': PAP_SIGN_IN_UI_0_0_1,
+  'product-comparison': PRODUCT_COMPARISON_UI_0_0_1,
   prompt: PROMPT_UI_0_0_1,
+  'shopping-basket': SHOPPING_BASKET_UI_0_0_1,
+  'social-accounts': SOCIAL_ACCOUNTS_UI_0_0_1,
   'spreadsheet-view': SPREADSHEET_VIEW_UI_0_0_1,
   spreadsheet: SPREADSHEET_UI_0_0_1,
+  'stripe-checkout': STRIPE_CHECKOUT_UI_0_0_1,
   'subagent-activity': SUBAGENT_ACTIVITY_UI_0_0_1,
+  'trial-balance': TRIAL_BALANCE_UI_0_0_1,
+  'trip-budget': TRIP_BUDGET_UI_0_0_1,
+  'trip-itinerary': TRIP_ITINERARY_UI_0_0_1,
+  'trip-options': TRIP_OPTIONS_UI_0_0_1,
+  'vat-summary': VAT_SUMMARY_UI_0_0_1,
   'window-frame': WINDOW_FRAME_UI_0_0_1,
+  'x-budget': X_BUDGET_UI_0_0_1,
+  'x-post-preview': X_POST_PREVIEW_UI_0_0_1,
 };
 
 /** The UI plugin an agent's or an application's `ui` names, or undefined. */

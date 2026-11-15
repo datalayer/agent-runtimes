@@ -93,6 +93,14 @@ class SkillSpec(BaseModel):
     enabled: bool = Field(
         default=False, description="Whether the platform offers this skill today"
     )
+    ui: List["UiChoiceSpec"] = Field(
+        default_factory=list,
+        description=(
+            "The UI plugins it brings to the chat that uses it (agentspecs "
+            "0.0.196): each ``{plugin, renderer}`` of agentspecs ``ui/``, "
+            "injected after the agent's own while it is in use"
+        ),
+    )
     # Variant 1: module-based discovery
     module: Optional[str] = Field(
         default=None, description="Python module path for name-based discovery"
@@ -180,6 +188,14 @@ class BackendToolSpec(BaseModel):
     description: str = Field(default="", description="Tool description")
     tags: List[str] = Field(default_factory=list, description="Tags for categorization")
     enabled: bool = Field(default=True, description="Whether the tool is enabled")
+    ui: List["UiChoiceSpec"] = Field(
+        default_factory=list,
+        description=(
+            "The UI plugins it brings to the chat that uses it (agentspecs "
+            "0.0.196): each ``{plugin, renderer}`` of agentspecs ``ui/``, "
+            "injected after the agent's own while it is in use"
+        ),
+    )
     approval: str = Field(
         default="auto",
         description="Approval policy for the tool ('auto' or 'manual')",
@@ -1613,6 +1629,14 @@ class MCPServer(BaseModel):
     emoji: Optional[str] = Field(
         default=None,
         description="Unicode emoji for UI display",
+    )
+    ui: List[UiChoiceSpec] = Field(
+        default_factory=list,
+        description=(
+            "The UI plugins it brings to the chat that uses it (agentspecs "
+            "0.0.196): each ``{plugin, renderer}`` of agentspecs ``ui/``, "
+            "injected after the agent's own while it is in use"
+        ),
     )
     url: str = Field(
         default="",

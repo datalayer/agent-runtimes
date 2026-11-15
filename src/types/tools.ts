@@ -6,6 +6,7 @@
 /**
  * Runtime binding metadata for a tool implementation.
  */
+import type { UiChoice } from './agentspecs';
 export interface BackendToolRuntimeSpec {
   /** Implementation language */
   language: 'python' | 'typescript';
@@ -19,6 +20,11 @@ export interface BackendToolRuntimeSpec {
  * Specification for a runtime tool.
  */
 export interface BackendToolSpec {
+  /**
+   * The UI plugins it brings to the chat that uses it (agentspecs 0.0.196):
+   * injected after the agent's own while it is in use (`apps/agentUiPlugins`).
+   */
+  ui?: UiChoice[];
   /** Unique tool identifier */
   id: string;
   /** Version */

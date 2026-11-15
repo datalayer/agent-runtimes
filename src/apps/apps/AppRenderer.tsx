@@ -75,6 +75,7 @@ import {
 } from '../plugins/canvas-blocks';
 import { LoopEmbed, type LoopEmbedProps } from '../embed/LoopEmbed';
 import type { LoopPresetOptions } from '../presets';
+import { agentUiPluginsFor } from '../agentUiPlugins';
 import { dumpAppspec } from './appspec';
 import { defineAppActivityPlugin } from '../plugins/app-activity';
 import { AppElementsPlugin } from '../plugins/app-elements';
@@ -459,6 +460,13 @@ export function appPreset(
       // What its code opens beside the conversation (P-18): a side
       // panel, a page of its own; nothing drawn while nothing is open.
       AppElementsPlugin,
+      // Its agent's own UI plugins, as its `ui` names them (the Marketer's
+      // post previews, the Shopper's basket…): to a visitor, only those
+      // that need no connection of theirs.
+      ...agentUiPluginsFor(
+        app.ui.map(choice => choice.plugin),
+        { anonymous: options.kept?.visitor ?? false },
+      ),
     ],
     workspace: appLayoutOptions(app),
   };

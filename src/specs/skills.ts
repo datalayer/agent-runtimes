@@ -40,6 +40,11 @@ export const ACCOUNTING_SKILL_SPEC_0_0_1: SkillSpec = {
   icon: '@primer/octicons-react:book',
   emoji: '🧮',
   enabled: true,
+  ui: [
+    { plugin: 'bank-reconciliation' },
+    { plugin: 'trial-balance' },
+    { plugin: 'vat-summary' },
+  ],
 };
 
 export const CRAWL_SKILL_SPEC_0_0_1: SkillSpec = {
@@ -134,6 +139,7 @@ export const FARE_AND_STAY_COMPARISON_SKILL_SPEC_0_0_1: SkillSpec = {
   icon: '@primer/octicons-react:arrow-switch',
   emoji: '⚖️',
   enabled: true,
+  ui: [{ plugin: 'trip-options' }, { plugin: 'trip-budget' }],
 };
 
 export const GITHUB_SKILL_SPEC_0_0_1: SkillSpec = {
@@ -277,6 +283,7 @@ export const TRAVEL_PLANNING_SKILL_SPEC_0_0_1: SkillSpec = {
   icon: '@primer/octicons-react:milestone',
   emoji: '🧭',
   enabled: true,
+  ui: [{ plugin: 'trip-itinerary' }, { plugin: 'trip-budget' }],
 };
 
 export const VIDEO_SKILL_SPEC_0_0_1: SkillSpec = {

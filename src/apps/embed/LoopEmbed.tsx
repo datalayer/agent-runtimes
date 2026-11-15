@@ -157,6 +157,8 @@ export function LoopEmbed({
       JSON.stringify(preset.datalayerCreatePayload ?? null),
       JSON.stringify(preset.datalayerVisitors ?? null),
       preset.datalayerKept?.url,
+      // The agent's own UI plugins, by their ids.
+      (preset.uiPlugins ?? []).join(','),
       preset.embedToken,
       preset.defaultEditor,
       preset.showViewSelector,

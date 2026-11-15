@@ -288,6 +288,17 @@ SLACK_TEAM_ID_SPEC_0_0_1 = EnvvarSpec(
     emoji="🏢",
 )
 
+STRIPE_TEST_AGENT_API_KEY_SPEC_0_0_1 = EnvvarSpec(
+    id="STRIPE_TEST_AGENT_API_KEY",
+    version="0.0.1",
+    name="Stripe Agent API Key (test mode)",
+    description="A Stripe agent API key created in a sandbox (test mode), never a live key: sent as the Bearer token to Stripe's MCP server at https://mcp.stripe.com. Create it in the Stripe Dashboard of a sandbox (Developers › API keys › Create agent key) with only the permissions the agent needs (Checkout Sessions write, Products and Prices read). Since December 2026 Stripe's MCP server takes only agent API keys or OAuth, no secret or plain restricted key. In test mode no card is charged: Stripe's test cards (4242 4242 4242 4242) pay on Stripe's page.",
+    registrationUrl="https://docs.stripe.com/keys#agent-keys",
+    tags=["authentication", "api-key", "stripe", "payments", "test-mode"],
+    icon="key",
+    emoji="🔑",
+)
+
 TAVILY_API_KEY_SPEC_0_0_1 = EnvvarSpec(
     id="TAVILY_API_KEY",
     version="0.0.1",
@@ -339,6 +350,7 @@ ENVVAR_CATALOG: Dict[str, EnvvarSpec] = {
     "SLACK_BOT_TOKEN": SLACK_BOT_TOKEN_SPEC_0_0_1,
     "SLACK_CHANNEL_IDS": SLACK_CHANNEL_IDS_SPEC_0_0_1,
     "SLACK_TEAM_ID": SLACK_TEAM_ID_SPEC_0_0_1,
+    "STRIPE_TEST_AGENT_API_KEY": STRIPE_TEST_AGENT_API_KEY_SPEC_0_0_1,
     "TAVILY_API_KEY": TAVILY_API_KEY_SPEC_0_0_1,
     "X_BEARER_TOKEN": X_BEARER_TOKEN_SPEC_0_0_1,
 }
