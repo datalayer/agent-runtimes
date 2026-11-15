@@ -24,7 +24,7 @@ import {
   turnsLeft,
   turnsToday,
   writeTurns,
-} from '../anonymousChat';
+} from '../anonymousMode';
 
 const NOON = Date.parse('2026-11-15T12:00:00Z');
 

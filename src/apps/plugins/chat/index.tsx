@@ -16,7 +16,7 @@ import {
   SyncIcon,
 } from '@primer/octicons-react';
 import { contribution, definePlugin } from '@datalayer/reactor';
-import type { ChatAnonymous } from '../../../chat/anonymous/anonymousChat';
+import type { ChatAnonymous } from '../../../chat/anonymous/anonymousMode';
 import type { ToolbarItem } from '@datalayer/primer-addons';
 import {
   LoopAgentGate,

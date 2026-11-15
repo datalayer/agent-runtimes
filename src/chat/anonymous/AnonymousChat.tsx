@@ -52,7 +52,7 @@ import {
   turnsToday,
   writeTurns,
   type ChatAnonymous,
-} from './anonymousChat';
+} from './anonymousMode';
 
 const storage = (): Storage | undefined => {
   try {

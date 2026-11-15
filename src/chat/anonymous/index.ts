@@ -10,5 +10,5 @@
  * @module chat/anonymous
  */
 
-export * from './anonymousChat';
+export * from './anonymousMode';
 export * from './AnonymousChat';

@@ -16,7 +16,7 @@
  *
  * Pure but for the storage it is handed.
  *
- * @module chat/anonymous/anonymousChat
+ * @module chat/anonymous/anonymousMode
  */
 
 /** How a host runs a conversation as an anonymous visitor. */

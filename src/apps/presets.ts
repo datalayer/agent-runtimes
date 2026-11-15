@@ -66,7 +66,7 @@ import { WindowFramePlugin } from './plugins/window-frame';
 import { DocumentExtension, NotebookExtension } from './extensions';
 import { LoopPageLayoutPlugin, type PageSize } from './plugins/page-layout';
 import type { ResumedThread, ThemeOverrides } from '../types/chat';
-import { maxTurnsOf } from '../chat/anonymous/anonymousChat';
+import { maxTurnsOf } from '../chat/anonymous/anonymousMode';
 
 export type LoopPresetOptions = {
   /** Where the agent runtimes service is. */

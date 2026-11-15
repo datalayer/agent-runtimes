@@ -15,7 +15,7 @@
 import type { JSX } from 'react';
 import { ActionList, ActionMenu, Label, Tooltip } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
-import { ANONYMOUS_WORDS } from '../anonymous/anonymousChat';
+import { ANONYMOUS_WORDS } from '../anonymous/anonymousMode';
 
 export function DisabledIndicator({
   names,

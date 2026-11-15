@@ -16,7 +16,7 @@
 import { useEffect, useMemo } from 'react';
 import { Tooltip } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
-import { ANONYMOUS_WORDS } from '../anonymous/anonymousChat';
+import { ANONYMOUS_WORDS } from '../anonymous/anonymousMode';
 import { DisabledIndicator } from './DisabledIndicator';
 
 export interface SkillsStatusIndicatorProps {

@@ -108,7 +108,7 @@ import {
   ANONYMOUS_MINUTES,
   ANONYMOUS_WORDS,
   type ChatAnonymous,
-} from '../../../chat/anonymous/anonymousChat';
+} from '../../../chat/anonymous/anonymousMode';
 import {
   AnonymousChatProvider,
   AnonymousFooterLabel,

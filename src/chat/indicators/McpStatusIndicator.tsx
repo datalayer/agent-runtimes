@@ -28,7 +28,7 @@ import type {
   McpToolsetsStatusResponse,
 } from '../../types/mcp';
 import { MCP_STATUS_COLORS, MCP_STATUS_LABELS } from '../../types/mcp';
-import { ANONYMOUS_WORDS } from '../anonymous/anonymousChat';
+import { ANONYMOUS_WORDS } from '../anonymous/anonymousMode';
 import { DisabledIndicator } from './DisabledIndicator';
 
 /* ── Props ─────────────────────────────────────────────── */
