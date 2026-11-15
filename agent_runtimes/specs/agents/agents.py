@@ -10856,12 +10856,9 @@ WORKER_MARKETER_AGENTSPEC_0_0_1 = Agentspec(
     inference_provider=None,
     mcp_servers=[MCP_SERVER_CATALOG["discord"], MCP_SERVER_CATALOG["linkedin"]],
     skills=[
-        "accounting:0.0.1",
         "crawl:0.0.1",
-        "events:0.0.1",
         "github:0.0.1",
         "image:0.0.1",
-        "jokes:0.0.1",
         "pdf:0.0.1",
         "text-summarizer:0.0.1",
         "video:0.0.1",
@@ -10893,7 +10890,20 @@ WORKER_MARKETER_AGENTSPEC_0_0_1 = Agentspec(
     icon="megaphone",
     emoji="📣",
     color="pink",
-    suggestions=[],
+    suggestions=[
+        AgentSuggestion(
+            text="Plan a two-week launch campaign for our new feature across X, Bluesky, LinkedIn and our Discord, with one goal and a post a day.",
+            summary="Plan a launch",
+        ),
+        AgentSuggestion(
+            text="Draft today's post for each network from this note, in our voice, and show me before anything goes out.",
+            summary="Draft today's post",
+        ),
+        AgentSuggestion(
+            text="Read the replies and the numbers on last week's posts and tell me what worked and what to change.",
+            summary="What came back",
+        ),
+    ],
     welcome_message="",
     welcome_notebook=None,
     welcome_document=None,

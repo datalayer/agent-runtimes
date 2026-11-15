@@ -12041,23 +12041,14 @@ export const WORKER_MARKETER_AGENTSPEC_0_0_1: Agentspec = {
     MCP_SERVER_MAP['linkedin:0.0.1'],
   ],
   skills: [
-    SKILL_MAP['accounting:0.0.1']
-      ? toAgentSkillSpec(SKILL_MAP['accounting:0.0.1'])
-      : undefined,
     SKILL_MAP['crawl:0.0.1']
       ? toAgentSkillSpec(SKILL_MAP['crawl:0.0.1'])
-      : undefined,
-    SKILL_MAP['events:0.0.1']
-      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
       : undefined,
     SKILL_MAP['github:0.0.1']
       ? toAgentSkillSpec(SKILL_MAP['github:0.0.1'])
       : undefined,
     SKILL_MAP['image:0.0.1']
       ? toAgentSkillSpec(SKILL_MAP['image:0.0.1'])
-      : undefined,
-    SKILL_MAP['jokes:0.0.1']
-      ? toAgentSkillSpec(SKILL_MAP['jokes:0.0.1'])
       : undefined,
     SKILL_MAP['pdf:0.0.1']
       ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
@@ -12106,7 +12097,20 @@ export const WORKER_MARKETER_AGENTSPEC_0_0_1: Agentspec = {
   icon: 'megaphone',
   emoji: '📣',
   color: 'pink',
-  suggestions: [],
+  suggestions: [
+    {
+      text: 'Plan a two-week launch campaign for our new feature across X, Bluesky, LinkedIn and our Discord, with one goal and a post a day.',
+      summary: 'Plan a launch',
+    },
+    {
+      text: "Draft today's post for each network from this note, in our voice, and show me before anything goes out.",
+      summary: "Draft today's post",
+    },
+    {
+      text: "Read the replies and the numbers on last week's posts and tell me what worked and what to change.",
+      summary: 'What came back',
+    },
+  ],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
   welcomeDocument: undefined,
