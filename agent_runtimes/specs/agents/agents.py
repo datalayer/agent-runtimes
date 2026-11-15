@@ -6763,7 +6763,15 @@ WORKER_ACCOUNTANT_AGENTSPEC_0_0_1 = Agentspec(
     advanced=None,
     checkpoints=None,
     authorization_policy=None,
-    policy={"shield": {"egress": ["*"]}},
+    policy={
+        "shield": {
+            "egress": [
+                "mcp.datalayer.run:443",
+                "r1.datalayer.run:443",
+                "prod1.datalayer.run:443",
+            ]
+        }
+    },
     notifications=None,
     memory="ephemeral",
     decisions=None,
@@ -10998,7 +11006,7 @@ WORKER_MARKETER_AGENTSPEC_0_0_1 = Agentspec(
     advanced=None,
     checkpoints=None,
     authorization_policy=None,
-    policy={"shield": {"egress": ["*"]}},
+    policy={"shield": {"egress": ["*:80", "*:443"]}},
     notifications=None,
     memory="mem0",
     decisions=None,
@@ -13389,7 +13397,7 @@ WORKER_SHOPPER_AGENTSPEC_0_0_1 = Agentspec(
     advanced=None,
     checkpoints=None,
     authorization_policy=None,
-    policy={"shield": {"egress": ["*"]}},
+    policy={"shield": {"egress": ["*:80", "*:443"]}},
     notifications=None,
     memory="mem0",
     decisions=None,
@@ -14144,7 +14152,21 @@ WORKER_TERRA_AGENTSPEC_0_0_1 = Agentspec(
     advanced=None,
     checkpoints=None,
     authorization_policy=None,
-    policy={"shield": {"egress": ["*"]}},
+    policy={
+        "shield": {
+            "egress": [
+                "mcp.datalayer.run:443",
+                "urs.earthdata.nasa.gov:443",
+                "cmr.earthdata.nasa.gov:443",
+                "data.lpdaac.earthdatacloud.nasa.gov:443",
+                "d1nklfio7vscoe.cloudfront.net:443",
+                "pypi.org:443",
+                "files.pythonhosted.org:443",
+                "r1.datalayer.run:443",
+                "prod1.datalayer.run:443",
+            ]
+        }
+    },
     notifications=None,
     memory="mem0",
     decisions=None,
@@ -14467,7 +14489,7 @@ WORKER_VOYAGER_AGENTSPEC_0_0_1 = Agentspec(
     advanced=None,
     checkpoints=None,
     authorization_policy=None,
-    policy={"shield": {"egress": ["*"]}},
+    policy={"shield": {"egress": ["*:80", "*:443"]}},
     notifications=None,
     memory="mem0",
     decisions=None,
