@@ -171,6 +171,29 @@ export function embedShadowCss(themeCss?: string): string {
   color: #1f2328;
   background: #ffffff;
 }
+.datalayer-app-waiting {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #d0d7de;
+  border-radius: 12px;
+  background: #ffffff;
+}
+.datalayer-app-waiting > span {
+  display: block;
+  height: 14px;
+  border-radius: 6px;
+  background: #eaeef2;
+  animation: datalayer-app-pulse 1.4s ease-in-out infinite;
+}
+@keyframes datalayer-app-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .datalayer-app-waiting > span { animation: none; }
+}
 iframe.datalayer-app-frame {
   display: block;
   width: 100%;

@@ -376,7 +376,42 @@ export function defineDatalayerAppElement(
 
     connectedCallback(): void {
       window.addEventListener('message', this.onMessage);
+      // The loader's placeholder, drawn before this module arrived, is no
+      // longer seen under the shadow root: it goes.
+      this.querySelectorAll(':scope > [data-datalayer-skeleton]').forEach(
+        node => node.remove(),
+      );
+      this.waiting();
       void this.load();
+    }
+
+    /**
+     * A skeleton while the application is read, never "Loading…" (the user,
+     * 15 November 2026): inline only, since a floating mode draws nothing
+     * in the page until it opens.
+     */
+    private waiting(): void {
+      const mode = this.getAttribute('mode');
+      if (
+        (mode && mode !== 'inline') ||
+        (this.shadowRoot?.childElementCount ?? 0) > 0
+      ) {
+        return;
+      }
+      this.setAttribute('data-embed-mode', 'inline');
+      const shadow = this.skeleton();
+      const box = document.createElement('div');
+      box.className = 'datalayer-app-waiting';
+      box.setAttribute('role', 'status');
+      box.setAttribute('aria-busy', 'true');
+      box.setAttribute('aria-label', 'Loading the application');
+      box.style.minHeight = `${inlineHeightOf(this.getAttribute('height'))}px`;
+      for (const width of ['40%', '72%', '58%', '64%']) {
+        const bar = document.createElement('span');
+        bar.style.width = width;
+        box.appendChild(bar);
+      }
+      shadow.appendChild(box);
     }
 
     disconnectedCallback(): void {
