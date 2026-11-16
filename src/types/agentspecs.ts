@@ -1132,7 +1132,8 @@ export interface AppPapCompanySpec {
   registeredAgents: string[];
   /**
    * What it does for the person once they confirm (the
-   * `operations` extension): each action and each tool once.
+   * `operations` extension): each action and each tool once. Derived from
+   * the application's `openapi` (its operations carrying `x-pap`), never written.
    */
   operations: AppPapOperationSpec[];
 }
@@ -1906,6 +1907,12 @@ export interface AppSpec {
   backendTools: string[];
   /** Tools of its own, written in its code; absent when it has none. */
   tools?: AppToolSpec[];
+  /**
+   * What it answers when called, as an OpenAPI 3.1 document (agentspecs checks
+   * it): its MCP tools, REST endpoints and PAP operations (`x-pap`). Absent: one
+   * operation, `ask`.
+   */
+  openapi?: Record<string, unknown>;
   /** The Frames it works under. */
   context: string[];
   /** The documents and datasets it answers from. */

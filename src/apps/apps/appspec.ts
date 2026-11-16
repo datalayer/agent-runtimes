@@ -45,6 +45,7 @@ import type {
   AppPapAlternativeSpec,
   AppPapCompanyScopeSpec,
   AppPapExcludedTaskSpec,
+  AppPapOperationSpec,
   AppPapSpec,
   PapProfile,
   AppPactSpec,
@@ -454,6 +455,7 @@ const KNOWN_KEYS = [
   'skills',
   'backend_tools',
   'tools',
+  'openapi',
   'context',
   'contents',
   'connections',
@@ -552,7 +554,34 @@ const enumsOf = <T extends string>(
  * Personal Agent Protocol: the companies the
  * application works with, and whether it is one. Defaults are agentspecs'.
  */
-function parsePap(data: Data): AppPapSpec {
+/**
+ * The PAP operations of an application's `openapi`: one per operation carrying
+ * `x-pap` (`action`, `tool`, `summary`), in the document's order — agentspecs'
+ * `pap_operations`. `pap.company.operations` is never written.
+ */
+export function papOperationsOf(openapi: unknown): AppPapOperationSpec[] {
+  const found: AppPapOperationSpec[] = [];
+  const paths = isData(openapi) && isData(openapi.paths) ? openapi.paths : {};
+  for (const item of Object.values(paths)) {
+    if (!isData(item)) {
+      continue;
+    }
+    for (const method of ['get', 'post', 'put', 'patch', 'delete']) {
+      const operation = item[method];
+      if (isData(operation) && isData(operation['x-pap'])) {
+        const pap = operation['x-pap'];
+        found.push({
+          action: text(pap.action),
+          tool: text(pap.tool),
+          summary: text(pap.summary),
+        });
+      }
+    }
+  }
+  return found;
+}
+
+function parsePap(data: Data, openapi?: unknown): AppPapSpec {
   const company = isData(data.company) ? data.company : {};
   return {
     profile: data.profile as PapProfile,
@@ -596,11 +625,7 @@ function parsePap(data: Data): AppPapSpec {
         'any',
       ),
       registeredAgents: texts(company.registered_agents),
-      operations: records(company.operations).map(operation => ({
-        action: text(operation.action),
-        tool: text(operation.tool),
-        summary: text(operation.summary),
-      })),
+      operations: papOperationsOf(openapi),
     },
   };
 }
@@ -720,17 +745,7 @@ function dumpPap(pap: AppPapSpec | undefined): Data {
         )
         .list('extensions', pap.company.extensions)
         .value<string>('personal_agents', pap.company.personalAgents, 'any')
-        .list('registered_agents', pap.company.registeredAgents)
-        .list(
-          'operations',
-          pap.company.operations.map(
-            operation =>
-              new Writer()
-                .text('action', operation.action, '\u0000')
-                .text('tool', operation.tool, '\u0000')
-                .text('summary', operation.summary, '\u0000').data,
-          ),
-        ).data,
+        .list('registered_agents', pap.company.registeredAgents).data,
     ).data;
 }
 
@@ -1492,6 +1507,7 @@ export function parseAppspec(document: unknown): ParsedAppspec {
     skills: texts(data.skills),
     backendTools: texts(data.backend_tools),
     tools: records(data.tools).map(parseTool),
+    ...(isData(data.openapi) ? { openapi: data.openapi } : {}),
     context: texts(data.context),
     contents: texts(data.contents),
     connections: records(data.connections).map(parseConnection),
@@ -1595,7 +1611,12 @@ export function parseAppspec(document: unknown): ParsedAppspec {
     if (problem) {
       problems.push(problem);
     } else {
-      app.pap = parsePap(data.pap);
+      if (isData(data.pap.company) && 'operations' in data.pap.company) {
+        problems.push(
+          '`pap.company.operations` are not written: they come from `openapi`, each operation that a person approves carrying `x-pap`.',
+        );
+      }
+      app.pap = parsePap(data.pap, data.openapi);
     }
   }
   if (isData(data.pact)) {
@@ -2138,6 +2159,7 @@ export function dumpAppspec(app: AppSpec): Data {
         does: tool.does,
       })),
     )
+    .present('openapi', app.openapi as Data | undefined)
     .list('context', app.context)
     .list('contents', app.contents)
     .list(

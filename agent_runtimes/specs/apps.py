@@ -2934,6 +2934,56 @@ EXCHANGE_DESK_APP_0_0_3 = AppSpec.model_validate(
                 "does": ["write"],
             }
         ],
+        "openapi": {
+            "openapi": "3.1.0",
+            "info": {"title": "Exchange Desk", "version": "0.0.3"},
+            "paths": {
+                "/exchange_order": {
+                    "post": {
+                        "operationId": "exchange_order",
+                        "summary": "Exchanges an order for another size, once the person approved it.",
+                        "requestBody": {
+                            "required": True,
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "order_id": {"type": "string"},
+                                            "size": {"type": "string"},
+                                        },
+                                        "required": ["order_id", "size"],
+                                    }
+                                }
+                            },
+                        },
+                        "responses": {
+                            "200": {
+                                "description": "Its answer",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "properties": {
+                                                "proposed": {"type": "boolean"},
+                                                "message": {"type": "string"},
+                                            },
+                                            "required": ["proposed", "message"],
+                                        }
+                                    }
+                                },
+                            }
+                        },
+                        "x-pap": {
+                            "action": "orders.exchange",
+                            "tool": "exchange_order",
+                            "summary": "Exchange order {order_id} for size {size}.",
+                            "scope": "orders:write",
+                        },
+                    }
+                }
+            },
+        },
         "context": [],
         "contents": [],
         "connections": [],

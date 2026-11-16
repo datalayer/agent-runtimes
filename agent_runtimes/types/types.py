@@ -3102,7 +3102,8 @@ class AppPapCompanySpec(BaseModel):
     scopes: List[AppPapCompanyScopeSpec] = Field(default_factory=list)
     excluded_tasks: List[AppPapExcludedTaskSpec] = Field(default_factory=list)
     extensions: List[str] = Field(default_factory=list)
-    operations: List[AppPapOperationSpec] = Field(default_factory=list)
+    #: Derived from the application's `openapi` (its operations carrying `x-pap`), never written.
+    operations: List[AppPapOperationSpec] = Field(default_factory=list, exclude=True)
 
     def scope_names(self) -> List[str]:
         """The names of the scopes it offers, in order."""
@@ -3897,6 +3898,13 @@ class AppSpec(BaseModel):
         default_factory=list,
         description="Tools of its own, written in its code",
     )
+    openapi: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description=(
+            "What it answers when called, as an OpenAPI 3.1 document, as agentspecs "
+            "checks it: its MCP tools, REST endpoints and PAP operations (`x-pap`)"
+        ),
+    )
     context: List[str] = Field(
         default_factory=list, description="The Frames it works under"
     )
@@ -3960,6 +3968,18 @@ class AppSpec(BaseModel):
         default="",
         description="Its banner, by name, from the set people choose theirs from; the one its id seeds when unsaid",
     )
+
+    @model_validator(mode="after")
+    def _pap_operations_of_its_openapi(self) -> "AppSpec":
+        """`pap.company.operations`, from its `openapi` (agentspecs `pap_operations`)."""
+        if self.openapi:
+            from agentspecs.apps import pap_operations
+
+            self.pap.company.operations = [
+                AppPapOperationSpec.model_validate(operation.model_dump(mode="json"))
+                for operation in pap_operations(self.openapi)
+            ]
+        return self
 
     def tool(self, name: str) -> Optional[AppToolSpec]:
         """Find its own tool of that name, or None."""

@@ -1409,15 +1409,6 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           title: 'Registered Agents',
           type: 'array',
         },
-        operations: {
-          description:
-            'What it does for the person once they confirm (the `operations` extension)',
-          items: {
-            $ref: '#/$defs/AppPapOperation',
-          },
-          title: 'Operations',
-          type: 'array',
-        },
       },
       title: 'AppPapCompany',
       type: 'object',
@@ -1559,34 +1550,6 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       },
       required: ['task'],
       title: 'AppPapExcludedTask',
-      type: 'object',
-    },
-    AppPapOperation: {
-      additionalProperties: false,
-      description:
-        "Something a personal agent may ask the application to do for the person,\ndone only once they approve its exact terms (Operations v2).\n\nAsked by a personal agent, the application's agent does not call `tool`:\nthe company answers with the operation, its arguments the terms, and the\npersonal agent asks the person about that revision. Its request sent again\nwith their approval runs the tool, with those arguments and only once.",
-      properties: {
-        action: {
-          description:
-            "The action's name at this company, e.g. `orders.exchange`",
-          title: 'Action',
-          type: 'string',
-        },
-        tool: {
-          description:
-            "The application's tool that does it, called with the terms",
-          title: 'Tool',
-          type: 'string',
-        },
-        summary: {
-          description:
-            'What the person is shown, with `{term}` for each term, e.g. `Exchange order {order_id} for size {size}`; never written by the model',
-          title: 'Summary',
-          type: 'string',
-        },
-      },
-      required: ['action', 'tool', 'summary'],
-      title: 'AppPapOperation',
       type: 'object',
     },
     AppPapReference: {
@@ -2990,6 +2953,21 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       },
       title: 'Tools',
       type: 'array',
+    },
+    openapi: {
+      anyOf: [
+        {
+          additionalProperties: true,
+          type: 'object',
+        },
+        {
+          type: 'null',
+        },
+      ],
+      default: null,
+      description:
+        "What it answers when called, as an OpenAPI 3.1 document: each operation's `summary` and `description` its instruction to the agent, its JSON request body and parameters its inputs, its `200` JSON schema what the agent answers. Its MCP tools, its REST endpoints and its Personal Agent Protocol operations (`x-pap`) all come from it. Without it, the application answers one operation, `ask`. In a file, a path relative to the spec",
+      title: 'Openapi',
     },
     context: {
       description:
