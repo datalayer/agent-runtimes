@@ -240,6 +240,8 @@ class RuntimeAddresses:
         for mode, slot in self.slots.items():
             await slot.fill(mode_app(addressed, mode))
         if addressed.hosts is not None:
+            # A2A at its agent host (D-6), whatever transport it was made for.
+            _answer_over_a2a(agent_id, addressed)
             company = (
                 company_of(addressed, agent_id) if addressed.role == "company" else None
             )
@@ -275,6 +277,33 @@ def _launched_address() -> str:
 
     instance = launched_app()[1] or {}
     return str(instance.get("address") or "").strip()
+
+
+def _answer_over_a2a(agent_id: str, addressed: AddressedAgent) -> None:
+    """The agent answers over A2A, its card at its agent host, when it was made for
+    another transport (a person's own agent made from its spec for the chat)."""
+    from agent_runtimes.routes.a2a import (
+        A2AAgentCard,
+        _a2a_agents,
+        register_a2a_agent,
+    )
+    from agent_runtimes.routes.acp import _agents
+
+    if agent_id in _a2a_agents or agent_id not in _agents:
+        return
+    try:
+        register_a2a_agent(
+            _agents[agent_id][0],
+            A2AAgentCard(
+                id=agent_id,
+                name=addressed.app.name,
+                description=addressed.app.description or addressed.app.name,
+                url=f"/api/v1/a2a/agents/{agent_id}",
+            ),
+        )
+        logger.info("Agent %s answers over A2A at its agent host", agent_id)
+    except Exception as error:  # noqa: BLE001 - said; its other addresses answer
+        logger.warning("Agent %s does not answer over A2A: %s", agent_id, error)
 
 
 def _policy_and_checkers() -> tuple[Optional[str], Any, Any]:

@@ -885,7 +885,9 @@ def test_a_companys_device_link_sends_the_person_on_to_studio() -> None:
 
 
 @pytest.mark.asyncio
-async def test_an_api_key_is_asked_of_iam_as_a_bearer(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_an_api_key_is_asked_of_iam_as_a_bearer(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     from agent_runtimes.addresses.access import iam_key_checker
 
     seen: List[Dict[str, str]] = []
@@ -904,3 +906,54 @@ async def test_an_api_key_is_asked_of_iam_as_a_bearer(monkeypatch: pytest.Monkey
     )
     assert await iam_key_checker("https://iam.example")("the-key") == "u-1"
     assert await iam_key_checker("https://iam.example")("another") is None
+
+
+@pytest.mark.asyncio
+async def test_the_mcp_server_answers_at_its_own_host_and_no_other() -> None:
+    from agent_runtimes.addresses.mcp import mcp_app
+
+    initialize = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {
+            "protocolVersion": "2025-06-18",
+            "capabilities": {},
+            "clientInfo": {"name": "check", "version": "1"},
+        },
+    }
+    headers = {"accept": "application/json, text/event-stream"}
+    async with served(mcp_app(addressed(Answers()))) as url:
+        async with httpx.AsyncClient(timeout=30) as client:
+            own = await client.post(
+                f"{url}/mcp",
+                json=initialize,
+                headers={**headers, "host": "shop.mcp.datalayer.ai"},
+            )
+            other = await client.post(
+                f"{url}/mcp",
+                json=initialize,
+                headers={**headers, "host": "evil.example"},
+            )
+    assert own.status_code == 200, own.text
+    assert other.status_code == 421
+
+
+def test_an_agent_at_its_address_answers_over_a2a_whatever_it_was_made_for(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from agent_runtimes.addresses import servers
+    from agent_runtimes.routes import a2a, acp
+
+    registered: List[Any] = []
+    monkeypatch.setattr(
+        a2a, "register_a2a_agent", lambda agent, card: registered.append((agent, card))
+    )
+    monkeypatch.setitem(acp._agents, "made-for-chat", ("adapter", None))
+    servers._answer_over_a2a("made-for-chat", addressed(Answers()))
+    assert registered[0][0] == "adapter"
+    assert registered[0][1].url == "/api/v1/a2a/agents/made-for-chat"
+    # Not made here, or answering over A2A already: nothing.
+    registered.clear()
+    servers._answer_over_a2a("nobody", addressed(Answers()))
+    assert registered == []

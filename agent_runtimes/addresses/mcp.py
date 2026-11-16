@@ -130,8 +130,30 @@ def mcp_app(addressed: AddressedAgent) -> Any:
         instructions=addressed.app.description,
     )
     return guarded(
-        create_mcp_app(host, path="/mcp"), addressed, _CALLER, open_paths=("/healthz",)
+        create_mcp_app(host, path="/mcp", app_options=_app_options(addressed)),
+        addressed,
+        _CALLER,
+        open_paths=("/healthz",),
     )
+
+
+def _app_options(addressed: AddressedAgent) -> Dict[str, Any]:
+    """The SDK's transport security: its DNS rebinding protection admits the agent's own
+    MCP host (``{name}.mcp.<domain>``, behind the ingress) besides the loopback, which
+    alone it admits by default — every request at the agent's address was 421."""
+    from mcp.server.transport_security import TransportSecuritySettings
+
+    hosts = ["127.0.0.1", "127.0.0.1:*", "localhost", "localhost:*", "[::1]:*"]
+    origins = ["http://127.0.0.1:*", "http://localhost:*"]
+    if addressed.hosts is not None:
+        host = addressed.hosts.host("mcp")
+        hosts += [host, f"{host}:443"]
+        origins.append(f"https://{host}")
+    return {
+        "transport_security": TransportSecuritySettings(
+            allowed_hosts=hosts, allowed_origins=origins
+        )
+    }
 
 
 __all__ = ["OperationsExtension", "mcp_app"]
