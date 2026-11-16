@@ -2117,6 +2117,15 @@ async def create_agent(
                     status_code=422,
                     detail={"problems": refused.problems},
                 ) from None
+            # Its own backend tools beside its agent's (the Demo Shop's
+            # demo-shop-* tools): a local process refuses an application
+            # with backend tools and sends it to a runtime, which brings them.
+            known_tools = {_ref_id_of(tool) for tool in request.backend_tools}
+            request.backend_tools = list(request.backend_tools) + [
+                str(tool)
+                for tool in running_app.backend_tools or []
+                if _ref_id_of(str(tool)) not in known_tools
+            ]
             # The runtime was launched for it and a secret it declares was not
             # given (R-19): refused in the sentence its launch was.
             launch_refused = _SET_UP_REFUSED.get(running_app.id)
