@@ -150,6 +150,8 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
         # The Personal Agent Protocol's recorded journeys as applications (PR-05).
         "order-tracker",
         "shop-concierge",
+        # A person's Shopper asking the Demo Shop over A2A (the Buy from a shop Stage).
+        "shopper",
         "live-shop-chat",
         "sign-in-desk",
         "returns-desk",

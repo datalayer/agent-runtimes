@@ -6769,6 +6769,131 @@ SHOP_CONCIERGE_APP_0_0_2 = AppSpec.model_validate(
     }
 )
 
+SHOPPER_APP_0_0_1 = AppSpec.model_validate(
+    {
+        "schema": "loop.app/v1",
+        "id": "shopper",
+        "version": "0.0.1",
+        "name": "Shopper",
+        "kind": "chat",
+        "description": "Shops at the Demo Shop for you: asks it for products, gets a basket quoted and places a test order once you say so, and hands over what the shop answered without adding a product or a figure of its own.",
+        "owner": "Datalayer <info@datalayer.io>",
+        "agent": "worker-shopper:0.0.1",
+        "team": "",
+        "instructions": "You shop for the person at the Demo Shop. You do not hold its catalogue: the shop does. When the person asks for products, a comparison, a basket or an order, call ask_shop once with one request the shop can act on without the rest of this conversation: what kind of product, the budget or price range, the quantities, and whether to quote or to place the order. Then give the person what the shop answered — its products, prices, stock and totals — as it answered them, and say which product you would pick and why from those figures. Never invent a product, a price, a rating or a total, and never compute a total yourself: ask the shop to quote. Ask the shop to place an order only once the person said to, and say that it is a test order: nothing is charged and nothing ships. When the shop cannot answer, or says it does not have something, say so and repeat what it said. You buy nothing yourself and contact no other shop.",
+        "model": "",
+        "skills": [],
+        "backend_tools": [],
+        "tools": [],
+        "context": [],
+        "contents": [],
+        "connections": [],
+        "protocols": [],
+        "ui": [{"plugin": "chat", "renderer": None, "placement": None}],
+        "pair": None,
+        "rules": [],
+        "permissions": {
+            "spaces": [],
+            "computer": {
+                "browse": False,
+                "files": False,
+                "shell": False,
+                "repository": None,
+            },
+        },
+        "interface": {
+            "layout": "chat",
+            "accent": "sun",
+            "theme": None,
+            "welcome": "I'm your Shopper at the Demo Shop: tell me what you need and your budget, and I ask the shop, compare what it has and get the basket quoted. Its orders are test orders: nothing is charged and nothing ships.",
+            "starters": [
+                {
+                    "label": "Tennis",
+                    "message": "Find me what the shop has for tennis, and say which you would pick.",
+                },
+                {
+                    "label": "A basket",
+                    "message": "Quote two tennis balls and the tennis racket.",
+                },
+                {
+                    "label": "Order it",
+                    "message": "Place the test order for that basket.",
+                },
+            ],
+            "commands": [],
+            "modes": [],
+            "actions": [],
+            "profiles": [],
+            "settings": None,
+            "settings_ui": None,
+            "language": "en",
+            "translations": {},
+            "uploads": None,
+            "components": [],
+            "surface": None,
+            "page": None,
+            "avatar": None,
+            "balloon": None,
+            "voice": {
+                "enabled": False,
+                "input": "push_to_talk",
+                "output": "on_request",
+                "voice": "",
+                "language": "",
+                "where": "auto",
+            },
+            "outputs": [],
+        },
+        "tests": {
+            "ready_at": 0.8,
+            "evalset": "",
+            "cases": [
+                {
+                    "ask": "Find me what the shop has for tennis, and say which you would pick.",
+                    "expect": "It asks the shop, lists the tennis racket and the tennis ball with the shop's prices, and recommends one from those figures.",
+                },
+                {
+                    "ask": "Quote two tennis balls and the tennis racket.",
+                    "expect": "It asks the shop to quote and gives its total of 63.97 USD, computing nothing itself.",
+                },
+                {
+                    "ask": "Find me a tent.",
+                    "expect": "It says the shop has no tent and invents none.",
+                },
+            ],
+            "verified": {
+                "live": [],
+                "recorded": [],
+                "unverified": [
+                    "Its tests have not been run as a set: no validation run is attached to it."
+                ],
+            },
+        },
+        "record": {
+            "keep_for": "30_days",
+            "include": ["conversations"],
+            "suggest_tests": False,
+            "retention_days": 30,
+        },
+        "checks": {"guards": [], "gates": [], "track": "", "code": []},
+        "deployment": {"hosted": None, "embedded": None},
+        "goal": "",
+        "triggers": [],
+        "memory": "",
+        "notifications": [],
+        "decision": None,
+        "samples": {"documents": [], "alternatives": []},
+        "enabled": True,
+        "unavailable_because": "",
+        "tags": ["example", "shopping", "commerce", "a2a"],
+        "icon": "gift",
+        "emoji": "🧺",
+        "avatar": "",
+        "banner": "",
+        "setup": [],
+    }
+)
+
 SHOPPING_DESK_APP_0_0_2 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
@@ -8082,6 +8207,7 @@ APP_CATALOGUE: Dict[str, AppSpec] = {
     "sheet-maker": SHEET_MAKER_APP_0_0_1,
     "ship-or-fix": SHIP_OR_FIX_APP_0_0_3,
     "shop-concierge": SHOP_CONCIERGE_APP_0_0_2,
+    "shopper": SHOPPER_APP_0_0_1,
     "shopping-desk": SHOPPING_DESK_APP_0_0_2,
     "sign-in-desk": SIGN_IN_DESK_APP_0_0_2,
     "signed-reader": SIGNED_READER_APP_0_0_2,
@@ -8132,6 +8258,7 @@ APP_BUILT: Dict[str, Literal["python", "canvas", "written"]] = {
     "sheet-maker": "written",
     "ship-or-fix": "written",
     "shop-concierge": "written",
+    "shopper": "written",
     "shopping-desk": "written",
     "sign-in-desk": "written",
     "signed-reader": "written",

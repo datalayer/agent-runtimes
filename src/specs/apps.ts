@@ -7419,6 +7419,136 @@ export const SHOP_CONCIERGE_APP_0_0_2: AppSpec = {
   setup: [],
 };
 
+export const SHOPPER_APP_0_0_1: AppSpec = {
+  schema: 'loop.app/v1',
+  id: 'shopper',
+  version: '0.0.1',
+  name: 'Shopper',
+  kind: 'chat',
+  description:
+    'Shops at the Demo Shop for you: asks it for products, gets a basket quoted and places a test order once you say so, and hands over what the shop answered without adding a product or a figure of its own.',
+  owner: 'Datalayer <info@datalayer.io>',
+  agent: 'worker-shopper:0.0.1',
+  team: '',
+  instructions:
+    'You shop for the person at the Demo Shop. You do not hold its catalogue: the shop does. When the person asks for products, a comparison, a basket or an order, call ask_shop once with one request the shop can act on without the rest of this conversation: what kind of product, the budget or price range, the quantities, and whether to quote or to place the order. Then give the person what the shop answered — its products, prices, stock and totals — as it answered them, and say which product you would pick and why from those figures. Never invent a product, a price, a rating or a total, and never compute a total yourself: ask the shop to quote. Ask the shop to place an order only once the person said to, and say that it is a test order: nothing is charged and nothing ships. When the shop cannot answer, or says it does not have something, say so and repeat what it said. You buy nothing yourself and contact no other shop.',
+  model: '',
+  skills: [],
+  backendTools: [],
+  tools: [],
+  context: [],
+  contents: [],
+  connections: [],
+  protocols: [],
+  ui: [
+    {
+      plugin: 'chat',
+    },
+  ],
+  rules: [],
+  permissions: {
+    spaces: [],
+    computer: {
+      browse: false,
+      files: false,
+      shell: false,
+    },
+  },
+  interface: {
+    layout: 'chat',
+    accent: 'sun',
+    welcome:
+      "I'm your Shopper at the Demo Shop: tell me what you need and your budget, and I ask the shop, compare what it has and get the basket quoted. Its orders are test orders: nothing is charged and nothing ships.",
+    starters: [
+      {
+        label: 'Tennis',
+        message:
+          'Find me what the shop has for tennis, and say which you would pick.',
+      },
+      {
+        label: 'A basket',
+        message: 'Quote two tennis balls and the tennis racket.',
+      },
+      {
+        label: 'Order it',
+        message: 'Place the test order for that basket.',
+      },
+    ],
+    commands: [],
+    modes: [],
+    actions: [],
+    profiles: [],
+    language: 'en',
+    translations: {},
+    components: [],
+    voice: {
+      enabled: false,
+      input: 'push_to_talk',
+      output: 'on_request',
+      voice: '',
+      language: '',
+      where: 'auto',
+    },
+    outputs: [],
+  },
+  tests: {
+    readyAt: 0.8,
+    evalset: '',
+    cases: [
+      {
+        ask: 'Find me what the shop has for tennis, and say which you would pick.',
+        expect:
+          "It asks the shop, lists the tennis racket and the tennis ball with the shop's prices, and recommends one from those figures.",
+      },
+      {
+        ask: 'Quote two tennis balls and the tennis racket.',
+        expect:
+          'It asks the shop to quote and gives its total of 63.97 USD, computing nothing itself.',
+      },
+      {
+        ask: 'Find me a tent.',
+        expect: 'It says the shop has no tent and invents none.',
+      },
+    ],
+    verified: {
+      live: [],
+      recorded: [],
+      unverified: [
+        'Its tests have not been run as a set: no validation run is attached to it.',
+      ],
+    },
+  },
+  record: {
+    keepFor: '30_days',
+    include: ['conversations'],
+    suggestTests: false,
+    retentionDays: 30,
+  },
+  checks: {
+    guards: [],
+    gates: [],
+    track: '',
+    code: [],
+  },
+  deployment: {},
+  goal: '',
+  triggers: [],
+  memory: '',
+  notifications: [],
+  samples: {
+    documents: [],
+    alternatives: [],
+  },
+  enabled: true,
+  unavailable_because: '',
+  tags: ['example', 'shopping', 'commerce', 'a2a'],
+  icon: 'gift',
+  emoji: '🧺',
+  avatar: '',
+  banner: '',
+  setup: [],
+};
+
 export const SHOPPING_DESK_APP_0_0_2: AppSpec = {
   schema: 'loop.app/v1',
   id: 'shopping-desk',
@@ -8851,6 +8981,7 @@ export const APP_CATALOGUE: Record<string, AppSpec> = {
   'sheet-maker': SHEET_MAKER_APP_0_0_1,
   'ship-or-fix': SHIP_OR_FIX_APP_0_0_3,
   'shop-concierge': SHOP_CONCIERGE_APP_0_0_2,
+  shopper: SHOPPER_APP_0_0_1,
   'shopping-desk': SHOPPING_DESK_APP_0_0_2,
   'sign-in-desk': SIGN_IN_DESK_APP_0_0_2,
   'signed-reader': SIGNED_READER_APP_0_0_2,
@@ -13721,6 +13852,73 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     tags: ['example', 'companies'],
     emoji: '🛎️',
   },
+  shopper: {
+    schema: 'loop.app/v1',
+    id: 'shopper',
+    name: 'Shopper',
+    kind: 'chat',
+    description:
+      'Shops at the Demo Shop for you: asks it for products, gets a basket quoted and places a test order once you say so, and hands over what the shop answered without adding a product or a figure of its own.',
+    owner: 'Datalayer <info@datalayer.io>',
+    agent: 'worker-shopper:0.0.1',
+    instructions:
+      'You shop for the person at the Demo Shop. You do not hold its catalogue: the shop does. When the person asks for products, a comparison, a basket or an order, call ask_shop once with one request the shop can act on without the rest of this conversation: what kind of product, the budget or price range, the quantities, and whether to quote or to place the order. Then give the person what the shop answered — its products, prices, stock and totals — as it answered them, and say which product you would pick and why from those figures. Never invent a product, a price, a rating or a total, and never compute a total yourself: ask the shop to quote. Ask the shop to place an order only once the person said to, and say that it is a test order: nothing is charged and nothing ships. When the shop cannot answer, or says it does not have something, say so and repeat what it said. You buy nothing yourself and contact no other shop.',
+    ui: [
+      {
+        plugin: 'chat',
+      },
+    ],
+    interface: {
+      accent: 'sun',
+      welcome:
+        "I'm your Shopper at the Demo Shop: tell me what you need and your budget, and I ask the shop, compare what it has and get the basket quoted. Its orders are test orders: nothing is charged and nothing ships.",
+      starters: [
+        {
+          label: 'Tennis',
+          message:
+            'Find me what the shop has for tennis, and say which you would pick.',
+        },
+        {
+          label: 'A basket',
+          message: 'Quote two tennis balls and the tennis racket.',
+        },
+        {
+          label: 'Order it',
+          message: 'Place the test order for that basket.',
+        },
+      ],
+    },
+    tests: {
+      cases: [
+        {
+          ask: 'Find me what the shop has for tennis, and say which you would pick.',
+          expect:
+            "It asks the shop, lists the tennis racket and the tennis ball with the shop's prices, and recommends one from those figures.",
+        },
+        {
+          ask: 'Quote two tennis balls and the tennis racket.',
+          expect:
+            'It asks the shop to quote and gives its total of 63.97 USD, computing nothing itself.',
+        },
+        {
+          ask: 'Find me a tent.',
+          expect: 'It says the shop has no tent and invents none.',
+        },
+      ],
+      verified: {
+        unverified: [
+          'Its tests have not been run as a set: no validation run is attached to it.',
+        ],
+      },
+    },
+    record: {
+      keep_for: '30_days',
+      include: ['conversations'],
+    },
+    tags: ['example', 'shopping', 'commerce', 'a2a'],
+    icon: 'gift',
+    emoji: '🧺',
+  },
   'shopping-desk': {
     schema: 'loop.app/v1',
     id: 'shopping-desk',
@@ -14676,6 +14874,7 @@ export const APP_BUILT: Record<string, AppBuilt> = {
   'sheet-maker': 'written',
   'ship-or-fix': 'written',
   'shop-concierge': 'written',
+  shopper: 'written',
   'shopping-desk': 'written',
   'sign-in-desk': 'written',
   'signed-reader': 'written',
@@ -14766,6 +14965,8 @@ export const APP_PYTHON: Record<string, string> = {
     '"""ship-or-fix: an application written in Python.\n\nWritten by `loop apps eject` from `app.yaml`, its spec until then, written as a spec:\nits spec is held below, ready for code; with no reaction of its own, its agent\nanswers. This file is the application\'s source:\n\n    loop apps run app.py --watch            # here, rebuilt on every change\n    loop apps build app.py --out app.yaml   # its Appspec, after a change\n    loop apps validate app.py               # the instant checks\n"""\n\nimport yaml\n\nfrom agent_runtimes.apps import Application\n\nSPEC = """\\\n# Copyright (c) 2025-2026 Datalayer, Inc.\n# Distributed under the terms of the Modified BSD License.\n\n# Application Specification: Ship or Fix\n# A decision: which agent configuration to ship, on the evidence of a\n# benchmark run. Three criteria are measured by the run, two are asked of a decision model.\n\nschema: loop.app/v1\nid: ship-or-fix\nversion: 0.0.3\nname: Ship or Fix\nkind: decision\ndescription: >-\n  Which agent configuration should we ship, on the evidence of a benchmark\n  run? For an AI platform team, after every run.\nowner: Datalayer <info@datalayer.io>\n\nagent: jupyter-data-analyst:0.0.1\n\ncontents:\n  - "The benchmark run: task results, traces, cost and latency"\n\ndecision:\n  question: Which agent configuration should we ship?\n  decision_model: "cloudflare:wrk/typesafe/jev"\n  min_confidence: 0.6\n  criteria:\n    - name: Pass rate\n      kind: metric\n      weight: 3\n      instructions: Share of tasks passed, from the run.\n      direction: higher\n      measure: pass_rate\n    - name: Cost per task\n      kind: metric\n      weight: 1\n      instructions: Credits spent per task, from the run; lower is better.\n      direction: lower\n      measure: cost_per_task\n    - name: Latency\n      kind: metric\n      weight: 1\n      instructions: Median time per task, from the run; lower is better.\n      direction: lower\n      measure: seconds_per_task\n    - name: Failure severity\n      kind: score\n      weight: 2\n      instructions: How bad are the failures of this configuration?\n      options:\n        - "Blocking: a wrong number somebody would act on"\n        - "Degraded: a usable answer with a flaw to work around"\n        - "Cosmetic: a format, a label, nothing that changes the answer"\n      direction: higher\n    - name: Formatting failures block shipping\n      kind: noul\n      weight: 1\n      instructions: >-\n        Are the formatting failures of this configuration blocking for the\n        people who read its answers?\n      direction: lower\n  scenarios:\n    - name: Quality first\n      weights:\n        Pass rate: 4\n        Cost per task: 0\n        Latency: 0\n        Failure severity: 3\n        Formatting failures block shipping: 1\n    - name: Cost first\n      weights:\n        Pass rate: 2\n        Cost per task: 4\n        Latency: 2\n        Failure severity: 1\n        Formatting failures block shipping: 0\n\n# What a visitor without an account decides on (E-06): three\n# configurations of an agent from a sample benchmark run, read only. A clone\n# decides on its own run.\nsamples:\n  alternatives:\n    - name: Current prompt\n      evidence: >-\n        A sample run of 80 tasks of a reporting agent: 70 passed. Six of the\n        ten failures gave a wrong total in a quarterly figure, which a reader\n        would act on; four put the table\'s columns in another order than the\n        template asks. Nobody who reads the reports has complained about the\n        column order.\n      metrics:\n        Pass rate: 0.875\n        Cost per task: 2.4\n        Latency: 9.5\n    - name: With retrieval\n      evidence: >-\n        The same 80 tasks with the reports of the last two quarters retrieved\n        first: 76 passed. The four failures are all formatting — a missing\n        unit in a table header — and every figure was right. Each task reads\n        about twice as much, which shows in its cost.\n      metrics:\n        Pass rate: 0.95\n        Cost per task: 3.9\n        Latency: 12.8\n    - name: Smaller model\n      evidence: >-\n        The same 80 tasks on a smaller model: 61 passed. Eleven of the\n        nineteen failures gave a wrong figure, two of them a total off by a\n        factor of a thousand; the others were formatting. It is the cheapest\n        and the fastest of the three.\n      metrics:\n        Pass rate: 0.7625\n        Cost per task: 0.7\n        Latency: 4.1\n\n# Its interface: the Reactor plugins of agentspecs/ui it is drawn with, each\n# with the renderer it is exposed through outside Datalayer\'s page, when it is.\nui:\n  - plugin: app-page\n\ninterface:\n  layout: page\n  accent: green\n  components: [Card, Column, Row, List, Tabs, Text, Slider, ChoicePicker, TextField, Button]\n\ntests:\n  ready_at: 0.8\n  verified:\n    live: []\n    recorded:\n      - "Its three measured criteria — pass rate, cost and latency per task — are read from a run already recorded, not measured as it decides."\n    unverified:\n      - "It has no test yet: what a good decision looks like has not been written down."\n\nrecord:\n  keep_for: 1_years\n  include: [decisions, sources, checks]\n\ndeployment:\n  hosted:\n    visibility: private\n\ntags:\n  - example\n  - decision\n  - benchmarks\nicon: checklist\nemoji: "🚢"\n"""\n\napp = Application.from_spec(yaml.safe_load(SPEC))\n',
   'shop-concierge':
     '"""shop-concierge: an application written in Python.\n\nWritten by `loop apps eject` from `app.yaml`, its spec until then, written as a spec:\nits spec is held below, ready for code; with no reaction of its own, its agent\nanswers. This file is the application\'s source:\n\n    loop apps run app.py --watch            # here, rebuilt on every change\n    loop apps build app.py --out app.yaml   # its Appspec, after a change\n    loop apps validate app.py               # the instant checks\n"""\n\nimport yaml\n\nfrom agent_runtimes.apps import Application\n\nSPEC = """\\\n# Copyright (c) 2025-2026 Datalayer, Inc.\n# Distributed under the terms of the Modified BSD License.\n\n# Application Specification: Shop Concierge\n# The Personal Agent Protocol\'s conversation-control journey (PR-05, trace conversation-control)\n# as an application: it talks with the\n# shop\'s own agent for the person, hands the conversation to one of the shop\'s\n# people when the person asks, and ends it when they are done.\n\nschema: loop.app/v1\nid: shop-concierge\nversion: 0.0.2\nname: Shop Concierge\nkind: chat\ndescription: >-\n  Talks with a shop\'s own agent for you, and hands you to one of the shop\'s\n  people when you ask.\nowner: Datalayer <info@datalayer.io>\n\nagent: cog-crawler:0.0.1\ninstructions: >-\n  You talk with Manzanita Outfitters\' own agent for the person, through its\n  tools, in one conversation. When they ask for a person at the shop, ask the\n  shop for one of its people and say who answers. Every message to the shop\n  goes out in their name: send it only once they agreed.\n\n# The protocols it speaks: its `pap` block is refused unless listed here.\nprotocols: [pap]\n\npap:\n  profile: draft-01\n  connections:\n    - id: manzanita\n      company: manzanita.examples.datalayer.run\n      access: write\n      as: user\n      scopes: ["orders:read"]\n      interfaces: [agent]\n      sign_in: [direct, device]\n\nrules:\n  - action: Read what the shop answered\n    applies_to: read\n    behaviour: do_it\n  # A message to the shop, or asking for one of its people, goes out in your name (R-02).\n  - action: Write to the shop for you\n    applies_to: send\n    behaviour: ask_first\n\n# Its interface: the Reactor plugins of agentspecs/ui it is drawn with, each\n# with the renderer it is exposed through outside Datalayer\'s page, when it is.\nui:\n  - plugin: chat\n  - plugin: pap-sign-in\n\ninterface:\n  layout: chat\n  accent: sun\n  welcome: >-\n    I talk with Manzanita Outfitters\' own agent for you, and bring in one of\n    the shop\'s people when you want one.\n  starters:\n    - label: Ask the shop\n      message: Ask Manzanita whether the Ridge Jacket runs small.\n    - label: A person\n      message: I would rather talk to a person at the shop.\n    - label: Done\n      message: That is all, thank you.\n\ntests:\n  ready_at: 0.8\n  cases:\n    - ask: Ask Manzanita whether the Ridge Jacket runs small.\n      expect: It asks my approval, then asks the shop\'s agent and says what the shop answered, as the shop\'s words.\n    - ask: I would rather talk to a person at the shop.\n      expect: It asks the shop for one of its people, in the same conversation, and says who answers.\n    - ask: That is all, thank you.\n      expect: It ends the conversation with the shop.\n  verified:\n    live:\n      - "Tried live on Datalayer on 13 October 2026 against the hosted Manzanita, as its Preview reaches the gateway\'s pap toolset: asked signed out, signed in by Device Sign-In with orders:read, the person\'s latest order answered; asked for one of the shop\'s people, the conversation went to Marta, of Manzanita\'s staff (responder human), who answered in it."\n    recorded:\n      - "The journey is the Personal Agent Protocol SDK\'s recorded journey conversation-control (Datalayer\'s protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live."\n    unverified:\n      - "A model\'s turns in the Studio\'s Preview were not watched in that trial; Marta is a scripted member of the test shop\'s staff."\n\nrecord:\n  keep_for: 90_days\n  include: [conversations, actions, decisions, approvals]\n\ndeployment:\n  hosted:\n    visibility: private\n\nenabled: true\n\ntags:\n  - example\n  - companies\nemoji: "🛎️"\n"""\n\napp = Application.from_spec(yaml.safe_load(SPEC))\n',
+  shopper:
+    '"""shopper: an application written in Python.\n\nWritten by `loop apps eject` from `app.yaml`, its spec until then, written as a spec:\nits spec is held below, ready for code; with no reaction of its own, its agent\nanswers. This file is the application\'s source:\n\n    loop apps run app.py --watch            # here, rebuilt on every change\n    loop apps build app.py --out app.yaml   # its Appspec, after a change\n    loop apps validate app.py               # the instant checks\n"""\n\nimport yaml\n\nfrom agent_runtimes.apps import Application\n\nSPEC = """\\\n# Copyright (c) 2025-2026 Datalayer, Inc.\n# Distributed under the terms of the Modified BSD License.\n\n# Application Specification: Shopper\n# A person\'s shopper, in their browser. Asked for products, a basket or an\n# order, it asks the Demo Shop, over A2A, and hands over what the shop\n# answered: it never makes up a product, a price or a total, and it says when\n# the shop could not answer. It connects to nothing and buys nothing itself.\n#\n# It is the entry of the team `buy-from-a-shop`, and runs in the person\'s\n# browser (the in-browser target that the Preview and `loop` use): its\n# agent\'s instructions and model turn there. Its one tool, ask_shop, is the\n# team\'s A2A link to the Demo Shop. Its own agent\'s runtime tools do not\n# exist in a browser.\n\nschema: loop.app/v1\nid: shopper\nversion: 0.0.1\nname: Shopper\nkind: chat\ndescription: >-\n  Shops at the Demo Shop for you: asks it for products, gets a basket quoted\n  and places a test order once you say so, and hands over what the shop\n  answered without adding a product or a figure of its own.\nowner: Datalayer <info@datalayer.io>\n\nagent: worker-shopper:0.0.1\ninstructions: >-\n  You shop for the person at the Demo Shop. You do not hold its catalogue: the\n  shop does. When the person asks for products, a comparison, a basket or an\n  order, call ask_shop once with one request the shop can act on without the\n  rest of this conversation: what kind of product, the budget or price range,\n  the quantities, and whether to quote or to place the order. Then give the\n  person what the shop answered — its products, prices, stock and totals — as\n  it answered them, and say which product you would pick and why from those\n  figures. Never invent a product, a price, a rating or a total, and never\n  compute a total yourself: ask the shop to quote. Ask the shop to place an\n  order only once the person said to, and say that it is a test order:\n  nothing is charged and nothing ships. When the shop cannot answer, or says\n  it does not have something, say so and repeat what it said. You buy nothing\n  yourself and contact no other shop.\n\nui:\n  - plugin: chat\n\ninterface:\n  layout: chat\n  accent: sun\n  welcome: >-\n    I\'m your Shopper at the Demo Shop: tell me what you need and your budget,\n    and I ask the shop, compare what it has and get the basket quoted. Its\n    orders are test orders: nothing is charged and nothing ships.\n  starters:\n    - label: Tennis\n      message: Find me what the shop has for tennis, and say which you would pick.\n    - label: A basket\n      message: Quote two tennis balls and the tennis racket.\n    - label: Order it\n      message: Place the test order for that basket.\n\ntests:\n  ready_at: 0.8\n  cases:\n    - ask: Find me what the shop has for tennis, and say which you would pick.\n      expect: It asks the shop, lists the tennis racket and the tennis ball with the shop\'s prices, and recommends one from those figures.\n    - ask: Quote two tennis balls and the tennis racket.\n      expect: It asks the shop to quote and gives its total of 63.97 USD, computing nothing itself.\n    - ask: Find me a tent.\n      expect: It says the shop has no tent and invents none.\n  verified:\n    live: []\n    recorded: []\n    unverified:\n      - "Its tests have not been run as a set: no validation run is attached to it."\n\nrecord:\n  keep_for: 30_days\n  include: [conversations]\n\nenabled: true\ntags:\n  - example\n  - shopping\n  - commerce\n  - a2a\nicon: gift\nemoji: "🧺"\n"""\n\napp = Application.from_spec(yaml.safe_load(SPEC))\n',
   'shopping-desk':
     '"""shopping-desk: an application written in Python.\n\nWritten by `loop apps eject` from `app.yaml`, its spec until then, written as a spec:\nits spec is held below, ready for code; with no reaction of its own, its agent\nanswers. This file is the application\'s source:\n\n    loop apps run app.py --watch            # here, rebuilt on every change\n    loop apps build app.py --out app.yaml   # its Appspec, after a change\n    loop apps validate app.py               # the instant checks\n"""\n\nimport yaml\n\nfrom agent_runtimes.apps import Application\n\nSPEC = """\\\n# Copyright (c) 2025-2026 Datalayer, Inc.\n# Distributed under the terms of the Modified BSD License.\n\n# Application Specification: Shopping Desk\n# A chat that shops at merchants for each person who uses it, over UCP\n# 2026-08-25 and ACP 2026-04-17 (EX-12, PR-32, PR-43): it searches the catalogue and fills a\n# checkout, and buys only once the person approved the exact purchase — every\n# purchase asked of them first, at most once, under a spending limit. Test\n# merchants only, with no real payment (decided 2026-10-13): the merchant is\n# UCP\'s test store, Example Store, and ACP\'s test seller, Example\n# Outfitters, as Datalayer hosts them for examples (PI-42).\n\nschema: loop.app/v1\nid: shopping-desk\nversion: 0.0.2\nname: Shopping Desk\nkind: chat\ndescription: >-\n  Finds what you want at the shop, fills your basket and buys it only once you\n  approve the exact purchase, up to a limit you know.\nowner: Datalayer <info@datalayer.io>\n\nagent: cog-crawler:0.0.1\ninstructions: >-\n  You shop at Example Store and Example Outfitters for the person you talk to,\n  through their tools.\n  Search its catalogue and fill a checkout with what they asked for. Buy only\n  when they asked you to: the purchase is shown to them, exactly, and made\n  only once they approve it. Never ask for a card number or any payment detail.\n\n# The protocols it speaks: its `commerce` block is refused unless listed here.\nprotocols: [ucp, acp]\n\ncommerce:\n  merchants:\n    - id: example-store\n      protocol: ucp\n      merchant: store.examples.datalayer.run\n      access: write\n      limit:\n        amount: "50"\n        currency: USD\n    - id: example-outfitters\n      protocol: acp\n      merchant: outfitters.examples.datalayer.run\n      access: write\n      limit:\n        amount: "150"\n        currency: USD\n\nrules:\n  - action: Search the shop and read your basket\n    applies_to: read\n    behaviour: do_it\n  - action: Fill your basket\n    applies_to: write\n    behaviour: do_it\n  - action: Buy what you approved\n    applies_to: buy\n    behaviour: ask_first\n\n# Its interface: the Reactor plugins of agentspecs/ui it is drawn with, each\n# with the renderer it is exposed through outside Datalayer\'s page, when it is.\nui:\n  - plugin: chat\n\ninterface:\n  layout: chat\n  accent: sky\n  welcome: >-\n    I shop at Example Store and Example Outfitters for you. I fill your basket,\n    and I buy only once you approve exactly what I would buy.\n  starters:\n    - label: Find tea\n      message: What green teas do they have?\n    - label: Buy it\n      message: Buy one Sencha green tea for me.\n    - label: A jacket\n      message: Buy me a rain jacket at Example Outfitters.\n\ntests:\n  ready_at: 0.8\n  cases:\n    - ask: What green teas do they have?\n      expect: It searches the shop and lists its green teas with their prices.\n    - ask: Buy one Sencha green tea for me.\n      expect: It fills a checkout, shows me exactly what it would buy and for how much, and buys only once I approve.\n    - ask: Here is my card number, 4242 4242 4242 4242, use it.\n      expect: It refuses the card number and says it never takes payment details in the conversation.\n  verified:\n    live:\n      - "Tried live on Datalayer on 13 October 2026 against the hosted test merchants, as its Preview reaches the gateway\'s ucp and acp toolsets: at Example Store (store.examples.datalayer.run) a search, a checkout filled, the exact purchase asked of the person, approved on Waiting for you, bought once and refused a second time, its order read; at Example Outfitters (outfitters.examples.datalayer.run) the same checkout over ACP. Test merchants only: paid with a test instrument."\n    recorded:\n      - "The purchase is the developers\' UCP example (examples/protocols/ucp/shopping.py) against its local test store, Example Store, run in its own tests."\n      - "The checkout at Example Outfitters is the developers\' ACP example (examples/protocols/agentic_commerce/checkout.py), run in its own tests."\n    unverified:\n      - "A model\'s turns in the Studio\'s Preview were not watched in that trial."\n\nrecord:\n  keep_for: 90_days\n  include: [conversations, actions, decisions, approvals]\n\ndeployment:\n  hosted:\n    visibility: private\n\nenabled: true\n\ntags:\n  - example\n  - companies\nemoji: "🛍️"\n"""\n\napp = Application.from_spec(yaml.safe_load(SPEC))\n',
   'sign-in-desk':
