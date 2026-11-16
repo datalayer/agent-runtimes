@@ -163,13 +163,17 @@ def web_app(addressed: AddressedAgent) -> Any:
         Route("/healthz", health, methods=["GET"]),
     ]
     if dist is not None and (dist / "assets").is_dir():
-        routes.append(Mount("/assets", app=StaticFiles(directory=dist / "assets")))
+        # The bundle is built for the main server's `/static/` (vite's base): the
+        # page asks for `/static/assets/…`, which answered 404 here (a blank page).
+        routes.append(
+            Mount("/static/assets", app=StaticFiles(directory=dist / "assets"))
+        )
     # Discovery and the bundle's files answer anybody; the agent itself only who may open it.
     app = guarded(
         Starlette(routes=routes),
         addressed,
         _CALLER,
-        open_paths=("/.well-known/poppy.json", "/healthz", "/assets/"),
+        open_paths=("/.well-known/poppy.json", "/healthz", "/static/assets/"),
     )
     if addressed.hosts is None:
         return app

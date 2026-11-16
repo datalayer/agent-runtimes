@@ -523,6 +523,32 @@ def test_the_web_page_shows_the_agent_and_serves_poppy_json_to_anybody() -> None
     assert poppy.json()["organization"]["domain"] == "shop.agent.datalayer.ai"
 
 
+def test_the_web_page_s_bundle_answers_at_the_path_the_page_asks_for(
+    tmp_path: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The bundle is built for `/static/` (vite's base): the page asks for
+    # `/static/assets/…`, served to anybody, even for a private agent.
+    from agent_runtimes.addresses import web
+
+    (tmp_path / "assets").mkdir()
+    (tmp_path / "assets" / "agent-web-x.js").write_text("export {};")
+    (tmp_path / web.PAGE).write_text(
+        '<html><head></head><body><script src="/static/assets/agent-web-x.js"></script></body></html>'
+    )
+    monkeypatch.setattr(web, "_dist", lambda: tmp_path)
+    agent = addressed(
+        Answers(),
+        COMPANY,
+        policy=AddressPolicy("private", owner_uid="owner"),
+        key_checker=_uid_of,
+    )
+    client = TestClient(web_app(agent))
+    page = client.get("/", headers={"X-API-Key": "key-owner"})
+    assert "/static/assets/agent-web-x.js" in page.text
+    asset = client.get("/static/assets/agent-web-x.js")
+    assert asset.status_code == 200 and asset.text == "export {};"
+
+
 # --- the agent host --------------------------------------------------------------------
 
 

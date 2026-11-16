@@ -9,6 +9,7 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
+- **1.6.81: an agent's web page loads its bundle** (16 November 2026, POPPY_COMPANIES PC-11): the page asks for `/static/assets/…` (the bundle's vite base), which the web host answered 404 (a blank page at `{name}.web`); its assets are served there, to anybody. Tests: test_addresses (+1)
 - **1.6.80: an application's own backend tools reach its agent on a runtime** (16 November 2026, POPPY_COMPANIES PC-21): the create route gives the agent the Appspec's `backend_tools` beside its agent's, each once. A kept Demo Shop (on `example-blank`) answered its operations with products it made up, and the visitors' Shopper (`demo-shopper`) had no shop tools. Tests: test_app_backend_tools (new, 2)
 - **1.6.79: the agent host serves the A2A card its application serves** (16 November 2026), its `url` the host's `/a2a/`: read off a dataclass card, it answered 500. Tests: test_addresses (+1)
 
