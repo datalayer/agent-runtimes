@@ -284,14 +284,16 @@ async def read_deployment_record(slug: str) -> dict[str, Any]:
 
 
 def iam_key_checker(iam_url: str) -> KeyChecker:
-    """Whose a Datalayer API key is, asked of IAM (``GET /api/iam/v1/whoami``)."""
+    """Whose a Datalayer API key is, asked of IAM (``GET /api/iam/v1/whoami``): a
+    Datalayer API key is a token IAM reads as a bearer, whatever header it came in."""
 
     async def check(key: str) -> Optional[str]:
         import httpx
 
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.get(
-                f"{iam_url.rstrip('/')}/api/iam/v1/whoami", headers={"X-API-Key": key}
+                f"{iam_url.rstrip('/')}/api/iam/v1/whoami",
+                headers={"Authorization": f"Bearer {key}"},
             )
         if response.status_code != 200:
             return None

@@ -882,3 +882,25 @@ def test_a_companys_device_link_sends_the_person_on_to_studio() -> None:
         went.headers["location"]
         == "https://datalayer.ai/pap/device?slug=shop&code=ABCD-EFGH"
     )
+
+
+@pytest.mark.asyncio
+async def test_an_api_key_is_asked_of_iam_as_a_bearer(monkeypatch: pytest.MonkeyPatch) -> None:
+    from agent_runtimes.addresses.access import iam_key_checker
+
+    seen: List[Dict[str, str]] = []
+
+    def whoami(request: httpx.Request) -> httpx.Response:
+        seen.append(dict(request.headers))
+        if request.headers.get("authorization") == "Bearer the-key":
+            return httpx.Response(200, json={"profile": {"uid": "u-1"}})
+        return httpx.Response(401, json={})
+
+    real = httpx.AsyncClient
+    monkeypatch.setattr(
+        httpx,
+        "AsyncClient",
+        lambda **kwargs: real(transport=httpx.MockTransport(whoami), **kwargs),
+    )
+    assert await iam_key_checker("https://iam.example")("the-key") == "u-1"
+    assert await iam_key_checker("https://iam.example")("another") is None
