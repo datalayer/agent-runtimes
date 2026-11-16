@@ -9,6 +9,8 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
+- **1.6.76 is 1.6.75 with the scenes regenerated from agentspecs as committed** (Sales & Accounting's last rehearsal its committed one, Live, not a local rehearsal file); 1.6.75's release was cancelled before it published.
+
 - **1.6.75: Buy from a shop, and a Datalayer agent discovered by its name** (the user, 16 November 2026), with agentspecs 0.0.206. The demo Stage *Buy from a shop*: a person's Shopper in the browser (`shopper`, its one tool `ask_demo_shop`) buying from the Demo Shop on a runtime over A2A — find the tennis gear, quote the basket, place a test order (nothing charged, nothing ships) — rehearsed every night with the demo account's `demo-shop`. The personal agent capability takes a company's domain, or an agent's name or HTTPS address: `shop` is discovered at `shop.agent.<DATALAYER_COMPANY_HOSTS_DOMAIN>` (`company_domain`, through `AddressHosts`). Regenerated: apps, teams, scenes, stages. Tests: test_scenes_specs, test_serve_scenes, test_apps_command, test_pap_personal_agent
 
 - **1.6.74 is 1.6.73 with test_apps_command naming the Demo Shop among the catalogue's applications (agentspecs 0.0.204); 1.6.73's tag never published.**
