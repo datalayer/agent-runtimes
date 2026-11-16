@@ -2093,7 +2093,7 @@ DEMO_SHOP_APP_0_0_1 = AppSpec.model_validate(
         "owner": "Datalayer <info@datalayer.io>",
         "agent": "example-blank:0.0.1",
         "team": "",
-        "instructions": "You are the Demo Shop, Datalayer's demo shop, answering people and their own agents. Everything you say about a product comes from your tools, which read the shop's catalogue: list_products (all or one category: groceries, kitchen, home, sports, sunglasses), find_products (words, category, a price range), get_product (one, with its description), quote_basket (a basket priced, its total summed by the tool) and place_test_order. Never invent a product, a price, a rating, a stock level or a photo, and never compute a total yourself. Prices are in USD. When asked what you sell or for a kind of product, call find_products or list_products: the products are shown with their photos, so say briefly which fit and why rather than repeating every figure. Before a basket is ordered, quote it with quote_basket. Place an order only once the person said to, with place_test_order, and say each time that it is a test order: nothing is charged, nothing ships and nothing is kept — there is no payment, no delivery and no account here. A product out of stock cannot be ordered; say so and offer another. When asked something the catalogue does not hold (a delivery date, a discount, a product you do not have), say the shop does not have it.",
+        "instructions": "You are the Demo Shop, Datalayer's demo shop, answering people and their own agents. Everything you say about a product comes from your tools, which read the shop's catalogue: list_products (all or one category: groceries, kitchen, home, sports, sunglasses), find_products (words, category, a price range), get_product (one, with its description), quote_basket (a basket priced, its total summed by the tool) and place_test_order. Never invent a product, a price, a rating, a stock level or a photo, and never compute a total yourself. Prices are in USD. When asked what you sell or for a kind of product, call find_products or list_products: the products are shown with their photos, so say briefly which fit and why rather than repeating every figure. Before a basket is ordered, quote it with quote_basket. Place an order only once the person said to, with place_test_order; give its order number (TEST-…) and its total as the tool answered them, and say each time that it is a test order: nothing is charged, nothing ships and nothing is kept — there is no payment, no delivery and no account here. A product out of stock cannot be ordered; say so and offer another. When asked something the catalogue does not hold (a delivery date, a discount, a product you do not have), say the shop does not have it.",
         "model": "",
         "skills": [],
         "backend_tools": [
@@ -2116,6 +2116,7 @@ DEMO_SHOP_APP_0_0_1 = AppSpec.model_validate(
                     "get": {
                         "operationId": "listProducts",
                         "summary": "List the shop's products, all of them or one category's.",
+                        "x-datalayer-gallery": {"title": "The shop's products"},
                         "description": "Call list_products with the category when one is given, and answer its products exactly as the tool answered them, with their image.",
                         "parameters": [
                             {
@@ -2424,7 +2425,7 @@ DEMO_SHOP_APP_0_0_1 = AppSpec.model_validate(
                     {
                         "name": "orders:write",
                         "description": "Place a test order you approved — nothing is charged and nothing ships",
-                        "changes": "none",
+                        "changes": "reversible",
                         "personal_data": False,
                     },
                 ],
@@ -6780,7 +6781,7 @@ SHOPPER_APP_0_0_2 = AppSpec.model_validate(
         "owner": "Datalayer <info@datalayer.io>",
         "agent": "worker-shopper:0.0.1",
         "team": "",
-        "instructions": "You shop for the person at the Demo Shop. You do not hold its catalogue: the shop does. When the person asks for products, a comparison, a basket or an order, call ask_demo_shop once with one request the shop can act on without the rest of this conversation: what kind of product, the budget or price range, the quantities, and whether to quote or to place the order. Then give the person what the shop answered — its products, prices, stock and totals — as it answered them, and say which product you would pick and why from those figures. Never invent a product, a price, a rating or a total, and never compute a total yourself: ask the shop to quote. Ask the shop to place an order only once the person said to, and say that it is a test order: nothing is charged and nothing ships. When the shop cannot answer, or says it does not have something, say so and repeat what it said. You buy nothing yourself and contact no other shop.",
+        "instructions": "You shop for the person at the Demo Shop. You do not hold its catalogue: the shop does. When the person asks for products, a comparison, a basket or an order, call ask_demo_shop once with one request the shop can act on without the rest of this conversation: what kind of product, the budget or price range, the quantities, and whether to quote or to place the order. Then give the person what the shop answered — its products, prices, stock, totals and order numbers (TEST-…) — as it answered them, and say which product you would pick and why from those figures. Never invent a product, a price, a rating or a total, and never compute a total yourself: ask the shop to quote. Ask the shop to place an order only once the person said to, and say that it is a test order: nothing is charged and nothing ships. When the shop cannot answer, or says it does not have something, say so and repeat what it said. You buy nothing yourself and contact no other shop.",
         "model": "",
         "skills": [],
         "backend_tools": [],
@@ -6817,7 +6818,7 @@ SHOPPER_APP_0_0_2 = AppSpec.model_validate(
                 },
                 {
                     "label": "Order it",
-                    "message": "Place the test order for that basket.",
+                    "message": "Place a test order of two tennis balls and the tennis racket.",
                 },
             ],
             "commands": [],

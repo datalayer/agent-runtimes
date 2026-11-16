@@ -9,6 +9,11 @@ skills, tools), its operations with their inputs and outputs, its protocols,
 who may open it and its four addresses, in the application's
 ``interface.theme`` and ``accent``. The view is written into the page and
 served at ``/api/agent``; ``/.well-known/poppy.json`` is its ``poppy.json``.
+An application whose ``openapi`` names a gallery (the operation carrying
+``x-datalayer-gallery``) shows that operation's answer as product cards: the
+page reads it at ``/api/gallery``, called with no input and kept
+:data:`GALLERY_SECONDS` (:class:`Gallery`), each read counted under the
+caller's rate cap.
 Behind the agent's access check, as its other addresses are; a person whose
 browser is not signed in to a private agent's page signs in with Datalayer
 (:mod:`.browser_sign_in`).
@@ -16,12 +21,15 @@ browser is not signed in to a private agent's page signs in with Datalayer
 
 from __future__ import annotations
 
+import asyncio
 import html
 import json
+import time
 from contextvars import ContextVar
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
+from agentspecs.openapi import gallery_operation
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse
@@ -32,12 +40,15 @@ from agent_runtimes.addresses import browser_sign_in
 from agent_runtimes.addresses.access import Caller
 from agent_runtimes.addresses.addressed import AddressedAgent
 from agent_runtimes.addresses.asgi import guarded
+from agent_runtimes.addresses.operations import OperationError
 from agent_runtimes.addresses.poppy import poppy_document
 
 #: The page's entry in the runtime's static bundle.
 PAGE = "agent-web.html"
 #: The script tag the view is written in.
 VIEW_ID = "agent-runtimes-agent-view"
+#: How long the gallery's answer is kept: a page seen often calls its agent once in that time.
+GALLERY_SECONDS = 600.0
 
 _CALLER: ContextVar[Optional[Caller]] = ContextVar("addresses_web_caller", default=None)
 
@@ -87,6 +98,56 @@ def _agent_of(addressed: AddressedAgent) -> Dict[str, Any]:
     }
 
 
+def gallery_of(addressed: AddressedAgent) -> Optional[Dict[str, Any]]:
+    """The gallery the page shows: the operation that feeds it and its title.
+
+    None when its ``openapi`` names none.
+    """
+    operation = gallery_operation(addressed.operations)
+    if operation is None:
+        return None
+    return {
+        "operation_id": operation.operation_id,
+        "title": (operation.gallery or {}).get("title") or "",
+    }
+
+
+class Gallery:
+    """The gallery operation's answer, called with no input and kept ``seconds``.
+
+    One call at a time: the pages opened while it runs wait for its answer. A call
+    that fails is not kept.
+    """
+
+    def __init__(
+        self,
+        addressed: AddressedAgent,
+        operation_id: str,
+        *,
+        seconds: float = GALLERY_SECONDS,
+        clock: Callable[[], float] = time.monotonic,
+    ) -> None:
+        """Keep ``operation_id``'s answer of ``addressed`` for ``seconds`` of ``clock``."""
+        self.addressed = addressed
+        self.operation_id = operation_id
+        self.seconds = seconds
+        self.clock = clock
+        self._answer: Any = None
+        self._at: Optional[float] = None
+        self._lock = asyncio.Lock()
+
+    async def answer(self, caller: Optional[Caller]) -> Any:
+        """The operation's answer: the one kept, or a call's when it is older than ``seconds``."""
+        async with self._lock:
+            if self._at is not None and self.clock() - self._at < self.seconds:
+                return self._answer
+            answer = await self.addressed.call(
+                self.operation_id, {}, interface="web", caller=caller
+            )
+            self._answer, self._at = answer, self.clock()
+            return answer
+
+
 def agent_view(addressed: AddressedAgent) -> Dict[str, Any]:
     """What the page shows of the agent."""
     app = addressed.app
@@ -113,6 +174,7 @@ def agent_view(addressed: AddressedAgent) -> Dict[str, Any]:
             for operation in addressed.operations
         ],
         "declares_openapi": app.openapi is not None,
+        "gallery": gallery_of(addressed),
         "protocols": list(app.protocols),
         "visibility": addressed.access.policy.visibility,
         "addresses": addressed.hosts.as_dict() if addressed.hosts else None,
@@ -143,6 +205,8 @@ def _page(addressed: AddressedAgent, dist: Optional[Path]) -> str:
 def web_app(addressed: AddressedAgent) -> Any:
     """The agent's web server."""
     dist = _dist()
+    shown = gallery_of(addressed)
+    gallery = Gallery(addressed, shown["operation_id"]) if shown else None
 
     async def page(_: Request) -> HTMLResponse:
         return HTMLResponse(_page(addressed, dist))
@@ -156,9 +220,24 @@ def web_app(addressed: AddressedAgent) -> Any:
     async def health(_: Request) -> JSONResponse:
         return JSONResponse({"success": True})
 
+    async def products(_: Request) -> JSONResponse:
+        """The gallery's items, for whoever may open the page (its guard), each read counted."""
+        if gallery is None:
+            return JSONResponse(
+                {"detail": f"{addressed.app.name} shows no gallery."}, status_code=404
+            )
+        caller = _CALLER.get()
+        try:
+            if caller is not None:
+                addressed.access.count(caller)
+            return JSONResponse(await gallery.answer(caller))
+        except OperationError as error:
+            return JSONResponse(error.as_dict(), status_code=error.status)
+
     routes = [
         Route("/", page, methods=["GET"]),
         Route("/api/agent", view, methods=["GET"]),
+        Route("/api/gallery", products, methods=["GET"]),
         Route("/.well-known/poppy.json", poppy, methods=["GET"]),
         Route("/healthz", health, methods=["GET"]),
     ]
@@ -189,4 +268,12 @@ def web_app(addressed: AddressedAgent) -> Any:
     return signed_in_with_datalayer
 
 
-__all__ = ["PAGE", "VIEW_ID", "agent_view", "web_app"]
+__all__ = [
+    "GALLERY_SECONDS",
+    "PAGE",
+    "VIEW_ID",
+    "Gallery",
+    "agent_view",
+    "gallery_of",
+    "web_app",
+]

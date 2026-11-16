@@ -1,8 +1,11 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Every agent at its addresses: the call contract, who may call, the API, the MCP
-server, the web page, poppy.json and the agent host (the user, 16 November 2026)."""
+"""Every agent at its addresses.
+
+The call contract, who may call, the API, the MCP server, the web page and its
+gallery, poppy.json and the agent host (the user, 16 November 2026).
+"""
 
 from __future__ import annotations
 
@@ -547,6 +550,126 @@ def test_the_web_page_s_bundle_answers_at_the_path_the_page_asks_for(
     assert "/static/assets/agent-web-x.js" in page.text
     asset = client.get("/static/assets/agent-web-x.js")
     assert asset.status_code == 200 and asset.text == "export {};"
+
+
+def _with_gallery(spec: Dict[str, Any]) -> Dict[str, Any]:
+    """``spec`` with a ``listProducts`` that feeds its web page's gallery."""
+    document = json.loads(json.dumps(spec["openapi"]))
+    document["paths"]["/products"] = {
+        "get": {
+            "operationId": "listProducts",
+            "summary": "The products",
+            "x-datalayer-gallery": {"title": "Our lamps"},
+            "responses": {
+                "200": {
+                    "description": "The products",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "products": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "title": {"type": "string"},
+                                                "image": {"type": "string"},
+                                                "price": {"type": "number"},
+                                            },
+                                        },
+                                    }
+                                },
+                                "required": ["products"],
+                            }
+                        }
+                    },
+                }
+            },
+        }
+    }
+    return {**spec, "openapi": document}
+
+
+LAMPS = {
+    "products": [
+        {"title": "Lamp", "image": "https://images.datalayer.io/lamp.jpg", "price": 9.5}
+    ]
+}
+
+
+def test_the_web_page_shows_the_gallery_its_openapi_names_read_once_and_kept() -> None:
+    """The gallery operation's answer is the page's, called with no input and kept."""
+    model = Answers(LAMPS, LAMPS)
+    agent = addressed(model, _with_gallery(COMPANY))
+    assert agent_view(agent)["gallery"] == {
+        "operation_id": "listProducts",
+        "title": "Our lamps",
+    }
+    client = TestClient(web_app(agent))
+    first = client.get("/api/gallery")
+    assert first.status_code == 200 and first.json() == LAMPS
+    # Called with no input, the operation's instruction told.
+    assert "The products" in model.prompts[0]
+    assert "The inputs, as JSON:\n{}" in model.prompts[0]
+    # Kept: a second page asks no model.
+    assert client.get("/api/gallery").json() == LAMPS
+    assert len(model.prompts) == 1
+
+
+@pytest.mark.asyncio
+async def test_a_gallery_is_called_again_once_it_is_old_and_a_failed_call_is_not_kept() -> (
+    None
+):
+    """An answer older than its time is asked again; a failed call is not kept."""
+    from agent_runtimes.addresses.web import Gallery
+
+    now = [0.0]
+    model = Answers(LAMPS, {"products": []})
+    agent = addressed(model, _with_gallery(APP))
+    gallery = Gallery(agent, "listProducts", seconds=600, clock=lambda: now[0])
+    assert await gallery.answer(None) == LAMPS
+    now[0] = 599
+    assert await gallery.answer(None) == LAMPS
+    now[0] = 601
+    assert await gallery.answer(None) == {"products": []}
+    failing = Gallery(
+        addressed(Answers({"wrong": 1}, {"wrong": 2}), _with_gallery(APP)),
+        "listProducts",
+    )
+    with pytest.raises(OperationError):
+        await failing.answer(None)
+    assert failing._at is None
+
+
+def test_a_gallery_answers_only_who_may_open_the_page_under_their_rate_cap() -> None:
+    """The gallery is behind the page's access check, each read counted."""
+    private = addressed(
+        Answers(LAMPS),
+        _with_gallery(COMPANY),
+        policy=AddressPolicy("private", owner_uid="owner", rate_per_minute=2),
+        key_checker=_uid_of,
+    )
+    client = TestClient(web_app(private))
+    assert client.get("/api/gallery").status_code == 401
+    assert (
+        client.get("/api/gallery", headers={"X-API-Key": "key-other"}).status_code
+        == 403
+    )
+    owner = {"X-API-Key": "key-owner"}
+    assert client.get("/api/gallery", headers=owner).json() == LAMPS
+    assert client.get("/api/gallery", headers=owner).status_code == 200
+    assert client.get("/api/gallery", headers=owner).status_code == 429
+
+
+def test_a_page_without_a_gallery_says_so() -> None:
+    """No gallery in its openapi: none in the view, 404 at the gallery."""
+    agent = addressed(Answers(), COMPANY)
+    assert agent_view(agent)["gallery"] is None
+    answered = TestClient(web_app(agent)).get("/api/gallery")
+    assert (
+        answered.status_code == 404 and "shows no gallery" in answered.json()["detail"]
+    )
 
 
 # --- the agent host --------------------------------------------------------------------

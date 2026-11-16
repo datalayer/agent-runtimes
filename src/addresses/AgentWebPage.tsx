@@ -13,14 +13,25 @@
  * skills, tools), its operations with their inputs and outputs, its protocols,
  * who may open it, and its four addresses.
  *
+ * An application whose `openapi` names a gallery (the operation carrying
+ * `x-datalayer-gallery`) shows its products first: the page reads them at its
+ * own `/api/gallery` (the operation called with no input, behind the page's
+ * access check) and draws them with the product cards its chat draws
+ * (`ProductGrid`), skeletons while they load.
+ *
  * @module addresses/AgentWebPage
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { JSX, ReactNode } from 'react';
 import { Box, Card, useSystemColorMode } from '@datalayer/primer-addons';
 import { Button, Heading, Label, Text } from '@primer/react';
 import { EmbedThemed } from '../apps/embed/AppEmbed';
+import { ProductGrid } from '../apps/plugins/product-cards';
+import {
+  readProductCards,
+  type ProductCardItem,
+} from '../apps/plugins/product-cards/read';
 import type { AppAccent, AppThemeVariant } from '../types/agentspecs';
 
 /** A JSON schema, as an operation's inputs or answer say it. */
@@ -65,6 +76,8 @@ export interface AgentView {
   };
   operations: AgentViewOperation[];
   declares_openapi: boolean;
+  /** The operation whose answer is shown as product cards, and the gallery's title. */
+  gallery?: { operation_id: string; title: string } | null;
   protocols: string[];
   visibility: 'public' | 'private';
   addresses: Record<
@@ -107,6 +120,135 @@ export function visibilityOf(visibility: AgentView['visibility']): string {
   return visibility === 'public'
     ? 'Anyone, under its spend limit and a rate cap per caller.'
     : 'Only the people its owner allowed: with a Datalayer API key or their sign-in.';
+}
+
+/** Where the page reads its gallery: its own web host, behind its access check. */
+export const GALLERY_PATH = '/api/gallery';
+
+export const GALLERY_WORDS = {
+  title: 'Products',
+  loading: 'Loading the products…',
+  none: 'No products to show yet.',
+  failed: (detail: string) => `The products could not be shown: ${detail}`,
+} as const;
+
+/** What the gallery shows: loading, its products, or why it has none. */
+export type GalleryState =
+  | { kind: 'loading' }
+  | { kind: 'shown'; products: ProductCardItem[]; count: number }
+  | { kind: 'failed'; detail: string };
+
+/** The gallery operation's answer, read for the product cards. */
+export function galleryOf(answer: unknown): GalleryState {
+  const cards = readProductCards(
+    answer && typeof answer === 'object'
+      ? (answer as Record<string, unknown>)
+      : {},
+  );
+  return cards.kind === 'products'
+    ? { kind: 'shown', products: cards.products, count: cards.count }
+    : { kind: 'shown', products: [], count: 0 };
+}
+
+/** The gallery's items, read from the page's own address. */
+export async function loadGallery(
+  fetcher: typeof fetch = fetch,
+): Promise<GalleryState> {
+  try {
+    const response = await fetcher(GALLERY_PATH, {
+      headers: { Accept: 'application/json' },
+      credentials: 'same-origin',
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const detail =
+        body && typeof body.detail === 'string'
+          ? body.detail
+          : `HTTP ${response.status}`;
+      return { kind: 'failed', detail };
+    }
+    return galleryOf(body);
+  } catch (error) {
+    return {
+      kind: 'failed',
+      detail: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+function GallerySkeleton(): JSX.Element {
+  return (
+    <Box
+      as="ul"
+      aria-busy="true"
+      aria-label={GALLERY_WORDS.loading}
+      sx={{
+        listStyle: 'none',
+        m: 0,
+        p: 0,
+        display: 'grid',
+        gap: 2,
+        gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+        maxWidth: 720,
+      }}
+    >
+      {[0, 1, 2, 3, 4, 5].map(card => (
+        <Card
+          as="li"
+          key={card}
+          border
+          shadow="none"
+          overflow="hidden"
+          data-skeleton
+        >
+          <Box sx={{ height: 140, bg: 'neutral.muted' }} />
+          <Card.Content p={2}>
+            <Box
+              sx={{ height: 12, mb: 2, borderRadius: 2, bg: 'neutral.muted' }}
+            />
+            <Box
+              sx={{
+                height: 12,
+                width: '50%',
+                borderRadius: 2,
+                bg: 'neutral.muted',
+              }}
+            />
+          </Card.Content>
+        </Card>
+      ))}
+    </Box>
+  );
+}
+
+/** The application's products, as its chat draws them. */
+export function Gallery({ fetcher }: { fetcher?: typeof fetch }): JSX.Element {
+  const [state, setState] = useState<GalleryState>({ kind: 'loading' });
+  useEffect(() => {
+    let current = true;
+    void loadGallery(fetcher).then(loaded => {
+      if (current) {
+        setState(loaded);
+      }
+    });
+    return () => {
+      current = false;
+    };
+  }, [fetcher]);
+  if (state.kind === 'loading') {
+    return <GallerySkeleton />;
+  }
+  if (state.kind === 'failed') {
+    return (
+      <Text sx={{ color: 'fg.muted' }}>
+        {GALLERY_WORDS.failed(state.detail)}
+      </Text>
+    );
+  }
+  if (state.products.length === 0) {
+    return <Text sx={{ color: 'fg.muted' }}>{GALLERY_WORDS.none}</Text>;
+  }
+  return <ProductGrid products={state.products} count={state.count} />;
 }
 
 /** The four addresses, in the order they are said, each with what it is for. */
@@ -239,7 +381,14 @@ function Section({
 }
 
 /** The page: the agent, in its own theme. */
-export function AgentWebPage({ view }: { view: AgentView }): JSX.Element {
+export function AgentWebPage({
+  view,
+  fetcher,
+}: {
+  view: AgentView;
+  /** How the gallery is read; `fetch` when unsaid. */
+  fetcher?: typeof fetch;
+}): JSX.Element {
   const system = useSystemColorMode();
   const mode = view.interface.theme?.mode;
   const colorMode = mode === 'light' || mode === 'dark' ? mode : system;
@@ -273,6 +422,12 @@ export function AgentWebPage({ view }: { view: AgentView }): JSX.Element {
         </Box>
         {view.description ? (
           <Text sx={{ fontSize: 2 }}>{view.description}</Text>
+        ) : null}
+
+        {view.gallery ? (
+          <Section title={view.gallery.title || GALLERY_WORDS.title}>
+            <Gallery fetcher={fetcher} />
+          </Section>
         ) : null}
 
         {view.addresses ? (

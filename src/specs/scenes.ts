@@ -151,7 +151,7 @@ export const BUY_FROM_A_SHOP_SCENE_0_0_1: SceneSpec = {
     {
       id: 'order',
       cue: {
-        say: 'Place the test order for that basket.',
+        say: 'Place a test order of two tennis balls and the tennis racket.',
         schedule: '',
         event: '',
       },
@@ -162,7 +162,7 @@ export const BUY_FROM_A_SHOP_SCENE_0_0_1: SceneSpec = {
           who: 'shopper',
           asks: 'demo-shop',
           over: 'a2a',
-          what: 'the test order for the basket quoted',
+          what: 'a test order of two tennis balls and one tennis racket',
           tool: '',
         },
         {
@@ -175,7 +175,7 @@ export const BUY_FROM_A_SHOP_SCENE_0_0_1: SceneSpec = {
         {
           who: 'shopper',
           asks: '',
-          what: 'the order placed, a test',
+          what: 'the order placed, a test, with its number',
           tool: '',
           answers: 'words',
         },

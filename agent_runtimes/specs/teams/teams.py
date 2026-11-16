@@ -617,7 +617,10 @@ BUY_FROM_A_SHOP_TEAM_SPEC_0_0_1 = TeamSpec(
         TeamSuggestionSpec(
             text="Quote two tennis balls and the tennis racket.", emoji="🧾"
         ),
-        TeamSuggestionSpec(text="Place the test order for that basket.", emoji="📦"),
+        TeamSuggestionSpec(
+            text="Place a test order of two tennis balls and the tennis racket.",
+            emoji="📦",
+        ),
     ],
     delegation=TeamDelegationSpec(
         max_depth=1, allow_peer_delegation=True, include_general_purpose=False

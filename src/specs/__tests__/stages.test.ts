@@ -22,10 +22,10 @@ const idOf = (ref: string): string => {
 };
 
 describe('the Stage catalogue', () => {
-  it('holds thirteen stages: eleven scenes, one app, one battle', () => {
-    expect(Object.keys(STAGE_CATALOGUE)).toHaveLength(13);
+  it('holds fourteen stages: twelve scenes, one app, one battle', () => {
+    expect(Object.keys(STAGE_CATALOGUE)).toHaveLength(14);
     const kinds = listStages().map(stage => stageKindOf(stage));
-    expect(kinds.filter(kind => kind === 'scene')).toHaveLength(11);
+    expect(kinds.filter(kind => kind === 'scene')).toHaveLength(12);
     expect(kinds.filter(kind => kind === 'app')).toEqual(['app']);
     expect(kinds.filter(kind => kind === 'battle')).toEqual(['battle']);
   });
@@ -69,9 +69,10 @@ describe('the Stage catalogue', () => {
     expect(getStage('constructor')).toBeUndefined();
   });
 
-  it('keeps the five demo stages public, with deployments', () => {
+  it('keeps the six demo stages public, with deployments', () => {
     const demo = listStages().filter(stage => stage.tags.includes('demo'));
     expect(demo.map(stage => stage.id).sort()).toEqual([
+      'buy-from-a-shop',
       'coding-agent-behind-the-shield',
       'crop-monitoring',
       'disaster-assessment',

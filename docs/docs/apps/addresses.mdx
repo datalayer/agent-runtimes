@@ -40,6 +40,29 @@ runs with **structured output** bound to the operation's `200` schema
 does not fit, the agent is asked once more with what was wrong, then the call is
 refused (`422`). A spend limit reached is `402`, a caller past its rate cap `429`.
 
+### A gallery on its page
+
+An application with a catalogue shows it first on its page: the operation that
+carries `x-datalayer-gallery` (a `get` that needs no input and answers `products`,
+items each with a `title` and an `image`) is called with no input, and its answer
+drawn as the product cards its chat draws — photo, title, price, rating and stock —
+with skeletons while it loads, in the application's theme. The page reads it at
+its own `/api/gallery`, behind the page's access check (anybody for a public
+agent, the people allowed for a private one), each read counted under the
+caller's rate cap. The answer is kept ten minutes: a page seen often calls the
+agent once in that time, recorded as a call by its `web` address. The Demo Shop's
+`listProducts` carries it:
+
+```yaml
+paths:
+  /products:
+    get:
+      operationId: listProducts
+      summary: List the shop's products, all of them or one category's.
+      x-datalayer-gallery:
+        title: The shop's products
+```
+
 ## Who may call it
 
 The same rule at its four addresses, from its "Who may open it":

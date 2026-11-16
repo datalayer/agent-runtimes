@@ -618,7 +618,10 @@ export const BUY_FROM_A_SHOP_TEAM_SPEC_0_0_1: TeamSpec = {
       emoji: '🎾',
     },
     { text: 'Quote two tennis balls and the tennis racket.', emoji: '🧾' },
-    { text: 'Place the test order for that basket.', emoji: '📦' },
+    {
+      text: 'Place a test order of two tennis balls and the tennis racket.',
+      emoji: '📦',
+    },
   ],
   delegation: {
     maxDepth: 1,
