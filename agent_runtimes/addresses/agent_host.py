@@ -89,18 +89,28 @@ class AgentHost:
         self.company = company
         self.host = addressed.hosts.host("agent")
 
-    def _card(self) -> dict[str, Any]:
+    async def _card(self) -> dict[str, Any]:
+        """The agent's A2A card, as its A2A application serves it, its ``url`` this host's."""
+        import httpx
+
         from agent_runtimes.routes.a2a import _a2a_agents
 
         registration = _a2a_agents.get(self.agent_id)
-        if registration is None:
+        if registration is None or registration.app is None:
             raise OperationError(
                 503, f"{self.addressed.app.name} is not answering over A2A yet."
             )
-        card = registration.card.model_copy(
-            update={"url": f"{self.addressed.hosts.agent}/a2a/"}
-        )
-        return card.model_dump(mode="json", by_alias=True, exclude_none=True)
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=registration.app), base_url="http://a2a"
+        ) as client:
+            answered = await client.get("/.well-known/agent-card.json")
+        if answered.status_code != 200:
+            raise OperationError(
+                503, f"{self.addressed.app.name}'s A2A card is not served yet."
+            )
+        card = answered.json()
+        card["url"] = f"{self.addressed.hosts.agent}/a2a/"
+        return card
 
     async def __call__(self, scope: dict, receive: Any, send: Any) -> None:
         if scope.get("type") != "http" or _host_of(scope) != self.host:
@@ -121,7 +131,7 @@ class AgentHost:
                 await answer_json(send, 200, poppy_document(self.addressed))
                 return
             if path == CARD:
-                await answer_json(send, 200, self._card())
+                await answer_json(send, 200, await self._card())
                 return
             if self.company is not None and path.startswith(COMPANY_PREFIXES):
                 # Its sign-in and Sessions are the protocol's: the SDK checks each request.

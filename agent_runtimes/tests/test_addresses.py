@@ -957,3 +957,26 @@ def test_an_agent_at_its_address_answers_over_a2a_whatever_it_was_made_for(
     registered.clear()
     servers._answer_over_a2a("nobody", addressed(Answers()))
     assert registered == []
+
+
+def test_the_agent_host_serves_the_a2a_card_its_application_serves_at_its_own_url(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from types import SimpleNamespace
+
+    from agent_runtimes.routes import a2a
+
+    async def card(_: Any) -> JSONResponse:
+        return JSONResponse(
+            {"name": "Shop", "url": "http://inside/api/v1/a2a/agents/shop-agent"}
+        )
+
+    served = Starlette(routes=[Route("/.well-known/agent-card.json", card)])
+    monkeypatch.setitem(
+        a2a._a2a_agents, "shop-agent", SimpleNamespace(app=served, card=None)
+    )
+    client = TestClient(AgentHost(_main_server(), addressed(Answers()), "shop-agent"))
+    said = client.get(
+        "/.well-known/agent-card.json", headers={"host": "shop.agent.datalayer.ai"}
+    ).json()
+    assert said == {"name": "Shop", "url": "https://shop.agent.datalayer.ai/a2a/"}

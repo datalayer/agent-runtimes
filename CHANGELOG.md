@@ -9,6 +9,8 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
+- **1.6.79: the agent host serves the A2A card its application serves** (16 November 2026), its `url` the host's `/a2a/`: read off a dataclass card, it answered 500. Tests: test_addresses (+1)
+
 - **1.6.78: an agent's MCP server and A2A answer at its address** (16 November 2026): the MCP SDK's DNS rebinding protection admitted only the loopback, so every request at `{name}.mcp.<domain>` was 421 *Invalid Host header*; it now admits the agent's own MCP host too. An agent made for another transport (a person's own agent made from its spec for the chat) answers over A2A once it has an address, its Agent Card at its agent host (was 503). Tests: test_addresses (+2)
 
 - **1.6.77: an API key at an agent's addresses is asked of IAM as a bearer** (16 November 2026): IAM reads a Datalayer API key as a bearer token and refused it in `X-API-Key`, so every key a private agent's caller sent was answered *not one Datalayer knows*; the caller still sends it in `X-API-Key` or `Authorization`. Tests: test_addresses (+1)
