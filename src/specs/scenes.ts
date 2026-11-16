@@ -31,14 +31,14 @@ export const BUY_FROM_A_SHOP_SCENE_0_0_1: SceneSpec = {
   cast: [
     {
       member: 'shopper',
-      app: 'shopper:0.0.1',
+      app: 'shopper:0.0.2',
       ref: '',
       server: '',
       role: 'initiator',
       runsIn: 'browser',
       talksTo: [
         {
-          member: 'shop',
+          member: 'demo-shop',
           over: 'a2a',
         },
       ],
@@ -52,7 +52,7 @@ export const BUY_FROM_A_SHOP_SCENE_0_0_1: SceneSpec = {
       overrides: {},
     },
     {
-      member: 'shop',
+      member: 'demo-shop',
       app: 'demo-shop:0.0.1',
       ref: '',
       server: '',
@@ -87,13 +87,13 @@ export const BUY_FROM_A_SHOP_SCENE_0_0_1: SceneSpec = {
       moves: [
         {
           who: 'shopper',
-          asks: 'shop',
+          asks: 'demo-shop',
           over: 'a2a',
           what: "the shop's products for tennis",
           tool: '',
         },
         {
-          who: 'shop',
+          who: 'demo-shop',
           asks: '',
           what: 'its tennis racket and tennis ball, each with its price, rating and stock',
           tool: '',
@@ -124,13 +124,13 @@ export const BUY_FROM_A_SHOP_SCENE_0_0_1: SceneSpec = {
       moves: [
         {
           who: 'shopper',
-          asks: 'shop',
+          asks: 'demo-shop',
           over: 'a2a',
           what: 'a quote for two tennis balls and one tennis racket',
           tool: '',
         },
         {
-          who: 'shop',
+          who: 'demo-shop',
           asks: '',
           what: 'each line and the total, summed by the shop',
           tool: '',
@@ -160,13 +160,13 @@ export const BUY_FROM_A_SHOP_SCENE_0_0_1: SceneSpec = {
       moves: [
         {
           who: 'shopper',
-          asks: 'shop',
+          asks: 'demo-shop',
           over: 'a2a',
           what: 'the test order for the basket quoted',
           tool: '',
         },
         {
-          who: 'shop',
+          who: 'demo-shop',
           asks: '',
           what: "the test order's number, and that nothing is charged and nothing ships",
           tool: '',
@@ -192,7 +192,7 @@ export const BUY_FROM_A_SHOP_SCENE_0_0_1: SceneSpec = {
         x: 0.25,
         y: 0.5,
       },
-      shop: {
+      'demo-shop': {
         x: 0.75,
         y: 0.5,
       },
@@ -266,7 +266,7 @@ export const BUY_FROM_A_SHOP_SCENE_0_0_1: SceneSpec = {
     account: 'demo',
     page: '/',
     addresses: {
-      shop: 'DATALAYER_DEMO_SCENE_BUY_FROM_A_SHOP_SHOP_A2A_URL',
+      'demo-shop': 'DATALAYER_DEMO_SCENE_BUY_FROM_A_SHOP_DEMO_SHOP_A2A_URL',
     },
   },
   actors: [],

@@ -45,7 +45,7 @@ export const BUY_FROM_A_SHOP_STAGE_0_0_1: StageSpec = {
   app: '',
   battle: '',
   deployments: {
-    shop: 'demo-shop',
+    'demo-shop': 'demo-shop',
   },
   public: true,
   enabled: true,

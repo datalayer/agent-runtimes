@@ -46,7 +46,7 @@ BUY_FROM_A_SHOP_STAGE_0_0_1 = StageSpec.model_validate(
         "scene": "buy-from-a-shop:0.0.1",
         "app": "",
         "battle": "",
-        "deployments": {"shop": "demo-shop"},
+        "deployments": {"demo-shop": "demo-shop"},
         "public": True,
         "enabled": True,
         "tags": ["example", "demo", "scene"],

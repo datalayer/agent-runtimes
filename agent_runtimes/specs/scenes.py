@@ -34,12 +34,12 @@ BUY_FROM_A_SHOP_SCENE_0_0_1 = SceneSpec.model_validate(
         "cast": [
             {
                 "member": "shopper",
-                "app": "shopper:0.0.1",
+                "app": "shopper:0.0.2",
                 "ref": "",
                 "server": "",
                 "role": "initiator",
                 "runs_in": "browser",
-                "talks_to": [{"member": "shop", "over": "a2a"}],
+                "talks_to": [{"member": "demo-shop", "over": "a2a"}],
                 "persona": {
                     "name": "Shopper",
                     "face": "🧺",
@@ -49,7 +49,7 @@ BUY_FROM_A_SHOP_SCENE_0_0_1 = SceneSpec.model_validate(
                 "overrides": {},
             },
             {
-                "member": "shop",
+                "member": "demo-shop",
                 "app": "demo-shop:0.0.1",
                 "ref": "",
                 "server": "",
@@ -82,13 +82,13 @@ BUY_FROM_A_SHOP_SCENE_0_0_1 = SceneSpec.model_validate(
                 "moves": [
                     {
                         "who": "shopper",
-                        "asks": "shop",
+                        "asks": "demo-shop",
                         "over": "a2a",
                         "what": "the shop's products for tennis",
                         "tool": "",
                     },
                     {
-                        "who": "shop",
+                        "who": "demo-shop",
                         "asks": "",
                         "what": "its tennis racket and tennis ball, each with its price, rating and stock",
                         "tool": "",
@@ -117,13 +117,13 @@ BUY_FROM_A_SHOP_SCENE_0_0_1 = SceneSpec.model_validate(
                 "moves": [
                     {
                         "who": "shopper",
-                        "asks": "shop",
+                        "asks": "demo-shop",
                         "over": "a2a",
                         "what": "a quote for two tennis balls and one tennis racket",
                         "tool": "",
                     },
                     {
-                        "who": "shop",
+                        "who": "demo-shop",
                         "asks": "",
                         "what": "each line and the total, summed by the shop",
                         "tool": "",
@@ -151,13 +151,13 @@ BUY_FROM_A_SHOP_SCENE_0_0_1 = SceneSpec.model_validate(
                 "moves": [
                     {
                         "who": "shopper",
-                        "asks": "shop",
+                        "asks": "demo-shop",
                         "over": "a2a",
                         "what": "the test order for the basket quoted",
                         "tool": "",
                     },
                     {
-                        "who": "shop",
+                        "who": "demo-shop",
                         "asks": "",
                         "what": "the test order's number, and that nothing is charged and nothing ships",
                         "tool": "",
@@ -179,7 +179,7 @@ BUY_FROM_A_SHOP_SCENE_0_0_1 = SceneSpec.model_validate(
         "stage": {
             "positions": {
                 "shopper": {"x": 0.25, "y": 0.5},
-                "shop": {"x": 0.75, "y": 0.5},
+                "demo-shop": {"x": 0.75, "y": 0.5},
             },
             "opens_first": "shopper",
             "transcript": {"tools": True, "narration": True, "withhold": ["ids"]},
@@ -241,7 +241,9 @@ BUY_FROM_A_SHOP_SCENE_0_0_1 = SceneSpec.model_validate(
         "deployment": {
             "account": "demo",
             "page": "/",
-            "addresses": {"shop": "DATALAYER_DEMO_SCENE_BUY_FROM_A_SHOP_SHOP_A2A_URL"},
+            "addresses": {
+                "demo-shop": "DATALAYER_DEMO_SCENE_BUY_FROM_A_SHOP_DEMO_SHOP_A2A_URL"
+            },
         },
         "actors": [],
         "lines": [],
