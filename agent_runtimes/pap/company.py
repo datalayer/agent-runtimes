@@ -398,6 +398,52 @@ class _TicketsPlugin:
         )
 
 
+def company_config(
+    name: str,
+    domain: str,
+    company: Any,
+    *,
+    device_page: str | None = None,
+    web: bool = False,
+) -> CompanyConfig:
+    """What a company publishes at ``domain``, from its Appspec's ``pap.company``:
+    what :class:`PapCompanyCapability` serves and the ``poppy.json`` of an agent
+    that is a company (``agent_runtimes.addresses.poppy``)."""
+    if not company.enabled:
+        raise ValueError("The Appspec does not enable pap.company")
+    if not company.scopes:
+        raise ValueError(
+            "A company offers at least one scope of its own: the Appspec's pap.company.scopes is empty"
+        )
+    scopes = _scopes(company)
+    return CompanyConfig(
+        name=name,
+        domain=domain,
+        # The one PAP version a runtime speaks (the newest its SDK implements): poppy.json
+        # is its document and nothing else is served; a request in another is refused.
+        protocol_versions=(pap_protocol_version(),),
+        scopes=scopes,
+        # What each allows, published as auth.scopes, and the Maker's hints (§4.4).
+        scope_descriptions={
+            str(scope.name): str(scope.description) for scope in company.scopes
+        },
+        scope_hints=_scope_hints(company),
+        excluded_tasks=_excluded_tasks(company),
+        write_scopes=tuple(scope for scope in scopes if scope.endswith(":write")),
+        device=True,
+        direct=False,
+        # `auth.disabled` (PAP 0.3 as published §3.2, D4-08): it offers personal agents no sign-in.
+        sign_in_disabled=bool(company.sign_in_disabled),
+        # Its website (§6): a browser joins the person's Session there when it offers `web`.
+        web=web,
+        web_unscoped=bool(company.web_unscoped) and web,
+        # `web.disabled` (PAP draft 0.4 §6, D5-09): agents are asked to use its agent and APIs.
+        web_disabled=bool(company.web_disabled),
+        operations="operations" in company.extensions,
+        device_page=device_page,
+    )
+
+
 class PapCompanyCapability:
     """An application, published as a PAP company at ``domain`` (served by :meth:`asgi`).
 
@@ -419,48 +465,30 @@ class PapCompanyCapability:
         device_page: str | None = None,
         plugins: Iterable[tuple[PluginManifest, object]] = (),
         address_resolver: Any = resolve_addresses,
+        hosted: bool = False,
     ) -> None:
-        """Configure the company's name, domain and application."""
-        if not company.enabled:
-            raise ValueError("The Appspec does not enable pap.company")
+        """Configure the company's name, domain and application.
+
+        ``hosted``: the company at its agent's address (``{name}.agent.<domain>``),
+        whose MCP, API and web servers answer beside it: every interface the
+        Appspec lists is offered, its website among them.
+        """
         interfaces = {str(getattr(i, "value", i)) for i in company.interfaces}
-        if interfaces != {"agent"}:
+        if not hosted and interfaces != {"agent"}:
             raise ValueError(
                 "A local company offers the agent interface only (its A2A route); "
                 f"the Appspec asks for {', '.join(sorted(interfaces))}"
-            )
-        if not company.scopes:
-            raise ValueError(
-                "A company offers at least one scope of its own: the Appspec's pap.company.scopes is empty"
             )
         self.company = company
         self.application = application
         self.accounts = accounts
         self.tickets = MemoryOperationTickets()
-        scopes = _scopes(company)
-        self.config = CompanyConfig(
-            name=name,
-            domain=domain,
-            # The one PAP version a runtime speaks (the newest its SDK implements): poppy.json
-            # is its document and nothing else is served; a request in another is refused.
-            protocol_versions=(pap_protocol_version(),),
-            scopes=scopes,
-            # What each allows, published as auth.scopes, and the Maker's hints (§4.4).
-            scope_descriptions={
-                str(scope.name): str(scope.description) for scope in company.scopes
-            },
-            scope_hints=_scope_hints(company),
-            excluded_tasks=_excluded_tasks(company),
-            write_scopes=tuple(scope for scope in scopes if scope.endswith(":write")),
-            device=True,
-            direct=False,
-            # `auth.disabled` (PAP 0.3 as published §3.2, D4-08): it offers personal agents no sign-in.
-            sign_in_disabled=bool(company.sign_in_disabled),
-            # `web.disabled` (PAP draft 0.4 §6, D5-09): agents are asked to use its agent and APIs. It serves
-            # no website, so `web.unscoped` says nothing here.
-            web_disabled=bool(company.web_disabled),
-            operations="operations" in company.extensions,
+        self.config = company_config(
+            name,
+            domain,
+            company,
             device_page=device_page,
+            web=hosted and "web" in interfaces,
         )
         self.service: CompanyService = build_company(
             self.config,
@@ -505,4 +533,5 @@ __all__ = [
     "a2a_data",
     "a2a_parts",
     "a2a_texts",
+    "company_config",
 ]

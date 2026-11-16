@@ -1,0 +1,173 @@
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+
+"""An agent's web page: what it is, shown with primer-addons in its own theme.
+
+The page (``agent-web.html``, built into the runtime's static bundle) renders
+what :func:`agent_view` says: what it does, its agent (model, MCP servers,
+skills, tools), its operations with their inputs and outputs, its protocols,
+who may open it and its four addresses, in the application's
+``interface.theme`` and ``accent``. The view is written into the page and
+served at ``/api/agent``; ``/.well-known/poppy.json`` is its ``poppy.json``.
+Behind the agent's access check, as its other addresses are.
+"""
+
+from __future__ import annotations
+
+import html
+import json
+from contextvars import ContextVar
+from pathlib import Path
+from typing import Any, Dict, Optional
+
+from starlette.applications import Starlette
+from starlette.requests import Request
+from starlette.responses import HTMLResponse, JSONResponse
+from starlette.routing import Mount, Route
+from starlette.staticfiles import StaticFiles
+
+from agent_runtimes.addresses.access import Caller
+from agent_runtimes.addresses.addressed import AddressedAgent
+from agent_runtimes.addresses.asgi import guarded
+from agent_runtimes.addresses.poppy import poppy_document
+
+#: The page's entry in the runtime's static bundle.
+PAGE = "agent-web.html"
+#: The script tag the view is written in.
+VIEW_ID = "agent-runtimes-agent-view"
+
+_CALLER: ContextVar[Optional[Caller]] = ContextVar("addresses_web_caller", default=None)
+
+
+def _dist() -> Optional[Path]:
+    """The runtime's built static bundle, as the main server finds it."""
+    package = Path(__file__).resolve().parent.parent
+    for candidate in (package.parent / "dist", package / "static" / "dist"):
+        if candidate.is_dir():
+            return candidate
+    return None
+
+
+def _agent_of(addressed: AddressedAgent) -> Dict[str, Any]:
+    """What its agent is made of: its model, MCP servers, skills and tools."""
+    from agent_runtimes.apps.agent import _agent_spec
+
+    app = addressed.app
+    spec = _agent_spec(app.agent) if app.agent else None
+    return {
+        "id": app.agent or app.team,
+        "name": getattr(spec, "name", "") or app.agent or app.team,
+        "description": getattr(spec, "description", "") or "",
+        "model": app.model or (getattr(spec, "model", "") or ""),
+        "mcp_servers": sorted(
+            {
+                *(connection.server for connection in app.connections),
+                *(
+                    str(getattr(server, "id", server))
+                    for server in (getattr(spec, "mcp_servers", None) or [])
+                ),
+            }
+        ),
+        "skills": sorted(
+            {
+                *app.skills,
+                *[
+                    str(getattr(s, "id", s))
+                    for s in (getattr(spec, "skills", None) or [])
+                ],
+            }
+        ),
+        "tools": [
+            {"name": tool.name, "description": tool.description} for tool in app.tools
+        ]
+        + [{"name": name, "description": ""} for name in app.backend_tools],
+    }
+
+
+def agent_view(addressed: AddressedAgent) -> Dict[str, Any]:
+    """What the page shows of the agent."""
+    app = addressed.app
+    return {
+        "id": app.id,
+        "name": app.name,
+        "description": app.description,
+        "emoji": app.emoji,
+        "kind": str(getattr(app.kind, "value", app.kind)),
+        "role": addressed.role,
+        "acts_for": addressed.acts_for,
+        "agent": _agent_of(addressed),
+        "operations": [
+            {
+                "operation_id": operation.operation_id,
+                "method": operation.method.upper(),
+                "path": operation.path,
+                "summary": operation.summary,
+                "description": operation.description,
+                "inputs": operation.input_schema,
+                "output": operation.output_schema,
+                "pap": operation.pap,
+            }
+            for operation in addressed.operations
+        ],
+        "declares_openapi": app.openapi is not None,
+        "protocols": list(app.protocols),
+        "visibility": addressed.access.policy.visibility,
+        "addresses": addressed.hosts.as_dict() if addressed.hosts else None,
+        "interface": {
+            "accent": app.interface.accent,
+            "theme": dict(app.interface.theme) if app.interface.theme else None,
+        },
+    }
+
+
+def _page(addressed: AddressedAgent, dist: Optional[Path]) -> str:
+    view = json.dumps(agent_view(addressed), ensure_ascii=False).replace("</", "<\\/")
+    tag = f'<script id="{VIEW_ID}" type="application/json">{view}</script>'
+    page = dist / PAGE if dist is not None else None
+    if page is not None and page.is_file():
+        text = page.read_text(encoding="utf-8")
+        return text.replace("<head>", f"<head>\n    {tag}", 1)
+    # No bundle built here (a checkout without `npm run build`): the view, plainly.
+    name = html.escape(addressed.app.name)
+    return (
+        f"<!doctype html><html><head><meta charset='utf-8'><title>{name}</title>{tag}</head>"
+        f"<body><h1>{name}</h1><p>{html.escape(addressed.app.description)}</p>"
+        "<p>The page's bundle is not built here: see <a href='/api/agent'>/api/agent</a>.</p>"
+        "</body></html>"
+    )
+
+
+def web_app(addressed: AddressedAgent) -> Any:
+    """The agent's web server."""
+    dist = _dist()
+
+    async def page(_: Request) -> HTMLResponse:
+        return HTMLResponse(_page(addressed, dist))
+
+    async def view(_: Request) -> JSONResponse:
+        return JSONResponse(agent_view(addressed))
+
+    async def poppy(_: Request) -> JSONResponse:
+        return JSONResponse(poppy_document(addressed))
+
+    async def health(_: Request) -> JSONResponse:
+        return JSONResponse({"success": True})
+
+    routes = [
+        Route("/", page, methods=["GET"]),
+        Route("/api/agent", view, methods=["GET"]),
+        Route("/.well-known/poppy.json", poppy, methods=["GET"]),
+        Route("/healthz", health, methods=["GET"]),
+    ]
+    if dist is not None and (dist / "assets").is_dir():
+        routes.append(Mount("/assets", app=StaticFiles(directory=dist / "assets")))
+    # Discovery and the bundle's files answer anybody; the agent itself only who may open it.
+    return guarded(
+        Starlette(routes=routes),
+        addressed,
+        _CALLER,
+        open_paths=("/.well-known/poppy.json", "/healthz", "/assets/"),
+    )
+
+
+__all__ = ["PAGE", "VIEW_ID", "agent_view", "web_app"]

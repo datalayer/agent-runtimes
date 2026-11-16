@@ -30,6 +30,9 @@ dependencies = [
     # its wire for the page (RU-1); 1.1.1 (unreleased): the ui
     # channel's WebSocket, `reactor.ui.ws` (RU-W).
     "datalayer_reactor>=1.3.7",
+    # An agent's MCP server at its address (`agent_runtimes.addresses.mcp`): one tool
+    # per operation of its openapi, contributed to Reactor's MCP server.
+    "reactor_mcp_server>=1.3.7",
     # PAP is a runtime protocol capability, not an example-only dependency.
     # 0.3.1 is the first release with matching Python/TypeScript Direct Sign-In
     # orchestration and a root-published TypeScript package.

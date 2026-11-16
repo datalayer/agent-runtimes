@@ -3244,6 +3244,19 @@ async def create_agent(
 
         # Register with ACP (base registration)
         register_agent(agent, info)
+
+        # Its addresses (agent, MCP, API, web) answer for it when they are for it.
+        from ..addresses.servers import RUNTIME_ADDRESSES
+
+        if RUNTIME_ADDRESSES.servers:
+            await RUNTIME_ADDRESSES.agent_made(
+                agent_id,
+                app_spec=request.app_spec,
+                agent_spec_id=request.agent_spec_id,
+                name=request.name,
+                description=request.description,
+                app_instance=request.app_instance,
+            )
         logger.info(
             f"POST /agents: Registered agent '{agent_id}' in _agents. All registered: {list(_agents.keys())}"
         )

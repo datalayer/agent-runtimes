@@ -3099,9 +3099,14 @@ class AppPapCompanySpec(BaseModel):
     #: access (`web.unscoped`), or personal agents are asked to use its agent and APIs (`web.disabled`).
     web_unscoped: bool = Field(default=False)
     web_disabled: bool = Field(default=False)
+    #: How personal agents reach it: `agent`, `openapi`, `mcp`, `web` (PAP §3.1).
+    interfaces: List[str] = Field(default_factory=lambda: ["agent"])
     scopes: List[AppPapCompanyScopeSpec] = Field(default_factory=list)
     excluded_tasks: List[AppPapExcludedTaskSpec] = Field(default_factory=list)
     extensions: List[str] = Field(default_factory=list)
+    #: `any`, or `registered` personal agents only, each by its `client_id` URL.
+    personal_agents: str = Field(default="any")
+    registered_agents: List[str] = Field(default_factory=list)
     #: Derived from the application's `openapi` (its operations carrying `x-pap`), never written.
     operations: List[AppPapOperationSpec] = Field(default_factory=list, exclude=True)
 
@@ -3522,6 +3527,10 @@ class AppInterfaceSpec(BaseModel):
 
     layout: str = Field(default="chat", description="`chat`, `page` or `split`")
     accent: str = Field(default="green", description="The application's one colour")
+    theme: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Its theme, `{variant, mode}` (primer-addons' themes), when it names one",
+    )
     welcome: str = Field(default="")
     starters: List[AppStarterSpec] = Field(default_factory=list)
     commands: List[AppCommandSpec] = Field(

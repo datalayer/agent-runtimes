@@ -1527,7 +1527,19 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
 
             _agentcore_seat = await start_seat()
 
+        # The agent's addresses (the user, 16 November 2026): its MCP, API and web
+        # servers beside this one, in this process, on 8766, 8767 and 8768, answering
+        # for the runtime's agent once it is made (`agent_runtimes.addresses`).
+        from .addresses.servers import RUNTIME_ADDRESSES
+
+        _addresses = RUNTIME_ADDRESSES.enabled() and not is_reload_parent
+        if _addresses:
+            await RUNTIME_ADDRESSES.start()
+
         yield
+
+        if _addresses:
+            await RUNTIME_ADDRESSES.stop()
 
         if _agentcore_seat is not None:
             await _agentcore_seat.stop()
@@ -1647,6 +1659,12 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     from .apps.visitors import OwnRoutesOnly
 
     app.add_middleware(OwnRoutesOnly)
+
+    # The agent host (`{name}.agent.<domain>`), once the runtime's agent answers
+    # there: outside the gate, which still sees every request it passes on.
+    from .addresses.servers import AgentHostMiddleware
+
+    app.add_middleware(AgentHostMiddleware)
 
     # A caller's trace continued into the request (SH-51):
     # inside OwnRoutesOnly, so a refused request opens no span.

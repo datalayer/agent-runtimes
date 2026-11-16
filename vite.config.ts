@@ -446,6 +446,8 @@ export default defineConfig(({ mode, command }) => {
       'agent-document': path.resolve(__dirname, 'html/agent-document.html'),
       loop: path.resolve(__dirname, 'html/loop.html'),
       'loop-example': path.resolve(__dirname, 'html/loop-example.html'),
+      // An agent's page at its address ({name}.web.<domain>, port 8768).
+      'agent-web': path.resolve(__dirname, 'html/agent-web.html'),
     };
   }
 

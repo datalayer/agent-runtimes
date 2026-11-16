@@ -1,0 +1,379 @@
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+
+"""The three servers beside the main one, in one process: 8766 mcp, 8767 api, 8768 web.
+
+``agent-runtimes serve --mode mcp|api|web --app <path|id>`` serves one of
+them for an application, in this process (:func:`serve_mode`). In a runtime
+(``AGENT_RUNTIMES_ADDRESSES=1``, as its image sets), the three start with the
+main server (:data:`RUNTIME_ADDRESSES`, from its lifespan) and answer 503
+until the runtime's agent is made; then they answer for it, whatever it is —
+a company's application, a published one, a person's own agent — and the main
+server answers its agent host (:class:`AgentHostMiddleware`).
+
+What the runtime's agent is at its addresses:
+
+- its name (``{name}.agent.<domain>``…) is ``AGENT_RUNTIMES_ADDRESS_NAME``, which
+  the operator gives the runtime of a deployment or of a person's own agent;
+- who may call it is its deployment's "Who may open it", read from ai-agents
+  with the runtime's proof, or else the configuration's
+  (:func:`~agent_runtimes.addresses.access.policy_from_environment`);
+- the agent is ``AGENT_RUNTIMES_ADDRESS_AGENT_ID`` when said, else the
+  deployment's own agent on a runtime launched for one, else the first made.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import contextlib
+import logging
+import os
+from typing import Any, Dict, Iterator, List, Literal, Optional
+
+import uvicorn
+
+from agent_runtimes.addresses.access import (
+    AddressAccess,
+    AddressPolicy,
+    either_token,
+    iam_key_checker,
+    iam_token_checker,
+    policy_from_environment,
+    policy_of_deployment,
+    read_deployment_record,
+)
+from agent_runtimes.addresses.addressed import (
+    AddressedAgent,
+    role_of,
+    runtime_agent_source,
+)
+from agent_runtimes.addresses.agent_host import AgentHost
+from agent_runtimes.addresses.asgi import answer_json
+from agent_runtimes.addresses.hosts import API_PORT, MCP_PORT, WEB_PORT, AddressHosts
+
+logger = logging.getLogger(__name__)
+
+Mode = Literal["mcp", "api", "web"]
+
+#: Turns the three servers on in a runtime.
+ENABLED_VARIABLE = "AGENT_RUNTIMES_ADDRESSES"
+NAME_VARIABLE = "AGENT_RUNTIMES_ADDRESS_NAME"
+AGENT_VARIABLE = "AGENT_RUNTIMES_ADDRESS_AGENT_ID"
+#: For a person's own agent: the handle of the person it acts for.
+ACTS_FOR_VARIABLE = "AGENT_RUNTIMES_ADDRESS_ACTS_FOR"
+
+PORTS: Dict[Mode, int] = {"mcp": MCP_PORT, "api": API_PORT, "web": WEB_PORT}
+
+
+def mode_app(addressed: AddressedAgent, mode: Mode) -> Any:
+    """The ASGI application of one of the three servers."""
+    if mode == "mcp":
+        from agent_runtimes.addresses.mcp import mcp_app
+
+        return mcp_app(addressed)
+    if mode == "api":
+        from agent_runtimes.addresses.api import api_app
+
+        return api_app(addressed)
+    if mode == "web":
+        from agent_runtimes.addresses.web import web_app
+
+        return web_app(addressed)
+    raise ValueError(f"{mode!r} is not a mode: mcp, api or web")
+
+
+class _Server(uvicorn.Server):
+    """A server beside another in one process: the main one handles the signals."""
+
+    @contextlib.contextmanager
+    def capture_signals(self) -> Iterator[None]:
+        yield
+
+
+class _Lifespan:
+    """An ASGI application's lifespan, run beside its requests (the MCP server's session
+    manager starts there)."""
+
+    def __init__(self, app: Any) -> None:
+        self.app = app
+        self.inbox: asyncio.Queue = asyncio.Queue()
+        self.outbox: asyncio.Queue = asyncio.Queue()
+        self.task: Optional[asyncio.Task] = None
+
+    async def start(self) -> None:
+        self.task = asyncio.create_task(
+            self.app(
+                {"type": "lifespan", "asgi": {"version": "3.0"}},
+                self.inbox.get,
+                self.outbox.put,
+            )
+        )
+        await self.inbox.put({"type": "lifespan.startup"})
+        said = await self.outbox.get()
+        if said["type"] != "lifespan.startup.complete":
+            raise RuntimeError(
+                f"The {self.app!r} did not start: {said.get('message', '')}"
+            )
+
+    async def stop(self) -> None:
+        if self.task is None:
+            return
+        await self.inbox.put({"type": "lifespan.shutdown"})
+        await self.outbox.get()
+        await self.task
+
+
+class _Slot:
+    """ASGI: the application of one address, once the runtime's agent is made; 503 before."""
+
+    def __init__(self, mode: Mode) -> None:
+        self.mode = mode
+        self.app: Optional[Any] = None
+        self._lifespan: Optional[_Lifespan] = None
+
+    async def fill(self, app: Any) -> None:
+        """Answer with ``app`` from now on, its lifespan started here."""
+        lifespan = _Lifespan(app)
+        await lifespan.start()
+        self.app, self._lifespan = app, lifespan
+
+    async def empty(self) -> None:
+        if self._lifespan is not None:
+            await self._lifespan.stop()
+        self.app, self._lifespan = None, None
+
+    async def __call__(self, scope: dict, receive: Any, send: Any) -> None:
+        if scope["type"] == "lifespan":
+            return
+        if self.app is None:
+            if scope["type"] == "http":
+                await answer_json(
+                    send,
+                    503,
+                    {"detail": f"No agent answers at this address ({self.mode}) yet."},
+                )
+            return
+        await self.app(scope, receive, send)
+
+
+class RuntimeAddresses:
+    """The three servers of a runtime, and its agent host."""
+
+    def __init__(self) -> None:
+        self.slots: Dict[Mode, _Slot] = {mode: _Slot(mode) for mode in PORTS}
+        self.servers: List[_Server] = []
+        self.tasks: List[asyncio.Task] = []
+        self.addressed: Optional[AddressedAgent] = None
+        self.agent_host: Optional[AgentHost] = None
+
+    @staticmethod
+    def enabled() -> bool:
+        return (os.environ.get(ENABLED_VARIABLE) or "").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+        )
+
+    async def start(self, host: str = "0.0.0.0") -> None:
+        """Start the three servers, answering 503 until the agent is made."""
+        for mode, port in PORTS.items():
+            server = _Server(
+                uvicorn.Config(
+                    self.slots[mode],
+                    host=host,
+                    port=port,
+                    lifespan="off",
+                    log_level="info",
+                )
+            )
+            self.servers.append(server)
+            self.tasks.append(
+                asyncio.create_task(server.serve(), name=f"addresses-{mode}")
+            )
+        logger.info(
+            "The agent's addresses: mcp %s, api %s, web %s",
+            MCP_PORT,
+            API_PORT,
+            WEB_PORT,
+        )
+
+    async def stop(self) -> None:
+        for server in self.servers:
+            server.should_exit = True
+        if self.tasks:
+            await asyncio.gather(*self.tasks, return_exceptions=True)
+        for slot in self.slots.values():
+            await slot.empty()
+        self.servers, self.tasks = [], []
+        self.addressed, self.agent_host = None, None
+
+    async def agent_made(
+        self,
+        agent_id: str,
+        *,
+        app_spec: Optional[Dict[str, Any]] = None,
+        agent_spec_id: Optional[str] = None,
+        name: str = "",
+        description: str = "",
+        app_instance: Optional[Dict[str, Any]] = None,
+    ) -> bool:
+        """The runtime made an agent: its addresses answer for it when it is the one they
+        are for. Whether they do."""
+        wanted = (os.environ.get(AGENT_VARIABLE) or "").strip()
+        if self.addressed is not None or (wanted and wanted != agent_id):
+            return False
+        from agent_runtimes.apps.principal import launched_for
+
+        launched = launched_for()
+        if (
+            launched
+            and str((app_instance or {}).get("deployment_uid") or "") != launched
+        ):
+            return False
+        addressed = await addressed_in_runtime(
+            agent_id,
+            app_spec=app_spec,
+            agent_spec_id=agent_spec_id,
+            name=name,
+            description=description,
+        )
+        for mode, slot in self.slots.items():
+            await slot.fill(mode_app(addressed, mode))
+        if addressed.hosts is not None:
+            company = (
+                company_of(addressed, agent_id) if addressed.role == "company" else None
+            )
+            self.agent_host = AgentHost(None, addressed, agent_id, company)
+        self.addressed = addressed
+        logger.info("Agent %s answers at its addresses (%s)", agent_id, addressed.role)
+        return True
+
+
+def _policy_and_checkers() -> tuple[Optional[str], Any, Any]:
+    from datalayer_core.utils.urls import DatalayerURLs
+
+    iam = getattr(DatalayerURLs.from_environment(), "iam_url", "") or ""
+    if not iam:
+        return None, None, None
+    return iam, iam_key_checker(iam), either_token(iam_token_checker(iam))
+
+
+async def addressed_in_runtime(
+    agent_id: str,
+    *,
+    app_spec: Optional[Dict[str, Any]] = None,
+    agent_spec_id: Optional[str] = None,
+    name: str = "",
+    description: str = "",
+) -> AddressedAgent:
+    """The runtime's agent at its addresses: its application, or an agent of its own
+    wrapped as one (a person's own agent)."""
+    from agent_runtimes.apps.loading import load_app
+    from agent_runtimes.apps.principal import launched_app, launched_for
+    from agent_runtimes.types import AppSpec
+
+    slug = (os.environ.get(NAME_VARIABLE) or "").strip()
+    hosts = AddressHosts.of(slug) if slug else None
+    if launched_for():
+        # What a runtime launched for a deployment runs is what ai-agents said, never what it was sent.
+        app_spec = launched_app()[0] or app_spec
+    if app_spec:
+        app = load_app(app_spec)
+        role = role_of(app)
+        acts_for = ""
+    else:
+        app = AppSpec.model_validate(
+            {
+                "id": agent_id,
+                "name": name or agent_id,
+                "kind": "chat",
+                "description": description,
+                "agent": agent_spec_id or agent_id,
+            }
+        )
+        acts_for = (os.environ.get(ACTS_FOR_VARIABLE) or "").strip()
+        role = "personal" if acts_for else "app"
+    policy: AddressPolicy
+    if slug and launched_for():
+        policy = policy_of_deployment(await read_deployment_record(slug))
+    else:
+        policy = policy_from_environment()
+    _, key_checker, token_checker = _policy_and_checkers()
+    return AddressedAgent(
+        app=app,
+        access=AddressAccess(
+            policy, key_checker=key_checker, token_checker=token_checker
+        ),
+        agent_source=runtime_agent_source(agent_id),
+        hosts=hosts,
+        role=role,  # type: ignore[arg-type]
+        acts_for=acts_for,
+    )
+
+
+def company_of(addressed: AddressedAgent, agent_id: str) -> Any:
+    """The PAP company of an agent that is one, at its agent host (the SDK's, as
+    :class:`PapCompanyCapability` assembles it), its turns asked over its own A2A route."""
+    import httpx
+
+    from agent_runtimes.addresses.accounts import DatalayerAccounts
+    from agent_runtimes.pap.company import A2AApplication, PapCompanyCapability
+
+    assert addressed.hosts is not None
+    port = int(os.environ.get("AGENT_RUNTIMES_PORT") or 8765)
+    client = httpx.AsyncClient(timeout=60.0)
+    return PapCompanyCapability(
+        name=addressed.app.name,
+        domain=addressed.hosts.host("agent"),
+        company=addressed.app.pap.company,
+        application=A2AApplication(
+            f"http://127.0.0.1:{port}/api/v1/a2a/agents/{agent_id}/", http_client=client
+        ),
+        accounts=DatalayerAccounts(),
+        http_client=client,
+        hosted=True,
+    )
+
+
+#: The runtime's addresses (one agent, one process).
+RUNTIME_ADDRESSES = RuntimeAddresses()
+
+
+class AgentHostMiddleware:
+    """ASGI, in front of the main server: the agent host, once the runtime's agent answers there."""
+
+    def __init__(self, app: Any) -> None:
+        self.app = app
+
+    async def __call__(self, scope: dict, receive: Any, send: Any) -> None:
+        host = RUNTIME_ADDRESSES.agent_host
+        if host is None:
+            await self.app(scope, receive, send)
+            return
+        host.app = self.app
+        await host(scope, receive, send)
+
+
+async def serve_mode(
+    addressed: AddressedAgent,
+    mode: Mode,
+    host: str = "127.0.0.1",
+    port: Optional[int] = None,
+) -> None:
+    """Serve one of the three servers for ``addressed`` in this process, until stopped."""
+    config = uvicorn.Config(
+        mode_app(addressed, mode), host=host, port=port or PORTS[mode], log_level="info"
+    )
+    await uvicorn.Server(config).serve()
+
+
+__all__ = [
+    "AgentHostMiddleware",
+    "PORTS",
+    "RUNTIME_ADDRESSES",
+    "RuntimeAddresses",
+    "addressed_in_runtime",
+    "company_of",
+    "mode_app",
+    "serve_mode",
+]

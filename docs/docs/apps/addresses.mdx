@@ -1,0 +1,110 @@
+---
+sidebar_position: 3.5
+title: An agent at its addresses
+---
+
+# An agent at its addresses
+
+Every agent — a company's application, a published application, a person's own
+agent — is reached at four addresses under one name, and offers the same things
+at each of them:
+
+| Address | Port | What answers |
+| --- | --- | --- |
+| `https://{name}.agent.<domain>` | 8765 (the main server) | A2A and its Agent Card (`/.well-known/agent-card.json`, A2A at `/a2a/`), its `poppy.json`, the chat at `/`; for a company, PAP sign-in, Sessions and operations |
+| `https://{name}.mcp.<domain>/mcp` | 8766 | Its MCP server: one tool per operation |
+| `https://{name}.api.<domain>` | 8767 | Its REST API: one route per operation, `/openapi.json`, `/docs` |
+| `https://{name}.web.<domain>` | 8768 | Its page, and `/.well-known/poppy.json` |
+
+`<domain>` is `DATALAYER_COMPANY_HOSTS_DOMAIN` (`datalayer.ai` unless set).
+
+## What it answers: its `openapi`
+
+What an agent answers when called is written once, in its Appspec's top-level
+`openapi` (see the Appspec reference in agentspecs): an OpenAPI 3.1 document. Each
+operation is
+
+- **an instruction to the agent** — its `summary` and `description`;
+- **its inputs** — its JSON request body and its path and query parameters, as one
+  JSON object;
+- **its answer** — the JSON schema of its `200` response.
+
+An agent that declares no `openapi` answers one operation, `ask`: a `question` in,
+its `answer` out.
+
+Every call goes through one function, `agent_runtimes.addresses.call_operation`:
+the inputs are checked against the operation's schema (`400` otherwise), the
+agent is told the instruction, the inputs as JSON and the JSON it must answer, and
+runs with **structured output** bound to the operation's `200` schema
+(pydantic-ai's `StructuredDict`). Its answer is checked against that schema; when it
+does not fit, the agent is asked once more with what was wrong, then the call is
+refused (`422`). A spend limit reached is `402`, a caller past its rate cap `429`.
+
+## Who may call it
+
+The same rule at its four addresses, from its "Who may open it":
+
+- **public** — anyone, anonymous, under its spend limit and a rate cap per caller
+  (by address, or by account when the caller says who they are);
+- **private** — the owner and the people they allowed, with a Datalayer API key
+  (`X-API-Key`) or a token (`Authorization: Bearer …`).
+
+`poppy.json`, the Agent Card and the page's script bundle answer anybody.
+
+## `poppy.json`
+
+Every agent publishes one, built with the Personal Agent Protocol SDK and checked
+by it:
+
+- **a company** (its application's `pap.company` enabled) publishes the SDK's
+  company document: its sign-in, its scopes, its operations (from the operations of
+  its `openapi` carrying `x-pap`), its conversations on its agent address; its
+  `apis` are its API's `openapi.json` and its MCP server;
+- **any other agent** publishes its A2A address, its API and its MCP server, and,
+  under the `datalayer.ai/agent` extension, what it is: `role` (`personal` or
+  `app`), whom it acts for (`acts_for`), what it accepts (`a2a`, `mcp`, `openapi`),
+  who may call it and how a caller signs in.
+
+Two agents of any kind find and reach each other the same way.
+
+## Three start modes
+
+One of the three servers can be started on its own for an application, in the
+process that runs its agent:
+
+```bash
+# Its MCP server, at http://127.0.0.1:8766/mcp
+agent-runtimes serve --mode mcp --app ./shop.yaml
+
+# Its REST API, at http://127.0.0.1:8767 (/openapi.json, /docs)
+agent-runtimes serve --mode api --app ./shop.yaml --name shop
+
+# Its page, at http://127.0.0.1:8768, and its poppy.json
+agent-runtimes serve --mode web --app exchange-desk --name exchange-desk
+```
+
+`--app` is a path to an Appspec (its `openapi` may be a file beside it) or a
+catalogue id; `--name` is its name in its four addresses, which its `poppy.json`
+and its API's `servers` say. `--port` overrides the mode's port. The agent is made
+in this process from the spec, so an application that needs a runtime's MCP
+servers or skills runs on a runtime.
+
+Who may call a local server is `AGENT_RUNTIMES_ADDRESS_VISIBILITY` (`private` unless
+`public`), `AGENT_RUNTIMES_ADDRESS_OWNER` and `AGENT_RUNTIMES_ADDRESS_ALLOWED`
+(uids, comma separated); `AGENT_RUNTIMES_ADDRESS_RATE_PER_MINUTE` its rate cap.
+
+## In a runtime
+
+With `AGENT_RUNTIMES_ADDRESSES=1` (the runtime image sets it), the three servers
+start beside the main one, in the same process, and answer `503` until the
+runtime's agent is made; then they answer for it, and the main server answers its
+agent address. What the runtime is told:
+
+| Variable | What it says |
+| --- | --- |
+| `AGENT_RUNTIMES_ADDRESS_NAME` | Its name in its four addresses |
+| `AGENT_RUNTIMES_ADDRESS_AGENT_ID` | Which agent answers, when the runtime makes several |
+| `AGENT_RUNTIMES_ADDRESS_ACTS_FOR` | For a person's own agent, whom it acts for |
+
+A runtime launched for a deployment reads who may call it from Datalayer, with its
+proof; the others from the variables above.

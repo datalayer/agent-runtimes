@@ -885,6 +885,31 @@ def serve(
             "the wakeup probe and the actor's identity, read at each wake",
         ),
     ] = None,
+    mode: Annotated[
+        Optional[str],
+        typer.Option(
+            "--mode",
+            help="Serve one of an agent's addresses for the application of --app, in this "
+            "process: 'mcp' its MCP server at /mcp (port 8766), 'api' its REST API with "
+            "/openapi.json and /docs (8767), 'web' its page and /.well-known/poppy.json "
+            "(8768); each operation of its openapi (or 'ask') answered by its agent",
+        ),
+    ] = None,
+    app_reference: Annotated[
+        Optional[str],
+        typer.Option(
+            "--app",
+            help="With --mode: the application, a path to its Appspec or a catalogue id",
+        ),
+    ] = None,
+    address_name: Annotated[
+        Optional[str],
+        typer.Option(
+            "--name",
+            help="With --mode: its name in its four addresses ({name}.agent.<domain>…), "
+            "which its poppy.json and its API's servers say",
+        ),
+    ] = None,
 ) -> None:
     """
     Start the agent-runtimes server.
@@ -954,7 +979,36 @@ def serve(
 
         # Run as an Agent Substrate actor (port 80, the wakeup probe at /ate/wakeup)
         AGENT_SPEC_ID=crawler agent-runtimes serve --target ate
+
+        # An application's MCP server, REST API or web page (8766, 8767, 8768)
+        agent-runtimes serve --mode mcp --app exchange-desk
+        agent-runtimes serve --mode api --app ./shop.yaml --name shop
+        agent-runtimes serve --mode web --app ./shop.yaml --name shop
     """
+    if mode is not None:
+        import asyncio
+
+        from agent_runtimes.addresses.addressed import local_addressed
+        from agent_runtimes.addresses.servers import PORTS, serve_mode
+
+        if mode not in PORTS:
+            logger.error(f"--mode is mcp, api or web, not {mode!r}.")
+            raise typer.Exit(1)
+        if not app_reference:
+            logger.error("--mode serves an application: name it with --app <path|id>.")
+            raise typer.Exit(1)
+        try:
+            addressed = local_addressed(app_reference, name=address_name)
+        except ValueError as error:
+            logger.error(str(error))
+            raise typer.Exit(1)
+        asyncio.run(
+            serve_mode(addressed, mode, host=host, port=None if port == 8000 else port)  # type: ignore[arg-type]
+        )
+        return
+    if app_reference or address_name:
+        logger.error("--app and --name are for --mode mcp|api|web.")
+        raise typer.Exit(1)
     try:
         serve_server(
             host=host,

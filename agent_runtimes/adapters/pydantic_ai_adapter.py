@@ -511,6 +511,12 @@ class PydanticAIAdapter(BaseAgent):
             )
         return toolset
 
+    async def operation_toolsets(self) -> list[Any]:
+        """The toolsets a call at the agent's addresses runs with (its MCP, API and
+        web servers, ``agent_runtimes.addresses``): those of a run with no person's
+        token — a deployment's reach the gateway as its principal."""
+        return await self._toolsets_of_the_run(None)
+
     async def _toolsets_of_the_run(self, user_token: str | None) -> list[Any]:
         """The toolsets of one run, the Datalayer MCP gateway reached as whom the run is.
 
