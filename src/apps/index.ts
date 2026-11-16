@@ -378,6 +378,7 @@ export {
   AppFloating,
   embedAssistantCharacter,
   type AppEmbedProps,
+  type AppRendererExtras,
   type AppFloatingProps,
   type EmbedSession,
   useEmbedSession,

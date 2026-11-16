@@ -73,11 +73,11 @@ const namesOf = (plugins: unknown[]): string[] =>
       : [plugin?.name],
   );
 
-/** A plugin by name, inside the extensions too. */
+/** A plugin by name, inside the extensions too — never the extension, which an application's shares (F-15). */
 const pluginNamed = (plugins: unknown[], name: string): any =>
   plugins
     .flatMap((plugin: any) =>
-      Array.isArray(plugin?.plugins) ? [plugin, ...plugin.plugins] : [plugin],
+      Array.isArray(plugin?.plugins) ? plugin.plugins : [plugin],
     )
     .find((plugin: any) => plugin?.name === name);
 
@@ -261,6 +261,46 @@ describe('Application in runtime mode', () => {
       '@datalayer/loop-plugin-app-runtime',
     );
     expect(namesOf(loop.plugins)).not.toContain(LOCKED_UI_PLUGIN_NAME);
+    await act(async () => root.unmount());
+  });
+});
+
+describe('Application at an application’s address (/apps/<slug>)', () => {
+  it('hands its renderer the page’s plugins, the UI plugins turned off and its computer, and runs a kept deployment as its own agent', async () => {
+    iamStore.setState({ token: 'jwt' } as never);
+    const own = { name: 'studio-cards-test', build: () => ({}) } as never;
+    const app = getApp('month-end-close')!;
+    const { root } = await render(
+      <Application
+        app={app}
+        runsOn={{
+          kind: 'runtime',
+          url: 'https://r1.example/agent-runtimes/pool/kept-1',
+        }}
+        instance={{ appUid: '01APP', deploymentUid: 'dep-1', version: 3 }}
+        renderer={{
+          plugins: [own],
+          pluginsOff: ['a2ui'],
+          computer: true,
+          autoFocusPrompt: true,
+        }}
+      />,
+    );
+    const loop = seen.loop.at(-1)!;
+    expect(loop).toMatchObject({
+      agentId: 'month-end-close',
+      datalayerKept: { url: 'https://r1.example/agent-runtimes/pool/kept-1' },
+      autoFocusPrompt: true,
+    });
+    expect(loop.plugins).toContain(own);
+    // Its own agent, the application's pair whole: its page plugin requires its runtime's.
+    expect(
+      pluginNamed(loop.plugins, 'loop-app-month-end-close')
+        .requiredBackendPlugins,
+    ).toEqual(['loop-app-month-end-close']);
+    expect(namesOf(loop.plugins)).toContain(
+      '@datalayer/loop-plugin-app-computer-month-end-close',
+    );
     await act(async () => root.unmount());
   });
 });

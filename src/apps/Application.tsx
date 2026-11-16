@@ -33,10 +33,12 @@
  *   the temporary key's clock, *Sign in* (`signInUrl` or `onSignIn`), and
  *   what its agent would bring that needs a connection of the visitor's
  *   locked in the title bar;
- * - `runtime` — a person's own agent, already running on a runtime of
- *   theirs: its agent-runtimes address (`url`), the agent by its name there
- *   (`agentId`), the session to go on with (`thread`); spoken to with the
- *   signed-in person's token (core's IAM store), nothing launched;
+ * - `runtime` — an agent already running on a runtime: a person's own
+ *   (its agent-runtimes address `url`, the agent by its name there
+ *   `agentId`), or a deployment kept always on (no `agentId`: the
+ *   application's own agent); the session to go on with (`thread`); spoken
+ *   to with the signed-in person's token (core's IAM store), nothing
+ *   launched;
  * - `server` — an agent-runtimes server of the host's own (`url`), with the
  *   visit's embed token when it has one (R-20);
  * - `datalayer` — launched on a Datalayer runtime with the signed-in
@@ -48,7 +50,10 @@
  * (`interface.theme`) or the host says a mode or a face; `theme: 'own'`
  * draws it in its own theme (`loop` unless it names one), as the element
  * does. Inline, it fills its container (`height`, `100%` by default); `mode`
- * floats it as a bubble, a panel or an avatar instead.
+ * floats it as a bubble, a panel or an avatar instead. `renderer` hands its
+ * renderer what a host's own page adds: its plugins, the UI plugins its
+ * organization turned off, its computer, the caret (Datalayer's page at an
+ * application's address, `/apps/<slug>`).
  *
  * @module apps/Application
  */
@@ -105,8 +110,12 @@ export type ApplicationRuntime = {
   kind: 'runtime';
   /** The runtime's agent-runtimes address (`…/agent-runtimes/<pool>/<name>`). */
   url: string;
-  /** The agent that answers, by its name on that runtime (`default`). */
-  agentId: string;
+  /**
+   * The agent that answers, by its name on that runtime (`default`): a
+   * person's own agent, made from its agentspec. Unsaid, the application's
+   * own agent, made there under its id — a deployment kept always on (R-33).
+   */
+  agentId?: string;
   /** The runtime's name. */
   name?: string;
   /** The session to go on with: one it holds, or one resumed onto it (`fromRuntime`). */
@@ -122,7 +131,11 @@ export type ApplicationServer = {
 };
 
 /** Launched on a Datalayer runtime, with the signed-in person's credentials. */
-export type ApplicationDatalayer = { kind: 'datalayer' };
+export type ApplicationDatalayer = {
+  kind: 'datalayer';
+  /** A conversation to go on with, read from its runtime (`fromRuntime`): one opened from the person's history. */
+  thread?: ResumedThread;
+};
 
 export type ApplicationRunsOn =
   | ApplicationVisitor
@@ -283,6 +296,7 @@ export type ApplicationProps = Pick<
   | 'ownPortal'
   | 'resume'
   | 'instance'
+  | 'renderer'
 > & {
   /** The application: an Appspec, a catalogue example's id, an address on Datalayer, or a decision's id. */
   app: AppSpec | string;
@@ -413,9 +427,12 @@ export function Application({
               url: runsOn.url.replace(/\/+$/, ''),
               ...(runsOn.name ? { name: runsOn.name } : {}),
             },
-            agentId: runsOn.agentId,
+            ...(runsOn.agentId ? { agentId: runsOn.agentId } : {}),
             ...(runsOn.thread ? { thread: runsOn.thread } : {}),
           }
+        : {})}
+      {...(runsOn.kind === 'datalayer' && runsOn.thread
+        ? { thread: runsOn.thread }
         : {})}
       {...(runsOn.kind === 'server'
         ? {

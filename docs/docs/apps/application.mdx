@@ -67,6 +67,7 @@ import {
 | `host` | What the page gives the application and what it is told: values, functions, events ([the page and the application, talking](./embedding.mdx#the-page-and-the-application-talking)). |
 | `plugins` | The host's plugins for the assistant mode's characters. |
 | `instance` | What its record is kept under on Datalayer. |
+| `renderer` | What the host's own page adds to its workspace: `plugins` (cards, panels, menu actions), `pluginsOff` (UI plugins its organization turned off), `computer`, `sidebar`, `autoFocusPrompt`. Datalayer's page at an application's address (`/apps/<slug>`) passes these. |
 | `resume` | On a host's server with an embed token: keep the visit's session in the page's storage (on by default). |
 | `ownPortal` | Draw overlays inside its own root. Only for a component mounted in a root of its own, such as the element's shadow root. |
 
@@ -100,7 +101,7 @@ and nothing is created on the runtime.
 | Field | What it is |
 | --- | --- |
 | `url` | The runtime's agent-runtimes address (`…/agent-runtimes/<pool>/<name>`). |
-| `agentId` | The agent's name on that runtime, often `default`. |
+| `agentId` | The agent's name on that runtime, often `default`, for a person's own agent made from its agentspec. Leave it out for a deployment kept always on: its own agent answers, made under the application's id. |
 | `name` | The runtime's name. |
 | `thread` | The session to continue: one the runtime holds, or a paused one resumed on it (`fromRuntime: true`). |
 
@@ -117,7 +118,18 @@ MCP servers and skills.
 
 `server` runs it on an agent-runtimes server of the host's own (`url`), with
 the visit's embed token (`embedToken`) when it has one. `datalayer` launches
-it on a Datalayer runtime with the signed-in person's credentials.
+it on a Datalayer runtime with the signed-in person's credentials; its
+`thread` continues a conversation opened from the person's history.
+
+## Where Datalayer uses it
+
+- The six agent demos on datalayer.ai's home page: visitor mode.
+- A Personal agent's page: runtime mode, on the person's own runtime.
+- An application at its address, `/apps/<slug>`, and its run page in the
+  Studio: visitor mode signed out, runtime mode when it is kept always on,
+  `datalayer` otherwise; `mode: 'assistant'` when it is shipped as its avatar
+  alone.
+- `<datalayer-app>`, which wraps it.
 
 ## The theme
 

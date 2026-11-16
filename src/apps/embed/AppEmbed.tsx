@@ -171,6 +171,8 @@ export type AppEmbedProps = {
    * element draws it in its shadow root.
    */
   followHost?: boolean;
+  /** What else the host gives its renderer (`AppRendererExtras`). */
+  renderer?: AppRendererExtras;
   /** With `runAsAnonymous`, the turns a visitor has today as the preview counts them; none: no limit counted. */
   maxTurns?: number;
   /** With `runAsAnonymous`, where *Sign in* goes. */
@@ -211,6 +213,31 @@ export type AppEmbedProps = {
    */
   resume?: boolean;
 };
+
+/**
+ * What else a host gives the application's renderer: its own plugins in the
+ * workspace (cards, panels, actions of its menus), the UI plugins its
+ * organization turned off, its computer or its builder's sidebar beside its
+ * page, whether its composer takes the caret — Datalayer's own page at an
+ * application's address passes these (`Application`'s `renderer`).
+ */
+export type AppRendererExtras = Partial<
+  Pick<
+    AppRendererProps,
+    'plugins' | 'pluginsOff' | 'computer' | 'sidebar' | 'autoFocusPrompt'
+  >
+>;
+
+/** The bridge's plugins and the host's, once each; the bridge's alone when the host gives none. */
+function useWorkspacePlugins(
+  bridged: PluginRef[],
+  own: PluginRef[] | undefined,
+): PluginRef[] {
+  return useMemo(
+    () => (own && own.length > 0 ? [...bridged, ...own] : bridged),
+    [bridged, own],
+  );
+}
 
 /** What `useEmbedSession` gives the conversation. */
 export type EmbedSession = {
@@ -547,7 +574,8 @@ export type AppFloatingProps = {
       | 'signInUrl'
       | 'onSignIn'
     >
-  >;
+  > &
+    AppRendererExtras;
   /** What the page gives the application (D-10). */
   host?: AppEmbedHost;
   /** The visit's session, picked up again after a reload (D-13). */
@@ -584,6 +612,8 @@ export function AppFloating({
   const [presence, setPresence] = useState<PresenceState>('idle');
   const [said, setSaid] = useState<ChatSaid>({ answering: false });
   const bridge = useHostBridge(app, host);
+  const { plugins: ownPlugins, ...rendered } = renderer ?? {};
+  const workspacePlugins = useWorkspacePlugins(bridge.plugins, ownPlugins);
   const onPresence = useCallback(
     (state: PresenceState) => {
       setPresence(state);
@@ -643,10 +673,10 @@ export function AppFloating({
               autoFocusPrompt={false}
               onPresence={onPresence}
               onSaying={onSaying}
-              plugins={bridge.plugins}
+              plugins={workspacePlugins}
               {...(session?.thread ? { thread: session.thread } : {})}
               {...(language ? { language } : {})}
-              {...renderer}
+              {...rendered}
             />
           </>
         ),
@@ -752,6 +782,7 @@ export function AppEmbed({
   agentId,
   thread,
   followHost = false,
+  renderer: extras,
   height = 640,
   ownPortal = false,
   plugins = NO_PLUGINS,
@@ -767,10 +798,13 @@ export function AppEmbed({
   // runs (VO-18): one object, so that the renderer never reads a change.
   // A visitor's limited preview with it (the user, 15 November 2026).
   const anonymous = Boolean(visitors && runAsAnonymous);
+  const { plugins: ownPlugins, ...extrasRest } = extras ?? {};
+  const extrasKey = JSON.stringify(extrasRest);
   const renderer = useMemo(
     () =>
-      visitors || speech || kept || thread
+      visitors || speech || kept || thread || extrasKey !== '{}'
         ? {
+            ...extrasRest,
             ...(visitors ? { datalayerVisitors: visitors } : {}),
             // A person's own agent on its runtime: nothing launched.
             ...(kept && !visitors
@@ -798,8 +832,11 @@ export function AppEmbed({
       kept,
       agentId,
       thread,
+      // By content: a host that writes them inline hands a new object each render.
+      extrasKey,
     ],
   );
+  const workspacePlugins = useWorkspacePlugins(bridge.plugins, ownPlugins);
   const keptSession = useEmbedSession({
     app,
     serverUrl,
@@ -881,8 +918,9 @@ export function AppEmbed({
             ? { themeOverrides: hostAccent }
             : {}
           : { themeOverrides, colorMode: resolvedMode, themeVariant: variant })}
-        // What the page gives it, and what it tells the page (D-10).
-        plugins={bridge.plugins}
+        // What the page gives it, and what it tells the page (D-10), and
+        // the host's own plugins in its workspace.
+        plugins={workspacePlugins}
         onPresence={bridge.onPresence}
         onSaying={bridge.onSaying}
         // Its session, picked up again after a reload (D-13).
@@ -899,6 +937,9 @@ export function AppEmbed({
           className="datalayer-app-inline"
           style={{
             height,
+            width: '100%',
+            flex: '1 1 auto',
+            minWidth: 0,
             display: 'flex',
             flexDirection: 'column',
             minHeight: 0,
@@ -938,7 +979,14 @@ export function AppEmbed({
             character={character}
             host={host}
             session={session}
-            {...(renderer ? { renderer } : {})}
+            {...(renderer || ownPlugins
+              ? {
+                  renderer: {
+                    ...(renderer ?? {}),
+                    ...(ownPlugins ? { plugins: ownPlugins } : {}),
+                  },
+                }
+              : {})}
             {...(language ? { language } : {})}
           />
         ) : (
