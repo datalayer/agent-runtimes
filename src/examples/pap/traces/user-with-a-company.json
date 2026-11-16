@@ -3,7 +3,7 @@
   "title": "A user with a company",
   "description": "Ada asks her personal agent, Atlas, to exchange a jacket at Manzanita Outfitters. Both sides are the PAP Python SDK's demo world: real keys and Session JWTs over in-process HTTP, recorded and redacted.",
   "generator": "examples/personal-agent-protocol/traces/generate.py",
-  "sdk": "personal-agent-protocol 0.35.0",
+  "sdk": "personal-agent-protocol 0.36.0",
   "parties": [
     {
       "id": "user",
@@ -331,7 +331,7 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
-              "id": "req_PxYRyHUldxCFP_o8JAo77g",
+              "id": "req_XSlvxeqJ6UiZSHFObyGg-Q",
               "message": {
                 "author": {
                   "type": "human"
@@ -352,7 +352,7 @@
                   "created_at": "2026-10-11T09:00:00Z",
                   "type": "message",
                   "message": {
-                    "id": "req_PxYRyHUldxCFP_o8JAo77g",
+                    "id": "req_XSlvxeqJ6UiZSHFObyGg-Q",
                     "author": {
                       "type": "human"
                     },
@@ -370,7 +370,7 @@
                       "type": "agent"
                     },
                     "role": "company",
-                    "as_of_request": "req_PxYRyHUldxCFP_o8JAo77g",
+                    "as_of_request": "req_XSlvxeqJ6UiZSHFObyGg-Q",
                     "text": "I can look that up once you sign in to your Manzanita account."
                   }
                 },
@@ -722,7 +722,7 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
-              "id": "req_28EuVp1ddftp90iT4IeLkg",
+              "id": "req_Z5MqFN_9bBQKl5OoxqBZYA",
               "message": {
                 "author": {
                   "type": "human"
@@ -743,7 +743,7 @@
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "req_28EuVp1ddftp90iT4IeLkg",
+                    "id": "req_Z5MqFN_9bBQKl5OoxqBZYA",
                     "author": {
                       "type": "human"
                     },
@@ -761,7 +761,7 @@
                       "type": "agent"
                     },
                     "role": "company",
-                    "as_of_request": "req_28EuVp1ddftp90iT4IeLkg",
+                    "as_of_request": "req_Z5MqFN_9bBQKl5OoxqBZYA",
                     "text": "The insulated Ridge Jacket is in stock. Here is the exchange.",
                     "extensions": {
                       "operations": {
@@ -895,7 +895,7 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
-              "id": "req_iTqaMHzxs0QwGGK_nC24hA",
+              "id": "req_5HC2r2Wvy2ucbBxSraHQXw",
               "message": {
                 "author": {
                   "type": "agent"
@@ -925,7 +925,7 @@
                   "created_at": "2026-10-11T09:00:00Z",
                   "type": "message",
                   "message": {
-                    "id": "req_PxYRyHUldxCFP_o8JAo77g",
+                    "id": "req_XSlvxeqJ6UiZSHFObyGg-Q",
                     "author": {
                       "type": "human"
                     },
@@ -943,7 +943,7 @@
                       "type": "agent"
                     },
                     "role": "company",
-                    "as_of_request": "req_PxYRyHUldxCFP_o8JAo77g",
+                    "as_of_request": "req_XSlvxeqJ6UiZSHFObyGg-Q",
                     "text": "I can look that up once you sign in to your Manzanita account."
                   }
                 },
@@ -959,7 +959,7 @@
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "req_28EuVp1ddftp90iT4IeLkg",
+                    "id": "req_Z5MqFN_9bBQKl5OoxqBZYA",
                     "author": {
                       "type": "human"
                     },
@@ -977,7 +977,7 @@
                       "type": "agent"
                     },
                     "role": "company",
-                    "as_of_request": "req_28EuVp1ddftp90iT4IeLkg",
+                    "as_of_request": "req_Z5MqFN_9bBQKl5OoxqBZYA",
                     "text": "The insulated Ridge Jacket is in stock. Here is the exchange.",
                     "extensions": {
                       "operations": {
@@ -1010,7 +1010,7 @@
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
-                    "id": "req_iTqaMHzxs0QwGGK_nC24hA",
+                    "id": "req_5HC2r2Wvy2ucbBxSraHQXw",
                     "author": {
                       "type": "agent"
                     },
@@ -1037,7 +1037,7 @@
                       "type": "agent"
                     },
                     "role": "company",
-                    "as_of_request": "req_iTqaMHzxs0QwGGK_nC24hA",
+                    "as_of_request": "req_5HC2r2Wvy2ucbBxSraHQXw",
                     "text": "Exchanged the Ridge Jacket (M) for the insulated Ridge Jacket (M). USD 70.00 charged to the card ending 4242; a return label was emailed.",
                     "data": {
                       "order_id": "ord_7Hk2",

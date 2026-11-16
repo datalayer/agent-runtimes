@@ -96,8 +96,6 @@ from personal_agent_protocol.demo.northwind import ACCOUNT, northwind
 from personal_agent_protocol.mediated import MediatedSignInClient
 from reactor import PluginManifest
 
-from agent_runtimes.protocols.pap import pap_protocol_version
-
 
 def ledgerly_at(
     network: Any, clock: MutableClock
@@ -108,7 +106,7 @@ def ledgerly_at(
 
     at_northwind = LedgerlyAsPersonalAgent(network, clock)
     service = build_company(
-        replace(LEDGERLY_CONFIG, protocol_versions=(pap_protocol_version(),)),
+        LEDGERLY_CONFIG,
         http_client=network.client(),
         address_resolver=network.resolve,
         plugins=[
@@ -567,11 +565,7 @@ class World:
         self.plugin = ManzanitaPlugin()
         self.network.caller = "manzanita"
         self.shop = build_company(
-            replace(
-                CONFIG,
-                humans_available=humans,
-                protocol_versions=(pap_protocol_version(),),
-            ),
+            replace(CONFIG, humans_available=humans),
             http_client=self.network.client(),
             address_resolver=self.network.resolve,
             plugins=[
@@ -603,9 +597,7 @@ class World:
 
     async def discover(self) -> None:
         self.company = await DiscoveryClient(
-            reactor=self.reactor,
-            http_client=self.http,
-            protocol_versions=(pap_protocol_version(),),
+            reactor=self.reactor, http_client=self.http
         ).discover(CONFIG.domain)
         self.metadata = self.company.oauth_metadata
         self.endpoint = self.company.document.agent.protocols[0].endpoint
@@ -1341,9 +1333,9 @@ async def two_companies() -> Trace:
             "northwind": await company_facts(bank, "ledgerly.example/poppy/agent.json"),
         }
 
-    company = await DiscoveryClient(
-        reactor=reactor, http_client=http, protocol_versions=(pap_protocol_version(),)
-    ).discover("ledgerly.example")
+    company = await DiscoveryClient(reactor=reactor, http_client=http).discover(
+        "ledgerly.example"
+    )
     metadata = company.oauth_metadata
     session = await SessionClient(reactor=reactor, http_client=http).start(
         client_id=atlas.client_id,

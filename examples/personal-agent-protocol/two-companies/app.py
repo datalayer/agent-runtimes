@@ -10,7 +10,6 @@ agent at Northwind Bank. Every approval is an Operation, and Ada is asked about 
 
 from __future__ import annotations
 
-from dataclasses import replace
 from typing import Any
 
 from personal_agent_protocol import (
@@ -46,7 +45,6 @@ from personal_agent_protocol.operations import OperationsClient
 from reactor import PluginManifest
 
 from agent_runtimes.apps import Application
-from agent_runtimes.protocols.pap import pap_protocol_version
 
 TENANT = "atlas-example"
 PAIRWISE = "usr_ada_at_ledgerly_00000000"
@@ -76,7 +74,7 @@ def ledgerly(
 
     at_northwind = LedgerlyAsPersonalAgent(network, clock)
     service = build_company(
-        replace(LEDGERLY_CONFIG, protocol_versions=(pap_protocol_version(),)),
+        LEDGERLY_CONFIG,
         http_client=network.client(),
         address_resolver=network.resolve,
         plugins=[
@@ -117,9 +115,9 @@ async def run_two_companies() -> dict[str, Any]:
     operations = OperationsClient(reactor=reactor)
 
     # Atlas signs Ada in to Ledgerly (Device Sign-In on Ledgerly's page).
-    company = await DiscoveryClient(
-        reactor=reactor, http_client=http, protocol_versions=(pap_protocol_version(),)
-    ).discover(LEDGERLY)
+    company = await DiscoveryClient(reactor=reactor, http_client=http).discover(
+        LEDGERLY
+    )
     metadata = company.oauth_metadata
     if not (
         metadata is not None and metadata.device_authorization_endpoint is not None

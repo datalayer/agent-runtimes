@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
 from typing import Any
 
 import httpx
@@ -33,7 +32,6 @@ from personal_agent_protocol.demo.kit import (
 from personal_agent_protocol.demo.manzanita import CONFIG, manzanita
 
 from agent_runtimes.apps import Application
-from agent_runtimes.protocols.pap import pap_protocol_version
 
 TENANT = "atlas-example"
 PAIRWISE = "usr_ada_at_manzanita_000000"
@@ -95,16 +93,16 @@ async def explain_conversation_streaming() -> dict[str, Any]:
     manzanita(
         network,
         clock,
-        config=replace(CONFIG, protocol_versions=(pap_protocol_version(),)),
+        config=CONFIG,
     )
     wire = DroppedConnection(network.client())
     http = httpx.AsyncClient(transport=wire)
     reactor = personal_agent_reactor(
         PersonalAgentHost(atlas, clock), network=network, http_client=http
     )
-    company = await DiscoveryClient(
-        reactor=reactor, http_client=http, protocol_versions=(pap_protocol_version(),)
-    ).discover("manzanita.example")
+    company = await DiscoveryClient(reactor=reactor, http_client=http).discover(
+        "manzanita.example"
+    )
     metadata = company.oauth_metadata
     if not (metadata is not None):
         raise RuntimeError("the example world is incomplete")

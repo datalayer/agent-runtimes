@@ -386,11 +386,9 @@ class PapPersonalAgentCapability:
         self._links: dict[tuple[str, str], _Link] = {}
         hosted = {"reactor": reactor, "http_client": http_client} if reactor else {}
         if company_client is None:
-            # The one version a runtime speaks (the newest its SDK implements): a company
-            # serving only older ones is refused at discovery, never negotiated down to.
-            self._owned_company: DiscoveryClient | None = DiscoveryClient(
-                **hosted, protocol_versions=(pap_protocol_version(),)
-            )
+            # The SDK's default versions are the one a runtime speaks (its newest): a
+            # company serving only older ones is refused at discovery, never negotiated down to.
+            self._owned_company: DiscoveryClient | None = DiscoveryClient(**hosted)
             self._company: _CompanyClient = self._owned_company
         else:
             self._owned_company = None

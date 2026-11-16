@@ -48,7 +48,6 @@ from pydantic import SecretStr
 from reactor import PluginManifest
 
 from agent_runtimes.apps import Application
-from agent_runtimes.protocols.pap import pap_protocol_version
 
 TENANT = "atlas-example"
 PAIRWISE = "usr_ada_at_manzanita_000000"
@@ -141,7 +140,7 @@ async def explain_browser_session() -> dict[str, Any]:
     manzanita(
         network,
         clock,
-        config=replace(CONFIG, web=True, protocol_versions=(pap_protocol_version(),)),
+        config=replace(CONFIG, web=True),
     )
     http = network.client()
     host = PersonalAgentHost(atlas, clock)
@@ -158,9 +157,7 @@ async def explain_browser_session() -> dict[str, Any]:
         ],
     )
 
-    company = await DiscoveryClient(
-        reactor=reactor, http_client=http, protocol_versions=(pap_protocol_version(),)
-    ).discover(DOMAIN)
+    company = await DiscoveryClient(reactor=reactor, http_client=http).discover(DOMAIN)
     metadata = company.oauth_metadata
     web = company.document.web
     if not (metadata is not None and web is not None and web.browser_session_endpoint):

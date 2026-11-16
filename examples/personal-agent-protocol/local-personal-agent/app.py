@@ -13,7 +13,6 @@ Every answer is a summary: no access token, Session JWT, device code or pairwise
 from __future__ import annotations
 
 import tempfile
-from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -35,7 +34,6 @@ from reactor import PluginManifest
 
 from agent_runtimes.apps import Application
 from agent_runtimes.pap import PapPersonalAgentCapability
-from agent_runtimes.protocols.pap import pap_protocol_version
 
 DOMAIN = "manzanita.example"
 
@@ -86,7 +84,7 @@ async def walk_through() -> dict[str, Any]:
     shop, plugin = manzanita(
         network,
         clock,
-        config=replace(CONFIG, protocol_versions=(pap_protocol_version(),)),
+        config=CONFIG,
     )
     with tempfile.TemporaryDirectory() as folder:
         host = LocalHost(Path(folder))

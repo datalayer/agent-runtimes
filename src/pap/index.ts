@@ -4,8 +4,8 @@
  */
 
 import {
-  AVAILABLE_PROTOCOL_VERSIONS,
   AgentIdentityClient,
+  DEFAULT_PROTOCOL_VERSION,
   discoverCompany,
   mediatedSignIn,
   negotiateExtensions,
@@ -13,7 +13,6 @@ import {
   SUPPORTED_EXTENSIONS,
   offersDirect,
   organizationLabel,
-  parseVersion,
   type DiscoveredCompany,
   type DiscoveryOptions,
   type JsonWebKeySet,
@@ -22,17 +21,12 @@ import {
 } from '@datalayer/personal-agent-protocol';
 
 /**
- * The one PAP version Agent Runtimes speaks: the newest its SDK implements
- * (the 1.0 draft with personal-agent-protocol 0.35). Announced and accepted
- * alone: a company serving only older versions is refused at discovery,
- * never negotiated down to.
+ * The one PAP version Agent Runtimes speaks: its SDK's default, the newest it
+ * implements (the 1.0 draft with personal-agent-protocol 0.36). Announced and
+ * accepted alone: a company serving only older versions is refused at
+ * discovery, never negotiated down to.
  */
-export const PAP_PROTOCOL_VERSION: string = [
-  ...AVAILABLE_PROTOCOL_VERSIONS,
-].reduce((newest, version) => {
-  const [a, b] = [parseVersion(newest), parseVersion(version)];
-  return b[0] > a[0] || (b[0] === a[0] && b[1] > a[1]) ? version : newest;
-});
+export const PAP_PROTOCOL_VERSION: string = DEFAULT_PROTOCOL_VERSION;
 
 /** Verified public company capabilities safe for model and UI surfaces. */
 export interface PapCompanySummary {

@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import json
 from collections.abc import AsyncIterator
-from dataclasses import replace
 from typing import Any
 
 from ag_ui.core import RunAgentInput, ToolCallResultEvent, UserMessage
@@ -36,7 +35,6 @@ from reactor.ui import DISPLAY_META_KEY
 
 from agent_runtimes.apps import Application
 from agent_runtimes.mcp.displays import DisplayMCPToolset
-from agent_runtimes.protocols.pap import pap_protocol_version
 from agent_runtimes.transports.agui_displays import DisplayAGUIAdapter
 
 TENANT = "atlas-demo"
@@ -70,17 +68,15 @@ async def _device_sign_in() -> dict[str, Any]:
     manzanita(
         network,
         clock,
-        config=replace(CONFIG, protocol_versions=(pap_protocol_version(),)),
+        config=CONFIG,
     )
     async with network.client() as http:
         reactor = personal_agent_reactor(
             PersonalAgentHost(atlas, clock), network=network, http_client=http
         )
-        company = await DiscoveryClient(
-            reactor=reactor,
-            http_client=http,
-            protocol_versions=(pap_protocol_version(),),
-        ).discover("manzanita.example")
+        company = await DiscoveryClient(reactor=reactor, http_client=http).discover(
+            "manzanita.example"
+        )
         metadata = company.oauth_metadata
         assert metadata is not None and metadata.device_authorization_endpoint
         started = await DeviceSignInClient(reactor=reactor, http_client=http).begin(

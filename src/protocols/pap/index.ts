@@ -16,12 +16,11 @@
  * @module protocols/pap
  */
 
+import { DEFAULT_PROTOCOL_VERSION } from '@datalayer/personal-agent-protocol';
 import { contribution, definePlugin } from '@datalayer/reactor';
 import { DEFAULT_ORDER, ProtocolDescriptions } from '../core';
 
 export const PAP_PLUGIN = 'agent-runtimes.protocols.pap';
-/** The PAP draft the SDK implements (its `PROTOCOL_PROFILE`; Python reads it from the SDK). */
-export const PAP_PROTOCOL_PROFILE = '0.4';
 
 export const PapPlugin = definePlugin({
   name: PAP_PLUGIN,
@@ -36,10 +35,10 @@ export const PapPlugin = definePlugin({
         id: 'pap',
         name: 'Personal Agent Protocol',
         layer: 'consent',
-        version: PAP_PROTOCOL_PROFILE,
+        version: DEFAULT_PROTOCOL_VERSION,
         roles: ['personal-agent', 'company'],
         status: 'implemented',
-        specification: 'https://personalagentprotocol.org/docs/0.4/spec',
+        specification: 'https://personalagentprotocol.org/docs/spec',
         plugin: PAP_PLUGIN,
         catalogue: 'pap',
         points: [],

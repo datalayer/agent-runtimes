@@ -74,14 +74,14 @@ class CompanyServiceTickets:
 
 
 def pap_protocol_version() -> str:
-    """The one PAP version a runtime speaks: the newest its SDK implements (the 1.0 draft
-    with personal-agent-protocol 0.35). Announced and accepted alone, as a personal agent
-    and as a company: a company on an older version is refused, never negotiated down to.
+    """The one PAP version a runtime speaks: its SDK's default, the newest it implements
+    (the 1.0 draft with personal-agent-protocol 0.36). Announced and accepted alone, as a
+    personal agent and as a company, as the SDK does by default: a company on an older
+    version is refused, never negotiated down to.
     """
-    from personal_agent_protocol import AVAILABLE_PROTOCOL_VERSIONS  # noqa: PLC0415
-    from personal_agent_protocol.models import parse_version  # noqa: PLC0415
+    from personal_agent_protocol import DEFAULT_PROTOCOL_VERSION  # noqa: PLC0415
 
-    return max(AVAILABLE_PROTOCOL_VERSIONS, key=parse_version)
+    return DEFAULT_PROTOCOL_VERSION
 
 
 def _version() -> str:

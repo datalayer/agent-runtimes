@@ -32,15 +32,11 @@ from personal_agent_protocol.demo.kit import (
     PersonalAgentHost,
     personal_agent_reactor,
 )
-from personal_agent_protocol.demo.manzanita import CONFIG as MANZANITA_0_4
-from personal_agent_protocol.demo.manzanita import manzanita
+from personal_agent_protocol.demo.manzanita import CONFIG, manzanita
 from reactor import PluginManifest
 
 from agent_runtimes.pap import PapCapabilityError, PapPersonalAgentCapability
 from agent_runtimes.protocols.pap import pap_protocol_version
-
-# The reference company at the one version a runtime speaks (the newest the SDK has).
-CONFIG = replace(MANZANITA_0_4, protocol_versions=(pap_protocol_version(),))
 
 DOMAIN = "manzanita.example"
 
@@ -498,7 +494,9 @@ async def test_it_speaks_the_newest_version_alone(tmp_path: Path) -> None:
     session = capability._links[("ada", DOMAIN)].session
     assert session is not None and session.protocol_version == "1.0"
 
-    older, _, _ = _capability(None, tmp_path / "older", MANZANITA_0_4)
+    older, _, _ = _capability(
+        None, tmp_path / "older", replace(CONFIG, protocol_versions=("0.4",))
+    )
     with pytest.raises(PapCapabilityError) as refused:
         await older.discover_company(DOMAIN)
     assert refused.value.code == "unsupported_protocol_version"

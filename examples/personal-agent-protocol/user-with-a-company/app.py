@@ -10,7 +10,6 @@ approved exchange, and finally narrowing and revoking the refresh token.
 
 from __future__ import annotations
 
-from dataclasses import replace
 from typing import Any
 
 from personal_agent_protocol import (
@@ -37,7 +36,6 @@ from personal_agent_protocol.demo.manzanita import CONFIG, DOMAIN, manzanita
 from personal_agent_protocol.operations import OperationsClient, operations_negotiated
 
 from agent_runtimes.apps import Application
-from agent_runtimes.protocols.pap import pap_protocol_version
 
 TENANT = "atlas-example"
 PAIRWISE = "usr_ada_at_manzanita_000000"
@@ -70,7 +68,7 @@ async def run_manzanita_journey() -> dict[str, Any]:
     shop, shop_plugin = manzanita(
         network,
         clock,
-        config=replace(CONFIG, protocol_versions=(pap_protocol_version(),)),
+        config=CONFIG,
     )
     http = network.client()
     approvals = ScriptedApprovals(
@@ -90,9 +88,7 @@ async def run_manzanita_journey() -> dict[str, Any]:
         )
 
     # Discovery and a signed-out Session.
-    company = await DiscoveryClient(
-        reactor=reactor, http_client=http, protocol_versions=(pap_protocol_version(),)
-    ).discover(DOMAIN)
+    company = await DiscoveryClient(reactor=reactor, http_client=http).discover(DOMAIN)
     metadata = company.oauth_metadata
     if not (
         metadata is not None and metadata.device_authorization_endpoint is not None
