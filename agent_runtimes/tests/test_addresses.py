@@ -650,3 +650,235 @@ def test_the_main_server_is_untouched_until_an_agent_answers_at_its_host() -> No
         "/.well-known/poppy.json", headers={"host": "shop.agent.datalayer.ai"}
     )
     assert answer.json()["path"] == "/.well-known/poppy.json"
+
+
+# --- a runtime's name, its calls, its company's store, a browser's sign-in --------------
+
+
+def test_a_runtime_takes_its_name_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    from agent_runtimes.addresses import servers
+    from agent_runtimes.addresses.access import OWNER_VARIABLE
+
+    for variable in (servers.NAME_VARIABLE, servers.ACTS_FOR_VARIABLE, OWNER_VARIABLE):
+        monkeypatch.delenv(variable, raising=False)
+    servers.take_address("marketer-eric", acts_for="eric", owner_uid="u-1")
+    import os
+
+    assert os.environ[servers.NAME_VARIABLE] == "marketer-eric"
+    assert os.environ[servers.ACTS_FOR_VARIABLE] == "eric"
+    assert os.environ[OWNER_VARIABLE] == "u-1"
+    # Said again, the same: nothing changes; another name is refused.
+    servers.take_address("marketer-eric")
+    with pytest.raises(ValueError, match="answers at marketer-eric already"):
+        servers.take_address("shopper-eric")
+    with pytest.raises(ValueError, match="is not an address"):
+        servers.take_address("Not An Address")
+
+
+@pytest.mark.asyncio
+async def test_each_call_is_recorded_with_who_made_it_by_which_address() -> None:
+    from agent_runtimes.addresses.calls import CallRecorder
+
+    sent: List[List[dict]] = []
+
+    async def send(calls: List[dict]) -> None:
+        sent.append(calls)
+
+    agent = addressed(Answers({"total": 3.0}))
+    agent.calls = CallRecorder(send, every=3600)
+    caller = await agent.access.admit({"x-forwarded-for": "203.0.113.9"})
+    assert await agent.call(
+        "quote", {"items": [1, 2]}, interface="mcp", caller=caller
+    ) == {"total": 3.0}
+    with pytest.raises(OperationError):
+        await agent.call("quote", {"items": "none"}, interface="api")
+    await agent.calls.flush()
+    calls = [call for batch in sent for call in batch]
+    assert [(c["interface"], c["operation"], c["status"]) for c in calls] == [
+        ("mcp", "quote", 200),
+        ("api", "quote", 400),
+    ]
+    assert calls[0]["caller"] == "anonymous" and calls[0]["person"] == ""
+    assert all("items" not in json.dumps(call) for call in calls)
+
+
+@pytest.mark.asyncio
+async def test_a_recorder_that_cannot_send_never_holds_a_call_up() -> None:
+    from agent_runtimes.addresses.calls import CallRecord, CallRecorder
+
+    async def refused(calls: List[dict]) -> None:
+        raise RuntimeError("ai-agents answered 503")
+
+    recorder = CallRecorder(refused, every=3600)
+    recorder.record(CallRecord("api", "quote", "anonymous", "", 200, 5))
+    await recorder.flush()
+    assert recorder.pending == []
+
+
+@pytest.mark.asyncio
+async def test_the_companys_store_is_kept_through_ai_agents_with_the_runtimes_proof(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from datetime import datetime, timezone
+
+    from agent_runtimes.addresses.company_store import (
+        DatalayerCompanyStore,
+        DatalayerReplayCache,
+        StoreUnavailable,
+    )
+    from agent_runtimes.apps import principal
+
+    asked: List[tuple[str, dict, str]] = []
+
+    def answer(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        asked.append(
+            (
+                request.url.path,
+                body,
+                request.headers.get(principal.RUNTIME_PROOF_HEADER, ""),
+            )
+        )
+        operation = request.url.path.rsplit("/", 1)[-1]
+        if operation == "get":
+            return httpx.Response(404, json={})
+        if operation in ("create", "replace"):
+            return httpx.Response(200, json={"written": True})
+        if operation == "records":
+            return httpx.Response(
+                200,
+                json={
+                    "records": [{"value": {"a": 1}, "version": "7", "expires_at": None}]
+                },
+            )
+        return httpx.Response(200, json={})
+
+    async def with_proof(deployment: str, url: str, ask: Any) -> Any:
+        return await ask({principal.RUNTIME_PROOF_HEADER: "proof"})
+
+    monkeypatch.setattr(principal, "launched_for", lambda: "dep-1")
+    monkeypatch.setattr(principal, "_asked_with_proof", with_proof)
+    monkeypatch.setenv("DATALAYER_AI_AGENTS_URL", "https://r1.example")
+    client = httpx.AsyncClient(transport=httpx.MockTransport(answer))
+    store = DatalayerCompanyStore("shop", http=client)
+    assert await store.get("session", "s1") is None
+    later = datetime(2030, 1, 1, tzinfo=timezone.utc)
+    assert await DatalayerReplayCache(store).mark_once("jti", expires_at=later)
+    records = await store.records("session")
+    assert (records[0].value, records[0].version) == ({"a": 1}, "7")
+    assert asked[0][0] == "/api/ai-agents/v1/apps/internal/addresses/shop/store/get"
+    assert asked[1][1] == {
+        "kind": "replay",
+        "key": "jti",
+        "value": {"seen": True},
+        "expires_at": later.isoformat(),
+    }
+    assert {proof for _, _, proof in asked} == {"proof"}
+
+    def refused(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(403, json={"detail": "not yours"})
+
+    with pytest.raises(StoreUnavailable):
+        await DatalayerCompanyStore(
+            "shop", http=httpx.AsyncClient(transport=httpx.MockTransport(refused))
+        ).put("session", "s1", {"a": 1})
+
+
+@pytest.mark.asyncio
+async def test_a_pap_operation_is_performed_through_the_call_contract() -> None:
+    from personal_agent_protocol.company import OperationFailed
+
+    from agent_runtimes.pap.company import (
+        OpenApiOperationExecutor,
+        openapi_operation_of,
+    )
+
+    document = json.loads(json.dumps(OPENAPI))
+    document["paths"]["/quote"]["post"]["x-pap"] = {
+        "action": "quote_basket",
+        "tool": "quote",
+        "summary": "Quote {items}",
+    }
+    company = json.loads(json.dumps(COMPANY))
+    company["pap"]["company"]["extensions"] = ["operations"]
+    agent = addressed(Answers({"total": 9.5}), {**company, "openapi": document})
+    assert openapi_operation_of(agent, "quote_basket") == "quote"
+
+    class Declared:
+        action = "quote_basket"
+
+    class Approved:
+        terms = {"items": [4]}
+
+    executor = OpenApiOperationExecutor(Declared(), "quote", agent)
+    done = await executor.perform(Approved(), "u-1")  # type: ignore[arg-type]
+    assert done.data == {"total": 9.5}
+
+    class Wrong:
+        terms = {"items": "four"}
+
+    with pytest.raises(OperationFailed):
+        await executor.perform(Wrong(), "u-1")  # type: ignore[arg-type]
+
+
+def test_a_private_page_sends_a_browser_to_sign_in_with_datalayer(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from urllib.parse import parse_qs, urlparse
+
+    from agent_runtimes.addresses import browser_sign_in
+
+    monkeypatch.setenv("DATALAYER_IAM_PUBLIC_URL", "https://iam.example")
+    agent = addressed(
+        Answers(),
+        policy=AddressPolicy("private", owner_uid="owner"),
+        token_checker=_uid_of,
+    )
+    client = TestClient(web_app(agent), base_url="https://shop.web.datalayer.ai")
+    page = client.get("/", headers={"accept": "text/html"}, follow_redirects=False)
+    assert page.status_code == 303
+    assert page.headers["location"] == "/.datalayer/sign-in?next=%2F"
+    # A program is answered 401, as before.
+    assert client.get("/api/agent").status_code == 401
+    document = client.get("/.datalayer/client.json").json()
+    assert (
+        document["client_id"] == "https://shop.web.datalayer.ai/.datalayer/client.json"
+    )
+    assert document["redirect_uris"] == [
+        "https://shop.web.datalayer.ai/.datalayer/callback"
+    ]
+    sign_in = client.get("/.datalayer/sign-in?next=/api/agent", follow_redirects=False)
+    location = urlparse(sign_in.headers["location"])
+    query = parse_qs(location.query)
+    assert f"{location.scheme}://{location.netloc}{location.path}" == (
+        "https://iam.example/api/iam/v1/oauth/authorize"
+    )
+    assert query["scope"] == ["openid"] and query["code_challenge_method"] == ["S256"]
+    assert browser_sign_in.PENDING_COOKIE in sign_in.headers["set-cookie"]
+    # A callback with another state is refused.
+    assert client.get("/.datalayer/callback?code=c&state=other").status_code == 400
+    # Signed in, the cookie is read as a bearer token: its owner opens the page.
+    signed = client.get(
+        "/api/agent", headers={"cookie": f"{browser_sign_in.COOKIE}=key-owner"}
+    )
+    assert signed.status_code == 200
+    assert browser_sign_in.safe_next("//evil.example") == "/"
+
+
+def test_a_companys_device_link_sends_the_person_on_to_studio() -> None:
+    class Company:
+        def asgi(self) -> Any:
+            raise AssertionError("not the company's")
+
+    agent = addressed(Answers(), COMPANY)
+    client = TestClient(AgentHost(_main_server(), agent, "shop-agent", Company()))
+    went = client.get(
+        "/pap/device?code=ABCD-EFGH&other=1",
+        headers={"host": "shop.agent.datalayer.ai"},
+        follow_redirects=False,
+    )
+    assert went.status_code == 303
+    assert (
+        went.headers["location"]
+        == "https://datalayer.ai/pap/device?slug=shop&code=ABCD-EFGH"
+    )

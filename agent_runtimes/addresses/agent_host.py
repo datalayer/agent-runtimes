@@ -12,7 +12,9 @@ For people, the hosted chat at ``/``; for agents:
   (``/api/v1/a2a/agents/{agent_id}/…``);
 - for a company, PAP sign-in, Sessions, conversations and operations: the SDK's
   company (``company_app``), assembled by :class:`PapCompanyCapability` at this
-  host.
+  host; its device link (``/pap/device``) sends the person on to Studio's page;
+- ``/.datalayer/…`` — a person's browser signs in with Datalayer for a private
+  agent's chat (:mod:`.browser_sign_in`); a page asked for without, there first.
 
 Everything else of this host is the main server's, for a caller its access
 check admits — the runtime's own guards (a runtime launched for a deployment
@@ -22,8 +24,10 @@ is the main server's, untouched.
 
 from __future__ import annotations
 
+import os
 from typing import Any, Optional
 
+from agent_runtimes.addresses import browser_sign_in
 from agent_runtimes.addresses.addressed import AddressedAgent
 from agent_runtimes.addresses.asgi import answer_json, headers_of, peer_of
 from agent_runtimes.addresses.operations import OperationError
@@ -33,6 +37,29 @@ from agent_runtimes.addresses.poppy import poppy_document
 COMPANY_PREFIXES = ("/poppy/", "/oauth/", "/.well-known/oauth-")
 
 CARD = "/.well-known/agent-card.json"
+
+#: The company's Device Sign-In link (``verification_uri``), on its agent host: a
+#: personal agent shows a link only on the issuer's host (PAP §4.6).
+DEVICE_PATH = "/pap/device"
+
+
+def studio_url() -> str:
+    """Where a person approves a personal agent: Datalayer's own pages."""
+    return (
+        os.environ.get("DATALAYER_PAP_STUDIO_URL") or "https://datalayer.ai"
+    ).rstrip("/")
+
+
+def device_redirect(addressed: AddressedAgent, scope: dict) -> str:
+    """Studio's device page for this company, with the code from the link and nothing
+    else of its query; the name is the host's, never the request's."""
+    from urllib.parse import parse_qsl, urlencode
+
+    query = (scope.get("query_string") or b"").decode("latin-1")
+    code = next((value for key, value in parse_qsl(query) if key == "code"), "")
+    assert addressed.hosts is not None
+    said = {"slug": addressed.hosts.name, **({"code": code} if code else {})}
+    return f"{studio_url()}/pap/device?{urlencode(said)}"
 
 
 def _host_of(scope: dict) -> str:
@@ -80,6 +107,15 @@ class AgentHost:
             await self.app(scope, receive, send)
             return
         path = str(scope.get("path") or "/")
+        if await browser_sign_in.answer(
+            scope, receive, send, host=self.host, name=self.addressed.app.name
+        ):
+            return
+        if self.company is not None and path == DEVICE_PATH:
+            # The company's device link, opened by the person (PAP §4.6): on to Studio,
+            # where they approve signed in to Datalayer; the code the SDK put in it alone.
+            await browser_sign_in.redirect(send, device_redirect(self.addressed, scope))
+            return
         try:
             if path == "/.well-known/poppy.json":
                 await answer_json(send, 200, poppy_document(self.addressed))
@@ -119,6 +155,11 @@ class AgentHost:
                 await send({"type": "http.response.body", "body": b""})
                 return
         except OperationError as error:
+            if error.status == 401 and browser_sign_in.wants_page(scope):
+                await browser_sign_in.redirect(
+                    send, browser_sign_in.sign_in_location(path)
+                )
+                return
             await answer_json(send, error.status, error.as_dict())
             return
         await self.app(scope, receive, send)

@@ -334,6 +334,56 @@ class ApplicationOperationExecutor:
         return ActionResult(summary=said or "Done.")
 
 
+class OpenApiOperationExecutor:
+    """``pap.company.operationExecutor`` for an action of the Appspec's ``openapi``: once
+    the person approved its exact terms, the operation is answered by the application's
+    agent through the call contract (``agent_runtimes.addresses.call_operation``), the
+    terms its inputs — the same answer its MCP and API servers give.
+
+    Its answer is the result's ``data`` (under ``result`` when it is not an object);
+    inputs that are not the operation's fail with nothing changed; anything else leaves
+    the operation in progress rather than claim it either way.
+    """
+
+    def __init__(self, declared: Any, operation_id: str, operations: Any) -> None:
+        """Perform ``operation_id`` of ``operations`` (an ``AddressedAgent``) for ``declared``."""
+        self.action = str(declared.action)
+        self.operation_id = operation_id
+        self.operations = operations
+
+    async def perform(
+        self, operation: Operation, account_id: str | None
+    ) -> ActionResult:
+        """Answer the operation with its approved terms."""
+        from agent_runtimes.addresses.access import Caller
+        from agent_runtimes.addresses.operations import OperationError
+
+        caller = Caller(kind="token", uid=account_id or "")
+        try:
+            answer = await self.operations.call(
+                self.operation_id,
+                dict(operation.terms),
+                interface="agent",
+                caller=caller,
+            )
+        except OperationError as error:
+            if error.status == 400:
+                raise OperationFailed(
+                    ActionResult(summary=f"Nothing was done: {error.detail}")
+                ) from error
+            raise OperationOutcomeUnknown(error.detail) from error
+        data = answer if isinstance(answer, dict) else {"result": answer}
+        return ActionResult(summary=f"{self.action}: done.", data=data)
+
+
+def openapi_operation_of(operations: Any, action: str) -> str | None:
+    """The ``operationId`` whose ``x-pap`` says ``action``, or ``None``."""
+    for found in getattr(operations, "operations", ()) or ():
+        if str((found.pap or {}).get("action") or "") == action:
+            return str(found.operation_id)
+    return None
+
+
 class RegisteredAgents:
     """``pap.company.clientPolicy``: only the personal agents the Appspec registers."""
 
@@ -375,9 +425,16 @@ class _CompanyPlugin:
                 order=10,
             )
         for declared in company.operations:
+            operation_id = (
+                openapi_operation_of(capability.operations, str(declared.action))
+                if capability.operations is not None
+                else None
+            )
             contribute(
                 OPERATION_EXECUTORS,
-                ApplicationOperationExecutor(
+                OpenApiOperationExecutor(declared, operation_id, capability.operations)
+                if operation_id
+                else ApplicationOperationExecutor(
                     declared, capability.application, capability.tickets
                 ),
                 contribution_id=f"operation-{declared.action}",
@@ -466,12 +523,17 @@ class PapCompanyCapability:
         plugins: Iterable[tuple[PluginManifest, object]] = (),
         address_resolver: Any = resolve_addresses,
         hosted: bool = False,
+        operations: Any = None,
     ) -> None:
         """Configure the company's name, domain and application.
 
         ``hosted``: the company at its agent's address (``{name}.agent.<domain>``),
         whose MCP, API and web servers answer beside it: every interface the
         Appspec lists is offered, its website among them.
+
+        ``operations``: the agent at its addresses (``AddressedAgent``), whose
+        ``openapi`` operations perform the PAP operations they carry (``x-pap``)
+        through the call contract (:class:`OpenApiOperationExecutor`).
         """
         interfaces = {str(getattr(i, "value", i)) for i in company.interfaces}
         if not hosted and interfaces != {"agent"}:
@@ -482,6 +544,7 @@ class PapCompanyCapability:
         self.company = company
         self.application = application
         self.accounts = accounts
+        self.operations = operations
         self.tickets = MemoryOperationTickets()
         self.config = company_config(
             name,
@@ -528,6 +591,7 @@ __all__ = [
     "ApplicationCompanyAgent",
     "ApplicationOperationExecutor",
     "MemoryOperationTickets",
+    "OpenApiOperationExecutor",
     "PapCompanyCapability",
     "RegisteredAgents",
     "a2a_data",

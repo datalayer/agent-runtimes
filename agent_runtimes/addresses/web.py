@@ -9,7 +9,9 @@ skills, tools), its operations with their inputs and outputs, its protocols,
 who may open it and its four addresses, in the application's
 ``interface.theme`` and ``accent``. The view is written into the page and
 served at ``/api/agent``; ``/.well-known/poppy.json`` is its ``poppy.json``.
-Behind the agent's access check, as its other addresses are.
+Behind the agent's access check, as its other addresses are; a person whose
+browser is not signed in to a private agent's page signs in with Datalayer
+(:mod:`.browser_sign_in`).
 """
 
 from __future__ import annotations
@@ -26,6 +28,7 @@ from starlette.responses import HTMLResponse, JSONResponse
 from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
+from agent_runtimes.addresses import browser_sign_in
 from agent_runtimes.addresses.access import Caller
 from agent_runtimes.addresses.addressed import AddressedAgent
 from agent_runtimes.addresses.asgi import guarded
@@ -162,12 +165,24 @@ def web_app(addressed: AddressedAgent) -> Any:
     if dist is not None and (dist / "assets").is_dir():
         routes.append(Mount("/assets", app=StaticFiles(directory=dist / "assets")))
     # Discovery and the bundle's files answer anybody; the agent itself only who may open it.
-    return guarded(
+    app = guarded(
         Starlette(routes=routes),
         addressed,
         _CALLER,
         open_paths=("/.well-known/poppy.json", "/healthz", "/assets/"),
     )
+    if addressed.hosts is None:
+        return app
+    host = addressed.hosts.host("web")
+
+    async def signed_in_with_datalayer(scope: dict, receive: Any, send: Any) -> None:
+        # A person's browser signs in here with Datalayer (`browser_sign_in`).
+        if not await browser_sign_in.answer(
+            scope, receive, send, host=host, name=addressed.app.name
+        ):
+            await app(scope, receive, send)
+
+    return signed_in_with_datalayer
 
 
 __all__ = ["PAGE", "VIEW_ID", "agent_view", "web_app"]

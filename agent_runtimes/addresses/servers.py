@@ -249,13 +249,61 @@ class RuntimeAddresses:
         return True
 
 
+def take_address(name: str, *, acts_for: str = "", owner_uid: str = "") -> None:
+    """This runtime's agent's name at its four addresses, as the platform routed them —
+    a person's own agent's (``{agent}-{handle}``), with the handle of the person it acts
+    for and its owner, who alone may call it unless they allow others. Said once: a name
+    is never changed, and another is refused (``ValueError``)."""
+    AddressHosts.of(name)
+    held = (os.environ.get(NAME_VARIABLE) or "").strip()
+    if held and held != name:
+        raise ValueError(f"This runtime answers at {held} already, not at {name}.")
+    os.environ[NAME_VARIABLE] = name
+    if acts_for:
+        os.environ[ACTS_FOR_VARIABLE] = acts_for
+    if owner_uid:
+        from agent_runtimes.addresses.access import OWNER_VARIABLE
+
+        os.environ[OWNER_VARIABLE] = owner_uid
+
+
+def _launched_address() -> str:
+    """The name at its four addresses of the deployment this runtime was launched
+    for, as ai-agents said it with what it runs (``address``, when its addresses are
+    on); ``""`` otherwise."""
+    from agent_runtimes.apps.principal import launched_app
+
+    instance = launched_app()[1] or {}
+    return str(instance.get("address") or "").strip()
+
+
 def _policy_and_checkers() -> tuple[Optional[str], Any, Any]:
     from datalayer_core.utils.urls import DatalayerURLs
+
+    from agent_runtimes.addresses.browser_sign_in import iam_userinfo_checker
 
     iam = getattr(DatalayerURLs.from_environment(), "iam_url", "") or ""
     if not iam:
         return None, None, None
-    return iam, iam_key_checker(iam), either_token(iam_token_checker(iam))
+    # A Datalayer token, or the access token of a browser signed in with Datalayer.
+    return (
+        iam,
+        iam_key_checker(iam),
+        either_token(iam_token_checker(iam), iam_userinfo_checker(iam)),
+    )
+
+
+def pap_token_checker(company: Any) -> Any:
+    """Whose a PAP access token this runtime's company issued is: the account a person
+    signed in to with their personal agent (the SDK's record of the token, while it
+    works: unexpired, its sign-in not ended)."""
+
+    async def check(token: str) -> Optional[str]:
+        # The SDK's own reading of a bearer it issued (`CompanyService._access_token`).
+        issued = await company.service._access_token(token)
+        return str(issued.account_id) if issued is not None else None
+
+    return check
 
 
 async def addressed_in_runtime(
@@ -272,7 +320,9 @@ async def addressed_in_runtime(
     from agent_runtimes.apps.principal import launched_app, launched_for
     from agent_runtimes.types import AppSpec
 
-    slug = (os.environ.get(NAME_VARIABLE) or "").strip()
+    slug = (os.environ.get(NAME_VARIABLE) or "").strip() or (
+        _launched_address() if launched_for() else ""
+    )
     hosts = AddressHosts.of(slug) if slug else None
     if launched_for():
         # What a runtime launched for a deployment runs is what ai-agents said, never what it was sent.
@@ -299,6 +349,12 @@ async def addressed_in_runtime(
     else:
         policy = policy_from_environment()
     _, key_checker, token_checker = _policy_and_checkers()
+    calls = None
+    if slug and launched_for():
+        # Every call recorded on its deployment (who, which operation, what it cost).
+        from agent_runtimes.addresses.calls import CallRecorder, ai_agents_sender
+
+        calls = CallRecorder(ai_agents_sender(slug))
     return AddressedAgent(
         app=app,
         access=AddressAccess(
@@ -308,6 +364,7 @@ async def addressed_in_runtime(
         hosts=hosts,
         role=role,  # type: ignore[arg-type]
         acts_for=acts_for,
+        calls=calls,
     )
 
 
@@ -315,14 +372,29 @@ def company_of(addressed: AddressedAgent, agent_id: str) -> Any:
     """The PAP company of an agent that is one, at its agent host (the SDK's, as
     :class:`PapCompanyCapability` assembles it), its turns asked over its own A2A route."""
     import httpx
+    from reactor import PluginManifest
 
     from agent_runtimes.addresses.accounts import DatalayerAccounts
+    from agent_runtimes.addresses.agent_host import DEVICE_PATH
+    from agent_runtimes.apps.principal import launched_for
     from agent_runtimes.pap.company import A2AApplication, PapCompanyCapability
 
     assert addressed.hosts is not None
     port = int(os.environ.get("AGENT_RUNTIMES_PORT") or 8765)
     client = httpx.AsyncClient(timeout=60.0)
-    return PapCompanyCapability(
+    plugins = []
+    if launched_for():
+        # Its records kept where Datalayer keeps the deployment's (through ai-agents):
+        # a restart forgets no sign-in, and Studio's approvals reach it.
+        from agent_runtimes.addresses.company_store import DatalayerStoresPlugin
+
+        plugins.append(
+            (
+                PluginManifest(name="agent-runtimes.pap.datalayer-stores", version="1"),
+                DatalayerStoresPlugin(addressed.hosts.name),
+            )
+        )
+    company = PapCompanyCapability(
         name=addressed.app.name,
         domain=addressed.hosts.host("agent"),
         company=addressed.app.pap.company,
@@ -331,8 +403,19 @@ def company_of(addressed: AddressedAgent, agent_id: str) -> Any:
         ),
         accounts=DatalayerAccounts(),
         http_client=client,
+        device_page=f"{addressed.hosts.agent}{DEVICE_PATH}",
+        plugins=plugins,
         hosted=True,
+        operations=addressed,
     )
+    # A person signed in with their personal agent calls its addresses with its PAP token.
+    access = addressed.access
+    access.token_checker = (
+        either_token(access.token_checker, pap_token_checker(company))
+        if access.token_checker is not None
+        else pap_token_checker(company)
+    )
+    return company
 
 
 #: The runtime's addresses (one agent, one process).
@@ -374,6 +457,8 @@ __all__ = [
     "RuntimeAddresses",
     "addressed_in_runtime",
     "company_of",
+    "pap_token_checker",
     "mode_app",
     "serve_mode",
+    "take_address",
 ]

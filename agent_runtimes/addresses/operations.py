@@ -104,6 +104,7 @@ async def call_operation(
     agent: OperationAgent,
     operation: OpenApiOperation,
     inputs: Mapping[str, Any],
+    usage: Optional[dict[str, int]] = None,
 ) -> Any:
     """Answer ``operation`` with ``inputs`` through ``agent``: the JSON its ``200`` says.
 
@@ -112,6 +113,8 @@ async def call_operation(
     OperationError
         400 for inputs that are not the operation's, 402 when the spend limit
         is reached, 422 when the agent's answer did not fit, twice.
+
+    ``usage``, when given, is added the tokens its runs spent (``tokens``).
     """
     if not isinstance(inputs, Mapping):
         raise OperationError(
@@ -153,6 +156,12 @@ async def call_operation(
             raise
         except ModelBudgetExceeded as error:
             raise OperationError(402, str(error)) from error
+        if usage is not None:
+            spent = result.usage
+            spent = spent() if callable(spent) else spent
+            usage["tokens"] = usage.get("tokens", 0) + int(
+                getattr(spent, "total_tokens", 0) or 0
+            )
         answer = result.output
         if wrapped and isinstance(answer, Mapping):
             answer = answer.get(_WRAPPED)

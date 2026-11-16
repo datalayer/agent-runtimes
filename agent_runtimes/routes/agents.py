@@ -5780,6 +5780,11 @@ class ConfigureFromSpecRequest(BaseModel):
     """Skills of the spec to leave out, by id (``github`` or ``github:0.0.1``):
     their secrets neither declared nor asked for, the skills not given. A
     skill the spec does not have is refused (422)."""
+    address: dict[str, str] | None = None
+    """A person's own agent's name at its four addresses, the handle of the
+    person it acts for and its owner (``{name, acts_for, owner_uid}``), as the
+    Operator routed them: named by the companion alone, once
+    (`agent_runtimes.addresses.servers.take_address`)."""
 
 
 def _skill_ref(skill: Any) -> str:
@@ -5807,6 +5812,28 @@ def _without_skills(spec: Any, agent_spec_id: str, left_out: list[str]) -> Any:
     return spec.model_copy(
         update={"skills": [s for s in spec.skills or [] if _skill_ref(s) not in names]}
     )
+
+
+def _take_address(http_request: Request, address: dict[str, str]) -> None:
+    """Know this runtime's agent's name at its four addresses (a person's own agent):
+    only the pod names it (`callers.is_the_pod`), before its agent is made."""
+    from agent_runtimes.addresses.servers import take_address
+    from agent_runtimes.apps.callers import POD_SECRET_HEADER, is_the_pod
+
+    host = http_request.client.host if http_request.client else None
+    if not is_the_pod(host, http_request.headers.get(POD_SECRET_HEADER)):
+        raise HTTPException(
+            status_code=403,
+            detail="Only the runtime's companion names its agent's addresses.",
+        )
+    try:
+        take_address(
+            str(address.get("name") or ""),
+            acts_for=str(address.get("acts_for") or ""),
+            owner_uid=str(address.get("owner_uid") or ""),
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from None
 
 
 def _take_owner(http_request: Request, owner_uid: str) -> None:
@@ -5970,6 +5997,8 @@ async def configure_from_spec_endpoint(
     target_agent_name = body.agent_id
     if body.owner_uid:
         _take_owner(http_request, body.owner_uid)
+    if body.address:
+        _take_address(http_request, body.address)
     if body.without_mcp_servers:
         # Its MCP servers left out: neither their secrets nor their tools.
         spec = spec.model_copy(update={"mcp_servers": []})

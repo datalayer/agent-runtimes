@@ -110,11 +110,15 @@ def api_app(addressed: AddressedAgent) -> FastAPI:
 
     def route(operation: OpenApiOperation) -> Any:
         async def answer(request: Request) -> JSONResponse:
-            await addressed.access.admit(
+            caller = await addressed.access.admit(
                 headers_of(request.scope), peer_of(request.scope)
             )
             inputs = await inputs_of(request, operation)
-            return JSONResponse(await addressed.call(operation.operation_id, inputs))
+            return JSONResponse(
+                await addressed.call(
+                    operation.operation_id, inputs, interface="api", caller=caller
+                )
+            )
 
         answer.__name__ = operation.operation_id
         return answer

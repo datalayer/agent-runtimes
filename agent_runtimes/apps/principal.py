@@ -864,6 +864,8 @@ async def read_launched_app(
             "app_uid": str(answer["app_uid"]),
             "deployment_uid": deployment,
             "version": int(answer["version"]),
+            # Its name at its four addresses, when they are on (ai-agents' word).
+            **({"address": str(answer["address"])} if answer.get("address") else {}),
         },
     )
     return None

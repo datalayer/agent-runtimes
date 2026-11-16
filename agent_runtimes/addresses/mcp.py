@@ -76,7 +76,11 @@ class OperationsExtension(McpExtension):
                     str(getattr(getattr(request, "client", None), "host", "") or ""),
                 )
                 addressed.access.count(caller)
-                return _result(await addressed.call(operation_id, arguments))
+                return _result(
+                    await addressed.call(
+                        operation_id, arguments, interface="mcp", caller=caller
+                    )
+                )
             except OperationError as error:
                 raise ToolError(
                     f"{error.status}: {error.detail}"

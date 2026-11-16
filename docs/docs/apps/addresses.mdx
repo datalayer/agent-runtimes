@@ -49,7 +49,29 @@ The same rule at its four addresses, from its "Who may open it":
 - **private** — the owner and the people they allowed, with a Datalayer API key
   (`X-API-Key`) or a token (`Authorization: Bearer …`).
 
+- **a person signed in with their personal agent** calls a company's addresses
+  with the PAP access token its company issued them.
+
 `poppy.json`, the Agent Card and the page's script bundle answer anybody.
+
+### In a browser
+
+A browser carries no API key. A private agent's page (`{name}.web`) and its chat
+(`{name}.agent`) send a person who is not signed in to Datalayer's sign-in (OpenID
+Connect, authorization code with PKCE, scope `openid`), as a client identified by
+its own metadata document at `https://<host>/.datalayer/client.json`. Back at
+`/.datalayer/callback`, the access token is kept in an HttpOnly cookie of that host
+alone; `/.datalayer/sign-out` forgets it. The agent's own rule still decides: its
+owner and the people they allowed. A program asking without a credential is
+answered `401`, as before.
+
+### What is recorded
+
+On a runtime launched for a deployment, every call its addresses answer is
+recorded on the deployment, a batch at a time: by which address, which operation,
+whether anonymous, with an API key or a token (and the person's account when they
+said who they are), its status, how long it took and the tokens its agent spent.
+Never what was said, a key or a token.
 
 ## `poppy.json`
 
@@ -105,6 +127,18 @@ agent address. What the runtime is told:
 | `AGENT_RUNTIMES_ADDRESS_NAME` | Its name in its four addresses |
 | `AGENT_RUNTIMES_ADDRESS_AGENT_ID` | Which agent answers, when the runtime makes several |
 | `AGENT_RUNTIMES_ADDRESS_ACTS_FOR` | For a person's own agent, whom it acts for |
+| `AGENT_RUNTIMES_ADDRESS_OWNER` | For a person's own agent, the account that alone may call it unless they allow others |
 
-A runtime launched for a deployment reads who may call it from Datalayer, with its
-proof; the others from the variables above.
+On Datalayer the platform says them: a person's own agent is named
+`{agent}-{handle}` (`marketer-eric`), told to the runtime as it is assigned; a
+deployment's name is its address, said by Datalayer with what it runs, once its
+owner turned its addresses on. A runtime launched for a deployment reads who may
+call it from Datalayer, with its proof; the others from the variables above.
+
+A company on a runtime launched for a deployment keeps its sign-ins, Sessions,
+device codes and operations where Datalayer keeps that deployment's, through
+Datalayer's own services: a restart or a relaunch forgets none, and a person who
+approves their personal agent's sign-in on Datalayer is signed in at the runtime.
+Its device link (`/pap/device` on its agent address) sends the person to that
+page. A PAP operation that its `openapi` carries (`x-pap`) is performed, once
+approved, through the same call contract as its MCP and API.

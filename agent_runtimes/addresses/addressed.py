@@ -19,7 +19,8 @@ from typing import Any, Awaitable, Callable, Dict, List, Literal, Optional
 
 from agentspecs.openapi import OpenApiOperation, ask_document, openapi_operations
 
-from agent_runtimes.addresses.access import AddressAccess, AddressPolicy
+from agent_runtimes.addresses.access import AddressAccess, AddressPolicy, Caller
+from agent_runtimes.addresses.calls import CallRecord, CallRecorder, timed
 from agent_runtimes.addresses.hosts import AddressHosts
 from agent_runtimes.addresses.operations import (
     OperationAgent,
@@ -46,6 +47,8 @@ class AddressedAgent:
     role: Role = "app"
     #: For a person's own agent: the handle of the person it acts for.
     acts_for: str = ""
+    #: Where its calls are recorded (a runtime launched for a deployment); none locally.
+    calls: Optional[CallRecorder] = None
 
     def __post_init__(self) -> None:
         self.document: Dict[str, Any] = copy.deepcopy(
@@ -68,10 +71,43 @@ class AddressedAgent:
             404, f"{self.app.name} answers no operation {operation_id!r}."
         )
 
-    async def call(self, operation_id: str, inputs: Dict[str, Any]) -> Any:
-        """Answer ``operation_id`` with ``inputs`` (:func:`call_operation`)."""
-        operation = self.operation(operation_id)
-        return await call_operation(await self.agent_source(), operation, inputs)
+    async def call(
+        self,
+        operation_id: str,
+        inputs: Dict[str, Any],
+        *,
+        interface: str = "api",
+        caller: Optional[Caller] = None,
+    ) -> Any:
+        """Answer ``operation_id`` with ``inputs`` (:func:`call_operation`), the call
+        recorded (:attr:`calls`) with who made it by which address."""
+        elapsed = timed()
+        usage: Dict[str, int] = {}
+        status = 200
+        try:
+            operation = self.operation(operation_id)
+            return await call_operation(
+                await self.agent_source(), operation, inputs, usage
+            )
+        except OperationError as error:
+            status = error.status
+            raise
+        except Exception:
+            status = 500
+            raise
+        finally:
+            if self.calls is not None:
+                self.calls.record(
+                    CallRecord(
+                        interface=interface,
+                        operation=operation_id,
+                        caller=caller.kind if caller is not None else "anonymous",
+                        person=caller.uid if caller is not None else "",
+                        status=status,
+                        duration_ms=elapsed(),
+                        tokens=usage.get("tokens", 0),
+                    )
+                )
 
     def published_document(self) -> Dict[str, Any]:
         """Its ``openapi`` as its API publishes it: served from its API host."""

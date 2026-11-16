@@ -9,7 +9,8 @@ The same rule for its agent, MCP, API and web hosts:
   per-caller rate cap (by address, as the visitors' cap is), or by account when
   the caller says who they are;
 - **private** — a Datalayer API key (``X-API-Key``), or a bearer token
-  (a Datalayer token, or the PAP delegated token of a person), of the owner or
+  (a Datalayer token, the PAP delegated token of a person, or the access token
+  of a browser signed in with Datalayer, kept in its cookie), of the owner or
   of a person the owner allowed; nobody else.
 
 What a key or a token says is asked of whoever can tell (:class:`KeyChecker`,
@@ -147,6 +148,13 @@ class AddressAccess:
                 raise OperationError(401, "This API key is not one Datalayer knows.")
             return "api_key", uid
         authorization = _header(headers, "authorization")
+        if not authorization.lower().startswith("bearer "):
+            # A browser signed in to the agent's page with Datalayer (`browser_sign_in`).
+            from agent_runtimes.addresses.browser_sign_in import cookie_of
+
+            signed_in = cookie_of({k.lower(): v for k, v in headers.items()})
+            if signed_in:
+                authorization = f"Bearer {signed_in}"
         if authorization.lower().startswith("bearer "):
             token = authorization[7:].strip()
             if self.token_checker is None:

@@ -11,6 +11,11 @@ from typing import Any, Iterable, Optional
 
 from agent_runtimes.addresses.access import Caller
 from agent_runtimes.addresses.addressed import AddressedAgent
+from agent_runtimes.addresses.browser_sign_in import (
+    redirect,
+    sign_in_location,
+    wants_page,
+)
 from agent_runtimes.addresses.operations import OperationError
 
 
@@ -55,7 +60,8 @@ def guarded(
 ) -> Any:
     """``app``, answered only for a caller the agent's access check admits (not counted:
     the handlers count each call). ``open_paths`` answer anybody; one ending in ``/``
-    opens every path under it."""
+    opens every path under it. A browser asking for a page it may not open yet, at an
+    agent with addresses, is sent to sign in (`browser_sign_in`)."""
     opened = frozenset(open_paths)
 
     async def guard(scope: dict, receive: Any, send: Any) -> None:
@@ -70,6 +76,14 @@ def guarded(
         try:
             found = await addressed.access.identify(headers_of(scope), peer_of(scope))
         except OperationError as error:
+            if (
+                error.status == 401
+                and addressed.hosts is not None
+                and wants_page(scope)
+            ):
+                # A browser: to Datalayer's sign-in, and back here.
+                await redirect(send, sign_in_location(path))
+                return
             await answer_json(
                 send,
                 error.status,
