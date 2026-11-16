@@ -2085,7 +2085,7 @@ PAP_YOUR_APPLICATION_A_COMPANY_SCENE_0_0_1 = SceneSpec.model_validate(
                     "title": "What becomes public at Ship",
                     "rows": [],
                     "lines": [
-                        "Its own domain, exchange-desk.apps.datalayer.ai, with the page personal agents read first.",
+                        "Its own domain, exchange-desk.agent.datalayer.ai, with the page personal agents read first.",
                         "How personal agents reach it: its agent, its API and its server for agents.",
                         "What changes something is proposed to the person and done only with their approval.",
                     ],
@@ -2110,7 +2110,7 @@ PAP_YOUR_APPLICATION_A_COMPANY_SCENE_0_0_1 = SceneSpec.model_validate(
                 "says": "Asks Sam to sign in at Exchange desk, with his Datalayer account.",
                 "card": {
                     "kind": "sign-in",
-                    "title": "Sign in at Exchange desk (exchange-desk.apps.datalayer.ai)",
+                    "title": "Sign in at Exchange desk (exchange-desk.agent.datalayer.ai)",
                     "rows": [],
                     "lines": [
                         "With your Datalayer account, on Datalayer’s page: the agent never sees your password."
@@ -2125,7 +2125,7 @@ PAP_YOUR_APPLICATION_A_COMPANY_SCENE_0_0_1 = SceneSpec.model_validate(
                 "says": "Proposes the exchange in the Maker’s own words: “Exchange order ord_7Hk2 for size L.”",
                 "card": {
                     "kind": "approval",
-                    "title": "Exchange desk (exchange-desk.apps.datalayer.ai) asks you to confirm",
+                    "title": "Exchange desk (exchange-desk.agent.datalayer.ai) asks you to confirm",
                     "rows": [["Order", "ord_7Hk2"], ["Size", "L"], ["Version", "1"]],
                     "lines": ["Exchange order ord_7Hk2 for size L."],
                 },
