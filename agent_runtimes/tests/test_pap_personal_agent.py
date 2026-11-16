@@ -25,17 +25,23 @@ from personal_agent_protocol import (
     ApprovalRequest,
     SqlitePairwiseUserIdStore,
 )
+from personal_agent_protocol.company import build_company, company_app
 from personal_agent_protocol.demo.kit import (
     AgentIdentity,
+    ClockPlugin,
     InProcessNetwork,
     MutableClock,
     PersonalAgentHost,
     personal_agent_reactor,
 )
-from personal_agent_protocol.demo.manzanita import CONFIG, manzanita
+from personal_agent_protocol.demo.manzanita import CONFIG, ManzanitaPlugin, manzanita
 from reactor import PluginManifest
 
-from agent_runtimes.pap import PapCapabilityError, PapPersonalAgentCapability
+from agent_runtimes.pap import (
+    PapCapabilityError,
+    PapPersonalAgentCapability,
+    company_domain,
+)
 from agent_runtimes.protocols.pap import pap_protocol_version
 
 DOMAIN = "manzanita.example"
@@ -501,3 +507,68 @@ async def test_it_speaks_the_newest_version_alone(tmp_path: Path) -> None:
         await older.discover_company(DOMAIN)
     assert refused.value.code == "unsupported_protocol_version"
     assert "PAP 1.0" in str(refused.value)
+
+
+def test_a_datalayer_agent_is_discovered_at_its_agent_host(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A name is the agent's host under the configured domain; its HTTPS origin is that
+    host; any other domain is itself."""
+    monkeypatch.delenv("DATALAYER_COMPANY_HOSTS_DOMAIN", raising=False)
+    assert company_domain("shop") == "shop.agent.datalayer.ai"
+    assert (
+        company_domain("https://shop.agent.datalayer.ai/") == "shop.agent.datalayer.ai"
+    )
+    assert company_domain("Manzanita.Example.") == DOMAIN
+    monkeypatch.setenv("DATALAYER_COMPANY_HOSTS_DOMAIN", "example.test")
+    assert company_domain("marketer-eric") == "marketer-eric.agent.example.test"
+    for refused in (
+        "http://shop.agent.datalayer.ai",
+        "https://shop.agent.datalayer.ai/poppy",
+        "https://shop.agent.datalayer.ai/?q=1",
+        "not_a_label",
+        "",
+    ):
+        with pytest.raises(ValueError):
+            company_domain(refused)
+
+
+@pytest.mark.asyncio
+async def test_a_company_named_by_its_agent_name_is_one_company(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``shop``, its address and its host reach the same company, with one Session."""
+    monkeypatch.delenv("DATALAYER_COMPANY_HOSTS_DOMAIN", raising=False)
+    host = "shop.agent.datalayer.ai"
+    clock = MutableClock()
+    network = InProcessNetwork()
+    atlas = AgentIdentity(domain="atlas.example", name="Atlas")
+    network.add(atlas.domain, atlas.website())
+    shop = build_company(
+        replace(CONFIG, domain=host),
+        http_client=network.client(),
+        address_resolver=network.resolve,
+        plugins=[
+            (PluginManifest(name="manzanita", version="1"), ManzanitaPlugin()),
+            (PluginManifest(name="clock", version="1"), ClockPlugin(clock)),
+        ],
+    )
+    network.add(host, company_app(shop))
+    http = network.client()
+    reactor = personal_agent_reactor(
+        PersonalAgentHost(atlas, clock),
+        network=network,
+        http_client=http,
+        plugins=_host_plugins(tmp_path),
+    )
+    capability = PapPersonalAgentCapability(
+        reactor=reactor, http_client=http, client_id=atlas.client_id, tenant_id="t1"
+    )
+    summary = await capability.discover_company("shop")
+    assert summary.domain == host and summary.protocol_version == "1.0"
+    await capability.ask("shop", "Do you sell jackets?", user_id="ada")
+    await capability.ask(f"https://{host}", "And gloves?", user_id="ada")
+    assert list(capability._links) == [("ada", host)]
+    assert capability.session_of("shop", user_id="ada") == capability.session_of(
+        host, user_id="ada"
+    )

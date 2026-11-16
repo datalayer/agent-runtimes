@@ -26,6 +26,7 @@ from __future__ import annotations
 import hashlib
 from dataclasses import dataclass, field
 from typing import Any, Literal, Protocol
+from urllib.parse import urlsplit
 
 import httpx
 from personal_agent_protocol import (
@@ -64,7 +65,34 @@ from personal_agent_protocol.sessions import AccessToken
 from pydantic import BaseModel, ConfigDict
 from reactor import PluginPlatform
 
+from agent_runtimes.addresses.hosts import AddressHosts
 from agent_runtimes.protocols.pap import pap_protocol_version
+
+
+def company_domain(company: str) -> str:
+    """The domain a company is discovered at (``/.well-known/poppy.json`` on it).
+
+    A Datalayer agent's name (one DNS label, such as ``shop``) is its agent host,
+    ``{name}.agent.<domain>`` (:class:`~agent_runtimes.addresses.hosts.AddressHosts`,
+    ``DATALAYER_COMPANY_HOSTS_DOMAIN``); an agent's address given as its HTTPS origin is
+    that host; any other domain is itself. ``ValueError`` for a URL with a path, a query
+    or another scheme.
+    """
+    value = str(company or "").strip().lower().rstrip(".")
+    if "://" in value:
+        parsed = urlsplit(value)
+        if (
+            parsed.scheme != "https"
+            or not parsed.hostname
+            or parsed.path not in ("", "/")
+            or parsed.query
+            or parsed.fragment
+        ):
+            raise ValueError(f"{company!r} is not a company's domain or HTTPS origin")
+        value = parsed.hostname
+    if "." not in value:
+        return AddressHosts.of(value).host("agent")
+    return value
 
 
 class PapScopeHint(BaseModel):
@@ -417,12 +445,17 @@ class PapPersonalAgentCapability:
             await self._owned_identity.aclose()
 
     async def discover_company(self, domain: str) -> PapCompanySummary:
-        """Discover and validate a company, then return public capabilities only."""
+        """Discover and validate a company, then return public capabilities only.
+
+        ``domain`` is a company's domain, or a Datalayer agent's name or address
+        (:func:`company_domain`): ``shop`` is discovered at ``shop.agent.datalayer.ai``.
+        """
 
         return _company_summary(await self._discover(domain))
 
     async def _discover(self, domain: str) -> DiscoveredCompany:
         """The company verified at the one PAP version a runtime speaks; refused otherwise."""
+        domain = company_domain(domain)
         try:
             return await self._company.discover(domain)
         except DiscoveryError as error:
@@ -465,6 +498,7 @@ class PapPersonalAgentCapability:
     async def _link(self, user_id: str, domain: str) -> _Link:
         """What this person holds at the company, its verified issuer unchanged."""
         reactor, _, _ = self._host()
+        domain = company_domain(domain)
         company = await self._discover(domain)
         link = self._links.get((user_id, domain))
         if link is not None:
@@ -883,7 +917,7 @@ class PapPersonalAgentCapability:
 
     def session_of(self, domain: str, *, user_id: str) -> dict[str, Any] | None:
         """The Session at a company as a person's card names it: a one-way reference."""
-        link = self._links.get((user_id, domain))
+        link = self._links.get((user_id, company_domain(domain)))
         if link is None or link.session is None:
             return None
         return {

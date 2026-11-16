@@ -12,6 +12,7 @@ from .capability import (
     PapOperationSummary,
     PapPersonalAgentCapability,
     PapSignInSummary,
+    company_domain,
 )
 from .company import A2AApplication, PapCompanyCapability
 
@@ -26,4 +27,5 @@ __all__ = [
     "PapOperationSummary",
     "PapPersonalAgentCapability",
     "PapSignInSummary",
+    "company_domain",
 ]
