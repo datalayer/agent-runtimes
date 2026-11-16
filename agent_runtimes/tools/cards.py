@@ -96,8 +96,9 @@ class _Product(_Row):
     availability: str = ""
     rating: Optional[float] = Field(default=None, ge=0, le=5)
     url: str = ""
+    image: str = ""
 
-    @field_validator("url")
+    @field_validator("url", "image")
     @classmethod
     def _link(cls, value: str) -> str:
         return _https(value)
@@ -114,7 +115,8 @@ def show_comparison(
     Args:
         products: Two to ten products as the catalogue returned them:
             ``{title, seller, variant, price, currency, availability, rating,
-            url}`` — the price in major units (69.99, not 6999).
+            url, image}`` — the price in major units (69.99, not 6999), the
+            image the product's photo (an https address) when it has one.
         currency: The currency of a product that does not say its own.
         pick: The title of the one you would choose, when you would.
         reason: Why, in a sentence.
@@ -147,8 +149,9 @@ class _BasketItem(_Row):
     quantity: int = Field(default=1, ge=1)
     price: Optional[float] = Field(default=None, ge=0)
     url: str = ""
+    image: str = ""
 
-    @field_validator("url")
+    @field_validator("url", "image")
     @classmethod
     def _link(cls, value: str) -> str:
         return _https(value)
@@ -167,8 +170,9 @@ def show_basket(
     terms, or paid at the seller's checkout.
 
     Args:
-        items: ``{title, seller, variant, quantity, price, url}`` each, the
-            price per unit in major units as the catalogue gave it.
+        items: ``{title, seller, variant, quantity, price, url, image}``
+            each, the price per unit in major units as the catalogue gave it,
+            the image the product's photo (an https address) when it has one.
         currency: The basket's currency (``USD``, ``EUR``).
         shipping: The shipping, when the seller said it.
         checkout_url: The seller's checkout, when there is no connection to

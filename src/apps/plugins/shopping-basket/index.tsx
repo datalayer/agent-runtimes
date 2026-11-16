@@ -10,7 +10,8 @@
  * basket* as the person's next turn: the agent then proposes the purchase at
  * the company, which is approved on its exact terms (`pap-purchase`), or
  * gives the seller's checkout. Nothing is bought from the card itself.
- * Draws `show_basket`.
+ * Draws `show_basket`, the items' photos in a row under it when they have
+ * them.
  *
  * @module apps/plugins/shopping-basket
  */
@@ -28,6 +29,7 @@ import {
   useToolCardSend,
 } from '../../toolCards/kit';
 import { A2uiCard, type CardSpec } from '../../toolCards/a2uiCard';
+import { PhotoStrip } from '../../toolCards/productPhoto';
 import { readBasket, type Basket } from './read';
 
 export const SHOPPING_BASKET_PLUGIN_NAME =
@@ -132,13 +134,21 @@ export function ShoppingBasketCard({
     }
   };
   return (
-    <A2uiCard
-      spec={basketCard(basket, context.toolCallId, {
-        buy: Boolean(send) && read.done,
-        asked,
-      })}
-      onAction={onAction}
-    />
+    <>
+      <A2uiCard
+        spec={basketCard(basket, context.toolCallId, {
+          buy: Boolean(send) && read.done,
+          asked,
+        })}
+        onAction={onAction}
+      />
+      <PhotoStrip
+        photos={basket.items.map(item => ({
+          url: item.image,
+          alt: item.title,
+        }))}
+      />
+    </>
   );
 }
 

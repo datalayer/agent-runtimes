@@ -7,7 +7,8 @@
  * `@datalayer/loop-plugin-product-comparison` — the Shopper's short list,
  * side by side: price, variant, availability, rating and seller, the one it
  * would pick marked with why. Draws `show_comparison` as a message, with the
- * A2UI renderer (`toolCards/a2uiCard`).
+ * A2UI renderer (`toolCards/a2uiCard`), the products' photos in a row under
+ * it when they have them.
  *
  * @module apps/plugins/product-comparison
  */
@@ -21,6 +22,7 @@ import {
   money,
 } from '../../toolCards/kit';
 import { A2uiCard, type CardSpec } from '../../toolCards/a2uiCard';
+import { PhotoStrip } from '../../toolCards/productPhoto';
 import { readComparison, type Comparison } from './read';
 
 export const PRODUCT_COMPARISON_PLUGIN_NAME =
@@ -83,7 +85,17 @@ export function ProductComparisonCard({
       <CardSkeleton label={PRODUCT_COMPARISON_WORDS.writing} />
     );
   }
-  return <A2uiCard spec={comparisonCard(comparison, context.toolCallId)} />;
+  return (
+    <>
+      <A2uiCard spec={comparisonCard(comparison, context.toolCallId)} />
+      <PhotoStrip
+        photos={comparison.products.map(product => ({
+          url: product.image,
+          alt: product.title,
+        }))}
+      />
+    </>
+  );
 }
 
 export const ProductComparisonPlugin = defineToolCardPlugin({

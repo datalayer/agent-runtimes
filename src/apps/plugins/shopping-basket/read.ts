@@ -12,6 +12,7 @@
 import {
   amount,
   records,
+  safeImage,
   safeUrl,
   words,
   type Data,
@@ -24,6 +25,8 @@ export type BasketItem = {
   quantity: number;
   price?: number;
   url: string;
+  /** The product's photo, an https address; empty when it has none. */
+  image: string;
 };
 
 export type Basket = {
@@ -49,6 +52,7 @@ export function readBasket(data: Data): Basket {
         quantity: quantity !== undefined && quantity > 0 ? quantity : 1,
         price: amount(item.price),
         url: safeUrl(item.url),
+        image: safeImage(item.image),
       };
     })
     .filter(item => item.title);

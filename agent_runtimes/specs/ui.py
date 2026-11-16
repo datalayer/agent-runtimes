@@ -2092,11 +2092,34 @@ PAP_SIGN_IN_UI_0_0_1 = UISpec(
     components=[],
 )
 
+PRODUCT_CARDS_UI_0_0_1 = UISpec(
+    id="product-cards",
+    version="0.0.1",
+    name="Product cards",
+    description="Products as cards — photo, title, price, rating and stock, a grid for a list — and a quote or a test order with each product's photo and the total (list_products, find_products, get_product, quote_basket, place_test_order).",
+    emoji="🛍️",
+    octicon="apps",
+    plugin="@datalayer/loop-plugin-product-cards",
+    folder="product-cards",
+    per=None,
+    contributions=UiContributionsSpec(
+        slots=[],
+        points=["reactor.ui.renderer", "reactor.ui.toolBinding"],
+        commands=[],
+    ),
+    contribution_points=[],
+    settings={},
+    renderers=[],
+    placements=["message"],
+    catalog="",
+    components=[],
+)
+
 PRODUCT_COMPARISON_UI_0_0_1 = UISpec(
     id="product-comparison",
     version="0.0.1",
     name="Product comparison",
-    description="The products the agent compared, side by side — price, variant, availability, rating and seller — and the one it would pick with why (show_comparison).",
+    description="The products the agent compared, side by side — price, variant, availability, rating, seller and photo — and the one it would pick with why (show_comparison).",
     emoji="📊",
     octicon="table",
     plugin="@datalayer/loop-plugin-product-comparison",
@@ -2142,7 +2165,7 @@ SHOPPING_BASKET_UI_0_0_1 = UISpec(
     id="shopping-basket",
     version="0.0.1",
     name="Shopping basket",
-    description="The basket the agent put together: each item, its seller and price, the shipping and the total summed by the tool; nothing is bought from it (show_basket).",
+    description="The basket the agent put together: each item with its photo, its seller and price, the shipping and the total summed by the tool; nothing is bought from it (show_basket).",
     emoji="🛒",
     octicon="package",
     plugin="@datalayer/loop-plugin-shopping-basket",
@@ -2528,6 +2551,7 @@ UI_CATALOGUE: Dict[str, UISpec] = {
     "page-layout": PAGE_LAYOUT_UI_0_0_1,
     "pap-purchase": PAP_PURCHASE_UI_0_0_1,
     "pap-sign-in": PAP_SIGN_IN_UI_0_0_1,
+    "product-cards": PRODUCT_CARDS_UI_0_0_1,
     "product-comparison": PRODUCT_COMPARISON_UI_0_0_1,
     "prompt": PROMPT_UI_0_0_1,
     "shopping-basket": SHOPPING_BASKET_UI_0_0_1,

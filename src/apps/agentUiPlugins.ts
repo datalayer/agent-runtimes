@@ -68,6 +68,7 @@ import { LinkedInPostPreviewPlugin } from './plugins/linkedin-post-preview';
 import { lockedUiPlugin } from './plugins/locked-ui';
 import { OdooContextChip, odooContextPlugin } from './plugins/odoo-context';
 import { PapPurchasePlugin } from './plugins/pap-purchase';
+import { ProductCardsPlugin } from './plugins/product-cards';
 import { ProductComparisonPlugin } from './plugins/product-comparison';
 import { ShoppingBasketPlugin } from './plugins/shopping-basket';
 import {
@@ -148,6 +149,8 @@ export const AGENT_UI_PLUGINS: Readonly<Record<string, AgentUiPlugin>> = {
     Chrome: BasketTotalChip,
   },
   'pap-purchase': { needsConnection: true, message: PapPurchasePlugin },
+  // The demo shop, in its own chat and in the Shopper's.
+  'product-cards': { needsConnection: false, message: ProductCardsPlugin },
   // The Accountant.
   'bank-reconciliation': {
     needsConnection: false,

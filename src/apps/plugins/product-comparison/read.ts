@@ -12,6 +12,7 @@
 import {
   amount,
   records,
+  safeImage,
   safeUrl,
   words,
   type Data,
@@ -26,6 +27,8 @@ export type ComparedProduct = {
   availability: string;
   rating?: number;
   url: string;
+  /** The product's photo, an https address; empty when it has none. */
+  image: string;
   picked: boolean;
 };
 
@@ -51,6 +54,7 @@ export function readComparison(data: Data): Comparison {
         availability: words(product.availability),
         rating: amount(product.rating),
         url: safeUrl(product.url),
+        image: safeImage(product.image),
         picked: Boolean(pick) && (pick === title || pick === words(product.id)),
       };
     })

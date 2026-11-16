@@ -13,7 +13,6 @@ from typing import Dict, List
 
 from agent_runtimes.types import BackendToolRuntimeSpec, BackendToolSpec
 
-
 # ============================================================================
 # Backend Tool Definitions
 # ============================================================================
@@ -130,6 +129,106 @@ DECIDE_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     ),
     icon="@primer/octicons-react:law",
     emoji="⚖️",
+)
+
+DEMO_SHOP_FIND_PRODUCTS_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
+    id="demo-shop-find-products",
+    version="0.0.1",
+    name="Find Demo Shop Products",
+    description="Find the demo shop's products by words, category and price range, the cheapest first, each with its photo, price, rating and stock. Drawn as a grid of product cards.",
+    tags=["shopping", "demo", "demo-shop"],
+    enabled=True,
+    ui=[{"plugin": "product-cards"}],
+    approval="auto",
+    timeout=None,
+    requires_approval=False,
+    runtime=BackendToolRuntimeSpec(
+        language="python",
+        package="agent_runtimes.tools.demo_shop",
+        method="find_products",
+    ),
+    icon="@primer/octicons-react:search",
+    emoji="🔎",
+)
+
+DEMO_SHOP_GET_PRODUCT_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
+    id="demo-shop-get-product",
+    version="0.0.1",
+    name="Get a Demo Shop Product",
+    description="One product of the demo shop with its photo, price, rating, stock and description. Drawn as a product card.",
+    tags=["shopping", "demo", "demo-shop"],
+    enabled=True,
+    ui=[{"plugin": "product-cards"}],
+    approval="auto",
+    timeout=None,
+    requires_approval=False,
+    runtime=BackendToolRuntimeSpec(
+        language="python",
+        package="agent_runtimes.tools.demo_shop",
+        method="get_product",
+    ),
+    icon="@primer/octicons-react:package",
+    emoji="📦",
+)
+
+DEMO_SHOP_LIST_PRODUCTS_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
+    id="demo-shop-list-products",
+    version="0.0.1",
+    name="List Demo Shop Products",
+    description="List the demo shop's products, all or one category's, each with its photo, price, rating and stock. Drawn as a grid of product cards.",
+    tags=["shopping", "demo", "demo-shop"],
+    enabled=True,
+    ui=[{"plugin": "product-cards"}],
+    approval="auto",
+    timeout=None,
+    requires_approval=False,
+    runtime=BackendToolRuntimeSpec(
+        language="python",
+        package="agent_runtimes.tools.demo_shop",
+        method="list_products",
+    ),
+    icon="@primer/octicons-react:apps",
+    emoji="🛍️",
+)
+
+DEMO_SHOP_PLACE_TEST_ORDER_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
+    id="demo-shop-place-test-order",
+    version="0.0.1",
+    name="Place a Demo Shop Test Order",
+    description="Place a test order of a basket at the demo shop: answered with a test order number, and nothing is charged, nothing ships and nothing is kept. Placed only once the person said to. Drawn with each product's photo.",
+    tags=["shopping", "demo", "demo-shop"],
+    enabled=True,
+    ui=[{"plugin": "product-cards"}],
+    approval="auto",
+    timeout=None,
+    requires_approval=False,
+    runtime=BackendToolRuntimeSpec(
+        language="python",
+        package="agent_runtimes.tools.demo_shop",
+        method="place_test_order",
+    ),
+    icon="@primer/octicons-react:check-circle",
+    emoji="✅",
+)
+
+DEMO_SHOP_QUOTE_BASKET_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
+    id="demo-shop-quote-basket",
+    version="0.0.1",
+    name="Quote a Demo Shop Basket",
+    description="Price a basket of the demo shop's products from its catalogue: each line and the total, summed by the tool. A quote, not an order: nothing is reserved. Drawn with each product's photo.",
+    tags=["shopping", "demo", "demo-shop"],
+    enabled=True,
+    ui=[{"plugin": "product-cards"}],
+    approval="auto",
+    timeout=None,
+    requires_approval=False,
+    runtime=BackendToolRuntimeSpec(
+        language="python",
+        package="agent_runtimes.tools.demo_shop",
+        method="quote_basket",
+    ),
+    icon="@primer/octicons-react:list-ordered",
+    emoji="🧾",
 )
 
 DISPLAY_RECIPE_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
@@ -502,7 +601,7 @@ SHOW_BASKET_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     id="show-basket",
     version="0.0.1",
     name="Show Basket",
-    description="Show the person the basket — each item with its seller, quantity and price, the shipping, and the total summed by the tool. Nothing is bought by showing it. Drawn by the shopping-basket UI plugin.",
+    description="Show the person the basket — each item with its seller, quantity, price and photo, the shipping, and the total summed by the tool. Nothing is bought by showing it. Drawn by the shopping-basket UI plugin.",
     tags=["shopping", "card", "shopper"],
     enabled=True,
     ui=[{"plugin": "shopping-basket", "renderer": "a2ui"}, {"plugin": "basket-total"}],
@@ -522,7 +621,7 @@ SHOW_COMPARISON_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     id="show-comparison",
     version="0.0.1",
     name="Show Comparison",
-    description="Show the person the products compared, side by side — price, variant, availability, rating and seller — and the one you would pick with why. Drawn as a table by the product-comparison UI plugin.",
+    description="Show the person the products compared, side by side — price, variant, availability, rating, seller and photo — and the one you would pick with why. Drawn as a table by the product-comparison UI plugin.",
     tags=["shopping", "card", "shopper"],
     enabled=True,
     ui=[{"plugin": "product-comparison", "renderer": "a2ui"}],
@@ -1020,6 +1119,11 @@ BACKEND_TOOL_CATALOG: Dict[str, BackendToolSpec] = {
     "create-plan": CREATE_PLAN_BACKEND_TOOL_SPEC_0_0_1,
     "current-time": CURRENT_TIME_BACKEND_TOOL_SPEC_0_0_1,
     "decide": DECIDE_BACKEND_TOOL_SPEC_0_0_1,
+    "demo-shop-find-products": DEMO_SHOP_FIND_PRODUCTS_BACKEND_TOOL_SPEC_0_0_1,
+    "demo-shop-get-product": DEMO_SHOP_GET_PRODUCT_BACKEND_TOOL_SPEC_0_0_1,
+    "demo-shop-list-products": DEMO_SHOP_LIST_PRODUCTS_BACKEND_TOOL_SPEC_0_0_1,
+    "demo-shop-place-test-order": DEMO_SHOP_PLACE_TEST_ORDER_BACKEND_TOOL_SPEC_0_0_1,
+    "demo-shop-quote-basket": DEMO_SHOP_QUOTE_BASKET_BACKEND_TOOL_SPEC_0_0_1,
     "display-recipe": DISPLAY_RECIPE_BACKEND_TOOL_SPEC_0_0_1,
     "example-create-plan": EXAMPLE_CREATE_PLAN_BACKEND_TOOL_SPEC_0_0_1,
     "example-current-time": EXAMPLE_CURRENT_TIME_BACKEND_TOOL_SPEC_0_0_1,

@@ -36,6 +36,22 @@ def test_a_basket_sums_its_total_and_says_when_a_price_is_missing():
     assert partial["partial"] is True and partial["total"] == 0.0
 
 
+def test_a_compared_product_and_a_basket_item_carry_their_photo_over_https_only():
+    photo = "https://images.datalayer.io/landing/demo-shop/tennis-ball.jpg"
+    compared = cards.show_comparison(
+        [
+            {"title": "Tennis Ball", "price": 6.99, "image": photo},
+            {"title": "Volleyball", "price": 11.99, "image": "http://x.example/v.jpg"},
+        ],
+        currency="USD",
+    )
+    assert [row["image"] for row in compared["products"]] == [photo, ""]
+    basket = cards.show_basket(
+        [{"title": "Tennis Ball", "price": 6.99, "image": photo}], "USD"
+    )
+    assert basket["items"][0]["image"] == photo
+
+
 def test_a_card_refuses_what_it_cannot_show_in_a_sentence():
     assert cards.show_basket([], "USD").startswith("Refused: the basket")
     assert "currency" in cards.show_basket([{"title": "Hat"}], " ")
