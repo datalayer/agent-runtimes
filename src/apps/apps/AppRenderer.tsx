@@ -141,6 +141,17 @@ export const agentIdOf = (app: Pick<AppSpec, 'agent' | 'team'>): string => {
 export function defineAppPlugin(
   app: AppSpec,
   shown: AppSpec = app,
+  {
+    agentOnRuntime = false,
+  }: {
+    /**
+     * Its agent is one already on a runtime, made there from its agentspec
+     * and not from the application (a person's own agent, `Application`'s
+     * runtime mode): the runtime holds no plugin of the application, so the
+     * page's requires none.
+     */
+    agentOnRuntime?: boolean;
+  } = {},
 ): ReactorPlugin<Record<string, never>, unknown, unknown> {
   if (!app.agent) {
     throw new Error(
@@ -151,7 +162,9 @@ export function defineAppPlugin(
   return defineAgentCapacityPlugin({
     key: `app-${app.id}`,
     name: pair.page.name,
-    requiredBackendPlugins: pair.page.requiredBackendPlugins,
+    ...(agentOnRuntime
+      ? {}
+      : { requiredBackendPlugins: pair.page.requiredBackendPlugins }),
     // What a person reads is in their language (P-26); what it is created
     // with is its own Appspec.
     displayName: shown.name,
@@ -302,6 +315,14 @@ export type AppRendererProps = Omit<LoopEmbedProps, 'agentId'> & {
    * answers heard; a host that gives none draws it without a voice.
    */
   speech?: Omit<ChatVoicePlace, 'consentKey' | 'language'>;
+  /**
+   * The agent that answers, by its name on the runtime it already runs on
+   * (`datalayerKept`): a person's own agent, launched from its agentspec
+   * (`Application`'s runtime mode). Its page plugin then requires nothing of
+   * that runtime, which holds no plugin of the application. Unsaid, the
+   * application's own agent, made under its id (D-15).
+   */
+  agentId?: string;
 };
 
 /** What `interface.layout` sets on the workspace. */
@@ -409,6 +430,12 @@ export function appPreset(
      * title bar. Unsaid, `kept.visitor`.
      */
     visitor?: boolean;
+    /**
+     * Its agent is already on a runtime, made from its agentspec (a
+     * person's own agent): its page plugin requires nothing of that runtime,
+     * which holds no plugin of the application, and nothing follows it.
+     */
+    agentOnRuntime?: boolean;
   } = {},
 ): AppPreset {
   if (app.kind === 'decision') {
@@ -434,11 +461,15 @@ export function appPreset(
   const visitor = options.visitor ?? options.kept?.visitor ?? false;
   return {
     plugins: [
-      defineAppPlugin(app, shown),
+      defineAppPlugin(app, shown, { agentOnRuntime: options.agentOnRuntime }),
       // What its runtime holds, told to the page (F-15), and its packaged
       // page side read from it when its components are files of its folder
-      // (P-29).
-      defineAppRuntimePlugin(app.id, { pageSide: hasFolderModules(app) }),
+      // (P-29) — not for an agent that is not the application's own.
+      ...(options.agentOnRuntime
+        ? []
+        : [
+            defineAppRuntimePlugin(app.id, { pageSide: hasFolderModules(app) }),
+          ]),
       // Its code in the browser's sandbox, when it turns in the page and
       // computes in code (E-11): `execute_code`, its documents there.
       ...(runsCodeInSandbox(app) ? [defineAppBrowserSandboxPlugin(app)] : []),
@@ -604,6 +635,7 @@ export function AppRenderer({
   pluginsOff,
   language,
   speech,
+  agentId,
   ...embed
 }: AppRendererProps): React.JSX.Element {
   /*
@@ -631,11 +663,14 @@ export function AppRenderer({
    */
   const deployed = Boolean(instance?.deploymentUid);
   const visitor = Boolean(embed.datalayerVisitors);
+  // A person's own agent on its runtime: not the application's, nor a visitor's.
+  const agentOnRuntime = Boolean(agentId && embed.datalayerKept && !visitor);
   const preset = useMemo(
     (): AppPreset | { problem: string } => {
       try {
         return appPreset(app, {
           visitor,
+          agentOnRuntime,
           page,
           pluginsOff,
           sidebar,
@@ -661,6 +696,7 @@ export function AppRenderer({
       instance?.appUid,
       deployed,
       visitor,
+      agentOnRuntime,
     ],
   );
   const allPlugins = useMemo(
@@ -708,7 +744,9 @@ export function AppRenderer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [accent],
   );
-  const agent = appAgentOf(app, embed.datalayerVisitors?.app);
+  const agent = agentOnRuntime
+    ? { agentId: agentId as string }
+    : appAgentOf(app, embed.datalayerVisitors?.app);
   /*
    * Its voice, as its Appspec says (VO-41, VO-49), where its host says the
    * speech runs: remembered consent is the application's own.
@@ -757,7 +795,9 @@ export function AppRenderer({
   const anonymousProblem =
     embed.runAsAnonymous && !embed.datalayerVisitors
       ? 'Run as an anonymous visitor, an application runs on the visitors’ runtime: its host names none (datalayerVisitors).'
-      : undefined;
+      : agentId && !agentOnRuntime
+        ? 'An agent named on its runtime (agentId) answers there: its host names no runtime of a person’s (datalayerKept).'
+        : undefined;
   const problem =
     anonymousProblem ??
     ('problem' in preset

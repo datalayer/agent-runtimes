@@ -39,6 +39,7 @@ const sidebars = {
         'apps/python-tutorial',
         'apps/session-api',
         'apps/portable',
+        'apps/application',
         'apps/embedding',
         'apps/memory',
         'apps/documents',

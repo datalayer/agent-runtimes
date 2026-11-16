@@ -460,3 +460,26 @@ export function embedSnippetOf(options: EmbedSnippetOptions): string {
     `<${EMBED_TAG}${written}></${EMBED_TAG}>`,
   ].join('\n');
 }
+
+/** The run page an application on Datalayer is framed from. */
+export function frameSrcOf(origin: string, app: string, token = ''): string {
+  // The token in the fragment, which no server is sent: it reaches the page
+  // and no access log.
+  return `${origin.replace(/\/+$/, '')}/public/apps/${encodeURIComponent(app)}/run?embed=1${
+    token ? `#token=${encodeURIComponent(token)}` : ''
+  }`;
+}
+
+/**
+ * A framed run page told the visitor's language (P-26): `language=` in its
+ * query, before the fragment that holds the token.
+ */
+export function frameInLanguage(src: string, language?: string): string {
+  if (!language) {
+    return src;
+  }
+  const at = src.indexOf('#');
+  const [page, fragment] =
+    at < 0 ? [src, ''] : [src.slice(0, at), src.slice(at)];
+  return `${page}${page.includes('?') ? '&' : '?'}language=${encodeURIComponent(language)}${fragment}`;
+}

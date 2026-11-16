@@ -30,8 +30,10 @@
  *    element.
  *
  * Every other application is drawn here, in the element's shadow root, by
- * `AppEmbed` — inline, or floating over the page as a bubble, a panel or the
- * assistant. The bundle's stylesheet is linked inside that root, the
+ * `Application` — the same React component a React host mounts in its own
+ * page (the user, 16 November 2026), here in its own theme — inline, or
+ * floating over the page as a bubble, a panel or the assistant. A name with
+ * no token is read as `Application` reads one (`resolveApplication`). The bundle's stylesheet is linked inside that root, the
  * styled-components rules are written into it, and Primer's overlays are
  * drawn in it, so nothing of the application's styles reaches the page and
  * nothing of the page's reaches the application.
@@ -71,7 +73,14 @@ import type { AppSpec } from '../../types/agentspecs';
 import { parseAppspec, type ParsedAppspec } from '../apps/appspec';
 import type { DatalayerVisitors } from '../apps/visitorToken';
 import { readAppspecYaml } from '../apps/yaml';
-import { AppEmbed, embedAssistantCharacter } from './AppEmbed';
+import { embedAssistantCharacter } from './AppEmbed';
+import {
+  Application,
+  resolveApplication,
+  visitorApiOf,
+  visitorInferenceOf,
+  type ApplicationRunsOn,
+} from '../Application';
 import type { AppEmbedHost, HostFunction, WindowPost } from './hostBridge';
 import { WINDOW_NOT_YET } from './embedSession';
 import {
@@ -83,6 +92,8 @@ import {
   adoptPropertiesSetEarly,
   embedLookOf,
   embedTokenDeployment,
+  frameInLanguage,
+  frameSrcOf,
   inlineHeightOf,
   anonymousOf,
   languageOf,
@@ -95,9 +106,8 @@ import {
   type EmbedLook,
 } from './embedConfig';
 import { embedShadowCss } from './embedTheme';
-import { DEFAULT_API, DEFAULT_INFERENCE, readVisitorApp } from './visitorApp';
 
-export { runnable };
+export { frameInLanguage, frameSrcOf, runnable };
 
 /** What the framed run page and the element say to each other. */
 export const EMBED_MESSAGES = {
@@ -148,29 +158,6 @@ export function appspecOfText(text: string): AppSpec {
     parsed = readAppspecYaml(trimmed);
   }
   return runnable(parsed);
-}
-
-/** The run page an application on Datalayer is framed from. */
-export function frameSrcOf(origin: string, app: string, token = ''): string {
-  // The token in the fragment, which no server is sent: it reaches the page
-  // and no access log.
-  return `${origin.replace(/\/+$/, '')}/public/apps/${encodeURIComponent(app)}/run?embed=1${
-    token ? `#token=${encodeURIComponent(token)}` : ''
-  }`;
-}
-
-/**
- * A framed run page told the visitor's language (P-26): `language=` in its
- * query, before the fragment that holds the token.
- */
-export function frameInLanguage(src: string, language?: string): string {
-  if (!language) {
-    return src;
-  }
-  const at = src.indexOf('#');
-  const [page, fragment] =
-    at < 0 ? [src, ''] : [src.slice(0, at), src.slice(at)];
-  return `${page}${page.includes('?') ? '&' : '?'}language=${encodeURIComponent(language)}${fragment}`;
 }
 
 /**
@@ -525,21 +512,16 @@ export function defineDatalayerAppElement(
         // A public application, as a visitor without an account (D-07):
         // an example kept warm or an address open to visitors, run on the
         // visitors' runtime; a decision framed; a refusal said.
-        const visitor = await readVisitorApp({
-          api: this.agents(),
-          inference: this.inference(),
+        // Read as `Application` reads a name (one way, `resolveApplication`).
+        return resolveApplication({
           app,
+          runsOn: {
+            kind: 'visitor',
+            api: this.agents(),
+            inference: this.inference(),
+            origin: this.originUrl(),
+          },
         });
-        if (visitor.kind === 'decision') {
-          return {
-            kind: 'frame',
-            src: frameSrcOf(this.originUrl(), visitor.app),
-          };
-        }
-        if (visitor.kind === 'said') {
-          return { kind: 'said', text: visitor.text };
-        }
-        return { kind: 'spec', app: visitor.app, visitors: visitor.visitors };
       }
       return readEmbeddedApp({
         api: this.spacerUrl(),
@@ -567,11 +549,7 @@ export function defineDatalayerAppElement(
      * which lives on another plane.
      */
     private agents(): string {
-      return (
-        this.getAttribute('api') ||
-        coreStore.getState().configuration?.aiAgentsUrl ||
-        DEFAULT_API
-      ).replace(/\/+$/, '');
+      return visitorApiOf({ api: this.getAttribute('api') || undefined });
     }
 
     /**
@@ -581,11 +559,7 @@ export function defineDatalayerAppElement(
      * `<datalayer-app app="…">` asked prod1 and got "Failed to fetch").
      */
     private inference(): string {
-      return (
-        this.getAttribute('api') ||
-        coreStore.getState().configuration?.aiInferenceUrl ||
-        DEFAULT_INFERENCE
-      ).replace(/\/+$/, '');
+      return visitorInferenceOf({ api: this.getAttribute('api') || undefined });
     }
 
     /** Spacer, where an application is read with its embed token: the `api` attribute, else the platform's, else prod1's. */
@@ -739,22 +713,38 @@ export function defineDatalayerAppElement(
       shadow.appendChild(mount);
       this.root = createRoot(mount);
       const server = this.getAttribute('server') || undefined;
+      // Where it runs: for a visitor without an account, on the visitors'
+      // runtime with a visitor's token, the limited preview unless the host
+      // says not (D-07, R-30); on the host's server, the visit's embed
+      // token going with the conversation (R-20); else on Datalayer, with
+      // the signed-in person's credentials.
+      const runsOn: ApplicationRunsOn = source.visitors
+        ? {
+            kind: 'visitor',
+            visitors: source.visitors,
+            anonymous: Boolean(preview),
+            ...(preview?.maxTurns ? { maxTurns: preview.maxTurns } : {}),
+            ...(preview ? { signInUrl: preview.signInUrl } : {}),
+          }
+        : server
+          ? {
+              kind: 'server',
+              url: server,
+              ...(this.token ? { embedToken: this.token } : {}),
+            }
+          : { kind: 'datalayer' };
+      // One implementation: the element is `Application` in its shadow root,
+      // in its own theme, its overlays drawn there too.
       this.root.render(
         <StyleSheetManager target={shadow as unknown as HTMLElement}>
-          <AppEmbed
+          <Application
             app={source.app}
+            runsOn={runsOn}
+            theme="own"
             mode={look.mode}
             accent={look.accent}
             colorMode={look.colorMode}
             font={look.font}
-            serverUrl={server}
-            // The visit's embed token goes with the conversation to the
-            // host's server, which runs the application's deployment (R-20).
-            {...(server && this.token ? { embedToken: this.token } : {})}
-            // A public application for a visitor without an account: on the
-            // visitors' runtime, with a visitor's token (D-07, R-30).
-            {...(source.visitors ? { visitors: source.visitors } : {})}
-            {...(preview ?? {})}
             // Its voice, when its Appspec says one (VO-18): ai-agents'
             // speech service; the microphone needs the page's
             // Permissions-Policy to allow it.

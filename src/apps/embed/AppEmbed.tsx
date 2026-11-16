@@ -56,6 +56,7 @@ import { FluentEmoji } from '@datalayer/core/lib/components/emoji';
 import {
   DatalayerThemeProvider,
   getThemeConfig,
+  themeAccentVars,
 } from '@datalayer/primer-addons';
 import type {
   AppAccent,
@@ -150,6 +151,26 @@ export type AppEmbedProps = {
    * application unless its host writes `anonymous="false"`.
    */
   runAsAnonymous?: boolean;
+  /**
+   * A person's own agent, already on a runtime of theirs (`Application`'s
+   * runtime mode): the runtime's agent-runtimes address (`url`) and its
+   * name, the agent by its name there (`agentId`), spoken to with the
+   * person's own token. Nothing is launched or made.
+   */
+  kept?: { url: string; name?: string };
+  /** With `kept`, the agent that answers, by its name on that runtime. */
+  agentId?: string;
+  /** The conversation to go on with: a session the runtime holds or resumed (`fromRuntime`). */
+  thread?: ResumedThread;
+  /**
+   * Drawn in the host's own page and theme (a React host's `Application`):
+   * no theme of its own around it unless its Appspec names one
+   * (`interface.theme`) or the host says a mode or a face — the page's
+   * primer-addons theme, the application's accent over it in its
+   * conversation. Off, in its own theme (`loop` unless it names one), as the
+   * element draws it in its shadow root.
+   */
+  followHost?: boolean;
   /** With `runAsAnonymous`, the turns a visitor has today as the preview counts them; none: no limit counted. */
   maxTurns?: number;
   /** With `runAsAnonymous`, where *Sign in* goes. */
@@ -518,6 +539,8 @@ export type AppFloatingProps = {
       | 'pluginsOff'
       | 'datalayerVisitors'
       | 'datalayerKept'
+      | 'agentId'
+      | 'thread'
       | 'speech'
       | 'runAsAnonymous'
       | 'maxTurns'
@@ -725,6 +748,10 @@ export function AppEmbed({
   signInUrl,
   onSignIn,
   speech,
+  kept,
+  agentId,
+  thread,
+  followHost = false,
   height = 640,
   ownPortal = false,
   plugins = NO_PLUGINS,
@@ -742,9 +769,14 @@ export function AppEmbed({
   const anonymous = Boolean(visitors && runAsAnonymous);
   const renderer = useMemo(
     () =>
-      visitors || speech
+      visitors || speech || kept || thread
         ? {
             ...(visitors ? { datalayerVisitors: visitors } : {}),
+            // A person's own agent on its runtime: nothing launched.
+            ...(kept && !visitors
+              ? { datalayerKept: kept, ...(agentId ? { agentId } : {}) }
+              : {}),
+            ...(thread ? { thread } : {}),
             ...(anonymous
               ? {
                   runAsAnonymous: true,
@@ -756,17 +788,35 @@ export function AppEmbed({
             ...(speech ? { speech } : {}),
           }
         : undefined,
-    [visitors, speech, anonymous, maxTurns, signInUrl, onSignIn],
+    [
+      visitors,
+      speech,
+      anonymous,
+      maxTurns,
+      signInUrl,
+      onSignIn,
+      kept,
+      agentId,
+      thread,
+    ],
   );
-  const kept = useEmbedSession({ app, serverUrl, embedToken, resume });
+  const keptSession = useEmbedSession({
+    app,
+    serverUrl,
+    embedToken,
+    resume,
+  });
   // Window messages from the page, on the host's own server (P-25).
   const session = useWindowPort({
     serverUrl,
     embedToken,
-    session: kept,
+    session: keptSession,
     host,
   });
   const system = useSystemMode();
+  // In the host's theme (a React host's `Application`): the page's, unless
+  // the application names one or the host says a mode or a face.
+  const hostThemed = followHost && !app.interface.theme && !colorMode && !font;
   // The theme the application names (T-30), `loop` when none; its mode
   // the host's, else the application's, else the visitor's system's.
   const variant = app.interface.theme?.variant ?? 'loop';
@@ -777,6 +827,18 @@ export function AppEmbed({
   const themeOverrides = useMemo(
     () => embedThemeOverrides({ accent: worn, font, variant }),
     [worn, font, variant],
+  );
+  // In the host's theme, the host's accent alone over it, in both modes;
+  // the application's own the renderer lays itself.
+  const hostAccent = useMemo(
+    () =>
+      accent
+        ? {
+            light: themeAccentVars(accent, 'light'),
+            dark: themeAccentVars(accent, 'dark'),
+          }
+        : undefined,
+    [accent],
   );
   const named = JSON.stringify(app.interface.avatar ?? null);
   const assistant = useMemo(
@@ -793,6 +855,61 @@ export function AppEmbed({
     );
   }
   const character = assistant?.character;
+  /*
+   * Inline: the renderer, its session picked up again (D-13). In its own
+   * theme, the host's accent and face over the application's inside its
+   * conversation, in the embed's mode — the host's or its visitor's
+   * system's, not a Datalayer setting; in the host's, the page's theme
+   * with the application's accent (or the host's) laid over it.
+   */
+  const inline = !session.ready ? null : (
+    <>
+      <SessionSaid said={session.said} />
+      <AppRenderer
+        app={app}
+        target={serverUrl ? 'local' : 'datalayer'}
+        {...(serverUrl ? { serverUrl } : {})}
+        // Only on the host's server: a Datalayer runtime is launched with
+        // a person's credentials, which an embed token never stands for.
+        {...(serverUrl && embedToken ? { embedToken } : {})}
+        // A visitor without an account, on the visitors' runtime (D-07); a
+        // person's own agent on its runtime.
+        {...(renderer ?? {})}
+        instance={instance}
+        {...(hostThemed
+          ? hostAccent
+            ? { themeOverrides: hostAccent }
+            : {}
+          : { themeOverrides, colorMode: resolvedMode, themeVariant: variant })}
+        // What the page gives it, and what it tells the page (D-10).
+        plugins={bridge.plugins}
+        onPresence={bridge.onPresence}
+        onSaying={bridge.onSaying}
+        // Its session, picked up again after a reload (D-13).
+        {...(session.thread ? { thread: session.thread } : {})}
+        // The visitor's language, when the host says it (P-26).
+        {...(language ? { language } : {})}
+      />
+    </>
+  );
+  if (hostThemed && !view) {
+    return (
+      <ChatLanguage language={language}>
+        <div
+          className="datalayer-app-inline"
+          style={{
+            height,
+            display: 'flex',
+            flexDirection: 'column',
+            minHeight: 0,
+          }}
+        >
+          {ownPortal ? <OwnPortalRoot /> : null}
+          {inline}
+        </div>
+      </ChatLanguage>
+    );
+  }
   return (
     <ChatLanguage language={language}>
       <EmbedThemed
@@ -824,35 +941,8 @@ export function AppEmbed({
             {...(renderer ? { renderer } : {})}
             {...(language ? { language } : {})}
           />
-        ) : !session.ready ? null : (
-          <>
-            <SessionSaid said={session.said} />
-            <AppRenderer
-              app={app}
-              target={serverUrl ? 'local' : 'datalayer'}
-              {...(serverUrl ? { serverUrl } : {})}
-              // Only on the host's server: a Datalayer runtime is launched with
-              // a person's credentials, which an embed token never stands for.
-              {...(serverUrl && embedToken ? { embedToken } : {})}
-              // A visitor without an account, on the visitors' runtime (D-07).
-              {...(renderer ?? {})}
-              instance={instance}
-              // The host's accent and face over the application's own, inside
-              // its conversation too, in the embed's mode: the host's or its
-              // visitor's system's, not a Datalayer setting.
-              themeOverrides={themeOverrides}
-              colorMode={resolvedMode}
-              themeVariant={variant}
-              // What the page gives it, and what it tells the page (D-10).
-              plugins={bridge.plugins}
-              onPresence={bridge.onPresence}
-              onSaying={bridge.onSaying}
-              // Its session, picked up again after a reload (D-13).
-              {...(session.thread ? { thread: session.thread } : {})}
-              // The visitor's language, when the host says it (P-26).
-              {...(language ? { language } : {})}
-            />
-          </>
+        ) : (
+          inline
         )}
       </EmbedThemed>
     </ChatLanguage>

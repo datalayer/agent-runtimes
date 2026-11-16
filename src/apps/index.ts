@@ -353,6 +353,24 @@ export { LoopCommandsPlugin, COMMANDS_PLUGIN_NAME } from './plugins/commands';
 export { PromptPlugin, PROMPT_PLUGIN_NAME } from './plugins/prompt';
 // Loop, ready to drop into somebody else's page.
 export { LoopEmbed, type LoopEmbedProps } from './embed/LoopEmbed';
+// An application as a React component of the host's own page, in visitor,
+// runtime, server or Datalayer mode: what `<datalayer-app>` wraps.
+export {
+  Application,
+  ApplicationSkeleton,
+  agentAppspec,
+  resolveApplication,
+  resolvedSpec,
+  visitorApiOf,
+  visitorInferenceOf,
+  type ApplicationDatalayer,
+  type ApplicationProps,
+  type ApplicationRunsOn,
+  type ApplicationRuntime,
+  type ApplicationServer,
+  type ApplicationVisitor,
+  type ResolvedApplication,
+} from './Application';
 // An application in another product's page: the React component, the
 // `<datalayer-app>` element, and the snippet a host pastes (D-07 to D-09).
 export {
