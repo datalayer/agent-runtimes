@@ -181,15 +181,24 @@ describe('words cut to fit', () => {
       balloon: { text: `${whole.slice(0, 119)}…`, fullText: whole, more: true },
     });
     const toggle = document.querySelector<HTMLElement>('[data-balloon-whole]')!;
+    // Folded, the whole words are drawn as markdown and the balloon's height
+    // clips them (the user, 17 November 2026: a cut flattened tables); more
+    // unfolds the box, less folds it back.
+    const box = () =>
+      document
+        .querySelector('[data-balloon-current-text]')!
+        .getAttribute('data-balloon-current-text');
     expect(toggle.textContent).toBe('more');
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
-    expect(drawnWords()).not.toContain('and that is all.');
+    expect(box()).toBe('');
+    expect(drawnWords()).toContain('and that is all.');
     await act(async () => toggle.click());
+    expect(box()).toBe('whole');
     expect(drawnWords()).toContain('and that is all.');
     expect(toggle.textContent).toBe('less');
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
     await act(async () => toggle.click());
-    expect(drawnWords()).not.toContain('and that is all.');
+    expect(box()).toBe('');
   });
 
   it('offer no more when nothing was cut', async () => {

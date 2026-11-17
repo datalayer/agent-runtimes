@@ -288,8 +288,10 @@ describe('the words, to a screen reader (H-21)', () => {
       },
     });
     const drawn = container.querySelector('[data-balloon-current-text]');
+    // The whole words as markdown, clipped by the balloon's height: the cut
+    // text flattened tables and lists (the user, 17 November 2026).
     expect(drawn?.querySelector('[aria-hidden="true"]')?.textContent).toBe(
-      'Ask me for a report, such as revenue or a customer…',
+      'Ask me for a report, such as revenue or a customer’s balance.',
     );
     expect(
       drawn?.querySelector('[data-balloon-words-whole]')?.textContent,

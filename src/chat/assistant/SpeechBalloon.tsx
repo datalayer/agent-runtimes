@@ -204,8 +204,12 @@ export interface SpeechBalloonProps {
   decide?: DecisionAsker;
   /** The decision's form or answer is on screen: it stays, and is wider. */
   onDecisionActive?: (active: boolean) => void;
-  /** Wider, for the decision's form. */
-  wide?: boolean;
+  /**
+   * The balloon's width, fixed whatever it says (the user, 17 November 2026:
+   * "stable and fixed"), never wider than its container; `BALLOON_WIDTH`
+   * unless given.
+   */
+  width?: number;
   /** Puts the peek away: a × beside its line. Never for an approval. */
   onDismissPeek?: () => void;
   /**
@@ -402,6 +406,9 @@ function BalloonHistory({
   );
 }
 
+/** A balloon's width unless given: room for a table, a form or a list without growing. */
+export const BALLOON_WIDTH = 300;
+
 export function SpeechBalloon({
   text,
   more = false,
@@ -413,7 +420,7 @@ export function SpeechBalloon({
   approval,
   decide,
   onDecisionActive,
-  wide = false,
+  width = BALLOON_WIDTH,
   onDismissPeek,
   display = 'history',
   tool,
@@ -463,13 +470,6 @@ export function SpeechBalloon({
     <Box
       data-speech-balloon=""
       data-balloon-display={display}
-      maxWidth={
-        wide || listed || offered || whole || prompt || (current && attachment)
-          ? 300
-          : current
-            ? 260
-            : 280
-      }
       px={3}
       py={2}
       color="fg.default"
@@ -485,15 +485,9 @@ export function SpeechBalloon({
       sx={{
         position: 'absolute',
         [align]: 0,
-        width:
-          wide ||
-          listed ||
-          offered ||
-          whole ||
-          prompt ||
-          (current && attachment)
-            ? 300
-            : 'max-content',
+        // Fixed, whatever it says: never sized by its words.
+        width,
+        maxWidth: '100%',
         bg: 'canvas.overlay',
         // The current balloon is the agent's voice now: its accent's edge.
         borderColor: current ? 'accent.muted' : 'border.default',

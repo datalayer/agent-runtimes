@@ -146,6 +146,8 @@ export type MemberData = {
   side: 'left' | 'right';
   /** Its figure's size, in pixels at full scale. */
   size: number;
+  /** Its balloon's width, fixed (`BALLOON_WIDTH` unless given). */
+  balloonWidth?: number;
 };
 
 /** What a connection's node is given. */

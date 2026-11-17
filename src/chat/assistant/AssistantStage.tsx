@@ -536,6 +536,8 @@ export function useKeepClear(
 }
 
 export interface AssistantStageProps {
+  /** Its balloon's width, fixed (`BALLOON_WIDTH`, 300, unless given). */
+  balloonWidth?: number;
   /**
    * The avatar: one Datalayer ships, by id (T-25), one loaded from a file
    * (T-26), or a 3D model.
@@ -755,6 +757,7 @@ export function useMouth(
 }
 
 export function AssistantStage({
+  balloonWidth,
   character,
   state,
   size = 88,
@@ -1181,7 +1184,7 @@ export function AssistantStage({
             onSuggestion={onSuggestion}
             decide={decide}
             onDecisionActive={setDeciding}
-            wide={deciding}
+            {...(balloonWidth ? { width: balloonWidth } : {})}
             onOpen={onToggle}
             above={size + 8}
             side={balloonSide(place).side}

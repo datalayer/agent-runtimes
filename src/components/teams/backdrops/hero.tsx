@@ -61,7 +61,9 @@ const CONNECTION_WIDTH = 88;
 /** The hero's layout: faces closer together than the studio's characters, a smaller ring beside each. */
 export const HERO_LAYOUT: SceneBackdropLayout = {
   nodeWidth: NODE_WIDTH,
-  gap: 200,
+  // Room between the faces for their balloons side by side (up to 300 px
+  // each): at 200 the two balloons overlapped (the user, 17 November 2026).
+  gap: 320,
   rowGap: 40,
   // The face, its name and where it runs.
   memberHeight: size => size + 50,

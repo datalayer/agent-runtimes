@@ -371,8 +371,12 @@ export function CurrentBalloonBody({
               {/* Cut for the eye; a screen reader is given them whole, in
                   plain words — Orca read the cut, *…or a customer…*
                   (H-21, 2026-10-11). */}
+              {/* The whole words as markdown, clipped by the box's height:
+                  the cut text had its line breaks flattened, so a table or a
+                  list showed as raw pipes and dashes until unfolded (the
+                  user, 17 November 2026). */}
               <Box aria-hidden="true">
-                <ChatMarkdown density="compact" text={text} />
+                <ChatMarkdown density="compact" text={fullText ?? text} />
               </Box>
               <Box as="span" data-balloon-words-whole="" {...VISUALLY_HIDDEN}>
                 {plainWords(fullText ?? '')}

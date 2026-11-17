@@ -154,6 +154,8 @@ export type A2ATeamGraphProps = {
    * a balloon gets at least its own. Unsaid, the backdrop's.
    */
   balloonRoom?: number;
+  /** Every member's balloon width, fixed (`BALLOON_WIDTH`, 300, unless given). */
+  balloonWidth?: number;
   /**
    * How the stage is drawn (`SceneStageSpec.backdrop`): `studio`, the
    * drawing every scene had first, `hero` or `plain`. `studio` when unsaid,
@@ -438,6 +440,7 @@ export function A2ATeamGraph({
   size = 96,
   calls = [],
   balloonRoom,
+  balloonWidth,
   backdrop,
   minHeight,
   selected,
@@ -629,7 +632,7 @@ export function A2ATeamGraph({
             selectable: false,
             // Above the edge and its label: a balloon overflows its node.
             zIndex: 10,
-            data: { id, side, size },
+            data: { id, side, size, ...(balloonWidth ? { balloonWidth } : {}) },
           } as Node<MemberData>,
           // A member's connections move with it.
           ...connections.map((connection, at) => {
@@ -668,6 +671,7 @@ export function A2ATeamGraph({
       CONNECTION_X,
       CONNECTION_WIDTH,
       NODE_WIDTH,
+      balloonWidth,
     ],
   );
   // The notebook open under the graph runs on a Pyodide kernel in the page:
