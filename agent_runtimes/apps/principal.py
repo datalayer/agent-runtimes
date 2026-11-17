@@ -1149,6 +1149,29 @@ async def gateway_toolsets_of_the_run(
             users_token=bearer or "",
             companies=companies_of_agent(agent_id),
         )
+    from agent_runtimes.apps.visitors import visitors_runtime
+
+    if visitors_runtime():
+        # A visitor acts in nobody's name: only a company the deployment lets its
+        # visitors use, in its owner's account, with the principal's token ai-agents
+        # gave this runtime for it (`visitors_pap`); every other one is left out.
+        from agent_runtimes.apps import visitors_pap
+        from agent_runtimes.apps.pap_connections import domain_of
+
+        let_in: dict[str, tuple[str, ...]] = {}
+        if await visitors_pap.ensure(deployment):
+            visitors_pap.enter_run(deployment)
+            let_in = dict(visitors_pap.companies_of(deployment))
+        return toolsets_for_the_run(
+            toolsets,
+            principal_token(deployment) or "" if let_in else "",
+            users_token="",
+            companies=tuple(
+                (sid, acting)
+                for sid, acting in companies_of_agent(agent_id)
+                if acting == "owner" and domain_of(sid) in let_in
+            ),
+        )
     from agent_runtimes.apps.acting import acting_token, servers_in_users_name
 
     in_users_name = servers_in_users_name(agent_id)

@@ -297,8 +297,13 @@ def visitor_refusal(tool: str, classes: Sequence[str], behaviour: str) -> str:
     without asking: nobody is there to be asked.
     """
     from agent_runtimes.apps.rules import DO_IT, is_read_only
+    from agent_runtimes.apps.visitors_pap import exempts
 
     if not in_visitor_turn():
+        return ""
+    if exempts(tool, classes, behaviour):
+        # The one company this public deployment lets its visitors use, in its
+        # owner's demo account (`visitors_pap`): read, propose, confirm there.
         return ""
     if not is_read_only(classes):
         return (

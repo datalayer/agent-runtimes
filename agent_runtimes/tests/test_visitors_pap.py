@@ -1,0 +1,151 @@
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+
+"""A public application's own company connection, on the visitors' runtime.
+
+ai-agents gives this runtime, with its own key, the principal's token of a
+deployment that lets its visitors use one company in its owner's account: the
+run reaches that company with it, and a visitor's turn may read, propose and
+confirm there. Every other company, tool and deployment still only reads.
+"""
+
+from __future__ import annotations
+
+from types import SimpleNamespace
+from typing import Any
+
+import httpx
+import pytest
+
+from agent_runtimes.apps import pap_connections, principal, visitors, visitors_pap
+from agent_runtimes.apps.principal import gateway_toolsets_of_the_run
+from agent_runtimes.apps.rules import ASK_FIRST, DO_IT
+from agent_runtimes.mcp import datalayer_gateway
+from agent_runtimes.models.models import remember_app_instance
+
+AGENT = "agent-demo-shopper"
+SHOP = "demo-shop.agent.datalayer.ai"
+OTHER = "manzanita.examples.datalayer.run"
+TOKEN = "visitors-principal-token"
+
+
+def _app(*connections: dict[str, Any]) -> Any:
+    return SimpleNamespace(pap=SimpleNamespace(connections=list(connections)))
+
+
+@pytest.fixture
+def world(monkeypatch: Any) -> Any:
+    seen: list[dict[str, str]] = []
+
+    def client(headers: dict[str, str] | None = None, **kwargs: Any) -> httpx.AsyncClient:
+        seen.append(dict(headers or {}))
+        return httpx.AsyncClient(headers=headers)
+
+    asked: list[tuple[str, str]] = []
+    answers: dict[str, Any] = {}
+
+    async def ask(deployment_uid: str, key: str) -> dict[str, Any]:
+        asked.append((deployment_uid, key))
+        answer = answers.get(deployment_uid)
+        if answer is None:
+            visitors_pap._REFUSED[deployment_uid] = 0.0 + __import__("time").time()
+            raise principal.PrincipalTokenMissing("ai-agents answered 409.")
+        visitors_pap._COMPANIES[deployment_uid] = {d: tuple(s) for d, s in answer["companies"].items()}
+        return answer
+
+    monkeypatch.setattr(datalayer_gateway, "tracing_client", client)
+    monkeypatch.setattr(visitors_pap, "_ask", ask)
+    monkeypatch.setenv(visitors.VISITORS_ENV, "example-simple")
+    monkeypatch.setenv(visitors_pap.KEY_ENV, "visitors-runtime-key")
+    visitors_pap.forget()
+    pap_connections.forget()
+    pap_connections.remember_agent(AGENT, _app(
+        {"company": SHOP, "as": "owner", "access": "write"},
+        {"company": OTHER, "as": "user", "access": "write"},
+    ))
+    remember_app_instance(AGENT, {"app_uid": "01SHOPPER", "deployment_uid": "dep-shopper"})
+    yield SimpleNamespace(seen=seen, asked=asked, answers=answers)
+    remember_app_instance(AGENT, None)
+    principal.forget_principal_token("dep-shopper")
+    visitors_pap.forget()
+    pap_connections.forget()
+
+
+def _let_in(world: Any) -> None:
+    world.answers["dep-shopper"] = {
+        "access_token": TOKEN, "expires_in": 3600, "principal_uid": "p-shopper",
+        "companies": {SHOP: ["catalog:read", "orders:write"]},
+    }
+
+
+@pytest.mark.asyncio
+async def test_the_company_it_lets_its_visitors_use_is_reached_with_the_principals_token(world: Any) -> None:
+    _let_in(world)
+    toolsets = await gateway_toolsets_of_the_run(AGENT, [SimpleNamespace(id="datalayer")], "visitors-token")
+    # The owner's company alone, with the principal's token: the person's company is left out.
+    assert world.seen == [{"Authorization": f"Bearer {TOKEN}"}] * len(world.seen) and world.seen
+    assert len(toolsets) == 2
+    # Asked once, with this runtime's key, which left the environment.
+    assert world.asked == [("dep-shopper", "visitors-runtime-key")]
+    import os
+
+    assert visitors_pap.KEY_ENV not in os.environ
+
+
+@pytest.mark.asyncio
+async def test_a_deployment_ai_agents_does_not_let_further_reaches_no_company(world: Any) -> None:
+    toolsets = await gateway_toolsets_of_the_run(AGENT, [SimpleNamespace(id="datalayer")], "visitors-token")
+    assert world.seen == [] and len(toolsets) == 0
+    # Refused, it is not asked again at every turn.
+    await gateway_toolsets_of_the_run(AGENT, [SimpleNamespace(id="datalayer")], "visitors-token")
+    assert len(world.asked) == 1
+
+
+@pytest.mark.asyncio
+async def test_without_its_key_or_off_the_visitors_runtime_nothing_is_asked(world: Any, monkeypatch: Any) -> None:
+    _let_in(world)
+    visitors_pap.forget()
+    monkeypatch.delenv(visitors_pap.KEY_ENV)
+    assert await visitors_pap.ensure("dep-shopper") is False
+    monkeypatch.delenv(visitors.VISITORS_ENV)
+    assert await visitors_pap.ensure("dep-shopper") is False
+    assert world.asked == []
+
+
+def _tool(domain: str, name: str) -> str:
+    return f"{pap_connections.server_id(domain)}_{name}"
+
+
+@pytest.mark.asyncio
+async def test_a_visitor_proposes_and_confirms_there_and_nowhere_else(world: Any, monkeypatch: Any) -> None:
+    monkeypatch.setattr(visitors, "in_visitor_turn", lambda: True)
+    visitors_pap._RUN_COMPANIES.set({SHOP: ("catalog:read", "orders:write")})
+    propose, confirm = _tool(SHOP, "pap_propose"), _tool(SHOP, "pap_confirm")
+    assert visitors.visitor_refusal(propose, ["write"], DO_IT) == ""
+    assert visitors.visitor_refusal(confirm, ["write", "buy"], DO_IT) == ""
+    # Another company: still only reads.
+    assert "only reads" in visitors.visitor_refusal(_tool(OTHER, "pap_propose"), ["write"], DO_IT)
+    # Another tool of the same company: never a sign-in, a disconnect or a message.
+    assert "only reads" in visitors.visitor_refusal(_tool(SHOP, "pap_sign_in"), ["write"], DO_IT)
+    assert "only reads" in visitors.visitor_refusal(_tool(SHOP, "pap_ask"), ["send"], DO_IT)
+    # A rule that waits for a person: nobody is there.
+    assert visitors.visitor_refusal(propose, ["write"], ASK_FIRST) != ""
+    # Any other tool that does more than read.
+    assert "only reads" in visitors.visitor_refusal("gmail.send", ["send"], DO_IT)
+
+
+@pytest.mark.asyncio
+async def test_another_deployments_run_lets_no_visitor_further(world: Any, monkeypatch: Any) -> None:
+    monkeypatch.setattr(visitors, "in_visitor_turn", lambda: True)
+    visitors_pap._RUN_COMPANIES.set({})
+    assert "only reads" in visitors.visitor_refusal(_tool(SHOP, "pap_propose"), ["write"], DO_IT)
+    visitors_pap._RUN_COMPANIES.set(None)
+    assert "only reads" in visitors.visitor_refusal(_tool(SHOP, "pap_confirm"), ["write", "buy"], DO_IT)
+
+
+@pytest.mark.asyncio
+async def test_a_scope_the_company_does_not_let_in_is_never_let_in(world: Any, monkeypatch: Any) -> None:
+    # ai-agents names the company only when the deployment's grant asks no more than the
+    # permissions it lets visitors use; a deployment asking another is answered nothing.
+    world.answers["dep-shopper"] = {"access_token": TOKEN, "expires_in": 3600, "principal_uid": "p", "companies": {}}
+    assert await visitors_pap.ensure("dep-shopper") is False

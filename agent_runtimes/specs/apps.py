@@ -2560,34 +2560,78 @@ DEMO_SHOP_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-DEMO_SHOPPER_APP_0_0_4 = AppSpec.model_validate(
+DEMO_SHOPPER_APP_0_0_5 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "demo-shopper",
-        "version": "0.0.4",
+        "version": "0.0.5",
         "name": "Shopper",
         "kind": "chat",
         "description": "Finds products with their photos, compares them, builds a basket with its total and places a test order at Datalayer's Demo Shop: nothing is charged and nothing ships.",
         "owner": "Datalayer <info@datalayer.io>",
         "agent": "worker-shopper:0.0.1",
         "team": "",
-        "instructions": "This is Datalayer's public demo of the Shopper. You are connected to no store and no payment, and you have no memory here. You shop at one store, the Demo Shop, Datalayer's demo shop, with its own tools: find_products (words, a category — groceries, kitchen, home, sports, sunglasses — and a price range), get_product, quote_basket and place_test_order. Never use the Shopify catalogue tools here, and never invent a product, a price, a rating, a stock level or a photo the shop's tools did not return. Prices are in USD. Ask for the budget and what matters most when the visitor has not said. Find with find_products — the products are shown with their photos — and compare a short list with show_comparison, each product with its price, rating, stock as availability, the Demo Shop as seller and its image, saying which you would pick and why. Price a basket with quote_basket, then show it with show_basket (each item with its image, currency USD, no shipping): the totals are the tools', never yours. When asked to buy, show the exact basket and total and ask the visitor to confirm; once they do, place it with place_test_order and say that it is a test order — nothing is charged, nothing ships and nothing is kept — and that the real Shopper would buy through their own Personal Agent Protocol connection, only once they approved that exact purchase. A product out of stock cannot be bought: say so and offer another.",
+        "instructions": "This is Datalayer's public demo of the Shopper. You have no payment and no memory here. You shop at one store, the Demo Shop (demo-shop.agent.datalayer.ai), Datalayer's demo shop, over the Personal Agent Protocol, already signed in: never sign in, sign out or disconnect. Call its API's operations with the company tools: findProducts (words, a category — groceries, kitchen, home, sports, sunglasses — and a price range), getProduct, quote, and placeOrder, which returns a test order to confirm. Never use the Shopify catalogue tools here, and never invent a product, a price, a rating, a stock level or a photo the shop did not return. Prices are in USD. Ask for the budget and what matters most when the visitor has not said. Find with findProducts and compare a short list with show_comparison, each product with its price, rating, stock as availability, the Demo Shop as seller and its image, saying which you would pick and why. Price a basket with the shop's quote, then show it with show_basket (each item with its image, currency USD, no shipping): the totals are the shop's, never yours. When asked to buy, show the exact basket and total and ask the visitor to confirm; once they do, place it with placeOrder and confirm the order it returns, then give its number and say that it is a test order — nothing is charged, nothing ships and nothing is kept — and that the real Shopper would buy through the person's own Personal Agent Protocol connection, only once they approved that exact purchase. A product out of stock cannot be bought: say so and offer another.",
         "model": "",
         "skills": [],
-        "backend_tools": [
-            "demo-shop-find-products:0.0.1",
-            "demo-shop-get-product:0.0.1",
-            "demo-shop-quote-basket:0.0.1",
-            "demo-shop-place-test-order:0.0.1",
-        ],
+        "backend_tools": [],
         "tools": [],
         "context": [],
         "contents": [],
         "connections": [],
-        "protocols": [],
-        "ui": [{"plugin": "chat", "renderer": None, "placement": None}],
+        "protocols": ["pap"],
+        "ui": [
+            {"plugin": "chat", "renderer": None, "placement": None},
+            {"plugin": "pap-sign-in", "renderer": None, "placement": None},
+        ],
+        "pap": {
+            "profile": "draft-01",
+            "connections": [
+                {
+                    "id": "demo-shop",
+                    "company": "demo-shop.agent.datalayer.ai",
+                    "access": "write",
+                    "as": "owner",
+                    "scopes": ["catalog:read", "orders:write"],
+                    "interfaces": ["openapi"],
+                    "sign_in": ["device"],
+                    "extensions": ["operations"],
+                }
+            ],
+            "company": {
+                "enabled": False,
+                "signed_out": True,
+                "sign_in_disabled": False,
+                "web_unscoped": False,
+                "web_disabled": False,
+                "publish_skills": False,
+                "interfaces": ["agent"],
+                "scopes": [],
+                "excluded_tasks": [],
+                "extensions": [],
+                "personal_agents": "any",
+                "registered_agents": [],
+                "operations": [],
+            },
+        },
         "pair": None,
-        "rules": [],
+        "rules": [
+            {
+                "action": "Read the Demo Shop's catalogue",
+                "applies_to": ["read"],
+                "behaviour": "do_it",
+            },
+            {
+                "action": "Quote a basket and place a test order at the Demo Shop",
+                "applies_to": ["write"],
+                "behaviour": "do_it",
+            },
+            {
+                "action": "Confirm a test order at the Demo Shop",
+                "applies_to": ["buy"],
+                "behaviour": "do_it",
+            },
+        ],
         "permissions": {
             "spaces": [],
             "computer": {
@@ -8184,7 +8228,7 @@ APP_CATALOGUE: Dict[str, AppSpec] = {
     "demo-aws-steward": DEMO_AWS_STEWARD_APP_0_0_4,
     "demo-marketer": DEMO_MARKETER_APP_0_0_2,
     "demo-shop": DEMO_SHOP_APP_0_0_1,
-    "demo-shopper": DEMO_SHOPPER_APP_0_0_4,
+    "demo-shopper": DEMO_SHOPPER_APP_0_0_5,
     "demo-terra": DEMO_TERRA_APP_0_0_3,
     "demo-voyager": DEMO_VOYAGER_APP_0_0_2,
     "disaster-assessment": DISASTER_ASSESSMENT_APP_0_0_2,
