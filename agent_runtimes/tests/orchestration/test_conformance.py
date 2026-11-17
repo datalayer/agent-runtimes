@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Scenarios 1 to 6 (O0-12).
+"""Scenarios 1 to 6.
 
 Successful delegation and artifact return, streaming progress, rejection
 before acceptance, disconnect after acceptance, lost acknowledgement, and
@@ -10,7 +10,7 @@ registered adapter. Nothing below names a protocol: a scenario that did
 would have stopped testing the claim, which is that the same orchestration
 runs over both bindings unchanged.
 
-Scenarios 5 and 6 are shared with O1-05. What is here is what the in-memory
+Scenarios 5 and 6 are shared with the durable workflow. What is here is what the in-memory
 store can already show: an idempotency key that deduplicates a delegation,
 and an acknowledgement that arrives twice without the execution moving
 twice. What waits for the durable control plane is noted where it applies.
@@ -372,7 +372,7 @@ class TestLostAcknowledgement:
 
         Detecting that an acknowledgement was *lost*, rather than seeing a
         duplicate of one that arrived, needs a lease and a control plane
-        that is waiting for it; that half is O1-05's.
+        that is waiting for it; that half is the durable workflow's.
         """
         delivered = await deliver(binding, monkeypatch, WorkerScript())
         seen = await dispatch(delivered)
@@ -470,7 +470,7 @@ class TestDuplicateCommandDelivery:
 
         Guaranteeing it against a worker that is *concurrently* being
         dispatched to by another control-plane replica needs the durable
-        claim of O1-03; what the store guarantees here is that a duplicate
+        claim of the durable workflow; what the store guarantees here is that a duplicate
         never becomes a second attempt.
         """
         delivered = await deliver(binding, monkeypatch, WorkerScript())
@@ -505,7 +505,7 @@ class TestDuplicateCommandDelivery:
 
 
 # ---------------------------------------------------------------------------
-# 7. Worker crash and checkpoint recovery (O1-16, O2-05)
+# 7. Worker crash and checkpoint recovery
 # ---------------------------------------------------------------------------
 
 
@@ -518,7 +518,7 @@ class TestWorkerCrashAndRecovery:
     disappeared. Resuming *from a checkpoint* belongs to the orchestration
     extension, and neither plain binding has one — each says why in its own
     words, which the reduced-guarantee test below reads rather than assumes.
-    O2-05 proves the extended path over both protocols against a runtime.
+    The extended path is proved over both protocols against a runtime.
     """
 
     @pytest.mark.asyncio
@@ -630,13 +630,15 @@ class TestWorkerCrashAndRecovery:
 
         refusal = delivered.worker.capabilities.refusal(WorkerOperation.RESUME)
         if refusal is None:
-            pytest.skip("This worker declares it can be resumed; O2-05 proves that.")
+            pytest.skip(
+                "This worker declares it can be resumed; the extended path's tests prove that."
+            )
         assert isinstance(outcome, Unsupported)
         assert outcome.reason.strip()
 
 
 # ---------------------------------------------------------------------------
-# 9. Cancellation race with completion (O1-16)
+# 9. Cancellation race with completion
 # ---------------------------------------------------------------------------
 
 
@@ -745,7 +747,7 @@ class TestCancellationRacesCompletion:
 
 
 # ---------------------------------------------------------------------------
-# 11. Budget exhaustion: the model budget (O1-07)
+# 11. Budget exhaustion: the model budget
 # ---------------------------------------------------------------------------
 
 
@@ -778,10 +780,10 @@ class TestTheHarness:
     async def test_a_dispatch_invents_no_canonical_transition(
         self, binding, monkeypatch
     ):
-        """O0-12's own acceptance test, and the guard the suite is built on.
+        """The suite's own acceptance test, and the guard the suite is built on.
 
         An adapter decides nothing: it reports what it saw and the lifecycle
-        says what that means (O0-02). An adapter made to invent a transition
+        says what that means. An adapter made to invent a transition
         — reporting a state twice, or one the execution cannot be in — leaves
         an ``invalid_transition`` against itself, and this is where the suite
         stops being green about it.

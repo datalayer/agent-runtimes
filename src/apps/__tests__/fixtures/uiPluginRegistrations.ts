@@ -4,7 +4,7 @@
  */
 
 /**
- * The registrations a UI spec is held to (F-03): each Reactor
+ * The registrations a UI spec is held to: each Reactor
  * plugin of `src/apps/plugins/` built on a reactor of its own, started, and
  * read back — the Slots it fills, the Contribution Points it contributes to,
  * the Commands it registers, the Contribution Points it offers, and the

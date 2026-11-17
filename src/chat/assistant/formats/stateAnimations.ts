@@ -4,7 +4,7 @@
  */
 
 /**
- * Which of a character's animations act each state of the assistant (T-22),
+ * Which of a character's animations act each state of the assistant,
  * by the names the characters of Office use — the same in clippy.js maps and
  * in Microsoft Agent files — and by the states an Agent character declares.
  *

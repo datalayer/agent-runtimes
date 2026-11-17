@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Who may (MH-31): the opener for every operation; an embed's visitor
+"""Who may: the opener for every operation; an embed's visitor
 refused clone, export and resume with `NOTHING_KEPT`; a stranger's — an
 organization's admin included — clone, export, swap, rename or end a 404; a
 pending question answered first wins, the second answer 409.
@@ -52,7 +52,7 @@ class KindsVerifier:
 @pytest.fixture()
 def kinds(runtime: Runtime, monkeypatch: pytest.MonkeyPatch) -> Iterator[Runtime]:  # noqa: F811 - the fixture
     monkeypatch.setattr(routes, "VERIFIER", KindsVerifier())
-    # A visitor's token reaches the one application it names (R-30), checked
+    # A visitor's token reaches the one application it names, checked
     # elsewhere: here every caller reaches the test's agent.
     monkeypatch.setattr(routes, "_reaches", lambda caller, agent: None)
     runtime.make("notes-assistant", ASSISTANT, {"app_uid": "app-1", "version": 3})

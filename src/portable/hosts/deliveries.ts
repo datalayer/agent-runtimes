@@ -9,7 +9,7 @@
  * missed, and each delivery handled once then acknowledged. What a delivery
  * shows is the host's own (its `DeliveryHandler`); where its installations
  * and claims are kept is its store, seen here as a `DeliverySink` and a
- * `DeliveryClaimStore`. Moved from the Slack service (DC-004).
+ * `DeliveryClaimStore`. Moved from the Slack service.
  *
  * @module portable/hosts/deliveries
  */

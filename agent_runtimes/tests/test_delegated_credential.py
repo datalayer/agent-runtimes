@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The credential a delegation hands its worker, for the run (O1-17).
+"""The credential a delegation hands its worker, for the run.
 
 The control plane puts the execution's token beside the model budget; the
 worker takes it out of the message before anything keeps the message, holds it
@@ -286,7 +286,7 @@ class TestTheAdapterBuildsTheRunsToolset:
 
 
 class TestAnApplicationsRunOverA2AReachesItsCompanies:
-    """B-04, found on r1: a company's turn reached its kept deployment over
+    """Found on r1: a company's turn reached its kept deployment over
     A2A, and its agent answered that it had no tool to ask the company it works with — the
     adapter, which runs every A2A task, reached the gateway with the run's token alone and
     without the application's companies, which only the AG-UI and Vercel runs were given.

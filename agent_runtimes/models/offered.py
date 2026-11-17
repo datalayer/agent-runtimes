@@ -226,7 +226,7 @@ def give_inference_token(token: str | None) -> float | None:
 
 
 #: The token of the calls under way, when the request that started them
-#: brought its own (an AgentCore invocation's exchanged token, AC-06): it wins
+#: brought its own (an AgentCore invocation's exchanged token): it wins
 #: over the one the runtime was given, for those calls only.
 _CALL_TOKEN: ContextVar[Optional[str]] = ContextVar(
     "agent_runtimes_call_inference_token", default=None

@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """
-Voice over A2A (VO-28, VO-36).
+Voice over A2A.
 
 An audio file part is heard through the speech service with the caller's
 token before the task is made, and marked spoken; the agent card says it
@@ -411,7 +411,7 @@ async def test_a_card_that_names_what_it_is_asked_in_keeps_it_and_hears_no_audio
 
 @pytest.mark.asyncio
 async def test_a_real_agent_s_task_says_its_voice_and_its_line(state):
-    """The worker holds the runtime's adapter, not the pydantic agent: its voice is still found (VO-36)."""
+    """The worker holds the runtime's adapter, not the pydantic agent: its voice is still found."""
     from pydantic_ai import Agent
     from pydantic_ai.models.test import TestModel
 

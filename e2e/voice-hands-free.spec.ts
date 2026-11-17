@@ -4,7 +4,7 @@
  */
 
 /**
- * Hands-free and barge-in (VO-12, VO-13), on two fixtures Chrome's fake
+ * Hands-free and barge-in, on two fixtures Chrome's fake
  * microphone plays over and over, one a file (`launchOptions` are a file's):
  *
  * - `quiet-then-eiffel-tower.wav` — a question that asks for a long answer
@@ -54,7 +54,7 @@ const STUDIO = '';
 
 test.use(hearing('quiet-then-eiffel-tower.wav', STUDIO));
 
-test.describe('a conversation by voice, spoken over (VO-12, VO-13)', () => {
+test.describe('a conversation by voice, spoken over', () => {
   test.skip(Boolean(unreachable), unreachable);
   test('hands-free: the turn sent by itself after the silence, Thinking then Speaking with its sentence marked, and the voice stopped when spoken over', async ({
     page,
@@ -62,12 +62,12 @@ test.describe('a conversation by voice, spoken over (VO-12, VO-13)', () => {
   }) => {
     const { runs, syntheses, toggle, state, states, times, sentenceMarked } =
       await talkWith(page, context, {}, STUDIO);
-    // The question is said, then silence: the turn goes by itself (VO-12).
+    // The question is said, then silence: the turn goes by itself.
     await expect
       .poll(() => runs.length, { timeout: 120_000 })
       .toBeGreaterThan(0);
     // The answer is said as it is written (hands-free implies always), and
-    // the sentence being said is marked in the conversation (VO-65).
+    // the sentence being said is marked in the conversation.
     await expect(state).toHaveAttribute('data-hands-free-state', 'speaking', {
       timeout: 120_000,
     });
@@ -79,7 +79,7 @@ test.describe('a conversation by voice, spoken over (VO-12, VO-13)', () => {
     // Seen as it happened: the voice may be spoken over a moment later.
     await expect.poll(sentenceMarked, { timeout: 30_000 }).toBe(true);
     // The question plays again while the answer is said: barge-in stops the
-    // voice, and the answer is marked interrupted (VO-13).
+    // voice, and the answer is marked interrupted.
     await expect(page.locator('[data-interrupted]').first()).toBeVisible({
       timeout: 60_000,
     });
@@ -92,10 +92,10 @@ test.describe('a conversation by voice, spoken over (VO-12, VO-13)', () => {
     const seen = await states();
     // Kept in the run's output: what the person saw, in order.
     console.log(`hands-free states: ${seen.join(' → ')}; runs ${runs.length}`);
-    // The moments the latency budgets are measured between (VO-52).
+    // The moments the latency budgets are measured between.
     console.log(`voice times: ${JSON.stringify(await times())}`);
     // Never *Listening…* while the answer's voice is being made: speech then
-    // is the person speaking over it (VO-13), not a new turn.
+    // is the person speaking over it, not a new turn.
     expect(seen.join(' ')).not.toContain('thinking listening speaking');
     expect([
       seen,

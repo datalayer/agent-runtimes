@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A runtime launched for a LOOP deployment names it (R-09).
+"""A runtime launched for a LOOP deployment names it.
 
 ``RuntimesClient.create`` sends ``app_uid`` and ``deployment_uid`` in the
 body, the way ai-agents launches a kept runtime: the Operator writes them on
@@ -55,7 +55,7 @@ def test_a_deployment_s_runtime_names_its_application_and_deployment() -> None:
         credits_limit=2.0,
         app_uid="app-1",
         deployment_uid="dep-1",
-        # An application's runtime is launched with its Appspec (R-19).
+        # An application's runtime is launched with its Appspec.
         app_spec={"name": "Tick"},
     )
     [body] = transport.bodies

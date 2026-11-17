@@ -5,7 +5,7 @@
 
 /**
  * PACT 1.0, Personal Agent Consent & Trust, as a Reactor Plugin and a
- * personal agent (PR-10 to PR-13) — the twin of
+ * personal agent — the twin of
  * `agent_runtimes.protocols.pact`. Built against
  * `openpactprotocol/openpactprotocol` `docs/spec.md` at 838c6bd
  * (2026-10-06), reviewed 2026-10-12.
@@ -42,7 +42,7 @@ type Json = Record<string, any>;
 
 export class PactError extends Error {}
 
-/** A scope a Brand offers, and its action class (F-10): unknown is the most restricted. */
+/** A scope a Brand offers, and its action class: unknown is the most restricted. */
 export interface PactScope {
   id: string;
   description: string;

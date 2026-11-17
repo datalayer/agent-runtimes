@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The session API (R-04): an application's sessions over the wire.
+"""The session API: an application's sessions over the wire.
 
 The real routes, in process, on an agent registered as the platform makes an
 application's — its Appspec and instance kept with it, its AG-UI app, its
@@ -55,7 +55,7 @@ ASSISTANT: Dict[str, Any] = {
                 }
             },
         },
-        # What a person may send without being asked (P-21).
+        # What a person may send without being asked.
         "uploads": {
             "kinds": [
                 {"type": ".csv", "max_mb": 1},
@@ -149,7 +149,7 @@ def uploaded(
     files: List[Dict[str, Any]],
     headers: Dict[str, str] | None = None,
 ) -> List[Dict[str, Any]]:
-    """Upload files as a page does before the run that names them (RU-6): what File upload holds (``{name, type, data_url}``) sent as bytes,
+    """Upload files as a page does before the run that names them: what File upload holds (``{name, type, data_url}``) sent as bytes,
     their refs back.
     """
     from urllib.parse import quote
@@ -238,7 +238,7 @@ def runtime(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[Runtime
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(plugins, "PLATFORM", PluginPlatform())
     monkeypatch.setattr(routes, "VERIFIER", Verifier())
-    # Everybody may open every deployment, unless a test says otherwise (D-02).
+    # Everybody may open every deployment, unless a test says otherwise.
     opening.use_opener(_lets_everybody_in)
     made = Runtime()
     yield made
@@ -342,7 +342,7 @@ def test_a_preview_session_starts_answers_and_is_recorded_as_the_person(
         "Hello\n\nTone: Plain",
         "And then?",
     ]
-    # Who opened it goes with its record: what they export and delete it by (R-31).
+    # Who opened it goes with its record: what they export and delete it by.
     assert {body["opened_by"] for body in runtime.records} == {"ada"}
     # Nobody else drives it, nor learns it exists.
     assert (
@@ -408,7 +408,7 @@ def test_a_deployments_session_acts_as_its_principal_and_a_preview_is_not_it(
     }
     assert said["preview"] is False
     assert asked == ["ada"]
-    # Run as its principal, it still says the person who opened it (R-31).
+    # Run as its principal, it still says the person who opened it.
     assert {
         body["opened_by"]
         for body in runtime.records
@@ -420,7 +420,7 @@ def test_a_deployments_session_acts_as_its_principal_and_a_preview_is_not_it(
 def test_a_deployments_session_is_held_only_by_whom_its_level_lets_in(
     runtime: Runtime, remote: TestClient
 ) -> None:
-    """D-02: the runtime asks ai-agents, with each caller's token, whether they
+    """The runtime asks ai-agents, with each caller's token, whether they
     may open the deployment — the principal's token it holds is no reason to
     let anybody else in — and refuses in ai-agents' sentence."""
     asked: List[Tuple[str, str]] = []
@@ -493,7 +493,7 @@ def test_nobody_signed_out_holds_a_session_of_a_deployment(
 ) -> None:
     """Whatever the level, a caller with no token holds no session on a
     person's runtime, and ai-agents is not asked: a visitor without an
-    account talks to it on the visitors' runtime (R-30)."""
+    account talks to it on the visitors' runtime."""
     asked: List[str] = []
 
     async def opens(deployment: str, bearer: str) -> Tuple[int, str]:
@@ -542,14 +542,14 @@ def test_the_chat_speaks_to_an_application_over_ag_ui_each_thread_a_session(
         {"tone": "Warm"},
         "local",
     )
-    # The machine itself is nobody whose conversations these are (R-31).
+    # The machine itself is nobody whose conversations these are.
     assert {body["opened_by"] for body in runtime.records} == {""}
     wrong = local.post(
         "/api/v1/apps/agents/notes-assistant/ag-ui/",
         json={**run, "forwardedProps": {"loop": {"settings": {"tone": "Loud"}}}},
     )
     assert wrong.status_code == 422
-    # Checked against the settings' form, the sentence a Form's check says (C-16).
+    # Checked against the settings' form, the sentence a Form's check says.
     assert wrong.json()["detail"] == (
         "“Its settings” was sent what its fields refuse: "
         "tone: 'Loud' is not one of ['Plain', 'Warm']."
@@ -605,7 +605,7 @@ def test_a_file_of_any_kind_is_put_in_the_sandbox_of_an_application_with_a_shell
             "type": "application/pdf",
             "size": len(pdf),
             "path": "files/thread-0002/report.pdf",
-            # Its digest, as the record keeps a file (MH-01): never its bytes.
+            # Its digest, as the record keeps a file: never its bytes.
             "digest": "sha256:" + hashlib.sha256(pdf).hexdigest(),
         }
     ]
@@ -655,7 +655,7 @@ def test_without_a_shell_a_text_file_goes_in_the_message_and_anything_else_is_re
     )
     assert "RUN_ERROR" not in types_of(events)
     assert model.prompts[-1].endswith("The file t.csv (text/csv):\n```\na,b\n1,2\n```")
-    # A block's action is never a run's (RU-5): nothing it gave
+    # A block's action is never a run's: nothing it gave
     # is said to the model.
     chose = local.post(
         url,
@@ -696,7 +696,7 @@ def test_without_a_shell_a_text_file_goes_in_the_message_and_anything_else_is_re
     assert error["message"].startswith(
         "x.zip is not a text file, and the application has no computer"
     )
-    # A file's bytes never ride in the run (RU-6): uploaded first,
+    # A file's bytes never ride in the run: uploaded first,
     # named by their ref — and a ref is read back for its uploader only.
     assert local.post(
         url,
@@ -792,7 +792,7 @@ def test_settings_change_stop_and_resume(runtime: Runtime, local: TestClient) ->
 
 def test_end_and_logout(runtime: Runtime, remote: TestClient) -> None:
     """Ended, a session is no longer held, its record stays; signing out ends
-    the caller's sessions, nobody else's (P-14)."""
+    the caller's sessions, nobody else's."""
     runtime.make("notes-assistant", ASSISTANT, {"app_uid": "app-1"})
     for person, uid in (
         ("ada", "session-0011"),
@@ -836,7 +836,7 @@ def test_end_and_logout(runtime: Runtime, remote: TestClient) -> None:
 async def test_the_codes_messages_change_and_its_end_runs_on_the_session() -> None:
     """A message changed is written again under its id, its author said (a
     ``reactor.ui`` meta op), one removed said removed (a remove op); the
-    code's end and logout run (P-14, P-15, RU-3)."""
+    code's end and logout run."""
     from agent_runtimes.apps import AppHost, Application, Session
     from agent_runtimes.apps.callers import Caller
 
@@ -942,7 +942,7 @@ async def test_the_codes_messages_change_and_its_end_runs_on_the_session() -> No
 
 async def test_what_an_answer_shows_is_a_surface_under_its_message() -> None:
     """An answer's components arrive as a display under the message, and come
-    back with a resume (P-04, RU-2)."""
+    back with a resume."""
     from agent_runtimes.apps import AppHost, Application
     from agent_runtimes.apps.callers import Caller
 
@@ -986,8 +986,8 @@ async def test_what_an_answer_shows_is_a_surface_under_its_message() -> None:
             if line.startswith("data:")
         )
     kinds = [e["type"] for e in events]
-    # What it shows is a display under the message, not a tool call
-    # (RU-2), on the session's ui socket, not the run (RU-W).
+    # What it shows is a display under the message, not a tool call,
+    # on the session's ui socket, not the run (RU-W).
     assert (
         kinds == ["TEXT_MESSAGE_START", "TEXT_MESSAGE_CONTENT", "TEXT_MESSAGE_END"] * 2
     )
@@ -1041,7 +1041,7 @@ async def test_what_an_answer_shows_is_a_surface_under_its_message() -> None:
 
 async def test_a_step_is_said_whole_beside_ag_uis_step() -> None:
     """STEP_STARTED and STEP_FINISHED carry a name; the step's display the
-    step (P-16, RU-3)."""
+    step."""
     from agent_runtimes.apps import AppHost, Application
     from agent_runtimes.apps.callers import Caller
 
@@ -1076,7 +1076,7 @@ async def test_a_step_is_said_whole_beside_ag_uis_step() -> None:
         )
 
     # On the run stream, AG-UI's steps by name; the steps whole are displays
-    # on the session's ui socket (RU-3, RU-W).
+    # on the session's ui socket (RU-W).
     assert [(e["type"], e["stepName"]) for e in events] == [
         ("STEP_STARTED", "Researching"),
         ("STEP_STARTED", "Searching"),
@@ -1202,7 +1202,7 @@ def test_report_from_a_file_takes_its_file_from_the_page(
 ) -> None:
     """The Python example asks for its file with `session.ask`: a file given on
     the page answers it — with its run, or after it asked. A page's block
-    sends a message with its files (RU-5), as its page does."""
+    sends a message with its files, as its page does."""
     model = runtime.make("report-from-a-file", REPORT, {"app_uid": "app-3"})
     csv = b"region,amount\nnorth,10\nsouth,20\n"
     file = {
@@ -1251,7 +1251,7 @@ def test_report_from_a_file_takes_its_file_from_the_page(
         local.post(url, json=_page_run("session-0007", "run-2", "Again", []))
     )
     # The run ends on the question, its result saying what it asks; the
-    # question is a display on the ui socket (RU-4).
+    # question is a display on the ui socket.
     assert asked[-1]["type"] == "RUN_FINISHED"
     assert asked[-1]["result"] == {
         "asking": {
@@ -1267,7 +1267,7 @@ def test_report_from_a_file_takes_its_file_from_the_page(
     assert shown["type"] == sessions.QUESTION_DISPLAY_TYPE
     assert (shown["data"]["kind"], shown["data"]["accept"]) == ("file", [".csv"])
     # A file answers it as any answer does: a press of reactor.answer, its
-    # value the ref its upload answered (RU-6).
+    # value the ref its upload answered.
     [offer] = shown["actions"]
     assert offer["name"] == "reactor.answer"
     waiting = local.get("/api/v1/apps/sessions/session-0007").json()
@@ -1317,7 +1317,7 @@ def test_report_from_a_file_takes_its_file_from_the_page(
     assert local.get("/api/v1/apps/sessions/session-0007").json()["state"] == "open"
 
     # A PDF is not what its page asks for: refused before its code runs, in
-    # the sentence the page says (P-21).
+    # the sentence the page says.
     pdf = {
         "name": "a.pdf",
         "type": "application/pdf",
@@ -1396,7 +1396,7 @@ DEPTH = {
 def test_the_mode_a_run_says_is_told_to_its_agent_for_that_run(
     runtime: Runtime, local: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """P-19: ``forwardedProps.loop.modes`` — the options' instructions for the
+    """``forwardedProps.loop.modes`` — the options' instructions for the
     run, the model one names run on; a mode or an option it does not have refused."""
     from pydantic_ai.messages import ModelRequest
 
@@ -1490,7 +1490,7 @@ PROFILES = [
 def test_a_conversation_keeps_the_profile_it_started_with(
     runtime: Runtime, local: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """P-20: ``forwardedProps.loop.profile`` — its instructions told before
+    """``forwardedProps.loop.profile`` — its instructions told before
     the modes', its model run unless a mode names one; kept to the end."""
     spec = {
         **ASSISTANT,
@@ -1571,7 +1571,7 @@ def test_a_conversation_keeps_the_profile_it_started_with(
 def test_its_code_is_told_the_settings_the_page_changed_and_the_profile(
     runtime: Runtime, local: TestClient
 ) -> None:
-    """P-20: settings changed in the page go with the next run; ``@app.settings``
+    """Settings changed in the page go with the next run; ``@app.settings``
     runs on what changed, before the message, and ``session.profile`` says the profile."""
     from agent_runtimes.apps import Application
 
@@ -1642,7 +1642,7 @@ class _Streamed:
 def test_a_test_that_is_a_conversation_is_played_on_the_session_api(
     runtime: Runtime, remote: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """E-01: a test that is a conversation is played on one session of
+    """A test that is a conversation is played on one session of
     the application, named by its caller, each turn sent once the one before
     was answered — a choice in its option's words, a message, an action by its
     name with its payload — as its page sends them; its code answers, and its
@@ -1695,7 +1695,7 @@ def test_a_test_that_is_a_conversation_is_played_on_the_session_api(
         "session": "test-run-1-case-1",
         "opener": "",
     }
-    # Pressed as the session offered it (RU-5): its token, typed.
+    # Pressed as the session offered it: its token, typed.
     assert {key: sent[4][1][key] for key in ("action", "display_id", "payload")} == {
         "action": "save",
         "display_id": "app",
@@ -1732,7 +1732,7 @@ def test_a_test_that_is_a_conversation_is_played_on_the_session_api(
 def test_a_conversation_declined_is_answered_and_a_wrong_turn_refused(
     runtime: Runtime, remote: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """E-01: the decline answers the consent it asks, and what it says
+    """The decline answers the consent it asks, and what it says
     after is its code's; a turn that is not one thing is refused before
     anything is sent."""
     from agentspecs.apps import dump_app

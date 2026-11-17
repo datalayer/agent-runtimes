@@ -9,7 +9,7 @@ HTTP Message Signatures (RFC 9421) for automated traffic.
 python examples/protocols/web_bot_auth/signed_agent.py
 ```
 
-Runs in one process with no network (examples EX-01 and EX-02):
+Runs in one process with no network:
 
 - the agent's origin serves its key directory at
   `/.well-known/http-message-signatures-directory`, its response signed by

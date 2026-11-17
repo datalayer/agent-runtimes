@@ -4,7 +4,7 @@
  */
 
 /**
- * The transcript as a sequence diagram (SCENES S2-02), drawn by mermaid
+ * The transcript as a sequence diagram, drawn by mermaid
  * from {@link sequenceDiagramPlan}'s source. mermaid is loaded when the
  * view opens (`import('mermaid')`), never with the graph; the drawing is
  * themed from Primer's tokens, light and dark; a click on an arrow or a

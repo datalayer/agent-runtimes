@@ -9,7 +9,7 @@
  * The host contracts, against the same file ai-agents tests its half with
  * (services/ai-agents/tests/fixtures/hosts/contracts.json): a change on
  * either side that breaks the other fails here or there. Ported from the
- * Slack service (DC-004).
+ * Slack service.
  */
 
 import { readFileSync } from 'node:fs';

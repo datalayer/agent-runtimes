@@ -4,7 +4,7 @@
  */
 
 /**
- * The selection the transcript's views and the stage share (SCENES S3-02).
+ * The selection the transcript's views and the stage share.
  *
  * A line selected in the Lines, Table or Sequence view — or a row, or an
  * arrow — is one {@link TranscriptSelection}: the line's key, who it is from

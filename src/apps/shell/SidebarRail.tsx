@@ -4,7 +4,7 @@
  */
 
 /**
- * The rail (T-07): the workspace's sidebar as a narrow column of line
+ * The rail: the workspace's sidebar as a narrow column of line
  * icons, one per panel, and the one panel chosen beside it.
  *
  * The sidebar stacks every panel its plugins contribute — an application's
@@ -12,7 +12,7 @@
  * With the rail, each is an icon: one weight, no colour, the chosen one on a
  * grey rounded square, as the reference screens draw their rail. A click
  * shows that panel, a click on the chosen one closes the column, and the
- * panel opens at the theme's pace (T-10).
+ * panel opens at the theme's pace.
  *
  * A panel names itself on the rail by the `rail` its plugin gives its
  * component (`LoopSidebarComponent`); without one it is shown by its id

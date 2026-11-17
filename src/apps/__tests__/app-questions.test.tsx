@@ -4,8 +4,8 @@
  */
 
 /**
- * What an application's code asks, drawn from its display (RU-4): a choice as buttons — a rule's prompt is Allow and Refuse — the
- * words as a field, a file chosen and uploaded first (RU-6); each answer
+ * What an application's code asks, drawn from its display: a choice as buttons — a rule's prompt is Allow and Refuse — the
+ * words as a field, a file chosen and uploaded first; each answer
  * pressed through the display's `act` as `reactor.answer`; answered, what answered it. The
  * `app-elements` plugin contributes the renderer for its type.
  */

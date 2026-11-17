@@ -37,13 +37,13 @@ export interface IRuntimeOptions {
    * Environment name
    *
    * A platform environment by its name, or an environment somebody built,
-   * named `<account-handle>/<name>` or by its uid (D-2).
+   * named `<account-handle>/<name>` or by its uid.
    */
   environmentName: string;
   /**
    * Which version of a user environment to launch: its number, or a version
    * uid. Absent means the version its owner promoted, which is what a platform
-   * environment always runs (E1-19).
+   * environment always runs.
    */
   environmentVersion?: number | string;
   /**
@@ -67,14 +67,14 @@ export interface IRuntimeOptions {
    */
   snapshot?: string;
   /**
-   * The Appspec of the application the runtime is launched for (R-19), as its file holds it. The Operator hands it to the runtime's
+   * The Appspec of the application the runtime is launched for, as its file holds it. The Operator hands it to the runtime's
    * companion, which gives the runtime the secrets its connections declare
    * before its agent is made. An application's launch carries it:
    * `appUid` without it is refused.
    */
   appSpec?: Record<string, unknown>;
   /**
-   * The saved application the runtime runs for (R-09): written on its
+   * The saved application the runtime runs for: written on its
    * reservation, so its running time is counted per application.
    */
   appUid?: string;

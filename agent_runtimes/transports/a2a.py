@@ -371,7 +371,7 @@ def _short(value: Any, limit: int = 2000) -> str:
     return text if len(text) <= limit else text[:limit] + "…"
 
 
-# -- a harness served over A2A (SH-15) ---------------------------------------
+# -- a harness served over A2A ---------------------------------------
 
 #: The media type of a diff artifact, one per file the harness changed.
 DIFF_MEDIA_TYPE = "text/x-diff"
@@ -761,12 +761,12 @@ class A2AWorker(_FastA2AWorker):
     agent: "BaseAgent" = None  # type: ignore[assignment]
     cancellation: TaskCancellation | None = None
     #: The id the agent is served under, which its usage and cost are counted
-    #: under: what a task spent is on the status that ends it (O2-10).
+    #: under: what a task spent is on the status that ends it.
     agent_id: str | None = None
     #: The media types its answers come in, as its card declares them: a
     #: caller that accepts one besides words gets it as an artifact.
     output_modes: tuple[str, ...] = ()
-    #: The tasks waiting on a caller's answer to an approval (SH-15), by id.
+    #: The tasks waiting on a caller's answer to an approval, by id.
     waiting: dict[str, A2AApprovals] = field(default_factory=dict)
 
     @asynccontextmanager
@@ -796,7 +796,7 @@ class A2AWorker(_FastA2AWorker):
             raise ValueError(f"Task {params['id']} not found")
         task_id = task["id"]
         context_id = task["context_id"]
-        # A message on a task waiting for an approval answers it (SH-15):
+        # A message on a task waiting for an approval answers it:
         # the run that asked goes on under the same task; nothing new starts.
         waiting = self.waiting.get(task_id)
         if waiting is not None:
@@ -836,7 +836,7 @@ class A2AWorker(_FastA2AWorker):
             # nothing about why. Log it, and put the reason on the failed
             # status; closing here keeps the base's own failed status from
             # following it.
-            # Said, and logged, with any credential withheld (R-19).
+            # Said, and logged, with any credential withheld.
             logger.error(
                 "A2A task %s for agent %s failed: %s",
                 task_id,
@@ -851,7 +851,7 @@ class A2AWorker(_FastA2AWorker):
                 context_id, Part(text=redact(f"{type(exc).__name__}: {exc}"))
             )
             # Which limit of the budget the delegation set stopped the run,
-            # where the delegation put the budget (O1-07), and what it spent.
+            # where the delegation put the budget, and what it spent.
             ended = merged_meta(
                 refusal_meta(exc.reached)
                 if isinstance(exc, ModelBudgetExceeded)
@@ -888,16 +888,15 @@ class A2AWorker(_FastA2AWorker):
 
         cancel = self.cancellation.register(task_id) if self.cancellation else None
         # A visitor's run, as the application's gate marked it: it only reads,
-        # whatever its rules say (R-30).
+        # whatever its rules say.
         meta = params["message"].get("metadata")
         visitor = visitor_of_a2a(meta)
         visiting = enter_visitor_run(visitor)
         # A visitor's run of a catalogue Battle, as the gate marked it from
-        # their token (B4-01): the Battle's books are reached with its key.
+        # their token: the Battle's books are reached with its key.
         battling = enter_battle_run(battle_of_a2a(meta) if visitor else "")
         # A turn asked by a personal agent through the company service: its
-        # declared operations are proposed, or performed once confirmed
-        # (B-04).
+        # declared operations are proposed, or performed once confirmed.
         from ..apps.pap_company import enter_pap_turn, leave_pap_turn, pap_turn_of
 
         pap_turn = enter_pap_turn(pap_turn_of(params["message"].get("metadata")))
@@ -962,12 +961,12 @@ class A2AWorker(_FastA2AWorker):
 
         meta = incoming.get("metadata")
         # A message said and heard (its audio by `HearA2AAudio`, or by the
-        # client itself): marked spoken for the run and the record (VO-27, VO-28).
+        # client itself): marked spoken for the run and the record.
         from ..voice import hear, spoken_of, voice_of_agent
 
         hear(spoken_of(meta.get("voice")) if isinstance(meta, dict) else None)
         # The voice of an agent whose answers may be heard, said at the start
-        # in the status message's metadata, as AG-UI's `voice.settings` (VO-36).
+        # in the status message's metadata, as AG-UI's `voice.settings`.
         voice = voice_of_agent(self.agent)
         if voice:
             await self.publish_status(
@@ -977,11 +976,11 @@ class A2AWorker(_FastA2AWorker):
                 voice_settings_message(context_id, voice),
             )
         # The model budget the delegation set on this run, when it set one:
-        # the adapter applies it as the run's usage limits (O1-07).
+        # the adapter applies it as the run's usage limits.
         budget = delegated_budget(meta)
         # The execution's token, taken out of the message when the task was
         # submitted: the run's identity, which its approvals, its telemetry and
-        # its Datalayer MCP toolset use instead of the process's (O1-17).
+        # its Datalayer MCP toolset use instead of the process's.
         credential = release(task_id)
         if credential is None and was_delegated(meta):
             # Owed by a process that has since restarted, and the credential
@@ -1004,16 +1003,15 @@ class A2AWorker(_FastA2AWorker):
         from ..apps.pap_company import asked_for_said
 
         # Asked of its company or its PACT business: which personal agent asks,
-        # for whom and with what the person granted, as ai-agents marked it
-        # (PR-13, B-04).
+        # for whom and with what the person granted, as ai-agents marked it.
         asked_for = asked_for_said(meta)
         if asked_for:
             prompt = f"{asked_for}\n\n{prompt}"
         # The execution this run is for, whose checkpoints it keeps, and the
-        # checkpoint it resumes from when it was paused (O2-05).
+        # checkpoint it resumes from when it was paused.
         execution_id = execution_of(meta)
         # On the run, where its tools read it: an orchestrated run asks the
-        # control plane for its children rather than taking them (O2-06).
+        # control plane for its children rather than taking them.
         enter_execution(meta)
         conversation = self.build_message_history(history)
         resumed_from = checkpoint_of(meta)
@@ -1029,12 +1027,12 @@ class A2AWorker(_FastA2AWorker):
                     "this runtime, so the run cannot resume from it."
                 )
             conversation = [dict(message) for message in checkpoint.messages]
-        # A team seat works inside an apps session (MH-38): the task is a
+        # A team seat works inside an apps session: the task is a
         # turn of the seat's session — opened at its first task, resumed at
         # the next from the uid the control plane hands it — and the
         # session's conversation is the run's history. The session's uid is
         # the adapter's session: a harness keeps its own session per (uid,
-        # agent), loaded again on the next task (MH-04).
+        # agent), loaded again on the next task.
         from ..orchestration.seat_sessions import SeatRefused, seat_run
 
         try:
@@ -1054,12 +1052,12 @@ class A2AWorker(_FastA2AWorker):
                 },
                 **({"budget": budget} if budget else {}),
                 **({"user_token": credential} if credential else {}),
-                # Said apart, so a harness lends its MCP with it (SH-33).
+                # Said apart, so a harness lends its MCP with it.
                 **({DELEGATED_CREDENTIAL: credential} if credential else {}),
                 # What is steered into this task reaches its model within the turn.
                 "steer_run": task_id,
                 # An approval a harness asks for is raised on this task as
-                # `input-required`, and answered on it (SH-15).
+                # `input-required`, and answered on it.
                 "approvals": A2AApprovals(
                     self,
                     task_id,
@@ -1084,9 +1082,9 @@ class A2AWorker(_FastA2AWorker):
         plan: Artifact | None = None
         diffs: dict[str, Artifact] = {}
         # A button of an answer's surface that would do more than read, pressed
-        # by a visitor, is refused in a sentence: no model runs (H-03).
+        # by a visitor, is refused in a sentence: no model runs.
         refused = refused_action(incoming)
-        # `say_aloud`'s lines, by call: said once the call has answered (VO-36).
+        # `say_aloud`'s lines, by call: said once the call has answered.
         say_lines: dict[str, str] = {}
         open_steering(task_id)
         try:
@@ -1203,7 +1201,7 @@ class A2AWorker(_FastA2AWorker):
             forget_pause(task_id)
             if execution_id:
                 # Paused, not cancelled: the conversation so far is kept where a
-                # resume finds it, in whichever process of this runtime (O2-05).
+                # resume finds it, in whichever process of this runtime.
                 messages = [*conversation, {"role": "user", "content": prompt}]
                 if text:
                     messages.append({"role": "assistant", "content": text})
@@ -1279,7 +1277,7 @@ class A2AWorker(_FastA2AWorker):
         await self.publish_artifact(task_id, context_id, artifact)
         for extra in composed:
             await self.publish_artifact(task_id, context_id, extra)
-        # The `completed` status says what the run spent (O2-10), so it is sent
+        # The `completed` status says what the run spent, so it is sent
         # and the stream ended here rather than by the base, whose final status
         # carries no message.
         finished = _agent_message(context_id, Part(text=output))
@@ -1350,13 +1348,13 @@ async def _said(text: str) -> AsyncIterator[Any]:
     yield SimpleNamespace(type="text", data=text)
 
 
-#: The tool an agent whose answers may be heard says a short line with (VO-35).
+#: The tool an agent whose answers may be heard says a short line with.
 SAY_ALOUD_TOOL = "say_aloud"
 
 
 def voice_settings_message(context_id: str, settings: dict[str, Any]) -> "Message":
     """
-    The voice of an agent whose answers may be heard, as an A2A status message (VO-36).
+    The voice of an agent whose answers may be heard, as an A2A status message.
 
     AG-UI says it as the ``voice.settings`` custom event; A2A in the message's
     ``metadata.voice.settings``, its one data part saying the same.
@@ -1383,7 +1381,7 @@ def voice_say_message(
     context_id: str, line: str, settings: dict[str, Any]
 ) -> "Message":
     """
-    A line the agent says aloud (``say_aloud``) as an A2A status message (VO-36).
+    A line the agent says aloud (``say_aloud``) as an A2A status message.
 
     AG-UI says it as the ``voice.say`` custom event; A2A as the line in a
     text part, captioned, with ``metadata.voice.say`` naming the voice and

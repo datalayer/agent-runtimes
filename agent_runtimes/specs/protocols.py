@@ -3,7 +3,7 @@
 """
 Protocol Catalog.
 
-The agent protocols Datalayer targets (PS-01).
+The agent protocols Datalayer targets.
 
 This file is AUTO-GENERATED from YAML specifications.
 DO NOT EDIT MANUALLY - run 'make specs' to regenerate.

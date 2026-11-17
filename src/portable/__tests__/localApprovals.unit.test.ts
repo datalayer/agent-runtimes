@@ -4,8 +4,8 @@
  */
 
 /**
- * A local session's approvals over the runtime's websocket (VSCODE VS-07,
- * DESKTOP DK-13, DK-25): where they are read, what a snapshot lists, what
+ * A local session's approvals over the runtime's websocket:
+ * where they are read, what a snapshot lists, what
  * a decision is sent as, and what it came to once the next snapshot no
  * longer lists it.
  *

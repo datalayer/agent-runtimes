@@ -4,7 +4,7 @@
  */
 
 /**
- * One validation of a scene (S-10), said in agentspecs' own
+ * One validation of a scene, said in agentspecs' own
  * sentences: what the spec editor refuses, the stage refuses and `loop`
  * refuses, in the same words wherever a person meets them.
  *
@@ -28,7 +28,7 @@
  *    plays, its rehearsal.
  *
  * Each sentence carries the section of the spec it is about, so that the
- * stage's own refusals (S-09: who runs where, what the audience may do) are
+ * stage's own refusals (who runs where, what the audience may do) are
  * read on their own without a second set of checks.
  *
  * **What stays agentspecs'.** Three checks need more than the browser has,
@@ -44,7 +44,7 @@
  *
  * It lives in agent-runtimes beside the application's checks (`checks.ts`),
  * so that every shell that edits a scene — the Studio, and agent-runtimes' own —
- * refuses the same things in the same words (S-10, moved from the landing 2026-10-10).
+ * refuses the same things in the same words (moved from the landing 2026-10-10).
  * `__tests__/scene-checks.test.ts` holds it to what
  * agentspecs itself says, sentence for sentence.
  *
@@ -73,14 +73,14 @@ export type SceneSection =
 export type SceneProblem = { says: string; section: SceneSection };
 
 /**
- * The sections a stage is written in (S-09): where each player runs and
+ * The sections a stage is written in: where each player runs and
  * what it is given (`stage`, `deployment`, a member's `runs_in`), and what
  * the audience may do (`audience`).
  */
 export const STAGE_SECTIONS: readonly SceneSection[] = ['stage', 'audience'];
 
 /**
- * The parts a person reads one at a time in the spec editor (S-08, S-09),
+ * The parts a person reads one at a time in the spec editor,
  * in the order a scene is written. The scene's own fields are always in
  * view, so they are not one of them.
  */
@@ -97,7 +97,7 @@ export const SCENE_PARTS: readonly SceneSection[] = [
  * Each section of a scene, and the keys of the spec it is written in.
  * *Where it plays* is the stage directions and the addresses together: where
  * each player runs is one thing, said in two keys. Read by the editor's
- * parts (S-09) and by `sceneShape`, which files a refusal of the scene's
+ * parts and by `sceneShape`, which files a refusal of the scene's
  * shape under the part whose key it names.
  */
 export const SCENE_SECTION_KEYS: Readonly<
@@ -241,7 +241,7 @@ function castMakesNoTeam(spec: SceneSpec): string | undefined {
  * reach. agentspecs reads the catalogue only, so to `loop` a member that is
  * the person's own application reaches no system at all; the Studio has the
  * person's applications, and judges them by what they truly reach, in the
- * same sentences (decided 2026-10-10, S-10).
+ * same sentences (decided 2026-10-10).
  */
 export type SceneOwnApp = {
   name: string;
@@ -895,7 +895,7 @@ function sceneOverTeam(
 export const sceneProblems = (spec: SceneSpec, own?: SceneOwnApps): string[] =>
   sceneCheck(spec, own).map(problem => problem.says);
 
-/** The refusals of one section of the spec: the stage's, for S-09's own panel. */
+/** The refusals of one section of the spec: the stage's, for its own panel. */
 export const problemsOfSections = (
   problems: readonly SceneProblem[],
   sections: readonly SceneSection[],

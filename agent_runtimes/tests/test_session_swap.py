@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The swap (MH-06), the old route gone (MH-07), the Shield on a swap (MH-08).
+"""The swap, the old route gone, the Shield on a swap.
 
 `POST /sessions/{uid}/agent` swaps a session's agent in place: refused while
 a turn runs or the harness loads, the new agent bound through the one way
@@ -44,7 +44,7 @@ FRAMEWORK_AGENT = next(
 def rebinder() -> Any:
     """A double of configure-from-spec, recording what it was asked to bind;
     and IAM stood in for, serving the organization's policy the new harness
-    is admitted by (MH-08: pulled before its first turn, fail closed).
+    is admitted by (pulled before its first turn, fail closed).
     """
     from agent_shield.policy import Harnesses, Policy
 
@@ -219,7 +219,7 @@ def test_the_swap_carries_the_conversation_tells_the_new_agent_and_is_in_the_rec
     assert described["agent"] == HARNESS_AGENT and [
         f["name"] for f in described["files"]
     ] == ["a.csv"]
-    # The session's Rules carry (MH-08).
+    # The session's Rules carry.
     assert [
         r["name"]
         for r in remote.get(
@@ -257,7 +257,7 @@ def test_the_swap_carries_the_conversation_tells_the_new_agent_and_is_in_the_rec
         HARNESS_AGENT,
         FRAMEWORK_AGENT,
     ]
-    # The person's turns are tagged with the agent that had them (MH-04).
+    # The person's turns are tagged with the agent that had them.
     events_of(
         remote.post(
             "/api/v1/apps/sessions/session-w002/messages",

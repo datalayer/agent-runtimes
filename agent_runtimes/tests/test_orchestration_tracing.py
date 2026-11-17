@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""One trace across the tree (O0-11).
+"""One trace across the tree.
 
 A two-level delegation has to read as one trace: the parent's span, the
 child's span under it, one span per attempt below that, and every canonical

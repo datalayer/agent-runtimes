@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Applications on a runtime (R-03).
+"""Applications on a runtime.
 
 `POST /api/v1/apps/configure` makes the runtime's agent the one an
 application runs: the application's agent, with what the application says
@@ -15,27 +15,27 @@ other at launch.
 interface shows before it is made. `GET /api/v1/apps` lists the applications
 the runtime knows. `POST /api/v1/apps/feedback` keeps what a person says of a
 conversation — a thumb up or down, and a comment — in the application's
-record (V-18). `POST /api/v1/apps/build` builds an ``app.py`` in a
+record. `POST /api/v1/apps/build` builds an ``app.py`` in a
 process of its own and `POST /api/v1/apps/eject` writes a spec as one — the
-Studio's Python tab (P-10, P-13); a person's, nothing kept here.
+Studio's Python tab; a person's, nothing kept here.
 `GET /api/v1/apps/memories/{app}` is what an
-application remembers of the caller — its owner, or a visitor apart (R-36) — and `DELETE` forgets one thing of it, or everything once the caller
-confirmed how many (R-18). `PUT /api/v1/apps/a2a` serves an
+application remembers of the caller — its owner, or a visitor apart — and `DELETE` forgets one thing of it, or everything once the caller
+confirmed how many. `PUT /api/v1/apps/a2a` serves an
 application's agent made here over A2A, with a card naming the address its
 callers reach it at — what ai-agents asks of the runtime a deployment is kept
-on, so that it answers at the deployment's stable address (A-08) —
+on, so that it answers at the deployment's stable address —
 and `DELETE` serves nothing any more. `POST /api/v1/apps/visitors/agent`, on
 the visitors' runtime, makes the agent a visitor's token names when it is not
 made yet — an application at its address — and says it and the application
-it runs: what a visitor's page asks before it follows the application here
-(D-15).
+it runs: what a visitor's page asks before it follows the application here.
 
-Every route checks who is calling before anything else (R-32,
-`agent_runtimes.apps.callers`): a person for `configure`; for the
+
+Every route checks who is calling before anything else
+(`agent_runtimes.apps.callers`): a person for `configure`; for the
 others, a person or an embed token for the application — and a browser only
 from the origins its deployment allows. A call from the machine itself needs
-no token. On the visitors' runtime (R-30,
-`agent_runtimes.apps.visitors`) a visitor without an account, and only
+no token. On the visitors' runtime
+(`agent_runtimes.apps.visitors`) a visitor without an account, and only
 one, holding a token for the one application they talk to.
 
 An application is a Reactor plugin here as in the page: the
@@ -87,8 +87,8 @@ router = APIRouter(prefix="/apps", tags=["apps"])
 
 #: The id of the application each agent of this runtime runs, by agent name:
 #: ``default`` for the one ``/apps/configure`` made, and each agent made for an
-#: application (``POST /api/v1/agents`` with its Appspec — a kept runtime's,
-#: R-14) under its own id. The application itself is a contribution of
+#: application (``POST /api/v1/agents`` with its Appspec — a kept runtime's)
+#:under its own id. The application itself is a contribution of
 #: its plugin.
 _RUNNING: Dict[str, str] = {}
 
@@ -179,7 +179,7 @@ def keep_running(agent: str, app: Optional[AppSpec]) -> None:
     """Say which application an agent of this runtime runs; ``None`` forgets it.
 
     The agent ``/apps/configure`` makes is ``default``; an agent made for an
-    application by the agents route — a kept runtime's (R-14) — is kept
+    application by the agents route — a kept runtime's — is kept
     under its own id, so that what is asked of "the runtime's application"
     (its feedback, its rules, which it is) is answered on that runtime too.
     """
@@ -194,7 +194,7 @@ def running_app(agent: str = "") -> Optional[AppSpec]:
 
     Unnamed, the runtime's application: the one it was configured for, else
     the one its agents run when they all run the same one — a kept runtime's
-    (R-14) — and None when they run none, or several
+    — and None when they run none, or several
     (`no_running_app` says which).
     """
     if agent:
@@ -245,7 +245,7 @@ async def _authorize(
     """Who is calling, or an HTTP refusal that says why.
 
     For the application the runtime runs, or the one ``for_app`` names — the
-    application of an agent a session is opened on (R-04). An embed
+    application of an agent a session is opened on. An embed
     token is checked against ``app_uid``, the application as the platform
     knows it, when the session's instance names it; its spec's id otherwise.
 
@@ -291,7 +291,7 @@ async def _authorize(
         )
     if caller.kind == "embed":
         # The page an embed's visitor is on, said to ai-agents when it is
-        # asked whether to open the session and for its principal (D-12).
+        # asked whether to open the session and for its principal.
         from agent_runtimes.apps.opening import PAGE_ORIGIN
 
         PAGE_ORIGIN.set(origin or "")
@@ -299,7 +299,7 @@ async def _authorize(
 
 
 def _reaches(caller: Caller, agent: str) -> None:
-    """A visitor's token reaches the one application it names, and no other (R-30)."""
+    """A visitor's token reaches the one application it names, and no other."""
     from agent_runtimes.apps.callers import is_host_visitor
 
     if caller.kind != "visitor" or is_host_visitor(caller):
@@ -321,7 +321,7 @@ async def _visitors_agent(agent: str, request: Request) -> None:
 
     The visitor's token names it; an application at its address has its
     agent made here as it is first talked to, from what ai-agents shows
-    somebody not signed in (R-30, D-02).
+    somebody not signed in.
     """
     from agent_runtimes.apps.principal import a_deployment_is_served
     from agent_runtimes.apps.visitors import (
@@ -356,12 +356,12 @@ async def _visitors_agent(agent: str, request: Request) -> None:
 async def visitor_agent(request: Request) -> Dict[str, str]:
     """The agent a visitor's token names, made if it is not: on the visitors'
     runtime, or — for an address whose version has code of its own — on the
-    runtime that deployment is kept on, which runs its code (R-30, decided 14
+    runtime that deployment is kept on, which runs its code (decided 14
     October 2026).
 
     What a visitor's page asks before it follows the application's plugins
-    here (F-15, D-15): an application at its address has its
-    agent made as ai-agents shows it to somebody not signed in (R-30, D-02),
+    here: an application at its address has its
+    agent made as ai-agents shows it to somebody not signed in,
     so that ``/apps/<id>/plugins/state`` holds it before the page's chat
     speaks to it; an example is one this runtime keeps warm. Answers the
     agent — ``at-<slug>`` for an address, the example's id — and the id of
@@ -511,7 +511,7 @@ async def configure_app(
     The plugins its organization has turned off are read from IAM with the
     person's token, and a block of its page from one of them is said in its
     setup notes; ``plugins_off_says`` says where the list came from, or why
-    none is off. Its agent keeps to the organization's contexts (U-31),
+    none is off. Its agent keeps to the organization's contexts,
     read when it is made: one that cannot be read refuses it.
     """
     from datalayer_core.utils.urls import DatalayerURLs
@@ -652,7 +652,7 @@ async def configure_app(
             "emoji": app.emoji,
         },
         "setup": app.setup,
-        # Its voice, so that the page knows it before the first answer (VO-45).
+        # Its voice, so that the page knows it before the first answer.
         "voice": voice_settings(app),
         "plugins_off_says": plugins_off.says,
         **({"a2a": a2a} if a2a else {}),
@@ -692,9 +692,9 @@ async def serve_agent_over_a2a(
     request: Request,
     authorized: Authorized = Depends(a_person),
 ) -> Dict[str, Any]:
-    """Serve an application's agent already made here over A2A (A-08).
+    """Serve an application's agent already made here over A2A.
 
-    What ai-agents asks of the runtime a deployment is kept on (R-33),
+    What ai-agents asks of the runtime a deployment is kept on,
     once it has made the deployment's agent there: its A2A route, behind its
     gate — keys granted to the route, and visitors when the deployment is
     open to them — with a card that names the deployment's stable address.
@@ -865,7 +865,7 @@ async def renew_principal(
     request: Request,
     authorized: Authorized = Depends(a_person),
 ) -> Dict[str, Any]:
-    """Renew the principal's token of a deployment kept here (A-08).
+    """Renew the principal's token of a deployment kept here.
 
     What ai-agents asks of the runtime it keeps a deployment on, before the
     token its agent was made with runs out: asked for again with the key it
@@ -937,14 +937,14 @@ async def agent_deployment(
 
 
 class BuildRequest(BaseModel):
-    """An application's file, to build (P-10)."""
+    """An application's file, to build."""
 
     file: str = Field("app.py", description="Its name: app.py, with no folder")
     text: str = Field(..., description="Its text, as the Studio's Python tab holds it")
 
 
 class EjectRequest(BaseModel):
-    """An application's Appspec, to eject into Python (P-13)."""
+    """An application's Appspec, to eject into Python."""
 
     spec: str = Field(..., description="Its Appspec, as YAML")
 
@@ -953,7 +953,7 @@ class EjectRequest(BaseModel):
 async def build_file(
     body: BuildRequest, authorized: Authorized = Depends(a_person)
 ) -> Dict[str, Any]:
-    """Build an ``app.py`` in a process of its own: the Studio's *Run* (P-10).
+    """Build an ``app.py`` in a process of its own: the Studio's *Run*.
 
     What ``loop apps build`` does, on this runtime: the file is run apart from
     the server, for at most a minute, and its Appspec is answered — what its
@@ -975,7 +975,7 @@ async def build_file(
 async def eject_spec(
     body: EjectRequest, authorized: Authorized = Depends(a_person)
 ) -> Dict[str, Any]:
-    """Write an application built by spec as an ``app.py`` (P-13).
+    """Write an application built by spec as an ``app.py``.
 
     `loop apps eject` on a spec's text: the ``app.py`` that holds it, ready
     for code, and the spec that file builds — checked to be the same, else
@@ -1015,7 +1015,7 @@ async def current_app(authorized: Authorized = Depends(a_caller)) -> Dict[str, A
     """Which application the runtime runs, and the first messages it offers.
 
     ``starters`` are the application's own (``interface.starters``): what a
-    host — @Datalayer's Home in Slack (S-104) — suggests asking,
+    host — @Datalayer's Home in Slack — suggests asking,
     each with the words it shows and the message it sends.
     """
     app = authorized.app
@@ -1066,11 +1066,11 @@ async def decide(
 
 @router.post("/feedback")
 async def feedback(body: FeedbackRequest, request: Request) -> Dict[str, Any]:
-    """Keep a person's word on a conversation in the application's record (V-18).
+    """Keep a person's word on a conversation in the application's record.
 
     The application is the conversation's: the one whose agent recorded it on
     this runtime — a configured runtime's, or a kept runtime's agent made with
-    the application's code (R-14, P-24) — else the runtime's own.
+    the application's code — else the runtime's own.
     """
     recorded = recorder_of(body.session)
     authorized = await _authorize(
@@ -1084,7 +1084,7 @@ async def feedback(body: FeedbackRequest, request: Request) -> Dict[str, Any]:
 
         raise HTTPException(status_code=409, detail=NOTHING_KEPT)
     if authorized.caller.kind == "embed":
-        # An embed's visitor speaks of their own session, and no other (R-20).
+        # An embed's visitor speaks of their own session, and no other.
         from agent_runtimes.apps.sessions import session_of
 
         live = session_of(body.session)
@@ -1118,7 +1118,7 @@ async def feedback(body: FeedbackRequest, request: Request) -> Dict[str, Any]:
         )
     except RecordNotSent as error:
         raise HTTPException(status_code=502, detail=str(error)) from None
-    # Its code hears it, once kept (P-24): `@app.feedback`.
+    # Its code hears it, once kept: `@app.feedback`.
     from agent_runtimes.apps.sessions import session_of
 
     live = session_of(body.session)
@@ -1139,7 +1139,7 @@ async def feedback(body: FeedbackRequest, request: Request) -> Dict[str, Any]:
     return {"kept": True, "summary": entry["summary"], "heard": heard}
 
 
-# --- the session API (R-04) ------------------------------------------------
+# --- the session API ------------------------------------------------
 #
 # An application's sessions over the wire: start, message, action, settings
 # change, stop and resume, each streamed as AG-UI events (`text/event-stream`),
@@ -1167,7 +1167,7 @@ class TurnPlace(BaseModel):
 
 
 class TurnProvenance(BaseModel):
-    """Where a host's turn comes from (S-204):
+    """Where a host's turn comes from:
     the host's kind, the place, its thread and message — other
     people's words arrive marked with where they were said. Kept with the
     turn: a retry naming another provenance is another request (409).
@@ -1255,7 +1255,7 @@ class SessionMessageRequest(BaseModel):
 
 
 class SessionPageRequest(BaseModel):
-    """A widget's page run on its inputs (P-05)."""
+    """A widget's page run on its inputs."""
 
     inputs: Dict[str, Any] = Field(
         default_factory=dict, description="Its inputs, by name, as its form holds them"
@@ -1269,7 +1269,7 @@ class SessionSettingsRequest(BaseModel):
 
 
 class SessionRuleRequest(BaseModel):
-    """A rule a person adds to a running session (SH-54): the Shield's rule shape.
+    """A rule a person adds to a running session: the Shield's rule shape.
 
     ``name`` and ``decision`` (``allow``, ``ask``, ``deny``) with what it
     names: ``classes`` (read, write, send, buy, delete, execute), ``kinds``
@@ -1289,7 +1289,7 @@ class SessionRuleRequest(BaseModel):
 
 
 class SessionWindowRequest(BaseModel):
-    """A message from the page the application sits in (P-25)."""
+    """A message from the page the application sits in."""
 
     data: Any = Field(..., description="What the page posted: anything JSON writes")
 
@@ -1333,16 +1333,16 @@ def _stream(chunks: Any) -> Any:
 async def _acts_as(
     instance: Dict[str, Any], caller: Caller, bearer: str, app: AppSpec
 ) -> Dict[str, str]:
-    """In whose name a session runs: a deployment's principal, else the person (I-03).
+    """In whose name a session runs: a deployment's principal, else the person.
 
-    A deployment's caller is let in by its level first (D-02,
-    `apps.opening`), on every request of the session. Its principal's
+    A deployment's caller is let in by its level first
+    (`apps.opening`), on every request of the session. Its principal's
     token is asked for again with the caller's token when it runs out, as
     every request of the session may.
 
-    A Preview runs as the person, held to its application's grants (R-25):
+    A Preview runs as the person, held to its application's grants:
     the token its runs carry is theirs, narrowed to the Spaces and the
-    companies the Appspec it runs grants (P-01), asked for and
+    companies the Appspec it runs grants, asked for and
     renewed the same way; without one it runs nothing.
     """
     from agent_runtimes.apps.callers import is_host_visitor
@@ -1360,7 +1360,7 @@ async def _acts_as(
 
     deployment = deployment_of(instance)
     if is_host_visitor(caller):
-        # A host's visitor (WHATSAPP WA-03): the one deployment their token
+        # A host's visitor: the one deployment their token
         # was issued for, opened to them as to anybody signed out, its
         # principal acting — their turn only reads and asks nobody (the
         # session's `run`), and nothing of it is resumed, cloned or exported.
@@ -1395,8 +1395,8 @@ async def _acts_as(
             )
     if caller.kind == "embed":
         # An embed token runs a session of its application's embedded
-        # deployment, as that deployment's principal, and nothing beyond
-        # (R-20): never a Preview, never in its owner's name.
+        # deployment, as that deployment's principal, and nothing beyond:
+        # never a Preview, never in its owner's name.
         from agent_runtimes.apps.callers import SESSION_SCOPE
 
         if SESSION_SCOPE not in caller.scopes:
@@ -1410,7 +1410,7 @@ async def _acts_as(
                 detail="An embed token runs its application as it is deployed, not a Preview.",
             )
     if caller.kind == "visitor":
-        # A visitor nobody knows (R-30): their own token calls the models,
+        # A visitor nobody knows: their own token calls the models,
         # and no principal acts for them — an application at its address is
         # opened to them by ai-agents, asked as nobody.
         if deployment:
@@ -1441,7 +1441,7 @@ async def _acts_as(
             except PrincipalTokenMissing as missing:
                 raise _refused(SessionRefused(403, str(missing))) from None
         return {"kind": "person", "uid": caller.uid}
-    # Who may open it (D-02), before its principal acts for them: the token
+    # Who may open it, before its principal acts for them: the token
     # held for the deployment is no reason to let anybody else talk to it.
     try:
         await ensure_may_open(deployment, caller, bearer)
@@ -1461,7 +1461,7 @@ async def _acts_as(
 def _signed_user(
     app: AppSpec, instance: Dict[str, Any], token: Any, *, woken: bool = False
 ) -> Any:
-    """The user the host's server signed for a session opening, or a refusal (D-21)."""
+    """The user the host's server signed for a session opening, or a refusal."""
     from agent_runtimes.apps.host_user import UserNotSigned, host_user_of
 
     if token is not None and not isinstance(token, str):
@@ -1489,8 +1489,8 @@ async def _woken_by(
 ) -> Dict[str, Any]:
     """What woke a session, from who may say so; else 403.
 
-    What it says opens the session without its host's signature (D-21), runs
-    the handler of the schedule it names and the person's token it names (W-03),
+    What it says opens the session without its host's signature, runs
+    the handler of the schedule it names and the person's token it names,
     and is what the record shows in place of who opened it. So of a deployment it
     is read from the authority `POST /deployments/{uid}/wake` answers, its owner,
     whose key the scheduler holds. ai-agents refuses anybody else there, and here
@@ -1516,7 +1516,7 @@ def _given_in_their_name(
     bearer: str,
 ) -> None:
     """A session woken for one person's own source — a message in their
-    mailbox (W-03) — is given that person's token naming the
+    mailbox — is given that person's token naming the
     application with its request (`acting.ACTING_TOKEN_HEADER`), minted by
     the scheduler from their grant: held where every run of the session
     finds it, as a person's own session's is (`acting.given`).
@@ -1725,9 +1725,9 @@ async def start_session(body: StartSessionRequest, request: Request) -> Any:
     # What woke it, from who may say so: everything below reads this.
     woken_by = await _woken_by(body, authorized, instance, bearer or "")
     # Woken for one person's own source, it is given their token naming the
-    # application, held where its runs find it (W-03).
+    # application, held where its runs find it.
     _given_in_their_name(request, woken_by, instance, bearer or "")
-    # Who its user is, embedded, when it takes only one its host signed (D-21).
+    # Who its user is, embedded, when it takes only one its host signed.
     user = _signed_user(app, instance, body.user_token, woken=bool(woken_by))
     # A host's retry is answered the original session and turn.
     turn_key = _turn_key(authorized.caller, request, body.external_event_id)
@@ -1824,7 +1824,7 @@ async def list_sessions(
     limit: int = 50,
     held: bool = False,
 ) -> Dict[str, Any]:
-    """The caller's sessions, held by this runtime **and** recorded (MH-02):
+    """The caller's sessions, held by this runtime **and** recorded:
     each with its state, turn phase, whether it is held here, agent, harness,
     turns, title, lineage, where it runs and when it started, and the folder
     (``workspace``) of a harness session from its harness row; newest first,
@@ -1913,7 +1913,7 @@ async def list_sessions(
     if not after:
         # Held sessions the record does not list yet (its write in flight): first.
         listed = [*by_uid.values(), *listed]
-    # A harness session's row says its folder (DESKTOP DK-26).
+    # A harness session's row says its folder.
     return {"sessions": await with_workspaces(listed), "has_more": page.has_more}
 
 
@@ -1939,7 +1939,7 @@ async def _recorded(uid: str, request: Request) -> Dict[str, Any]:
 @router.get("/sessions/{uid}")
 async def get_session(uid: str, request: Request) -> Dict[str, Any]:
     """What a session is: its application, in whose name it runs, where it
-    stands — held here, or, for its owner, as its record says it (MH-02).
+    stands — held here, or, for its owner, as its record says it.
     """
     from agent_runtimes.apps.sessions import session_of
 
@@ -1947,7 +1947,7 @@ async def get_session(uid: str, request: Request) -> Dict[str, Any]:
         live, _ = await _held(uid, request)
         described = dict(live.describe())
         # Its harness's row, with the vendor's own session id when the
-        # adapter exposes it (MH-05): what `loop sessions show` prints.
+        # adapter exposes it: what `loop sessions show` prints.
         shield = live._shield()
         if shield is not None and hasattr(shield, "harness_row"):
             described["harness_session"] = await shield.harness_row(uid)
@@ -1956,13 +1956,13 @@ async def get_session(uid: str, request: Request) -> Dict[str, Any]:
 
 
 class TitleRequest(BaseModel):
-    """A session's title, the person's (MH-43)."""
+    """A session's title, the person's."""
 
     title: str = Field("", description="At most 200 characters; empty takes it back")
 
 
 class ArchivedRequest(BaseModel):
-    """Whether a session is hidden from the list (MH-43)."""
+    """Whether a session is hidden from the list."""
 
     archived: bool
 
@@ -2018,7 +2018,7 @@ def _app_of(app_id: str) -> Optional[Tuple[AppSpec, Dict[str, Any]]]:
 
 
 async def _source(uid: str, request: Request) -> Tuple[Any, Caller]:
-    """A session the caller may clone, export or resume (MH-31): held here,
+    """A session the caller may clone, export or resume: held here,
     or recorded, for its owner; an embed's visitor refused with
     `NOTHING_KEPT`; a stranger's — an organization's admin included — 404.
     """
@@ -2046,7 +2046,7 @@ async def _source(uid: str, request: Request) -> Tuple[Any, Caller]:
 
 async def _within_budget(source: Any, operation: str, caller: Caller) -> None:
     """One more ``operation`` of ``caller``'s on ``source`` within the hour's
-    budget (R-22 (5)), or 429 in a sentence naming when it resets — said in
+    budget, or 429 in a sentence naming when it resets — said in
     the source's record first.
     """
     from agent_runtimes.apps.sessions import (
@@ -2063,7 +2063,7 @@ async def _within_budget(source: Any, operation: str, caller: Caller) -> None:
 
 
 class CloneRequest(BaseModel):
-    """Where to cut a clone, and what it runs on (MH-09)."""
+    """Where to cut a clone, and what it runs on."""
 
     up_to_turn: Optional[int] = Field(
         None, description="The turn to cut at; the last one unsaid"
@@ -2078,7 +2078,7 @@ class CloneRequest(BaseModel):
 async def clone_session_route(
     uid: str, body: CloneRequest, request: Request
 ) -> Dict[str, Any]:
-    """Clone a session from a turn (MH-09): a new session, `paused`, on no
+    """Clone a session from a turn: a new session, `paused`, on no
     runtime; the entries up to the turn copied under the new uid; `cloned`
     on both; the same agent unless another is named, the clone then told
     as a swap is; a turn the source lacks is 422.
@@ -2101,7 +2101,7 @@ async def clone_session_route(
 
 @router.get("/sessions/{uid}/export")
 async def export_session_route(uid: str, request: Request, format: str = "") -> Any:
-    """Export a session as a `datalayer-session/1` file (MH-13): the session
+    """Export a session as a `datalayer-session/1` file: the session
     line first, every entry after it, redacted and counted; the files as
     entries, never bytes; refused 409 when the application keeps no
     conversations; `exported` in the record with the digest.
@@ -2147,7 +2147,7 @@ async def _read_at_most(request: Request, cap: int) -> bytes:
 async def import_session_route(
     request: Request, agent: str = "", format: str = ""
 ) -> Dict[str, Any]:
-    """Import a session file (MH-14): the file as the body; always a new
+    """Import a session file: the file as the body; always a new
     uid, the importer its author, `paused`, lineage `imported_from`; the
     caps, the format's refusals, an application the runtime lacks (422), an
     agent it lacks (422 unless `?agent=` names one), a different application
@@ -2162,7 +2162,7 @@ async def import_session_route(
     )
 
     authorized = await _authorize(request, False)
-    # The hour's budget of imports first (R-22 (5)): a refused import reads
+    # The hour's budget of imports first: a refused import reads
     # no byte of the file; with no session yet, the refusal is logged by caller.
     try:
         spend_budget("import", authorized.caller)
@@ -2194,7 +2194,7 @@ async def import_session_route(
 
 
 class SwapRequest(BaseModel):
-    """Which agentspec the session goes on with (MH-06)."""
+    """Which agentspec the session goes on with."""
 
     agent: str = Field(
         ...,
@@ -2204,14 +2204,14 @@ class SwapRequest(BaseModel):
 
 @router.post("/sessions/{uid}/agent")
 async def swap_agent(uid: str, body: SwapRequest, request: Request) -> Dict[str, Any]:
-    """Swap the session's agent in place (MH-06): refused while a turn runs
+    """Swap the session's agent in place: refused while a turn runs
     or the harness is still loading (409); the current harness's process
     ended, its row kept; the new agent bound through configure-from-spec —
     a harness or a framework agent alike; the conversation carried, the
     sentence of what carries appended to it and read by the new agent with
     its first turn; the session's Rules carried, its *always* answers
     dropped, the organization's policy pulled for the new harness before its
-    first turn, fail closed (MH-08); ``swapped`` in the record.
+    first turn, fail closed; ``swapped`` in the record.
     """
     from agent_runtimes.adapters.acp_agent import HarnessRefused
     from agent_runtimes.apps.session_carry import carry_policy
@@ -2239,7 +2239,7 @@ async def swap_agent(uid: str, body: SwapRequest, request: Request) -> Dict[str,
         await run_hooks("swap", live, facts)
         if target["harness"]:
             # The organization's policy for the new harness, before its first
-            # turn: none readable, none served (fail closed, as SH-50).
+            # turn: none readable, none served (fail closed).
             try:
                 policies_in_force(live.app, token=bearer or None)
             except PolicyUnavailable as unavailable:
@@ -2267,7 +2267,7 @@ async def swap_agent(uid: str, body: SwapRequest, request: Request) -> Dict[str,
 async def retitle_session(
     uid: str, body: TitleRequest, request: Request
 ) -> Dict[str, Any]:
-    """Rename a session (MH-43): at most 200 characters, 422 over it; in the record."""
+    """Rename a session: at most 200 characters, 422 over it; in the record."""
     from agent_runtimes.apps.sessions import (
         TITLE_LIMIT,
         SessionRefused,
@@ -2295,7 +2295,7 @@ async def retitle_session(
 async def archive_session(
     uid: str, body: ArchivedRequest, request: Request
 ) -> Dict[str, Any]:
-    """Archive a session — hidden from the list unless ``?archived=true`` — or bring it back (MH-43)."""
+    """Archive a session — hidden from the list unless ``?archived=true`` — or bring it back."""
     from agent_runtimes.apps.sessions import session_of
 
     if session_of(uid) is not None:
@@ -2308,7 +2308,7 @@ async def archive_session(
 async def session_thread(uid: str, request: Request) -> Dict[str, Any]:
     """What a session's conversation holds, as AG-UI messages: what a page
     that reloaded draws again, for the caller that opened it — an embed's
-    visit, with a token renewed for it (D-13). A session this runtime
+    visit, with a token renewed for it. A session this runtime
     no longer holds, or somebody else's, is a 404.
     """
     live, _ = await _held(uid, request)
@@ -2347,7 +2347,7 @@ async def session_message(
 
 @router.post("/sessions/{uid}/press")
 async def session_press(uid: str, request: Request) -> Any:
-    """A press of what the session offered (RU-5), for a client of
+    """A press of what the session offered, for a client of
     the session API: Reactor's ``UiAction`` — the action, the display that
     offered it (``app`` for what its code declares, `describe`'s
     ``actions``), its token and its typed payload — checked before anything
@@ -2381,7 +2381,7 @@ async def session_press(uid: str, request: Request) -> Any:
 
 @router.post("/sessions/{uid}/page")
 async def session_page(uid: str, body: SessionPageRequest, request: Request) -> Any:
-    """A widget's page run on its inputs (P-05): checked against its form
+    """A widget's page run on its inputs: checked against its form
     — refused with 422 and the sentence — then its code's ``@app.page``, its
     outputs a ``CUSTOM`` event named ``loop.page``. Not a turn of the
     conversation: nothing is said in it.
@@ -2410,7 +2410,7 @@ async def session_rules_in_force(uid: str, request: Request) -> Dict[str, Any]:
 async def add_session_rule(
     uid: str, body: SessionRuleRequest, request: Request
 ) -> Dict[str, Any]:
-    """Add or tighten a rule on the running session (SH-54): in force at once,
+    """Add or tighten a rule on the running session: in force at once,
     gone with the session, never below the organization's — a rule that
     would permit more is a 422 in a sentence. Answers what is in force now.
     """
@@ -2451,7 +2451,7 @@ async def session_settings(
 
 @router.post("/sessions/{uid}/window")
 async def session_window(uid: str, body: SessionWindowRequest, request: Request) -> Any:
-    """A message from the page the application sits in (P-25): its code's
+    """A message from the page the application sits in: its code's
     ``@app.window`` runs on it, streamed — what the code sends back is a
     ``window`` op on the session's ui socket (RU-W).
     """
@@ -2465,10 +2465,10 @@ async def session_window(uid: str, body: SessionWindowRequest, request: Request)
 
 
 #: The most sound one turn may send: a minute of 16-bit mono WAV at 48 kHz
-#: is 5.8 MB; the speech service hears a minute at most (VO-34).
+#: is 5.8 MB; the speech service hears a minute at most.
 AUDIO_TURN_BYTES = 8 * 1024 * 1024
 
-#: What a turn's sound may be, as the speech service hears it (VO-34).
+#: What a turn's sound may be, as the speech service hears it.
 AUDIO_TYPES = (
     "audio/wav",
     "audio/x-wav",
@@ -2481,7 +2481,7 @@ AUDIO_TYPES = (
 
 @router.post("/sessions/{uid}/audio")
 async def session_audio(uid: str, request: Request, language: str = "") -> Any:
-    """The person spoke (VO-46): the turn's sound as the body — WAV, FLAC,
+    """The person spoke: the turn's sound as the body — WAV, FLAC,
     Ogg Opus or WebM, as its ``Content-Type`` says, at most a minute —
     read in the chunks it came in, heard, then the turn, streamed: its code's
     ``@app.audio`` with what was heard, or the words as the person's
@@ -2529,7 +2529,7 @@ async def session_audio(uid: str, request: Request, language: str = "") -> Any:
 
 @router.post("/sessions/{uid}/interrupt")
 async def interrupt_session(uid: str, request: Request) -> Dict[str, Any]:
-    """The person spoke over the agent (VO-46, VO-13): what runs is
+    """The person spoke over the agent: what runs is
     cancelled, a client reading the turn told (``voice.interrupted``), its
     code's ``@app.interrupted`` run. Unlike Stop, it stays open for what is
     said next.
@@ -2547,7 +2547,7 @@ async def interrupt_session(uid: str, request: Request) -> Dict[str, Any]:
 @router.post("/agents/{agent}/files")
 async def upload_file(agent: str, request: Request) -> Any:
     """A file the page gives a conversation, uploaded before the run that
-    names it (RU-6): Reactor's `UiFilesRoutes` over the sessions'
+    names it: Reactor's `UiFilesRoutes` over the sessions'
     `UI_FILES`. Its bytes are the body; the conversation (the thread, which
     the session is or will be) in ``X-Reactor-Scope``, its name in
     ``X-Reactor-File-Name``, its media type in ``Content-Type``, the caller's
@@ -2596,7 +2596,7 @@ async def upload_file(agent: str, request: Request) -> Any:
 
 @router.get("/files/{scope}/{ref}")
 async def download_file(scope: str, ref: str, request: Request) -> Any:
-    """A file of a conversation by its signed url (RU-6): its
+    """A file of a conversation by its signed url: its
     bytes, as an attachment, until the url expires (403 after, or for a
     signature that is not this file's; 404 for a file no longer kept).
     """
@@ -2693,7 +2693,7 @@ async def stop_session(uid: str, request: Request) -> Dict[str, Any]:
 @router.post("/sessions/{uid}/end")
 async def end_session(uid: str, request: Request) -> Dict[str, Any]:
     """End a session: what runs is cancelled, a Python application's ``end`` runs,
-    and the runtime no longer holds it (P-14). Its record stays, ``ended``.
+    and the runtime no longer holds it. Its record stays, ``ended``.
     """
     from agent_runtimes.apps.sessions import SessionRefused
 
@@ -2742,7 +2742,7 @@ async def delete_session(uid: str, request: Request) -> Dict[str, Any]:
 @router.post("/sessions/logout")
 async def logout_sessions(request: Request) -> Dict[str, Any]:
     """The caller signed out: each of their sessions here runs its ``logout``,
-    then ends (P-14).
+    then ends.
     """
     from agent_runtimes.apps import sessions
 
@@ -2790,8 +2790,8 @@ async def resume_session(uid: str, body: ResumeSessionRequest, request: Request)
 
             raise SessionRefused(404, NOTHING_KEPT)
         if authorized.caller.kind == "embed":
-            # Its record names nobody who opened it (R-31): nobody can say
-            # it is theirs to go on with (R-20).
+            # Its record names nobody who opened it: nobody can say
+            # it is theirs to go on with.
             raise SessionRefused(
                 404,
                 "An embedded session is resumed only while this runtime holds it.",
@@ -2799,15 +2799,15 @@ async def resume_session(uid: str, body: ResumeSessionRequest, request: Request)
         bearer = bearer_of(request.headers.get("authorization"))
         set_request_user_jwt(bearer or None)
         acts_as = await _acts_as(instance, authorized.caller, bearer, app)
-        # Opened again: its user signed again, when its application takes only that (D-21).
+        # Opened again: its user signed again, when its application takes only that.
         user = _signed_user(app, instance, body.user_token)
-        # The whole conversation (MH-03): turns, tool rows and displays,
+        # The whole conversation: turns, tool rows and displays,
         # files, the session's Rules, its title and lineage.
         rebuilt = await rebuilt_from_record(uid, app, instance, bearer)
         if not opener_may(rebuilt.opened_by, authorized.caller):
             # The opener's alone, as a clone or an export is: a stranger — the
             # application's owner, who reads its record, included — is not
-            # told the session exists (MH-31).
+            # told the session exists.
             raise SessionRefused(404, f"No session {uid} is held here.")
         _prune()
         live = new_session(
@@ -2832,12 +2832,12 @@ async def resume_session(uid: str, body: ResumeSessionRequest, request: Request)
         raise _refused(refused) from None
 
 
-#: The most sound a turn sends to keep, as base64 (a minute, VO-63).
+#: The most sound a turn sends to keep, as base64 (a minute).
 SAID_SOUND_BASE64 = AUDIO_TURN_BYTES * 4 // 3 + 4
 
 
 def _said_sound(forwarded: Any) -> Optional[Tuple[bytes, str, float, str]]:
-    """The sound a spoken message carries to be kept (VO-63) —
+    """The sound a spoken message carries to be kept —
     ``forwardedProps.voice.sound``: ``{data: <base64>, type, seconds}`` —
     taken out of the run: ``(sound, content_type, seconds, language)``, or
     ``None`` when there is none or it is not a sound a turn may keep.
@@ -2912,18 +2912,18 @@ async def session_agui(agent: str, request: Request) -> Any:
     thread = str(body.get("threadId") or "")
     forwarded = body.get("forwardedProps")
     loop = forwarded.get("loop") if isinstance(forwarded, dict) else None
-    # What they said as sound, sent to be kept with their consent (VO-63):
+    # What they said as sound, sent to be kept with their consent:
     # taken out before anything else reads the run, never given to a model.
     said = _said_sound(forwarded)
     # A message the person said: its transcript is the message, and the
-    # record keeps it marked spoken (VO-27, VO-29).
+    # record keeps it marked spoken.
     hear(spoken_of(forwarded.get("voice")) if isinstance(forwarded, dict) else None)
     try:
         live = session_of(thread)
         if live is None:
             acts_as = await _acts_as(instance, authorized.caller, bearer, app)
             # Who its user is, embedded, when it takes only one its host
-            # signed (D-21): verified as the session opens.
+            # signed: verified as the session opens.
             user = _signed_user(
                 app,
                 instance,
@@ -2951,7 +2951,7 @@ async def session_agui(agent: str, request: Request) -> Any:
         raise _refused(refused) from None
 
 
-# --- What an application remembers (R-18, R-36) --------------------------
+# --- What an application remembers --------------------------
 
 
 async def _whose(request: Request) -> str:
@@ -2961,7 +2961,7 @@ async def _whose(request: Request) -> str:
     (`agent_runtimes.apps.memory`): each person reads, corrects and
     forgets what it remembers of them — its owner for its Preview and its
     deployments alike, a visitor at its address what it remembers of the
-    visitor (R-36) — and nobody else's. The machine itself is the owner.
+    visitor — and nobody else's. The machine itself is the owner.
     """
     from agent_runtimes.memory.identity import resolve_memory_identity
 
@@ -3044,7 +3044,7 @@ class Correction(BaseModel):
 async def correct_memory(
     app: str, memory_id: str, correction: Correction, request: Request
 ) -> Dict[str, Any]:
-    """Correct one thing an application remembers, in place (R-34).
+    """Correct one thing an application remembers, in place.
 
     Its words change — mem0 embeds them again — and the correction is kept
     with who made it and when. Somebody else's is not found.

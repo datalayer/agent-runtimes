@@ -1,8 +1,8 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What an application's code asks is a display; a press of it answers it
-(RU-4).
+"""What an application's code asks is a display; a press of it answers it.
+
 
 ``session.ask(...)`` says the question in words in the conversation and
 shows a ``QuestionShown`` display under them with an ``ask`` op on the
@@ -229,7 +229,7 @@ async def test_a_form_is_answered_with_its_values_checked() -> None:
 
 
 async def test_a_file_is_answered_by_the_ref_its_upload_answered() -> None:
-    """RU-6: a file question offers reactor.answer as any other; its
+    """A file question offers reactor.answer as any other; its
     value is the ref the upload answered, read back for whoever uploaded it in
     this conversation, held to the question's kinds."""
     live, got, _ = await asking("session-ask-6", FileQuestion("Which file?", (".csv",)))
@@ -273,7 +273,7 @@ async def test_a_file_is_answered_by_the_ref_its_upload_answered() -> None:
 
 
 async def test_a_question_asked_is_said_on_the_record_by_its_kind_only() -> None:
-    """M-023: the record says the application waits for an answer, whatever
+    """The record says the application waits for an answer, whatever
     `record.include` keeps, and ai-agents tells whoever opened the session; the
     question's words stay in the conversation."""
     sent: List[Dict[str, Any]] = []

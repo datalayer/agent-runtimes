@@ -4,7 +4,7 @@
  */
 
 /**
- * The halo round a selected edge (SCENES S3-02): a wide, faint stroke under
+ * The halo round a selected edge: a wide, faint stroke under
  * the edge, in the backdrop's colour, so the exchange chosen in the
  * transcript is seen on the stage, on every backdrop.
  *

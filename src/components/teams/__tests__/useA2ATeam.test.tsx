@@ -4,7 +4,7 @@
  */
 
 /**
- * A team of N in the page (A-08): the entry asks each peer with a tool
+ * A team of N in the page: the entry asks each peer with a tool
  * of its own, its instructions naming each; each peer keeps its own persona,
  * history, flow and calls; and an entry on a runtime is asked over A2A from
  * the page itself.
@@ -499,7 +499,7 @@ describe('a button pressed on what a peer showed', () => {
 });
 
 describe('the entry’s words, block after block', () => {
-  it('starts a block written after another as a paragraph of its own (H-21)', async () => {
+  it('starts a block written after another as a paragraph of its own', async () => {
     const { joinBlock } = await import('../useA2ATeam');
     // Orca read "…right away.Accounting looked up…" (2026-10-11).
     expect(
@@ -516,7 +516,7 @@ describe('the entry’s words, block after block', () => {
   });
 });
 
-describe("an entry alone in the browser with the page's tools (AGENT_BATTLE B1-01)", () => {
+describe("an entry alone in the browser with the page's tools", () => {
   it("has an agent whose tools are the page's, and none without them", async () => {
     const { useA2ATeam } = await import('../useA2ATeam');
     const tools = [

@@ -82,7 +82,7 @@ class LoopSession:
 
     def with_agent(self, agent_id: str) -> "LoopSession":
         """The same session, its agent swapped in place through the session
-        route (MH-07): ``POST /api/v1/apps/sessions/{uid}/agent``, the
+        route: ``POST /api/v1/apps/sessions/{uid}/agent``, the
         sentence the new agent was told kept in ``said``.
 
         Raises

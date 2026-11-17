@@ -4,7 +4,7 @@
  */
 
 /**
- * The transcript as rows (SCENES S2-01): one row per line, with what the
+ * The transcript as rows: one row per line, with what the
  * lines do not say in so many words — over which protocol an exchange went,
  * how long a call or an ask took, in what state it is — and the filter the
  * three views share: members, kinds, *failed only*, failed first.

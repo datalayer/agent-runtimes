@@ -1,17 +1,17 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""``datalayer envs``, every command against a fake client (E1-20).
+"""``datalayer envs``, every command against a fake client.
 
 The fake is ``AgentClient`` over a fake ``_fetch``. Each route answers what
-E1-01's routes answered in ``environments_registry_recorded.json``, so a
+the routes answered in ``environments_registry_recorded.json``, so a
 command is held to the requests its client calls really send, among them the
-``If-Match`` taken from the record it has just read. ``resolve``, which E1-04
-has not built, answers its recorded 501. ``try``, a promotion's record and its
+``If-Match`` taken from the record it has just read. ``resolve``, which is
+not built yet, answers its recorded 501. ``try``, a promotion's record and its
 refusal, and ``rm`` refused while a runtime runs the environment answer what
-E1-14's and E1-15's routes answered, on an environment of their own.
+their routes answered, on an environment of their own.
 
-A build's log is what E1-16's routes answered for a build of its own, recorded
+A build's log is what the build log routes answered for a build of its own, recorded
 from Runtimes' in-memory app (see the JSON's ``source``): the stream
 ``logs?follow=true`` sent is ``environments_build_logs_recorded.sse``, byte for
 byte, beside the polling answer and the build as it ended. ``build --follow``
@@ -58,7 +58,7 @@ READY = RECORDED["list_versions"]["body"]["versions"][0]
 QUEUED = RECORDED["create_builds"]["body"]["builds"][0]
 SPEC = RECORDED["create_version"]["json"]["spec"]
 
-#: E1-16's routes, recorded on a build of their own.
+#: The build log routes, recorded on a build of their own.
 FOLLOWED = RECORDED["follow_build_log"]
 #: The bytes ``logs?follow=true`` sent, ``event: end`` included.
 STREAM = (HERE / FOLLOWED["stream"]).read_bytes()
@@ -74,7 +74,7 @@ DRAFT_UID = DRAFT["uid"]
 READY_UID = READY["uid"]
 BUILD_UID = QUEUED["uid"]
 
-#: E1-14's and E1-15's routes, recorded on an environment of their own.
+#: The trial, promotion and deletion routes, recorded on an environment of their own.
 TRIAL = RECORDED["trial_version"]
 #: Its version 2, tried before it was ever promoted.
 TRIED_UID = TRIAL["path"].split("/")[-2]
@@ -180,7 +180,7 @@ def answered(name: str) -> tuple[int, Any]:
 
 
 def recorded_stream(size: int = 64) -> requests.Response:
-    """``logs?follow=true`` as E1-16's route answered it: its status, its headers and its bytes."""
+    """``logs?follow=true`` as its route answered it: its status, its headers and its bytes."""
     response = requests.Response()
     response.status_code = FOLLOWED["status"]
     response.headers.update(FOLLOWED["responseHeaders"])
@@ -654,7 +654,7 @@ def test_resolve_of_a_version_that_has_a_lock_answers_it_and_starts_nothing(
     registry: Registry,
 ) -> None:
     """The question behind `envs resolve` is "what does this lock to", and a
-    version that has an answer is given it rather than refused (E1-26)."""
+    version that has an answer is given it rather than refused."""
     registry.on(
         "GET", f"/environments/{ENV_UID}/versions", ok({"versions": [READY, DRAFT]})
     )
@@ -705,7 +705,7 @@ def test_resolve_follows_the_build_that_resolves(registry: Registry) -> None:
     """The solve runs on the platform, in the version's own base image, so it
     is queued as a build that stops once the lock is stored. `--follow` is on
     by default because a solve takes minutes, and its log is where it says why
-    it refused (E1-26)."""
+    it refused."""
     follow_routes(registry)
     queued = {
         "resolved": False,
@@ -876,8 +876,8 @@ def test_diff_reads_each_lock_from_its_own_route(registry: Registry) -> None:
     """A version's answer names its lock by digest only — a lock is tens of
     kilobytes and every listing would carry it — so `diff` reads the document
     itself. Before that route existed it could only say "whose content the
-    service does not answer yet", which is what it said on r1 on 2026-09-16
-    (E1-20)."""
+    service does not answer yet", which is what it said on r1 on 2026-09-16.
+    """
     before = locked(1, ["geopandas==1.1.1"], None)
     after = locked(2, ["geopandas==1.1.2"], None)
     registry.on("GET", f"/environment-versions/{before['uid']}", ok(before))
@@ -1032,7 +1032,7 @@ LOGS = f"/environment-builds/{LOGGED_UID}/logs"
 
 
 def follow_routes(registry: Registry, size: int = 64, **changes: Any) -> None:
-    """Answer as E1-16 recorded: the build queued, its log's stream, and the build as it ended, with ``changes``."""
+    """Answer as recorded: the build queued, its log's stream, and the build as it ended, with ``changes``."""
     registry.on(
         "POST",
         f"/environment-versions/{LOGGED_VERSION_UID}/builds",
@@ -1486,7 +1486,7 @@ A_PUBLICATION = {
 def test_publish_names_everything_that_becomes_public(registry: Registry) -> None:
     """A version is made public once and the snapshot is frozen at that moment,
     so the command prints the list rather than a confirmation — the publication
-    rules publish nothing by implication (E2-16)."""
+    rules publish nothing by implication."""
     registry.on("GET", f"/environment-versions/{READY_UID}", ok(READY))
     registry.on("POST", f"/environment-versions/{READY_UID}/publish", ok(A_PUBLICATION))
 
@@ -1546,7 +1546,7 @@ def test_publication_reads_what_a_version_made_public(registry: Registry) -> Non
 
 # -- builds, artifacts, cancel, retry, fork ----------------------------------------------------
 #
-# The five routes no `envs` command could reach until E4-07's parity test was
+# The five routes no `envs` command could reach until the parity test was
 # written: a version's builds and artifacts could not be listed, a running
 # build could not be stopped, a failed one could not be tried again, and a
 # published environment could not be forked.

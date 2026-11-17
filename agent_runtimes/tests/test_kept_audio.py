@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """
-What the person said, kept as sound, on the runtime's side (VO-63).
+What the person said, kept as sound, on the runtime's side.
 
 A spoken message the page sends with its sound (``forwardedProps.voice.sound``,
 when the application's record keeps ``audio`` and the person agreed) has the

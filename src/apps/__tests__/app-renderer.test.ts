@@ -4,7 +4,7 @@
  */
 
 /**
- * An application in a LOOP workspace (R-01): the agent created with the
+ * An application in a LOOP workspace: the agent created with the
  * application in its payload, and the application's starters on the empty
  * chat.
  */
@@ -44,7 +44,7 @@ describe('the application plugin', () => {
     expect(blueprint.value.createPayload.agent_library).toBe('pydantic-ai');
   });
 
-  it('says the organization it belongs to on a Datalayer runtime, whose contexts its agent keeps to (U-31)', () => {
+  it('says the organization it belongs to on a Datalayer runtime, whose contexts its agent keeps to', () => {
     expect(
       appDatalayerCreatePayload(research, {
         appUid: 'app-1',
@@ -77,7 +77,7 @@ describe('the application plugin', () => {
       interface: { ...research.interface, starters: [] },
     });
     expect(contributed(plain, LoopChatSuggestion)).toEqual([]);
-    // The name of the pair, which the runtime's plugin has too (F-15).
+    // The name of the pair, which the runtime's plugin has too.
     expect(plugin.name).toBe('loop-app-web-research');
     expect(plugin.requiredBackendPlugins).toEqual(['loop-app-web-research']);
     expect(plugin.displayName).toBe('Web Research');
@@ -92,7 +92,7 @@ describe('the application plugin', () => {
   });
 });
 
-describe('the application’s accent in its conversation (T-05, T-18)', () => {
+describe('the application’s accent in its conversation', () => {
   it('is laid over the theme the chat wears, in both modes', () => {
     const research = APP_CATALOGUE['web-research'];
     expect(research.interface.accent).toBe('sky');
@@ -116,7 +116,7 @@ describe('the application’s accent in its conversation (T-05, T-18)', () => {
     expect(appThemeOverrides(plain)).toBeUndefined();
   });
 
-  it('is the same over every theme: the accents are the theme system’s (T-30, 2026-10-07)', () => {
+  it('is the same over every theme: the accents are the theme system’s (2026-10-07)', () => {
     // The overrides do not depend on the theme the chat wears.
     expect(
       appThemeOverrides(APP_CATALOGUE['web-research'])?.light?.[
@@ -126,7 +126,7 @@ describe('the application’s accent in its conversation (T-05, T-18)', () => {
   });
 });
 
-describe('the agent its chat speaks to (D-15)', () => {
+describe('the agent its chat speaks to', () => {
   const research = APP_CATALOGUE['web-research'];
 
   it('is its own, under its id', () => {

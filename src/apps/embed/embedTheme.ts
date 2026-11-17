@@ -4,13 +4,13 @@
  */
 
 /**
- * The `loop` theme, carried inside the embed (T-13, D-11).
+ * The `loop` theme, carried inside the embed.
  *
  * The element draws the application in a shadow root: the host's styles do
  * not reach in, and the application's do not reach out. The theme travels
  * with it as CSS custom properties, set on the theme provider's own element
  * inside that root — the `loop` theme's, with the application's accent over
- * it — and the theme's own stylesheet (its controls as pills, T-09) is
+ * it — and the theme's own stylesheet (its controls as pills) is
  * written into the root, scoped to that element, since a stylesheet in the
  * host's `<head>` does not cross into a shadow tree.
  *
@@ -63,7 +63,7 @@ function faceOf(
 }
 
 /**
- * The accent over a theme, whichever theme (T-05, T-30; every theme since
+ * The accent over a theme, whichever theme (every theme since
  * 2026-10-07); none when neither the application nor the host names one —
  * the theme's own colours.
  */
@@ -74,8 +74,8 @@ const accentOver = (
 
 /**
  * The theme as the embed wears it — `loop`, or the one the application
- * names (T-30) — with the application's accent over it in both modes
- * (T-05), and the host's face when it named one.
+ * names — with the application's accent over it in both modes,
+ * and the host's face when it named one.
  */
 export function embedThemeStyles({
   accent,
@@ -103,8 +103,8 @@ export function embedThemeStyles({
 }
 
 /**
- * The same accent and face laid over the conversation's own theme (T-05,
- * D-11): the chat sets its theme again inside it, which would put the
+ * The same accent and face laid over the conversation's own theme:
+ * the chat sets its theme again inside it, which would put the
  * theme's colours and face back over what the embed set around it. The
  * accent's properties in each mode (over any theme), and, when the host
  * named a face, every property of the theme that names its own.

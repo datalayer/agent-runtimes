@@ -3,7 +3,7 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/** A2A card extensions in TypeScript, as `test_protocols_a2a_extensions.py` (PR-02). */
+/** A2A card extensions in TypeScript, as `test_protocols_a2a_extensions.py`. */
 
 import { contribution, definePlugin } from '@datalayer/reactor';
 import { describe, expect, it } from 'vitest';
@@ -97,7 +97,7 @@ describe('A2A card extensions', () => {
   });
 
   it("publishes the extensions an application's Appspec declares", () => {
-    // `a2a.extensions` as agentspecs writes it (PR-02).
+    // `a2a.extensions` as agentspecs writes it.
     const a2a: AppA2ASpec = {
       extensions: [
         {
@@ -161,7 +161,7 @@ describe('A2A card extensions', () => {
   });
 });
 
-describe('the paired fixture (PR-51, EX-09)', () => {
+describe('the paired fixture', () => {
   it('reads as test_protocols_a2a_extensions.py reads it', () => {
     expect(extensionsOf(fixture.card)).toEqual(fixture.extensions);
     expect(findExtension(fixture.card, fixture.find.uri)?.uri).toBe(

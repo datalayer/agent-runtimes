@@ -4,7 +4,7 @@
  */
 
 /**
- * The three views under one switch (SCENES S2-03) and the drill-down (S3):
+ * The three views under one switch and the drill-down (S3):
  * Lines, Table and Sequence show the same lines after a filter; *Copy*
  * copies each view as its own text; a click on a line or a row opens the
  * detail, which says a recording has no span to open and, with the spans,

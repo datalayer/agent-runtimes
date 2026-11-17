@@ -4,7 +4,7 @@
  */
 
 /**
- * Components in the answers (H-02): a surface a peer shows
+ * Components in the answers: a surface a peer shows
  * (`application/json+a2ui`) is kept by the team with the peer that gave it,
  * drawn with `InlineSurface` on Datalayer's catalog, and a button pressed
  * on it goes back to that peer with its action — what it does said, so that
@@ -194,7 +194,7 @@ describe('AnswerSurfaces', () => {
         'Accounting',
       ),
     ).toBe('You chose: Not now. Accounting: Nothing sent.');
-    // The reply in plain words: Orca was given its backticks (H-21, 2026-10-11).
+    // The reply in plain words: Orca was given its backticks (2026-10-11).
     expect(
       answerSaid(
         {
@@ -229,7 +229,7 @@ describe('AnswerSurfaces', () => {
         does: 'send',
       });
       // A form's submission is not an answer's button; the surface's id
-      // says nothing either way (RU-2: no `answer-` prefix).
+      // says nothing either way (no `answer-` prefix).
       expect(
         pressedOf({ name: 'submit_a2ui_form', surfaceId: SURFACE_ID }),
       ).toBeNull();
@@ -276,7 +276,7 @@ describe('AnswerSurfaces', () => {
         ),
       ).toBeTruthy();
       expect(screen.getByText('You chose: Send them')).toBeTruthy();
-      // Heard as one sentence, from a status there before the press, in plain words (H-21).
+      // Heard as one sentence, from a status there before the press, in plain words.
       expect(screen.getByRole('status').textContent).toBe(
         'You chose: Send them. Accounting: Without an account it only reads: Send them would do more than read, so it asked nobody and did nothing.',
       );

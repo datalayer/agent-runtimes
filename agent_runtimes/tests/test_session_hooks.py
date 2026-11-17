@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The `session.hook` point and its first two hooks (MH-F06).
+"""The `session.hook` point and its first two hooks.
 
 Each operation reaches every hook with the session and its facts; a hook
 that refuses stops the operation with its sentence, one that fails stops it

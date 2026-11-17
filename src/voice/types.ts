@@ -90,7 +90,7 @@ export interface VoiceEngines {
   vad: () => Promise<VadModule>;
 }
 
-/** How a message was heard: what rides on it as `metadata` (VO-27). */
+/** How a message was heard: what rides on it as `metadata`. */
 export interface SpokenMetadata {
   input: 'voice';
   language: string;
@@ -98,13 +98,13 @@ export interface SpokenMetadata {
   where: 'device' | 'server';
   /**
    * The turn's sound, sent to be kept with its words when the application's
-   * record keeps `audio` and the person agreed (VO-63); never on the
+   * record keeps `audio` and the person agreed; never on the
    * conversation's own message.
    */
   sound?: SpokenSound;
 }
 
-/** A turn's recording, to keep (VO-63): a WAV, base64. */
+/** A turn's recording, to keep: a WAV, base64. */
 export interface SpokenSound {
   data: string;
   type: 'audio/wav';

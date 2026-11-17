@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The session file format (MH-12) as agent-runtimes reads it.
+"""The session file format as agent-runtimes reads it.
 
 Generated from agentspecs 0.0.119's `sessions/` kind by
 `scripts/codegen/generate_session_files.py`, wired into `make specs`: the

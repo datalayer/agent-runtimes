@@ -185,7 +185,7 @@ class RuntimesClient:
         environment_name : str
             Name of the environment to use. A platform environment by its
             name, a user environment as ``<account-handle>/<name>`` or by its
-            uid (D-2).
+            uid.
         environment_version : Optional[Union[int, str]]
             The version of a user environment to launch: its number, or a
             version uid. Without one the promoted version launches, which is
@@ -205,11 +205,11 @@ class RuntimesClient:
             runtime: a Home Folder attachment mounts the caller's home
             folders, a Volume attachment mounts its Volume.
         parent_reservation_uid : Optional[str]
-            The execution tree the runtime is metered against
-            (O1-07): IAM grants its reservation no more than
+            The execution tree the runtime is metered against:
+            IAM grants its reservation no more than
             the tree has left, and refuses it once the tree has nothing.
         app_uid : Optional[str]
-            The LOOP application the runtime runs for (R-09).
+            The LOOP application the runtime runs for.
         deployment_uid : Optional[str]
             The deployment of that application it runs for — a scheduled
             tick's or an event's session. The Operator writes both on the
@@ -227,7 +227,7 @@ class RuntimesClient:
             ``/apps/<slug>/preview/<version>``. Only with ``deployment_slug``
             (`ValueError` otherwise).
         app_spec : Optional[dict[str, Any]]
-            The Appspec of the application the runtime is launched for (R-19). The Operator passes it to the runtime's companion, which
+            The Appspec of the application the runtime is launched for. The Operator passes it to the runtime's companion, which
             gives the runtime the secrets its connections declare before its
             agent is made. An application's launch carries it: ``app_uid``
             without it is refused (`ValueError`).
@@ -278,7 +278,7 @@ class RuntimesClient:
             )
         # The launch contract is `environment: {name, version}`, and the
         # version is additive: absent, this is byte for byte the request every
-        # platform environment has always been launched with (E1-11).
+        # platform environment has always been launched with.
         environment: dict[str, Any] = {"name": environment_name}
         if environment_version is not None and str(environment_version).strip() != "":
             environment["version"] = environment_version

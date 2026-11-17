@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The runtime's plugin host for the session (MH-F01): the points read, the
+"""The runtime's plugin host for the session: the points read, the
 refusals kept, ``loop plugins`` answered.
 
 The platform is the runtime's own (``apps.plugins.PLATFORM``, one per

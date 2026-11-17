@@ -62,7 +62,7 @@ export type LoopEmbedProps = LoopPresetOptions & {
    */
   frameHeight?: number | string;
   /**
-   * The sidebar as a rail of line icons, one panel shown at a time (T-07). See `LoopWorkspaceProps.sidebarRail`.
+   * The sidebar as a rail of line icons, one panel shown at a time. See `LoopWorkspaceProps.sidebarRail`.
    */
   sidebarRail?: boolean;
   /**
@@ -72,7 +72,7 @@ export type LoopEmbedProps = LoopPresetOptions & {
    * window's title bar, a panel of its own, a command. Without this a host
    * would have to rebuild the plugin list to add one thing to it, which is the
    * assembly this component exists to save. An extension groups some of
-   * them, as an application's own plugins are (`AppRenderer`, F-15).
+   * them, as an application's own plugins are (`AppRenderer`).
    */
   plugins?: PlatformInput[];
 };
@@ -151,7 +151,7 @@ export function LoopEmbed({
         engines: undefined,
         token: undefined,
       }),
-      // The thread a reloaded embed goes on with, by its id (D-13).
+      // The thread a reloaded embed goes on with, by its id.
       preset.thread?.id,
       // By its content: an application's spec written inline is a new object each render.
       JSON.stringify(preset.datalayerCreatePayload ?? null),

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A worker's answer is read as the markdown it usually is (O1-10).
+"""A worker's answer is read as the markdown it usually is.
 
 Found live, 2026-09-13: a document opened at `.../documents/{uid}` showed
 `# Heading` and `**bold**` literally — the `#`s and `*`s as text — because

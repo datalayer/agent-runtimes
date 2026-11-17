@@ -56,7 +56,7 @@ class ProtocolDescription:
     """One protocol as its plugin implements it."""
 
     #: As code names it: ``mcp``, ``a2a``, ``web_bot_auth``… (never ``acp``
-    #: for commerce: that is the Agent Client Protocol, PR-40).
+    #: for commerce: that is the Agent Client Protocol).
     id: str
     name: str
     layer: Layer
@@ -68,9 +68,9 @@ class ProtocolDescription:
     specification: str
     #: The plugin that implements it.
     plugin: str
-    #: Its id in the agentspecs protocols catalogue (``agentspecs/protocols``,
-    #: PS-01): ``web-bot-auth``, ``acp``… — how Studio reads a
-    #: runtime's answer against the catalogue (PR-50).
+    #: Its id in the agentspecs protocols catalogue (``agentspecs/protocols``):
+    #:``web-bot-auth``, ``acp``… — how Studio reads a
+    #: runtime's answer against the catalogue.
     catalogue: str
     #: The contribution points its plugin declares, its extensions' included.
     points: tuple[str, ...] = ()

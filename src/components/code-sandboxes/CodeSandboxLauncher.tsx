@@ -162,7 +162,7 @@ export interface ICodeSandboxLauncherProps {
    * publication, as the Library page that sent the reader here names it.
    * Nobody's listing holds another account's environment, so it is read from
    * the publication, offered under *Library* and priced by the rate the
-   * publication carries (D-12, E2-19).
+   * publication carries.
    */
   libraryVersionUid?: string;
 }
@@ -206,8 +206,8 @@ export function CodeSandboxLauncher(
   );
   const listed = manager.environments.get();
   /*
-   * A publication somebody else owns, which no listing of the viewer's holds
-   * (D-12, E2-19): read by its version uid, offered under *Library* beside
+   * A publication somebody else owns, which no listing of the viewer's holds:
+   * read by its version uid, offered under *Library* beside
    * the rest, priced by the rate the publication carries, and selected below,
    * since it is what the reader came here to launch.
    */
@@ -301,7 +301,7 @@ export function CodeSandboxLauncher(
    * The environments come through `codeSandboxEnvironments`, so they read
    * here exactly as they read in the picker: grouped as yours, your
    * organizations' and the platform's, with the version and size class each
-   * runs, and disabled where there is nothing built to launch (E1-19).
+   * runs, and disabled where there is nothing built to launch.
    */
   const environmentOptions = useMemo(
     (): ICodeSandboxEnvironmentOption[] => [
@@ -488,7 +488,7 @@ export function CodeSandboxLauncher(
        * A user environment's entry says "v3", and sending that pins it: a
        * promotion made while this dialog was open cannot change what the
        * person accepted. A platform environment has no version, and the
-       * request is then the one it has always been (E1-19).
+       * request is then the one it has always been.
        */
       const environmentVersion = spec
         ? codeSandboxEnvironmentVersion(spec)

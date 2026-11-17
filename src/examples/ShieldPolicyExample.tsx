@@ -4,7 +4,7 @@
  */
 
 /**
- * The Shield's policy, from TypeScript (SH-53, SH-23).
+ * The Shield's policy, from TypeScript.
  *
  * An organization's document typed by `@datalayer/agent-shield` (the types
  * generated from the schema the Python package publishes), what it decides

@@ -1,8 +1,7 @@
 # Shopping over UCP, a purchase approved once
 
 The [Universal Commerce Protocol](https://ucp.dev) `2026-08-25` against a
-local test merchant, _Example Store_, in one process with no network
-(example EX-04).
+local test merchant, _Example Store_, in one process with no network.
 
 ```bash
 python examples/protocols/ucp/shopping.py --yes

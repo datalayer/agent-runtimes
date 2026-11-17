@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """Code where plain words are not enough: an application's own tools, checks
-and tests (P-06).
+and tests.
 
 An ``app.py`` declares them with ``@app.tool``, ``@app.check`` and
 ``@app.test``; its spec says each by name (``tools``, ``checks.code``,
@@ -12,7 +12,7 @@ them. Here is what runs them:
 - `own_toolset` — its tools, given to its agent beside its own; every call is
   decided by its rules, by what the tool ``does`` (`rules.decision_for`);
 - `AppCodeChecksCapability` — its checks, at their stage, beside the built-in
-  ones (R-06): an answer refused is asked again, a tool call refused is
+  ones: an answer refused is asked again, a tool call refused is
   stopped, each in its own sentence, and kept in the record as a check;
 - `run_code_tests` — its tests, each case asked of the application in this
   process, its conversation handed to the function that decides it.
@@ -51,7 +51,7 @@ Handler = Callable[..., Any]
 @dataclass(frozen=True)
 class CommandTool:
     """A tool of a plugin the application uses, run as the Reactor command it
-    names (P-35): ``app.uses(plugin, tools={...})``.
+    names: ``app.uses(plugin, tools={...})``.
 
     Contributed unbound; the host that runs a session binds it to its
     platform (`on`), where the command is registered.
@@ -106,7 +106,7 @@ def own_toolset(app: AppSpec, handlers: Mapping[str, Optional[Handler]]) -> Any:
 
     tools = [
         # A plugin's tool runs its command with its declared parameters: there
-        # is no signature of its own to read them from (P-35).
+        # is no signature of its own to read them from.
         Tool.from_schema(
             handler.run,
             name=tool.name,
@@ -150,7 +150,7 @@ def refusal_of(name: str, said: Any) -> Optional[str]:
 
 @dataclass
 class AppCodeChecksCapability(AbstractCapability[Any]):
-    """Run the checks of an application's code at their stage (P-06).
+    """Run the checks of an application's code at their stage.
 
     After its rules and its built-in checks: a call the rules refuse is not
     checked. A tool call refused is stopped (`AppCheckBlockedError`); an

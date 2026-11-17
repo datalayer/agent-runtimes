@@ -279,7 +279,7 @@ class TestTheApplicationsRules:
 
 
 class TestTheComponents:
-    """H-02: components of the catalog beside the answer, as an A2UI surface."""
+    """Components of the catalog beside the answer, as an A2UI surface."""
 
     def test_the_sources_a_table_a_chart_and_a_choice_are_the_catalogs(self) -> None:
         surface = formats.surface_of_components(
@@ -375,7 +375,7 @@ class TestTheComponents:
         assert part["data"]["title"] == "Open invoices"
 
     def test_a_refused_surface_is_the_calls_answer_not_its_failure(self) -> None:
-        """H-02/H-25, 2026-10-08: Odoo had no open invoice, Accounting showed an
+        """Found 2026-10-08: Odoo had no open invoice, Accounting showed an
         empty table, and the refusal (`ModelRetry`) made the transcript say
         *show_components failed*. The call now answers why, for the answer to
         say; nothing is kept; a correct call after it is shown."""

@@ -4,7 +4,7 @@
  */
 
 /**
- * The scenes of the catalogue (agentspecs `scenes`, A-15), in tabs:
+ * The scenes of the catalogue (agentspecs `scenes`), in tabs:
  * each scene's face and name, its `assumes` line under them, its graph and
  * its transcript behind *Graph · Transcript* (`SceneView`), its members
  * standing where its stage directions put them (`positions`), the entry's
@@ -236,7 +236,7 @@ function Scene({
     accept: NOTEBOOK_AND_WORDS,
     inspector,
   });
-  // The script's cues, labelled by the entry's starters (A-13): chips in
+  // The script's cues, labelled by the entry's starters: chips in
   // its balloon while it waits for a question.
   const suggestions = useMemo(
     () => sceneCuesOf(scene, entry.app.interface.starters ?? []),
@@ -262,7 +262,7 @@ function Scene({
       })),
     [stage, runtimeMembers],
   );
-  // The line selected, held here for the transcript and the graph (S3-02):
+  // The line selected, held here for the transcript and the graph:
   // the transcript opens it, the graph draws its edge with a halo, and a
   // click on an edge selects its latest exchange.
   const [selectedLine, setSelectedLine] = useState<string | null>(null);
@@ -562,7 +562,7 @@ function Scene({
 }
 
 function Scenes(): JSX.Element {
-  // A scripted scene is played as written on its page (X-02): here, the teams staged live.
+  // A scripted scene is played as written on its page: here, the teams staged live.
   const scenes = useMemo(
     () => listSceneSpecs().filter(scene => scene.kind === 'team'),
     [],

@@ -4,12 +4,12 @@
  */
 
 /**
- * What an application's code asks, drawn from its display (RU-4): `application/vnd.datalayer.loop.question+json`, shown under the
+ * What an application's code asks, drawn from its display: `application/vnd.datalayer.loop.question+json`, shown under the
  * message that asks it in words. A choice is its buttons — a rule's prompt
  * is Allow and Refuse — the words a field, a form its fields; each press of
  * it is `reactor.answer`, through the display's `act`, which the chat sends
  * up the conversation's ui socket. A file is chosen here, uploaded first
- * through the display's `upload`, and its ref is the answer (RU-6): its
+ * through the display's `upload`, and its ref is the answer: its
  * bytes never ride in the press. Answered, it says what answered it, and
  * offers nothing.
  *
@@ -168,7 +168,7 @@ export function QuestionView({
               return;
             }
             setSaid(null);
-            // Uploaded first: the answer is its ref (RU-6).
+            // Uploaded first: the answer is its ref.
             void upload(chosen)
               .then(ref => answer(ref))
               .catch((failure: unknown) =>

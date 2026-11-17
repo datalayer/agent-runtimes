@@ -4,21 +4,21 @@
  */
 
 /**
- * The floating assistant in the LOOP workspace (T-24): the character a
+ * The floating assistant in the LOOP workspace: the character a
  * page draws over its workspace, chosen from what the enabled plugins
  * contribute to `loop.assistant.character` — the application's own
  * (`interface.avatar`) when its Appspec names one, else the person's
  * choice from their settings, else the paper clip. It acts out what the
  * application is doing as its chat says it — paused too, when its deployment
- * is — and the turn (T-22), says the agent's newest words in its balloon
+ * is — and the turn, says the agent's newest words in its balloon
  * while the conversation is out of sight, holds there the approval it waits
  * on, answered with *Approve* or *Deny* on the path every approval of it is
- * answered on (T-23, U-19), opens the conversation when clicked, and is
- * dragged about and sent away as the chat's own assistant is (T-27). Given
+ * answered on, opens the conversation when clicked, and is
+ * dragged about and sent away as the chat's own assistant is. Given
  * the runtime to ask (`decisions`), its balloon offers *Ask a decision*: a
  * typed decision asked of Jev through the runtime, answered there.
  *
- * Its balloon shows the conversation as `balloon` says (T-23; the
+ * Its balloon shows the conversation as `balloon` says (the
  * Appspec's `interface.balloon`): a peek of the newest words (`history`, the
  * default), or the one thing being said or done now (`current`). Either way
  * what the agent is doing while a tool runs — the turn's `activity` — is said
@@ -101,7 +101,7 @@ export type LoopAssistantConfig = {
   person?: string;
   /**
    * The application's id: the approvals it waits on are read and answered
-   * in the balloon (T-23), as its rules card reads them (U-19). Without it,
+   * in the balloon, as its rules card reads them. Without it,
    * the balloon says an approval waits and the conversation answers it.
    */
   appId?: string;
@@ -115,7 +115,7 @@ export type LoopAssistantConfig = {
    */
   decisions?: DecisionsTarget;
   /**
-   * How the balloon shows the conversation (T-23): a peek of the newest
+   * How the balloon shows the conversation: a peek of the newest
    * words (`history`, the default), or only what is said or done now
    * (`current`). The Appspec's `interface.balloon`.
    */
@@ -157,7 +157,7 @@ export function balloonHistoryOf(
 const NO_PRESENCE = signal<PresenceState>('idle');
 
 /**
- * What the character acts out (T-22), from what the application is doing as
+ * What the character acts out, from what the application is doing as
  * its chat says it — idle, thinking, working, waiting for the person, paused
  * — and the turn: it speaks while the answer is written.
  */
@@ -176,7 +176,7 @@ const PENDING = { status: 'pending' as const };
 
 /**
  * The approvals an application waits on, read and answered as its rules
- * card does (U-19): over the ai-agents `/ws`, where every decision is
+ * card does: over the ai-agents `/ws`, where every decision is
  * broadcast, so one answered here leaves every list. The first is offered
  * to the balloon; none, once all are answered.
  */
@@ -296,7 +296,7 @@ const ABOVE_COMPOSER_GAP = 8;
  * How far from the window's bottom the character stands in its corner: at
  * `CORNER`, or just above its own conversation's composer when that composer
  * reaches the corner. Without this it stood over the composer, and stepped
- * aside for it (T-27) for as long as the composer stayed there — after the
+ * aside for it for as long as the composer stayed there — after the
  * first message, for good, as the composer moved down into its corner.
  */
 export function cornerBottomAbove(
@@ -429,7 +429,7 @@ export function LoopAssistant({
     return () => clearTimeout(timer);
   }, []);
 
-  /* The agent's newest words, said in the balloon until heard (T-23). */
+  /* The agent's newest words, said in the balloon until heard. */
   const saying = turn.assistant
     ? latestSaying([
         { id: String(turn.id), role: 'assistant', content: turn.assistant },
@@ -557,7 +557,7 @@ export function LoopAssistant({
 
   const state = assistantStateOfTurn(turn, presence, { arriving, leaving });
   const unheard = !!saying && saying.id !== heardId;
-  // What the agent does while a tool runs, in its own words (T-23).
+  // What the agent does while a tool runs, in its own words.
   const tool: BalloonToolLine | undefined = turn.activity
     ? {
         id: `${turn.id}:${turn.activity}`,

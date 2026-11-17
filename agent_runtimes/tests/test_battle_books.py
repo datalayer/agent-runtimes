@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The demo books, for a catalogue Battle played on them (B4-01).
+"""The demo books, for a catalogue Battle played on them.
 
 The invoice race and the report challenge race scenes whose members reach
 the gateway's ``odoo-accounting``: played signed out and rehearsed nightly,

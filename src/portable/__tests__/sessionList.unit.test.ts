@@ -4,7 +4,7 @@
  */
 
 /**
- * The sessions list (VSCODE VS-04, VS-12; DESKTOP DK-09, DK-25): the rows
+ * The sessions list: the rows
  * of two places with their applications, lineage and folders, the places
  * merged (one uid once per place, a place that did not answer one note),
  * the rule of two holders, the filters, the sentences, and the team runs
@@ -203,7 +203,7 @@ describe('the rows of two places', () => {
     });
   });
 
-  it("reads a runtime's rows with the application's name and the folder from either answer (DK-26)", () => {
+  it("reads a runtime's rows with the application's name and the folder from either answer", () => {
     const [held, elsewhere] = listedSessionsOf(HELD);
     expect(held?.application).toEqual({
       key: 'shield-mvp-claude-code',
@@ -265,7 +265,7 @@ describe('the rows of two places', () => {
   });
 });
 
-describe('the two places merged (DK-09)', () => {
+describe('the two places merged', () => {
   const merged = mergePlaces([
     { place: DATALAYER, sessions: listedSessionsOf(RECORDED) },
     {
@@ -290,7 +290,7 @@ describe('the two places merged (DK-09)', () => {
     ).toEqual(['7d2c4b10', 'e15ewh3r']);
   });
 
-  it("marks a session open and held by none of this host's runtimes as held elsewhere (D-12)", () => {
+  it("marks a session open and held by none of this host's runtimes as held elsewhere", () => {
     const [held, elsewhere] = merged[1]!.groups.flatMap(g => g.sessions);
     expect(heldElsewhere(held!.row, LOCAL)).toBe(false);
     expect(held?.elsewhere).toBe(false);
@@ -515,7 +515,7 @@ describe('the team runs', () => {
   });
 });
 
-describe('the sessions as a host watches them (VS-10, DK-14)', () => {
+describe('the sessions as a host watches them', () => {
   it('is one row per session listed, none in front', () => {
     const listed = listedSessionsOf({
       sessions: [

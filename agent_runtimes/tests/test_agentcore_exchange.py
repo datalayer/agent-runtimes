@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The token AgentCore validated, exchanged at IAM for the platform's (AC-06).
+"""The token AgentCore validated, exchanged at IAM for the platform's.
 
 IAM is a fake behind httpx's mock transport, answering as the real one does:
 form-encoded RFC 8693, ``resource`` the runtime's ARN, which must be the

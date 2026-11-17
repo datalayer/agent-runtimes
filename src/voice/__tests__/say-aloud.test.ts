@@ -4,7 +4,7 @@
  */
 
 /**
- * What the runtime says of voice over the protocols (VO-35, VO-36):
+ * What the runtime says of voice over the protocols:
  * `voice.say` read as a line to hear and caption — from AG-UI's custom
  * events and Vercel AI's data parts alike, nothing else taken for it.
  */
@@ -18,7 +18,7 @@ import {
   lineToSay,
 } from '../sayAloud';
 
-describe('A line the agent says aloud (VO-35)', () => {
+describe('A line the agent says aloud', () => {
   it('is read from AG-UI’s custom event and Vercel AI’s data part', () => {
     const data = {
       text: '  One   moment, I am looking that up. ',
@@ -54,7 +54,7 @@ describe('A line the agent says aloud (VO-35)', () => {
   });
 });
 
-describe('Spoken over, the runtime says (VO-46)', () => {
+describe('Spoken over, the runtime says', () => {
   it('reads `voice.interrupted` from a custom event or a data part, and nothing else', () => {
     expect(
       isVoiceInterrupted({ type: VOICE_INTERRUPTED_EVENT, data: {} }),

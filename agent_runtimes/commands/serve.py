@@ -385,7 +385,7 @@ def serve_server(
                            each turn to this agent: an agentspec ID, or an A2A
                            (http) or ACP (ws) endpoint. Unset, none is registered.
         target: ``agentcore`` answers Amazon Bedrock AgentCore Runtime's
-                contract (AC-01): on ``0.0.0.0``, port 8080 (``AGENTCORE_PORT``
+                contract: on ``0.0.0.0``, port 8080 (``AGENTCORE_PORT``
                 to change it), ``/invocations``, ``/ping`` and ``/ws`` at the
                 root, the agentspec named by ``AGENT_SPEC_ID`` configured at
                 start; it refuses to start without one. ``kagent`` serves
@@ -545,7 +545,7 @@ def serve_server(
             f"(registered as '{effective_name}')"
         )
 
-    # Validate the agent the orchestrator delegates to, if one is named (O2-08)
+    # Validate the agent the orchestrator delegates to, if one is named
     if orchestrator_root:
         from agent_runtimes.orchestration.orchestrator import root_binding
 

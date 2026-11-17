@@ -4,7 +4,7 @@
  */
 
 /**
- * How a sign-in stands, for the person's own client (M-039): accepted
+ * How a sign-in stands, for the person's own client: accepted
  * only bound to the application, the company and a verified issuer.
  *
  * @module portable/__tests__/signInStatus
@@ -20,7 +20,7 @@ const SAID = {
   status: 'signed_in',
 };
 
-describe('how a sign-in stands (M-039)', () => {
+describe('how a sign-in stands', () => {
   it('binds the answer to the application, the company and a verified issuer', () => {
     const expected = { appUid: 'app-1', company: 'Shop.Example' };
     expect(signInStandsOf(SAID, expected)).toMatchObject({

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The A2A binding (O0-06).
+"""The A2A binding.
 
 Standard A2A first: the mapping is the one in the mapping table — an
 execution is a Task, an objective is a Message, a status is a task status,
@@ -31,21 +31,21 @@ declared in ``A2A_CAPABILITIES`` rather than discovered:
   ``tasks/get`` through ``subscribe``, which is all "no lease beyond
   polling" means.
 - The objective travels as one text part rather than a structured DataPart.
-  The structured form belongs with the extension package (O3-02).
+  The structured form belongs with the extension package.
 
 Every one of those is on the execution's own event stream before anything is
 dispatched, because ``dispatch`` yields ``capability_report`` first.
 
 A worker whose agent card declares the Datalayer orchestration extension
 (``EXTENSION_URI``) gets steering, pause and resume back, from the worker
-rather than invented here (O2-05). ``resolve`` gives it
+rather than invented here. ``resolve`` gives it
 ``A2A_EXTENDED_CAPABILITIES``; its delegation names the execution, and the
 checkpoint when the attempt resumes; ``pause`` and ``steer`` post to the
 routes its card names, on the worker's own origin; and a task that ends
 ``canceled`` naming the checkpoint it kept is read as a pause, not a
 cancellation.
 
-The trace (O0-11) is carried the only way standard A2A leaves
+The trace is carried the only way standard A2A leaves
 open: a ``traceparent`` header on the HTTP requests the relay makes, which
 reaches them because the attempt span instruments ``httpx`` rather than
 because this module reaches into a client it does not own. A worker that
@@ -126,7 +126,7 @@ __all__ = ["A2A_CAPABILITIES", "A2A_EXTENDED_CAPABILITIES", "A2AWorkerAdapter"]
 
 #: What an A2A task state is evidence of, in canonical terms. A2A's states
 #: are not canonical states and are not treated as any: the lifecycle
-#: decides what an event produces (O0-02). ``submitted`` is deliberately
+#: decides what an event produces. ``submitted`` is deliberately
 #: absent — it is an acknowledgement that the endpoint has the message, not
 #: a worker taking the work — and so are the terminal states, which are read
 #: after the stream ends, when the reason for ending is known too.
@@ -227,7 +227,7 @@ A2A_CAPABILITIES = AdapterCapabilities(
     ),
     #: A reduction that is about a milestone names it in quotes, so the
     #: conformance harness can find the adapter's own reason for skipping a
-    #: scenario about that milestone rather than inventing one (O0-12).
+    #: scenario about that milestone rather than inventing one.
     reductions=(
         "No 'accepted' acknowledgement: A2A's 'submitted' says the endpoint "
         "took the message, not that a worker took responsibility (6.3).",
@@ -244,8 +244,8 @@ A2A_CAPABILITIES = AdapterCapabilities(
     ),
 )
 
-#: A worker whose agent card declares the Datalayer orchestration extension
-#: (O2-05): steered within its task, paused at a checkpoint it reports, and
+#: A worker whose agent card declares the Datalayer orchestration extension:
+#: steered within its task, paused at a checkpoint it reports, and
 #: resumed by an attempt that names that checkpoint.
 A2A_EXTENDED_CAPABILITIES = A2A_CAPABILITIES.extended(
     without=(_NO_CHECKPOINTED,),
@@ -277,8 +277,8 @@ class _Seen:
     state: str | None = None
     acknowledged: bool = False
     #: The final status message's metadata, which names the model budget's
-    #: limit when that is what stopped the worker (O1-07), and the checkpoint
-    #: it kept when it paused (O2-05).
+    #: limit when that is what stopped the worker, and the checkpoint
+    #: it kept when it paused.
     metadata: dict[str, Any] | None = None
     #: Whether the worker speaks the orchestration extension: only then is a
     #: canceled task that names a checkpoint a pause.
@@ -322,15 +322,15 @@ class A2AWorkerAdapter(WorkerAdapter):
             Seconds between ``tasks/get`` polls in ``subscribe``.
         credential : str | None
             The execution's token for the run, handed to the worker with the
-            delegation (O1-17).
+            delegation.
         account_uid : str | None
             The account the execution belongs to, named to a worker that
-            speaks the extension, which asks for its children in it (O2-06).
+            speaks the extension, which asks for its children in it.
         approvals : ApprovalResponder | None
             Who answers an approval the worker's task waits on
             (``input-required`` carrying ``datalayer.approvalRequest``): the
             control plane files it as a tool approval under the execution and
-            returns the option the person chose (O1-08). Without it, the
+            returns the option the person chose. Without it, the
             task's wait is recorded and nothing answers it.
         """
         self._approvals = approvals
@@ -481,7 +481,7 @@ class A2AWorkerAdapter(WorkerAdapter):
             What the worker did, as it did it.
         """
         remote = _remote(worker)
-        # O0-11: one span for this dispatch, inside the tree's trace. It
+        # One span for this dispatch, inside the tree's trace. It
         # stays current across the yields below, so the events the caller
         # records between observations land on it, and it is what puts the
         # traceparent on the relay's outgoing requests.
@@ -552,7 +552,7 @@ class A2AWorkerAdapter(WorkerAdapter):
 
             answer = str(relay.result() or "")
             # The whole body travels with the observation, for the durable
-            # worker to write to the platform (O1-10); the record keeps a
+            # worker to write to the platform; the record keeps a
             # summary and the body's hash.
             for artifact, body in await self._artifacts(
                 remote, execution, attempt, seen, answer
@@ -562,13 +562,13 @@ class A2AWorkerAdapter(WorkerAdapter):
                 LifecycleEvent.COMPLETE,
                 message=seen.state or "completed",
                 protocol_task_id=seen.task_id,
-                # The apps session a team seat worked in (MH-38), on the
+                # The apps session a team seat worked in, on the
                 # completed status as on any other ending: kept on the run
                 # and handed the seat's next task (MH-P05). Found on r1, 22
                 # October 2026: a completed seat's attempt carried none, so
                 # the run had no seat session to swap, clone or export.
                 session_id=session_of_meta(seen.metadata),
-                # What the worker says the task spent, on its final status (O2-10).
+                # What the worker says the task spent, on its final status.
                 usage=spent_of(seen.metadata),
             )
             yield Observation.acknowledged(
@@ -786,7 +786,7 @@ class A2AWorkerAdapter(WorkerAdapter):
         references: Sequence[ContextReference] = (),
     ) -> OperationOutcome:
         """
-        Steer the running task through the route the worker's card names (O2-05).
+        Steer the running task through the route the worker's card names.
 
         The worker adds the instructions to its model's next request, within
         the task. A plain A2A worker has no such route, and is refused.
@@ -833,7 +833,7 @@ class A2AWorkerAdapter(WorkerAdapter):
         reason: str | None = None,
     ) -> OperationOutcome:
         """
-        Ask the running task to pause, through the route the worker's card names (O2-05).
+        Ask the running task to pause, through the route the worker's card names.
 
         What this answers is only that the worker was asked. The pause itself
         arrives on the stream of the dispatch watching the task: it ends
@@ -878,7 +878,7 @@ class A2AWorkerAdapter(WorkerAdapter):
 
         Nothing is sent here: A2A restarts no task that ended, so the next
         attempt is dispatched as a new task in the same context, and the
-        worker starts it from the checkpoint's conversation (O2-05).
+        worker starts it from the checkpoint's conversation.
 
         Parameters
         ----------
@@ -1030,10 +1030,10 @@ class A2AWorkerAdapter(WorkerAdapter):
                 # references onto A2A, and the root is what groups a tree.
                 context_id=execution.root_execution_id,
                 emit=emit,
-                # The model budget the worker's run is held to (O1-07), the
-                # execution's token it reaches Datalayer with (O1-17), and, to
+                # The model budget the worker's run is held to, the
+                # execution's token it reaches Datalayer with, and, to
                 # a worker speaking the extension, the execution and the
-                # checkpoint this attempt resumes from (O2-05).
+                # checkpoint this attempt resumes from.
                 metadata=delegation_meta(
                     execution,
                     credential=self._credential,
@@ -1042,7 +1042,7 @@ class A2AWorkerAdapter(WorkerAdapter):
                     account_uid=self._account_uid,
                 ),
                 # An approval the task waits on is the control plane's to
-                # file and answer (O1-08, MH-42).
+                # file and answer.
                 **({"on_input": self._answer} if self._approvals is not None else {}),
             )
         finally:
@@ -1073,7 +1073,7 @@ class A2AWorkerAdapter(WorkerAdapter):
         Read the end of a task: which lifecycle event, and which failure.
 
         A worker speaking the orchestration extension that ends a task
-        ``canceled`` and names the checkpoint it kept has paused (O2-05): the
+        ``canceled`` and names the checkpoint it kept has paused: the
         execution pauses, and the milestone names the checkpoint a resume
         will name.
 
@@ -1089,11 +1089,11 @@ class A2AWorkerAdapter(WorkerAdapter):
         list[Observation]
             The terminal move, with the error when there is one; or the pause
             and the checkpoint it kept. The move carries what the worker says
-            the task spent, when it says so (O2-10).
+            the task spent, when it says so.
         """
         state = seen.state or ""
         spent = spent_of(seen.metadata)
-        # The apps session a team seat worked in (MH-38): the attempt's
+        # The apps session a team seat worked in: the attempt's
         # session, which the control plane keeps on the run and hands the
         # seat's next task (MH-P05).
         session = session_of_meta(seen.metadata)
@@ -1123,7 +1123,7 @@ class A2AWorkerAdapter(WorkerAdapter):
         )
         if refused is not None:
             # Stopped by the model budget the delegation set: not a worker
-            # that broke, and nothing another attempt could spend (O1-07).
+            # that broke, and nothing another attempt could spend.
             return [
                 Observation.moved(
                     LifecycleEvent.FAIL,
@@ -1485,7 +1485,7 @@ def _observe(phase: str, payload: Mapping[str, Any], seen: _Seen) -> list[Observ
     starting = observed is LifecycleEvent.START
     if starting and seen.resumed:
         # The attempt resumes from a checkpoint: the worker working is the
-        # paused execution resuming, once (O2-05).
+        # paused execution resuming, once.
         observed, seen.resumed = LifecycleEvent.RESUME, False
     observations.append(
         Observation.moved(observed, message=state, protocol_task_id=task_id)
@@ -1561,7 +1561,7 @@ def _task_artifacts(
     The A2A artifacts of a task, as canonical artifacts with provenance.
 
     Each comes with its body, which the observation carries for the durable
-    worker to write to the platform (O1-10): the notebook, when a part is
+    worker to write to the platform: the notebook, when a part is
     one, and the artifact's text otherwise. The record keeps a summary and
     the body's hash.
 
@@ -1596,8 +1596,8 @@ def _task_artifacts(
             summary = f"A notebook of {cells} cells"
         else:
             summary = text if len(text) <= 200 else text[:200] + "…"
-        # What the worker claims of it (the extension's `artifactProvenance`,
-        # SH-15): the hash is computed here from the body received, and
+        # What the worker claims of it (the extension's `artifactProvenance`):
+        # the hash is computed here from the body received, and
         # a claim that differs is said rather than taken.
         claimed = _claimed_provenance(raw)
         if claimed and claimed.get("contentHash") not in (None, digest):

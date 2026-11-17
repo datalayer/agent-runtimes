@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""GenAI spans AgentCore Evaluations reads (AC-12), and where they go (AC-13).
+"""GenAI spans AgentCore Evaluations reads, and where they go.
 
 A pydantic-ai agent on a function model calls one tool and answers; its
 spans, exported to an in-memory exporter, are read back: the scope every
@@ -182,7 +182,7 @@ def test_every_agent_is_instrumented_once_switched_on(
     }
 
 
-# --- AC-13: AgentCore Observability -----------------------------------------------------
+# --- AgentCore Observability -----------------------------------------------------
 
 
 def test_the_endpoint_agentcore_sets_is_read_from_the_otlp_variables() -> None:

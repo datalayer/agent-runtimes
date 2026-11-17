@@ -96,7 +96,7 @@ describe('Local, on the web', () => {
   });
 });
 
-describe('Local, on a server the host names (P-08, P-25)', () => {
+describe('Local, on a server the host names', () => {
   it('is offered, and is where the page starts: the host serves it', () => {
     expect(
       heldTargetReason('local', 'http://127.0.0.1:8000/app'),

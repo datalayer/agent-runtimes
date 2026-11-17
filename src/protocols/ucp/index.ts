@@ -5,7 +5,7 @@
 
 /**
  * The Universal Commerce Protocol, `2026-08-25`, as a Reactor Plugin and a
- * shopping client (PR-30, PR-31) — the twin of
+ * shopping client — the twin of
  * `agent_runtimes.protocols.ucp`.
  *
  * Checkouts are read through the protocol's own TypeScript SDK
@@ -45,8 +45,8 @@ export const PROFILE_PATH = '/.well-known/ucp';
 export const UCP_PLUGIN = 'agent-runtimes.protocols.ucp';
 
 /**
- * Each operation's action class (F-10), for Rules (R-05): agentspecs'
- * `protocol-tools/ucp.yaml` (PR-54).
+ * Each operation's action class, for Rules: agentspecs'
+ * `protocol-tools/ucp.yaml`.
  */
 export const UCP_ACTION_CLASSES = operationClasses('ucp');
 

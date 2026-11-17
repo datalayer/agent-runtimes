@@ -4,16 +4,16 @@
  */
 
 /**
- * The microphone of a composer whose text its host holds (VO-10, VO-11):
+ * The microphone of a composer whose text its host holds:
  * `ChatBase`'s own, and the workspace's (an application's page,
  * whose composer is a plugin of its own). What the box held when the
  * microphone opened stays; the words heard go after it as they come, and the
  * whole of what was heard replaces them once it stops. Put there for the
  * person to edit and send — or sent at once with *Send what I say*. While
  * the words are still being heard the host is told (`onInterimChange`), to
- * grey them until they are final (VO-11). Beside the microphone, the
- * person's voice menu (`VoiceMenu`, VO-30). Where the application's voice
- * says `hands_free`, *Talk with it* too (`HandsFree`, VO-12, VO-13): a turn
+ * grey them until they are final. Beside the microphone, the
+ * person's voice menu (`VoiceMenu`). Where the application's voice
+ * says `hands_free`, *Talk with it* too (`HandsFree`): a turn
  * is sent by itself and the agent's answer may be spoken over.
  *
  * @module voice/ComposerVoice
@@ -35,36 +35,36 @@ export interface ComposerVoiceProps {
   /** What the composer holds now. */
   input: string;
   setInput: (text: string) => void;
-  /** What was heard is in the box: how it was heard, for when it is sent (VO-27). */
+  /** What was heard is in the box: how it was heard, for when it is sent. */
   onSpoken: (metadata: SpokenMetadata) => void;
   /** *Send what I say*: what was heard, sent at once. */
   send: (text: string, metadata: SpokenMetadata) => void;
   disabled?: boolean;
   /** The agent is speaking: the composer offers *Stop speaking*. */
   speaking?: boolean;
-  /** Stops the agent's voice, also when the microphone opens (VO-13). */
+  /** Stops the agent's voice, also when the microphone opens. */
   onStopSpeaking?: () => void;
-  /** How loud the agent's voice plays now, 0 to 1: hands-free's barge-in is gated on it (VO-13). */
+  /** How loud the agent's voice plays now, 0 to 1: hands-free's barge-in is gated on it. */
   playbackLevel?: () => number;
-  /** The agent is answering: a run is in progress (hands-free, VO-12). */
+  /** The agent is answering: a run is in progress (hands-free). */
   running?: boolean;
-  /** Stops the run while the answer is still being written (barge-in, VO-13). */
+  /** Stops the run while the answer is still being written (barge-in). */
   onStopRun?: () => void;
-  /** The answer being written was spoken over: marked in the conversation (VO-13). */
+  /** The answer being written was spoken over: marked in the conversation. */
   onInterrupted?: () => void;
   /**
    * The words in the box are still being heard (`true`), or final
-   * (`false`): the host greys them until they are (VO-11).
+   * (`false`): the host greys them until they are.
    */
   onInterimChange?: (interim: boolean) => void;
   /**
    * The application lets its answers be heard: the voice menu offers when,
-   * the voice, its speed and loudness (VO-21, VO-25, VO-30).
+   * the voice, its speed and loudness.
    */
   answers?: boolean;
 }
 
-/** Whether something rides on a run as a spoken message's metadata (VO-27). */
+/** Whether something rides on a run as a spoken message's metadata. */
 export function spokenOf(value: unknown): SpokenMetadata | undefined {
   const said = value as Partial<SpokenMetadata> | undefined;
   return said?.input === 'voice' &&
@@ -92,7 +92,7 @@ export function ComposerVoice({
   answers = false,
 }: ComposerVoiceProps): JSX.Element | null {
   // In the browser, or on Datalayer's servers where the application, the
-  // language or the person's detection asks for it (VO-14, VO-34).
+  // language or the person's detection asks for it.
   const place = hearingPlace(voice);
   const hearing = useMemo((): Hearing | undefined => {
     if (voice.input === 'off') {
@@ -177,7 +177,7 @@ export function ComposerVoice({
           base.current = input.trim();
           onStopSpeaking?.();
         }}
-        // The words as they are heard, in the box (VO-11), greyed until
+        // The words as they are heard, in the box, greyed until
         // final; '' gives it back.
         onInterim={(words: string) => {
           setInput(afterBase(words));

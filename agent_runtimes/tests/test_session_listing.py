@@ -1,8 +1,8 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The session list, held and recorded (MH-02), and a session's title and
-archive flag (MH-43).
+"""The session list, held and recorded, and a session's title and
+archive flag.
 
 `GET /sessions` lists the caller's sessions held by this runtime and those
 its record keeps, paged and filtered; `GET /sessions/{uid}` answers a
@@ -322,7 +322,7 @@ def test_a_harness_sessions_row_says_its_folder_and_a_model_agents_does_not(
     runtime: Runtime,  # noqa: F811 - the fixture
     remote: TestClient,  # noqa: F811 - the fixture
 ) -> None:
-    """DESKTOP DK-26: `workspace` on the list's row of a harness session, from its harness row."""
+    """`workspace` on the list's row of a harness session, from its harness row."""
     from agent_runtimes.protocol_state.store import use_protocol_state_store
     from agent_runtimes.tests.test_acp_agent import Store
 

@@ -173,7 +173,7 @@ describe('how a band lays out', () => {
   });
 });
 
-describe('a band clear of the floating assistant (T-27)', () => {
+describe('a band clear of the floating assistant', () => {
   it("pads its right end by the assistant's clearance, else its own padding", () => {
     // On an application's page the character stands in the bottom-right
     // corner, over the right end of the composer's session controls — the

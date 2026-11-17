@@ -4,7 +4,7 @@
  */
 
 /**
- * The page told which of an application's plugins its runtime holds (F-15).
+ * The page told which of an application's plugins its runtime holds.
  *
  * The application's page plugin requires the runtime's plugin of the same
  * name (`requiredBackendPlugins`). Reactor stands such a plugin down while
@@ -22,7 +22,7 @@
  *   its own runtime, and the pair is whole: nothing stands down, nothing is
  *   blank.
  *
- * An application whose components are files of its folder (P-29) has
+ * An application whose components are files of its folder has
  * its page side in its package, installed beside the server that runs it:
  * once on a runtime, the page reads it there with Reactor's
  * `bootstrapExtensions` (`<base>/plugins/frontend-extensions`) and installs
@@ -72,7 +72,7 @@ export function AppRuntimePlugins({
   pageSide = false,
 }: {
   appId: string;
-  /** Its page side is packaged, to be read from its runtime (P-29). */
+  /** Its page side is packaged, to be read from its runtime. */
   pageSide?: boolean;
 }): null {
   const reactor = useReactorPlatform();
@@ -114,7 +114,7 @@ export function AppRuntimePlugins({
     onState,
   });
 
-  // Its packaged page side, installed from its runtime (P-29): the
+  // Its packaged page side, installed from its runtime: the
   // application's extension only, whatever else the server holds.
   useEffect(() => {
     if (!runtime || !pageSide) {

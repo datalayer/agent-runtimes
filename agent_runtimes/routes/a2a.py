@@ -64,7 +64,7 @@ class A2AAgentCard:
     face: dict[str, str] | None = None
     #: Extensions it advertises besides the runtime's own (orchestration,
     #: face): each ``{uri, description?, required?, params?}``, as A2A's
-    #: ``capabilities.extensions`` writes it (PR-02). A URI
+    #: ``capabilities.extensions`` writes it. A URI
     #: the runtime already publishes is refused.
     extensions: list[dict[str, Any]] | None = None
 
@@ -231,7 +231,7 @@ def register_a2a_agent(
     )
 
     # A harness's card: its skills from the harness spec, and what it answers
-    # in besides words — diffs and the plan (SH-15).
+    # in besides words — diffs and the plan.
     harness = getattr(agent, "harness", None)
     if harness is not None:
         if not card.skills:
@@ -243,8 +243,8 @@ def register_a2a_agent(
         card.default_output_modes = modes
 
     # It is asked in audio too — what the speech service hears, heard before
-    # the task is made and given to the agent as its transcript (VO-28,
-    # VO-36) — unless its card names what it is asked in (an application's
+    # the task is made and given to the agent as its transcript
+    # — unless its card names what it is asked in (an application's
     # does: text).
     from ..voice.protocol_audio import HEARD_TYPES
 
@@ -279,7 +279,7 @@ def register_a2a_agent(
 
         # Kept in the runtime's protocol state store, so a task a client was
         # given the id of outlives this process, and the work it was owed is
-        # run again when the runtime starts (O1-11).
+        # run again when the runtime starts.
         from ..protocol_state.a2a import DurableBroker, DurableStorage
         from ..protocol_state.store import protocol_state_store
 
@@ -307,7 +307,7 @@ def register_a2a_agent(
                 yield
 
         # What the card publishes is what the A2A plugin's extension points
-        # hold (PR-02): Datalayer's orchestration and
+        # hold: Datalayer's orchestration and
         # face by default, then what the card itself declares.
         from ..protocols import protocols_platform
         from ..protocols.a2a import CardContext, card_extensions
@@ -323,7 +323,7 @@ def register_a2a_agent(
             description=card.description,
             provider=provider,
             skills=skills,
-            # The Datalayer orchestration extension (O2-05): a delegation names
+            # The Datalayer orchestration extension: a delegation names
             # its execution and may resume from a checkpoint; a running task can
             # be paused at one and steered, at these routes. Contributed by the
             # A2A plugin to `a2a.extension.orchestration`.
@@ -354,13 +354,13 @@ def register_a2a_agent(
         _a2a_agents[agent_id] = registration
 
         # Audio a caller sends is heard once the gate admits it, before the
-        # task is made (VO-28): the agent sees its transcript.
+        # task is made: the agent sees its transcript.
         from ..voice.protocol_audio import HearA2AAudio
 
         heard_app = HearA2AAudio(a2a_app) if hears_audio else a2a_app
         served = gate(heard_app) if gate is not None else heard_app
-        # An agent that signs its requests (Web Bot Auth,
-        # PR-23) is verified before anything else: a signature that does not
+        # An agent that signs its requests (Web Bot Auth)
+        # is verified before anything else: a signature that does not
         # hold is refused; a verified one is in `scope["state"]["web_bot_auth"]`;
         # an unsigned request passes as `unverified`, for the gate to judge.
         served = WebBotAuthMiddleware(
@@ -613,13 +613,13 @@ async def terminate_task(request: TerminateRequest) -> TerminateResponse:
 
 
 class PauseRequest(BaseModel):
-    """Request to pause a running A2A task at a checkpoint (O2-05)."""
+    """Request to pause a running A2A task at a checkpoint."""
 
     task_id: str
 
 
 class SteerRequest(BaseModel):
-    """Instructions for a running A2A task, for its model's next request (O2-05)."""
+    """Instructions for a running A2A task, for its model's next request."""
 
     task_id: str
     instructions: str
@@ -630,7 +630,7 @@ async def pause_task(request: PauseRequest) -> TerminateResponse:
     """
     Pause a running A2A task: it keeps a checkpoint of its conversation and stops.
 
-    Part of the Datalayer orchestration extension (O2-05). The task ends
+    Part of the Datalayer orchestration extension. The task ends
     `canceled`, its final status message naming the checkpoint under
     `datalayer.paused`, and a delegation naming that checkpoint resumes it. A
     task that names no execution has nowhere to keep a checkpoint, and is
@@ -658,7 +658,7 @@ async def steer_task(request: SteerRequest) -> TerminateResponse:
     """
     Steer a running A2A task: its model reads the instructions before its next request.
 
-    Part of the Datalayer orchestration extension (O2-05). A task that is not
+    Part of the Datalayer orchestration extension. A task that is not
     working receives nothing, and the answer says so.
     """
     from ..context.delegation import deliver_steer

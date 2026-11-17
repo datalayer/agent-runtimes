@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Voice on the runtime's side (VO-27, VO-29, VO-44, VO-45)."""
+"""Voice on the runtime's side."""
 
 import json
 from typing import Any
@@ -65,7 +65,7 @@ def test_each_speech_model_carries_what_it_is_for():
 
 
 def test_each_speech_model_is_kept_under_its_provider():
-    """Datalayer's storage, the pod's and the page's store: `<provider>/<model id>/<path>` (VO-48)."""
+    """Datalayer's storage, the pod's and the page's store: `<provider>/<model id>/<path>`."""
     import sys
     from pathlib import Path
 
@@ -240,7 +240,7 @@ async def test_the_record_keeps_a_spoken_turn_as_its_transcript_marked_spoken():
     assert "spoken" not in turn["payload"]
 
 
-# --- An agent spec's voice, for agents that are not applications (VO-41) ----
+# --- An agent spec's voice, for agents that are not applications ----
 
 
 def _generate_agents():
@@ -356,7 +356,7 @@ def test_the_generator_refuses_a_voice_the_catalogue_does_not_have():
 
 
 # ---------------------------------------------------------------------------
-# What only the runtime knows, said over the protocols (VO-35, VO-36)
+# What only the runtime knows, said over the protocols
 # ---------------------------------------------------------------------------
 
 
@@ -400,7 +400,7 @@ def _agui_input() -> Any:
 
 @pytest.mark.asyncio
 async def test_ag_ui_says_the_voice_at_the_run_s_start_and_a_line_to_hear():
-    """VO-35: `voice.settings` right after RUN_STARTED, `voice.say` from the agent's say_aloud; the text stays text."""
+    """`voice.settings` right after RUN_STARTED, `voice.say` from the agent's say_aloud; the text stays text."""
     from ag_ui.core import CustomEvent
 
     from agent_runtimes.transports.agui_displays import DisplayAGUIAdapter
@@ -454,7 +454,7 @@ async def test_an_agent_without_a_voice_says_nothing_of_voice():
 
 @pytest.mark.asyncio
 async def test_vercel_ai_says_the_same_as_data_parts():
-    """VO-36: `data-voice.settings` after the start, `data-voice.say` beside the tool's output."""
+    """`data-voice.settings` after the start, `data-voice.say` beside the tool's output."""
     from pydantic_ai.messages import FunctionToolResultEvent, ToolReturnPart
     from pydantic_ai.ui.vercel_ai.response_types import DataChunk, StartChunk
 

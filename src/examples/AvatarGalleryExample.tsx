@@ -4,14 +4,14 @@
  */
 
 /**
- * Every avatar of the floating assistant, as a gallery (T-21
- * to T-27): each one — Datalayer's four, the owl an example plugin
+ * Every avatar of the floating assistant, as a gallery:
+ * each one — Datalayer's four, the owl an example plugin
  * contributes to `loop.assistant.character`, a test sprite read through
  * the clippy.js reader, the 3D robot drawn with three.js, and, when asked,
  * the characters clippy.js publishes, fetched from jsDelivr — in each state
  * it acts, stepped aside, with its
  * balloon, in light and dark, moving or still. The balloon shows the
- * conversation either way (T-23): a peek of it (`history`), or only what is
+ * conversation either way: a peek of it (`history`), or only what is
  * said or done now (`current`); a tool call is said in plain words ("Using
  * list_invoices…", "Done: list_invoices", "list_invoices failed"), and a
  * recorded notebook shows read-only in the current balloon.
@@ -73,7 +73,7 @@ import {
 
 type Modes = 'light' | 'dark' | 'both';
 type View = 'stage' | 'grid';
-/** Where the character is: here, leaving, gone, or coming back (T-27). */
+/** Where the character is: here, leaving, gone, or coming back. */
 type Presence = 'here' | 'leaving' | 'away' | 'arriving';
 
 const STAGE_SIZE = 96;
@@ -317,7 +317,7 @@ const AvatarGalleryExample: React.FC = () => {
   const [presence, setPresence] = useState<Presence>('here');
   const [away, setAway] = useState<AssistantAway>('none');
   const [replay, setReplay] = useState(0);
-  // How the balloon shows the conversation, a tool being called, a notebook (T-23).
+  // How the balloon shows the conversation, a tool being called, a notebook.
   const [display, setDisplay] = useState<BalloonDisplay>('current');
   const [toolPhase, setToolPhase] = useState<ToolLinePhase | undefined>();
   const [withNotebook, setWithNotebook] = useState(false);

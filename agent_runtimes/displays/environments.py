@@ -5,7 +5,7 @@
 Display functions for Datalayer environments.
 
 ``display_environments`` renders the listing of ``datalayer envs ls``. The rest
-serves the registry commands (E1-20): the three output formats,
+serves the registry commands: the three output formats,
 the tables of an environment, its versions with their promotion records,
 builds, validation reports and trial runtimes, a refusal with its error
 code and what it names, and the comparison of two versions' locks.
@@ -257,7 +257,7 @@ def display_environments(environments: list[dict[str, Any]]) -> None:
     console.print("└" + "─" * inner_total + "┘")
 
 
-# -- The registry commands (E1-20) -----------------------------------
+# -- The registry commands -----------------------------------
 
 
 class OutputFormat(str, Enum):
@@ -359,7 +359,7 @@ def display_refusal(
 
     What it names: each finding of a refused spec; each runtime still running
     an environment a deletion was refused for; a refused promotion's
-    unavailable variants, and what was acknowledged instead (E1-15). In JSON
+    unavailable variants, and what was acknowledged instead. In JSON
     or YAML, the refusal is printed under ``error`` in that format.
 
     Parameters
@@ -643,7 +643,7 @@ def display_environment_builds(
     """Display builds: one per variant and region.
 
     A `Kind` column appears only when one of these is not a build — a resolve
-    is a build record that makes no artifact (E1-26), and a
+    is a build record that makes no artifact, and a
     `succeeded` row that built nothing needs saying. Nothing else grows a
     column it has no use for.
     """
@@ -762,7 +762,7 @@ def display_fork(fork: EnvironmentFork) -> None:
 
 
 def display_publication(publication: EnvironmentPublicationRecord) -> None:
-    """A publication and what its snapshot froze (D-12, E2-15).
+    """A publication and what its snapshot froze.
 
     Every line is something the publication makes world-visible, named rather
     than implied: the publication rules publish nothing by
@@ -811,7 +811,7 @@ def display_publication(publication: EnvironmentPublicationRecord) -> None:
 
 
 def display_trial(trial: EnvironmentTrial) -> None:
-    """Display the runtime a trial launched: its name, and the version and artifact it runs (E1-14)."""
+    """Display the runtime a trial launched: its name, and the version and artifact it runs."""
     runtime = trial.runtime
     environment = runtime.environment
     artifact = environment.artifact
@@ -1037,9 +1037,9 @@ def version_lock_text(version: EnvironmentVersionRecord) -> Optional[str]:
     """
     The text of a version's lock, when its answer carries it.
 
-    E1-01's version answer names its lock by ``lockDigest`` only. The lock is a
-    document of its own, ``{digest, format, content}`` (D-3), which no route
-    serves before E1-04. It is read from the answer's ``lock``, as that
+    The version answer names its lock by ``lockDigest`` only. The lock is a
+    document of its own, ``{digest, format, content}``, which no route
+    serves yet. It is read from the answer's ``lock``, as that
     document or as the text itself.
 
     Parameters

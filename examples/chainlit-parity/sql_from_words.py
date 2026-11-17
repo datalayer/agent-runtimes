@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """Text to SQL — the example of Chainlit's documentation (``examples/openai-sql``),
-rebuilt with LOOP's API (P-27).
+rebuilt with LOOP's API.
 
 Chainlit offers a starter (*>50 minutes watched*), fills a prompt template
 with what the person asked, calls the model with its own settings

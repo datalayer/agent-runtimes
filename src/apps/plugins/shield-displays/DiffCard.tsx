@@ -4,7 +4,7 @@
  */
 
 /**
- * What a coding agent changed in one file, as a unified diff (SH-16):
+ * What a coding agent changed in one file, as a unified diff:
  * the path and the count in the header, each line signed and
  * coloured, the file's language on the block for a highlighter. What it
  * reads is `portable/displays`' (`protocolDisplayOf`, `unifiedDiffLines`),

@@ -3,9 +3,9 @@
 
 """A harness served over the runtime's transports, and the orchestrator's stdio channel.
 
-- AG-UI (SH-10, SH-19): ``BaseAgent.stream`` as AG-UI events, what the
+- AG-UI: ``BaseAgent.stream`` as AG-UI events, what the
   terminal (``loop``) and the web chat read;
-- the orchestration adapter's ``ShieldChannel`` (SH-02's agent-runtimes
+- the orchestration adapter's ``ShieldChannel`` (the agent-runtimes
   part): ``stdio:<command>`` launches the agent through ``agent_shield.acp``,
   and the adapter's four verbs hold.
 
@@ -108,7 +108,7 @@ class TestAGUI:
             r["display"] and r["display"][0]["display"] == "diff" for r in results
         )
         # The page's display beside the result, as every protocol display
-        # travels (SH-16).
+        # travels.
         shown = [r["_meta"]["reactor.ui/display"] for r in results if "_meta" in r]
         assert shown and all(
             s["type"] == "application/vnd.datalayer.shield.diff+json" for s in shown
@@ -130,7 +130,7 @@ class TestAGUI:
     async def test_a_running_terminal_reaches_the_page_before_its_result(
         self, workspace: Path
     ) -> None:
-        """SH-13, SH-16: the output so far rides the row's custom event, so the
+        """The output so far rides the row's custom event, so the
         page's terminal card fills while the command runs."""
         agent = an_agent(workspace, approvals=Approvals())
         try:
@@ -328,7 +328,7 @@ class TestShieldChannel:
 
 
 class TestTheRuntimeStartedWithAHarness:
-    """``loop --harness`` (SH-19): the runtime makes the harness's agent at startup
+    """``loop --harness``: the runtime makes the harness's agent at startup
     through the create route, serves it over AG-UI, and ends its process with it.
     """
 

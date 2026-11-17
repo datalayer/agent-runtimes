@@ -9,10 +9,10 @@ the online path ``failed``, older code ``init``, ``pending``, ``error``,
 ``success``, ``done``. Every reader then kept its own set of "finished"
 words, and a run the poller did not recognise as finished polled forever.
 
-This module is the mapping every reader uses (B0-08): the
+This module is the mapping every reader uses: the
 legacy words map onto the product vocabulary, and
 "terminal" is answered here rather than by each caller. The service
-enforces the vocabulary on write in a later phase (B2-01); until then a
+enforces the vocabulary on write in a later phase; until then a
 value that means nothing maps to itself, lower-cased, so it is at least
 visible rather than misread.
 

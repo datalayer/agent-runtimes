@@ -502,12 +502,12 @@ def company_config(
         write_scopes=tuple(scope for scope in scopes if scope.endswith(":write")),
         device=True,
         direct=False,
-        # `auth.disabled` (PAP 0.3 as published §3.2, D4-08): it offers personal agents no sign-in.
+        # `auth.disabled` (PAP 0.3 as published §3.2): it offers personal agents no sign-in.
         sign_in_disabled=bool(company.sign_in_disabled),
         # Its website (§6): a browser joins the person's Session there when it offers `web`.
         web=web,
         web_unscoped=bool(company.web_unscoped) and web,
-        # `web.disabled` (PAP draft 0.4 §6, D5-09): agents are asked to use its agent and APIs.
+        # `web.disabled` (PAP draft 0.4 §6): agents are asked to use its agent and APIs.
         web_disabled=bool(company.web_disabled),
         operations="operations" in company.extensions,
         device_page=device_page,

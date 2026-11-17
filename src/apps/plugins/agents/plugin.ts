@@ -136,18 +136,18 @@ export type AgentsConfig = {
   /**
    * What the agent created on that runtime is created with besides its spec:
    * an application's `app_spec`, so that the runtime runs the application and
-   * decides its tool calls by its rules (R-05, R-03).
+   * decides its tool calls by its rules.
    */
   datalayerCreatePayload?: Record<string, unknown>;
   /**
-   * A conversation without an account (R-30): the application's agent
+   * A conversation without an account: the application's agent
    * is already on the visitors' runtime, so nothing is allocated or created,
    * and the chat speaks to it with a visitor's token for the application.
    */
   datalayerVisitors?: DatalayerVisitors;
   /**
    * An agent already on a runtime of its own, so nothing is allocated or
-   * created: a deployment kept there (R-33), its agent made from the
+   * created: a deployment kept there, its agent made from the
    * deployment record when the runtime started, which the chat speaks to
    * with the person's own token; or the runtime a terminal session runs on,
    * handed over by `/browser`, reached through the terminal's relay, which
@@ -164,7 +164,7 @@ export type AgentsConfig = {
     jupyter?: { url: string; token: string };
   };
   /**
-   * An embed token for the application (R-20): what an embedded
+   * An embed token for the application: what an embedded
    * application's chat speaks to its session with, for a visitor the platform
    * does not know — it runs a session of the application's deployment, and
    * reaches nothing else.

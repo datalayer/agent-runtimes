@@ -59,7 +59,7 @@ export const LINK_PAGE_PATH = '/hosts/link';
 /**
  * `GET /apps/hosts/self`: the installation with its allowed deployments.
  * `channels`, `direct_only` and `paused` are the installation's channel
- * policy and pause (S-104, S-105, S-403).
+ * policy and pause.
  */
 export const selfSchema = z.object({
   host: z
@@ -104,7 +104,7 @@ export const selfSchema = z.object({
     .loose(),
 });
 
-/** `POST /apps/hosts/handoffs`: a one-use code that opens one session or approval (S-305). */
+/** `POST /apps/hosts/handoffs`: a one-use code that opens one session or approval. */
 export const handoffSchema = z.object({
   code: z.string().startsWith('dlho_'),
   expires_in: z.number().int().nonnegative(),
@@ -153,7 +153,7 @@ export const exchangeSchema = z.object({
   expires_in: z.number().int().nonnegative(),
   exp: z.number().int(),
   principal_uid: z.string().min(1),
-  /** A person who never linked, answered as a visitor (WHATSAPP WA-03): `principal_uid` is `visitor:<hash>`. */
+  /** A person who never linked, answered as a visitor: `principal_uid` is `visitor:<hash>`. */
   visitor: z.boolean().optional(),
   host_uid: z.string().min(1),
   deployment: z.object({

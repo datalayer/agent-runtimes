@@ -1,27 +1,27 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Deployments, from the terminal (S-06).
+"""Deployments, from the terminal.
 
 The same deployments the Studio's Ship tab keeps. An application's
 definition is Spacer's — its `app` item, read here for its name, its space
 and its latest version; what runs is kept by ai-agents
-(`/api/ai-agents/v1/apps/deployments`, R-11). A deployment points at one
+(`/api/ai-agents/v1/apps/deployments`). A deployment points at one
 version; deploying moves the pointer; a hosted deployment has its address on
 the main site, `/apps/<slug>`.
 
 And a session of a deployment that nobody opened: woken by one of its
-schedules (R-14), the scheduler launches a runtime, creates the
+schedules, the scheduler launches a runtime, creates the
 deployment's agent on it with `session_payload` — what ai-agents answers it
 with — and opens a session of it with `start_session`, on the session API,
 said to be woken: the handler the application's code declared for that
 schedule runs, or its agent is asked the trigger's prompt.
 
-And a deployment kept on a runtime of its own (R-33): a live deployment
+And a deployment kept on a runtime of its own: a live deployment
 its owner keeps always on has one runtime, launched as its owner, whose
 agent is made from the deployment record every time that runtime starts —
 `kept_payload`, created with `create_agent` — so that a visitor waits for
-the answer and never for the start (R-08).
+the answer and never for the start.
 """
 
 from __future__ import annotations
@@ -214,7 +214,7 @@ class Deployments:
     def change(self, uid: str, **changes: Any) -> dict[str, Any]:
         """Change what a deployment is beside its version — who may open it,
         kept always on and its spend limit, served over A2A at its stable
-        address and open there to visitors (A-08) — as ai-agents
+        address and open there to visitors — as ai-agents
         answers it, whole.
         """
         body = self._answer(
@@ -282,7 +282,7 @@ def deploy(
     return deployments.update(replace(hosted, version=target, state="live")), done
 
 
-# --- a session of a deployment, woken by its trigger (R-14) ----------------
+# --- a session of a deployment, woken by its trigger ----------------
 
 
 @dataclass(frozen=True)
@@ -329,7 +329,7 @@ def schedule_triggers(spec: Mapping[str, Any]) -> list[ScheduleTrigger]:
 class EventTrigger:
     """One of an application's events: where it sits among its triggers,
     the event it waits for, and what its agent is asked when it happens
-    (R-14, W-03: *when a message arrives*).
+    (*when a message arrives*).
     """
 
     position: int
@@ -434,7 +434,7 @@ def session_payload(
     — with the instance its record is kept under: the deployment, and what
     woke it. Never with code: the runtime reads the version's ``app.py``
     from the deployment as the agent is made, and runs the sessions with it,
-    so a ``@app.schedule`` handler runs on a tick (R-14).
+    so a ``@app.schedule`` handler runs on a tick.
 
     `AppNotRunnable` when the runtime's own loader refuses the Appspec;
     `DeployRefused` for an application run by a team, which a woken session
@@ -474,16 +474,16 @@ def kept_payload(
     spend_limit: float = 0.0,
     runs: str = "kept on its runtime",
 ) -> dict[str, Any]:
-    """What creates a deployment's agent on the runtime it is kept on
-    (R-33): the payload the hosted page sends (`AppRenderer`'s
+    """What creates a deployment's agent on the runtime it is kept on:
+    the payload the hosted page sends (`AppRenderer`'s
     `appDatalayerCreatePayload`) — under the application's id, over AG-UI,
     with its Appspec and the deployment as its instance — so that the page's
     chat finds the agent it would have made, already there. Never with code:
-    the runtime reads the version's ``app.py`` from the deployment (R-14).
+    the runtime reads the version's ``app.py`` from the deployment.
 
     `spend_limit` is the deployment's, in credits a day (the keeper's
     `limit_of`): above zero, it travels in the instance, and the runtime
-    holds each session to it as a `team` document's `limits.spend` (SH-32) while the keeper holds the day.
+    holds each session to it as a `team` document's `limits.spend` while the keeper holds the day.
 
     `runs` is how its description says where it runs: a runtime launched for
     the deployment makes its agent from this too, whoever launched it.
@@ -693,15 +693,15 @@ def start_session(
     (`create_agent`), then open a session of it on the session API
     (`/api/v1/apps/sessions`, the hosted page's route), said to be woken by
     what the payload's instance names, with the trigger's prompt as its
-    opener (R-14).
+    opener.
 
     On the runtime, an application written in Python whose code declared the
     schedule at that trigger runs that handler, with the session; any other
     is asked the prompt. Either way the session has nobody present, and only
-    reads unless a rule says otherwise (R-16).
+    reads unless a rule says otherwise.
 
     A session woken for one person's own source — a message in their
-    mailbox (W-03) — is given that person's token naming the
+    mailbox — is given that person's token naming the
     application, ``acting_token``, which the scheduler minted from their
     grant for this one wake: sent with the session request alone, in
     `acting.ACTING_TOKEN_HEADER`, never with the agent's creation, never
@@ -805,7 +805,7 @@ def session_result(lines: Iterable[str]) -> tuple[str, dict[str, Any]]:
         if kind == "CUSTOM" and event.get("name") == "loop.session" and not uid:
             uid = str((event.get("value") or {}).get("uid") or "")
         elif kind == "RUN_FINISHED" and isinstance(event.get("result"), Mapping):
-            # A run that ended on a question says it in its result (RU-4).
+            # A run that ended on a question says it in its result.
             asking = event["result"].get("asking")
             if isinstance(asking, Mapping):
                 asked = str(asking.get("prompt") or "a question")

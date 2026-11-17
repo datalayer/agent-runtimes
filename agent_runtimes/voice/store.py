@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The speech models on this machine, for ``loop --voice`` (VO-16).
+"""The speech models on this machine, for ``loop --voice``.
 
 The machine's store is laid out as the speech service's,
 ``<store>/<provider>/<model id>/<path>`` (``DATALAYER_SPEECH_MODELS_DIR``,
@@ -37,7 +37,7 @@ DEFAULT_MODELS_DIR = "~/.cache/voice-work/store"
 MODELS_URL_ENV = "DATALAYER_SPEECH_MODELS_URL"
 DEFAULT_MODELS_URL = "https://models-speech.datalayer.tech"
 
-#: What the machine hears and says with (VO-16).
+#: What the machine hears and says with.
 HEARING_MODEL = "whisper-small"
 SPEAKING_MODEL = "kokoro-82m"
 MACHINE_MODELS = (HEARING_MODEL, SPEAKING_MODEL)
@@ -69,7 +69,7 @@ def model_spec(model_id: str) -> Dict[str, Any]:
 
 
 def runs_on_the_machine(model_id: str) -> bool:
-    """Whether the catalogue says a model runs on the person's machine (``where: machine``, VO-16)."""
+    """Whether the catalogue says a model runs on the person's machine (``where: machine``)."""
     return "machine" in model_spec(model_id)["where"]
 
 

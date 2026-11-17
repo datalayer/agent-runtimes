@@ -4,7 +4,7 @@
  */
 
 /**
- * A Direct Conversation (M-038, P-08): one-use ticket,
+ * A Direct Conversation: one-use ticket,
  * then the words; replies read from the cursor, never by sending again; lines
  * said apart by who wrote them; closed by the company, nothing more sent.
  *
@@ -28,7 +28,7 @@ const TARGET = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status });
 
-describe('a Direct Conversation (M-038)', () => {
+describe('a Direct Conversation', () => {
   it('asks a one-use ticket, sends the words with it, and reads replies from the cursor', async () => {
     const fetcher = vi.fn(async (url: string, init?: RequestInit) => {
       if (url.endsWith('/api/iam/v1/pap/my/direct'))

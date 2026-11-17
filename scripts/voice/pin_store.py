@@ -2,7 +2,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The pinned-file store of the speech models (VO-03, VO-48, VO-49).
+"""The pinned-file store of the speech models.
 
 Every file of every speech model of the catalogue, laid out as
 ``<store>/<provider>/<model id>/<path>`` — as Datalayer's storage keeps them,
@@ -128,7 +128,7 @@ def _download(url: str, target: Path) -> None:
 
 
 def folder_of(model: Dict[str, Any]) -> str:
-    """Where a model's files are kept: `<provider>/<model id>`, as Datalayer's storage keeps them (VO-48)."""
+    """Where a model's files are kept: `<provider>/<model id>`, as Datalayer's storage keeps them."""
     return f"{model['provider']}/{model['id']}"
 
 

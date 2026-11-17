@@ -2,7 +2,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Measure the speech models on the recorded fixtures (VO-05, VO-51, VO-52).
+"""Measure the speech models on the recorded fixtures.
 
     python scripts/voice/measure.py --store ~/.cache/voice-work/store
 
@@ -92,7 +92,7 @@ def transcribe(
     return json.loads(done.stdout.strip().splitlines()[-1])
 
 
-#: Spoken turns timed on the server (VO-47): a 3 s fixture and the
+#: Spoken turns timed on the server: a 3 s fixture and the
 #: e2e suite's 9 s question, each heard ``TURN_RUNS`` times told its language.
 TURNS = {
     "3s": VOICE_TESTS / "fixtures" / "en-6930-75918-0013.flac",
@@ -124,7 +124,7 @@ def measure_server(
     threads: int,
     only: List[str],
 ) -> None:
-    """Each server speech-to-text model on the fixtures, as the speech service runs it (VO-47).
+    """Each server speech-to-text model on the fixtures, as the speech service runs it.
 
     The service's own engines (faster-whisper 8-bit, Moonshine through
     onnxruntime) on the CPU with ``threads`` threads, told the language, one

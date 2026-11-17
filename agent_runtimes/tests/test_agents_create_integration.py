@@ -485,7 +485,7 @@ class _DummyHarnessAgent:
 async def test_create_agent_on_a_harness_launches_the_acp_agent(
     monkeypatch: pytest.MonkeyPatch, creation_spy: dict[str, object]
 ) -> None:
-    """SH-10: the route builds the ACP adapter, not a pydantic-ai agent."""
+    """The route builds the ACP adapter, not a pydantic-ai agent."""
     import agent_runtimes.adapters.acp_agent as acp_agent
 
     made: list[_DummyHarnessAgent] = []

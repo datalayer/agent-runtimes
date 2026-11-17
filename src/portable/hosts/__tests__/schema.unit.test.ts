@@ -5,7 +5,7 @@
  * @vitest-environment node
  */
 
-/** The shared tables, under each host's prefix (DC-004). */
+/** The shared tables, under each host's prefix. */
 
 import { describe, expect, it, vi } from 'vitest';
 import { applyHostSchema, hostSchemaSql, hostTables } from '../schema';

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Approve and save (R-24).
+"""Approve and save.
 
 An application granted a Space to write is given `save_to_space`; the call is
 always asked — the whole text shown — whatever its rules say short of
@@ -183,7 +183,7 @@ async def test_approved_it_is_saved_as_a_page_of_the_space_and_its_link_answered
     ]
     [(space, title, state, key)] = written.calls
     assert (space, title) == ("sp-notes", "Weekly digest")
-    # Its byline closes the page (I-10).
+    # Its byline closes the page.
     assert state == markdown_document(
         "Weekly digest", DIGEST + "\n\n*Written by 👀 Weekly Digest.*"
     )
@@ -300,7 +300,7 @@ async def test_it_writes_through_spacer_under_its_key(monkeypatch) -> None:
     body = post.content.decode()
     assert 'name="idempotencyKey"' in body and "loop:k" in body
     assert 'name="documentType"' in body and "lexical" in body
-    # Who wrote it, in the document's metadata (I-10).
+    # Who wrote it, in the document's metadata.
     assert 'name="metadata"' in body and "loop.app" in body
 
 
@@ -344,7 +344,7 @@ async def test_on_a_deployment_it_saves_as_its_principal(monkeypatch) -> None:
     assert tokens == ["p-token"] and said == "Saved as “T”: /documents/doc-1"
 
 
-# What it writes says who wrote it (I-10).
+# What it writes says who wrote it.
 
 
 def test_its_byline_carries_its_face_and_says_when_it_wrote_on_its_own() -> None:
@@ -424,7 +424,7 @@ def test_its_capability_knows_who_opened_each_session() -> None:
 
 
 async def test_a_space_not_granted_is_refused_before_anybody_is_asked() -> None:
-    """R-25: the grant is read before the person is asked, not after."""
+    """The grant is read before the person is asked, not after."""
     app = digest()
     decided = rules_for(app).decide(
         SAVE_TOOL, {"title": "t", "content": "c", "space": "sp-wiki"}
@@ -477,7 +477,7 @@ async def test_a_space_not_granted_is_refused_before_anybody_is_asked() -> None:
 
     rules = rules_for(app)
     rules.ask = ask
-    # What the record says of it (found in the R-25 drill of 2026-10-07: it
+    # What the record says of it (found in a drill of 2026-10-07: it
     # said `do_it`): refused, not granted — never the behaviour that let the
     # tool run only to refuse it.
     recorder = AppRecorder(

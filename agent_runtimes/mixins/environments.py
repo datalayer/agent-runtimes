@@ -5,11 +5,11 @@
 Datalayer environments: the platform's catalogue, and the registry of user environments.
 
 ``GET /environments`` lists the platform's environments and the user
-environments the caller may use. The registry beside it (served by Runtimes since E1-01)
+environments the caller may use. The registry beside it (served by Runtimes)
 creates environments, their versions,
 builds and artifacts, and serves build logs. A version's specification, its
 states and its capability reports are the canonical models of
-``code_sandboxes.environments`` (D-14), as the TypeScript client's types are
+``code_sandboxes.environments``, as the TypeScript client's types are
 generated from their JSON Schema.
 
 A conditional write names the record it replaces with ``if_match``, the
@@ -116,7 +116,7 @@ class EnvironmentsRequestError(RuntimeError):
     @property
     def runtimes(self) -> list[EnvironmentLiveRuntime]:
         """
-        The runtimes a refused deletion names, each still running one of the environment's artifacts (E1-15).
+        The runtimes a refused deletion names, each still running one of the environment's artifacts.
 
         Returns
         -------
@@ -132,7 +132,7 @@ class EnvironmentsRequestError(RuntimeError):
     @property
     def unavailable_variants(self) -> Optional[list[str]]:
         """
-        The variants a refused promotion's acknowledgement must name, exactly (E1-15).
+        The variants a refused promotion's acknowledgement must name, exactly.
 
         Returns
         -------
@@ -144,7 +144,7 @@ class EnvironmentsRequestError(RuntimeError):
     @property
     def acknowledged_unavailable_variants(self) -> Optional[list[str]]:
         """
-        What a refused promotion's acknowledgement named, when it named the wrong variants (E1-15).
+        What a refused promotion's acknowledgement named, when it named the wrong variants.
 
         Returns
         -------
@@ -513,7 +513,7 @@ class EnvironmentsListMixin:
 
         Refused with 409 ``DL_ENV_CONFLICT`` while a version is promoted, an
         artifact is referenced, or a runtime still runs one of its artifacts,
-        whoever launched it; the refusal's ``runtimes`` name each one (E1-15).
+        whoever launched it; the refusal's ``runtimes`` name each one.
         Refused with 503 ``DL_ENV_UNAVAILABLE`` when the service cannot read
         which runtimes run it, and nothing is deleted then either.
 
@@ -581,7 +581,7 @@ class EnvironmentsListMixin:
         ``acknowledge_unavailable_variants`` names exactly its unavailable
         variants: otherwise 409 ``DL_ENV_CONFLICT``, whose
         ``unavailable_variants`` name them. The promotion is recorded on the
-        version, as its ``promotion`` (E1-15). Asking again for the version
+        version, as its ``promotion``. Asking again for the version
         already promoted writes nothing and answers the environment, even with
         a stale ``if_match``; asking for another with a stale one is refused
         with 412.
@@ -626,7 +626,7 @@ class EnvironmentsListMixin:
         correlation_id: Optional[str] = None,
     ) -> EnvironmentPublicationRecord:
         """
-        Publish a promoted version to the public Library (D-12, E2-15).
+        Publish a promoted version to the public Library.
 
         Owners only. Refused with ``DL_ENV_PUBLICATION_BLOCKED`` unless every
         input is public — no build secret, only public indexes, an approved
@@ -660,7 +660,7 @@ class EnvironmentsListMixin:
         self, version_uid: str, *, correlation_id: Optional[str] = None
     ) -> EnvironmentPublicationRecord:
         """
-        Withdraw a published version from the public Library (D-12, E2-15).
+        Withdraw a published version from the public Library.
 
         The snapshot is kept — the publication's ``status`` becomes
         ``unpublished`` rather than the record being gone — so a re-publish
@@ -690,7 +690,7 @@ class EnvironmentsListMixin:
         self, version_uid: str, *, correlation_id: Optional[str] = None
     ) -> EnvironmentPublicationRecord:
         """
-        A version's publication and the snapshot it froze (D-12, E2-15).
+        A version's publication and the snapshot it froze.
 
         Parameters
         ----------
@@ -719,7 +719,7 @@ class EnvironmentsListMixin:
         correlation_id: Optional[str] = None,
     ) -> EnvironmentFork:
         """
-        Fork a published version into an environment of your own (D-12, E2-15).
+        Fork a published version into an environment of your own.
 
         A fork whose spec, lock and base are unchanged reuses the published
         Datalayer artifact rather than building again — the same immutable
@@ -933,7 +933,7 @@ class EnvironmentsListMixin:
         self, version_uid: str, *, correlation_id: Optional[str] = None
     ) -> Any:
         """
-        A version's lock: its digest, its format and its text (D-3).
+        A version's lock: its digest, its format and its text.
 
         A version's own answer names the lock by digest only, since a lock is
         tens of kilobytes and every listing would carry it. A version with no
@@ -966,7 +966,7 @@ class EnvironmentsListMixin:
 
         The resolver runs a BuildKit solve `FROM` the version's base digest,
         which is a build's work, so this queues a build with ``kind: resolve``
-        that stops once the lock is stored (E1-26). The answer
+        that stops once the lock is stored. The answer
         names it, so the caller can follow its log like any other build's:
         ``{"resolved": false, "build": {...}, "version": {...}}``.
 
@@ -999,7 +999,7 @@ class EnvironmentsListMixin:
         correlation_id: Optional[str] = None,
     ) -> EnvironmentTrial:
         """
-        Launch a trial sandbox of a ready or partially ready version, before it is promoted (E1-14).
+        Launch a trial sandbox of a ready or partially ready version, before it is promoted.
 
         Only an owner tries a version. The runtime is launched as ``POST
         /runtimes`` launches one, with the version pinned, a given name saying
@@ -1201,7 +1201,7 @@ class EnvironmentsListMixin:
         self, version_uid: str, *, correlation_id: Optional[str] = None
     ) -> dict[str, Any]:
         """
-        The sandboxes running a version (E2-19).
+        The sandboxes running a version.
 
         The caller's own carry their runtime uid, digest, burning rate and why
         they wait, if they do; anybody else's only their phase and start.
@@ -1232,7 +1232,7 @@ class EnvironmentsListMixin:
         correlation_id: Optional[str] = None,
     ) -> dict[str, Any]:
         """
-        An owner's build quotas and what it holds against each (E1-13, E2-19).
+        An owner's build quotas and what it holds against each.
 
         Parameters
         ----------
@@ -1290,7 +1290,7 @@ class EnvironmentsListMixin:
         correlation_id: Optional[str] = None,
     ) -> EnvironmentBuildLogPage:
         """
-        Read a build's stored log chunks after a cursor: the polling side of D-15.
+        Read a build's stored log chunks after a cursor: the polling side of the build log.
 
         Parameters
         ----------
@@ -1327,7 +1327,7 @@ class EnvironmentsListMixin:
         """
         Yield each chunk of a build's log as it is written, until the build is terminal.
 
-        The stream is Server-Sent Events (D-15, E1-16): each chunk an event
+        The stream is Server-Sent Events: each chunk an event
         whose id is its sequence, then ``end`` once the build is terminal and
         every chunk is sent. A dropped connection is resumed with
         ``Last-Event-ID``, so no chunk is repeated; after ``max_reconnects``

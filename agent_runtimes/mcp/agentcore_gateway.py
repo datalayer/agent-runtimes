@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An Amazon Bedrock AgentCore Gateway as a remote MCP server (AC-20).
+"""An Amazon Bedrock AgentCore Gateway as a remote MCP server.
 
 A catalogue server with ``auth: {kind: agentcore-gateway, identity: …}`` is a
 gateway whose inbound authorizer trusts that identity (an identity issued by
@@ -18,7 +18,7 @@ does not know its account cannot name it, and the server is refused.
 Every request also names the run's **policy session** in
 ``x-amzn-bedrock-agentcore-policy-session-id``: the session uid of the last
 invocation (one session per microVM), over which the organization's policy
-engine keeps the history its temporal policies read (AC-44). When the
+engine keeps the history its temporal policies read. When the
 organization's temporal policies change, AgentCore ends the open policy
 sessions and answers ``409``: the session is restarted under a new id
 (``<uid>-<n>``), said in a sentence, and the request sent again once.

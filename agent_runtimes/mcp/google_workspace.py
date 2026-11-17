@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Gmail, reached in the name of the person an application acts for (W-02).
+"""Gmail, reached in the name of the person an application acts for.
 
 The catalogue's ``google-workspace`` server is ``workspace-mcp`` in its
 external OAuth provider mode: a local HTTP process (its spec's ``command``,
@@ -15,15 +15,15 @@ the runtime makes a toolset of its own, bound to who the run is for, whose
 every HTTP request to the server carries an access token IAM minted
 (``POST /api/iam/v1/oauth2/google-workspace/token``) — asked with
 
-- the person's token naming the application (I-04, ``apps.acting``)
+- the person's token naming the application (``apps.acting``)
   when the application's connection to Gmail is in the name of who uses it
   (``as: user``);
-- the application's principal's token (I-03) when it is in its owner's;
+- the application's principal's token when it is in its owner's;
 
 and narrowed by IAM to the connection's level (``access: read`` is *can read*,
 ``write`` *can read and send*). The access token is held in memory until
 :data:`REFRESH_MARGIN_SECONDS` before it ends, never in the environment, the
-record or the model's context (R-19); the refresh token never leaves IAM.
+record or the model's context; the refresh token never leaves IAM.
 
 A run nobody's Gmail can be reached for — no deployment (a Preview, a local
 run), the person has not let it act in their name, Gmail not connected or at a
@@ -218,7 +218,7 @@ async def gmail_access_token(agent_id: str, bearer: Optional[str]) -> str:
 
     if held is not None:
         release(held["token"])
-    # Withheld wherever it would be shown, should a tool ever echo it (R-19).
+    # Withheld wherever it would be shown, should a tool ever echo it.
     hold(token)
     _HELD[key] = {
         "token": token,

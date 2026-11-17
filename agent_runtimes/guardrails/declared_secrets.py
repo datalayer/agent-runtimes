@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Only the secrets its specs declare reach a runtime (R-19, decided 2026-10-07).
+"""Only the secrets its specs declare reach a runtime (decided 2026-10-07).
 
 A runtime is no longer given the account's whole set of secrets. What it is
 given is what the specs it is configured from **declare**, read off them:
@@ -19,7 +19,7 @@ given is what the specs it is configured from **declare**, read off them:
   on Datalayer, no harness's key is declared at all: its model calls go
   through ai-inference, to Bedrock or Alibaba, or it is not offered there
   (``adapters.harness_inference``);
-- a deployment that takes a signed user (D-21) — its user secret,
+- a deployment that takes a signed user — its user secret,
   ``DATALAYER_APP_USER_SECRET_<UID>``;
 - what the code an MCP server's tools write reads in the code sandbox — its
   ``sandbox_envvars`` (Earthdata's download script: ``EARTHDATA_USERNAME``,
@@ -471,7 +471,7 @@ class DeclaredSecrets:
     #: What the code sandbox gets: the skills' (their scripts run there).
     kernel: FrozenSet[str] = frozenset()
     #: Held by the process for its own checks, never required up front, never
-    #: in the sandbox: a deployment's user secret (D-21, refused per session).
+    #: in the sandbox: a deployment's user secret (refused per session).
     held: FrozenSet[str] = frozenset()
     #: Given when the account has them, never required: what an MCP server's
     #: scripts read in the sandbox (``sandbox_envvars``), also in ``kernel``.
@@ -853,7 +853,7 @@ def declared_secrets(
         deployment = _get(app, "deployment") or {}
         embedded = _get(deployment, "embedded") or {}
         host = _get(embedded, "host") or {}
-        # The Appspec says it as `host.user: signed` (D-21); a `signed_user`
+        # The Appspec says it as `host.user: signed`; a `signed_user`
         # key no Appspec has was read here, so a kept runtime was never given
         # its deployment's secret and refused every signed user (2026-10-10).
         signed = _get(host, "user") == "signed"

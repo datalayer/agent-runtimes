@@ -6,7 +6,7 @@
 /**
  * Web Bot Auth in TypeScript against the vectors the Python package reads
  * (`fixtures/vectors.json`, the draft's Appendix E.2): the same key, the same
- * bytes (PR-20 to PR-23, PR-51, PR-53).
+ * bytes.
  */
 
 import { definePlugin, contribution } from '@datalayer/reactor';
@@ -179,7 +179,7 @@ describe('Web Bot Auth, end to end', () => {
     );
   });
 
-  it('never publishes or sends the private key (PR-53)', async () => {
+  it('never publishes or sends the private key', async () => {
     await expect(directoryBody([vectors.key])).rejects.toThrow(
       'public keys only',
     );

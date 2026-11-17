@@ -4,8 +4,8 @@
  */
 
 /**
- * The thread's `⋯` menu, drawn from the `loop.session.action` registry
- * (MH-F08): the entries that apply to the session as it stands, read when
+ * The thread's `⋯` menu, drawn from the `loop.session.action` registry:
+ * the entries that apply to the session as it stands, read when
  * the menu opens; an entry's `when` hides what does not apply.
  *
  * @module apps/plugins/chat/SessionActionsMenu
@@ -38,7 +38,7 @@ import {
 } from '../../../portable/activity';
 
 /**
- * What the thread's header says of its session (MH-27, MH-10): its state
+ * What the thread's header says of its session: its state
  * with the turn phase — *Open · answering*, *Paused*, *Ended* — and where it
  * comes from — *Cloned from e67a52b2 at turn 2*, *Imported from a file…* —
  * as the record says them. Nothing while the session is not read.
@@ -81,7 +81,7 @@ export function SessionStateLine({
 }
 
 /**
- * The entries offered on a turn's row (MH-10): *Clone from here*, naming
+ * The entries offered on a turn's row: *Clone from here*, naming
  * the turn. Drawn under the person's message of that turn; nothing while
  * the session is not read or nothing applies.
  */
@@ -142,7 +142,7 @@ export function SessionActionsMenu({
   const [facts, setFacts] = useState<SessionFacts | undefined>(undefined);
   const [open, setOpen] = useState(false);
   const [said, setSaid] = useState('');
-  // A panel an entry shows (the session's Rules, SH-54), in a dialog of the
+  // A panel an entry shows (the session's Rules), in a dialog of the
   // menu's own when the host gives no other way.
   const [panel, setPanel] = useState<SessionPanel | undefined>(undefined);
   const saying: SessionActionContext = {

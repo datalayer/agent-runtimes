@@ -78,7 +78,7 @@ export async function createRuntime(
     );
   }
   /*
-   * An application's launch carries its Appspec (R-19), as
+   * An application's launch carries its Appspec, as
    * `RuntimesClient.create` does in Python: the Operator hands it to the
    * companion, which gives the runtime the secrets its connections declare
    * before its agent is made. Refused here, before any request, as the
@@ -100,7 +100,7 @@ export async function createRuntime(
    *
    * Without one this is, byte for byte, the request every runtime has been
    * launched with since before user environments existed, and the platform
-   * resolves the promoted version itself (D-2, E1-11).
+   * resolves the promoted version itself.
    */
   const environment: Record<string, unknown> = {
     name: options.environmentName,
@@ -185,7 +185,7 @@ export async function getRuntimes(): Promise<IRuntimeRecord[]> {
 
 /**
  * One runtime as the platform answers it now — why its pod waits included —
- * or `null` when there is none by that uid (E2-19).
+ * or `null` when there is none by that uid.
  */
 export async function getRuntimeRecord(
   id: string,

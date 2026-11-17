@@ -452,7 +452,7 @@ class AgentCoreWorkloadRequest(BaseModel):
 async def give_agentcore_workload_token_endpoint(
     request: Request, body: AgentCoreWorkloadRequest
 ) -> dict[str, Any]:
-    """Give this pod the workload token the ``agentcore`` identity provider uses (ID-06).
+    """Give this pod the workload token the ``agentcore`` identity provider uses.
 
     The companion asks AgentCore Identity for it with the person's token
     (``GetWorkloadAccessTokenForJWT``) and gives it here, as it gives the
@@ -478,7 +478,7 @@ async def give_agentcore_workload_token_endpoint(
 
 @router.post("/identity/authorizations/{authorization_id}/decline")
 async def decline_authorization_endpoint(authorization_id: str) -> dict[str, Any]:
-    """Decline the grant a tool waits for, as the chat's *Decline* asks (ID-10).
+    """Decline the grant a tool waits for, as the chat's *Decline* asks.
 
     The id is the one the ``identity.authorization_required`` event carried to
     the person's own turn stream, never listed elsewhere. The tool call ends
@@ -1175,7 +1175,7 @@ async def get_agent_spec_endpoint(
         **spec,
         "sandbox": sandbox_status.model_dump() if sandbox_status else None,
         # Why its configure was refused — a secret its specs declare and it was
-        # not given (R-19) — so a launch waiting for it says so, and stops.
+        # not given — so a launch waiting for it says so, and stops.
         **({"set_up_refused": refused} if refused else {}),
     }
 

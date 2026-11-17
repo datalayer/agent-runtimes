@@ -73,7 +73,7 @@ const namesOf = (plugins: unknown[]): string[] =>
       : [plugin?.name],
   );
 
-/** A plugin by name, inside the extensions too — never the extension, which an application's shares (F-15). */
+/** A plugin by name, inside the extensions too — never the extension, which an application's shares. */
 const pluginNamed = (plugins: unknown[], name: string): any =>
   plugins
     .flatMap((plugin: any) =>

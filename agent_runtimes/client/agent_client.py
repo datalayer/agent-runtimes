@@ -247,7 +247,7 @@ def ensure_local_agent(
 
     An agent an agentspec defines is registered by its id. One defined inline
     is registered from ``fields``: its system prompt, model, tools and MCP
-    servers (a team's seat, O2-09).
+    servers (a team's seat).
     """
     base = base_url.rstrip("/")
     headers = {"Authorization": f"Bearer {token}"} if token else {}
@@ -555,8 +555,8 @@ def _post_vercel_ai_chat(
     """POST a single prompt to a Vercel AI chat endpoint.
 
     ``chat_id`` is the chat's id, the conversation the runtime records the
-    turn under (an application's session, R-07): a caller that reads
-    the record afterwards (the Evals engine, V-08) names it; one is
+    turn under (an application's session): a caller that reads
+    the record afterwards (the Evals engine) names it; one is
     made up otherwise.
     """
     message_id = f"chat-{int(time.time() * 1000)}"
@@ -741,7 +741,7 @@ def run_cloud_agent_chat(
     return last_result
 
 
-#: What a turn of a test's conversation does: exactly one of these (E-01).
+#: What a turn of a test's conversation does: exactly one of these.
 TURN_DOINGS = ("say", "choose", "press")
 
 
@@ -774,7 +774,7 @@ def _turn_in_words(turn: dict[str, Any]) -> str:
 
 def _session_offers(lines: list[str]) -> dict[str, dict[str, Any]]:
     """The actions a session offers, by name, as its ``loop.session`` event
-    says them (RU-5): each with the display that offers it and its
+    says them: each with the display that offers it and its
     token.
     """
     offers: dict[str, dict[str, Any]] = {}
@@ -804,14 +804,14 @@ def run_cloud_app_conversation(
     turns: list[Any],
     timeout: int = 300,
 ) -> dict[str, Any]:
-    """Play a test that is a conversation (E-01) on an application's
+    """Play a test that is a conversation on an application's
     session, as its page has it: the session opened on the session API
     (``/api/v1/apps/sessions``, named ``session`` — the record it is kept
     under), then each turn sent once the one before was answered — a message
     for what the person says, the option's words for a choice they pick (as
     the chat answers a choice), and for what they press the action the
     session offered under that name, its token and its payload
-    (``/sessions/{uid}/press``, RU-5) — an action it did not offer
+    (``/sessions/{uid}/press``) — an action it did not offer
     is a failure. ``agent`` is the application's agent on the runtime, made on
     AG-UI, which the session API runs on.
 
@@ -961,7 +961,7 @@ class AgentClient(
         List all available environments.
 
         The platform's, then the user environments of the caller and of its
-        organizations (E1-01), every page of them.
+        organizations, every page of them.
 
         Parameters
         ----------
@@ -1109,10 +1109,10 @@ class AgentClient(
         environment : str, optional
             Environment type (e.g., "ai-agents-env"). Type of resources needed
             (cpu, gpu, etc.). A user environment is named through the same
-            argument, as ``<account-handle>/<name>`` or by its uid (D-2).
+            argument, as ``<account-handle>/<name>`` or by its uid.
         version : Optional[Union[int, str]], optional
             The version of a user environment to launch: its number, or a
-            version uid. Without one the promoted version launches (E1-19).
+            version uid. Without one the promoted version launches.
         time_reservation : Minutes, optional
             Time reservation in minutes for the runtime. Defaults to 10 minutes.
         snapshot_name : Optional[str], optional
@@ -1126,15 +1126,15 @@ class AgentClient(
             a Volume attachment mounts its Volume.
         from_snapshot_uid : Optional[str], optional
             The uid of the snapshot to restore into the runtime, when the caller
-            holds the uid rather than the name (a benchmark task's sandbox is restored from the snapshot its result names, B3-05).
+            holds the uid rather than the name (a benchmark task's sandbox is restored from the snapshot its result names).
             ``snapshot_name`` looks the uid up by name; this skips the lookup.
         parent_reservation_uid : Optional[str], optional
-            The execution tree the runtime is metered against (O1-07):
+            The execution tree the runtime is metered against:
             its reservation gets no more than the tree has left.
         app_spec : Optional[dict[str, Any]], optional
             The Appspec of the application the runtime is launched for: its
-            connections' secrets are given to it before its agent is made
-            (R-19), as `loop apps run --cloud` launches one.
+            connections' secrets are given to it before its agent is made,
+            as `loop apps run --cloud` launches one.
         agent_setup : Optional[dict[str, Any]], optional
             How its agent is configured at launch: ``without_mcp_servers``,
             ``without_skills`` (``loop --without-mcp-servers``).
@@ -1157,12 +1157,12 @@ class AgentClient(
             # What a second costs is READ FROM THE LISTING, never written
             # here: a platform entry carries its pool's rate, and a user
             # environment the rate of the size class its promoted version
-            # names (D-4, E1-19).
+            # names.
             burning_rate, size_class = entry.burning_rate, entry.size_class
         else:
             # Somebody else's published version is in nobody's listing but
             # its owner's: it is launched by its version uid, priced by the
-            # rate its publication carries (D-12, E2-15).
+            # rate its publication carries.
             publication = self._publication_to_launch(environment, version)
             if publication is None:
                 raise ValueError(

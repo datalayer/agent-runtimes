@@ -6,8 +6,8 @@
 Nine evaluators are listed; four execute. The others were offered in the
 picker and silently recorded as skipped, so a benchmark could claim an
 LLM judge it never ran. `executable` on each spec is now generated from
-the YAML and must agree with the registries the runner grades with
-(B0-11): a flag that drifts from the code is what this fails on.
+the YAML and must agree with the registries the runner grades with:
+a flag that drifts from the code is what this fails on.
 """
 
 from agent_runtimes.evals.remote.evaluators import CASE_EVALUATORS, REPORT_EVALUATORS

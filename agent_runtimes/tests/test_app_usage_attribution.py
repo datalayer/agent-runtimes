@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An application's model calls name it, so its owner reads what it spent (R-09).
+"""An application's model calls name it, so its owner reads what it spent.
 
 Routed through datalayer-ai-inference, every call of an agent that serves an
 application instance carries ``X-Datalayer-App-Uid`` and, for a deployment,
@@ -53,7 +53,7 @@ def test_the_headers_reach_ai_inference_on_every_call(monkeypatch):
 
     monkeypatch.setenv("DATALAYER_AI_INFERENCE_URL", "https://inference.example")
     give_inference_token("the-runtime-token")
-    # A deployment calls as its application's principal (I-03).
+    # A deployment calls as its application's principal.
     give_principal_token("01DEP", "the-principal-token", expires_in=3600)
     model = resolve_model_for_inference_provider(
         "bedrock:x", "datalayer", app_instance=DEPLOYMENT
@@ -147,7 +147,7 @@ def test_the_header_names_are_ai_inference_s():
 
 
 def test_a_model_the_persons_modes_choose_names_the_deployment_too(monkeypatch):
-    """R-09: on a runtime, a model a mode chooses (P-19) is called
+    """On a runtime, a model a mode chooses is called
     through the agent's provider, naming the instance it serves — not
     around ai-inference, unmetered on the application."""
     from pydantic_ai import Agent
@@ -175,7 +175,7 @@ def test_a_model_the_persons_modes_choose_names_the_deployment_too(monkeypatch):
 
 
 def test_the_runtimes_session_agent_carries_what_its_agent_was_made_with(monkeypatch):
-    """The agent a runtime's session runs (R-04) is told the provider and the
+    """The agent a runtime's session runs is told the provider and the
     instance its agent was created with."""
     from agent_runtimes.apps import sessions
     from agent_runtimes.routes import agents, agui
@@ -205,7 +205,7 @@ def test_the_runtimes_session_agent_carries_what_its_agent_was_made_with(monkeyp
     assert (made.inference_provider, made.app_instance) == ("datalayer", DEPLOYMENT)
 
 
-# --- a model the chat request names (drilled 2026-10-08, P-24) ---------------------
+# --- a model the chat request names (drilled 2026-10-08) ---------------------
 
 BEDROCK = "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0"
 

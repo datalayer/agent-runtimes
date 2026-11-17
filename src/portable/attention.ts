@@ -4,14 +4,14 @@
  */
 
 /**
- * What a host says outside the chat about a session, and when (VSCODE
- * VS-07, VS-10; DESKTOP DK-14, DK-25): the approvals, the questions, the
+ * What a host says outside the chat about a session, and when:
+ * the approvals, the questions, the
  * finished turns, a runtime gone — pure, no host API, no React.
  *
  * - **An approval raised** — an *ask me first* decision — is said as a
  *   notification that names the application, the action and its class
  *   (*read*, *write*, *send*, *buy*, *delete*, *execute*, *publish*) and
- *   never its arguments (DESKTOP decision D-8: a notification is read on a
+ *   never its arguments (a notification is read on a
  *   lock screen): the request is read whole in the chat, and a decision
  *   from the notification is allowed only once the chat has shown it. The
  *   decision goes through the place's one way after the approval is read
@@ -285,7 +285,7 @@ export function waitingSessions(
 }
 
 /**
- * What a dock badge counts (DK-14): the sessions waiting for the person.
+ * What a dock badge counts: the sessions waiting for the person.
  *
  * @param sessions - The sessions watched.
  *
@@ -296,7 +296,7 @@ export function badgeCount(sessions: readonly SessionAttention[]): number {
 }
 
 /**
- * The status bar's item (VS-10): *Datalayer: 2 waiting for you* when sessions
+ * The status bar's item: *Datalayer: 2 waiting for you* when sessions
  * wait (the first waiting one is what a click opens), *Datalayer: working…*
  * while a turn of any runs, nothing otherwise. The tooltip says the
  * session in front.
@@ -332,7 +332,7 @@ export function statusBarItem(
   return null;
 }
 
-/** One entry of a tray's menu (DK-14). */
+/** One entry of a tray's menu. */
 export interface TrayEntry {
   /** The session's key, or empty for the heading. */
   key: string;
@@ -434,7 +434,7 @@ export function finishedTurns(
 }
 
 /**
- * How the OS cues the person (DK-14, Omnigent's rule): a banner when the
+ * How the OS cues the person (Omnigent's rule): a banner when the
  * host is not in front; a dock bounce or a taskbar flash when it is, so
  * nothing covers what they look at.
  *

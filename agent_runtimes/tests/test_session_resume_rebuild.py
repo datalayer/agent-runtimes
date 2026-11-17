@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A resume from the record rebuilds the whole conversation (MH-03): turns,
+"""A resume from the record rebuilds the whole conversation: turns,
 tool rows with their displays, the files given with their places, the
 session's Rules — not `asked`/`answered` alone — and the session's title and
 lineage as the record says them; an ended session is not resumed.
@@ -270,7 +270,7 @@ def test_a_file_given_and_a_rule_added_are_on_the_record(
         ],
         headers=as_("ada"),
     )
-    # A file travels with an AG-UI run, as a page's block sends it (RU-6).
+    # A file travels with an AG-UI run, as a page's block sends it.
     events_of(
         remote.post(
             "/api/v1/apps/agents/notes-assistant/ag-ui/",

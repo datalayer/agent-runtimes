@@ -4,7 +4,7 @@
  */
 
 /**
- * The ai-agents host client every chat host calls (moved from the Slack service, DC-004).
+ * The ai-agents host client every chat host calls (moved from the Slack service).
  *
  * @module portable/hosts/client
  */
@@ -213,7 +213,7 @@ export class DatalayerHostClient {
   }
 
   /**
-   * The host's own administration (DC-106, `/datalayer-admin`):
+   * The host's own administration (`/datalayer-admin`):
    * pause, resume or one channel's rule, for the host
    * user linked to the installation's owner; Datalayer refuses anyone else
    * (403), whatever their role in the host.
@@ -342,7 +342,7 @@ export class DatalayerHostClient {
   }
 
   /**
-   * *Open in Datalayer* (S-305): a one-use code for the host token's person
+   * *Open in Datalayer*: a one-use code for the host token's person
    * that opens one session or approval after sign-in. Answers the landing's
    * path that redeems it; never a bearer token in a URL.
    */

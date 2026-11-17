@@ -76,7 +76,7 @@ export interface ProtocolConfig {
   uiSocket?: string;
   /**
    * Where a file of a conversation is uploaded before the run or the press
-   * that names it (RU-6): Reactor's upload, the bytes as the body,
+   * that names it: Reactor's upload, the bytes as the body,
    * the conversation's thread its scope. A run carries the ref it answers,
    * never the bytes. Set for an application's agent.
    */

@@ -6,8 +6,8 @@
  */
 
 /**
- * Dead letters and the durable queue's tables, under a host's prefix
- * (DC-004, DC-403): over a recording connection; Slack's
+ * Dead letters and the durable queue's tables, under a host's prefix:
+ * over a recording connection; Slack's
  * Postgres run, on a real database, covers the rest.
  */
 

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An application's own backend tools reach its agent on a runtime (POPPY_COMPANIES PC-21).
+"""An application's own backend tools reach its agent on a runtime.
 
 A local process refuses an application with backend tools and sends it to a
 runtime; the runtime's create route gives the agent the application's tools

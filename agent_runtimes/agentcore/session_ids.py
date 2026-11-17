@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A session uid as AgentCore's ``runtimeSessionId``, and back (AC-03).
+"""A session uid as AgentCore's ``runtimeSessionId``, and back.
 
 AgentCore Runtime takes a ``runtimeSessionId`` of 33 to 256 characters; a
 session uid is 8 to 128 letters, digits, hyphens or underscores

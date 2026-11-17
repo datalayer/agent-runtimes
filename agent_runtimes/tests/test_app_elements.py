@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """Where an element shows: inline, in a side panel, or on a page of its own,
-opened and closed from Python (P-18).
+opened and closed from Python.
 """
 
 import json
@@ -183,7 +183,7 @@ async def test_over_the_session_api_an_element_is_a_display_with_where_it_shows(
     page = await session.show(session.ui.text("t", text="Hi"), where="page", id="hello")
     await page.close()
     # Nothing of it on the run stream: opened and changed, a show of its
-    # display; closed, a remove — on the session's ui socket (RU-3, RU-W).
+    # display; closed, a remove — on the session's ui socket (RU-W).
     assert _drain(queue) == []
     ops = [frame.op.model_dump(mode="json") for frame in sessions.UI_HUB.ops(live.uid)]
     assert [(op["op"], op["id"]) for op in ops] == [
@@ -193,7 +193,7 @@ async def test_over_the_session_api_an_element_is_a_display_with_where_it_shows(
     ]
     shows = ops[0]["body"]
     assert ops[0]["scope"] == live.uid
-    # What it shows is its display (RU-2), where it shows in it.
+    # What it shows is its display, where it shows in it.
     assert shows["type"] == "application/vnd.datalayer.loop.answer+json"
     assert (shows["id"], shows["data"]["where"], shows["data"]["title"]) == (
         panel.id,

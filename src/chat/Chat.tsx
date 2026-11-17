@@ -141,7 +141,7 @@ function getProtocolType(
 }
 
 /**
- * What a host lends the thread's `⋯` menu (VSCODE VS-24): the ways an
+ * What a host lends the thread's `⋯` menu: the ways an
  * entry may use that only the page has — a file saved, a pick, a file
  * picked — and what it is told. The menu itself is drawn from the
  * `loop.session.action` registry of the Reactor registered on the page
@@ -169,7 +169,7 @@ export interface ChatSessionActions {
  */
 export interface ChatProps extends ChatCommonProps {
   /**
-   * The conversation to go on with (D-13, VS-24): an application's session,
+   * The conversation to go on with: an application's session,
    * read from its runtime by uid when `fromRuntime` is set (`GET
    * …/apps/sessions/{uid}/messages`, else resumed from its record), and
    * drawn in place of the runtime's history. The chat is remounted on
@@ -661,7 +661,7 @@ export function Chat({
   }, []);
 
   /*
-   * The thread (VS-24): the host's, or the one a menu entry opened in its
+   * The thread: the host's, or the one a menu entry opened in its
    * place (a clone's, an import's). One read from its runtime is opened
    * here first — held there, else resumed from its record — and drawn in
    * place of the runtime's history; one that cannot be opened is said, and
@@ -743,7 +743,7 @@ export function Chat({
       : '';
 
   /*
-   * The thread's menu (VS-24): the `loop.session.action` entries of the
+   * The thread's menu: the `loop.session.action` entries of the
    * Reactor registered on the page, for the session the thread is — the
    * uid the next message goes to, as the chat says it (`onSendReady`'s
    * `thread`), kept here so the menu follows the header's +.

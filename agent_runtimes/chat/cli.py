@@ -1031,7 +1031,7 @@ def _prompt_session(
 
 
 def _choose_where_at_start(*, local: bool, cloud: bool) -> str:
-    """Here or on Datalayer, asked before the agentspec (L-01).
+    """Here or on Datalayer, asked before the agentspec.
 
     Datalayer is offered only to somebody signed in; nobody else is asked,
     and is told in one line how to be offered it.
@@ -1659,7 +1659,7 @@ def main_callback(
         )
         preview_tux.show_welcome()
 
-    # Where it runs (L-01), asked first: what the flags say, else what
+    # Where it runs, asked first: what the flags say, else what
     # the person answers — on this machine, or on Datalayer. Here the
     # agentspec is picked from the list this machine's keys allow; on
     # Datalayer the environment is picked instead, and no agentspec list is
@@ -2381,7 +2381,7 @@ def _prepare_harness(harness_id: str) -> None:
         from agentspecs.harnesses import listed_refusal
 
         offered = sorted(h for h, s in HARNESS_CATALOGUE.items() if s.enabled)
-        # The long tail is registered and not offered until drilled (SH-57).
+        # The long tail is registered and not offered until drilled.
         raise ValueError(
             listed_refusal(harness_id)
             or f"There is no harness named {harness_id!r}: one of "

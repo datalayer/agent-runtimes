@@ -110,7 +110,7 @@ export function heldTargetReason(
     return `This session runs on ${TARGET_SPECS[fixed].label}: it cannot be moved from here.`;
   }
   // A host that names its own agent-runtimes server — `app.mount`, `loop apps
-  // run --web` (P-08, P-25) — is not asking for the reader's machine:
+  // run --web` — is not asking for the reader's machine:
   // Local is that server, and it is offered. Held, every message of a page
   // served by its own server went to the visitors' runtime instead
   // (seen 2026-10-10 on 1.3.96).

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The sessions and plugins examples, run (MH-46).
+"""The sessions and plugins examples, run.
 
 ``examples/sessions`` and ``examples/plugins`` are what the sessions pages
 point a reader at; each script is run here as its README runs it — its own

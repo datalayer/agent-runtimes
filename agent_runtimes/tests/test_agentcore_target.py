@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The `agentcore` runtime target (AC-10) and `loop agentcore` (AC-11),
+"""The `agentcore` runtime target and `loop agentcore`,
 against stubbed boto3 clients: every call's parameters asserted.
 """
 

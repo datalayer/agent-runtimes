@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Our ACP route pauses a turn at a checkpoint, resumes from it, and is steered while it works (O2-05).
+"""Our ACP route pauses a turn at a checkpoint, resumes from it, and is steered while it works.
 
 The route as served, over a websocket, with an agent that says what it has,
 waits at a gate, and then says what it was steered. Checkpoints and sessions
@@ -204,7 +204,7 @@ class SpendingAgent(GatedAgent):
 
 
 def test_a_turn_answers_with_what_it_spent(client: TestClient) -> None:
-    # O2-10: in the answer's `_meta`, which the ACP adapter records on the attempt.
+    # In the answer's `_meta`, which the ACP adapter records on the attempt.
     with session(client, "spending", SpendingAgent()) as (wire, session_id, _):
         _, answered = wire.request(
             "session/prompt", _prompt(session_id, "Profile the notebook")

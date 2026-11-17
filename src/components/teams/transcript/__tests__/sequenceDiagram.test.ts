@@ -4,7 +4,7 @@
  */
 
 /**
- * The transcript as a mermaid sequence diagram (SCENES S2-02): the source
+ * The transcript as a mermaid sequence diagram: the source
  * of a recorded transcript matches its golden file (`golden/*.mmd`; run
  * with `UPDATE_GOLDEN=1` to write them again), the participants stand in
  * the cast's order, each arrow and note maps back to its line, the words

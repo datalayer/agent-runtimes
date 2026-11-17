@@ -4,11 +4,11 @@
  */
 
 /**
- * Quotas before costly work (S-404, DC-402): questions an
+ * Quotas before costly work: questions an
  * hour per person, installation (a Slack workspace, a Discord server),
  * organization and application, taken atomically before a turn starts at
  * Datalayer. A refusal says which limit and when it resets. Moved from the
- * Slack service (DC-004).
+ * Slack service.
  *
  * @module portable/hosts/quotas
  */
@@ -124,7 +124,7 @@ export type QuotaTake =
 /** Where quota counts are kept. */
 export interface QuotaStore {
   /**
-   * Take one of each quota for a period, all or none (S-404): refused when
+   * Take one of each quota for a period, all or none: refused when
    * any is spent, naming it.
    */
   takeQuota(entries: readonly QuotaEntry[], period: string): Promise<QuotaTake>;

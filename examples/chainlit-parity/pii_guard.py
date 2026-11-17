@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """Security, personal data — the example of Chainlit's documentation
-(``examples/security``), rebuilt with LOOP's API (P-27).
+(``examples/security``), rebuilt with LOOP's API.
 
 Chainlit looks for personal data in what the person wrote before anything
 is done with it (Microsoft Presidio's analyzer); when it finds some, it asks

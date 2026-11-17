@@ -113,7 +113,7 @@ def _evaluate_pass_rate_threshold(
 
 
 # ---------------------------------------------------------------------------
-# The LLM judge (B2-12)
+# The LLM judge
 # ---------------------------------------------------------------------------
 
 #: What a judge may call the way a task failed. A closed list, so the task
@@ -309,8 +309,8 @@ def default_judge() -> JudgeCall | None:
     return _default_judge()
 
 
-#: What the judge is told of a conversation's record, when it is handed one
-#: (V-08): it grades on what was done, not only on what was said.
+#: What the judge is told of a conversation's record, when it is handed one:
+#: it grades on what was done, not only on what was said.
 RECORD_PREAMBLE = (
     "What the runtime recorded it doing in this conversation (its record: the "
     "tools it called, what its rules decided, what its checks said, the people "
@@ -383,7 +383,7 @@ def _evaluate_llm_judge(
     Handed a conversation's record (``_record``: its lines, as
     `apps.validation.what_it_did` says them), the judge reads it beside
     the answer and grades on what was done — a test of an application
-    (V-08) is graded on its tool calls, its rules' decisions and its
+    is graded on its tool calls, its rules' decisions and its
     checks, not on its words alone.
     """
     judge: JudgeCall | None = arguments.get("_judge") or _default_judge()
@@ -403,7 +403,7 @@ def _evaluate_llm_judge(
             "failure_mode": "other",
             "failure_stage": "scorer",
         }
-    # The conversation's record, when the caller read one (V-08):
+    # The conversation's record, when the caller read one:
     # `None` is a judge of the answer alone, `[]` a record that holds nothing.
     record = arguments.get("_record")
     prompt = _judge_prompt(

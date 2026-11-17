@@ -5,18 +5,18 @@
 #
 # BSD 3-Clause License
 
-"""The runtime's authorizer, subject and lent-tool classes for the Shield (SH-70, SH-72, SH-75).
+"""The runtime's authorizer, subject and lent-tool classes for the Shield.
 
 On Datalayer the Shield never holds OpenFGA's address: the runtime hands it
 ``agent_shield.saas.IamAuthorizer`` — IAM's AuthZen route, asked with the
 run's credential — and the **subject** the run acts as: the deployment its
 token names (an application's runtime), else the account the token is minted
-for. The PAP grant is then a decision input (SH-72): IAM wrote
+for. The PAP grant is then a decision input: IAM wrote
 ``connection:<company>`` relationships for the deployment when its grant was
 made, and a ``propose`` at a company the person did not connect is refused at
 the Rules through the authorizer, as the gateway refuses it at the toolset.
 
-The lent tools of a company (SH-70) are classed by agentspecs' table
+The lent tools of a company are classed by agentspecs' table
 (:mod:`agent_runtimes.apps.pap_connections`), the strictest class when a
 tool may do two things, and name the company as the resource.
 """
@@ -39,7 +39,7 @@ DATALAYER_AUTHORIZE: tuple[str, ...] = ("send", "buy")
 
 #: And in a runtime pod's workspace, where the platform writes the relationship at
 #: the runtime's launch (the operator for its account, IAM for a deployment's grant:
-#: ``can_execute workspace:mnt/shared-agent/workspace``, SH-75): reading, writing
+#: ``can_execute workspace:mnt/shared-agent/workspace``): reading, writing
 #: and running a command there need the authorizer's allow too.
 WORKSPACE_AUTHORIZE: tuple[str, ...] = ("read", "write", "execute")
 
@@ -114,7 +114,7 @@ def runtime_authorizer(credential: "str | Callable[[], str]") -> Optional[Any]:
     deployment's principal token the runtime holds *now*, renewed by its
     keeper — so a harness relaunched under a short-lived minted key does not
     keep asking IAM with that key once it expired (every decision answered
-    *the authorizer answered 401* after fifteen minutes, SH-12's finding).
+    *the authorizer answered 401* after fifteen minutes, as found on r1).
     Every class a policy lists under ``authorize:`` is then refused — never a fail-open.
     """
     iam_url = (os.environ.get(IAM_URL_VARIABLE) or "").strip().rstrip("/")

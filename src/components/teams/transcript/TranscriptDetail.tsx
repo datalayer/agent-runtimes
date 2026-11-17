@@ -4,7 +4,7 @@
  */
 
 /**
- * The drill-down (SCENES S3-01): the selected line's span — the words sent
+ * The drill-down: the selected line's span — the words sent
  * and answered, a tool's name, arguments and result when the span recorded
  * them, when it started and ended, its status and an error's message, the
  * span and trace ids, and for a coding harness's step what the Shield

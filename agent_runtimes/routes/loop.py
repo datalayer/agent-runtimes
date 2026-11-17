@@ -209,7 +209,7 @@ class SwitchAgentRequest(BaseModel):
 
 @router.post("/sessions/{session_id}/agent", status_code=410)
 async def switch_agent(session_id: str, body: SwitchAgentRequest) -> dict[str, Any]:
-    """Gone (MH-07): a session's agent is swapped at the session route.
+    """Gone: a session's agent is swapped at the session route.
 
     The swap is the session's — its conversation carried, the new agent told
     in a sentence, the record saying it — which this route never did: it

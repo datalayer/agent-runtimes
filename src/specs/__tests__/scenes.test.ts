@@ -4,7 +4,7 @@
  */
 
 /**
- * Scenes: the catalogue generated from agentspecs 0.0.61 (A-12).
+ * Scenes: the catalogue generated from agentspecs 0.0.61.
  *
  * A scene stages a team. The generated catalogue carries its cast resolved,
  * its entry said, what each beat shows, and what it needs set up; the empty
@@ -23,7 +23,7 @@ import { SCENE_RECORDINGS, getSceneRecording } from '../sceneRecordings';
 import { stageBackdropOf } from '../../components/teams/backdrops/catalogue';
 import * as specs from '..';
 
-/** The four scenes of the home page (A-08): the entry, the members on a runtime. */
+/** The four scenes of the home page: the entry, the members on a runtime. */
 const HOME_SCENES: Record<string, [string, string[]]> = {
   'sales-and-accounting': ['sales', ['accounting']],
   'month-end-close': ['month-end-close', ['month-end-close']],

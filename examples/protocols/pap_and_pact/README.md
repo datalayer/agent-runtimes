@@ -2,7 +2,7 @@
 
 Ada asks her application, _Atlas_, one question — _where is my jacket order,
 and when do I fly?_ — whose answer is at two businesses speaking two
-consent protocols (example EX-07):
+consent protocols:
 
 - **Manzanita Outfitters**, a company over the
   [Personal Agent Protocol](https://personal-agent-protocol.datalayer.tech)
@@ -16,7 +16,7 @@ consent protocols (example EX-07):
 
 One record keeps what each protocol did, in order. PACT's receipts reach it
 through `pact.receiptStore`, to which Atlas's host contributes the record
-(as a Datalayer host contributes the application's record, R-07); PAP's
+(as a Datalayer host contributes the application's record); PAP's
 steps are written by the tool. No user code, device code, token, assertion,
 proof or receipt signature is in it, nor in the answer the model reads.
 

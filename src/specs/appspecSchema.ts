@@ -106,7 +106,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppAction: {
       additionalProperties: false,
       description:
-        'An action of its code a person presses (`@app.action`, RU-5).\n\nWhat its payload is, typed: the JSON Schema of an object, written from the\npydantic model its code declares (`@app.action(name, payload=Model)`); an\naction declaring none takes nothing. The runtime offers it only where a\ndisplay showed it, or to the session that runs it, each press with a\ntoken; a press of an action not declared here is refused, and its payload\nis checked against this schema before its code runs.',
+        'An action of its code a person presses (`@app.action`).\n\nWhat its payload is, typed: the JSON Schema of an object, written from the\npydantic model its code declares (`@app.action(name, payload=Model)`); an\naction declaring none takes nothing. The runtime offers it only where a\ndisplay showed it, or to the session that runs it, each press with a\ntoken; a press of an action not declared here is refused, and its payload\nis checked against this schema before its code runs.',
       properties: {
         name: {
           description: 'Its name, as its button presses it',
@@ -705,7 +705,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         },
         actions: {
           description:
-            'The actions of its code a person presses (`@app.action`, RU-5), each with the JSON Schema of its payload: what its buttons offer, with a token, and nothing else',
+            'The actions of its code a person presses (`@app.action`), each with the JSON Schema of its payload: what its buttons offer, with a token, and nothing else',
           items: {
             $ref: '#/$defs/AppAction',
           },

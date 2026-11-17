@@ -7,7 +7,7 @@
  * What the environment dropdown says about an environment, as rules.
  *
  * The listing now holds two kinds of thing: the platform's environments, which
- * have always been there, and the environments people build (E1-01).
+ * have always been there, and the environments people build.
  * They are told apart, grouped, priced and — where a variant was never
  * built — refused here rather than in the components, so the launcher and the
  * picker cannot come to different conclusions about the same entry, and so the
@@ -15,7 +15,7 @@
  *
  * Nothing in this module writes a rate: the burning rate of a user environment
  * is the rate of the size class its promoted version names, and the listing
- * carries it (D-4, E1-19).
+ * carries it.
  *
  * @module components/code-sandboxes/codeSandboxEnvironments
  */
@@ -69,13 +69,12 @@ export type ICodeSandboxEnvironmentViewer = {
  *
  * An entry that reached the picker through the public Library is a *library*
  * entry, whoever owns it: a published environment is offered where a reader who
- * came from its public page looks for it (D-12, E2-16). Otherwise a platform
+ * came from its public page looks for it. Otherwise a platform
  * entry says so with its `origin`. A user environment is the caller's own when
  * the account that owns it is theirs — by uid, or by the handle its name is
  * written with, `ada/geo`, since that is all an entry carries when the uid is
  * not at hand. Everything else a caller can see is an environment of one of
- * their organizations: the listing only ever offers them their own accounts'
- * (D-19).
+ * their organizations: the listing only ever offers them their own accounts'.
  */
 export function codeSandboxEnvironmentGroupOf(
   environment: Pick<
@@ -107,7 +106,7 @@ export function codeSandboxEnvironmentVersion(
   return environment.promotedVersion?.version;
 }
 
-/** The address of a version's page (E1-21), where its builds are. */
+/** The address of a version's page, where its builds are. */
 export function environmentVersionHref(uid: string, version?: number): string {
   return version === undefined
     ? `/environments/${uid}/versions`
@@ -244,8 +243,7 @@ export function firstLaunchableCodeSandboxEnvironment(
 }
 
 /**
- * A publication, as the picker offers it to somebody who does not own it
- * (D-12, E2-19).
+ * A publication, as the picker offers it to somebody who does not own it.
  *
  * Nobody's listing holds another account's environment, so a reader who came
  * from its Library page is offered it from the publication itself: launched by

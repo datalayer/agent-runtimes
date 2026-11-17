@@ -62,7 +62,7 @@ OWN = {
     ("GET", "/api/v1/apps/{app_id}/events/stream"),
     # A visitor's page on the visitors' runtime (refused anywhere else, by itself).
     ("POST", "/api/v1/apps/visitors/agent"),
-    # What ai-agents keeps a deployment with (A-08).
+    # What ai-agents keeps a deployment with.
     ("PUT", "/api/v1/apps/a2a"),
     ("DELETE", "/api/v1/apps/a2a"),
     ("POST", "/api/v1/apps/principal"),
@@ -72,8 +72,8 @@ OWN = {
     ("GET", "/api/v1/apps/current"),
     ("POST", "/api/v1/apps/decide"),
     ("POST", "/api/v1/apps/feedback"),
-    # Each person's own sessions and chat (R-04); the session's operations
-    # (MH-09, MH-13, MH-14, MH-06, MH-43) are the person's own too.
+    # Each person's own sessions and chat; the session's operations
+    # are the person's own too.
     ("POST", "/api/v1/apps/sessions"),
     ("POST", "/api/v1/apps/sessions/{uid}/clone"),
     ("GET", "/api/v1/apps/sessions/{uid}/export"),
@@ -89,7 +89,7 @@ OWN = {
     ("POST", "/api/v1/apps/sessions/{uid}/page"),
     ("PUT", "/api/v1/apps/sessions/{uid}/settings"),
     ("POST", "/api/v1/apps/sessions/{uid}/window"),
-    # A turn said, and the person speaking over the agent (VO-46).
+    # A turn said, and the person speaking over the agent.
     ("POST", "/api/v1/apps/sessions/{uid}/audio"),
     ("POST", "/api/v1/apps/sessions/{uid}/interrupt"),
     ("POST", "/api/v1/apps/sessions/{uid}/stop"),
@@ -98,7 +98,7 @@ OWN = {
     ("DELETE", "/api/v1/apps/sessions/{uid}"),
     ("POST", "/api/v1/apps/sessions/logout"),
     ("POST", "/api/v1/apps/sessions/{uid}/resume"),
-    # A person's rules on their running session (SH-54).
+    # A person's rules on their running session.
     ("GET", "/api/v1/apps/sessions/{uid}/rules"),
     ("POST", "/api/v1/apps/sessions/{uid}/rules"),
     ("DELETE", "/api/v1/apps/sessions/{uid}/rules/{name}"),
@@ -106,12 +106,12 @@ OWN = {
     ("WS", "/api/v1/apps/ui"),
     ("POST", "/api/v1/apps/agents/{agent}/files"),
     ("GET", "/api/v1/apps/files/{scope}/{ref}"),
-    # What it remembers of the caller (R-18, R-36).
+    # What it remembers of the caller.
     ("GET", "/api/v1/apps/memories/{app}"),
     ("DELETE", "/api/v1/apps/memories/{app}/{memory_id}"),
     ("PATCH", "/api/v1/apps/memories/{app}/{memory_id}"),
     ("DELETE", "/api/v1/apps/memories/{app}"),
-    # Its computer, shown where the person is (R-23).
+    # Its computer, shown where the person is.
     ("GET", "/api/v1/apps/agents/{agent}/computer"),
     ("GET", "/api/v1/apps/agents/{agent}/computer/files"),
     ("GET", "/api/v1/apps/agents/{agent}/computer/file"),

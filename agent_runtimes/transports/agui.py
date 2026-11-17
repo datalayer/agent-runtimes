@@ -38,16 +38,15 @@ from ..otel.prompt_turn_metrics import (
 )
 from .agui_authorizations import stream_with_authorizations
 
-# AG-UI's adapter, with a tool's display beside the result the page draws
-# (RU-1).
+# AG-UI's adapter, with a tool's display beside the result the page draws.
 from .agui_displays import DisplayAGUIAdapter as AGUIAdapter
 from .base import BaseTransport
 
 logger = logging.getLogger(__name__)
 
 #: What a run is told besides its agent's instructions, set by the runtime
-#: itself, never by the request: the modes an application's session is in
-#: (P-19), for the run it forwards to its agent.
+#: itself, never by the request: the modes an application's session is in,
+#: for the run it forwards to its agent.
 _run_instructions: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "run_instructions", default=None
 )
@@ -147,7 +146,7 @@ async def hear_client_audio(
     body: Any, authorization: str | None
 ) -> tuple[dict[str, Any], bytes] | Response | None:
     """
-    An AG-UI run whose newest user message carries audio, heard (VO-28).
+    An AG-UI run whose newest user message carries audio, heard.
 
     The audio is heard by ai-agents' speech service with the caller's own
     token; the message becomes its transcript, marked spoken in
@@ -199,7 +198,7 @@ async def hear_client_audio(
 
 def mark_spoken(body: Any) -> None:
     """
-    Say, for the run this body starts, whether its message was said (VO-27).
+    Say, for the run this body starts, whether its message was said.
 
     ``forwardedProps.voice`` is how a client that heard the person itself —
     the page, ``loop --voice`` — says so: ``{"input": "voice", "language",
@@ -348,7 +347,7 @@ class AGUITransport(BaseTransport):
         """
         if self._app is None and not hasattr(self.agent, "_agent"):
             # An agent that is not pydantic-ai's — a harness driven over ACP
-            # (SH-10) — is served from its own stream.
+            # — is served from its own stream.
             from .agui_stream import agui_app_of
 
             self._app = agui_app_of(self.agent, self._agent_id)
@@ -402,7 +401,7 @@ class AGUITransport(BaseTransport):
                     body_bytes = await request.body()
                     body = json.loads(body_bytes)
                     # Audio a protocol client sent is heard first, and the
-                    # message is its transcript (VO-28).
+                    # message is its transcript.
                     heard = await hear_client_audio(
                         body, request.headers.get("authorization")
                     )
@@ -412,7 +411,7 @@ class AGUITransport(BaseTransport):
                         body, body_bytes = heard
                     else:
                         # A message said and heard by the client: marked
-                        # spoken for the run and the record (VO-15, VO-27).
+                        # spoken for the run and the record.
                         mark_spoken(body)
                     model = body.get("model")
                     if model:
@@ -516,7 +515,7 @@ class AGUITransport(BaseTransport):
                 # through its provider — ai-inference on a Datalayer runtime,
                 # naming the application it serves — never handed to
                 # pydantic-ai as a bare string it would call directly (a
-                # hosted page's agent called Bedrock with no region, P-24).
+                # hosted page's agent called Bedrock with no region).
                 run_model: Any = model
                 if isinstance(model, str) and model:
                     from ..models.models import RequestModelRefused, model_of_request
@@ -732,9 +731,9 @@ class AGUITransport(BaseTransport):
                 runtime_toolsets = transport_self._get_runtime_toolsets()
                 # An application's run reaches the Datalayer MCP gateway as
                 # the application, never with the process's key: a session's
-                # run of a deployment as its principal (I-03), of a
+                # run of a deployment as its principal, of a
                 # Preview with the token the session gives the run, narrowed
-                # to its granted Spaces (R-25) — which the gateway holds.
+                # to its granted Spaces — which the gateway holds.
                 from ..apps.principal import gateway_toolsets_of_the_run
 
                 runtime_toolsets = await gateway_toolsets_of_the_run(
@@ -822,7 +821,7 @@ class AGUITransport(BaseTransport):
                             )
 
                         # A tool waiting for a person's grant: its
-                        # authorization event reaches the chat meanwhile (ID-10).
+                        # authorization event reaches the chat meanwhile.
                         original_iter = stream_with_authorizations(
                             original_iter,
                             {

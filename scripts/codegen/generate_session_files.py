@@ -5,7 +5,7 @@
 """
 Generate Python and TypeScript code from the session file specification.
 
-One spec under ``agentspecs/sessions`` (MH-12): ``datalayer-session-1.yaml``
+One spec under ``agentspecs/sessions``: ``datalayer-session-1.yaml``
 says the ``datalayer-session/1`` JSONL format — its caps, the states, the
 entry kinds a file may carry, the redaction rules by name and the sentences
 a reader refuses a file in — and ``session-file.schema.json`` beside it is
@@ -62,7 +62,7 @@ def generate_python_code(spec: dict[str, Any], schema: dict[str, Any]) -> str:
         "# Copyright (c) 2025-2026 Datalayer, Inc.",
         "# Distributed under the terms of the Modified BSD License.",
         '"""',
-        "Session file format (MH-12).",
+        "Session file format.",
         "",
         "The datalayer-session/1 JSONL file: its caps, the states, the entry kinds,",
         "the redaction rules and the refusal sentences, as agentspecs says them.",
@@ -135,7 +135,7 @@ def generate_typescript_code(spec: dict[str, Any], schema: dict[str, Any]) -> st
         " */",
         "",
         "/**",
-        " * Session file format (MH-12).",
+        " * Session file format.",
         " *",
         " * The datalayer-session/1 JSONL file: its caps, the states, the entry kinds,",
         " * the redaction rules and the refusal sentences, as agentspecs says them.",

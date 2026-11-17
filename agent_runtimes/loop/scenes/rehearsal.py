@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A scene's rehearsal: each beat played and compared to its expected shape (A-14).
+"""A scene's rehearsal: each beat played and compared to its expected shape.
 
 A scene spec's ``rehearsal`` says, per beat, the shape its transcript must
 take (``lines``, in the transcript's own grammar: *You → Sales*, *Accounting
@@ -18,7 +18,7 @@ from what happened, and the two compared here:
 - ``must_say`` and ``must_not_say`` are read on the entry's answer;
 - ``within`` is read on the time the beat took.
 
-Each beat gets a verdict in the words of the Validate tab (V-05, as `loop
+Each beat gets a verdict in the words of the Validate tab (as `loop
 apps validate --tests` says them): **passed**, **failed** with what
 differed, or **not run** with why. The scene's verdict counts them, and
 its exit code is `loop apps validate`'s: 1 when a beat failed, 3 when one

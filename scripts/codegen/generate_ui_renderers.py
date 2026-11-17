@@ -5,8 +5,8 @@
 """
 Generate Python and TypeScript code from the YAML UI renderer specifications.
 
-One YAML per UI renderer under ``agentspecs/ui-renderers`` (R8,
-F-01): how a UI plugin's interface reaches a host that is not Datalayer's own
+One YAML per UI renderer under ``agentspecs/ui-renderers`` (R8):
+how a UI plugin's interface reaches a host that is not Datalayer's own
 page — A2UI, MCP Apps, MCP UI. A UI plugin (``agentspecs/ui``) says the
 renderers it may be exposed through; an agent's or an application's ``ui``
 names, per plugin, the one it uses.

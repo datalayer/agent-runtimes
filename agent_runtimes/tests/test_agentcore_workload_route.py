@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A Datalayer pod is given its AgentCore workload token by its companion (ID-06).
+"""A Datalayer pod is given its AgentCore workload token by its companion.
 
 ``PUT /api/v1/configure/identity/agentcore``, as ``/configure/inference/token``:
 only the pod itself (loopback, and the pod's secret when it holds one) may

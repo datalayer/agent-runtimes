@@ -5,7 +5,7 @@
  */
 
 /**
- * Character files a person brings (T-26): clippy.js maps and Microsoft Agent
+ * Character files a person brings: clippy.js maps and Microsoft Agent
  * .acs files, and .acf files with their .aca files, from small synthetic
  * fixtures built here — no character of Microsoft's is in the repository.
  */

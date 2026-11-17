@@ -4,7 +4,7 @@
  */
 
 /**
- * The microphone in the composer (VO-10, VO-11, VO-61, VO-62, VO-65 to VO-68).
+ * The microphone in the composer.
  *
  * Clicked, it listens: the words are written in the composer as they are
  * heard (`onInterim`), and it stops at a second click, or once the person
@@ -40,7 +40,7 @@ import type { Hearing } from './hearing';
 import { keptAudioSentence, soundOf } from './keptSound';
 import type { Transcript } from './types';
 
-/** What the microphone is doing, said in words (VO-67, VO-68). */
+/** What the microphone is doing, said in words. */
 export type ListeningState =
   'idle' | 'asking' | 'loading' | 'listening' | 'hearing';
 
@@ -59,7 +59,7 @@ const CLICKED_WORDS =
 /** A press shorter than this is a click: it starts, and the next click stops. */
 const CLICK_MS = 300;
 
-/** How often the words heard so far are written in the composer, in ms (VO-11). */
+/** How often the words heard so far are written in the composer, in ms. */
 export const INTERIM_MS = 700;
 
 /** The longest a microphone listens in one go, in ms: then it stops by itself. */
@@ -75,7 +75,7 @@ export interface VoiceInputProps {
   /** What was said, once heard. */
   onTranscript: (transcript: Transcript) => void;
   /**
-   * The words heard so far, while it listens (VO-11): for the composer, as
+   * The words heard so far, while it listens: for the composer, as
    * they come. Called with `''` when it stops with nothing heard, or is
    * cancelled, for the composer to get back what it held.
    */
@@ -85,14 +85,14 @@ export interface VoiceInputProps {
    * one held stops when let go.
    */
   silenceMs?: number;
-  /** The microphone the person chose (VO-30); the browser's own when unsaid. */
+  /** The microphone the person chose; the browser's own when unsaid. */
   microphoneId?: string;
-  /** The microphone opens: the agent stops speaking (VO-13). */
+  /** The microphone opens: the agent stops speaking. */
   onListen?: () => void;
   /** Whose consent is remembered: the application's id. */
   consentKey: string;
   /**
-   * The days the application keeps what is said as sound (VO-63): asked in
+   * The days the application keeps what is said as sound: asked in
    * the first sentence, and each turn's recording sent with its words.
    */
   keepsAudio?: number;
@@ -207,7 +207,7 @@ export function VoiceInput({
         return;
       }
       setSaid(`Heard: ${transcript.text}`);
-      // Kept as sound too, as the person agreed (VO-63).
+      // Kept as sound too, as the person agreed.
       onTranscript(
         keepsAudio
           ? {
@@ -239,7 +239,7 @@ export function VoiceInput({
   }, [onInterim]);
 
   /*
-   * While it listens, the words heard so far go in the composer (VO-11), and
+   * While it listens, the words heard so far go in the composer, and
    * a microphone clicked on stops once the person has stopped speaking: what
    * was heard is looked at again every INTERIM_MS — Silero VAD finds the
    * speech and the silence after it, the language's model writes the words.
@@ -323,7 +323,7 @@ export function VoiceInput({
         }
       }
     };
-    // A hidden tab closes the microphone (VO-62).
+    // A hidden tab closes the microphone.
     const hidden = () => {
       if (document.hidden) {
         cancel();
@@ -421,7 +421,7 @@ export function VoiceInput({
           // Unavailable as `aria-disabled`, never `disabled`: Primer's
           // Tooltip throws for a trigger that is not interactive (a disabled
           // button is not), which took a visitor's whole page down when the
-          // microphone mounted before its conversation was ready (VO-53).
+          // microphone mounted before its conversation was ready.
           aria-disabled={inert || undefined}
           data-voice-mic=""
           onPointerDown={event => {
@@ -452,7 +452,7 @@ export function VoiceInput({
             }
           }}
           onKeyDown={event => {
-            // Enter or Space on the focused button toggles, for the keyboard (VO-66).
+            // Enter or Space on the focused button toggles, for the keyboard.
             if (event.key === 'Enter' || event.key === ' ') {
               event.preventDefault();
               if (inert) {

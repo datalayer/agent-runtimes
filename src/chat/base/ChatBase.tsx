@@ -198,7 +198,7 @@ const EphemeralDocument = React.lazy(() =>
 // The agent's details (its context charts draw with ECharts) and the
 // companion notebook (JupyterLab's notebook) are opened by a click, not drawn
 // with the conversation: each is its own chunk, fetched when first shown, so
-// a chat — and an embedded application (D-08) — loads without them.
+// a chat — and an embedded application — loads without them.
 // A chunk that cannot load says so where the view would be.
 const loadAgentDetails = () =>
   import('../../agents/AgentDetails').then(m => ({ default: m.AgentDetails }));
@@ -383,7 +383,7 @@ function ThemedChatBoundary({
     ...(resolvedMode === 'dark'
       ? themeConfig.themeStyles.dark
       : themeConfig.themeStyles.light),
-    // What the host lays over the theme: an application's accent (T-05).
+    // What the host lays over the theme: an application's accent.
     ...themeOverrides?.[resolvedMode],
   };
   const themeBackground =
@@ -1784,7 +1784,7 @@ function ChatBaseInner({
 
   // ---- Component state ----
   /*
-   * The conversation (M-030): `reduceConversation`'s, as on the phone,
+   * The conversation: `reduceConversation`'s, as on the phone,
    * whatever protocol the agent speaks — its adapter's events normalised by
    * `conversationEventsOf`. Kept in a ref as each change lands, so the events
    * of one network chunk each read the last, and drawn on the next render
@@ -1794,7 +1794,7 @@ function ChatBaseInner({
     emptyConversation(BROWSER_LIMITS),
   );
   const conversationRef = useRef(conversation);
-  // The grants the turn's tools wait for (ID-10), until it ends.
+  // The grants the turn's tools wait for, until it ends.
   const [identityAuthorizations, setIdentityAuthorizations] = useState<
     IdentityAuthorization[]
   >([]);
@@ -1909,8 +1909,8 @@ function ChatBaseInner({
      it is a detour from the conversation, not a place the chat lives. */
   const [showDetails, setShowDetails] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  // Streaming tools' events as turns the model did not ask for (AGENT_BATTLE
-  // B1-00): sent at once when the model is idle, held while a turn is in
+  // Streaming tools' events as turns the model did not ask for:
+  // sent at once when the model is idle, held while a turn is in
   // flight and sent as one turn — the latest per source — when it ends.
   const loadingRef = useRef(false);
   const sendRef = useRef<(text: string) => void>(() => undefined);
@@ -1962,7 +1962,7 @@ function ChatBaseInner({
   const [historyRefreshTick, setHistoryRefreshTick] = useState(0);
   const historyRetryAttemptsRef = useRef<Map<string, number>>(new Map());
   // The steps of an application's code shown so far, as displays (patched
-  // as they stream), and the elements it showed (RU-3).
+  // as they stream), and the elements it showed.
   const uiStepsRef = useRef<UiModel>(emptyUiModel());
   const uiElementsRef = useRef<Set<string>>(new Set());
   // Adapter-ready flag — flipped to true once the protocol adapter is initialised
@@ -2407,7 +2407,7 @@ function ChatBaseInner({
   hideMessagesAfterToolUIRef.current = hideMessagesAfterToolUI;
   const threadIdRef = useRef<string>(thread?.id || generateMessageId());
   /*
-   * The thread a host gave, kept as it was given at mount (D-13), and
+   * The thread a host gave, kept as it was given at mount, and
    * told when a message is first sent on a thread: the host keeps it.
    */
   const threadGivenRef = useRef(thread);
@@ -2438,7 +2438,7 @@ function ChatBaseInner({
   const uiSocketTokenRef = useRef(protocol?.authToken);
   uiSocketTokenRef.current = protocol?.authToken;
   /*
-   * Its files (RU-6): uploaded to its runtime before the run or
+   * Its files: uploaded to its runtime before the run or
    * the press that names them, the conversation's thread their scope; the
    * run carries the ref, never the bytes.
    */
@@ -2538,10 +2538,10 @@ function ChatBaseInner({
       uiStepsRef.current = next.steps;
       const routed = next.routed;
       if (routed.to === 'window') {
-        // For the page it sits in, outside the conversation (P-25).
+        // For the page it sits in, outside the conversation.
         tellLoopWindow(routed.data);
       } else if (routed.to === 'step') {
-        // A step of its code, drawn as it runs (P-16).
+        // A step of its code, drawn as it runs.
         const step = routed.step;
         changeLayer(kept => {
           const anchors = new Map(
@@ -2563,7 +2563,7 @@ function ChatBaseInner({
           };
         });
       } else if (routed.to === 'element') {
-        // In a side panel or on a page of its own (P-18).
+        // In a side panel or on a page of its own.
         uiElementsRef.current.add(routed.change.id);
         applyLoopElement(routed.change);
       } else if (!placeable(messageStubs(), routed.op)) {
@@ -2693,7 +2693,7 @@ function ChatBaseInner({
     recorderRef.current = null;
   }
   const inspectAnswerRef = useRef('');
-  // A line the agent says aloud, from a run's `voice.say` (VO-35).
+  // A line the agent says aloud, from a run's `voice.say`.
   const voiceSayRef = useRef<((activity: VoiceActivity) => void) | undefined>(
     undefined,
   );
@@ -3382,7 +3382,7 @@ function ChatBaseInner({
     if (!historyScopeId) return;
 
     /*
-     * A thread the host gave (D-13): its session's conversation, drawn
+     * A thread the host gave: its session's conversation, drawn
      * once, and never replaced by the runtime's snapshot, which is its
      * agent's — every session's — not this one's.
      */
@@ -3938,7 +3938,7 @@ function ChatBaseInner({
             }
           }
           read();
-          // A running row said again with its display (VS-24): the host
+          // A running row said again with its display: the host
           // drawing it elsewhere follows it as it streams.
           if (
             event.activity?.type === HARNESS_TOOL_CALL &&
@@ -4128,16 +4128,16 @@ function ChatBaseInner({
   // Voice (V1): what was said and put in the composer, until sent.
   const spokenRef = useRef<SpokenMetadata | undefined>(undefined);
   // Its voice with what it leaves unsaid filled in: Datalayer's models and packages.
-  // The person's own settings, followed as the voice menu changes them (VO-30).
+  // The person's own settings, followed as the voice menu changes them.
   const [personVoice] = useVoiceSettings();
   const settled = useMemo(
     () => (voice ? settledVoice(voice, personVoice) : undefined),
     [voice, personVoice],
   );
-  // The words in the box are still being heard: greyed until final (VO-11).
+  // The words in the box are still being heard: greyed until final.
   const [voiceInterim, setVoiceInterim] = useState(false);
   /*
-   * Its answers heard (VO-20, VO-21), by Datalayer's speech service: the
+   * Its answers heard, by Datalayer's speech service: the
    * host's speaker when it gives one (`ChatFloating`, whose assistant's mouth
    * moves with it), else the chat's own — a chat given a `voice` speaks
    * wherever it is drawn.
@@ -4151,18 +4151,18 @@ function ChatBaseInner({
     ownVoice.speaker,
   );
   const speakingNow = voiceSpeaking || ownVoice.state.speaking;
-  // The sentence being said, marked in the conversation (VO-65).
+  // The sentence being said, marked in the conversation.
   const sentenceSaid = hostSpeaks ? voiceSentence : ownVoice.state.sentence;
   const saidConversationRef = useRef<HTMLDivElement>(null);
   useSaidSentence(saidConversationRef, sentenceSaid, displayItems);
   /*
-   * A line the agent wants heard, not written (VO-35): a caption while the
+   * A line the agent wants heard, not written: a caption while the
    * run goes on, said by the speaker where answers are said by themselves.
    */
   const [voiceSaid, setVoiceSaid] = useState('');
   voiceSayRef.current = activity => {
     if (isVoiceInterrupted(activity)) {
-      // Spoken over, the runtime says (VO-46): its voice stops.
+      // Spoken over, the runtime says: its voice stops.
       if (onStopSpeaking) {
         onStopSpeaking();
       } else if (ownVoice.speaker) {
@@ -4188,7 +4188,7 @@ function ChatBaseInner({
       setVoiceSaid('');
     }
   }, [isLoading]);
-  // Answers spoken over, hands-free (VO-13): marked *interrupted*.
+  // Answers spoken over, hands-free: marked *interrupted*.
   const [interruptedIds, setInterruptedIds] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
@@ -4206,7 +4206,7 @@ function ChatBaseInner({
   }, []);
   const stopSpeaking =
     onStopSpeaking ?? (ownVoice.speaker ? ownVoice.stop : undefined);
-  // How loud the answer plays: the host's speaker's, or the chat's own (VO-13).
+  // How loud the answer plays: the host's speaker's, or the chat's own.
   const playbackLevel = hostSpeaks ? voiceLevel : ownVoice.level;
   const readAnswerAloud =
     onReadAloud ?? (ownVoice.speaker ? ownVoice.read : undefined);
@@ -4214,15 +4214,15 @@ function ChatBaseInner({
     async (
       messageOverride?: string,
       // AG-UI's: what goes with the run besides the conversation — an
-      // application's page says there what it did (R-04).
+      // application's page says there what it did.
       forwardedPropsGiven?: Record<string, unknown>,
-      // How the message was heard, when it was said (VO-27).
+      // How the message was heard, when it was said.
       spokenGiven?: SpokenMetadata,
     ) => {
       const messageContent = (messageOverride ?? input).trim();
       if (!messageContent || isLoading) return;
       if (!adapterRef.current && !onSendMessage) return;
-      // Its files are uploaded first: the run names their refs (RU-6).
+      // Its files are uploaded first: the run names their refs.
       if (forwardedPropsGiven && namesFiles(forwardedPropsGiven)) {
         try {
           forwardedPropsGiven = await withUploadedFiles(
@@ -4283,8 +4283,8 @@ function ChatBaseInner({
         ? { ...(forwardedPropsGiven ?? {}), voice: spoken }
         : forwardedPropsGiven;
 
-      // The message says how it was heard; its sound, sent to be kept
-      // (VO-63), rides on the run only, never on the conversation.
+      // The message says how it was heard; its sound, sent to be kept,
+      // rides on the run only, never on the conversation.
       let heardAs: SpokenMetadata | undefined;
       if (spoken) {
         const { sound: _sound, ...rest } = spoken;
@@ -4387,7 +4387,7 @@ function ChatBaseInner({
           const enabledMcpToolNames = getEnabledMcpToolNames();
           const enabledSkillIds = getEnabledSkillIds();
 
-          // The thread is opened by this run: its host keeps it (D-13).
+          // The thread is opened by this run: its host keeps it.
           noteThreadStarted();
           await adapterRef.current.sendMessage(userMessage, {
             threadId: threadIdRef.current,
@@ -4487,7 +4487,7 @@ function ChatBaseInner({
   ]);
 
   // ---- handleStop ----
-  // Spoken over (VO-46, VO-13), an application's session is told so and
+  // Spoken over, an application's session is told so and
   // stays open; Stop leaves it to be resumed.
   const stopTurn = useCallback(
     (spokenOver: boolean) => {
@@ -4570,8 +4570,8 @@ function ChatBaseInner({
   const handleSpokenOver = useCallback(() => stopTurn(true), [stopTurn]);
 
   /*
-   * How a message's display presses what it offered (RU-4,
-   * RU-W): with the token of the offer, as the run's press — which
+   * How a message's display presses what it offered
+   * (RU-W): with the token of the offer, as the run's press — which
    * `handleSend` sends up the ui socket before the run, the run naming it
    * only. An answer is the person's words in the conversation; any other
    * press, the action's name.
@@ -4654,13 +4654,13 @@ function ChatBaseInner({
       // live outside this component — the LOOP prompt's + reaches it here.
       newChat: handleNewChat,
       thread: () => threadIdRef.current,
-      // Its speaker, for a host whose composer holds the microphone (VO-10).
+      // Its speaker, for a host whose composer holds the microphone.
       stopSpeaking,
-      // How loud it plays, for a host's hands-free barge-in (VO-13).
+      // How loud it plays, for a host's hands-free barge-in.
       voiceLevel: playbackLevel,
-      // The answer spoken over, marked for a host's own composer (VO-13).
+      // The answer spoken over, marked for a host's own composer.
       markInterrupted,
-      // Spoken over: the run ends, the application's session stays open (VO-46).
+      // Spoken over: the run ends, the application's session stays open.
       interrupt: handleSpokenOver,
     });
     return () => {
@@ -4684,7 +4684,7 @@ function ChatBaseInner({
     onLoadingChange?.(isLoading);
   }, [onLoadingChange, isLoading]);
 
-  // Whether its voice speaks, for a host that draws the composer (VO-10).
+  // Whether its voice speaks, for a host that draws the composer.
   useEffect(() => {
     onSpeakingChange?.(speakingNow);
   }, [onSpeakingChange, speakingNow]);
@@ -5138,7 +5138,7 @@ function ChatBaseInner({
   shownItemsRef.current = welcomedItems;
   const saidId = saidMessageId(welcomedItems, sentenceSaid);
   /*
-   * *Read aloud* under each answer the agent has finished (VO-21),
+   * *Read aloud* under each answer the agent has finished,
    * when the host reads answers aloud on request.
    */
   const writingId =
@@ -5246,7 +5246,7 @@ function ChatBaseInner({
     </Box>
   );
 
-  // The microphone, in the composer's footer (VO-10, VO-11).
+  // The microphone, in the composer's footer.
   const voiceControl =
     settled && settled.input !== 'off' ? (
       <ComposerVoice
@@ -5256,18 +5256,18 @@ function ChatBaseInner({
         disabled={disabled || launching}
         speaking={speakingNow}
         onStopSpeaking={stopSpeaking}
-        // Barge-in gated on how loud the answer plays (VO-13): the host's
+        // Barge-in gated on how loud the answer plays: the host's
         // speaker, or the chat's own.
         playbackLevel={playbackLevel}
-        // Hands-free (VO-12, VO-13): the run in progress, stopped when the
+        // Hands-free: the run in progress, stopped when the
         // person speaks over it, and the answer marked interrupted.
         running={isLoading}
-        // Spoken over, the application's session stays open (VO-46).
+        // Spoken over, the application's session stays open.
         onStopRun={handleSpokenOver}
         onInterrupted={markInterrupted}
         onInterimChange={setVoiceInterim}
         // The menu offers when answers are heard where the application
-        // lets them be (VO-21, VO-30).
+        // lets them be.
         answers={Boolean(
           voice?.output && voice.output !== 'off' && voice.speechUrl,
         )}
@@ -5289,7 +5289,7 @@ function ChatBaseInner({
       </Text>
     ) : null;
 
-  // The line said aloud, written as it is said: captions always (VO-65).
+  // The line said aloud, written as it is said: captions always.
   const voiceSayCaption = voiceSaid ? (
     <Text
       aria-live="polite"
@@ -5566,7 +5566,7 @@ function ChatBaseInner({
           />
         )}
 
-      {/* A third party's grant a tool waits for (ID-10) */}
+      {/* A third party's grant a tool waits for */}
       <IdentityAuthorizationPanel
         authorizations={identityAuthorizations}
         agentName={title || activeAgentId}

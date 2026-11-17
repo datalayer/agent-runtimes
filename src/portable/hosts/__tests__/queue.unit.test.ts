@@ -7,7 +7,7 @@
 
 /**
  * The in-memory work queue and the table prefix every Postgres
- * implementation takes (DC-004).
+ * implementation takes.
  */
 
 import { describe, expect, it, vi } from 'vitest';

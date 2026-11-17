@@ -4,7 +4,7 @@
  */
 
 /**
- * A third party's grant a tool waits for, drawn as an approval (ID-10).
+ * A third party's grant a tool waits for, drawn as an approval.
  *
  * The runtime emits `identity.authorization_required` (an AG-UI custom event)
  * while a tool waits for the person to grant a provider (GitHub, Google…):

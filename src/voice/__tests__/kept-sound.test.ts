@@ -4,7 +4,7 @@
  */
 
 /**
- * What is said kept as sound, on the page (VO-63): only for an application
+ * What is said kept as sound, on the page: only for an application
  * whose record keeps `audio`, 30 days at most, asked apart from being heard,
  * each turn a WAV sent with its words.
  */
@@ -20,7 +20,7 @@ import {
   soundOf,
 } from '../keptSound';
 
-describe('what is said, kept as sound (VO-63)', () => {
+describe('what is said, kept as sound', () => {
   it('is kept only when the record names audio, 30 days at most', () => {
     expect(keptAudioDays(undefined)).toBeUndefined();
     expect(

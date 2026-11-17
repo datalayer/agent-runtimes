@@ -4,23 +4,23 @@
  */
 
 /**
- * Hearing on Datalayer's servers (VO-34, VO-14): what was said
+ * Hearing on Datalayer's servers: what was said
  * in one press, kept to its speech by Silero VAD in the page, then sent as a
  * WAV recording to the speech service's `POST /speech/transcriptions`, where
  * Whisper hears it — small for a spoken turn, large-v3-turbo past one
  * — in any language it knows, and finding
- * the language itself when the person asks for that (detection, VO-14). The
+ * the language itself when the person asks for that (detection). The
  * sound is held in the request only: the service keeps neither it nor the
- * words (VO-60).
+ * words.
  *
  * Used where the application's voice says `where: server`, where it says
  * `auto` and no model in the browser hears the language, and where the
  * person asked for their language to be detected — never when they chose to
  * keep speech on the device.
  *
- * While the person speaks, the words come too (VO-11): the first look at
+ * While the person speaks, the words come too: the first look at
  * what was heard so far opens `WS /speech/transcriptions/stream` (the token
- * in its first message, VO-37), the sound is sent as it is captured, 16-bit
+ * in its first message), the sound is sent as it is captured, 16-bit
  * PCM at 16 kHz, and the service's partial words are what was heard so far,
  * greyed in the composer until final. At the end of the press the stream is
  * told so and its final words are the transcript. A press heard without a
@@ -71,7 +71,7 @@ export interface HearingAsked {
   language: string;
   /** The application's `interface.voice.where`; `auto` when unsaid. */
   where?: 'auto' | 'device' | 'server';
-  /** The person asked for their language to be detected (VO-14). */
+  /** The person asked for their language to be detected. */
   detect?: boolean;
   /** The speech service; none, and everything is heard in the browser. */
   speechUrl?: string;
@@ -141,7 +141,7 @@ export interface ServerHearingOptions {
   speechUrl: string;
   /** The token the conversation speaks with: the person's, a visitor's, an embed's. */
   token?: string;
-  /** Let Whisper find the language (VO-14), rather than tell it. */
+  /** Let Whisper find the language, rather than tell it. */
   detect?: boolean;
   fetcher?: typeof fetch;
   /** Opens a WebSocket; the browser's own unless a test gives one. */

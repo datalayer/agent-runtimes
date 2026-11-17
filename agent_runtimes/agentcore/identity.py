@@ -1,25 +1,25 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The ``agentcore`` identity provider (ID-21): AgentCore Identity's vault.
+"""The ``agentcore`` identity provider: AgentCore Identity's vault.
 
 - ``workload_token`` — on AgentCore Runtime, the token its invocation
   carries (the ``WorkloadAccessToken`` header, held for the turn by
   :func:`use_workload_token`); a runtime-managed workload identity cannot
   fetch its own and this never tries. Elsewhere,
-  ``get_workload_access_token_for_jwt(workloadName, userToken)`` (ID-06).
+  ``get_workload_access_token_for_jwt(workloadName, userToken)``.
   ``GetWorkloadAccessTokenForUserId`` is never called: asked for a user id,
   it refuses.
-- ``oauth_token`` — ``get_resource_oauth2_token`` (ID-07). A token answered is
+- ``oauth_token`` — ``get_resource_oauth2_token``. A token answered is
   returned; an authorization URL is handed to ``on_auth_url`` and the same
   call is repeated with the ``sessionUri`` answered until a token comes, the
   person declines (``sessionStatus = FAILED``, a sentence), or the wait ends
   (five minutes, a sentence). Without ``on_auth_url``,
   :class:`AuthorizationRequired` carries the URL at once.
-- ``api_key`` — ``get_resource_api_key`` (ID-08).
+- ``api_key`` — ``get_resource_api_key``.
 - ``complete_binding`` — ``complete_resource_token_auth`` with the person's
-  token (ID-09).
-- ``inbound_token`` — IAM's exchanged token for the runtime (ID-03) is the
+  token.
+- ``inbound_token`` — IAM's exchanged token for the runtime is the
   platform's to mint: given an ``exchange``, it is asked; without one, refused.
 
 Every token answered is held (:func:`agent_runtimes.guardrails.credentials.hold`):
@@ -60,7 +60,7 @@ DEFAULT_POLL_SECONDS = 2.0
 
 #: The workload's name outside AgentCore Runtime, when none is given.
 WORKLOAD_NAME_ENV = "AGENTCORE_WORKLOAD_NAME"
-#: Where the person is sent back after a grant (the binding URL, ID-09).
+#: Where the person is sent back after a grant (the binding URL).
 RETURN_URL_ENV = "AGENTCORE_OAUTH_RETURN_URL"
 
 #: The workload token of the invocation being served.
@@ -119,7 +119,7 @@ def invocation_token() -> str:
     return _INVOCATION_TOKEN.get()
 
 
-#: The workload token a Datalayer pod was given by its companion (ID-06), the
+#: The workload token a Datalayer pod was given by its companion, the
 #: workload it is for and its region: outside AgentCore Runtime, the token
 #: the provider uses when no invocation carries one.
 _GIVEN: Dict[str, str] = {}

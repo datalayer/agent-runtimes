@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""`loop scenes` (A-14): a scripted scene — fake members answering fixed
+"""`loop scenes`: a scripted scene — fake members answering fixed
 lines over the catalogue's ``sales-and-accounting`` scene spec — rehearsed
 to a pass, a fail with what differed, and a *not run* with why; the command's
 words and exit codes. No live call: the members are pydantic-ai agents on a
@@ -617,7 +617,7 @@ def test_a_member_at_an_address_that_fails_is_a_failed_line(scene: Any) -> None:
 def test_ls_lists_the_catalogue_with_faces_members_and_setup(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # The catalogue keeps each scene's last rehearsal beside its spec (A-14):
+    # The catalogue keeps each scene's last rehearsal beside its spec:
     # read as none here, so the listing says the spec's own `verified` words.
     monkeypatch.setattr(scenes, "scene_played", lambda _id: None)
     result = runner.invoke(scenes_command.app, ["ls"])
@@ -635,7 +635,7 @@ def test_ls_lists_the_catalogue_with_faces_members_and_setup(
     # odoo-accounting is enabled since agentspecs 0.0.162: it is no setup step any more.
     assert "The MCP server 'odoo-accounting:0.0.1' is not enabled." not in result.output
     listed = json.loads(runner.invoke(scenes_command.app, ["ls", "--json"]).output)
-    # The teams staged live: a scripted scene is played as written on its page (X-02).
+    # The teams staged live: a scripted scene is played as written on its page.
     assert [scene["id"] for scene in listed] == sorted(
         scene_id
         for scene_id, scene in scenes.SCENE_CATALOGUE.items()
@@ -743,7 +743,7 @@ def test_rehearse_refuses_an_unknown_scene_or_beat() -> None:
 
 def test_a_browser_member_is_played_as_the_browser_plays_it(scene: Any) -> None:
     # Sales, in the browser: its agent names skills and backend tools, which the
-    # page has not; the rehearsal leaves them out as the page does (A-13, A-14).
+    # page has not; the rehearsal leaves them out as the page does.
     # Accounting, on a runtime, is still refused in this process.
     from agent_runtimes.loop.scenes.stage import refused_here
 
@@ -811,7 +811,7 @@ def test_a_runtime_member_is_launched_for_its_application_and_needs_a_key(
         scene, keys={}, environment=None, minutes=None, status=lambda _m: None
     )
     # Launched for Accounting's own Appspec, so that the runtime is given the
-    # secrets its connections declare (R-19), not the bootstrap agent's none.
+    # secrets its connections declare, not the bootstrap agent's none.
     [(agent_id, kwargs)] = asked["launches"]
     assert agent_id == "example-simple" and kwargs["app_spec"]["id"] == "accounting"
     assert kwargs["label"] == "🧾 Accounting"

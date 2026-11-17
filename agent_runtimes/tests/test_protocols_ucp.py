@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""UCP 2026-08-25: shop at the test merchant, buy once approved (PR-30 to PR-32, PR-53)."""
+"""UCP 2026-08-25: shop at the test merchant, buy once approved."""
 
 from __future__ import annotations
 
@@ -85,7 +85,7 @@ def _client(store: ExampleStore) -> UcpClient:
     http = httpx.AsyncClient(
         transport=httpx.ASGITransport(app=store.app()), base_url=STORE
     )
-    # A local test merchant: its profile read over the client the test trusts (PI-13).
+    # A local test merchant: its profile read over the client the test trusts.
     return UcpClient(
         business=STORE,
         agent_profile=AGENT_PROFILE,
@@ -150,7 +150,7 @@ async def test_a_purchase_is_proposed_approved_and_made_once():
 
 @pytest.mark.asyncio
 async def test_after_the_sale_the_order_is_read_and_a_stranger_is_refused():
-    """PR-31: an order the merchant placed, read back (``read``); an unknown one refused."""
+    """An order the merchant placed, read back (``read``); an unknown one refused."""
     store = ExampleStore()
     client = _client(store)
     platform = build_protocols_reactor(
@@ -284,7 +284,7 @@ async def test_extensions_are_negotiated_from_what_is_contributed():
 
 @pytest.mark.asyncio
 async def test_no_payment_token_reaches_what_an_agent_sees():
-    """PR-53: the token goes to the business, never into a summary or a proposal."""
+    """The token goes to the business, never into a summary or a proposal."""
     client = _client(ExampleStore())
     checkout = await _ready(client)
     proposal = await client.propose_completion(checkout["id"])
@@ -300,7 +300,7 @@ async def test_no_payment_token_reaches_what_an_agent_sees():
 
 
 def test_the_revision_fixture_both_languages_read():
-    """PR-51: the TypeScript client computes the same digest from the same checkout."""
+    """The TypeScript client computes the same digest from the same checkout."""
     from pathlib import Path
 
     from agent_runtimes.protocols.ucp import revision_of

@@ -4,7 +4,7 @@
  */
 
 /**
- * The portable conversation (M-030): a run stream read the way every
+ * The portable conversation: a run stream read the way every
  * client reads it, into the conversation a native client draws — bounded.
  * The run of `agent_runtimes/tests/fixtures/app_session_ops.json`, which the
  * runtime's own test holds the session to, is the shared fixture.
@@ -244,7 +244,7 @@ describe('the conversation a run builds', () => {
     });
   });
 
-  it("draws a coding agent's terminal while it runs, then its result (SH-13, SH-16)", () => {
+  it("draws a coding agent's terminal while it runs, then its result", () => {
     const wire = (output: string, exit: number | null) => ({
       type: 'application/vnd.datalayer.shield.terminal+json',
       version: 1,

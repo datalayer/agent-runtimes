@@ -4,7 +4,7 @@
  */
 
 /**
- * The floating assistant (T-21, T-22, T-25): what its character acts
+ * The floating assistant: what its character acts
  * out, and the characters Datalayer ships.
  */
 
@@ -101,7 +101,7 @@ describe('what the assistant acts out', () => {
   });
 });
 
-describe('the characters Datalayer ships (T-25)', () => {
+describe('the characters Datalayer ships', () => {
   it('are four of its own, a paper clip first', () => {
     expect(ASSISTANT_CHARACTERS.map(character => character.id)).toEqual([
       'paperclip',
@@ -119,7 +119,7 @@ describe('the characters Datalayer ships (T-25)', () => {
   });
 });
 
-describe('what the assistant says in its balloon (T-23)', () => {
+describe('what the assistant says in its balloon', () => {
   it('is the newest message of the agent, in plain words', () => {
     expect(latestSaying([])).toBeUndefined();
     expect(
@@ -172,7 +172,7 @@ describe('what the assistant says in its balloon (T-23)', () => {
   });
 });
 
-describe('how long the assistant is sent away for (T-27)', () => {
+describe('how long the assistant is sent away for', () => {
   it('keeps the session and for good apart, and forgets on a call back', () => {
     keepAway('session');
     expect(keptAway()).toBe('session');
@@ -187,7 +187,7 @@ describe('how long the assistant is sent away for (T-27)', () => {
   });
 });
 
-describe('what the assistant keeps clear of (T-27)', () => {
+describe('what the assistant keeps clear of', () => {
   const stage = { left: 100, top: 100, right: 188, bottom: 188 };
 
   it('meets a box that shares any area with it, not one that only touches it', () => {

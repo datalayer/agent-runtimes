@@ -4,17 +4,17 @@
  */
 
 /**
- * The instant checks of an application (V-01 to V-04): what an editor
+ * The instant checks of an application: what an editor
  * shows on every change, with no model call.
  *
  * The same checks `loop apps validate` runs with agentspecs, in the words it
  * uses, read here from the catalogues this package generates:
  *
  * - **problems** — what stops the application from being used: what the spec
- *   refuses, and every reference that does not resolve (V-01);
+ *   refuses, and every reference that does not resolve;
  * - **attention** — what its builder should have decided rather than left to
  *   the defaults: what it can do with no rule of its own, what it reaches with
- *   the builder's account, a record of nothing (V-03);
+ *   the builder's account, a record of nothing;
  * - **setup** — what it names that is not enabled today.
  *
  * The verdict is said in the Studio's words: *Not ready* with a problem,
@@ -90,7 +90,7 @@ const idOf = (ref: string): string => {
 };
 
 /**
- * The component a layout names (C-13), from the catalogs of the enabled
+ * The component a layout names, from the catalogs of the enabled
  * UI specs, by the name a surface gives it.
  */
 export const componentNamed = (name: string): ComponentSpec | undefined =>
@@ -134,7 +134,7 @@ const matches = (name: string, pattern: string): boolean =>
 const CODE_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 /**
- * What its code declares that agentspecs refuses (P-06): its tools,
+ * What its code declares that agentspecs refuses: its tools,
  * its checks and the tests it decides, each by a Python name, each name
  * once; a tool says what it does, by class, each class once.
  */
@@ -190,13 +190,13 @@ export function ownCodeProblems(app: AppSpec): string[] {
     problems.push('Two tests are decided by the same function of its code.');
   }
   problems.push(...pageProblems(app));
-  // The components its developer wrote, reviewed as the catalog's (P-17).
+  // The components its developer wrote, reviewed as the catalog's.
   problems.push(...customComponentsProblems(app));
   return problems;
 }
 
 /**
- * What agentspecs refuses of a widget's page written in its code (P-05): a page that is not a widget's, inputs that are not a form, outputs
+ * What agentspecs refuses of a widget's page written in its code: a page that is not a widget's, inputs that are not a form, outputs
  * of one name twice, drawn with another component, saying in their `props`
  * what their value fills or lacking what their component needs, and an input
  * named as a setting — both are on the page at `/inputs/<name>`.
@@ -237,7 +237,7 @@ export function pageProblems(app: AppSpec): string[] {
         `Cannot use “${output.name}” as an output's name: letters, digits and \`_\`, as in Python.`,
       );
     }
-    // A component its developer wrote (P-17): its value what it shows first.
+    // A component its developer wrote: its value what it shows first.
     const custom =
       output.component in PAGE_OUTPUT_SHOWS
         ? undefined
@@ -293,11 +293,11 @@ export function pageProblems(app: AppSpec): string[] {
 }
 
 /** What the spec says of itself that the tolerant reader lets through. */
-/** What was said aloud is kept 30 days at most (VO-63): agentspecs' `AUDIO_KEPT_DAYS_AT_MOST`. */
+/** What was said aloud is kept 30 days at most: agentspecs' `AUDIO_KEPT_DAYS_AT_MOST`. */
 export const AUDIO_KEPT_DAYS_AT_MOST = 30;
 
 /**
- * agentspecs' refusals of an application keeping audio (VO-42, VO-63),
+ * agentspecs' refusals of an application keeping audio,
  * in its sentences: never public, only when it listens, and never
  * kept longer than 30 days — by `record.keep_for`, or by the Track its
  * `checks.track` names, whose retention wins.
@@ -351,7 +351,7 @@ function shapeProblems(app: AppSpec): string[] {
       'An application names who does the work: an `agent`, or a `team`, and not both.',
     );
   }
-  // agentspecs refuses either way round (E-01): off says why, on says nothing.
+  // agentspecs refuses either way round: off says why, on says nothing.
   const because = (app.unavailable_because ?? '').trim();
   if (!app.enabled && !because) {
     problems.push(
@@ -386,7 +386,7 @@ function shapeProblems(app: AppSpec): string[] {
     );
   }
   problems.push(...keptAudioProblems(app));
-  // Its profiles (P-20): two at least, or none; each id slash-safe and
+  // Its profiles: two at least, or none; each id slash-safe and
   // said once, each with a label.
   const profiles = app.interface.profiles ?? [];
   if (profiles.length === 1) {
@@ -409,7 +409,7 @@ function shapeProblems(app: AppSpec): string[] {
     }
     profileIds.add(profile.id);
   }
-  // How its settings' fields are drawn (P-20): by a widget that draws each.
+  // How its settings' fields are drawn: by a widget that draws each.
   if (app.interface.settingsUi) {
     if (!app.interface.settings) {
       problems.push(
@@ -425,9 +425,9 @@ function shapeProblems(app: AppSpec): string[] {
       );
     }
   }
-  // Its words in other languages (P-26): of languages, of what it says.
+  // Its words in other languages: of languages, of what it says.
   problems.push(...translationProblems(app.interface));
-  // What the host page passes and offers (D-10): named once each, in words
+  // What the host page passes and offers: named once each, in words
   // its agent's tools can carry, each function saying what it does.
   const host = app.deployment.embedded?.host;
   if (host) {
@@ -460,7 +460,7 @@ function shapeProblems(app: AppSpec): string[] {
     if (new Set(names).size !== names.length) {
       problems.push('The host’s functions are named once each.');
     }
-    // Who its user is (D-21): what the page says, or what its server signed.
+    // Who its user is: what the page says, or what its server signed.
     if (host.user !== undefined && !HOST_USERS.includes(host.user)) {
       problems.push(
         `“${host.user}” is not how the host’s user is taken: claimed or signed.`,
@@ -475,7 +475,7 @@ function shapeProblems(app: AppSpec): string[] {
       }
     }
   }
-  // What its code declares (P-06), as agentspecs refuses it.
+  // What its code declares, as agentspecs refuses it.
   problems.push(...ownCodeProblems(app));
   const servers = app.connections.map(connection => idOf(connection.server));
   if (new Set(servers).size !== servers.length) {
@@ -508,7 +508,7 @@ function shapeProblems(app: AppSpec): string[] {
 
 /** How an organization's own context is named: never a catalogue id (agentspecs' `ORGANIZATION_FRAME_PREFIX`). */
 /**
- * What stops a Form block from asking (C-16), in agentspecs'
+ * What stops a Form block from asking, in agentspecs'
  * `form_problems` sentences: its schema is an object of named fields, each
  * required one among them, so that the page draws it and the runtime checks
  * what it receives against the same schema.
@@ -544,7 +544,7 @@ export function formProblems(node: Record<string, unknown>): string[] {
       `${said} requires ${missing.map(name => `“${String(name)}”`).join(', ')}, which it does not ask.`,
     );
   }
-  // How its fields are drawn (P-20): by a widget that draws each.
+  // How its fields are drawn: by a widget that draws each.
   if (node.ui !== undefined && node.ui !== null) {
     problems.push(...formUiProblems(said, schema, node.ui));
   }
@@ -556,7 +556,7 @@ const isPlainRecord = (value: unknown): value is Record<string, unknown> =>
 
 export const ORGANIZATION_FRAME_PREFIX = 'org-';
 
-/** Whether a reference names an organization's own context rather than the catalogue's (U-32). */
+/** Whether a reference names an organization's own context rather than the catalogue's. */
 export const isOrganizationFrame = (ref: string): boolean =>
   idOf(ref).startsWith(ORGANIZATION_FRAME_PREFIX);
 
@@ -575,9 +575,9 @@ function referenceProblems(
   if (app.agent && !getAgentspecs(idOf(app.agent)) && !getCog(app.agent)) {
     missing('agent or Cog', app.agent);
   }
-  // An agent on a catalogue harness is served by the runtime's ACP adapter
-  // (SH-10); `custom` and a harness that is none are refused, not run
-  // on pydantic-ai in their place (SH-01).
+  // An agent on a catalogue harness is served by the runtime's ACP adapter;
+  // `custom` and a harness that is none are refused, not run
+  // on pydantic-ai in their place.
   const agent = app.agent ? getAgentspecs(idOf(app.agent)) : undefined;
   const unserved = agent ? unservedHarnessProblem(agent) : undefined;
   if (unserved) {
@@ -635,7 +635,7 @@ function referenceProblems(
   if (app.model && !getModel(app.model)) {
     missing('model', app.model);
   }
-  // The model a profile runs on is the catalogue's (P-20).
+  // The model a profile runs on is the catalogue's.
   for (const profile of app.interface.profiles ?? []) {
     if (profile.model && !getModel(profile.model)) {
       problems.push(
@@ -643,7 +643,7 @@ function referenceProblems(
       );
     }
   }
-  // The model a mode runs on is the catalogue's (P-19).
+  // The model a mode runs on is the catalogue's.
   for (const mode of app.interface.modes ?? []) {
     for (const option of mode.options) {
       if (option.model && !getModel(option.model)) {
@@ -653,8 +653,8 @@ function referenceProblems(
       }
     }
   }
-  // The components it may use, and those its surface uses, are the catalog's (C-13).
-  // Those its developer wrote are of the catalog for it alone (P-17).
+  // The components it may use, and those its surface uses, are the catalog's.
+  // Those its developer wrote are of the catalog for it alone.
   for (const name of app.interface.components ?? []) {
     if (!componentNamed(name) && !customComponentOf(app, name)) {
       problems.push(`There is no component named “${name}” in the catalog.`);
@@ -708,7 +708,7 @@ function referenceProblems(
       );
     }
   }
-  // The tools of the host page are the application's own (D-10).
+  // The tools of the host page are the application's own.
   const hostTools = hostToolsOf(app.deployment.embedded?.host);
   for (const rule of app.rules) {
     for (const target of rule.appliesTo) {
@@ -716,7 +716,7 @@ function referenceProblems(
       const [server, name] = splitRef(target);
       if (server === undefined) {
         if (hostTools.includes(target)) continue;
-        // A tool of its own, written in its code (P-06).
+        // A tool of its own, written in its code.
         if ((app.tools ?? []).some(tool => tool.name === target)) continue;
         if (!getBackendToolSpec(name)) {
           problems.push(
@@ -780,7 +780,7 @@ function attentionNotes(app: AppSpec): string[] {
   if (app.record.include.length === 0) {
     notes.push('It keeps no record of what it did.');
   }
-  // A Guard the runtime does not run checks nothing (R-06): said here,
+  // A Guard the runtime does not run checks nothing: said here,
   // where the builder decides, rather than found out in production.
   for (const ref of app.checks.guards) {
     const guard = own(GUARD_CATALOGUE, idOf(ref));
@@ -864,7 +864,7 @@ function setupNotes(app: AppSpec): string[] {
  * Where an application is checked: the plugins its organization has turned
  * off (catalogue ids, `plugins_off` in IAM), none when it has decided nothing
  * or the checks run with no organization; and the ids of its organization's
- * contexts (`frames` in IAM: its versions and its own, U-32), unsaid
+ * contexts (`frames` in IAM: its versions and its own), unsaid
  * when no organization is known — a context of an organization's own is then
  * refused.
  */
@@ -887,7 +887,7 @@ export function checkApp(
     ...referenceProblems(app, context.organizationFrames),
   ];
   // A block its page uses from a plugin its organization turned off is said
-  // with the rest of what is not enabled today (C-12).
+  // with the rest of what is not enabled today.
   const setup = [
     ...setupNotes(app),
     ...pluginsOffSetupNotes(app, context.pluginsOff),
@@ -924,7 +924,7 @@ const ENUMS = {
     'sources',
     'outputs',
     'feedback',
-    // agentspecs' RecordItem whole: audio (VO-42, VO-63, refused by keptAudioProblems unless allowed),
+    // agentspecs' RecordItem whole: audio (refused by keptAudioProblems unless allowed),
     // a harness's diffs and terminals.
     'audio',
     'diffs',
@@ -1087,7 +1087,7 @@ export function documentShapeProblems(document: unknown): string[] {
     oneOf(ui.layout, ENUMS.layout, 'interface.layout');
     oneOf(ui.accent, ENUMS.accent, 'interface.accent');
     oneOf(ui.balloon, ENUMS.balloon, 'interface.balloon');
-    // The theme it runs in by default (T-30): a theme of Appearance's, a mode.
+    // The theme it runs in by default: a theme of Appearance's, a mode.
     mapping(ui.theme, 'interface.theme', theme => {
       required(theme, 'variant', 'interface.theme');
       oneOf(theme.variant, ENUMS.themeVariant, 'interface.theme.variant');
@@ -1149,7 +1149,7 @@ export function documentShapeProblems(document: unknown): string[] {
         unknownKeys(model, ['kind', 'url'], 'interface.avatar', 'a 3D avatar');
       }
     }
-    // Its voice (VO-41, VO-12).
+    // Its voice.
     mapping(ui.voice, 'interface.voice', voice => {
       oneOf(voice.input, ENUMS.voiceInput, 'interface.voice.input');
       oneOf(voice.output, ENUMS.voiceOutput, 'interface.voice.output');
@@ -1164,7 +1164,7 @@ export function documentShapeProblems(document: unknown): string[] {
       unknownKeys(item, ['label', 'message', 'category'], where, 'a starter');
     };
     records(ui.starters, 'interface.starters', starter);
-    // Its profiles (P-20), as agentspecs refuses them: no key unknown.
+    // Its profiles, as agentspecs refuses them: no key unknown.
     records(ui.profiles, 'interface.profiles', (profile, where) => {
       required(profile, 'id', where);
       required(profile, 'label', where);
@@ -1208,7 +1208,7 @@ export function documentShapeProblems(document: unknown): string[] {
         );
       }
     });
-    // Its commands and modes in the composer (P-19), as agentspecs
+    // Its commands and modes in the composer, as agentspecs
     // refuses them: names and ids slash-safe and said once, no key unknown.
     const named = new Set<string>();
     records(ui.commands, 'interface.commands', (item, where) => {
@@ -1308,7 +1308,7 @@ export function documentShapeProblems(document: unknown): string[] {
         `let only one mode choose the model, not ${choosingModel.join(', ')}`,
       );
     }
-    // Its settings are the JSON Schema of a form (C-16), checked as a Form's
+    // Its settings are the JSON Schema of a form, checked as a Form's
     // schema is; the list of settings of earlier versions is refused.
     if (Array.isArray(ui.settings)) {
       at(
@@ -1320,7 +1320,7 @@ export function documentShapeProblems(document: unknown): string[] {
         problems.push(...formProblems({ id: 'settings', schema: settings }));
       });
     }
-    // What a person may send without being asked (P-21), as agentspecs
+    // What a person may send without being asked, as agentspecs
     // refuses it: a kind at least, each a type said once, sizes it takes.
     mapping(ui.uploads, 'interface.uploads', uploads => {
       unknownKeys(
@@ -1377,7 +1377,7 @@ export function documentShapeProblems(document: unknown): string[] {
           required(item, 'component', where);
         },
       );
-    }); // A widget's page written in its code (P-05), as agentspecs reads it.
+    }); // A widget's page written in its code, as agentspecs reads it.
     mapping(ui.page, 'interface.page', page => {
       unknownKeys(
         page,
@@ -1412,7 +1412,7 @@ export function documentShapeProblems(document: unknown): string[] {
     }
     text(tests.evalset, 'tests.evalset');
     records(tests.cases, 'tests.cases', (item, where) => {
-      // One message (`ask`) or a conversation (`turns`), never both (E-01).
+      // One message (`ask`) or a conversation (`turns`), never both.
       const asks = typeof item.ask === 'string' && item.ask.trim() !== '';
       const converses = Array.isArray(item.turns) && item.turns.length > 0;
       if (asks === converses) {

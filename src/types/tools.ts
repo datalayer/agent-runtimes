@@ -98,7 +98,7 @@ export interface FrontendToolSpec {
    */
   toolset: string | string[];
   /**
-   * The tools of the set that stream (AGENT_BATTLE B1-00): called once,
+   * The tools of the set that stream: called once,
    * each keeps pushing events the harness tells the model as turns it did
    * not ask for — an arena's `arena_watch`.
    */
@@ -228,7 +228,7 @@ export interface FrontendToolDefinition<
    * the page keeps pushing events through `subscribe` until the
    * subscription ends. The harness tells the model each event as a turn it
    * did not ask for (an arena says where the ball is rather than waiting to
-   * be asked; AGENT_BATTLE, 6 November 2026).
+   * be asked, 6 November 2026).
    */
   streams?: boolean;
 

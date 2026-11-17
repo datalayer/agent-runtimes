@@ -2582,7 +2582,7 @@ def list_ui() -> list[UISpec]:
 
 
 #: The visual components the UI plugins render, by the name a
-#: surface gives them (C-13).
+#: surface gives them.
 COMPONENT_CATALOGUE: Dict[str, ComponentSpec] = {
     component.id: component
     for plugin in UI_CATALOGUE.values()
@@ -2600,7 +2600,7 @@ def list_components() -> list[ComponentSpec]:
 
 
 # ============================================================================
-# The components as typed calls (C-15)
+# The components as typed calls
 # ============================================================================
 
 #: A property bound to what the application publishes or takes: ``{"path": "/runs"}``.

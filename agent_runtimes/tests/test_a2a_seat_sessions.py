@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A team seat works inside an apps session (MH-38, decision T).
+"""A team seat works inside an apps session.
 
 The runtime's A2A worker, serving the Coder of the catalogue's
 ``coding-agents`` team on the ACP SDK's fake harness: a task the control
@@ -133,7 +133,7 @@ async def _tasks(
         async with broker, worker.run():
             for message in messages:
                 task = await storage.submit_task(message["context_id"], message)
-                # The execution's token, as the A2A route holds it for the worker (O1-17).
+                # The execution's token, as the A2A route holds it for the worker.
                 hold(task["id"], CREDENTIAL)
                 params = {
                     "id": task["id"],
@@ -274,7 +274,7 @@ async def test_a_session_of_another_run_and_an_unknown_team_are_refused(
 
 @pytest.mark.asyncio
 async def test_a_seats_stopped_task_keeps_its_turn() -> None:
-    """A seat session whose only task stopped has that turn: listed, counted, resumable (MH-42)."""
+    """A seat session whose only task stopped has that turn: listed, counted, resumable."""
     from agent_runtimes.orchestration.seat_sessions import SeatRun
 
     class Recorder:

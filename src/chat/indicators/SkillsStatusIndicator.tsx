@@ -115,7 +115,7 @@ function SkillsStateIndicator({
     [aggregate, skillsCount, enabledCount],
   );
 
-  // Nothing drawn when the agent has no skill (H-21): a control that
+  // Nothing drawn when the agent has no skill: a control that
   // only says so was read out as *No Skills defined* in every composer.
   if (aggregate === 'none') {
     return null;

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The harness rows per (session, agent) and the vendor's session id (MH-04, MH-05).
+"""The harness rows per (session, agent) and the vendor's session id.
 
 A harness's row is kept under `<agentspec>:<uid>` and never deleted on a
 swap: a swap A→B→A finds A's row, loads A's own session and compares the

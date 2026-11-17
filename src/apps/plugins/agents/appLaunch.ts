@@ -4,7 +4,7 @@
  */
 
 /**
- * What an application's runtime is launched with (R-19).
+ * What an application's runtime is launched with.
  *
  * Pure, so it is read without the agent hook's runtime stack.
  *

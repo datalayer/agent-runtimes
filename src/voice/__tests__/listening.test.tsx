@@ -4,7 +4,7 @@
  */
 
 /**
- * The microphone in the composer, as people expect it (VO-10, VO-11):
+ * The microphone in the composer, as people expect it:
  * clicked, it listens, the words go in the box as they are heard,
  * and it stops at a second click or once the person stops speaking; held,
  * it stops when let go. Never sent: the box is the person's. And a chat's
@@ -114,7 +114,7 @@ function press(button: Element, type: 'pointerdown' | 'pointerup') {
   button.dispatchEvent(new MouseEvent(type, { bubbles: true, button: 0 }));
 }
 
-describe('what was heard so far (VO-11)', () => {
+describe('what was heard so far', () => {
   it('gives the words heard, and how long it has been silent since', async () => {
     const hearing = new DeviceHearing(
       'https://models.example/speech',
@@ -132,7 +132,7 @@ describe('what was heard so far (VO-11)', () => {
   });
 });
 
-describe('the microphone in the composer (VO-10, VO-11)', () => {
+describe('the microphone in the composer', () => {
   let container: HTMLDivElement;
   let root: Root;
   let capture: ReturnType<typeof microphone>;
@@ -253,7 +253,7 @@ describe('the microphone in the composer (VO-10, VO-11)', () => {
     expect(transcripts).toHaveLength(0);
   });
 
-  it('turned off, is drawn under its tooltip still, marked unavailable, and does not listen (VO-53)', async () => {
+  it('turned off, is drawn under its tooltip still, marked unavailable, and does not listen', async () => {
     // A disabled button is not interactive to Primer's Tooltip, which threw
     // and took a visitor's page down when the microphone mounted early.
     const mic = draw(800, true);
@@ -267,7 +267,7 @@ describe('the microphone in the composer (VO-10, VO-11)', () => {
     expect(openMicrophone).not.toHaveBeenCalled();
   });
 
-  it('keeping what is said as sound, asks apart and sends the turn’s recording with its words (VO-63)', async () => {
+  it('keeping what is said as sound, asks apart and sends the turn’s recording with its words', async () => {
     const hearing = new DeviceHearing(
       'https://models.example/speech',
       engines(['Open', 'the', 'notebook.']),
@@ -325,7 +325,7 @@ describe('the microphone in the composer (VO-10, VO-11)', () => {
   });
 });
 
-describe('the composer a host holds (VO-10, VO-27)', () => {
+describe('the composer a host holds', () => {
   let container: HTMLDivElement;
   let root: Root;
 
@@ -413,7 +413,7 @@ describe('the composer a host holds (VO-10, VO-27)', () => {
       press(mic, 'pointerup');
     });
     await until(() => spoken.length === 1);
-    // Greyed while they are being heard, plain once final (VO-11).
+    // Greyed while they are being heard, plain once final.
     expect(interims[0]).toBe(true);
     expect(interims[interims.length - 1]).toBe(false);
     expect(box[0]).toBe('Please Open');
@@ -447,7 +447,7 @@ describe('the composer a host holds (VO-10, VO-27)', () => {
   });
 });
 
-describe('a chat’s voice from its spec (VO-41, VO-49)', () => {
+describe('a chat’s voice from its spec', () => {
   const spec = (more: Partial<AppVoiceSpec> = {}): AppVoiceSpec => ({
     enabled: true,
     input: 'push_to_talk',
@@ -490,7 +490,7 @@ describe('a chat’s voice from its spec (VO-41, VO-49)', () => {
     ).toThrow('speechUrl is missing');
   });
 
-  it('is the person’s where they chose (VO-30): their voice and pace, or nothing sent', () => {
+  it('is the person’s where they chose: their voice and pace, or nothing sent', () => {
     const given = {
       language: 'en-US',
       input: 'push_to_talk' as const,
@@ -522,7 +522,7 @@ describe('a chat’s voice from its spec (VO-41, VO-49)', () => {
   });
 });
 
-describe('a chat’s answers said by the speech service (VO-21, VO-33)', () => {
+describe('a chat’s answers said by the speech service', () => {
   it('asks datalayer-speech’s syntheses for each sentence read aloud, with its voice and token', async () => {
     class StandInContext {
       destination = {};
@@ -583,7 +583,7 @@ describe('a chat’s answers said by the speech service (VO-21, VO-33)', () => {
         text: 'The report is ready.',
         voice: 'kokoro-bf-emma',
         language: 'en-GB',
-        // The chat's answers are asked streamed, played as they come (VO-52).
+        // The chat's answers are asked streamed, played as they come.
         format: 'pcm',
         stream: true,
       },
@@ -595,7 +595,7 @@ describe('a chat’s answers said by the speech service (VO-21, VO-33)', () => {
     vi.unstubAllGlobals();
   });
 
-  it('is asked as the chat speaks to its runtime: a visitor’s or an embed’s token, and no deployment of the page’s (VO-37, VO-19)', async () => {
+  it('is asked as the chat speaks to its runtime: a visitor’s or an embed’s token, and no deployment of the page’s', async () => {
     const given = {
       language: 'en-US',
       input: 'push_to_talk' as const,

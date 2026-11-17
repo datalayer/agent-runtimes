@@ -16,8 +16,8 @@
  * (`SCENE_DERIVED_KEYS`, `sceneWithDerived`). A text's own refusals are the
  * scene's checks over what it reads (`sceneTextProblems`).
  *
- * Moved from the landing's Studio on 2026-10-10 with `sceneChecks.ts`
- * (S-10), so that every shell editing a scene reads and writes
+ * Moved from the landing's Studio on 2026-10-10 with `sceneChecks.ts`,
+ * so that every shell editing a scene reads and writes
  * it alike. Pure: no React, no network.
  *
  * @module apps/apps/sceneYaml
@@ -169,7 +169,7 @@ export const sceneWithDerived = (
 
 /**
  * The scene as YAML, spelled as agentspecs spells it: the text under the
- * stage (S-01, S-08), edited there as on the stage (`sceneOfYaml`). What is
+ * stage, edited there as on the stage (`sceneOfYaml`). What is
  * not written by hand is left out, so the text reads as a scene file
  * (`SCENE_DERIVED_KEYS`).
  */
@@ -284,7 +284,7 @@ export function sceneOfData(spec: Partial<SceneSpec>): SceneSpec {
 }
 
 /**
- * What the text says of itself (S-08): what stands in the way, each in
+ * What the text says of itself: what stands in the way, each in
  * agentspecs' sentence with the part of the scene it is about — a text that
  * is no scene first of all, since nothing else can be read of it.
  */

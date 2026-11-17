@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Where ``loop`` runs its agent: on this machine, or on Datalayer (L-01 to L-06).
+"""Where ``loop`` runs its agent: on this machine, or on Datalayer.
 
 Launching ``loop`` asks one question more than it used to — *where?* — and,
 for Datalayer, the few a cloud runtime needs: the environment, how long to
@@ -867,7 +867,7 @@ def wait_until_set_up(relay_url: str, timeout: float = 180.0) -> bool:
     Its agent answers from the moment the pod starts, before the runtime is
     set up for the account: an application configured on it then finds none
     of the account's secrets (an owner's connection does not start), and is
-    replaced by the platform's own configuration when it comes (A-08).
+    replaced by the platform's own configuration when it comes.
     """
     import httpx
 
@@ -880,7 +880,7 @@ def wait_until_set_up(relay_url: str, timeout: float = 180.0) -> bool:
             )
             answered = response.json() if response.status_code == 200 else None
             if isinstance(answered, dict) and answered.get("set_up_refused"):
-                # A secret its specs declare was not given (R-19): said now.
+                # A secret its specs declare was not given: said now.
                 raise CloudRefused(str(answered["set_up_refused"]))
             if set_up_by_datalayer(answered):
                 return True
@@ -915,7 +915,7 @@ def choose_running(
     can_ask: bool,
     ask: Optional[Callable[..., Optional[str]]] = None,
 ) -> Optional[Any]:
-    """A running agent runtime to go back to, or None to launch a new one (L-06)."""
+    """A running agent runtime to go back to, or None to launch a new one."""
     agents = [r for r in runtimes if is_agent_runtime(r)]
     if not agents or not can_ask:
         return None
@@ -1128,7 +1128,7 @@ def _attach(
 
 def attached_refusal(runtime_name: str, app_name: str) -> str:
     """Why an application refused on a runtime it was attached to cannot be
-    set up there, and what to do (R-19).
+    set up there, and what to do.
 
     Secrets reach a runtime once, from its companion, when it is launched:
     a runtime launched for something else was given that one's, and nothing
@@ -1159,7 +1159,7 @@ def launch_cloud(
     """Launch a cloud runtime for an agent, or go back to one, and the relay that reaches it.
 
     ``runtime`` names a running runtime to attach to, and nothing is launched.
-    Otherwise a running agent runtime is offered first (L-06), then a new one
+    Otherwise a running agent runtime is offered first, then a new one
     is reserved in an environment that can launch an agent, chosen from the
     SDK's list and priced against the credits left. No agentspec is asked
     for: the runtime's agent is ``agent_id``, else `DEFAULT_CLOUD_AGENTSPEC`,
@@ -1168,7 +1168,7 @@ def launch_cloud(
     ``app_spec`` is the Appspec of the application the runtime is launched
     for (`loop apps run --cloud`): sent with the launch, so the runtime is
     given the secrets its connections declare and a missing one is said
-    before the application is configured (R-19). A running runtime is
+    before the application is configured. A running runtime is
     not offered for it: one not launched for the application was not given
     its secrets. ``runtime`` still attaches to the one the person names; its
     configure then declares the application's secrets and refuses, in a

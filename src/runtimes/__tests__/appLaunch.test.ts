@@ -4,8 +4,7 @@
  */
 
 /**
- * An application's runtime, launched from the browser, carries its Appspec
- * (R-19).
+ * An application's runtime, launched from the browser, carries its Appspec.
  *
  * The Studio's Preview and the hosted page signed in allocate the runtime an
  * application runs on through the agent hook. The launch sends the Appspec,

@@ -5,7 +5,7 @@
  * @vitest-environment node
  */
 
-/** Which application a host's turn runs (DC-004). */
+/** Which application a host's turn runs. */
 
 import { describe, expect, it, vi } from 'vitest';
 import {

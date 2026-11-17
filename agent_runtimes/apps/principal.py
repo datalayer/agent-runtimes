@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A deployment's agent acts as its application's principal (I-03).
+"""A deployment's agent acts as its application's principal.
 
 A deployed application is somebody of its own on the platform: a service
 principal, whose token names it, its owner, the deployment it acts for, and
@@ -64,9 +64,9 @@ runs as the same user, so the process is first made undumpable
 The sandbox reaches the MCP proxy without it, and only as a tool call of the run
 whose code is running (`enforcement.through_the_code_run`).
 
-**A Preview is held to the same grants** (R-25, decided 2026-10-06):
+**A Preview is held to the same grants** (decided 2026-10-06):
 though it runs as the person trying it, it reaches only the Spaces its
-application is granted, and the companies it works with (P-01). As its session opens, and on each of its requests, the runtime asks
+application is granted, and the companies it works with. As its session opens, and on each of its requests, the runtime asks
 ai-agents with the person's token for a token of theirs narrowed to what the
 Appspec it runs grants (`preview_grants`: its `permissions` and its `pap`
 connections, its `pact` businesses and `commerce` merchants; `POST
@@ -320,8 +320,8 @@ def kernel_holds_owner_secrets() -> bool:
     the Operator signed, that its owner launched it (`read_owner_secrets`). Not
     said, or not yet, no.
 
-    The demo books' key a runtime playing a catalogue Battle holds (B4-01,
-    `battle_books`) never reaches it, whoever launched: taken out of the
+    The demo books' key a runtime playing a catalogue Battle holds
+    (`battle_books`) never reaches it, whoever launched: taken out of the
     environment as the runtime starts, held in this process, and no spec may
     declare it (``DATALAYER_`` is the runtime's own).
     """
@@ -576,7 +576,7 @@ def is_held_principal(claims: Mapping[str, Any]) -> bool:
     """Whether a token's claims are those of a principal this runtime acts as, for the
     same deployment: its `agent_uid` and the deployment's live grant (`task_grant_uid`)
     those of a token held here. What ai-agents sends a kept deployment's agent a
-    company's turn with (B-04) — never a person's, never another's.
+    company's turn with — never a person's, never another's.
     """
     from agent_runtimes.apps.callers import _unverified_claims  # noqa: PLC0415
 
@@ -621,7 +621,7 @@ async def _ask_ai_agents(deployment_uid: str, bearer: str) -> dict[str, Any]:
                 lambda proved: client.post(
                     f"{url.rstrip('/')}/api/ai-agents/v1/apps/deployments/{deployment_uid}/principal-token",
                     # An embed's page, which ai-agents checks against the
-                    # sites its owner allows it on (D-12).
+                    # sites its owner allows it on.
                     headers={
                         "Authorization": f"Bearer {bearer}",
                         **page_origin_headers(),
@@ -685,9 +685,9 @@ async def _read_from_ai_agents(
                 lambda proved: client.get(
                     f"{url.rstrip('/')}/api/ai-agents/v1/apps/deployments/{deployment_uid}/code",
                     params={} if version is None else {"version": int(version)},
-                    # An embed's page, checked as for the principal's token (D-12).
+                    # An embed's page, checked as for the principal's token.
                     # With no token, asked as nobody: answered only for a deployment
-                    # somebody without an account may talk to (R-30), and only
+                    # somebody without an account may talk to, and only
                     # with this runtime's proof.
                     headers={
                         **({"Authorization": f"Bearer {bearer}"} if bearer else {}),
@@ -755,14 +755,14 @@ async def read_deployment_code(
 ) -> Optional[dict[str, Any]]:
     """
     The ``app.py`` of the version a deployment runs, ``{file, text}``, or
-    ``None`` for a version written as a spec (R-14).
+    ``None`` for a version written as a spec.
 
     Read from ai-agents (`GET /apps/deployments/{uid}/code`) with the token
     of whoever opened the session and this runtime's proof, admitted as for
     the principal's token: never taken from the request that makes the agent.
     With none — the runtime a deployment is kept on, making the agent a
     visitor without an account talks to — asked as nobody, which ai-agents
-    answers only for a deployment such a visitor may talk to (R-30), with
+    answers only for a deployment such a visitor may talk to, with
     this runtime's proof.
 
     Parameters
@@ -1025,7 +1025,7 @@ async def ensure_principal_token(deployment_uid: str, bearer: Optional[str]) -> 
 async def renew_principal_token(deployment_uid: str, bearer: str) -> float:
     """
     Ask for a deployment's principal's token now, whatever is held: what keeps
-    a deployment kept always on acting (A-08).
+    a deployment kept always on acting.
 
     A kept deployment is asked mostly by callers whose token is no reason to
     ask for its principal's — a visitor's over A2A, a key granted to its
@@ -1108,10 +1108,10 @@ async def gateway_toolsets_of_the_run(
     """
     An application's run reaches the Datalayer MCP gateway as the application, never with the runtime's key.
 
-    A deployment's run with its principal's token (I-03) — its servers in
-    each user's name with the token of the person talking to it (I-04) — and
+    A deployment's run with its principal's token — its servers in
+    each user's name with the token of the person talking to it — and
     a Preview's with the token its run carries, the person's narrowed to the
-    Spaces its application is granted (R-25): the gateway holds each to those
+    Spaces its application is granted: the gateway holds each to those
     Spaces. Any other agent's toolsets are left as they are.
 
     Parameters
@@ -1134,7 +1134,7 @@ async def gateway_toolsets_of_the_run(
 
     instance = app_instance_of(agent_id)
     if not instance or not str(instance.get("app_uid") or "").strip():
-        # As the process holds them, but the books only for a Battle's run (B4-01).
+        # As the process holds them, but the books only for a Battle's run.
         from agent_runtimes.apps.battle_books import books_left_out
 
         return books_left_out(toolsets)
@@ -1165,20 +1165,20 @@ async def gateway_toolsets_of_the_run(
     )
 
 
-# --- a Preview, held to its application's Space grants (R-25) ----------
+# --- a Preview, held to its application's Space grants ----------
 
 
 def preview_grants(app: Any) -> dict[str, Any]:
     """What an Appspec grants a Preview of it, as ai-agents is asked to narrow its token to.
 
-    Its ``permissions`` (the Spaces, R-25) and its ``pap`` connections
-    (the companies it works with, P-01): a Preview whose token
+    Its ``permissions`` (the Spaces) and its ``pap`` connections
+    (the companies it works with): a Preview whose token
     named no company had every call of the gateway's `pap` toolset refused.
     And its ``pact`` connections and ``commerce`` merchants (the businesses
-    and the test merchants it asks for the person, PI-42):
+    and the test merchants it asks for the person):
     without them, a Preview of *Travel Desk* or *Shopping Desk* had every
     call of the gateway's `pact`, `ucp` and `acp` toolsets refused. And the
-    sites it reads signed (``signed_fetch``, EX-11), for the
+    sites it reads signed (``signed_fetch``), for the
     gateway's `signed-fetch` toolset.
     """
     pap = app.pap.model_dump(mode="json", by_alias=True, exclude_none=True)
@@ -1212,8 +1212,8 @@ def preview_key(app_uid: str, person_uid: str, grants: Mapping[str, Any]) -> str
         json.dumps(connection, sort_keys=True)
         for connection in (grants.get("pap") or {}).get("connections") or []
     )
-    # The businesses and merchants it asks for the person (PI-42),
-    # and the sites it reads signed (EX-11).
+    # The businesses and merchants it asks for the person,
+    # and the sites it reads signed.
     others = sorted(
         json.dumps(connection, sort_keys=True)
         for connection in [
@@ -1310,11 +1310,11 @@ async def ensure_preview_token(
     bearer: Optional[str],
 ) -> str:
     """
-    The token a Preview runs with, asked for when none is held or it runs out (R-25).
+    The token a Preview runs with, asked for when none is held or it runs out.
 
     The person's own, narrowed by ai-agents and IAM to what the Appspec the
     Preview runs grants (``permissions.spaces``, and the companies of its
-    ``pap.connections`` in the person's name: P-01) — nothing
+    ``pap.connections`` in the person's name) — nothing
     when it grants nothing — asked for with the person's token, as a
     deployment's principal's is with its opener's, and kept in memory.
 

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Approve and save: a result an application keeps, written as a page of a Space (R-24).
+"""Approve and save: a result an application keeps, written as a page of a Space.
 
 An application whose Appspec grants it a Space to write (`permissions.spaces`,
 ``access: write``) is given one tool, ``save_to_space``: a title and the text
@@ -22,13 +22,13 @@ it wants to keep, in markdown. Nothing is written before a person saw it:
   one; a retry after a failure, by the model or by the person, keeps one page.
 
 It writes with the token of the run: a deployment's application principal,
-which the Space was shared with when it was deployed (I-13); a
-Preview's person. A visitor without an account only reads (R-30): the call is
+which the Space was shared with when it was deployed; a
+Preview's person. A visitor without an account only reads: the call is
 refused before anybody is asked.
 
-**What it writes says who wrote it** (I-10). The page ends with its
+**What it writes says who wrote it**. The page ends with its
 byline — *Written by 📬 Inbox Triage.*, or *Written by 📬 Inbox Triage, on its
-own.* when nobody opened the session (R-16) — and the document's metadata
+own.* when nobody opened the session — and the document's metadata
 names the application (its id, uid, name and face), its deployment, the
 person it acted for (who opened the session, by uid), whether it wrote it on
 its own, and the session (`authorship`). The byline names that person by their
@@ -54,7 +54,7 @@ from agent_runtimes.types import AppSpec
 
 logger = logging.getLogger(__name__)
 
-#: The tool its agent is given, and what it does (F-10's classes).
+#: The tool its agent is given, and what it does (by action class).
 SAVE_TOOL = "save_to_space"
 SAVING_CLASSES: Mapping[str, List[str]] = {SAVE_TOOL: ["write"]}
 
@@ -63,7 +63,7 @@ APPROVE_AND_SAVE = "approve_and_save"
 
 #: Why a save is not asked: the Space it names is not granted to write, and
 #: the tool refuses it by itself — nobody is asked to approve what cannot be
-#: written (R-25).
+#: written.
 SPACE_NOT_GRANTED = "space_not_granted"
 
 #: The longest text saved, in characters: all of it is shown before it is.
@@ -140,11 +140,11 @@ def authorship(
     session: str,
     user: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """Who wrote a page it saves: the application, and the person it acted for (I-10).
+    """Who wrote a page it saves: the application, and the person it acted for.
 
     ``person_uid`` is who opened the session, ``""`` when it is not known;
-    ``on_its_own`` when nobody did — a session woken by a schedule (R-16).
-    ``user``, embedded, the user the host's server signed (D-21): its
+    ``on_its_own`` when nobody did — a session woken by a schedule.
+    ``user``, embedded, the user the host's server signed: its
     ``sub`` and ``name``, kept as ``for_user``.
     """
     about: Dict[str, Any] = {
@@ -166,9 +166,9 @@ def authorship(
 
 
 def signature(app: AppSpec, *, on_its_own: bool, for_name: str = "") -> str:
-    """Who wrote it, in a sentence (I-10): its face and name, and *on its
+    """Who wrote it, in a sentence: its face and name, and *on its
     own* when nobody was there — or the person it wrote for, by name, when it
-    is known (the user the host's server signed, D-21, or who opened it).
+    is known (the user the host's server signed, or who opened it).
     """
     face = f"{app.emoji} " if app.emoji else ""
     who = f"{face}{app.name or app.id}"
@@ -304,17 +304,17 @@ class AppSavingCapability(AbstractCapability[Any]):
     """Its deployment, when it runs as one: then it saves as its principal."""
 
     person: Optional[Callable[[str], str]] = None
-    """Who opened a session, by uid — the person it acts for; ``""`` when not known (I-10)."""
+    """Who opened a session, by uid — the person it acts for; ``""`` when not known."""
 
     woken: Optional[Callable[[str], Any]] = None
-    """What woke a session, empty when a person opened it: then it writes on its own (I-10, R-16)."""
+    """What woke a session, empty when a person opened it: then it writes on its own."""
 
     user: Optional[Callable[[str], Dict[str, Any]]] = None
-    """The user the host's server signed for a session, embedded — ``{sub, name}`` — or ``{}`` (D-21)."""
+    """The user the host's server signed for a session, embedded — ``{sub, name}`` — or ``{}``."""
 
     named: Optional[Callable[[str], str]] = None
     """The name of the person it acts for in a session, ``""`` when not known —
-    who its byline says it wrote for, never a uid (I-10)."""
+    who its byline says it wrote for, never a uid."""
 
     write: Optional[Write] = None
     """How Spacer is written to; over HTTP, with the token of the run, when unsaid."""
@@ -354,7 +354,7 @@ class AppSavingCapability(AbstractCapability[Any]):
         key = idempotency_key(
             self.app_uid or self.app.id, session, target, title, content
         )
-        # What it writes says who wrote it (I-10): its byline closes the page,
+        # What it writes says who wrote it: its byline closes the page,
         # and the document's metadata names it and the person it acted for.
         person_uid = self.person(session) if self.person is not None else ""
         on_its_own = bool(self.woken(session)) if self.woken is not None else False

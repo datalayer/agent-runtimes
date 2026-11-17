@@ -20,9 +20,9 @@ import type { ActionClass } from '../types/agentspecs';
 type Json = Record<string, any>;
 
 /**
- * Each operation's action class (F-10) for Rules (R-05), as agentspecs
- * classes a protocol's tools (`protocol-tools/<protocol>.yaml`,
- * PR-54), named as the TypeScript client names them
+ * Each operation's action class for Rules, as agentspecs
+ * classes a protocol's tools (`protocol-tools/<protocol>.yaml`),
+ * named as the TypeScript client names them
  * (`complete_checkout` → `completeCheckout`). A commerce operation does one
  * thing: one with several classes, or none, throws rather than guess.
  */

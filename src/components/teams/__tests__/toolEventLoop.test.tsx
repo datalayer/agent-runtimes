@@ -16,7 +16,7 @@ const event = (tick: number, says: string) => ({
   says,
 });
 
-/** An arena's events as turns the entry did not ask for (AGENT_BATTLE B1-00). */
+/** An arena's events as turns the entry did not ask for. */
 describe("the team hook's loop over a streaming tool's events", () => {
   it('sends an event at once while the entry is idle', () => {
     const send = vi.fn();

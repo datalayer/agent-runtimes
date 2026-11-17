@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """
-A2A tasks that outlive the runtime (O1-11).
+A2A tasks that outlive the runtime.
 
 ``fasta2a`` keeps tasks in a dictionary and hands work to the worker through
 an in-process stream. A runtime that restarted therefore answered
@@ -87,7 +87,7 @@ class DurableStorage(Storage[Any]):
         named = str(message.get("task_id") or "")
         if named:
             # A2A 1.0: a message naming a task continues it. Here that is a
-            # task waiting on the caller (`input-required`, SH-15):
+            # task waiting on the caller (`input-required`):
             # the message joins its history and the worker answers the wait.
             key = _key(self._scope, named)
             waiting: Any = await self._store.get(TASK, key)
@@ -114,7 +114,7 @@ class DurableStorage(Storage[Any]):
         message["context_id"] = context_id
         # A delegation's credential leaves the message before anything keeps
         # it — this task's history, its context, the work the broker owes —
-        # and waits in process memory for the run it came with (O1-17).
+        # and waits in process memory for the run it came with.
         credential = take_credential(message.get("metadata"))
         if credential:
             hold(task_id, credential)

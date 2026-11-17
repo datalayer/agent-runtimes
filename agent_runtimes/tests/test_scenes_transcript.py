@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The transcript's grammar in Python (A-06, A-14): the twin of
+"""The transcript's grammar in Python: the twin of
 ``sceneTranscript.ts`` gives the fixture's lines — the same fixture the
 TypeScript test reads (``agent_runtimes/tests/fixtures/scene_transcript.json``).
 """
@@ -99,7 +99,7 @@ def test_a_finished_run_is_read_the_same_way(fixture: Dict[str, Any]) -> None:
     assert [
         line_text(line) for line in transcript_of_record(entries, member)
     ] == without["lines"]
-    # Kept without its outputs either: the run's end says no words (R-01).
+    # Kept without its outputs either: the run's end says no words.
     bare = record["without_outputs"]
     entries = [record["entries"][index] for index in bare["entries"]]
     assert [line_text(line) for line in transcript_of_record(entries, member)] == bare[
@@ -140,7 +140,7 @@ EXPORTED = Path(__file__).parent / "fixtures" / "scene_transcript_export.json"
 
 def test_reads_back_the_pages_export(fixture: Dict[str, Any]) -> None:
     """The Sales & Accounting transcript with one refused call, exported by the
-    page (`transcriptExport.ts`, SCENES S3-03), reads back as the lines the
+    page (`transcriptExport.ts`), reads back as the lines the
     spans gave: the same words, the open call open, the refusal failed."""
     lines = read_transcript_json(EXPORTED)
     case = fixture["cases"][1]

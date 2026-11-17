@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Clone, export and import (MH-09, MH-13, MH-14).
+"""Clone, export and import.
 
 A clone at turn 2 of 4 has two turns and both lineage rows, the source
 untouched, a clone with another agent carries the sentence, a turn the

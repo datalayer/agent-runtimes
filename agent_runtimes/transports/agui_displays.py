@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A tool's display, beside the result the page draws (RU-1).
+"""A tool's display, beside the result the page draws.
 
 A tool result that carried a display reaches the model as the display's model
 view (``agent_runtimes.mcp.displays``) and keeps the whole display in its
@@ -11,7 +11,7 @@ beside it — the shape ``resolveToolResult`` (``@datalayer/reactor/ui``) reads.
 The model's message keeps the model view alone.
 
 An agent whose answers may be heard has its voice said right after
-``RUN_STARTED``: a ``voice.settings`` custom event (VO-35).
+``RUN_STARTED``: a ``voice.settings`` custom event.
 """
 
 from __future__ import annotations
@@ -57,7 +57,7 @@ def with_page_meta(content: str, meta: dict[str, Any]) -> str:
 class DisplayAGUIEventStream(AGUIEventStream[Any, Any]):
     """AG-UI's event stream, with a tool's display beside its result."""
 
-    #: The running agent's voice, said at the run's start (VO-35); None, nothing said.
+    #: The running agent's voice, said at the run's start; None, nothing said.
     voice: Optional[dict[str, Any]] = None
 
     async def before_stream(self) -> AsyncIterator[BaseEvent]:

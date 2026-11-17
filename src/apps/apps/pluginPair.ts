@@ -4,7 +4,7 @@
  */
 
 /**
- * An application's two Reactor plugins, named once (F-15).
+ * An application's two Reactor plugins, named once.
  *
  * Whichever editor wrote it — a spec, the Canvas, an `app.py` — an
  * application is a pair of plugins of one name, `loop-app-<id>`: the page's

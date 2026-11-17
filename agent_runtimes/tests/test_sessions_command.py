@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""`loop sessions …` (MH-17): one command per verb against a fake runtime —
+"""`loop sessions …`: one command per verb against a fake runtime —
 the real session routes in process, the command's client the test's — and
 the retired `loop apps threads|feedback` answering with their sentence.
 """

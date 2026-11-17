@@ -1,10 +1,10 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The `agentcore` identity provider (ID-21) against a stubbed
+"""The `agentcore` identity provider against a stubbed
 `bedrock-agentcore` client — every call's parameters asserted, the polling,
 decline and timeout paths, `ForUserId` refused — and a skill decorated with
-`@requires_oauth` (ID-22), run once with a token and once with a URL.
+`@requires_oauth`, run once with a token and once with a URL.
 """
 
 from __future__ import annotations

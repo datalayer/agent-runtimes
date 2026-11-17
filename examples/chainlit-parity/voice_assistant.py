@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """A voice assistant — Chainlit's cookbook ``openai-whisper``, rebuilt with
-LOOP's API as far as LOOP goes (P-27).
+LOOP's API as far as LOOP goes.
 
 Chainlit streams the microphone to the application (``on_audio_start``,
 ``on_audio_chunk``: 16-bit PCM, a turn ended by 1.3 s of silence), writes the
@@ -13,7 +13,7 @@ ElevenLabs, and plays it.
 **The gap.** LOOP has no live microphone: the composer takes no audio stream,
 and no handler hears one (voice is set aside). What LOOP does
 take is a **voice note** — an audio file sent with a message (``@app.file``,
-``audio/*`` in the Appspec's uploads, P-21) — and that is what this rebuild
+``audio/*`` in the Appspec's uploads) — and that is what this rebuild
 answers: transcribed with Whisper in a ``tool`` step as Chainlit does,
 answered by the application's agent, spoken with OpenAI's speech (Chainlit's
 example uses ElevenLabs), and played in the answer with the catalog's

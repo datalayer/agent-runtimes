@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The Datalayer orchestration extension, as a worker speaks it (O2-05).
+"""The Datalayer orchestration extension, as a worker speaks it.
 
 A delegation names its execution and the checkpoint it resumes from; a paused
 worker answers with the checkpoint it paused at; and a steer delivered while a
@@ -73,7 +73,7 @@ class TestWhatADelegationNames:
         assert paused_at({"datalayer": {"budget": {}}}) is None
 
     def test_a_worker_answers_with_what_its_turn_spent(self) -> None:
-        # O2-10: beside the checkpoint it paused at, when it paused.
+        # Beside the checkpoint it paused at, when it paused.
         spent = Usage(input_tokens=1200, output_tokens=340, cost=0.0123)
         answered = merged_meta(paused_meta("ckpt_9"), spent_meta(spent))
         assert (paused_at(answered), spent_of(answered)) == ("ckpt_9", spent)

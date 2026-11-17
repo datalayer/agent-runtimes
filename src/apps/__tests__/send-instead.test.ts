@@ -4,8 +4,8 @@
  */
 
 /**
- * Words that go elsewhere than the agent (`LoopChatExtrasValue.sendInstead`,
- * P-08): a person's own words in a Direct Conversation with a
+ * Words that go elsewhere than the agent (`LoopChatExtrasValue.sendInstead`):
+ * a person's own words in a Direct Conversation with a
  * company, never the model's.
  */
 

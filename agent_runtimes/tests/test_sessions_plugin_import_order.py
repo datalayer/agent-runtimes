@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The sessions plugin contributes whatever module a process imports first (MH-F01).
+"""The sessions plugin contributes whatever module a process imports first.
 
 Importing ``agent_teams`` builds its app and discovers every extension under
 ``datalayer.reactor.extensions`` — ours among them, whose built-in plugin

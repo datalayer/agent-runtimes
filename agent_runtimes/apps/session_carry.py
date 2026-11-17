@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The ``session.carry`` point's default policy (MH-F05): what a swap or a
+"""The ``session.carry`` point's default policy: what a swap or a
 clone carries, what it drops, and the sentence the new agent is told.
 
 Swap and clone never decide on their own: they ask the policy read through
@@ -20,7 +20,7 @@ for a swap back.* — the last clause *is gone* when the old harness's
 a target whose ``resume`` is ``none`` is warned that a swap back to it will
 start over.
 
-**On a clone** (MH-09): the conversation up to the turn, the files and the
+**On a clone**: the conversation up to the turn, the files and the
 Rules carry; the mode is reset to the application's default (a
 ``bypassPermissions`` source is not inherited), ``allow_always`` answers are
 not copied, the harness's own session never is (a clone starts the harness

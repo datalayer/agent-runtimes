@@ -1,14 +1,14 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Commands, modes and profiles in the composer (P-19, P-20).
+"""Commands, modes and profiles in the composer.
 
 An application declares slash commands (``interface.commands``) and mode
 switches (``interface.modes``). The page lists the commands when ``/`` is
 typed and sends the prompt of the one picked; it sends the options of the
 modes with every run (``forwardedProps.loop.modes``), and the runtime tells
 the agent the instructions of the options chosen and runs the model one of
-them names — for that run only. A profile (``interface.profiles``, P-20) is
+them names — for that run only. A profile (``interface.profiles``) is
 picked before the conversation starts and kept to its end: its instructions
 are told before the modes', and its model run unless a mode names one.
 
@@ -37,8 +37,8 @@ def command_prompt(command: AppCommandSpec, words: str = "") -> str:
 
 @dataclass(frozen=True)
 class ReactorCommandRun:
-    """What answers a command of the composer that runs a Reactor command
-    (P-35): ``app.command(name, description, run=<command id>)``.
+    """What answers a command of the composer that runs a Reactor command:
+    ``app.command(name, description, run=<command id>)``.
 
     Called as any command its code answers, ``(session, words)``: the
     command runs on the session's platform with the words typed after it,
@@ -131,7 +131,7 @@ def mode_effect(app: AppSpec, chosen: Optional[Mapping[str, Any]] = None) -> Mod
 def profile_choice(
     app: AppSpec, chosen: Optional[str] = None
 ) -> Optional[AppProfileSpec]:
-    """The profile a conversation is with (P-20): the one chosen, else the
+    """The profile a conversation is with: the one chosen, else the
     first; None for an application without profiles.
 
     Raises

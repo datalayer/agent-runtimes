@@ -242,7 +242,7 @@ class AGUIClient:
             tools: Optional tool definitions for the agent.
             identities: Optional OAuth identities for tool authentication.
             forwarded_props: What goes with the run besides the conversation:
-                ``voice``, how a spoken message was heard (VO-27).
+                ``voice``, how a spoken message was heard.
             keep_waiting: Asked while the agent says nothing: ``True`` keeps the
                 run open however long it is silent — a tool call waits on a
                 person's approval, and the run says nothing until it is

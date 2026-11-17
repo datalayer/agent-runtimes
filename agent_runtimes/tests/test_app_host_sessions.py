@@ -40,7 +40,7 @@ class HostVerifier:
 
     async def verify(self, token: str, app_uid: str = "") -> Caller:
         if token.startswith("visitor:"):
-            # `visitor:<id>:<deployment>`: a host's visitor (WHATSAPP WA-03).
+            # `visitor:<id>:<deployment>`: a host's visitor.
             _, visitor, deployment = token.split(":")
             return Caller(
                 kind="visitor",
@@ -131,7 +131,7 @@ def test_a_host_runs_its_deployment_as_its_principal_recorded_as_its_person(
     assert hosted == [("dep-1", "host:alice:dep-1")]
     assert {b["opened_by"] for b in runtime.records} == {"alice"}
     # Its person opens it on the web, signed in as themselves (Open in
-    # Datalayer, S-305), its messages read; nobody else does.
+    # Datalayer), its messages read; nobody else does.
     held = remote.get(
         "/api/v1/apps/sessions/slack-thread-0001/messages", headers=as_("alice")
     )
@@ -359,7 +359,7 @@ CONTRACTS = json.loads(
 def test_a_turn_carries_its_provenance_as_the_contract_says(
     runtime: Runtime, remote: TestClient, hosted: Any
 ) -> None:
-    """S-204: the turn itself carries
+    """The turn itself carries
     where it comes from, at most 1 KiB, and a retry naming another
     provenance is another request."""
     turn = CONTRACTS["external_turn"]
@@ -503,7 +503,7 @@ def test_a_whatsapp_turn_carries_its_chat_and_its_message(
 def test_an_external_turn_holds_to_the_shared_contract(
     runtime: Runtime, remote: TestClient, hosted: Any
 ) -> None:
-    """S-004: the `external_turn` section of the hosts' shared contracts,
+    """The `external_turn` section of the hosts' shared contracts,
     held by the session API that answers it: its requests are taken as
     written, the `loop.turn` event carries exactly its keys, and a retry is
     answered as its replay rule says, under the external event id (a start)
@@ -571,7 +571,7 @@ def test_an_external_turn_holds_to_the_shared_contract(
     assert len(model.prompts) == 2
 
 
-# --- a host's visitor (WHATSAPP WA-03, decided 28 October 2026) ------------------------------
+# --- a host's visitor (decided 28 October 2026) ------------------------------
 
 
 def test_ai_agents_saying_visitor_makes_a_host_token_a_visitor_of_its_one_deployment(

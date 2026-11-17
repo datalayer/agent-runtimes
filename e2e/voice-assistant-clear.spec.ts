@@ -4,8 +4,8 @@
  */
 
 /**
- * The floating assistant is never drawn over the composer's voice controls
- * (T-27). On an application's page the character stands in the bottom-right
+ * The floating assistant is never drawn over the composer's voice controls.
+ * On an application's page the character stands in the bottom-right
  * corner, where the composer's session controls end: the microphone, the
  * voice menu and *Talk with it*. It took their clicks there (20 October
  * 2026, 1280×900); the band now ends where the character's clearance begins

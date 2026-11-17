@@ -4,7 +4,7 @@
  */
 
 /**
- * The TypeScript shopping client at the Python merchant (EX-04): Example Store served by `examples/protocols/ucp/merchant_server.py`
+ * The TypeScript shopping client at the Python merchant: Example Store served by `examples/protocols/ucp/merchant_server.py`
  * at `UCP_MERCHANT`, over real HTTP — discovery, search, a checkout created
  * and updated, the exact purchase proposed, approved once by the person,
  * bought once, the same proposal refused after.

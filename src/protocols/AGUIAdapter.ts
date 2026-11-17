@@ -195,7 +195,7 @@ export class AGUIAdapter extends BaseProtocolAdapter {
   }
 
   /**
-   * The person spoke over the agent (VO-46, VO-13): an application's
+   * The person spoke over the agent: an application's
    * session is told (`POST {sessions}/{uid}/interrupt`) — what runs is
    * cancelled, its code's `@app.interrupted` runs, and it stays open for
    * what is said next, where Stop would leave it waiting to be resumed.
@@ -399,7 +399,7 @@ export class AGUIAdapter extends BaseProtocolAdapter {
       });
 
       if (!response.ok) {
-        // Why, in the page's own words (F-15): a 404 at an agent's AG-UI
+        // Why, in the page's own words: a 404 at an agent's AG-UI
         // address means the agent is not on this runtime, which the status
         // alone never said.
         throw new Error(

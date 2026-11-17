@@ -15,7 +15,7 @@
  * A question is read from `RUN_FINISHED.result.asking` only: the run stream
  * carries no `loop.ask` event (that is the record's word, `record.py`).
  *
- * Moved from the Slack service (DC-005, S-205).
+ * Moved from the Slack service.
  *
  * @module portable/semanticOfAgUi
  */
@@ -72,7 +72,7 @@ function resultRecord(content: unknown): Record<string, unknown> | undefined {
 /**
  * The question a turn ends on (`RUN_FINISHED.result.asking`), as
  * a host asks it, or `undefined` when the value is not a question. A kind a
- * host does not know is answered in Datalayer, as a form (S-307):
+ * host does not know is answered in Datalayer, as a form:
  * never guessed to be text. (`conversation.ts`'s `questionOf`, for a native
  * client, throws on such a kind instead.)
  */

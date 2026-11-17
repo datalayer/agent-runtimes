@@ -4,8 +4,8 @@
  */
 
 /**
- * The person's sessions in one list (VSCODE VS-04, VS-12; DESKTOP DK-09,
- * DK-25): on Datalayer (the record, through ai-agents) and on this machine
+ * The person's sessions in one list:
+ * on Datalayer (the record, through ai-agents) and on this machine
  * (a local runtime's `GET /api/v1/apps/sessions`, which lists every local
  * session since the file store is one) — grouped by place then application,
  * each row as `loop sessions list` prints it (title, state with the turn
@@ -13,7 +13,7 @@
  * application, state and title, the archived hidden; the person's team runs
  * with their seats.
  *
- * The rule of two holders (DESKTOP D-12): a session `open` on this machine
+ * The rule of two holders: a session `open` on this machine
  * and held by none of the host's own runtimes is open in another host (VS
  * Code, a terminal) and is not resumed from here until it is `paused`.
  *
@@ -93,7 +93,7 @@ export interface ListedSession {
   application: SessionApplication;
   /**
    * The folder a local harness session runs in — the row's `workspace`
-   * (agent-runtimes 1.5.71, DESKTOP DK-26), else its `harness_session`'s;
+   * (agent-runtimes 1.5.71), else its `harness_session`'s;
    * empty when the row names none.
    */
   workspace: string;
@@ -399,12 +399,12 @@ export function noLocalRuntimeSentence(howToStart: string): string {
   return `No local runtime is running: start a coding agent in a folder, or ${howToStart}.`;
 }
 
-/** The sentence under *On this machine* while no folder was ever worked in (DK-09). */
+/** The sentence under *On this machine* while no folder was ever worked in. */
 export const NO_LOCAL_SESSION_YET =
   'No session on this machine yet — File → Work in a folder…';
 
 // ---------------------------------------------------------------------------
-// The two places merged (DK-09)
+// The two places merged
 // ---------------------------------------------------------------------------
 
 /** What one place answered: its sessions, or why it did not. */
@@ -417,7 +417,7 @@ export interface SessionEntry extends ListedSession {
   place: SessionPlace;
   /**
    * The session is `open` on this machine and held by none of the host's
-   * own runtimes: open in VS Code or a terminal (D-12).
+   * own runtimes: open in VS Code or a terminal.
    */
   elsewhere: boolean;
 }
@@ -496,7 +496,7 @@ export function mergePlaces(
 
 /**
  * Where a session is, in words: *on Datalayer*, *on this machine · <folder>*,
- * or *on this machine · folder unknown* when the row names none (DK-26).
+ * or *on this machine · folder unknown* when the row names none.
  *
  * @param entry - The session with its place.
  *
@@ -511,7 +511,7 @@ export function placeSaid(
   return `on this machine · ${entry.workspace || 'folder unknown'}`;
 }
 
-/** The sentence when a session held elsewhere is resumed from here (D-12). */
+/** The sentence when a session held elsewhere is resumed from here. */
 export const ELSEWHERE_SENTENCE =
   'This session is open in VS Code or a terminal: pause it there to resume it here.';
 
@@ -555,7 +555,7 @@ export function entryDescription(entry: SessionEntry): string {
 }
 
 // ---------------------------------------------------------------------------
-// Teams (VS-12; DESKTOP DK-16, postponed)
+// Teams (postponed)
 // ---------------------------------------------------------------------------
 
 /** A seat of a team run: its execution, its session when it has one. */
@@ -575,7 +575,7 @@ export interface TeamSeat {
 export interface TeamRun {
   executionId: string;
   team: string;
-  /** The run's state as a session's (MH-22). */
+  /** The run's state as a session's. */
   state: SessionState;
   /** The execution's own state word. */
   status: string;
@@ -600,7 +600,7 @@ const OPEN_WORDS = new Set([
 const ENDED_WORDS = new Set(['completed', 'failed', 'cancelled', 'terminated']);
 
 /**
- * A team run's state as a session's (MH-22): `created|assigned|running|waiting|retrying`
+ * A team run's state as a session's: `created|assigned|running|waiting|retrying`
  * → `open`, `paused` → `paused`, `completed|failed|cancelled|terminated` → `ended`.
  *
  * @param status - The execution's state word.
@@ -820,7 +820,7 @@ export interface SessionAttention {
 }
 
 /**
- * The sessions of a place as a host watches them (VS-10, DK-14): one row
+ * The sessions of a place as a host watches them: one row
  * per session listed, by its uid, none in front — the chat says which is.
  *
  * @param listed - The place's sessions as read.

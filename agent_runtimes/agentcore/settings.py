@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What ``agent-runtimes serve --target agentcore`` is started with (AC-01).
+"""What ``agent-runtimes serve --target agentcore`` is started with.
 
 AgentCore Runtime starts the container with its environment: the agentspec
 the runtime serves in ``AGENT_SPEC_ID``, and, when the runtime's

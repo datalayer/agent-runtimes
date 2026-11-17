@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An execution's model budget, on the way to its worker and back (O1-07).
+"""An execution's model budget, on the way to its worker and back.
 
 The control plane does not count a worker's tokens. It hands the execution's
 limits to the worker with the delegation — ``delegation_meta``, which both
@@ -11,9 +11,9 @@ What comes back is read by ``budget_refusal`` into the canonical error, so an
 execution stopped by its model budget says so, and which limit, rather than
 reading as a worker that broke.
 
-Beside the budget travel the execution's credential (O1-17) and, to a worker
+Beside the budget travel the execution's credential and, to a worker
 that speaks the Datalayer orchestration extension, the execution itself and
-the checkpoint an attempt resumes from (O2-05).
+the checkpoint an attempt resumes from.
 """
 
 from __future__ import annotations
@@ -78,18 +78,18 @@ def delegation_meta(
         The execution being delegated.
     credential : str | None
         The execution's own token, which the worker reaches Datalayer with for
-        the run (O1-17). The worker takes it out of the message on arrival
+        the run. The worker takes it out of the message on arrival
         (``agent_runtimes.context.delegation``), so nothing keeps it.
     extended : bool
         Whether the worker speaks the Datalayer orchestration extension. Its
         delegation then names the execution, which is the scope the worker
-        keeps its checkpoints under (O2-05).
+        keeps its checkpoints under.
     resumed_from : str | None
         The checkpoint the attempt resumes from.
     account_uid : str | None
         The account the execution belongs to, named beside it to a worker
         that speaks the extension: what the worker's request for a child is
-        made in (O2-06).
+        made in.
 
     Returns
     -------
@@ -129,7 +129,7 @@ def delegation_meta(
         }
     if resumed_from:
         ours[CHECKPOINT_FIELD] = {"checkpointId": resumed_from}
-    # A team's seat works inside an apps session (MH-38): the worker is told
+    # A team's seat works inside an apps session: the worker is told
     # which seat it is, and — on the seat's next task — the session the
     # control plane carries for it on its binding (MH-P05), to resume rather
     # than open.

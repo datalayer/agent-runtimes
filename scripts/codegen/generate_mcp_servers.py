@@ -165,8 +165,8 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             ]
         )
         # Where an HTTP server is reached: a remote one is connected to there
-        # (`odoo-accounting`), a local one's command listens there (W-02,
-        # `google-workspace`).
+        # (`odoo-accounting`), a local one's command listens there
+        # (`google-workspace`).
         if spec.get("url"):
             lines.append(f'    url="{spec["url"]}",')
         # The headers a remote server is sent with every request, their
@@ -177,7 +177,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             for key, value in headers.items():
                 lines.append(f'        "{key}": "{value}",')
             lines.append("    },")
-        # A bearer minted for the run (AC-20): an AgentCore Gateway trusting
+        # A bearer minted for the run: an AgentCore Gateway trusting
         # the identity named, never a header written in the spec.
         if spec.get("auth"):
             auth = spec["auth"]
@@ -194,7 +194,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         if spec.get("ui"):
             lines.append(f"    ui={json.dumps(list(spec['ui']), ensure_ascii=False)},")
         # What the code its tools write reads in the code sandbox: given there
-        # when the account has them, never required (R-19).
+        # when the account has them, never required.
         sandbox_envvars = spec.get("sandbox_envvars", [])
         if sandbox_envvars:
             lines.append(

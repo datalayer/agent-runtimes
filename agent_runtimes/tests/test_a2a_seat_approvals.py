@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A delegated task's *ask me first*, answered by the control plane (META_HARNESS MH-42).
+"""A delegated task's *ask me first*, answered by the control plane.
 
 A team seat — any task the control plane dispatched over A2A — that asks a
 person before a call waits as ``input-required`` carrying

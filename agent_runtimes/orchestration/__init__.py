@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Orchestration in agent-runtimes (O0-04 to O0-07).
+"""Orchestration in agent-runtimes.
 
 The canonical model is not here. It is
 ``datalayer_core.orchestration`` — the agent descriptor, the execution and
@@ -16,7 +16,7 @@ What is here is what stands between that model and a real worker:
 
 - ``store``: where executions, attempts, events, acknowledgements and
   artifacts live, behind the ``ExecutionStore`` port. In Phase 0 that is a
-  dictionary; in Phase 1 it is Solr (O1-02), and only the implementation
+  dictionary; in Phase 1 it is Solr, and only the implementation
   changes because ``durable``, ``runtimes`` and ``jupyter-mcp-server``
   already consume this package in process.
 - ``adapter``: the ``WorkerAdapter`` port, where an adapter

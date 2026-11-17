@@ -4,8 +4,7 @@
  */
 
 /**
- * A public application in the element, for a visitor without an account
- * (D-07, R-30).
+ * A public application in the element, for a visitor without an account.
  *
  * `<datalayer-app app="…">` with no token names a public application. The
  * element reads what it is without anybody's credentials, as the landing's
@@ -98,7 +97,7 @@ export type VisitorApp =
 /**
  * Where a visitor's conversation with `app` runs: the visitors' runtime beside
  * ai-agents — or `runtime`, the one a deployment with code of its own is
- * kept on (R-30) — its token from ai-inference, at `inference` when it is
+ * kept on — its token from ai-inference, at `inference` when it is
  * named, else beside ai-agents.
  */
 export function visitorsAt(
@@ -240,7 +239,7 @@ export async function readVisitorApp({
 
 /**
  * Where somebody without an account talks to an address, as ai-agents says
- * it (R-30, decided 14 October 2026): written as a spec, on the visitors'
+ * it (decided 14 October 2026): written as a spec, on the visitors'
  * runtime (`url` unsaid); with code of its own (`runs_code`), on the runtime
  * its deployment is kept on (`kept.url`), which runs that code — never the
  * visitors', where its plain agent would answer in its code's place. An

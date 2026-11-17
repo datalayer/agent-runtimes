@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A lent gateway toolset, the credential held by the runtime alone (SH-14).
+"""A lent gateway toolset, the credential held by the runtime alone.
 
 Whatever a harness holds, what it runs can read: the commands the model writes
 run as the same user, so a file it could open, or its own memory, is theirs.
@@ -71,7 +71,7 @@ def lent_url(handle: str) -> str:
 
 def carry(handle: str, traceparent: str | None) -> None:
     """
-    Carry the turn's trace: the ``traceparent`` the gateway is sent from now on (SH-51).
+    Carry the turn's trace: the ``traceparent`` the gateway is sent from now on.
 
     The toolset is one connection for the session, so what is sent per call is
     read at each call; the runtime sets the current turn's context here before

@@ -4,7 +4,7 @@
  */
 
 /**
- * The page the pictures are taken of (T-16): one reference screen, or
+ * The page the pictures are taken of: one reference screen, or
  * one state of the floating assistant, in one theme and one mode, chosen by
  * the address — `html/pictures.html?screen=approval&theme=loop&mode=dark`,
  * or `?assistant=thinking&mode=light`, or a character idle,
@@ -12,7 +12,7 @@
  * or the gallery's grid of every character in every pose, `?gallery=grid`.
  *
  * It sets `data-pictures-ready` on the document once the fonts are in — Inter
- * in its two weights, served by this page (T-04) — and two frames have
+ * in its two weights, served by this page — and two frames have
  * painted, which is what the capture waits for.
  *
  * @module stories/loop/pictures-main
@@ -48,7 +48,7 @@ import {
 } from '../../examples/utils/AvatarGalleryGrid';
 
 import '../../../style/primer-primitives.css';
-// The `loop` theme's face (T-04): Inter and its metric-matched fallback,
+// The `loop` theme's face: Inter and its metric-matched fallback,
 // served by this page's own Vite, as the landing serves them from its build.
 import '@datalayer/primer-addons/style/loop-face.css';
 

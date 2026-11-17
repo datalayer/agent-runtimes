@@ -4,7 +4,7 @@
  */
 
 /**
- * An application in another product's page, as a React component (D-07, D-09, D-11): what the `<datalayer-app>` element draws, and what a
+ * An application in another product's page, as a React component: what the `<datalayer-app>` element draws, and what a
  * host that uses React mounts itself.
  *
  * Four modes, as the Appspec says (`deployment.embedded.mode`) or the host:
@@ -18,24 +18,24 @@
  * - **assistant** — the application's character on the page, speaking in a
  *   balloon: the one its Appspec names (`interface.avatar`), else
  *   the paper clip, looked up in what is contributed — Datalayer's four and
- *   the host's own plugins (T-24); an id nothing contributes is said, never
+ *   the host's own plugins; an id nothing contributes is said, never
  *   replaced.
  *
  * The three floating modes are `ChatFloating`'s chrome around the same
- * `AppRenderer` (R-01): the application's preset per kind and its layout in
+ * `AppRenderer`: the application's preset per kind and its layout in
  * the window, its agent created with its spec in its payload and spoken to
- * at its session endpoint (R-04), so the runtime enforces its rules there as
+ * at its session endpoint, so the runtime enforces its rules there as
  * it does inline; the chrome told by the workspace what it is doing and
  * what it last said, for the balloon and the blink.
  *
  * In its theme (`loop` unless it names one) with the application's accent
- * over it, whichever theme (T-12, T-05), which the
- * host may override with the face and the mode (D-11) — around the
+ * over it, whichever theme, which the
+ * host may override with the face and the mode — around the
  * conversation and inside it, where the chat sets its theme again.
  *
  * On the host's server with the visit's embed token, its session is kept
- * in the host's storage and picked up again after the page reloads (D-13,
- * `useEmbedSession`): its conversation drawn again, and gone on with.
+ * in the host's storage and picked up again after the page reloads
+ * (`useEmbedSession`): its conversation drawn again, and gone on with.
  *
  * @module apps/embed/AppEmbed
  */
@@ -109,14 +109,14 @@ export type AppEmbedProps = {
   accent?: AppAccent;
   /**
    * Light, dark, or the visitor's system: the host's, else the one the
-   * Appspec names (`interface.theme.mode`, T-30), else the system's.
+   * Appspec names (`interface.theme.mode`), else the system's.
    */
   colorMode?: EmbedColorMode;
   /** The host's face, a CSS font family; the theme's by default. */
   font?: string;
   /**
    * The language the visitor reads it in, as BCP 47 tags it (`fr`, `pt-BR`):
-   * its translation into it and the chat's own words (P-26). The
+   * its translation into it and the chat's own words. The
    * visitor's browser's by default.
    */
   language?: string;
@@ -129,14 +129,14 @@ export type AppEmbedProps = {
   /** What its record is kept under, on Datalayer. */
   instance?: AppInstance;
   /**
-   * The embed token the host's server was issued for this visit (R-20):
+   * The embed token the host's server was issued for this visit:
    * what the chat speaks to the application's session with on the
    * agent-runtimes server that runs its deployment (`serverUrl`). It runs a
    * session of that deployment, and reaches nothing else.
    */
   embedToken?: string;
   /**
-   * A conversation without an account (D-07, R-30): a public
+   * A conversation without an account: a public
    * application run on the visitors' runtime, which the chat speaks to with
    * a visitor's token it mints from ai-inference for that one application —
    * what the element gives a public `app` with no token. Nothing is launched
@@ -180,7 +180,7 @@ export type AppEmbedProps = {
   /** With `runAsAnonymous`, what *Sign in* does, in place of `signInUrl` (a React host). */
   onSignIn?: () => void;
   /**
-   * Where its voice runs (VO-18): Datalayer's speech service and
+   * Where its voice runs: Datalayer's speech service and
    * the browser's models, in every mode, when its Appspec's `interface.voice`
    * is on — the microphone in its composer, its answers heard, asked with
    * the conversation's own token. None, it is drawn without a voice.
@@ -201,14 +201,14 @@ export type AppEmbedProps = {
    */
   plugins?: PluginRef[];
   /**
-   * What the page gives the application (D-10): the values it passes,
+   * What the page gives the application: the values it passes,
    * its functions, and what it is told — read for the names the Appspec
    * gives under `deployment.embedded.host`.
    */
   host?: AppEmbedHost;
   /**
    * Keep the visit's session in the host's storage, and pick it up again
-   * after the page reloads (D-13); on by default. Off, the session
+   * after the page reloads; on by default. Off, the session
    * lasts as long as the page.
    */
   resume?: boolean;
@@ -250,7 +250,7 @@ export type EmbedSession = {
 };
 
 /**
- * The visit's session, kept and picked up again (D-13): on the host's
+ * The visit's session, kept and picked up again: on the host's
  * server with an embed token that names its visit, the session the chat
  * opens is kept under the application and the visit — in the host's
  * storage unless `resume` is off, in memory always — and, when the
@@ -337,7 +337,7 @@ export function useEmbedSession({
 }
 
 /**
- * Window messages from the page (P-25): on the host's own server, the
+ * Window messages from the page: on the host's own server, the
  * page is handed how to post one to the application's session
  * (`host.onWindowPort`) — the session the chat goes on with, its uid known
  * from its first message — and what the code answers is raised on the page
@@ -414,7 +414,7 @@ function SessionSaid({ said }: { said?: string }): JSX.Element | null {
 const NO_HOST_PLUGINS: PluginRef[] = [];
 
 /**
- * The page and the application talking (D-10): the tools of the host
+ * The page and the application talking: the tools of the host
  * the Appspec names, given to its agent through a chat-extras plugin made
  * once — the page's newest values and functions read at each call — and
  * `message` said to the page when an answer is done.
@@ -431,7 +431,7 @@ export function useHostBridge(
   hostRef.current = host;
   const bridge = app.deployment.embedded?.host;
   const key = JSON.stringify([bridge ?? null, app.rules, app.connections]);
-  // The host's plugin (RU-7): the page's functions as its
+  // The host's plugin: the page's functions as its
   // commands, named for the agent by its agent tools bundle — made again
   // when what the Appspec names, or the rules that decide them, change.
   const hosting = useMemo(
@@ -439,7 +439,7 @@ export function useHostBridge(
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [app.id, key],
   );
-  // Who its user is (D-21): the token the host's server signed goes with
+  // Who its user is: the token the host's server signed goes with
   // every run, for an application that takes only a signed user.
   const signed = bridge?.user === 'signed';
   const userPlugin = useMemo(() => {
@@ -466,7 +466,7 @@ export function useHostBridge(
         : NO_HOST_PLUGINS,
     [hosting, userPlugin],
   );
-  // What its code tells the page during a turn (P-25), raised on it.
+  // What its code tells the page during a turn, raised on it.
   useEffect(
     () =>
       onLoopWindowMessage(data =>
@@ -510,7 +510,7 @@ export function useHostBridge(
 const NO_PLUGINS: PluginRef[] = [];
 
 /**
- * The avatar the assistant mode draws (T-24, D-07): the application's own
+ * The avatar the assistant mode draws: the application's own
  * (`interface.avatar`), else the paper clip, from what Datalayer's
  * avatars (the clippy.js characters among them) and the host's plugins contribute — as a page decides it, with
  * no person's choice, since a visitor to another product has none here.
@@ -536,7 +536,7 @@ export const signedOutSentence = (app: Pick<AppSpec, 'name'>): string =>
 
 /** The application's face, as the floating window's button and header draw it. */
 function Face({ emoji }: { emoji: string }): JSX.Element {
-  // In Fluent Emoji, at a line's size (T-19, T-20).
+  // In Fluent Emoji, at a line's size.
   return <FluentEmoji emoji={emoji} size={20} label="" />;
 }
 
@@ -544,7 +544,7 @@ export type AppFloatingProps = {
   app: AppSpec;
   view: 'floating-small' | 'panel' | 'assistant';
   colorMode: 'light' | 'dark';
-  /** The theme it is drawn in (T-30); the page's when unsaid. */
+  /** The theme it is drawn in; the page's when unsaid. */
   themeVariant?: AppThemeVariant;
   /** The accent and face inside the conversation. */
   themeOverrides: ThemeOverrides;
@@ -553,11 +553,11 @@ export type AppFloatingProps = {
   /** The host's agent-runtimes server, when it names one. */
   serverUrl?: string;
   instance?: AppInstance;
-  /** The visit's embed token, on the host's server (R-20). */
+  /** The visit's embed token, on the host's server. */
   embedToken?: string;
   /**
    * What else the host gives the application's `AppRenderer`: Datalayer's
-   * own page at an application's address (T-21) passes the UI plugins its
+   * own page at an application's address passes the UI plugins its
    * organization turned off, the visitors' runtime and the one kept on.
    */
   renderer?: Partial<
@@ -576,11 +576,11 @@ export type AppFloatingProps = {
     >
   > &
     AppRendererExtras;
-  /** What the page gives the application (D-10). */
+  /** What the page gives the application. */
   host?: AppEmbedHost;
-  /** The visit's session, picked up again after a reload (D-13). */
+  /** The visit's session, picked up again after a reload. */
   session?: EmbedSession;
-  /** The language the visitor reads it in (P-26); the browser's by default. */
+  /** The language the visitor reads it in; the browser's by default. */
   language?: string;
 };
 
@@ -588,8 +588,8 @@ export type AppFloatingProps = {
  * The bubble, the panel and the assistant: `ChatFloating`'s chrome in that
  * mode — the button, its blink and its balloon, the panel at the edge, the
  * character dragged about and sent away — holding the application as
- * `AppRenderer` draws it inline (R-01): its kind's preset, its layout, its
- * agent created with its spec and spoken to at its session endpoint (R-04).
+ * `AppRenderer` draws it inline: its kind's preset, its layout, its
+ * agent created with its spec and spoken to at its session endpoint.
  * The workspace tells the chrome what the application is doing and what it
  * last said (`onPresence`, `onSaying`).
  */
@@ -632,7 +632,7 @@ export function AppFloating({
   // A runtime is somebody's to pay for: on Datalayer, only for a visitor
   // Datalayer knows — said, and nothing launched, for one it does not.
   const token = useIAMStore(state => state.token);
-  // Signed out on the visitors' runtime (R-30) is somebody's too.
+  // Signed out on the visitors' runtime is somebody's too.
   const signedOut = !serverUrl && !token && !renderer?.datalayerVisitors;
   return (
     <ChatFloating
@@ -747,7 +747,7 @@ export function EmbedThemed({
      * Marked as themed above the provider, so that the provider counts
      * itself nested and leaves the host's <body> and Primer's portal root
      * alone: it would otherwise write the theme's tokens, colour and face on
-     * the host's page (T-13). A wrapper of no box.
+     * the host's page. A wrapper of no box.
      */
     <div data-color-mode={colorMode} style={{ display: 'contents' }}>
       <DatalayerThemeProvider
@@ -792,10 +792,10 @@ export function AppEmbed({
   const shownAs = mode ?? app.deployment.embedded?.mode ?? 'inline';
   // Inline, the page is bridged here; in a bubble, a panel or the assistant,
   // `AppFloating` bridges it itself. Bridged twice, every window message of a
-  // turn reached the page twice (seen 2026-10-10 with P-27's copilot).
+  // turn reached the page twice (seen 2026-10-10 with a copilot).
   const bridge = useHostBridge(app, shownAs === 'inline' ? host : undefined);
-  // Where a visitor without an account runs it (D-07), and where its voice
-  // runs (VO-18): one object, so that the renderer never reads a change.
+  // Where a visitor without an account runs it, and where its voice
+  // runs: one object, so that the renderer never reads a change.
   // A visitor's limited preview with it (the user, 15 November 2026).
   const anonymous = Boolean(visitors && runAsAnonymous);
   const { plugins: ownPlugins, ...extrasRest } = extras ?? {};
@@ -843,7 +843,7 @@ export function AppEmbed({
     embedToken,
     resume,
   });
-  // Window messages from the page, on the host's own server (P-25).
+  // Window messages from the page, on the host's own server.
   const session = useWindowPort({
     serverUrl,
     embedToken,
@@ -854,7 +854,7 @@ export function AppEmbed({
   // In the host's theme (a React host's `Application`): the page's, unless
   // the application names one or the host says a mode or a face.
   const hostThemed = followHost && !app.interface.theme && !colorMode && !font;
-  // The theme the application names (T-30), `loop` when none; its mode
+  // The theme the application names, `loop` when none; its mode
   // the host's, else the application's, else the visitor's system's.
   const variant = app.interface.theme?.variant ?? 'loop';
   const asked = colorMode ?? app.interface.theme?.mode ?? 'auto';
@@ -893,7 +893,7 @@ export function AppEmbed({
   }
   const character = assistant?.character;
   /*
-   * Inline: the renderer, its session picked up again (D-13). In its own
+   * Inline: the renderer, its session picked up again. In its own
    * theme, the host's accent and face over the application's inside its
    * conversation, in the embed's mode — the host's or its visitor's
    * system's, not a Datalayer setting; in the host's, the page's theme
@@ -909,7 +909,7 @@ export function AppEmbed({
         // Only on the host's server: a Datalayer runtime is launched with
         // a person's credentials, which an embed token never stands for.
         {...(serverUrl && embedToken ? { embedToken } : {})}
-        // A visitor without an account, on the visitors' runtime (D-07); a
+        // A visitor without an account, on the visitors' runtime; a
         // person's own agent on its runtime.
         {...(renderer ?? {})}
         instance={instance}
@@ -918,14 +918,14 @@ export function AppEmbed({
             ? { themeOverrides: hostAccent }
             : {}
           : { themeOverrides, colorMode: resolvedMode, themeVariant: variant })}
-        // What the page gives it, and what it tells the page (D-10), and
+        // What the page gives it, and what it tells the page, and
         // the host's own plugins in its workspace.
         plugins={workspacePlugins}
         onPresence={bridge.onPresence}
         onSaying={bridge.onSaying}
-        // Its session, picked up again after a reload (D-13).
+        // Its session, picked up again after a reload.
         {...(session.thread ? { thread: session.thread } : {})}
-        // The visitor's language, when the host says it (P-26).
+        // The visitor's language, when the host says it.
         {...(language ? { language } : {})}
       />
     </>

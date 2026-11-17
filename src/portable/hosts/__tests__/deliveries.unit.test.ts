@@ -6,7 +6,7 @@
  */
 
 /**
- * Deliveries to a host (DC-004): the signed webhook,
+ * Deliveries to a host: the signed webhook,
  * the outbox poller, and a delivery handled once then acknowledged.
  */
 

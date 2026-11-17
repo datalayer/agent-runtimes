@@ -5,7 +5,7 @@
 
 /**
  * A visitor's token, for a conversation without an account on the visitors'
- * runtime (R-30).
+ * runtime.
  *
  * ai-inference mints it (`POST /anonymous/token`) naming the visitor — the id
  * this tab keeps for them, so that a new token is the same visitor, whose
@@ -15,7 +15,7 @@
  * visitor is on the servers (turns a day, a session's minutes, a rate and a
  * ceiling for the day), not the life of a key.
  *
- * A token may also name the catalogue Battle it is played for (B4-01): its
+ * A token may also name the catalogue Battle it is played for: its
  * model calls then count against that play's own budget at ai-inference,
  * instead of the visitor's rate, and the runtime that plays a member of the
  * Battle's scene reads the Battle from it (`fetchBattleToken`, and
@@ -36,7 +36,7 @@ export type DatalayerVisitors = {
   app: string;
   /** ai-inference, which mints the visitor's token. */
   inferenceUrl: string;
-  /** The catalogue Battle the token is played for, when it is (B4-01). */
+  /** The catalogue Battle the token is played for, when it is. */
   battle?: string;
 };
 
@@ -169,7 +169,7 @@ export type BattleToken = {
 
 /**
  * Mint the token one play of a catalogue Battle is played with, by the
- * visitor this tab keeps (B4-01): the players in the page call their models
+ * visitor this tab keeps: the players in the page call their models
  * with it, its calls counted against the play's budget. Never renewed: a play
  * is minutes, and the next play mints its own.
  */
@@ -318,7 +318,7 @@ export type VisitorAgent = { agent: string; appId: string };
 
 /**
  * Ask the visitors' runtime for the agent a visitor's token names, made
- * there if it is not (`POST /api/v1/apps/visitors/agent`, D-15): an
+ * there if it is not (`POST /api/v1/apps/visitors/agent`): an
  * application at its address has its agent made as it is first opened, so
  * that the runtime holds the application before the page follows it.
  * Throws with the runtime's sentence when it refuses.

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The ``session.format`` point's first contribution: ``datalayer-session/1`` (MH-F04).
+"""The ``session.format`` point's first contribution: ``datalayer-session/1``.
 
 An exporter and importer pair under a format id, read through the point so
 that a second format (Omnigent's JSONL, a third party's) is contributed the
@@ -11,7 +11,7 @@ generated): the session line first, one entry line per record entry after
 it, the caps, the entry kinds, the redaction rules and the refusal sentences
 — the same words on every surface.
 
-**Export** (MH-13) redacts at the source, by the rules the spec names, each
+**Export** redacts at the source, by the rules the spec names, each
 counted: a header or key named ``Authorization``, ``Proxy-Authorization``
 or ``Cookie``; a value shaped as a credential **wherever it is** — the
 runtime's own :func:`~agent_runtimes.guardrails.credentials.redact` (an API
@@ -22,7 +22,7 @@ the value of a declared secret, by name; a URL's userinfo; the signed user of
 an embed; the runtime's uid and addresses. A file's bytes are never in it: a
 file is its entry (name, size, digest, place in the sandbox).
 
-**Import** (MH-14) treats the file as untrusted data: the caps first, then
+**Import** treats the file as untrusted data: the caps first, then
 each line against the spec, an entry of a kind the record does not have
 refused, nothing executed or replayed through a tool.
 """

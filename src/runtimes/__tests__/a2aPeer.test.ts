@@ -152,7 +152,7 @@ describe('Sales asks Accounting over A2A', () => {
       { request: 'Which invoices are open?' },
       { toolCallId: 'call-1', messages: [] },
     );
-    // The route's own sentence, not the client's HTTP error around it (H-25).
+    // The route's own sentence, not the client's HTTP error around it.
     expect(result).toMatchObject({
       error:
         'accounting answers a key granted to its A2A route, and this token was not granted to it.',
@@ -350,7 +350,7 @@ describe('faceOfCard', () => {
 });
 
 describe('peerRefusalOf', () => {
-  it("says a refusing route's sentence, not the client's HTTP error (H-25)", () => {
+  it("says a refusing route's sentence, not the client's HTTP error", () => {
     const thrown = new Error(
       'HTTP error establishing stream for SendStreamingMessage: 429 . Response: ' +
         '{"detail":"You have asked Accounting 3 times today without an account: sign in to keep going, or come back tomorrow."}',

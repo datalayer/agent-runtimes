@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The Shield's policies from IAM, on a runtime (SH-50).
+"""The Shield's policies from IAM, on a runtime.
 
 A Datalayer runtime is **managed**: the organization's and the teams' Shield
 documents are IAM's, pulled for the account the runtime runs under

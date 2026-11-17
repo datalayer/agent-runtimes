@@ -1,9 +1,9 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The `identity.provider` point and the built-in `datalayer` provider (ID-20),
+"""The `identity.provider` point and the built-in `datalayer` provider,
 and the provider the runtime's target chooses for `identity.oauth_token` and
-`@requires_oauth` (ID-22).
+`@requires_oauth`.
 """
 
 from __future__ import annotations

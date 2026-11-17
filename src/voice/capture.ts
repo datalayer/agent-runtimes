@@ -4,7 +4,7 @@
  */
 
 /**
- * The microphone, for one press (VO-10, VO-62): opened by a
+ * The microphone, for one press: opened by a
  * gesture, shown while open, closed when the press ends or is cancelled.
  * What it heard is kept in memory only, until it is transcribed.
  *
@@ -18,7 +18,7 @@ export const HEARING_RATE = 16000;
 export interface Capture {
   /** How loud it is now, between 0 and 1: what the level meter shows. */
   level: () => number;
-  /** What it has heard so far, mono at 16 kHz, while it stays open: for the words as they come (VO-11). */
+  /** What it has heard so far, mono at 16 kHz, while it stays open: for the words as they come. */
   peek: () => Float32Array;
   /** Close it and give what it heard, mono at 16 kHz. */
   stop: () => Promise<Float32Array>;
@@ -63,7 +63,7 @@ export function resample(
 
 /**
  * Open the microphone. The browser's echo cancellation is asked for, so
- * the agent's own voice is not heard back (VO-13).
+ * the agent's own voice is not heard back.
  */
 export async function openMicrophone(deviceId?: string): Promise<Capture> {
   if (!navigator.mediaDevices?.getUserMedia) {
@@ -73,7 +73,7 @@ export async function openMicrophone(deviceId?: string): Promise<Capture> {
   try {
     stream = await navigator.mediaDevices.getUserMedia({
       audio: {
-        // The person's microphone, when they chose one (VO-30).
+        // The person's microphone, when they chose one.
         ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
         channelCount: 1,
         echoCancellation: true,

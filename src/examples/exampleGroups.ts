@@ -29,8 +29,8 @@ export const EXAMPLE_GROUP_ORDER = [
 ] as const;
 
 export const getExampleGroup = (id: string): string => {
-  // The library of specs, the Loop shells, and the scenes of the catalogue
-  // (A-15): the applications and what is staged with them.
+  // The library of specs, the Loop shells, and the scenes of the catalogue:
+  // the applications and what is staged with them.
   if (
     id === 'AgentspecsExample' ||
     id === 'ScenesExample' ||
@@ -43,9 +43,9 @@ export const getExampleGroup = (id: string): string => {
   // Agents reached over the A2A protocol: their own category, after A2UI.
   if (id.startsWith('AgentA2A')) return 'A2A';
   if (id.startsWith('Pap')) return 'Personal Agent Protocol';
-  // The other agent protocols' examples: signed requests, commerce (EX-10).
+  // The other agent protocols' examples: signed requests, commerce.
   if (id.startsWith('Protocol')) return 'Agent protocols';
-  // The Shield: a coding agent behind it, and its policy (SH-23).
+  // The Shield: a coding agent behind it, and its policy.
   if (id.startsWith('Shield')) return 'Shield';
   if (id.startsWith('AgUi')) return 'AG-UI';
   if (id.startsWith('CopilotKit')) return 'CopilotKit';

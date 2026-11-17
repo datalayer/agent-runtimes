@@ -4,7 +4,7 @@
  */
 
 /**
- * Hearing on Datalayer's servers (VO-34, VO-14): where a chat's
+ * Hearing on Datalayer's servers: where a chat's
  * voice hears, the recording the speech service is sent, what comes back,
  * and the person's choice to have their language detected.
  */
@@ -62,13 +62,13 @@ describe('Where a chat hears', () => {
     // auto: a language no model in the browser hears goes to the server.
     expect(hearingPlace({ language: 'de-DE', speechUrl: url })).toBe('server');
     expect(hearingPlace({ language: 'de-DE' })).toBe('device');
-    // The person asked for their language to be detected (VO-14).
+    // The person asked for their language to be detected.
     expect(
       hearingPlace({ language: 'en-US', speechUrl: url, detect: true }),
     ).toBe('server');
   });
 
-  it('asks consent for the server apart from the device (VO-61)', () => {
+  it('asks consent for the server apart from the device', () => {
     expect(consentKeyFor('desk', 'device')).toBe('desk');
     expect(consentKeyFor('desk', 'server')).toBe('desk:server');
   });
@@ -92,7 +92,7 @@ describe('Where a chat hears', () => {
   });
 });
 
-describe('A recording heard on the server (VO-34)', () => {
+describe('A recording heard on the server', () => {
   it('is a 16-bit mono WAV at 16 kHz', () => {
     const wav = new DataView(wavOf(Float32Array.from([0, 1, -1, 0.5])));
     const text = (at: number) =>
@@ -158,7 +158,7 @@ describe('A recording heard on the server (VO-34)', () => {
     });
   });
 
-  it('lets Whisper find the language when the person asked (VO-14)', async () => {
+  it('lets Whisper find the language when the person asked', async () => {
     let url = '';
     const hearing = new ServerHearing(new AllSpeech(), {
       speechUrl: 'https://r1.example',
@@ -247,7 +247,7 @@ class FakeSocket implements SpeechSocket {
   }
 }
 
-describe('Speech heard on the server as it is said (VO-11, VO-34)', () => {
+describe('Speech heard on the server as it is said', () => {
   const socket = (url: string) => new FakeSocket(url);
   afterEach(() => {
     FakeSocket.opened = [];
@@ -322,7 +322,7 @@ describe('Speech heard on the server as it is said (VO-11, VO-34)', () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 
-  it('asks the stream for no language when the person asked for detection (VO-14)', async () => {
+  it('asks the stream for no language when the person asked for detection', async () => {
     const hearing = new ServerHearing(new AllSpeech(), {
       speechUrl: 'https://r1.example',
       detect: true,
@@ -372,7 +372,7 @@ describe('Speech heard on the server as it is said (VO-11, VO-34)', () => {
     expect(silent.closed).toBe(true);
   });
 
-  it('hears a person who waits longer than the service’s silence before speaking (VO-12)', async () => {
+  it('hears a person who waits longer than the service’s silence before speaking', async () => {
     const hearing = new ServerHearing(new AllSpeech(), {
       speechUrl: 'https://r1.example',
       socket,

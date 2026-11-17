@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A harness as a Datalayer agent: ``ACPAgent(BaseAgent)`` on ``agent_shield.acp`` (SH-10).
+"""A harness as a Datalayer agent: ``ACPAgent(BaseAgent)`` on ``agent_shield.acp``.
 
 A **harness** — Claude Code, Codex, any program speaking the Agent Client
 Protocol — is launched in the runtime as a subprocess over stdio and driven
@@ -22,9 +22,9 @@ inner client classes the harness's tool calls, decides them by the policies
 - the mapping of the package's neutral events onto ``StreamEvent``s;
 - ``session/request_permission`` raised through the runtime's tool approvals
   (Waiting for you, ai-agents ``/ws``, ``GET /tool-approvals/{id}``), the
-  person's answer handed back to the harness (SH-12); a turn cancelled
+  person's answer handed back to the harness; a turn cancelled
   while it waits answers ``cancelled``;
-- the Shield's audit written to the application's record (SH-18);
+- the Shield's audit written to the application's record;
 - ``session/load`` when the harness advertises it, the replay compared with
   the record; otherwise a start-over said in a sentence, never pretended.
 
@@ -153,7 +153,7 @@ def launch_command(harness: HarnessSpec, *, home: Path | None = None) -> list[st
     never fetched at first run: it is looked for where
     ``agent-shield setup --harness <id>`` installs it
     (``~/.agent-shield/harnesses/<id>@<version>/node_modules/.bin``) and
-    then on the PATH, where the runtime image installs it at build (SH-05).
+    then on the PATH, where the runtime image installs it at build.
 
     Parameters
     ----------
@@ -278,7 +278,7 @@ def installed_bin(harness: HarnessSpec, *, home: Path | None = None) -> Path | N
     return executable.parent if prefix in executable.parents else None
 
 
-#: Where the pod's `datalayer-harnesses` sidecar listens, when the operator added one (SH-40).
+#: Where the pod's `datalayer-harnesses` sidecar listens, when the operator added one.
 SIDECAR_VARIABLE = "AGENT_RUNTIMES_HARNESS_SIDECAR_URL"
 
 
@@ -316,7 +316,7 @@ def harness_workspace(environment: Mapping[str, str] | None = None) -> Path:
     return workspace
 
 
-#: What a `_meta` key must say to be read as the vendor's own session id (MH-05).
+#: What a `_meta` key must say to be read as the vendor's own session id.
 _SESSION_ID_WORDS = ("session", "thread", "conversation")
 
 
@@ -347,7 +347,7 @@ def native_session_id_of(harness: HarnessSpec, meta: Any) -> str | None:
 def own_and_since(
     history: Sequence[Mapping[str, Any]], spec_id: str
 ) -> tuple[list[Mapping[str, Any]], str]:
-    """A conversation split for a swap back (MH-04): the person's turns that
+    """A conversation split for a swap back: the person's turns that
     are this agent's own (tagged ``agent``, or untagged — the agent's when it
     was the only one), and the turns since it was swapped away, as text.
     """
@@ -398,7 +398,7 @@ def advertised_problems(harness: HarnessSpec, answer: InitializeResponse) -> lis
     return problems
 
 
-# -- MCP, lent through the gateway (SH-14) ------------------------------------------
+# -- MCP, lent through the gateway ------------------------------------------
 
 
 @dataclass(frozen=True)
@@ -475,7 +475,7 @@ def lent_toolsets(harness: HarnessSpec, app: Any = None) -> list[LentToolset]:
                 url=f"{gateway_url()}?{query}" if query else gateway_url(),
             )
         )
-    # The companies the application works with as a personal agent (SH-70):
+    # The companies the application works with as a personal agent:
     # each a gateway toolset of its protocol at that company
     # (``?only=pap&pap-company=<domain>``), reached with the execution credential
     # as any other — the harness calls pap_sign_in, pap_ask, pap_propose as tools
@@ -495,10 +495,10 @@ def lent_toolsets(harness: HarnessSpec, app: Any = None) -> list[LentToolset]:
 
 
 class RecordAudit:
-    """The Shield's audit rows as the application's record (SH-18, SH-34).
+    """The Shield's audit rows as the application's record.
 
     The proxy writes one row per decision, action and answer, in the
-    package's vocabulary (A-01's with ACP's kinds); here each becomes an
+    package's vocabulary (the record's, with ACP's kinds); here each becomes an
     entry of the record the session API, Activity and ``/apps/activity``
     read — a ``decision`` for what a policy or a limit decided, a
     ``tool_call`` for what was done (its kind, path or command, diff or
@@ -683,7 +683,7 @@ class RecordAudit:
             return
         if event == "display":
             # The diff or the terminal a tool result carried, as the page
-            # draws it (SH-16): whole only when the record names it.
+            # draws it: whole only when the record names it.
             recorder.add(
                 "tool_call",
                 f"{title}: shown",
@@ -827,16 +827,16 @@ class ACPAgent(BaseAgent, ShieldProxy):
         """Build the agent on a harness, its command resolved (or the sidecar's URL), its policies given."""
         self._agent_id = agent_id
         #: The agentspec bound: what a session's harness row is kept under
-        #: (MH-04, per (session, agent)), the runtime's agent id when none.
+        #: (per (session, agent)), the runtime's agent id when none.
         self.spec_id = spec_id or agent_id
         #: The runtime sessions whose harness session is being loaded: a
-        #: swap waits for them (MH-06).
+        #: swap waits for them.
         self.loading: set[str] = set()
         #: The turns since this agent was swapped away, by ACP session: replayed
-        #: as text with the first prompt after a swap back (MH-04).
+        #: as text with the first prompt after a swap back.
         self._since: dict[str, str] = {}
         #: The harness's sessions whose first prompt still owes the application's
-        #: instructions (VS-23): the folder's own instructions file was kept.
+        #: instructions: the folder's own instructions file was kept.
         self._preface_due: set[str] = set()
         self.harness = harness
         self._name = name or harness.name
@@ -867,7 +867,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
         #: (which says its command) for the harness's row (which may not).
         self._terminal_commands: dict[str, str] = {}
         self._replayed: dict[str, int] = {}
-        #: ACP session -> the authority its lent MCP carries (``_authority_of``, SH-33).
+        #: ACP session -> the authority its lent MCP carries (``_authority_of``).
         self._lent_authority: dict[str, str] = {}
         self._cancelled: dict[str, asyncio.Event] = {}
         self._failures: dict[str, str] = {}
@@ -879,11 +879,11 @@ class ACPAgent(BaseAgent, ShieldProxy):
             LoadedPolicy(policy=policy, origin=_origin_of(policy))
             for policy in (policies if policies is not None else policies_of(None))
         ]
-        #: How the policies are made again when IAM's documents change (SH-50):
+        #: How the policies are made again when IAM's documents change:
         #: given the managed documents, the full set in force.
         self.policy_maker: Callable[[list[Policy]], list[Policy]] | None = policy_maker
         self._stop_listening: Callable[[], None] | None = None
-        # The authorizer and the subject (SH-72, SH-75): IAM's AuthZen
+        # The authorizer and the subject: IAM's AuthZen
         # route with the run's credential, the deployment or the account the run
         # acts as; the lent tools of a company classed by agentspecs' table, the
         # companies named so that a fetch to one is refused.
@@ -956,7 +956,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
         harness the keeper relaunched starts under the owner's minted key,
         which lives fifteen minutes: bound at creation it outlived nothing,
         and every decision after that answered *the authorizer answered 401*
-        (found on r1, 21 October 2026, SH-12). As ``_bearer_of`` does for
+        (found on r1, 21 October 2026). As ``_bearer_of`` does for
         the gateway, the token is read when it is needed.
         """
         from agent_runtimes.apps.principal import principal_token
@@ -968,7 +968,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
                 return held
         return self.credential
 
-    # -- the policies while running (SH-50, SH-54) ---------------------------------------
+    # -- the policies while running ---------------------------------------
 
     def _listen_for_policies(self) -> None:
         """Be told of IAM's changed documents, and of an outage, while this agent runs."""
@@ -989,7 +989,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
         self._stop_listening = policies.listen(changed, self.refuse_all)
 
     def _rules_from(self, runtime_session: str) -> Callable[[], list[Rule]]:
-        """The rules a person added to the runtime's session, read at every decision (SH-54)."""
+        """The rules a person added to the runtime's session, read at every decision."""
         return lambda: session_rules().of(runtime_session)
 
     def rules_in_force_of(self, runtime_session: str) -> dict[str, Any] | None:
@@ -1281,7 +1281,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
     ) -> AsyncIterator[StreamEvent]:
         """Run one turn: the harness's updates as the runtime's events, then ``done``.
 
-        Its GenAI spans written as they come (AC-12): an ``invoke_agent`` span
+        Its GenAI spans written as they come: an ``invoke_agent`` span
         for the turn, an ``execute_tool`` span for each tool call.
         """
         spans = HarnessTurnSpans(
@@ -1372,14 +1372,14 @@ class ACPAgent(BaseAgent, ShieldProxy):
                 )
 
     def _prompt_with_since(self, prompt: str, acp_session: str) -> str:
-        """The prompt, the turns since a swap away replayed before it, once (MH-04)."""
+        """The prompt, the turns since a swap away replayed before it, once."""
         since = self._since.pop(acp_session, "")
         return f"{since}\n\n{prompt}" if since else prompt
 
     def _prompt_blocks(self, prompt: str, acp_session: str) -> list[Any]:
         """
         The blocks of a turn's prompt: the application's instructions first, once per
-        harness session, when the folder's own instructions file was kept (VS-23);
+        harness session, when the folder's own instructions file was kept;
         then the prompt with the turns since a swap.
         """
         blocks: list[Any] = []
@@ -1394,7 +1394,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
     async def _traced_prompt(
         self, prompt: str, acp_session: str, runtime_session: str
     ) -> PromptResponse:
-        """The turn as a span of the trace the face arrived on (SH-51).
+        """The turn as a span of the trace the face arrived on.
 
         A child of whatever is current — the A2A or AG-UI request's span,
         which carries the caller's ``traceparent`` — so one trace runs from
@@ -1427,7 +1427,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
     ) -> tuple[str, list[StreamEvent]]:
         """The harness's session for the runtime's: kept, loaded, or new and said so."""
         runtime_session = context.session_id
-        # Whose authority the session's lent MCP carries (SH-33): a delegated
+        # Whose authority the session's lent MCP carries: a delegated
         # execution's credential, or the runtime's own. A turn under another
         # does not run on servers lent with the first.
         authority = self._authority_of(context)
@@ -1446,7 +1446,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
             )
         kept = known or await self._kept_session(runtime_session)
         # What the session is lent: the gateway's toolsets with the run's
-        # credential, in the shape the harness takes (SH-14).
+        # credential, in the shape the harness takes.
         servers = self._lent_servers(self._bearer_of(context))
         if kept and self.loads_sessions:
             # The agent replays what it kept; the queue holds it for the comparison.
@@ -1481,7 +1481,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
             while not queue.empty():
                 if isinstance(queue.get_nowait(), UserText):
                     replayed += 1
-            # Compared with this agent's own spans of the record (MH-04): a
+            # Compared with this agent's own spans of the record: a
             # session swapped away at turn 4 and back at turn 6 loads turns
             # 1–4; turns 5–6, another agent's, are replayed as text below.
             own, since = own_and_since(context.conversation_history, self.spec_id)
@@ -1530,14 +1530,14 @@ class ACPAgent(BaseAgent, ShieldProxy):
         self.sessions[acp_session].rules_from = self._rules_from(runtime_session)
         native = native_session_id_of(self.harness, getattr(answer, "field_meta", None))
         await self._keep_session(runtime_session, acp_session, native)
-        # The folder's own instructions file kept (VS-23): said first, and the
+        # The folder's own instructions file kept: said first, and the
         # application's instructions owed to the harness with its first prompt.
         self._preface_due.add(acp_session)
         kept_line = kept_said(self.lent_files, self.harness, self.workspace)
         opening = [_said(kept_line)] if kept_line else []
         return acp_session, opening + ([_said(sentence)] if sentence else [])
 
-    # -- what was written for it is read-only to it (SH-21) ------------------------------
+    # -- what was written for it is read-only to it ------------------------------
 
     def decide(
         self, session: SessionState, action: Action, *, key: str | None = None
@@ -1565,7 +1565,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
             )
         return ShieldProxy.decide(self, session, action, key=key)
 
-    # -- MCP lent (SH-14) ----------------------------------------------------------------
+    # -- MCP lent ----------------------------------------------------------------
 
     @property
     def lends_over_http(self) -> bool:
@@ -1578,10 +1578,10 @@ class ACPAgent(BaseAgent, ShieldProxy):
         """The credential this run reaches the gateway with.
 
         The execution's own, when the run was delegated with one (``_meta`` or
-        ``metadata`` ``datalayer.credential``, O1-17): the narrowest authority
+        ``metadata`` ``datalayer.credential``): the narrowest authority
         the run holds, so the lent MCP — and every sub-agent the harness
         spawns, which reaches MCP through the servers it was lent — is held
-        to that execution's manifest at the gateway (SH-33).
+        to that execution's manifest at the gateway.
         Else a deployment's principal, else the run's, else the caller's.
         """
         from agent_runtimes.apps.principal import deployment_of, principal_token
@@ -1680,7 +1680,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
         """Whether the harness advertised ``loadSession`` — and its spec's
         capabilities table says its session comes back (``resume`` not
         ``none``): a harness declared ``none`` starts over, said, whatever
-        it advertises (MH-20).
+        it advertises.
         """
         if self.harness.capabilities.resume == "none":
             return False
@@ -1697,7 +1697,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
         return f"{self.spec_id}:{runtime_session}"
 
     async def harness_row(self, runtime_session: str) -> dict[str, Any] | None:
-        """The harness's row for the runtime's session, as kept (MH-04, MH-05)."""
+        """The harness's row for the runtime's session, as kept."""
         if self.state_store is None:
             return None
         return await self.state_store.get(
@@ -1716,9 +1716,9 @@ class ACPAgent(BaseAgent, ShieldProxy):
         native_session_id: str | None = None,
     ) -> None:
         """Keep the harness's session for the runtime's in the protocol state
-        store: one row per (session, agent), never deleted on a swap (MH-04);
+        store: one row per (session, agent), never deleted on a swap;
         the vendor's own session id beside the ACP one when the adapter
-        exposes it, said absent when it does not (MH-05).
+        exposes it, said absent when it does not.
         """
         if self.state_store is None:
             return
@@ -1762,7 +1762,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
         token = _SESSION.set(runtime_session)
         try:
             # A refused turn is a turn too: a session whose only turn was
-            # refused has it to count, list and resume from (MH-42).
+            # refused has it to count, list and resume from.
             if status in ("answered", "stopped"):
                 recorder.turned(
                     asked, answered if status == "answered" else f"Stopped: {answered}"
@@ -1880,7 +1880,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
                 for terminal_id in terminal_ids:
                     self._terminal_commands[terminal_id] = own_command
             if event.status in ("completed", "failed"):
-                # The page's display of the result (SH-16): the diff,
+                # The page's display of the result: the diff,
                 # or the terminal with its output kept after release.
                 shown = self._shown.pop(event.tool_call_id, displays)
                 terminals = [
@@ -1931,7 +1931,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
                         },
                     )
                 ]
-            # A terminal still running (SH-13, SH-16): its output so far rides
+            # A terminal still running: its output so far rides
             # the row as the page's display, so the terminal card fills while
             # the command runs — the Shield pushes it whole at each change.
             running = (
@@ -1996,7 +1996,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
         # are never handed up by `normalize`: nothing is guessed into a row.
         raise RuntimeError(f"no StreamEvent for the harness event {event.event!r}")
 
-    # -- permissions (SH-12) -------------------------------------------------------------
+    # -- permissions -------------------------------------------------------------
 
     async def _person_answers(
         self,
@@ -2213,15 +2213,15 @@ def harness_agent(
     read_organization: Any = None,
     spec_id: str = "",
 ) -> ACPAgent:
-    """An agent on a harness, resolved through the ``harness`` registry (MH-F02): not yet started.
+    """An agent on a harness, resolved through the ``harness`` registry: not yet started.
 
     The catalogue contributes its harnesses; a third party's package
-    contributes its own; an ``org-…`` harness is the organization's own
-    (SH-46), read from IAM for ``organization_uid`` with ``credential``
+    contributes its own; an ``org-…`` harness is the organization's own,
+    read from IAM for ``organization_uid`` with ``credential``
     (``read_organization`` stands in for IAM in tests) and contributed for
     that organization alone, served only once the policies in force admit its
     reviewed command (``<id>@<digest>``). A harness of the register's listed
-    tier is refused *listed, not drilled yet* (SH-57). The contribution's
+    tier is refused *listed, not drilled yet*. The contribution's
     adapter makes the agent: :func:`acp_harness_agent` for every ACP harness.
 
     Parameters
@@ -2332,9 +2332,9 @@ def acp_harness_agent(
 ) -> ACPAgent:
     """An ``ACPAgent`` on a harness spec: the adapter every ACP harness contribution names.
 
-    The policies in force (SH-50) admit it — an organization's own by its
+    The policies in force admit it — an organization's own by its
     reviewed command's digest — the application's skills and instructions are
-    written for it (SH-21), and the sidecar bridge (SH-40) runs it when the
+    written for it, and the sidecar bridge runs it when the
     pod has one.
 
     Raises
@@ -2355,7 +2355,7 @@ def acp_harness_agent(
     lent = lent_toolsets(harness, app)
     root = workspace or harness_workspace(environment)
     lent_names = [item.name for item in lent]
-    # The policies in force (SH-50): IAM's documents for the account —
+    # The policies in force: IAM's documents for the account —
     # fail closed, in a sentence naming IAM, when none can be read —, the
     # application's Rules, the platform's default; the harness admitted by them.
     try:
@@ -2375,12 +2375,12 @@ def acp_harness_agent(
         raise HarnessRefused(refused)
     # The repository the application is lent, checked out as the workspace,
     # then its skills and instructions, in the harness's format, before it
-    # starts (SH-21).
+    # starts.
     lent_repository = lend_repository(root, app)
     if lent_repository:
         logger.info("Harness %s lent %s", harness.id, lent_repository)
     lent_files = write_lent_files(root, harness, app, lent_names)
-    # The sidecar bridge (SH-40): with the pod's `datalayer-harnesses`
+    # The sidecar bridge: with the pod's `datalayer-harnesses`
     # container beside this one, the harness runs there, reached over the
     # WebSocket channel at `<url>/acp/<harness>`; the Shield here decides the
     # same. Without it, the adapter is launched in this container.

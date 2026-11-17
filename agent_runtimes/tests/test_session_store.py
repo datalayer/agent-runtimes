@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The `session.store` point and its two contributions (MH-F03).
+"""The `session.store` point and its two contributions.
 
 The file store keeps a session whole under `~/.datalayer/sessions/<uid>/`
 (the operations of the model against it: list, get, entries, append, copy,

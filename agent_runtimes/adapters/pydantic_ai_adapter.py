@@ -62,7 +62,7 @@ def model_messages(history: list[Any]) -> list[ModelMessage]:
     own message objects, so each message becomes one: the person's a request,
     the agent's a response, a system message a system prompt. A message that
     already is pydantic-ai's is kept as it is. This is how an A2A task's
-    context, and the checkpoint a resumed run starts from (O2-05), reach the
+    context, and the checkpoint a resumed run starts from, reach the
     model.
 
     Parameters
@@ -523,10 +523,10 @@ class PydanticAIAdapter(BaseAgent):
         An application's run reaches it as its AG-UI runs do
         (`gateway_toolsets_of_the_run`): a deployment as its principal, with
         the companies it works with — over A2A too, where a company's turn
-        reaches its kept deployment (B-04: found on r1, its
+        reaches its kept deployment (found on r1, its
         agent answered without the company's tools it was given). Any other
         run with an identity of its own reaches it with that identity, never
-        with the process's key (O1-17).
+        with the process's key.
         """
         toolsets = await self._get_runtime_toolsets_async()
         from ..models.models import app_instance_of
@@ -535,7 +535,7 @@ class PydanticAIAdapter(BaseAgent):
             from ..apps.principal import gateway_toolsets_of_the_run
             from ..apps.sessions import agent_code_toolset
 
-            # And the tools of its code, when it is written in Python (R-14): a session adds them itself, a run over A2A only here.
+            # And the tools of its code, when it is written in Python: a session adds them itself, a run over A2A only here.
             own = agent_code_toolset(self._agent_id)
             gateway = await gateway_toolsets_of_the_run(
                 self._agent_id, toolsets, user_token
@@ -545,7 +545,7 @@ class PydanticAIAdapter(BaseAgent):
             from ..mcp.datalayer_gateway import toolsets_for_the_run
 
             return toolsets_for_the_run(toolsets, user_token)
-        # As the process holds them, but the books only for a Battle's run (B4-01).
+        # As the process holds them, but the books only for a Battle's run.
         from ..apps.battle_books import books_left_out
 
         return books_left_out(toolsets)
@@ -614,8 +614,8 @@ class PydanticAIAdapter(BaseAgent):
                     from ..mcp.google_workspace import toolset_for_the_run
 
                     # Gmail, for this run only, in the name of whom it acts
-                    # for: every request carries a token IAM minted for them
-                    # (W-02), never the process's or anybody else's.
+                    # for: every request carries a token IAM minted for them,
+                    # never the process's or anybody else's.
                     toolsets.append(
                         toolset_for_the_run(
                             self._agent_id,
@@ -662,7 +662,7 @@ class PydanticAIAdapter(BaseAgent):
                     logger.warning(
                         f"PydanticAIAdapter [{self._name}]: {origin} MCP server '{server_id}' not running, skipping"
                     )
-                    # Started again for the next turn (H-03).
+                    # Started again for the next turn.
                     lifecycle_manager.retry_in_background(server_id)
 
         elif codemode_enabled:
@@ -785,7 +785,7 @@ class PydanticAIAdapter(BaseAgent):
             run_kwargs_base: dict[str, Any] = {
                 "toolsets": runtime_toolsets,
             }
-            # The model budget a delegation set on this run (O1-07).
+            # The model budget a delegation set on this run.
             usage_limits = usage_limits_for(
                 context.metadata.get("budget") if context.metadata else None
             )
@@ -796,7 +796,7 @@ class PydanticAIAdapter(BaseAgent):
                 from ..context.delegation import SteerCapability
 
                 # What is steered into this run reaches its model within the
-                # turn, before its next model request (O2-05).
+                # turn, before its next model request.
                 run_kwargs_base["capabilities"] = [SteerCapability(steer_run)]
             if model_override:
                 run_kwargs_base["model"] = model_override
@@ -1034,7 +1034,7 @@ class PydanticAIAdapter(BaseAgent):
                 if deferred_tool_results is not None:
                     run_kwargs["deferred_tool_results"] = deferred_tool_results
                 # The model budget a delegation set on this run: pydantic-ai
-                # stops the run when a limit is reached (O1-07).
+                # stops the run when a limit is reached.
                 usage_limits = usage_limits_for(
                     context.metadata.get("budget") if context.metadata else None
                 )
@@ -1047,7 +1047,7 @@ class PydanticAIAdapter(BaseAgent):
                     from ..context.delegation import SteerCapability
 
                     # What is steered into this run reaches its model within
-                    # the turn, before its next model request (O2-05).
+                    # the turn, before its next model request.
                     run_kwargs["capabilities"] = [SteerCapability(steer_run)]
 
                 # -- launch agent.run() concurrently --------------------------
@@ -1110,7 +1110,7 @@ class PydanticAIAdapter(BaseAgent):
 
         except UsageLimitExceeded as e:
             # Stopped by the budget the delegation set: said as such, so the
-            # transport can tell its caller which limit it was (O1-07).
+            # transport can tell its caller which limit it was.
             yield StreamEvent(type="error", data=reached(e))
         except Exception as e:
             yield StreamEvent(type="error", data=str(e))

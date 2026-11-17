@@ -40,7 +40,7 @@ export type ApprovalRecord = {
   updated_at?: string;
   updatedAt?: string;
   read?: boolean;
-  /** The execution waiting on it, when a run the control plane dispatched asked (MH-42). */
+  /** The execution waiting on it, when a run the control plane dispatched asked. */
   execution_id?: string;
   executionId?: string;
   /** The team and the seat that asked, when a team seat did. */
@@ -140,7 +140,7 @@ export type SeatSource = {
 };
 
 /**
- * The team seat that asked (MH-42): the approval's `team` and `seat`, else
+ * The team seat that asked: the approval's `team` and `seat`, else
  * its agent id when it is a seat's (`team:<team>/<seat>`); `null` for an
  * approval no team seat asked.
  */
@@ -163,7 +163,7 @@ export type ApprovalArgs = {
   toolArgs?: Record<string, unknown>;
 };
 
-/** A message it asks to send, as the approval carries it, whole (W-05). */
+/** A message it asks to send, as the approval carries it, whole. */
 export type MessageAsked = {
   to: string;
   cc: string;
@@ -192,7 +192,7 @@ const addressed = (value: unknown): string =>
       : '';
 
 /**
- * The message a send asks for, to show whole before *Approve* (W-05):
+ * The message a send asks for, to show whole before *Approve*:
  * an approval whose arguments say to whom and what. `null` for anything else.
  */
 export function messageOfApproval(approval: ApprovalArgs): MessageAsked | null {

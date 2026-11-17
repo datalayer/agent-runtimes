@@ -4,7 +4,7 @@
  */
 
 /**
- * The preset per kind (R-01, R-01b, R-02): which plugins an
+ * The preset per kind: which plugins an
  * application's kind needs and how its workspace is laid out — a chat, a
  * widget or a worker as its agent, its page and the Canvas's blocks; a
  * decision as the page its host draws, in a workspace without a
@@ -62,11 +62,11 @@ describe('the preset per kind', () => {
   it('runs a chat as its agent and the feedback its record keeps, laid out as a conversation', () => {
     const preset = appPreset(APP_CATALOGUE['web-research']);
     expect(names(preset.plugins)).toEqual([
-      // Its page plugin, named as its runtime's is (F-15), and what tells
+      // Its page plugin, named as its runtime's is, and what tells
       // it which of them its runtime holds.
       'loop-app-web-research',
       '@datalayer/loop-plugin-app-runtime',
-      // Its code in the browser's sandbox, when it turns in the page (E-11).
+      // Its code in the browser's sandbox, when it turns in the page.
       '@datalayer/loop-plugin-app-browser-sandbox-web-research',
       '@datalayer/loop-plugin-app-feedback-web-research',
       '@datalayer/loop-plugin-app-elements',

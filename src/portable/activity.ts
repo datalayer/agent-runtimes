@@ -4,12 +4,12 @@
  */
 
 /**
- * What an application is doing (R-15), as ai-agents answers
+ * What an application is doing, as ai-agents answers
  * `/api/ai-agents/v1/apps/activity`, its record's entries (`/apps/records`)
  * and its sessions as the record lists them (`/apps/sessions`: state,
  * agent, title, lineage, where each runs — the row a runtime describes a
  * held session with too): read and said the same by the Studio, the chat
- * and Datalayer Mobile (M-015b). Pure: each client fetches with its own
+ * and Datalayer Mobile. Pure: each client fetches with its own
  * authentication and hands the body here.
  *
  * @module portable/activity
@@ -19,7 +19,7 @@ import { RUN_END_WORDS } from './records';
 
 export type RecordKind =
   | 'session'
-  /** A run began: in progress until it answers (R-15). Not a step. */
+  /** A run began: in progress until it answers. Not a step. */
   | 'run'
   | 'tool_call'
   | 'decision'
@@ -27,11 +27,11 @@ export type RecordKind =
   | 'approval'
   | 'output'
   | 'feedback'
-  /** A turn of a conversation: what was asked, what it answered (V-16). */
+  /** A turn of a conversation: what was asked, what it answered. */
   | 'turn'
-  /** What it did, step by step (P-16); a harness's session, turn and plan events. */
+  /** What it did, step by step; a harness's session, turn and plan events. */
   | 'step'
-  /** What one of its channels was sent, or why not: `{channel, event, delivery, detail}` (R-37). */
+  /** What one of its channels was sent, or why not: `{channel, event, delivery, detail}`. */
   | 'notification';
 
 /** One entry of an application's record. */
@@ -113,7 +113,7 @@ export function sessionSentence(entries: readonly RecordEntry[]): string {
   return `${parts.join(', ')}.`;
 }
 
-/** A run its schedule plans, as the scheduler says (R-15). */
+/** A run its schedule plans, as the scheduler says. */
 export type ScheduledRun = {
   deploymentUid: string;
   appUid: string;
@@ -357,7 +357,7 @@ export function sessionAgentSaid(
     : session.agent;
 }
 
-/** What an application, or all of a person's, is doing (R-15): real use only, its tests read apart. */
+/** What an application, or all of a person's, is doing: real use only, its tests read apart. */
 export type AppActivity = {
   /** Sessions whose latest run has not answered yet, newest first: their run's start. */
   inProgress: RecordEntry[];
@@ -431,7 +431,7 @@ export const ACTIVITY_WORDS = {
   nothing: 'Nothing yet.',
 } as const;
 
-/** What happens that starts it on its own, in words (W-03): its event triggers. */
+/** What happens that starts it on its own, in words: its event triggers. */
 export const wakesOn = (
   triggers:
     | ReadonlyArray<{ type: string; event?: string; description?: string }>

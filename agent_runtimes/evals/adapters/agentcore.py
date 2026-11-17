@@ -1,14 +1,14 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""AgentCore Evaluations as an evals adapter (AC-14).
+"""AgentCore Evaluations as an evals adapter.
 
 Beside harbor and inspect_ai, which run a framework's own cases in a
 sandbox, this adapter judges agent-runtimes' own runs with Amazon Bedrock
 AgentCore's evaluators:
 
 1. a case is run by the local runner (`agent_runtimes.evals.local.runner`),
-   the agent's GenAI spans captured as they are written (AC-12);
+   the agent's GenAI spans captured as they are written;
 2. those spans, as OpenTelemetry documents carrying the run's
    ``session.id``, are sent to AgentCore Evaluations on demand:
    ``bedrock-agentcore`` ``Evaluate``, once per chosen evaluator

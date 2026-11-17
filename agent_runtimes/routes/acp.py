@@ -166,7 +166,7 @@ class ACPErrorCode:
 # connection's session: process state, made again by whoever connects. The
 # sessions themselves are records of the protocol state store
 # (`protocol_state/acp.py`), so `session/load` on a restarted runtime finds the
-# session a client names (O1-11).
+# session a client names.
 _agents: dict[str, tuple[BaseAgent, AgentInfo]] = {}
 _adapters: dict[str, ACPTransport] = {}
 
@@ -249,7 +249,7 @@ def cancel_all_prompts() -> int:
     return count
 
 
-# -- ACP in, ACP out (SH-17) --------------------------------------------------
+# -- ACP in, ACP out --------------------------------------------------
 
 
 class PermissionRelay:
@@ -560,7 +560,7 @@ async def websocket_endpoint(websocket: WebSocket, agent_id: str) -> None:
         websocket.headers.get("authorization"),
         websocket.headers.get("x-external-token"),
     )
-    # The IDE's answers to a harness's permissions (SH-17).
+    # The IDE's answers to a harness's permissions.
     relay = PermissionRelay(websocket)
 
     try:
@@ -570,7 +570,7 @@ async def websocket_endpoint(websocket: WebSocket, agent_id: str) -> None:
             message = ACPMessage(**data)
 
             # A response, not a request: the IDE answering a permission the
-            # route asked it (SH-17). Read by its id; an id nobody asked is said.
+            # route asked it. Read by its id; an id nobody asked is said.
             if message.method is None:
                 if message.id is None or not relay.answered(
                     message.id, message.result, message.error
@@ -595,7 +595,7 @@ async def websocket_endpoint(websocket: WebSocket, agent_id: str) -> None:
                     _adapters[session_id] = adapter
 
             # ACP spec method: authenticate. A browser opens a websocket with
-            # no header of its own, so a notebook's panel (SH-49) says
+            # no header of its own, so a notebook's panel says
             # who it is in a message, as agent-shield's `serve` takes it:
             # methodId `bearer`, the token in `_meta.token` — never in the
             # address. The token is the connection's from then on, as the
@@ -639,7 +639,7 @@ async def websocket_endpoint(websocket: WebSocket, agent_id: str) -> None:
 
             # ACP spec method: session/prompt. On a task of its own, so this
             # loop goes on reading while the prompt runs: the `session/cancel`
-            # that stops it arrives on this same connection (O1-11).
+            # that stops it arrives on this same connection.
             elif message.method == "session/prompt":
                 prompted_session_id = (message.params or {}).get("sessionId")
                 if (
@@ -742,13 +742,13 @@ async def websocket_endpoint(websocket: WebSocket, agent_id: str) -> None:
                     from ..context.delegation import pause_asked, request_pause
 
                     # A cancel that asks to pause (the Datalayer orchestration
-                    # extension, O2-05): the turn keeps a checkpoint of its
+                    # extension): the turn keeps a checkpoint of its
                     # conversation and answers with it, rather than only stopping.
                     if pause_asked((message.params or {}).get("_meta")):
                         request_pause(cancelled_session_id)
                     cancel_prompt(cancelled_session_id)
 
-            # The Datalayer orchestration extension's steer (O2-05), a
+            # The Datalayer orchestration extension's steer, a
             # notification: the instructions reach the session's running turn
             # before its next model request, and a session not working drops
             # them.
@@ -818,7 +818,7 @@ async def websocket_endpoint(websocket: WebSocket, agent_id: str) -> None:
             del _adapters[session_id]
 
 
-#: The one authentication method the route takes in a message (SH-49), as
+#: The one authentication method the route takes in a message, as
 #: agent-shield's ``serve`` names it: the token in ``_meta.token``.
 AUTH_METHOD = "bearer"
 
@@ -875,7 +875,7 @@ async def _handle_initialize(
     result = {
         "protocolVersion": ACP_PROTOCOL_VERSION,
         # A client with no header of its own (a browser) authenticates in a
-        # message (SH-49); a client that sent `Authorization` need not.
+        # message; a client that sent `Authorization` need not.
         "authMethods": [
             {
                 "id": AUTH_METHOD,
@@ -884,17 +884,17 @@ async def _handle_initialize(
             }
         ],
         "agentCapabilities": {
-            # The Datalayer orchestration extension (O2-05): a prompt may name
+            # The Datalayer orchestration extension: a prompt may name
             # its execution and resume from a checkpoint, a `session/cancel`
             # may ask to pause at one, and `_datalayer/steer` reaches the
             # running turn.
             "_meta": {"datalayer": {"extensions": [EXTENSION_URI]}},
             # A session outlives this process, and its conversation is
-            # replayed on `session/load` (O1-11).
+            # replayed on `session/load`.
             "loadSession": True,
             "promptCapabilities": {
                 "image": False,
-                # Heard by the speech service, the prompt its transcript (VO-28).
+                # Heard by the speech service, the prompt its transcript.
                 "audio": True,
                 "embeddedContext": True,
             },
@@ -981,7 +981,7 @@ async def _handle_new_session(
         "sessionId": session_id,
     }
     if harness_workspace is not None:
-        # Where the harness works (SH-49): a notebook's panel shows the
+        # Where the harness works: a notebook's panel shows the
         # harness's edits against the runtime's files, so it is told the
         # workspace its paths are in, which is not the cwd it sent.
         result["_meta"] = {"datalayer": {"workspace": str(harness_workspace)}}
@@ -1011,7 +1011,7 @@ async def _handle_prompt(
     and returns stopReason when complete.
     """
     params = message.params or {}
-    # The prompt's content blocks, under the name the schema gives them (O1-11).
+    # The prompt's content blocks, under the name the schema gives them.
     content = params.get("prompt", [])
     metadata = params.get("metadata", {})
     metadata_identities = (
@@ -1024,7 +1024,7 @@ async def _handle_prompt(
         logger.info(f"ACP: Using model from request metadata: {model}")
 
     # Audio the client sent is heard first, with the connection's token, and
-    # the prompt is its transcript, marked spoken (VO-28).
+    # the prompt is its transcript, marked spoken.
     from ..voice import hear
     from ..voice.protocol_audio import AudioNotHeard, hear_acp_prompt
 
@@ -1066,12 +1066,12 @@ async def _handle_prompt(
     from ..guardrails.model_budget import ModelBudgetReached, acp_stop_reason
 
     # The model budget the delegation set on this turn, in the schema's `_meta`:
-    # the adapter applies it as the run's usage limits (O1-07).
+    # the adapter applies it as the run's usage limits.
     budget = delegated_budget(params.get("_meta"))
     if budget:
         context_metadata["budget"] = budget
     # The execution's token, taken out of `_meta` before anything keeps the
-    # prompt: the turn's identity, and its Datalayer MCP toolset's (O1-17).
+    # prompt: the turn's identity, and its Datalayer MCP toolset's.
     from ..checkpoints.protocol_state import ProtocolStateCheckpointStore
     from ..context.delegation import (
         DELEGATED_CREDENTIAL,
@@ -1084,16 +1084,16 @@ async def _handle_prompt(
     delegated_credential = take_credential(params.get("_meta"))
     if delegated_credential:
         context_metadata["user_token"] = delegated_credential
-        # Said apart, so a harness lends its MCP with it (SH-33).
+        # Said apart, so a harness lends its MCP with it.
         context_metadata[DELEGATED_CREDENTIAL] = delegated_credential
     budget_meta: dict[str, Any] | None = None
 
     # The execution this turn is for, whose checkpoints it keeps, and the one
-    # it resumes from when it was paused (O2-05); what is steered into it while
+    # it resumes from when it was paused; what is steered into it while
     # it works reaches its model within the turn.
     execution_id = execution_of(params.get("_meta"))
     # On the turn, where its tools read it: an orchestrated turn asks the
-    # control plane for its children rather than taking them (O2-06).
+    # control plane for its children rather than taking them.
     enter_execution(params.get("_meta"))
     # The conversation before this prompt — none, or the checkpoint's. The
     # prompt is not part of it: the adapter is given the prompt once, as such.
@@ -1118,7 +1118,7 @@ async def _handle_prompt(
     context_metadata["steer_run"] = session_id
     if relay is not None:
         # A harness's *ask me first* reaches this IDE with the same options,
-        # and nothing a Rule already decided does (SH-17).
+        # and nothing a Rule already decided does.
         context_metadata["approvals"] = RelayApprovals(relay, session_id)
 
     context = AgentContext(
@@ -1131,7 +1131,7 @@ async def _handle_prompt(
     start_time = time.perf_counter()
     tool_call_count = 0
     # The tool calls this turn already told the IDE of: a later event on one
-    # is a `tool_call_update` (SH-17).
+    # is a `tool_call_update`.
     told: set[str] = set()
     response_chunks: list[str] = []
     completed_without_error = False
@@ -1141,7 +1141,7 @@ async def _handle_prompt(
     await sessions.append_turn(session_id, "user", prompt)
     session_agent_id = session.agent_id if session else None
     # What the turn spends, counted from here: answered with the turn, so the
-    # control plane knows what its attempt cost (O2-10), and kept in the metrics.
+    # control plane knows what its attempt cost, and kept in the metrics.
     turn = TurnSpend.begin(session_agent_id)
 
     session_user_id = session.context.user_id if session and session.context else None
@@ -1150,7 +1150,7 @@ async def _handle_prompt(
         metadata_identities
     )
     # The execution's token is the turn's identity when the prompt delegated
-    # one (O1-17); otherwise the identity hints', or the connection's.
+    # one; otherwise the identity hints', or the connection's.
     user_jwt_token = delegated_credential or hint_token or user_jwt_token
     if hint_user_id:
         session_user_id = hint_user_id
@@ -1178,7 +1178,7 @@ async def _handle_prompt(
             from ..context.delegation import close_steering, open_steering
 
             # Steerable while it works: what arrives on `_datalayer/steer` for
-            # this session reaches its model before the next request (O2-05).
+            # this session reaches its model before the next request.
             open_steering(session_id)
             stream = agent.stream(prompt, context).__aiter__()
             cancelled = asyncio.ensure_future(cancel_event.wait())
@@ -1186,7 +1186,7 @@ async def _handle_prompt(
                 while not cancelled.done():
                     # The next event or the cancel, whichever comes first: an
                     # agent waiting in the middle of its answer is stopped
-                    # where it waits, not after its next event (O1-11).
+                    # where it waits, not after its next event.
                     step = asyncio.ensure_future(stream.__anext__())
                     await asyncio.wait(
                         {step, cancelled}, return_when=asyncio.FIRST_COMPLETED
@@ -1216,7 +1216,7 @@ async def _handle_prompt(
                         event_data, ModelBudgetReached
                     ):
                         # The turn's budget, reached: a stop reason the schema
-                        # has, and which limit in `_meta` (O1-07).
+                        # has, and which limit in `_meta`.
                         stop_reason = acp_stop_reason(event_data.limit)
                         budget_meta = refusal_meta(event_data)
                         break
@@ -1301,7 +1301,7 @@ async def _handle_prompt(
                 forget_pause(session_id)
                 if execution_id:
                     # Paused, not cancelled: the turn's conversation so far is
-                    # kept where a resume finds it, in whichever process (O2-05).
+                    # kept where a resume finds it, in whichever process.
                     kept = [*history, {"role": "user", "content": prompt}]
                     if response_chunks:
                         kept.append(
@@ -1450,7 +1450,7 @@ def _convert_event_to_session_update(
     - tool_call
     - tool_call_update
     - agent_thought_chunk
-    - plan, available_commands_update, current_mode_update (a harness's, SH-17)
+    - plan, available_commands_update, current_mode_update (a harness's)
 
     ``told`` holds the tool calls the turn already announced: a harness's
     later event on one is a ``tool_call_update``, as ACP spells it.
@@ -1478,7 +1478,7 @@ def _convert_event_to_session_update(
         return None
 
     # As the ACP schema spells an update: nested under `update`, its text in a
-    # content block (O1-11).
+    # content block.
     if event_type == "text":
         return _session_update(
             session_id,

@@ -1,9 +1,9 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The Shield's audit in the record and its trace across the chain (SH-34, SH-51, SH-37).
+"""The Shield's audit in the record and its trace across the chain.
 
-Every Shield row reaches the application's record in A-01's vocabulary
+Every Shield row reaches the application's record in its safe vocabulary
 extended with ACP's kinds; a diff is whole only when the record names
 ``diffs``, a terminal's output only when it names ``terminals``; a credential
 in a row is redacted before anything keeps, logs or counts it. The turn is a
@@ -389,7 +389,7 @@ class TestWhatIsKeptWhole:
 
 
 class TestNothingSecret:
-    """SH-37's drill: a secret in a tool argument is refused by the policy's rule and never kept as written."""
+    """A drill: a secret in a tool argument is refused by the policy's rule and never kept as written."""
 
     def test_a_credential_in_a_command_is_redacted_at_the_row(self) -> None:
         recorder = Recorder()

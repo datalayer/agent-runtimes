@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The ``session.hook`` point and its first two hooks (MH-F06): the audit
+"""The ``session.hook`` point and its first two hooks: the audit
 rows in the record, and an OTEL span per operation.
 
 Every operation of the session — open, resume, swap, clone, export, import,
@@ -10,7 +10,7 @@ operation's facts; a hook that refuses stops the operation with its sentence
 (:class:`~agent_runtimes.plugins.points.HookRefused`), and one that raises
 anything else stops it too, saying which hook raised — never swallowed.
 
-The **audit hook** writes the session's audit rows (MH-30) through the
+The **audit hook** writes the session's audit rows through the
 recorder: ``swapped``, ``cloned`` (on both sessions), ``exported``,
 ``imported``; ``paused`` and ``ended`` are the session's own and written by
 it. The **OTEL hook** opens a span under the session's trace through the

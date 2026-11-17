@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A2A Agent Card extensions: read, published from contributions, negotiated (PR-02)."""
+"""A2A Agent Card extensions: read, published from contributions, negotiated."""
 
 from __future__ import annotations
 
@@ -168,7 +168,7 @@ def test_publishing_refuses_a_uri_twice():
         merge_extensions(builtin, [{"uri": FACE_URI}])
 
 
-# --- the paired fixture (PR-51, EX-09): `a2aExtensions.unit.test.ts` reads it too ---
+# --- the paired fixture: `a2aExtensions.unit.test.ts` reads it too ---
 
 _FIXTURE = json.loads(
     (

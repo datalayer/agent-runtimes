@@ -238,7 +238,7 @@ def load_fragments(specs_dir: Path) -> List[Dict[str, Any]]:
 
 def refuse_tools_field(spec: Dict[str, Any], path: Path) -> None:
     """Refuse an agent spec that still says `tools` (it is `backend_tools` now) or
-    `ui_plugin` (it is `ui` now, PS-03).
+    `ui_plugin` (it is `ui` now).
     """
     if "ui_plugin" in spec:
         raise SystemExit(
@@ -316,7 +316,7 @@ def load_yaml_specs(specs_dir: Path) -> List[tuple[str, Dict[str, Any]]]:
 
 
 def check_voices(specs: List[tuple[str, Dict[str, Any]]]) -> None:
-    """Refuse an agent whose `voice` is not an `interface.voice` block of the voice catalogue (VO-41)."""
+    """Refuse an agent whose `voice` is not an `interface.voice` block of the voice catalogue."""
     from agentspecs.apps import agent_voice_problems
 
     problems = [
@@ -339,7 +339,7 @@ def voice_of(spec: Dict[str, Any]) -> Dict[str, Any] | None:
 
 
 def load_protocol_ids(specs_dir: Path) -> set[str]:
-    """Every id of the protocols catalogue (`agentspecs/protocols`, PS-01)."""
+    """Every id of the protocols catalogue (`agentspecs/protocols`)."""
     ids: set[str] = set()
     for yaml_file in sorted((specs_dir.parent / "protocols").glob("*.yaml")):
         protocol = yaml.safe_load(yaml_file.read_text()) or {}
@@ -384,7 +384,7 @@ def check_identities(
 def check_protocols(
     specs: List[tuple[str, Dict[str, Any]]], protocol_ids: set[str]
 ) -> None:
-    """Refuse an agent whose `protocols` is not a list of the catalogue's ids, each once (PS-02)."""
+    """Refuse an agent whose `protocols` is not a list of the catalogue's ids, each once."""
     problems = []
     for _, spec in specs:
         said = spec.get("protocols")
@@ -408,7 +408,7 @@ BUILTIN_HARNESSES = ("pydantic-ai", "vercel-ai")
 
 
 def load_harnesses(specs_dir: Path) -> dict[str, dict[str, Any]]:
-    """Every harness of the catalogue (`agentspecs/harnesses`, SH-01), by id."""
+    """Every harness of the catalogue (`agentspecs/harnesses`), by id."""
     harnesses: dict[str, dict[str, Any]] = {}
     for yaml_file in sorted((specs_dir.parent / "harnesses").glob("*.yaml")):
         if yaml_file.name == "register.yaml":
@@ -422,7 +422,7 @@ def load_harnesses(specs_dir: Path) -> dict[str, dict[str, Any]]:
 def check_harnesses(
     specs: List[tuple[str, Dict[str, Any]]], harnesses: dict[str, dict[str, Any]]
 ) -> None:
-    """Refuse an agent naming a harness the catalogue does not know, or asking what it cannot honour (SH-01)."""
+    """Refuse an agent naming a harness the catalogue does not know, or asking what it cannot honour."""
     problems = []
     for _, spec in specs:
         harness_id = str(spec.get("harness") or BUILTIN_HARNESSES[0])

@@ -1,15 +1,15 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A new application's folder: what ``loop apps init`` writes (P-01, E-13).
+"""A new application's folder: what ``loop apps init`` writes.
 
 A folder named by the application's id, holding its Appspec, ``app.yaml``,
 and — written in Python — the ``app.py`` that is its source, the spec beside
-it built from it (`loop apps build`, P-07), so the two agree from the start:
+it built from it (`loop apps build`), so the two agree from the start:
 
 - **blank**: a chat or a widget, its agent the one a blank application starts
   with in the Studio (``example-simple``) — written in Python, the blank
-  agent this process builds (``example-blank``, P-32); a worker or a decision says more
+  agent this process builds (``example-blank``); a worker or a decision says more
   than a name (what starts its work, what it decides), so it starts from an
   example;
 - **from an example** of the catalogue (``--from support-desk``): its spec,
@@ -18,9 +18,9 @@ it built from it (`loop apps build`, P-07), so the two agree from the start:
   ready for code.
 
 Beside them, ``tests/test_app.py``: what the folder's CI runs with
-``pytest`` (E-13) — the spec passes the instant checks, each of its
+``pytest`` — the spec passes the instant checks, each of its
 test conversations says what it is asked and what it should do, and, written
-in Python, the ``app.py`` still builds the spec committed beside it (E-02).
+in Python, the ``app.py`` still builds the spec committed beside it.
 Its test conversations themselves are asked of a model by a validation run,
 on the Validate tab once the application is pushed.
 
@@ -48,7 +48,7 @@ from agent_runtimes.apps.loading import AppNotRunnable
 #: The agentspec a blank application starts with, as in the Studio.
 BLANK_AGENT = "example-simple:0.0.1"
 
-#: The agentspec a blank ``app.py`` starts with (P-32): a model and
+#: The agentspec a blank ``app.py`` starts with: a model and
 #: nothing else — no prompt of its own over the application's instructions,
 #: nothing only a runtime brings — so an `AppHost` builds it in this process
 #: as a runtime does.
@@ -289,7 +289,7 @@ def _from_example(folder: Path, app_id: str, example: str, python: bool) -> List
     return [SPEC_FILE]
 
 
-#: What ejecting does, said before it is done (P-13).
+#: What ejecting does, said before it is done.
 EJECT_SAID = (
     "Ejecting is one way: {file} becomes the source of {name}. From then on "
     "its spec is built from the file — push the file, not the spec — and "
@@ -299,7 +299,7 @@ EJECT_SAID = (
 
 
 def eject(spec_path: Path, out: Optional[Path] = None, *, force: bool = False) -> Path:
-    """Write an application built by spec or on the Canvas as an ``app.py`` (P-13).
+    """Write an application built by spec or on the Canvas as an ``app.py``.
 
     The file holds the spec and builds it again, the same: checked before it
     is written, and refused otherwise.
@@ -354,7 +354,7 @@ def eject(spec_path: Path, out: Optional[Path] = None, *, force: bool = False) -
 
 @dataclass(frozen=True)
 class Ejected:
-    """An application ejected where no file is kept (P-13): its text."""
+    """An application ejected where no file is kept: its text."""
 
     code: str
     """The ``app.py`` that holds its spec, ready for code."""

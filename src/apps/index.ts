@@ -372,7 +372,7 @@ export {
   type ResolvedApplication,
 } from './Application';
 // An application in another product's page: the React component, the
-// `<datalayer-app>` element, and the snippet a host pastes (D-07 to D-09).
+// `<datalayer-app>` element, and the snippet a host pastes.
 export {
   AppEmbed,
   AppFloating,
@@ -389,7 +389,7 @@ export {
   embedSessionKey,
   visitOfToken,
 } from './embed/embedSession';
-// The host page and an embedded application, talking (D-10).
+// The host page and an embedded application, talking.
 export {
   HOST_CONTEXT_COMMAND,
   HOST_CONTEXT_TOOL,

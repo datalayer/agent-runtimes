@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The published schema says what the code actually sends (O3-01).
+"""The published schema says what the code actually sends.
 
 `EXTENSION_URI` is advertised on agent cards, so a third party builds against
 this schema. The way that goes wrong is quiet: a field is added to the
@@ -147,7 +147,7 @@ def test_a_message_carrying_the_envelope_is_still_a_message(schema):
 
 
 def test_every_catalogued_capability_is_in_the_closed_vocabulary():
-    """No spec slipped a capability past the generator (O2-07).
+    """No spec slipped a capability past the generator.
 
     The vocabulary is validated on the model, so a spec built in Python
     cannot name an unknown capability. The catalogue is generated from YAML,

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""GenAI spans of a harness's turn driven over ACP (AC-12).
+"""GenAI spans of a harness's turn driven over ACP.
 
 pydantic-ai writes the GenAI spans of the runtime's own agents
 (:mod:`agent_runtimes.otel.genai`). A harness — Claude Code, Codex — runs its

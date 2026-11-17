@@ -4,7 +4,7 @@
  */
 
 /**
- * The chat's own words in the person's language (P-26): the composer's
+ * The chat's own words in the person's language: the composer's
  * placeholder and buttons, its error sentences, the tool lines and the tool
  * cards, the approvals, and the assistant's balloon — said in the six
  * languages the application's composer is said in (`interfaceWords`).
@@ -108,7 +108,7 @@ export type ChatWords = {
   arguments: string;
   approvalWarning: string;
   rememberChoice: string;
-  // A third party's grant a tool waits for (ID-10).
+  // A third party's grant a tool waits for.
   connectToContinue: (provider: string) => string;
   connectAsks: (agent: string, scopes: string) => string;
   connect: string;

@@ -6,7 +6,7 @@
  */
 
 /**
- * The host's agent client over the session API (DC-004):
+ * The host's agent client over the session API:
  * the exchange, a turn run once by its event id, the session mapped to the
  * thread through the injected `HostShape`, the stream reduced. Ported from
  * the Slack service, over a Discord-like shape.
@@ -398,7 +398,7 @@ describe('the host agent client', () => {
     );
   });
 
-  it('exchanges as a visitor when the host user never linked, as the contract says (WHATSAPP WA-03)', async () => {
+  it('exchanges as a visitor when the host user never linked, as the contract says', async () => {
     const visitorAnswer = {
       ...exchanged,
       principal_uid: `${contracts.visitor_exchange.sub_prefix}0a1b2c`,

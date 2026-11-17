@@ -4,7 +4,7 @@
  */
 
 /**
- * What the environment dropdown offers, and what it refuses (E1-19).
+ * What the environment dropdown offers, and what it refuses.
  *
  * The rules live in a module of their own so they can be read without a DOM,
  * and so the launcher and the picker cannot disagree about the same entry.
@@ -105,7 +105,7 @@ describe('which group an entry reads under', () => {
 
   it('lists a published environment reached through the Library on its own', () => {
     /* A published environment is offered where a reader who came from its
-       public page looks for it, whoever owns it (D-12, E2-16). */
+       public page looks for it, whoever owns it. */
     expect(codeSandboxEnvironmentGroupOf(library(), VIEWER)).toBe('library');
     expect(
       codeSandboxEnvironmentGroupOf(library({ owner: '01OTHER' }), {
@@ -223,7 +223,7 @@ describe('the order the dropdown reads in', () => {
   });
 });
 
-describe('a publication offered to a stranger (E2-19)', () => {
+describe('a publication offered to a stranger', () => {
   const publication = (
     changes: Partial<IEnvironmentPublicationRecord> = {},
   ): IEnvironmentPublicationRecord =>

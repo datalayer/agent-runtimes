@@ -148,7 +148,7 @@ describe('the seed agents’ UI', () => {
   });
 });
 
-describe('where each UI goes (UP-11)', () => {
+describe('where each UI goes', () => {
   it('mounts each chrome placement in its slot', async () => {
     const { registrationOf } = await import('./fixtures/uiPluginRegistrations');
     const slotsOf = async (plugin: string, placement: string) =>
@@ -215,7 +215,7 @@ describe('where each UI goes (UP-11)', () => {
   });
 });
 
-describe('the six seed agents (UP-12)', () => {
+describe('the six seed agents', () => {
   it.each([
     'worker-marketer',
     'worker-shopper',

@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """OTEL capability hooks for pydantic-ai lifecycle events, and the
-orchestration trace (O0-11).
+orchestration trace.
 
 Two things share this module because they share one telemetry path. The
 capability hooks below emit an agent run's counters and histograms through
@@ -20,7 +20,7 @@ whichever of those is current.
 Three rules it keeps, and they are the whole design:
 
 **The trace agrees with the store; it does not restate it.** The store
-stamps the correlation onto an ``ExecutionEvent`` in ``record`` (O0-04), and
+stamps the correlation onto an ``ExecutionEvent`` in ``record``, and
 ``correlation_of`` reads it back off that envelope. Nothing here recomputes a
 root or a parent from an execution, because two computations of the same
 identifier are two identifiers waiting to disagree.
@@ -40,7 +40,7 @@ trace is findable rather than merely absent.
 Who opens which span. The attempt span belongs to the adapter, because an
 attempt is exactly one dispatch and the adapter is what performs it. The
 execution span belongs to whoever owns the execution's lifetime, which from
-Phase 1 is ``OrchestrationWorkflow`` (O1-03) and in Phase 0 is the
+Phase 1 is ``OrchestrationWorkflow`` and in Phase 0 is the
 conformance harness; a store that opened it would be opening a span it
 cannot close, since ``create`` returns long before the work does.
 """
@@ -209,7 +209,7 @@ class OTelHooksCapability(AbstractCapability[Any]):
 
 
 # ---------------------------------------------------------------------------
-# One trace across the execution tree (O0-11)
+# One trace across the execution tree
 # ---------------------------------------------------------------------------
 
 #: The service the orchestration spans are emitted under. The adapters and
@@ -395,7 +395,7 @@ def restored(trace: Trace | None) -> Iterator[None]:
     """
     Continue the tree's trace, when this process is not already on it.
 
-    This is the "restored on every worker" half of O0-11. A durable step, a
+    This is the "restored on every worker" half of the trace's propagation. A durable step, a
     re-attach after a pod roll and a worker picking work off a queue all
     start with nothing but the execution record, and the ``traceparent`` on
     it is what puts their spans back under the delegation that caused them.
@@ -440,8 +440,8 @@ def execution_span(execution: Execution) -> Iterator[Any]:
     """
     The span one execution's life happens inside.
 
-    Opened by whoever owns that life: ``OrchestrationWorkflow`` from Phase 1
-    (O1-03), the conformance harness before it. The execution's own
+    Opened by whoever owns that life: ``OrchestrationWorkflow`` from Phase 1,
+    the conformance harness before it. The execution's own
     ``traceparent`` is restored first, so a delegation dispatched in a fresh
     step lands under the parent that asked for it rather than starting a
     trace of its own.
@@ -480,7 +480,7 @@ def attempt_span(
     caller records between observations land on this span — which is how the
     trace comes to agree with the store without either of them being told
     about the other. What that assumes is one dispatch at a time in one
-    task, which is what a durable activity does (O1-03); two dispatches
+    task, which is what a durable activity does; two dispatches
     interleaved in one task would unwind their contexts out of order, and
     the answer to that is a task each, not a span that is never current.
 
@@ -641,7 +641,7 @@ def _recording() -> bool:
 
 
 class TraceContextMiddleware:
-    """Continue the trace a caller sent (W3C ``traceparent``) into the request (SH-51).
+    """Continue the trace a caller sent (W3C ``traceparent``) into the request.
 
     Nothing instruments the server itself, so without this an A2A or AG-UI
     request arrives with a ``traceparent`` header nobody reads, fasta2a

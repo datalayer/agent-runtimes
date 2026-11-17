@@ -1,6 +1,6 @@
 # PACT, as reviewed
 
-PR-10: the specification this package is built against, and
+The specification this package is built against, and
 when it was read.
 
 | | |

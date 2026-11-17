@@ -4,9 +4,9 @@
 """Every card `to_agent_card()` writes validates against a real, independent
 A2A client — not `fasta2a`, which Datalayer already depends on and already
 shapes to its own needs, but `a2a-sdk`, the project's own reference
-implementation (O4-01).
+implementation.
 
-Found on 2026-09-12, evaluating O4-01's own claim ("a catalogued agentspec is
+Found on 2026-09-12, evaluating its own claim ("a catalogued agentspec is
 consumable by a third-party A2A client with no Datalayer dependency"): it
 was false. `to_agent_card()` wrote only `supportedInterfaces`, a field name
 the current specification (a2a-protocol.org) does not have at all — the
@@ -44,7 +44,7 @@ from agent_runtimes.specs.agents import list_agentspecs
 
 #: One endpoint per agentspec, standing in for what `resolve_worker` would
 #: fill in once a worker actually answers. The claim under test is the
-#: card's *shape*, not a live network fetch — O4-01's is a schema question.
+#: card's *shape*, not a live network fetch — this is a schema question.
 _ENDPOINT = ProtocolEndpoint(
     protocol=AgentProtocol.A2A,
     url="https://example.datalayer.run/a2a/agent",
@@ -57,7 +57,7 @@ def _delegable_specs():
     """
     Every catalogued agentspec that declares work an orchestrator may hand it.
 
-    An example agent deliberately declares none (O2-07) and is not a claim
+    An example agent deliberately declares none and is not a claim
     this item makes anything about.
 
     Returns

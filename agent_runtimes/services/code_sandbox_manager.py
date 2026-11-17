@@ -572,7 +572,7 @@ class CodeSandboxManager:
             elif jupyter_token is not None:
                 self._config.jupyter_token = jupyter_token
             # The sandbox's token is used by its tools, never shown to the
-            # model (R-19); nor are the secrets given to its kernel.
+            # model; nor are the secrets given to its kernel.
             from agent_runtimes.guardrails.credentials import hold, hold_env
 
             hold(self._config.jupyter_token)
@@ -970,7 +970,7 @@ class CodeSandboxManager:
             )
 
     def withdraw_env_vars(self, names: list[str] | set[str]) -> list[str]:
-        """Take secrets back from the sandbox: a configure no longer gives them (R-19).
+        """Take secrets back from the sandbox: a configure no longer gives them.
 
         Forgotten from what is injected into a sandbox that starts later, and
         unset in every live kernel — the shared sandbox's and each agent's —

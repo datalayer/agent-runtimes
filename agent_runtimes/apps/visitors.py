@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Signed-out sessions, on the visitors' runtime (R-30).
+"""Signed-out sessions, on the visitors' runtime.
 
 A visitor without an account talks to an application written as a spec on a
 runtime kept warm for everybody without one: the runtime image the pools run, started with
@@ -13,10 +13,10 @@ their own.
 **Who calls.** A visitor holds a token ai-inference minted for them
 (``POST /anonymous/token``), naming the visitor — the id their tab keeps —
 and the application it is for: an example's id, or ``at:<slug>`` for an
-application at its address that its owner lets anybody open (D-02). The
+application at its address that its owner lets anybody open. The
 runtime asks ai-inference who it is for (``GET /anonymous/whoami``), as any
-runtime asks IAM who a person is (R-32,
-`agent_runtimes.apps.callers`). A caller is then ``visitor:<id>``.
+runtime asks IAM who a person is
+(`agent_runtimes.apps.callers`). A caller is then ``visitor:<id>``.
 
 **An application with code of its own** (an ``app.py``; decided 14 October
 2026) is never talked to here, where its plain agent would answer in its
@@ -29,14 +29,14 @@ their turns and minutes, nothing kept — as this runtime does.
 
 **A session is its own.** A visitor's session answers that visitor and
 nobody else, on the same runtime as everybody else's: somebody else's is not
-found, as for people (R-04). A token reaches the one application it names.
+found, as for people. A token reaches the one application it names.
 
 **What a visitor is given.** Model calls go to ai-inference with the
 visitor's own token, read as each call is made (:func:`turn_api_key`) and
 never another key, so ai-inference's anonymous limits and its ceiling for
 the day apply and nobody's account pays. A tool whose action class is not
 *read* is refused before it runs, whatever the application's rules say
-(:func:`visitor_refusal`). Nothing is remembered (R-36) and no record is
+(:func:`visitor_refusal`). Nothing is remembered and no record is
 sent (`AppRecorder.kept`).
 
 **Limits.** Per visitor, a number of turns a day
@@ -210,7 +210,7 @@ def visitor_of_a2a(meta: Any) -> str:
 
 
 #: Where the gate marks a visitor's A2A run with the catalogue Battle their
-#: token names (B4-01): ``datalayer.battle``, never what the message says.
+#: token names: ``datalayer.battle``, never what the message says.
 A2A_BATTLE_FIELD = "battle"
 
 #: The catalogue Battle the run under way is played for, as the visitor's
@@ -274,7 +274,7 @@ async def turn_api_key() -> str:
 def or_visitors_key(otherwise: Any) -> Any:
     """The key a deployment's model call is made with: in a visitor's turn on
     the runtime it is kept on, the visitor's own token, as on the visitors'
-    runtime (R-30, decided 14 October 2026); else ``otherwise()``, its
+    runtime (decided 14 October 2026); else ``otherwise()``, its
     principal's. Read as each call is made.
     """
 
@@ -385,7 +385,7 @@ _READS = ("/api/v1/configure", "/api/v1/configure/models")
 
 #: Under the application routes, and not the application's own: what makes the
 #: runtime's agent another application (the companion's, at launch) and the
-#: Studio's tools, a person's (P-10, P-13).
+#: Studio's tools, a person's.
 _NOT_THE_APPLICATIONS = (
     "/api/v1/apps/configure",
     "/api/v1/apps/build",
@@ -456,7 +456,7 @@ def held_to_own_routes() -> bool:
 class OwnRoutesOnly:
     """The one gate: a runtime held to the application's own routes (:func:`path_answered`).
 
-    The visitors' runtime always (R-30); any other runtime once one of its
+    The visitors' runtime always; any other runtime once one of its
     agents serves a deployment (`a_deployment_is_served`) — a deployment's kept
     runtime, or the one a hosted page launched for it, beside the agent it was
     allocated with. Every other route — configuring it, its inference token,
@@ -647,7 +647,7 @@ SPEC_ON_VISITORS = (
 
 def _where_refused(said: Mapping[str, Any], deployment_uid: str) -> str:
     """Why this runtime does not talk to a visitor of an address, or ``""``
-    (R-30, decided 14 October 2026). A version with code of its own
+    (decided 14 October 2026). A version with code of its own
     (``runs_code``, as ai-agents answers somebody without an account) runs
     on the runtime it is kept on, never on the visitors' — where its plain
     agent would answer in its code's place; that runtime talks to visitors
@@ -667,7 +667,7 @@ def _where_refused(said: Mapping[str, Any], deployment_uid: str) -> str:
 
 async def ensure_address_agent(app_key: str) -> str:
     """The agent of the application at an address, made here if it is not, or made again
-    when its owner moved it to another version (R-30, D-02): on the visitors'
+    when its owner moved it to another version: on the visitors'
     runtime for a version written as a spec; on the runtime its deployment is
     kept on for one with code of its own, which that agent runs — the code
     read from the deployment as nobody, as the agent is made.

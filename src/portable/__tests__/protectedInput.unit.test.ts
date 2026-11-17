@@ -4,7 +4,7 @@
  */
 
 /**
- * A mediated sign-in's form (M-039): read with the page's one-use
+ * A mediated sign-in's form: read with the page's one-use
  * ticket, sent once, nothing typed in an error.
  *
  * @module portable/__tests__/protectedInput
@@ -24,7 +24,7 @@ const ASKED = {
   ],
 };
 
-describe('a mediated sign-in (M-039)', () => {
+describe('a mediated sign-in', () => {
   it('reads the request by the page’s ticket and sends what was typed once', async () => {
     const ticket = ticketOfPage(
       'https://datalayer.ai/pap/sign-in?ticket=Abc_def-0123456789xyz',

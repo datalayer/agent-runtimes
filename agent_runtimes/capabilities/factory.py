@@ -441,8 +441,7 @@ def build_capabilities_from_agent_spec(
             datalayer_overrides = memory_config.get("datalayer")
             if isinstance(datalayer_overrides, dict):
                 override = datalayer_overrides.get("memory_agent_id")
-                # An application's memory: per person, shared as they allow
-                # (R-18, R-35, R-36).
+                # An application's memory: per person, shared as they allow.
                 if datalayer_overrides.get("app_memory"):
                     app_memory_key = str(override or "").strip()
                     if not app_memory_key:
@@ -552,7 +551,7 @@ def build_capabilities_from_agent_spec(
         capabilities.append(PromptHistoryCapability(agent_id=agent_id))
 
     # The skill a `load_skill` call loaded, on its tool span, as AgentCore's
-    # skill evaluators read it (AC-15).
+    # skill evaluators read it.
     from ..otel.skill_spans import SkillSpanCapability
 
     capabilities.append(SkillSpanCapability())
@@ -567,7 +566,7 @@ def build_capabilities_from_agent_spec(
         )
 
     # Answers that may be heard are written for the ear too: an agent spec's
-    # own voice (VO-41, VO-44); an application's is joined by
+    # own voice; an application's is joined by
     # app_capabilities.
     from ..voice import agent_voice_capability
 

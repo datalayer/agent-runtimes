@@ -5,17 +5,17 @@
 
 /**
  * `@datalayer/loop-plugin-shield-displays` — a coding agent's *diff* and
- * *terminal*, drawn where its tool results carry them (SH-16).
+ * *terminal*, drawn where its tool results carry them.
  *
  * The runtime sends each beside the tool's result in
- * `_meta["reactor.ui/display"]`, as every protocol display travels
- * (RU-1): `application/vnd.datalayer.shield.diff+json` and
+ * `_meta["reactor.ui/display"]`, as every protocol display travels:
+ * `application/vnd.datalayer.shield.diff+json` and
  * `application/vnd.datalayer.shield.terminal+json`, typed in Python as
  * `agent_runtimes.adapters.harness_displays`. This plugin contributes one
  * renderer per type; it binds no tool, since a harness names its tools as it
  * likes (*Edit hello.py*, *Run pytest*) and the display is what says what
  * it is. The web chat and the embed mount it through the preset; the phone
- * reads the same contract from `portable/displays` (M-037).
+ * reads the same contract from `portable/displays`.
  *
  * @module apps/plugins/shield-displays
  */

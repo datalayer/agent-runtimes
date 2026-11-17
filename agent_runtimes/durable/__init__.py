@@ -9,7 +9,7 @@ without losing its steps: DBOS in this process, against this runtime's own
 database.
 
 **This is not the platform's durable execution, and nothing new should be
-built on it** (O0-16, and the decision recorded with it).
+built on it** (and the decision recorded with it).
 `datalayer-durable` is the control plane that owns durability for the
 platform — an agent run, a benchmark run, a sandbox's whole life, an
 approval, a scheduled notebook — because those outlive the pod that started

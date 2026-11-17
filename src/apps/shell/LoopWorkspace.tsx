@@ -164,7 +164,7 @@ export type LoopWorkspaceProps = {
    */
   headerContainer?: HTMLElement | null;
   /**
-   * The sidebar as a rail (T-07): a narrow column of line icons, one per
+   * The sidebar as a rail: a narrow column of line icons, one per
    * panel, and the chosen panel beside it — rather than every panel stacked
    * in one column. False by default; an application's shell asks for it. In
    * a `panel` layout the sidebar stays a stack under the view.
@@ -277,7 +277,7 @@ function WorkspaceBody({
   useEffect(() => {
     setAgentId(initialAgentId);
   }, [initialAgentId]);
-  // The thread the chat sends on, said by the chat (its session, SH-54).
+  // The thread the chat sends on, said by the chat (its session).
   const [thread, setThreadState] = useState<string | undefined>(undefined);
   const setThread = useCallback((next: string) => {
     setThreadState(current => (current === next ? current : next));
@@ -339,7 +339,7 @@ function WorkspaceBody({
         argv: command.argv,
       });
       // What a command sends goes to the agent as if typed: an
-      // application's command sends its prompt (P-19).
+      // application's command sends its prompt.
       if (result?.prompt) {
         onSend?.(result.prompt, currentWorkspace.current!);
         prompts.submit(result.prompt);

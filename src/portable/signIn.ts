@@ -4,8 +4,8 @@
  */
 
 /**
- * What the gateway's `pap_sign_in` tool answers, read and checked
- * (PI-56, P-03): the person signs in at a
+ * What the gateway's `pap_sign_in` tool answers, read and checked:
+ * the person signs in at a
  * company themselves — on the company's page (`direct`), by entering a
  * code there (`device`), or by typing what the company asks on Datalayer's
  * own page (`mediated`), never in the conversation. The chat shows the link,
@@ -15,7 +15,7 @@
  *
  * Pure: no React. A test reaches it without a chat around it.
  *
- * Kept in `portable/` (M-037): Datalayer Mobile reads the same
+ * Kept in `portable/`: Datalayer Mobile reads the same
  * sign-in with the same checks; the web plugin re-exports it.
  *
  * @module portable/signIn
@@ -30,7 +30,7 @@ export type PapSignInWaiting = {
   host: string;
   /**
    * The company's domain, when the gateway names it: for a bound `direct`
-   * sign-in the page opened is Datalayer's start link (P-04),
+   * sign-in the page opened is Datalayer's start link,
    * which sends the person on to the company and takes them back only from it.
    */
   company?: string;
@@ -49,7 +49,7 @@ export type PapSignInWaiting = {
   /**
    * What the company said it needs: the scopes its `insufficient_scope`
    * named (the `authorization` event, which always names them since PAP
-   * draft 0.3; P-02), what the person is asked to allow there.
+   * draft 0.3), what the person is asked to allow there.
    */
   needs?: string[];
 };
@@ -84,7 +84,7 @@ export const PAP_SIGN_IN_WORDS = {
     `I have signed in at ${host}. Please check again.`,
   refused: 'This sign-in link cannot be opened safely, so it is not shown.',
   qr: (host: string): string => `A code to scan to open ${host} on your phone`,
-  /** Once the person's browser came back from the company (P-04), said under the card. */
+  /** Once the person's browser came back from the company, said under the card. */
   returned: {
     signed_in: (company: string): string =>
       `Signed in at ${company}: checking again.`,
@@ -96,8 +96,8 @@ export const PAP_SIGN_IN_WORDS = {
 } as const;
 
 /**
- * Where Datalayer's `/pap/signed-in` page says a Direct Sign-In came back
- * (P-04): the card waiting for that company hears it in the
+ * Where Datalayer's `/pap/signed-in` page says a Direct Sign-In came back:
+ * the card waiting for that company hears it in the
  * person's tab, so the conversation goes on there.
  */
 export const PAP_SIGN_IN_CHANNEL = 'datalayer-pap-sign-in';
@@ -128,7 +128,7 @@ export function signInReturnOf(
 }
 
 /**
- * `pap_sign_in` — or a business's `pact_sign_in` (PI-56) — as the gateway
+ * `pap_sign_in` — or a business's `pact_sign_in` — as the gateway
  * names it with or without a prefix.
  */
 export const PAP_SIGN_IN_TOOL = /(^|[_.:\-/])pa(?:p|ct)_sign_in$/;

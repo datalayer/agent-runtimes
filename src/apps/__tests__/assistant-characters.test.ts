@@ -4,7 +4,7 @@
  */
 
 /**
- * The floating assistant's characters as contributions (T-24): the
+ * The floating assistant's characters as contributions: the
  * catalogue is what the enabled plugins contribute, and an application names
  * one by id.
  */
@@ -42,7 +42,7 @@ const RobotPlugin = definePlugin({
 });
 
 describe('the characters of the floating assistant', () => {
-  it('take one a person brought, beside the contributed ones (T-26)', async () => {
+  it('take one a person brought, beside the contributed ones', async () => {
     const reactor = buildReactorFromPlugins([
       AssistantCharactersPlugin,
       defineAssistantCharacterPlugin('own', robot),

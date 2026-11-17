@@ -1,13 +1,13 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The one port a protocol binding implements (O0-05).
+"""The one port a protocol binding implements.
 
 An adapter turns a canonical command into protocol operations and turns what
 the protocol says back into observations. It does exactly that, and it is
 refused two things it would be easy to give it: it never decides a canonical
 state, and it never holds policy. ``datalayer_core.orchestration.lifecycle``
-decides what an observation means (O0-02) and the control plane decides what
+decides what an observation means and the control plane decides what
 to do about it; an adapter allowed to do either would be a second place
 where an execution's truth lives, and a worker that can talk to that place
 can report work it never did.
@@ -38,7 +38,7 @@ capability report — unsupported, with that reason — because a report with a
 hole in it is how a later reader concludes the hole was an oversight.
 
 A worker that speaks the Datalayer orchestration extension is resolved with
-more (``AdapterCapabilities.extended``, O2-05): it is steered within its turn,
+more (``AdapterCapabilities.extended``): it is steered within its turn,
 paused at a checkpoint it reports, and resumed by a new attempt that names
 that checkpoint (``Attempt.resumed_from``). It checkpoints as it pauses, not
 on request, so ``checkpoint`` stays refused for it too, with that reason.
@@ -113,7 +113,7 @@ def now() -> str:
 
 
 #: What an attempt that resumes from a checkpoint is told before its
-#: objective (O2-05): its worker has the conversation it paused in back.
+#: objective: its worker has the conversation it paused in back.
 RESUMING = (
     "Carry on from where you were paused: the conversation so far is restored "
     "from the checkpoint. Do not start again, and do not repeat what is done."
@@ -134,7 +134,7 @@ def objective_prompt(execution: Execution, attempt: Attempt | None = None) -> st
     different things is a worker that proves nothing about orchestration.
 
     The references are named, never resolved: context is to
-    be passed by reference, and resolving them is O0-09's.
+    be passed by reference, and resolving them is done elsewhere.
 
     An attempt that resumes from a checkpoint (``Attempt.resumed_from``) is
     told so first. Its worker has the conversation it paused in back, and a
@@ -183,7 +183,7 @@ def answer_artifact(
     The artifact model asks for outputs to be typed, versioned references with
     provenance, and this is the smallest honest one: what the worker said,
     hashed, attributed to the attempt that said it. It is ``registered``,
-    not ``committed`` — committing it to contents or the Library is O1-10,
+    not ``committed`` — committing it to contents or the Library is a later step,
     and the commit rule is the fourth decision.
 
     Parameters
@@ -328,7 +328,7 @@ class Performed:
 OperationOutcome = Union[Performed, Unsupported]
 
 #: What a worker that speaks the Datalayer orchestration extension can be
-#: asked besides what its protocol gives (O2-05).
+#: asked besides what its protocol gives.
 EXTENSION_OPERATIONS: frozenset[WorkerOperation] = frozenset(
     {WorkerOperation.STEER, WorkerOperation.PAUSE, WorkerOperation.RESUME}
 )
@@ -476,7 +476,7 @@ class AdapterCapabilities:
         self, *, without: tuple[str, ...] = (), reductions: tuple[str, ...] = ()
     ) -> "AdapterCapabilities":
         """
-        The report for a worker that speaks the Datalayer orchestration extension (O2-05).
+        The report for a worker that speaks the Datalayer orchestration extension.
 
         The same for either protocol: the worker is steered within its turn,
         paused, and resumed from the checkpoint it paused at, which it
@@ -580,10 +580,10 @@ class Observation:
     session_id: str | None = None
     protocol_task_id: str | None = None
     #: The checkpoint a ``checkpointed`` milestone names, which is what a
-    #: resume names (O2-05).
+    #: resume names.
     checkpoint_id: str | None = None
     #: What the worker says the attempt spent, on the move that ends the
-    #: attempt (O2-10).
+    #: attempt.
     usage: Usage | None = None
 
     def __post_init__(self) -> None:
@@ -750,7 +750,7 @@ class Observation:
         artifact : Artifact
             The artifact, with its provenance already filled in by the adapter.
         data : Mapping[str, Any] | None
-            The bytes or text the artifact stands for, until O1-10 commits it.
+            The bytes or text the artifact stands for, until it is committed.
 
         Returns
         -------
@@ -841,7 +841,7 @@ def recorded_capabilities(events: Sequence[ExecutionEvent]) -> Mapping[str, Any]
 
     What the worker was found to do, rather than what its protocol does: a
     worker that speaks the orchestration extension is asked for a pause
-    its protocol has no word for (O2-05), and one that does not is refused.
+    its protocol has no word for, and one that does not is refused.
 
     Parameters
     ----------
@@ -874,7 +874,7 @@ class ResolvedWorker:
     ``details`` is what the worker said about itself: an agent card summary,
     an ACP initialize response. It comes from the worker, so it is shown and
     never followed. Turning it into an ``AgentDescriptor`` is
-    O0-08's mapping and deliberately not repeated here.
+    the canonical model's mapping and deliberately not repeated here.
     """
 
     binding: AgentBinding
@@ -888,7 +888,7 @@ def resume_in_a_new_attempt(
     worker: ResolvedWorker, checkpoint_id: str | None, *, next_attempt: str
 ) -> OperationOutcome:
     """
-    How a worker that speaks the orchestration extension is resumed (O2-05).
+    How a worker that speaks the orchestration extension is resumed.
 
     Not in place: the work it paused has ended, and the next attempt is
     dispatched with a delegation that names the checkpoint. What is decided

@@ -4,10 +4,10 @@
  */
 
 /**
- * A deployment's lifecycle as its owner drives it (R-17, D-04): pause
+ * A deployment's lifecycle as its owner drives it: pause
  * and resume one exact version, reset what it holds, and the events recorded
  * with who did each. The requests' bodies, the answers read and the words
- * said — the same in the Studio and Datalayer Mobile (M-041b). Pure:
+ * said — the same in the Studio and Datalayer Mobile. Pure:
  * each client sends them with its own authentication.
  *
  * @module portable/lifecycle
@@ -94,7 +94,7 @@ export type ResetCounts = {
   schedules: number;
   /**
    * Why its memories stay: they are its application's, not the
-   * deployment's (R-18) — forgotten under *What it remembers*.
+   * deployment's — forgotten under *What it remembers*.
    */
   memoriesNote: string;
 };
@@ -147,7 +147,7 @@ export function resetLines(counts: ResetCounts): {
   };
 }
 
-/** What happened to a deployment, recorded with who did it (D-04, R-17). */
+/** What happened to a deployment, recorded with who did it. */
 export type DeploymentEventKind =
   'promoted' | 'rolled_back' | 'paused' | 'resumed' | 'reset';
 
@@ -217,7 +217,7 @@ export function deploymentEventLine(
     event.kind === 'reset' && deleted
       ? ` — ${plural(count(deleted.conversations), 'conversation')} and ${plural(count(deleted.schedules), 'schedule')} deleted`
       : '';
-  // Paused by an owner of its owner's organization (I-09): said as such.
+  // Paused by an owner of its owner's organization: said as such.
   const forOrganization =
     event.kind === 'paused' && event.details.by === 'organization_owner'
       ? ', an owner of your organization'

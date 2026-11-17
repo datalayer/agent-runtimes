@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A PACT 1.0 Provider's side of a Brand (PR-13, EX-06).
+"""A PACT 1.0 Provider's side of a Brand.
 
 :class:`PactBrand` is a Brand answered by its Provider, both profiles:
 *Identity* (§2–4: the card, the personal-agent JWT verified against the keys

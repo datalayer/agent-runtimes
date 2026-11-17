@@ -4,7 +4,7 @@
  */
 
 /**
- * What an editor refuses of a scene is what `loop` refuses (S-10):
+ * What an editor refuses of a scene is what `loop` refuses:
  * every sentence of `sceneChecks` is agentspecs' own, in agentspecs'
  * order, each one at a time as agentspecs stops where it stops.
  *
@@ -60,7 +60,7 @@ const specOf = (yaml: string) => {
   return read.spec;
 };
 
-describe('what an editor refuses of a scene is what `loop` refuses (S-10)', () => {
+describe('what an editor refuses of a scene is what `loop` refuses', () => {
   it('has a case for every sentence agentspecs says, recorded from agentspecs itself', () => {
     expect(table.recordedWith).toBe('scripts/record-scene-checks.py');
     expect(table.cases.length).toBeGreaterThanOrEqual(34);
@@ -107,7 +107,7 @@ describe('what an editor refuses of a scene is what `loop` refuses (S-10)', () =
   });
 });
 
-describe('each refusal says which part of the scene it is about (S-09)', () => {
+describe('each refusal says which part of the scene it is about', () => {
   it('reads the stage’s own refusals apart: where each player runs, and what the audience may do', () => {
     const inTheBrowser = named('an address for a member in the browser');
     const visitors = named('visitors may watch and a member has no address');

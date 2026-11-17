@@ -4,7 +4,7 @@
  */
 
 /**
- * *Example Store*, the local UCP test merchant, as a `fetch` (EX-04, EX-10): the same catalogue, totals, email gate, idempotency and
+ * *Example Store*, the local UCP test merchant, as a `fetch`: the same catalogue, totals, email gate, idempotency and
  * test payment as `agent_runtimes.protocols.ucp.merchant.ExampleStore`, so a
  * page or a test buys from it with no network. A test merchant only: it keeps
  * nothing beyond the page, and refuses any payment but its test handler's.

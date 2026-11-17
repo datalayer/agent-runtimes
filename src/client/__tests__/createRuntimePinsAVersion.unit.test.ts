@@ -4,17 +4,17 @@
  */
 
 /**
- * What a launch sends when it names a version (E1-19).
+ * What a launch sends when it names a version.
  *
  * `createRuntime` takes an environment and, optionally, the version of it to
  * launch, and sends `environment: {name, version}` — so a sandbox runs the
  * version it was asked for rather than whatever is promoted by the time the
- * request lands (E1-11). Without a version the body is the one runtimes
+ * request lands. Without a version the body is the one runtimes
  * have always been created with.
  *
  * What a second costs is read from the listing, never written here: an
  * environment whose size class carries no rate is refused before anything is
- * asked of the platform (D-4).
+ * asked of the platform.
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';

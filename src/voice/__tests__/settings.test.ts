@@ -4,8 +4,8 @@
  */
 
 /**
- * A person's own voice settings (VO-30) and what the chat's voice
- * becomes once they are taken into account (VO-14 the language, VO-25 the
+ * A person's own voice settings and what the chat's voice
+ * becomes once they are taken into account (the language, the
  * voice, the rate and the volume).
  */
 
@@ -147,7 +147,7 @@ describe('The voice a person hears', () => {
   });
 });
 
-describe('A person who pauses longer before they are done (VO-69)', () => {
+describe('A person who pauses longer before they are done', () => {
   const chat: ChatVoice = {
     input: 'hands_free',
     output: 'off',

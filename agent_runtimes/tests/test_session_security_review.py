@@ -240,7 +240,7 @@ def test_an_embeds_visitor_cannot_import(
 
 class RecordPages:
     """The record's `GET /records`, answering a session of ``total`` entries
-    a page at a time, as the route pages (R-22 (4)): ``start`` and ``limit``
+    a page at a time, as the route pages: ``start`` and ``limit``
     read, ``has_more`` said; ``endless`` answers a full page with more every
     time, a session longer than any cap.
     """

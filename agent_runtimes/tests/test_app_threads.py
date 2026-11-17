@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Threads (P-24): what an application's code names its conversation —
+"""Threads: what an application's code names its conversation —
 ``session.title``, ``session.tags``, ``session.metadata`` — kept as a
 ``thread`` entry of its record; ``@app.feedback`` hearing a person's word on
 an answer; and a person's threads and a thread's feedback read from
@@ -213,7 +213,7 @@ def test_a_persons_threads_and_a_threads_feedback_are_read() -> None:
 
 
 def test_loop_apps_threads_and_feedback_are_retired_naming_the_session_verbs() -> None:
-    """`loop apps threads|feedback` are retired (MH-17, decision 17): each answers
+    """`loop apps threads|feedback` are retired: each answers
     a sentence naming `loop sessions …`, and forwards to nothing."""
     from agent_runtimes.commands import apps as commands
 

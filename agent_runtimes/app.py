@@ -561,7 +561,7 @@ async def _create_and_register_cli_agent(
             agent_id,
         )
 
-    # Credentials are never shown to the model (R-19): last, so it
+    # Credentials are never shown to the model: last, so it
     # wraps every tool call innermost and reads every request last.
     from .guardrails.credentials import credentials_withheld
 
@@ -1151,20 +1151,20 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         nonlocal _mcp_toolsets_task, _mcp_servers_task, _durable_lifecycle
         logger.info("Starting agent-runtimes server...")
 
-        # One session store, chosen by configuration (MH-F03): two named, or
+        # One session store, chosen by configuration: two named, or
         # one nothing contributes, refuse the host before it serves a session.
         from .apps.session_store import active_store
 
         logger.info("Sessions are kept in the %s store", active_store().name)
 
-        # pydantic-ai's GenAI spans for every agent (AC-12), on AgentCore
-        # Runtime also to AgentCore Observability's endpoint (AC-13).
+        # pydantic-ai's GenAI spans for every agent, on AgentCore
+        # Runtime also to AgentCore Observability's endpoint.
         from .otel.genai import enable_genai_instrumentation, genai_tracer_provider
 
         enable_genai_instrumentation(genai_tracer_provider())
 
         # The demo books' key, taken out of the environment before anything is
-        # started from it: no MCP server, command or sandbox inherits it (B4-01).
+        # started from it: no MCP server, command or sandbox inherits it.
         from .apps.battle_books import take_books_key
 
         if take_books_key():
@@ -1256,7 +1256,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         if harness_id:
             await _create_harness_agent(app, harness_id, config.api_prefix)
 
-        # Amazon Bedrock AgentCore (AC-01): the agentspec of AGENT_SPEC_ID
+        # Amazon Bedrock AgentCore: the agentspec of AGENT_SPEC_ID
         # configured as a pool pod's is, before the first invocation.
         if _agentcore and not is_reload_parent:
             from .agentcore.contract import configure_at_start
@@ -1429,7 +1429,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                 )
 
         # The orchestrator as one ACP agent, with a tree of executions behind it
-        # (--orchestrator-root, O2-08).
+        # (--orchestrator-root).
         orchestrator_root = os.environ.get("AGENT_RUNTIMES_ORCHESTRATOR_ROOT")
         if orchestrator_root:
             from .orchestration.orchestrator import (
@@ -1501,7 +1501,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         else:
             logger.info("Agent Node mode disabled (use --node to enable)")
 
-        # The visitors' runtime (R-30): the examples it keeps warm, their
+        # The visitors' runtime: the examples it keeps warm, their
         # agents made through its own API once it listens.
         from .apps.visitors import loopback_url, visitors_runtime, warm
 
@@ -1545,7 +1545,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
             await _agentcore_seat.stop()
 
         # The sessions this runtime holds are paused in their record before
-        # it goes (MH-01): a listing from the record then says the truth.
+        # it goes: a listing from the record then says the truth.
         try:
             from .apps.sessions import pause_held
 
@@ -1632,7 +1632,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         except Exception as e:
             logger.warning(f"Error stopping sandboxes during shutdown: {e}")
 
-        # Stop the browsers of applications' computers (R-23).
+        # Stop the browsers of applications' computers.
         from .apps.browser import close_browsers
 
         await close_browsers()
@@ -1651,7 +1651,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     )
 
     # One gate (the release gates, decided 14 October 2026): the
-    # visitors' runtime (R-30), and a runtime that serves a deployment —
+    # visitors' runtime, and a runtime that serves a deployment —
     # kept always on, or launched by a hosted page — answer anybody but the
     # pod itself only on the application's own routes, websockets and the
     # dynamic AG-UI and A2A mounts included. Inside CORS, so that a page reads
@@ -1666,7 +1666,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
 
     app.add_middleware(AgentHostMiddleware)
 
-    # A caller's trace continued into the request (SH-51):
+    # A caller's trace continued into the request:
     # inside OwnRoutesOnly, so a refused request opens no span.
     from .monitoring.otel import TraceContextMiddleware
 
@@ -1705,12 +1705,12 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     app.include_router(history_router, prefix=config.api_prefix)
     app.include_router(loop_router, prefix=config.api_prefix)
     # Which of an application's plugins this runtime holds, followed by the
-    # page's plugin of the same name (F-15).
+    # page's plugin of the same name.
     app.include_router(app_plugins_router, prefix=config.api_prefix)
     app.include_router(apps_router, prefix=config.api_prefix)
-    # The harness catalogue, as `loop harnesses` prints it (VS-03).
+    # The harness catalogue, as `loop harnesses` prints it.
     app.include_router(harnesses_router, prefix=config.api_prefix)
-    # An application's computer, shown where the person is (R-23).
+    # An application's computer, shown where the person is.
     app.include_router(computer_router, prefix=config.api_prefix)
     app.include_router(mcp_router, prefix=config.api_prefix)
     app.include_router(mcp_auth_router, prefix=config.api_prefix)
@@ -1734,7 +1734,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     if triggers_webhook_router is not None:
         app.include_router(triggers_webhook_router, prefix=config.api_prefix)
     if _agentcore:
-        # AgentCore Runtime's contract, at the root (AC-02).
+        # AgentCore Runtime's contract, at the root.
         from .agentcore.contract import router as agentcore_router
 
         app.include_router(agentcore_router)

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-# The image Amazon Bedrock AgentCore Runtime runs (AC-04), from
+# The image Amazon Bedrock AgentCore Runtime runs, from
 # docker/Dockerfile.agentcore: agent-runtimes from PyPI, built natively for
 # linux/arm64 (ubuntu-24.04-arm) and linux/amd64 (ubuntu-latest), each one
 # smoke-tested (GET /ping answers {"status": "Healthy"}, no model called),

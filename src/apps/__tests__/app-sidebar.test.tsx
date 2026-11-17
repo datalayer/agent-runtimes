@@ -4,9 +4,9 @@
  */
 
 /**
- * What a builder reads beside an application's page (R-01b): its rules
- * and the approvals waiting for the person (`app-rules`, U-19), and what it
- * did (`app-activity`, R-15), as plugins of the workspace's sidebar — mounted
+ * What a builder reads beside an application's page: its rules
+ * and the approvals waiting for the person (`app-rules`), and what it
+ * did (`app-activity`), as plugins of the workspace's sidebar — mounted
  * by the preset when the host asks (`sidebar`), and drawn in the sidebar
  * slot.
  *
@@ -129,7 +129,7 @@ describe('the preset, asked for the sidebar', () => {
     expect(slots).toEqual(['app-rules', 'app-activity']);
   });
 
-  it('mounts its computer alone when asked for it alone (R-23: its owner and editors at its address)', () => {
+  it('mounts its computer alone when asked for it alone (its owner and editors at its address)', () => {
     const mounted = names(appPreset(app(), { computer: true }).plugins);
     expect(mounted).toContain(
       '@datalayer/loop-plugin-app-computer-web-research',
@@ -203,7 +203,7 @@ describe('the rules and approvals card', () => {
     expect(seen.rejected).toEqual(['appr-1']);
   });
 
-  it('shows a result it wants to keep whole, with Approve and save and Decline (R-24)', async () => {
+  it('shows a result it wants to keep whole, with Approve and save and Decline', async () => {
     iamStore.setState({ token: 'jwt' } as never);
     seen.waiting.push({
       id: 'appr-9',
@@ -290,7 +290,7 @@ describe('the activity feed', () => {
                   summary: 'Three sources',
                   payload: { status: 'answered' },
                 },
-                // A run's start is a mark, not a step (R-15).
+                // A run's start is a mark, not a step.
                 {
                   uid: 'e4',
                   session_uid: 's1',
@@ -304,7 +304,7 @@ describe('the activity feed', () => {
     );
     const { container } = await render(<AppActivity appUid="app-1" />);
     expect(calls[0][0]).toBe(
-      // Real use: the sessions its tests ran are read apart (R-07).
+      // Real use: the sessions its tests ran are read apart.
       'https://ai.example/api/ai-agents/v1/apps/sessions?app_uid=app-1&limit=20&tests=false',
     );
     expect((calls[0][1]?.headers as Record<string, string>).Authorization).toBe(
@@ -360,7 +360,7 @@ describe('in words', () => {
     );
   });
 
-  it('says how each run ended when its words are not kept (R-01)', () => {
+  it('says how each run ended when its words are not kept', () => {
     const ends = [
       { uid: '1', kind: 'output', payload: { status: 'answered' } },
       { uid: '2', kind: 'output', payload: { status: 'answered' } },

@@ -4,7 +4,7 @@
  */
 
 /**
- * The transcript of a scene (A-06): what happens in it, as lines, in
+ * The transcript of a scene: what happens in it, as lines, in
  * the order it happened — *Sales: …*, *Sales → Accounting: …*,
  * *Accounting → Odoo: odoo_accounting_aged_balance* — each with its time.
  *
@@ -63,7 +63,7 @@ export type SceneTranscriptLine = {
   failed?: boolean;
   /**
    * When a call or an ask that is over ended, in milliseconds since the
-   * epoch: the span's end (SCENES S2-01, the table's durations). None while
+   * epoch: the span's end (the table's durations). None while
    * it is open, and none for a line read from a record.
    */
   ended?: number;

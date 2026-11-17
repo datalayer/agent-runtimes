@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The REPL's session commands (MH-18): `/sessions`, `/resume <uid>`,
+"""The REPL's session commands: `/sessions`, `/resume <uid>`,
 `/swap <agent>`, `/clone [turn]`, `/export [file]` through `LoopSession`,
 each against a fake session; `/swap` shows the sentence; `/browser` unchanged.
 """

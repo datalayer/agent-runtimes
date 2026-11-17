@@ -1,19 +1,19 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The registry, and the only protocol-specific code in this suite (O0-12).
+"""The registry, and the only protocol-specific code in this suite.
 
 A conformance scenario says what the worker does — it works for a while and
 answers, it refuses before taking the job, it takes the job and then fails,
 it is still going when we lose sight of it — and a binding renders that into
 whichever protocol it speaks. The scenario never learns which one it got,
-which is the whole claim O0-12 is making: the same orchestration runs over
+which is the whole claim being made: the same orchestration runs over
 A2A and over ACP with nothing changed in between.
 
 Three entries are registered, and the third is a worker rather than a
 protocol. An ACP agent that does not declare ``loadSession`` cannot be
-re-attached to, and ``resolve`` narrows its capability report to say so
-(O0-07). Registering it means the harness has something real to skip, and
+re-attached to, and ``resolve`` narrows its capability report to say so.
+Registering it means the harness has something real to skip, and
 that the skip comes from a declaration the adapter produced rather than from
 a protocol name written into a test.
 
@@ -77,7 +77,7 @@ class Ending(str, Enum):
     REJECTED = "rejected"
     FAILED = "failed"
     WORKING = "working"
-    #: Stopped by the model budget the delegation set (scenario 11, O1-07):
+    #: Stopped by the model budget the delegation set (scenario 11):
     #: the worker says which limit, where the delegation put the budget.
     BUDGET = "budget"
 

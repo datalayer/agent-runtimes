@@ -4,7 +4,7 @@
  */
 
 /**
- * The drill-down's reading of a span (SCENES S3-01): a tool's name,
+ * The drill-down's reading of a span: a tool's name,
  * arguments and result; an A2A ask's words and answer, its failure; the
  * person's turn; and a line with no span, from a recording.
  */

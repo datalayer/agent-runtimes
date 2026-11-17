@@ -6,7 +6,7 @@
 /// <reference types="vite/client" />
 
 /**
- * What `ShieldPolicyExample` draws, as data (SH-53, SH-23).
+ * What `ShieldPolicyExample` draws, as data.
  *
  * `@datalayer/agent-shield` is the Shield's TypeScript: the policy
  * document's types generated from the schema the Python package publishes,

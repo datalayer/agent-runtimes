@@ -758,7 +758,7 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
               givenName: runtimeOptions.givenName,
               capabilities: runtimeOptions.capabilities,
               snapshot: runtimeOptions.snapshot,
-              // The application it is launched for, with its Appspec (R-19).
+              // The application it is launched for, with its Appspec.
               appSpec: runtimeOptions.appSpec,
               appUid: runtimeOptions.appUid,
               deploymentUid: runtimeOptions.deploymentUid,

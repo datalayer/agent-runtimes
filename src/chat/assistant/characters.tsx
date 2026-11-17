@@ -4,11 +4,11 @@
  */
 
 /**
- * Datalayer's own characters for the floating assistant (T-25): drawn
+ * Datalayer's own characters for the floating assistant: drawn
  * for LOOP and owned by Datalayer, in the spirit of the Office Assistant —
  * a paper clip of our own, a wizard, a cat and the L👀P eyes. The characters
  * of Office are Microsoft's and are never bundled; a person loads
- * one they hold the rights to (T-26).
+ * one they hold the rights to.
  *
  * Each drawing names its moving parts with classes the stage animates by
  * state — `assistant-body`, `assistant-pupils`, `assistant-lids`,
@@ -30,7 +30,7 @@ import type { AssistantState } from './state';
 export type AssistantColorMode = 'light' | 'dark';
 
 /**
- * What a drawing must keep readable, by mode (T-25, tested as T-15 tests the
+ * What a drawing must keep readable, by mode (tested as the contrast test tests the
  * faces): the colours that meet the page along its edge, and its eyes.
  */
 export interface AssistantCharacterKeyColours {
@@ -77,7 +77,7 @@ export interface AssistantDrawingProps {
   /** The chat's colour mode; light when unsaid. */
   mode?: AssistantColorMode;
   /**
-   * What the assistant acts out (T-22), for a drawing that shows it itself
+   * What the assistant acts out, for a drawing that shows it itself
    * (the orb thinks while a turn runs); the others animate by class.
    */
   state?: AssistantState;
@@ -95,7 +95,7 @@ export interface AssistantCharacter {
    * unsaid); its parts animate by class.
    */
   Drawing: (props: AssistantDrawingProps) => JSX.Element;
-  /** Its key colours in each mode, for the contrast test (T-25). */
+  /** Its key colours in each mode, for the contrast test. */
   keyColours?: Record<AssistantColorMode, AssistantCharacterKeyColours>;
   /** The family a picker lists it under; a drawing when unsaid. */
   family?: AssistantCharacterFamily;

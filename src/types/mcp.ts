@@ -20,7 +20,7 @@ export interface MCPServerTool {
 }
 
 /**
- * How a remote MCP server's bearer is minted for the run (AC-20).
+ * How a remote MCP server's bearer is minted for the run.
  */
 export interface MCPServerAuth {
   /** Who mints it: an Amazon Bedrock AgentCore Gateway's inbound authorizer trusts the identity */
@@ -58,7 +58,7 @@ export interface MCPServer {
   args: string[];
   /** The headers a remote server is sent with every request, `${VAR}` expanded as it starts: the bearer among them */
   headers?: Record<string, string>;
-  /** A bearer minted for the run instead of one in `headers`: an AgentCore Gateway trusting the identity named (AC-20) */
+  /** A bearer minted for the run instead of one in `headers`: an AgentCore Gateway trusting the identity named */
   auth?: MCPServerAuth;
   /** Whether the server is available (based on tool discovery) */
   isAvailable: boolean;

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Sessions: `loop sessions …` (MH-17).
+"""Sessions: `loop sessions …`.
 
 With nothing else, `loop sessions` is the picker: your sessions in two
 groups, **On this machine** and **On Datalayer**, one to choose and resume
@@ -53,7 +53,7 @@ errors = Console(stderr=True, soft_wrap=True)
 #: Where the local runtime answers when nothing names one.
 DEFAULT_SERVER = "http://localhost:8000"
 
-#: The old verbs, retired (decision 17): each answers with this sentence.
+#: The old verbs, retired: each answers with this sentence.
 RETIRED = {
     "threads": "`loop apps threads` is retired: list your conversations with `loop sessions list [--app <id>]`.",
     "feedback": "`loop apps feedback` is retired: read what people said of a conversation with `loop sessions feedback <uid>`.",

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The record of an application, written for every session (R-07)."""
+"""The record of an application, written for every session."""
 
 import time
 from typing import Any
@@ -38,7 +38,7 @@ def app(include: list[str]) -> AppSpec:
 
 
 def app_suggesting(include: list[str]) -> AppSpec:
-    """An application that lets its conversations suggest tests (V-16)."""
+    """An application that lets its conversations suggest tests."""
     return AppSpec.model_validate(
         {
             **app(include).model_dump(),
@@ -53,7 +53,7 @@ def app_suggesting(include: list[str]) -> AppSpec:
 
 def kept_by_session(sent: list) -> Any:
     """A send that keeps what ai-agents keeps: each session's entries in one
-    body, in the order sent — a run's start is sent at once (R-15), the
+    body, in the order sent — a run's start is sent at once, the
     rest as it ends.
     """
 
@@ -157,7 +157,7 @@ async def test_only_what_the_application_keeps_is_kept():
 
 
 async def test_a_runs_end_is_kept_without_its_words_when_outputs_are_not():
-    """R-01, decided 2026-10-13: a session whose run has no end
+    """Decided 2026-10-13: a session whose run has no end
     reads *In progress* and never *Completed*; its end is kept whatever
     `include` says — how and when it ended, never what it answered."""
     agent, sent = recorded(app([]), "Here is the news.")
@@ -375,7 +375,7 @@ async def test_a_stream_whose_closing_raises_still_sends_the_record():
     assert [entry["summary"] for entry in sent[0]["entries"]][-1] == "An answer."
 
 
-# --- feedback (V-18) ---------------------------------------------------------
+# --- feedback ---------------------------------------------------------
 
 
 def feedback_recorder(include: list[str]) -> tuple[AppRecorder, list]:
@@ -436,7 +436,7 @@ async def test_feedback_that_cannot_be_sent_is_said():
         await recorder.feedback("thread-3", liked=True)
 
 
-# --- each turn of a conversation (V-16) ----------------------------------------
+# --- each turn of a conversation ----------------------------------------
 
 
 async def test_a_turn_keeps_what_was_asked_and_answered_under_conversations():
@@ -472,7 +472,7 @@ async def test_no_turn_is_kept_unless_conversations_are():
 
 
 async def test_a_stopped_run_keeps_its_turn_said_stopped():
-    """A refused turn is a turn: a session whose only turn was refused lists and resumes (MH-42)."""
+    """A refused turn is a turn: a session whose only turn was refused lists and resumes."""
     spec = app(["conversations", "outputs", "checks"])
     agent, sent = recorded(spec, ("search", {"q": AWS}), "done")
     with pytest.raises(AppCheckBlockedError):
@@ -523,7 +523,7 @@ async def test_an_ag_ui_turn_keeps_the_question_from_its_messages():
     assert turn["payload"]["answered"] == "Python is a language."
 
 
-# --- the checks of a session's start, and a credential stopped (R-06) ----
+# --- the checks of a session's start, and a credential stopped ----
 
 
 def app_checked(**fields: Any) -> AppSpec:
@@ -628,7 +628,7 @@ async def test_a_call_after_its_first_words_is_kept_in_the_record():
     """Words and a call in one response ("let me check…", then the search) do
     not end the turn: the run goes on, and the search and the answer after it
     are on the record — closed at the first words, the call was lost and the
-    judge read the answer as not from its sources (E-01, 2026-10-10)."""
+    judge read the answer as not from its sources (2026-10-10)."""
     import asyncio
     import json
 

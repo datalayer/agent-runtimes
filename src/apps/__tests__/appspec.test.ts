@@ -362,7 +362,7 @@ describe('writing an Appspec', () => {
     ).toBeUndefined();
   });
 
-  it('reads and writes a company that offers personal agents no sign-in, off unless said (D4-08)', () => {
+  it('reads and writes a company that offers personal agents no sign-in, off unless said', () => {
     const company = {
       enabled: true,
       scopes: [{ name: 'orders:read', description: 'Read your orders' }],
@@ -387,7 +387,7 @@ describe('writing an Appspec', () => {
       enabled: true,
       sign_in_disabled: true,
     });
-    // Its public skills published to personal agents (D4-06): off unless said, written as publish_skills.
+    // Its public skills published to personal agents: off unless said, written as publish_skills.
     const publishing = parseAppspec({
       kind: 'chat',
       skills: ['accounting'],
@@ -401,7 +401,7 @@ describe('writing an Appspec', () => {
     expect(dumpAppspec(publishing).pap?.company).toMatchObject({
       publish_skills: true,
     });
-    // Its website's flags at PAP draft 0.4 (D5-09): off unless said, written as web_unscoped / web_disabled.
+    // Its website's flags at PAP draft 0.4: off unless said, written as web_unscoped / web_disabled.
     expect(open.pap?.company.webUnscoped).toBe(false);
     expect(open.pap?.company.webDisabled).toBe(false);
     const unscoped = parseAppspec({

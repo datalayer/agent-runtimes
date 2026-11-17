@@ -177,7 +177,7 @@ _BEARER_ARG = re.compile(r"^\s*Authorization:\s*Bearer\s*$", re.IGNORECASE)
 
 
 class _Failures(dict[str, str]):
-    """Why each server failed, a credential never kept in it (R-19).
+    """Why each server failed, a credential never kept in it.
 
     What a start failed with is answered by the routes and said to whoever
     configured the agent: an error that echoes a command line with its
@@ -326,7 +326,7 @@ class MCPLifecycleManager:
                 logger.warning(
                     f"Environment variable '{name}' not found or empty during expansion"
                 )
-        # Used by the tool, never shown to the model (R-19).
+        # Used by the tool, never shown to the model.
         return expand_env_vars(
             value,
             env_source,
@@ -398,7 +398,7 @@ class MCPLifecycleManager:
         # If user provides a command, or a url to reach a remote server at, use
         # their config entirely. Its args, env and headers keep their `${VAR}`:
         # they are expanded as the server starts, so a secret never sits in
-        # the config the routes answer (R-19).
+        # the config the routes answer.
         if user_config:
             expanded = dict(user_config)
             if isinstance(expanded.get("command"), str):
@@ -742,7 +742,7 @@ class MCPLifecycleManager:
             #  2. Layer extra_env (from API request body, e.g. decoded secrets)
             #  3. Layer config.env (from catalog/mcp.json, may contain ${VAR} refs)
             # This ordering lets config.env reference extra_env values via ${VAR}.
-            # Without the secrets a configure gave for other servers (R-19).
+            # Without the secrets a configure gave for other servers.
             env = env_for_server(os.environ, config)
             # A deployment's agent acts as its principal (`apps/principal`):
             # a server of the catalogue asking for `${DATALAYER_API_KEY}` on a
@@ -752,7 +752,7 @@ class MCPLifecycleManager:
             # Seen 6 November 2026: the home page's Accounting could not open
             # `odoo-accounting`, its runtime holding no key at all.
             # On the visitors' runtime, the gateway's Odoo servers start with
-            # the demo books' key, for a catalogue Battle's runs alone (B4-01).
+            # the demo books' key, for a catalogue Battle's runs alone.
             principal = self._principal_key(server_id, config, env)
             if not principal and self._asks_for_datalayer_key(config):
                 from agent_runtimes.apps.battle_books import books_start_key
@@ -763,7 +763,7 @@ class MCPLifecycleManager:
 
             if extra_env:
                 env.update(extra_env)
-                # Used by the server, never shown to the model (R-19).
+                # Used by the server, never shown to the model.
                 hold_env(extra_env)
                 # Names only: never any part of a value.
                 logger.info(
@@ -786,7 +786,7 @@ class MCPLifecycleManager:
                     for key, value in config.env.items()
                 }
                 logger.debug(f"  Expanded config.env: {list(expanded_env.keys())}")
-                # Used by the server, never shown to the model (R-19).
+                # Used by the server, never shown to the model.
                 hold_env(expanded_env)
                 env.update(expanded_env)
 
@@ -817,7 +817,7 @@ class MCPLifecycleManager:
             if remote:
                 # Reached at its url, no process: its headers sent with
                 # every request, the bearer among them expanded here and
-                # held, never shown to the model (R-19).
+                # held, never shown to the model.
                 headers = self._expanded_headers(config, env)
                 problem = empty_bearer_problem(
                     server_id,
@@ -829,7 +829,7 @@ class MCPLifecycleManager:
                     self._failed_servers[server_id] = problem
                     return None
                 # An AgentCore Gateway: its bearer minted for the run by
-                # the agentcore identity provider, never a header (AC-20).
+                # the agentcore identity provider, never a header.
                 try:
                     gateway_auth = gateway_auth_of(config)
                 except IdentityRefused as refused:
@@ -869,7 +869,7 @@ class MCPLifecycleManager:
                 )
             elif config.transport == "streamable-http" and config.url:
                 # Its command runs as a local HTTP process, reached at its
-                # url (W-02: Gmail, whose every request carries a
+                # url (Gmail, whose every request carries a
                 # token IAM minted for whom the run acts for).
                 return await self._start_http_process_server(
                     server_id, config, env, expanded_args
@@ -1134,7 +1134,7 @@ class MCPLifecycleManager:
         One served deployment with a token: its principal is the key. None, or
         several with different tokens: nothing is chosen, and the server
         fails closed as before (`empty_bearer_problem`). Held, never shown
-        to the model (R-19); logged by name, never by value.
+        to the model; logged by name, never by value.
         """
         if env.get("DATALAYER_API_KEY"):
             return ""
@@ -1173,7 +1173,7 @@ class MCPLifecycleManager:
         self, config: MCPServer, env: dict[str, str]
     ) -> dict[str, str]:
         """A remote server's headers with their ``${VAR}`` expanded, the
-        credentials among them held, never shown to the model (R-19).
+        credentials among them held, never shown to the model.
         """
         headers = {
             name: self._expand_env_vars(value, lookup_env=env)
@@ -1249,7 +1249,7 @@ class MCPLifecycleManager:
         """Start a server's command as a local HTTP process, reached at its url.
 
         Nothing is asked of it here: a server that opens what each request's
-        token says (Gmail, W-02) answers nobody without one, so its
+        token says (Gmail) answers nobody without one, so its
         tools are listed by each run's own toolset
         (`google_workspace.toolset_for_the_run`), never by the process's.
         """
@@ -1344,7 +1344,7 @@ class MCPLifecycleManager:
         every turn after: Disaster Assessment's `earthdata` started 11 ms
         before the runtime's key was in its environment, its header expanded
         empty, and the deployment answered without its tools for hours
-        (H-03, 2026-10-10). The turn that finds it stopped goes on
+        (2026-10-10). The turn that finds it stopped goes on
         without it; the next one finds it running.
 
         Returns

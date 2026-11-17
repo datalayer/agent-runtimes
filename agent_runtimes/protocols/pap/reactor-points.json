@@ -20,7 +20,7 @@
       "resolution": "single",
       "tenant": null,
       "extension": false,
-      "note": "Python only: a runtime's perform turn redeems its ticket here (B-04). Datalayer's company service by default; a local PapCompanyCapability contributes its own tickets. A TypeScript runtime performs no company operation, so the point is not declared there."
+      "note": "Python only: a runtime's perform turn redeems its ticket here. Datalayer's company service by default; a local PapCompanyCapability contributes its own tickets. A TypeScript runtime performs no company operation, so the point is not declared there."
     }
   ],
   "sdk": "PAP's own points (pap.*, pap.company.*) are the SDK's plugins', listed in personal-agent-protocol's protocol/reactor-points.json; they are registered on the PAP Reactor each personal agent or company builds."

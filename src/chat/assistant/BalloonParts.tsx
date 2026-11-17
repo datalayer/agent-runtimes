@@ -4,7 +4,7 @@
  */
 
 /**
- * The parts the two balloon displays are drawn with (T-23): the tool
+ * The parts the two balloon displays are drawn with: the tool
  * line ("Using **list_invoices**…"), what a screen reader hears of it, the
  * `current` balloon's *Now*, and the `history` balloon's header
  * ("Conversation · 6").
@@ -175,7 +175,7 @@ export function ToolLineAnnouncer({
  * drawn were a live region of their own, with `aria-busy` while they
  * streamed, which Orca does not wait for: it read *There*, then *There are
  * 4 open customer invoices in the books, and*, then the balloon's cut ending
- * in a table's pipes (H-21, 2026-10-11).
+ * in a table's pipes (2026-10-11).
  */
 export function WordsAnnouncer({
   text,
@@ -370,7 +370,7 @@ export function CurrentBalloonBody({
             <>
               {/* Cut for the eye; a screen reader is given them whole, in
                   plain words — Orca read the cut, *…or a customer…*
-                  (H-21, 2026-10-11). */}
+                  (2026-10-11). */}
               {/* The whole words as markdown, clipped by the box's height:
                   the cut text had its line breaks flattened, so a table or a
                   list showed as raw pipes and dashes until unfolded (the

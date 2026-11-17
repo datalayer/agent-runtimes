@@ -4,7 +4,7 @@
  */
 
 /**
- * A chat's speaker (VO-20, VO-21, VO-33): its answers said by
+ * A chat's speaker: its answers said by
  * Datalayer's speech service — `POST /api/ai-agents/v1/speech/syntheses` on
  * ai-agents, `datalayer-speech` — while its voice's `output` is not `off`.
  * One for `ChatFloating` and for `ChatBase` alone, so that a chat given a
@@ -26,9 +26,9 @@ export interface VoiceSpeaker {
   state: SpeakerState;
   /** Stop at once (`Esc`, *Stop speaking*, the microphone opening). */
   stop: () => void;
-  /** Read an answer aloud from its start (VO-21). */
+  /** Read an answer aloud from its start. */
   read: (answer: string) => void;
-  /** How loud what plays is, for the assistant's mouth (VO-23). */
+  /** How loud what plays is, for the assistant's mouth. */
   level?: () => number;
 }
 
@@ -53,7 +53,7 @@ export function useVoiceSpeaker(
             rate: voice.rate,
             volume: voice.volume,
             onState: setState,
-            // The chat's answers: streamed, played as they are said (VO-52);
+            // The chat's answers: streamed, played as they are said;
             // from a service that does not stream, the first clause first.
             streamed: true,
             firstClauseFirst: true,

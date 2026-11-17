@@ -111,7 +111,7 @@ export interface UseAgentOptions {
    */
   runtimeConnection?: AgentRuntimeConnectionOptions;
   /**
-   * The application the runtime is launched for (R-19): its Appspec,
+   * The application the runtime is launched for: its Appspec,
    * and the saved application and deployment it runs for. Sent with the
    * launch, as `RuntimesClient.create` sends it in Python, so the runtime is
    * given the secrets its connections declare before its agent is made.
@@ -123,13 +123,13 @@ export interface UseAgentOptions {
   appLaunch?: AppLaunch;
 }
 
-/** What an application's launch carries besides its environment (R-19). */
+/** What an application's launch carries besides its environment. */
 export type AppLaunch = Required<Pick<IRuntimeOptions, 'appSpec'>> &
   Pick<IRuntimeOptions, 'appUid' | 'deploymentUid' | 'runtimeEngine'>;
 
 /**
  * Whether a listed runtime is one an application's deployment goes on with:
- * launched for that deployment (its secrets given at launch, R-19) and not
+ * launched for that deployment (its secrets given at launch) and not
  * expired. One per visitor: the listing is the caller's own runtimes.
  */
 export function reusesAppRuntime(
@@ -1005,7 +1005,7 @@ export function useAgentRuntimes(
     if (!hasSpec || runtime || lifecycleStatus !== 'idle') {
       return;
     }
-    // An application's runtime is launched for it (R-19), given its
+    // An application's runtime is launched for it, given its
     // connections' secrets: a running one launched for another spec was not,
     // so only one launched for the same deployment is gone on with. Each
     // visit used to launch its own, and a reload while the first was still

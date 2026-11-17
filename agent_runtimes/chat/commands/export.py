@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Slash command: /export [file] - Export this session as a file (MH-18)."""
+"""Slash command: /export [file] - Export this session as a file."""
 
 from __future__ import annotations
 

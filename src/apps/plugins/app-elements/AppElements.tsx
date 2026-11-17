@@ -4,7 +4,7 @@
  */
 
 /**
- * The elements an application's code opened beside the conversation (P-18): a side panel on the trailing edge, and a page of its own over the
+ * The elements an application's code opened beside the conversation: a side panel on the trailing edge, and a page of its own over the
  * workspace — each drawn from its display as an answer is (`AnswerShowsView`),
  * its buttons pressing the actions the display offered, and closed with its
  * own button.
@@ -54,7 +54,7 @@ function ElementBody({
   send: Send;
 }): JSX.Element {
   // What its code shows, drawn as an answer's display is: its buttons press
-  // what the display offered (P-04, RU-2).
+  // what the display offered.
   return (
     <AnswerShowsView
       display={element.shows}

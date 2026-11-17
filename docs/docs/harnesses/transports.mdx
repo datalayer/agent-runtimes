@@ -31,7 +31,7 @@ ACP's `session/update`s become the `StreamEvent`s every transport reads:
 | `fs/*`, `terminal/*` | Answered by the runtime, each **also** a `tool_call` row of kind `read` / `edit` / `execute` and a decision | Visible, decided, recorded |
 | a malformed update, a refused action | `text` (`[Shield] …`), then `done {stop_reason: refusal, sentence}` | The sentence, the turn over |
 
-## Permissions are Rules (SH-11, SH-12 — built)
+## Permissions are Rules
 
 ACP's tool `kind` is classed by the package's one table
 (`agent_shield.policy.class_of`, `KIND_CLASS` in `@datalayer/agent-shield`),
@@ -61,7 +61,7 @@ without one — the cautious answer is written beside it, and the read or write
 itself is decided again with its path when the runtime answers it
 (`harness_on_the_runtime.py` shows both rows).
 
-## Sessions, the sidecar, `loop` (SH-18, SH-19, SH-40 — built)
+## Sessions, the sidecar, `loop`
 
 The harness's session is kept in the protocol state store; a restarted
 runtime loads it when the harness advertises `loadSession`, and otherwise
@@ -71,7 +71,7 @@ operator's `AGENT_RUNTIMES_HARNESS_SIDECAR_URL` (1.5.38, the operator's flag
 off by default) the harness runs in the pod's `datalayer-harnesses` sidecar
 and the runtime reaches it over the WebSocket channel, deciding the same.
 
-## MCP, lent through the gateway (SH-14 — built)
+## MCP, lent through the gateway
 
 `session/new.mcpServers` is how a harness gets tools; it is **never** given a
 credential of its own. `adapters/acp_agent.py`'s `lent_toolsets` reads the
@@ -107,7 +107,7 @@ from `session/new`, each cut a `decision` of the record. Drilled against the
 gateway on r1 (read-only): the lent `earthdata` toolset lists its tools over
 both shapes, and `launch_sandbox`, outside it, is refused by the gateway.
 
-## A2A (SH-15 — built)
+## A2A
 
 `transports/a2a.py`'s `A2AWorker` serves a harness as any agent, plus:
 
@@ -130,7 +130,7 @@ Drilled: the orchestrator delegating over HTTP to the worker on the fake agent
 and getting the diff back with its provenance (`test_a2a_harness_worker.py`;
 runnable as `examples/shield/delegate_to_a_harness.py`).
 
-## AG-UI, the session API, the embed, the phone (SH-16 — the web built, the phone's contract given)
+## AG-UI, the session API, the embed, the phone (the web built, the phone's contract given)
 
 Two displays join `portable/displays`, typed in Python in
 `adapters/harness_displays.py` and sent beside the tool's result in
@@ -150,7 +150,7 @@ The web chat and the embed draw them through the preset's
 tool binding — the display says what it is); the session API's record carries
 each as a `tool_call` entry *shown* with the display; the phone reads the same
 contract (`protocolDisplayOf`, `displayLine`, `shieldDisplayFixtures()` as its
-fixture, M-037) — drawing it there is the mobile app's. A terminal
+fixture) — drawing it there is the mobile app's. A terminal
 fills while its command runs: the Shield pushes the output whole at each
 change, and each push reaches the page as the running row's
 `_meta["reactor.ui/display"]` (the output so far, no exit code, not released)
@@ -160,7 +160,7 @@ The examples app's *Shield Harness* page is the web chat on a harness runtime
 (`examples/shield/harness_on_the_runtime.py --serve`), drawing both; not yet
 seen in a browser.
 
-## ACP in, ACP out (SH-17 — built, proved with the SDK's client)
+## ACP in, ACP out (proved with the SDK's client)
 
 An IDE connects to the runtime's ACP endpoint (`routes/acp.py`,
 `/api/v1/acp/ws/{agent_id}`) and names an application whose agent is a harness:
@@ -189,7 +189,7 @@ not yet drilled. The standalone Shield is the same proxy without a runtime:
 `examples/shield/proxy_from_python.py` drives `agent-shield run` from Python
 as an editor would.
 
-## Skills, in the harness's format (SH-21 — built on the fake agent)
+## Skills, in the harness's format (built on the fake agent)
 
 Before the harness starts, `adapters/harness_skills.py` writes the
 application's **enabled** skills into the workspace where the harness spec

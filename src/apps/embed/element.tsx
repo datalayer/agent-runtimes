@@ -5,9 +5,9 @@
 
 /**
  * `<datalayer-app>`: an application in another product's page, as one
- * script tag and one element (D-08), in the mode its Appspec says
- * (D-07), its theme isolated from the host's and overridable in the three
- * ways that matter (T-13, D-11).
+ * script tag and one element, in the mode its Appspec says,
+ * its theme isolated from the host's and overridable in the three
+ * ways that matter.
  *
  *   <script src="https://datalayer.app/embed/datalayer-app.js" async></script>
  *   <datalayer-app app="01M…" origin="https://datalayer.app"></datalayer-app>
@@ -19,7 +19,7 @@
  * 2. an Appspec at an address (`spec="https://…/support-desk.yaml"`);
  * 3. an application on Datalayer (`app`), read with its embed token
  *    (`token`), or — with no token — a public one read as a visitor
- *    without an account reads it (D-07, R-30, `visitorApp`): an
+ *    without an account reads it (`visitorApp`): an
  *    example Datalayer keeps warm for visitors, or an application at its
  *    address that its owner lets anybody talk to. The conversation then
  *    runs on the visitors' runtime with a visitor's token the chat mints
@@ -38,19 +38,19 @@
  * drawn in it, so nothing of the application's styles reaches the page and
  * nothing of the page's reaches the application.
  *
- * The page and the application talk (D-10), for the names its Appspec
+ * The page and the application talk, for the names its Appspec
  * gives under `deployment.embedded.host`: the page sets `element.context`
  * (`{ user, page, …its own }`), which its agent reads with `host_context`,
  * and `element.functions` (`{ open_ticket: async args => … }`), which its
  * agent calls as `host_open_ticket`, each as the rule naming it decides; the
  * element raises `message` when the application has answered and `action`
  * when it called a function of the page, beside `decision` and
- * `token-expired`. Who its user is, when it matters (D-21): the page
+ * `token-expired`. Who its user is, when it matters: the page
  * sets `user-token` (or `element.userToken`) to the token its server signed
  * naming the user, sent with every run of an application that says
  * `user: signed`.
  *
- * Window messages (P-25), on the host's own server: the element raises
+ * Window messages, on the host's own server: the element raises
  * `window-message` (`detail.data`) when the application's code tells the page
  * something outside the conversation (`session.send_window_message`), and
  * `element.postWindowMessage(data)` hands the page's to its `@app.window`.
@@ -58,7 +58,7 @@
  * On the host's server (`server`) with the visit's embed token, the
  * session the application opens is kept in the page's `localStorage`, under
  * the application and the visit its token names, and picked up again after
- * the page reloads — its conversation drawn again (D-13); a token
+ * the page reloads — its conversation drawn again; a token
  * renewed for the visit redraws the application on the same session.
  * `resume="false"` keeps nothing in the page's storage.
  *
@@ -121,7 +121,7 @@ export const EMBED_MESSAGES = {
 
 /** Where an application comes from, once read. */
 export type EmbedSource =
-  /** An Appspec to draw; with `visitors`, run as a visitor without an account on the visitors' runtime (D-07). */
+  /** An Appspec to draw; with `visitors`, run as a visitor without an account on the visitors' runtime. */
   | { kind: 'spec'; app: AppSpec; visitors?: DatalayerVisitors }
   | { kind: 'frame'; src: string }
   | { kind: 'said'; text: string; expired?: boolean };
@@ -271,12 +271,12 @@ export function defineDatalayerAppElement(
     private passed: Record<string, unknown> = {};
     /** One object, its functions replaced in place: the host below holds it. */
     private readonly offered: Record<string, HostFunction> = {};
-    /** How a window message reaches the application's session, once it can (P-25). */
+    /** How a window message reaches the application's session, once it can. */
     private windowPort: WindowPost | null = null;
-    /** What the page gives the application, read at each call (D-10). */
+    /** What the page gives the application, read at each call. */
     private readonly host: AppEmbedHost = {
       context: () => this.passed,
-      // Read as each run is sent (D-21): a renewed one goes with the next.
+      // Read as each run is sent: a renewed one goes with the next.
       userToken: () => this.getAttribute('user-token') || undefined,
       functions: this.offered,
       onWindowPort: post => {
@@ -292,7 +292,7 @@ export function defineDatalayerAppElement(
         ),
     };
 
-    /** The values the page passes: `user`, `page`, its own (D-10). */
+    /** The values the page passes: `user`, `page`, its own. */
     get context(): Record<string, unknown> {
       return this.passed;
     }
@@ -302,7 +302,7 @@ export function defineDatalayerAppElement(
     }
 
     /**
-     * Post a window message to the application (P-25): its code's
+     * Post a window message to the application: its code's
      * `@app.window` reads it, and what it answers is raised as
      * `window-message` events. Refused, in a sentence, before its
      * conversation has started or off the host's own server.
@@ -314,7 +314,7 @@ export function defineDatalayerAppElement(
         : Promise.reject(new Error(`datalayer-app: ${WINDOW_NOT_YET}`));
     }
 
-    /** The page's functions the application may call, by name (D-10). */
+    /** The page's functions the application may call, by name. */
     get functions(): Record<string, HostFunction> {
       return this.offered;
     }
@@ -330,7 +330,7 @@ export function defineDatalayerAppElement(
       super();
       this.attachShadow({ mode: 'open' });
       this.onMessage = this.onMessage.bind(this);
-      // What the page set before the element was defined (D-10).
+      // What the page set before the element was defined.
       adoptPropertiesSetEarly(this);
     }
 
@@ -348,7 +348,7 @@ export function defineDatalayerAppElement(
     }
 
     /**
-     * The token the host's server signed naming its user (D-21), the
+     * The token the host's server signed naming its user, the
      * `user-token` attribute's: what an application that says `user: signed`
      * opens its session with. Set it to hand a new one over.
      */
@@ -417,7 +417,7 @@ export function defineDatalayerAppElement(
       if (!this.isConnected || before === after) {
         return;
       }
-      // The user's signed token is read as each run is sent (D-21): nothing
+      // The user's signed token is read as each run is sent: nothing
       // is drawn again for a new one.
       if (name === 'user-token') {
         return;
@@ -509,7 +509,7 @@ export function defineDatalayerAppElement(
       }
       const token = this.token;
       if (!token) {
-        // A public application, as a visitor without an account (D-07):
+        // A public application, as a visitor without an account:
         // an example kept warm or an address open to visitors, run on the
         // visitors' runtime; a decision framed; a refusal said.
         // Read as `Application` reads a name (one way, `resolveApplication`).
@@ -531,7 +531,7 @@ export function defineDatalayerAppElement(
       });
     }
 
-    /** Where its voice runs (VO-18): ai-agents' speech service, as the platform's configuration says it; one object per address. */
+    /** Where its voice runs: ai-agents' speech service, as the platform's configuration says it; one object per address. */
     private spoken: { speechUrl: string } | null = null;
 
     private get speech(): { speechUrl: string } {
@@ -694,7 +694,7 @@ export function defineDatalayerAppElement(
         return;
       }
       // A character nothing contributes is said in place, as an attribute
-      // that is not one is (D-07, T-24).
+      // that is not one is.
       if (look.mode === 'assistant') {
         const chosen = embedAssistantCharacter(source.app);
         if ('problem' in chosen) {
@@ -704,7 +704,7 @@ export function defineDatalayerAppElement(
       }
       this.setAttribute('data-embed-mode', look.mode);
       // The theme's own stylesheet: `loop`'s, or the one the application
-      // names (T-30).
+      // names.
       const shadow = this.skeleton(
         getThemeConfig(look.variant).themeStyles.css,
       );
@@ -715,8 +715,8 @@ export function defineDatalayerAppElement(
       const server = this.getAttribute('server') || undefined;
       // Where it runs: for a visitor without an account, on the visitors'
       // runtime with a visitor's token, the limited preview unless the host
-      // says not (D-07, R-30); on the host's server, the visit's embed
-      // token going with the conversation (R-20); else on Datalayer, with
+      // says not; on the host's server, the visit's embed
+      // token going with the conversation; else on Datalayer, with
       // the signed-in person's credentials.
       const runsOn: ApplicationRunsOn = source.visitors
         ? {
@@ -745,7 +745,7 @@ export function defineDatalayerAppElement(
             accent={look.accent}
             colorMode={look.colorMode}
             font={look.font}
-            // Its voice, when its Appspec says one (VO-18): ai-agents'
+            // Its voice, when its Appspec says one: ai-agents'
             // speech service; the microphone needs the page's
             // Permissions-Policy to allow it.
             speech={this.speech}
@@ -753,9 +753,9 @@ export function defineDatalayerAppElement(
             ownPortal
             host={this.host}
             // The visit's session kept in the page's storage, and picked
-            // up again after a reload, unless the host says not (D-13).
+            // up again after a reload, unless the host says not.
             resume={resume}
-            // The visitor's language, when the host says it (P-26).
+            // The visitor's language, when the host says it.
             {...(language ? { language } : {})}
           />
         </StyleSheetManager>,

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The contribution points of the session (MH-F01): what a plugin may offer.
+"""The contribution points of the session: what a plugin may offer.
 
 The session — one conversation of one person with one application's agent,
 kept in the record — is extended through the reactor and nothing else: the
@@ -135,7 +135,7 @@ class HarnessContribution:
 
     spec: HarnessSpec
     adapter: Callable[..., Any]
-    #: The organization whose own harness this is (``org-…``, SH-46), or ``""``
+    #: The organization whose own harness this is (``org-…``), or ``""``
     #: for one of the shared catalogue: an organization's is contributed under
     #: ``<id>@<organization>`` and resolved for that organization alone, so
     #: it leaks to no other.

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What the record keeps of a person's answers, and for how long (R-07).
+"""What the record keeps of a person's answers, and for how long.
 
 An approval's outcome is an entry of its own — approved, declined, or not
 answered in time — whether a rule or a Gate asked. An application that names
@@ -164,7 +164,7 @@ def test_a_run_starts_in_the_record_at_once() -> None:
 def test_a_swapped_in_recorder_goes_on_with_the_session_without_a_second_opening() -> (
     None
 ):
-    """After a swap (MH-06) the new agent's recorder adopts the session another
+    """After a swap the new agent's recorder adopts the session another
     recorder started on this runtime: no second opening, which said an agent of
     ``""`` and had the record refuse every later entry (r1, 21 October 2026).
     A resume still writes its own opening."""

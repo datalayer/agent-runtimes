@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """``loop`` on Datalayer: what the cloud offers, attaching, refusals, and the
-slash commands reading the cloud runtime (L-01, L-02, L-04, L-06, L-07).
+slash commands reading the cloud runtime.
 
 The Datalayer API is a fake client; the cloud runtime is a small Starlette
 application behind the real relay, so every request a slash command makes
@@ -141,7 +141,7 @@ def test_datalayer_is_not_offered_to_somebody_not_signed_in(tmp_path: Any) -> No
         choose_where(can_ask=True, ask=ask, cloud_offered=False, preferences=prefs)
         == LOCAL
     )
-    # The flag still says so, and is refused later in a sentence (L-04).
+    # The flag still says so, and is refused later in a sentence.
     assert choose_where(cloud=True, cloud_offered=False, preferences=prefs) == CLOUD
 
 
@@ -319,7 +319,7 @@ def test_an_application_s_launch_carries_its_appspec(datalayer: FakeDatalayer) -
         "example-simple", reconnect=False, can_ask=False, minutes=5, app_spec=app
     )
     try:
-        # Its connections' secrets given at launch (R-19).
+        # Its connections' secrets given at launch.
         assert datalayer.created["app_spec"] == app
     finally:
         started.relay.stop()
@@ -333,7 +333,7 @@ def test_an_application_s_launch_carries_its_appspec(datalayer: FakeDatalayer) -
 def test_an_application_is_never_offered_a_running_runtime(
     datalayer: FakeDatalayer, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """One not launched for the application was not given its secrets (R-19)."""
+    """One not launched for the application was not given its secrets."""
     datalayer.running = [Running("runtime-9", "ai-agents-env")]
     offered: List[Any] = []
     monkeypatch.setattr(
@@ -350,7 +350,7 @@ def test_an_application_is_never_offered_a_running_runtime(
         assert datalayer.created["app_spec"] == app
     finally:
         started.relay.stop()
-    # An agent alone is still offered the running one first (L-06).
+    # An agent alone is still offered the running one first.
     started = launch.launch_cloud("crawler", can_ask=False, minutes=5)
     try:
         assert len(offered) == 1

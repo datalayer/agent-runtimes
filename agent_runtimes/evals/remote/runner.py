@@ -63,7 +63,7 @@ DEFAULT_QUEUED_TIMEOUT_SECONDS = 180
 DEFAULT_HEARTBEAT_SECONDS = 30.0
 
 #: A launch that will not move on its own: over, or `blocked` — waiting on
-#: credits, compute or an approval a person has to provide (B2-06).
+#: credits, compute or an approval a person has to provide.
 LAUNCH_SETTLED_STATUSES = frozenset({"completed", "failed", "cancelled", "blocked"})
 
 
@@ -87,7 +87,7 @@ def resolve_evalset(
 
     Returns ``{evalset_id, evalset, imported, unsupported_evaluators}``. The
     evaluators the platform cannot run are dropped by the import and named
-    here, so a benchmark never claims a grade it will not compute (B0-11).
+    here, so a benchmark never claims a grade it will not compute.
     """
     spec: Optional[dict[str, Any]] = None
     if isinstance(spec_or_id, dict):
@@ -161,7 +161,7 @@ def ensure_experiments(
     log: Optional[Callable[[str], None]] = print,
 ) -> list[str]:
     """One experiment per subject on the evalset: the existing one that runs
-    that subject, else a new one (B2-11). Experiments are the durable objects
+    that subject, else a new one. Experiments are the durable objects
     runs compare across, so a second launch of the same agent lands on the
     same experiment rather than a fresh one.
     """
@@ -236,9 +236,9 @@ def launch_config(
     retention: str = "snapshots",
     git: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
-    """The launch's configuration, the keys the service reads (B2-03, B2-06).
+    """The launch's configuration, the keys the service reads.
 
-    `git` is where the launch came from when CI made it (B6-02):
+    `git` is where the launch came from when CI made it:
     the commit, the ref, the pull request, the action run and the
     repository. Kept on the launch, indexed by the service, shown on the
     launch's page and in the report's methodology. Empty values are dropped,
@@ -456,7 +456,7 @@ def execute_evalset_spec(
     Imports the evalset from ``spec`` (through the service's import route),
     then, ``run_limit`` times, either submits a **launch** the platform
     executes on a pool of ``concurrency`` sandboxes per agentspec and watches
-    it to its end (``execution_target='cloud'``, B2-03 and B2-15),
+    it to its end (``execution_target='cloud'``),
     or runs every case through a local ``agent-runtimes`` server,
     grades the outputs with the evals API and stores one run record per
     execution (``execution_target='local'``). Local execution resources are
@@ -488,8 +488,8 @@ def execute_evalset_spec(
     account_uid : Optional[str]
         Optional account UID context.
     credits_limit : float, optional
-        Credits a cloud launch may spend; it ends ``blocked`` when reached
-        (B2-06). No cap when omitted.
+        Credits a cloud launch may spend; it ends ``blocked`` when reached.
+        No cap when omitted.
     evalset_name : Optional[str]
         Optional explicit evalset name. Defaults to a timestamped name derived
         from the spec name.
@@ -616,7 +616,7 @@ def execute_evalset_spec(
     run_ids: list[str] = []
 
     if target == "cloud":
-        # A cloud run is a launch (B2-03, B2-15): the platform executes it on
+        # A cloud run is a launch: the platform executes it on
         # a pool of sandboxes as the person and grades it; this process
         # submits and watches. The runtimes this branch used to create and
         # the per-case loop it used to drive are the durable workflow's now.

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Scenes: `loop scenes …` (A-14).
+"""Scenes: `loop scenes …`.
 
 A scene is a scene spec (`agentspecs.scenes`, ``loop.scene/v1``): a team
 staged — its cast with their personas, its setting, its script of beats,
@@ -17,7 +17,7 @@ and its rehearsal, the shape each beat's transcript must take.
   process (a member the scene puts in the browser played as the browser
   plays it), or with ``--cloud`` every member on a runtime served over A2A
   on a cloud runtime of its own, launched for its application so that it is
-  given the secrets its connections declare (R-19), or at an address
+  given the secrets its connections declare, or at an address
   it is already served at (``--address member=URL``, or the variable the
   scene's ``deployment.addresses`` names: a deployment's stable address, a
   runtime kept with ``--keep``), asked with a key granted to its route
@@ -39,7 +39,7 @@ and its rehearsal, the shape each beat's transcript must take.
   in the scene's YAML (``rehearsal.recording``): what a stage plays, at its
   recorded pace, when the scene cannot play live.
 - ``loop scenes build scene.py`` writes the scene spec a scene written in
-  Python amounts to (``loop.scene``, ``loop.stage``; P-30), and
+  Python amounts to (``loop.scene``, ``loop.stage``), and
   ``loop scenes push`` keeps a scene in the person's Space as the Studio keeps
   one; ``rehearse`` takes a ``scene.py`` as it takes a YAML file.
 """
@@ -90,7 +90,7 @@ def _require_scenes() -> Any:
 
 
 def written_scene_of(path: Path) -> Any:
-    """The scene a ``scene.py`` writes (P-30); refused in a sentence."""
+    """The scene a ``scene.py`` writes; refused in a sentence."""
     from agent_runtimes.loop.scenes.written import load_scene_file
 
     if not path.is_file():
@@ -119,7 +119,7 @@ def spec_of_written(path: Path) -> Any:
 def scene_of(name: str) -> Any:
     """A scene by its id in the catalogue, or from a file.
 
-    The file is YAML, or a ``scene.py`` written in Python (P-30);
+    The file is YAML, or a ``scene.py`` written in Python;
     refused in a sentence.
     """
     module = _require_scenes()
@@ -143,7 +143,7 @@ def scene_of(name: str) -> Any:
 
 
 def played_of(scene: Any) -> Any:
-    """What the scene's last rehearsal on Datalayer found, or None (A-14)."""
+    """What the scene's last rehearsal on Datalayer found, or None."""
     module = _require_scenes()
     read = getattr(module, "scene_played", None)
     if read is None:
@@ -267,7 +267,7 @@ def scenes_ls(
 ) -> None:
     """The scenes of the catalogue: faces, members, setup, and whether each is Live."""
     module = _require_scenes()
-    # The teams staged live: a scripted scene is played as written on its page (X-02).
+    # The teams staged live: a scripted scene is played as written on its page.
     scenes = [
         scene
         for scene in module.list_scenes()
@@ -382,7 +382,7 @@ def stage_in_cloud(
 
     A member on a runtime is launched for its application (``app_spec``), so
     that the runtime is given the secrets its connections declare and no
-    other (R-19), then configured with it and served over A2A. One at an
+    other, then configured with it and served over A2A. One at an
     ``addresses`` entry is asked there instead, and nothing is launched for
     it. A member the scene puts in the browser is played here, as the browser
     plays it. A launch Datalayer refuses, or does not set up in time, is the
@@ -532,7 +532,7 @@ def scenes_rehearse(
         raise typer.BadParameter("--local or --cloud: one place to play it.")
     scene = scene_of(scene_name)
     if getattr(getattr(scene, "kind", None), "value", "team") == "scripted":
-        # Written out and played as written, on the page (X-02): nothing to rehearse.
+        # Written out and played as written, on the page: nothing to rehearse.
         raise typer.BadParameter(
             f"{scene.id} is scripted: it is played as written, with no team to rehearse."
         )
@@ -609,7 +609,7 @@ def scenes_rehearse(
         transcript.write_text(json.dumps(written, indent=2, ensure_ascii=False) + "\n")
         aside(f"The transcript is written to {transcript}.")
     if cloud and not (beats or []) and module.get_scene(scene.id) is scene:
-        # Every beat, on Datalayer, of a catalogue scene: kept as its last rehearsal (A-14).
+        # Every beat, on Datalayer, of a catalogue scene: kept as its last rehearsal.
         kept = keep_played(module, scene, verdict)
         if kept is not None:
             aside(f"Kept as the scene's last rehearsal: {kept}")
@@ -744,7 +744,7 @@ def scenes_build(
         False, "--force", help="Overwrite a file that is there."
     ),
 ) -> None:
-    """Write the scene spec a scene.py amounts to (P-30): loop.scene/v1, as YAML.
+    """Write the scene spec a scene.py amounts to: loop.scene/v1, as YAML.
 
     Refused, with agentspecs' sentences, when the file writes no scene or more
     than one, or agentspecs refuses the scene it writes.
@@ -788,7 +788,7 @@ def scenes_push(
         None, "--space", help="A space of yours to make it a new scene in, by its id."
     ),
 ) -> None:
-    """Keep a scene in your Space as the Studio keeps one (P-30).
+    """Keep a scene in your Space as the Studio keeps one.
 
     The Studio then opens it as any scene of yours — the same spec in its
     spec editor and on its stage. --scene saves it as a scene that is there;

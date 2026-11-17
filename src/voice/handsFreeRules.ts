@@ -4,7 +4,7 @@
  */
 
 /**
- * A conversation by voice, hands-free (VO-12, VO-13): what the
+ * A conversation by voice, hands-free: what the
  * composer is doing at every moment, and when a turn ends or the person
  * speaks over the agent. Pure: the component (`HandsFree`) keeps the
  * microphone and the clock, this decides.
@@ -15,7 +15,7 @@
  * - **Thinking**: the turn was sent and the agent is answering, nothing
  *   said yet.
  * - **Speaking**: the answer is being said. The microphone stays open:
- *   speech heard now is barge-in (VO-13) — the voice stops at once, the run
+ *   speech heard now is barge-in — the voice stops at once, the run
  *   is stopped when the answer is still being written, and what was heard
  *   starts the next turn.
  * - **Paused**: the person paused it (`Esc`, *Pause*), or nothing was said
@@ -24,7 +24,7 @@
  * @module voice/handsFreeRules
  */
 
-/** What hands-free is doing, shown at all times (VO-12). */
+/** What hands-free is doing, shown at all times. */
 export type HandsFreeState =
   'off' | 'listening' | 'thinking' | 'speaking' | 'paused';
 
@@ -37,7 +37,7 @@ export const HANDS_FREE_WORDS: Record<HandsFreeState, string> = {
   paused: 'Paused',
 };
 
-/** The silence after speech that ends a turn, in ms, unless said otherwise (VO-12). */
+/** The silence after speech that ends a turn, in ms, unless said otherwise. */
 export const TURN_SILENCE_MS = 500;
 
 /** Listening with nothing said for this long pauses it: a microphone is not left open on an empty room. */
@@ -80,7 +80,7 @@ export interface HeardSoFarLike {
 
 /**
  * Whether the turn ended: the person spoke, and has been silent for the
- * turn's silence since (VO-12).
+ * turn's silence since.
  */
 export function turnEnded(
   heard: HeardSoFarLike,
@@ -91,9 +91,9 @@ export function turnEnded(
 
 /**
  * At most this share of what plays is taken to come back into the
- * microphone once the browser's echo cancellation has done its part (VO-13),
+ * microphone once the browser's echo cancellation has done its part,
  * on the meters' own scales (the microphone's `Capture.level`, the speaker's
- * `level`). Measured on a laptop's own speakers in Chrome (VO-13): the echo
+ * `level`). Measured on a laptop's own speakers in Chrome: the echo
  * left after cancellation was about 1% of the playback (0.055 at p95), and a
  * voice over the answer passed this gate several times a second. 0.6 keeps
  * a margin for worse speakers and rooms.
@@ -110,8 +110,8 @@ export interface Levels {
 }
 
 /**
- * Whether the microphone holds more than the agent's own voice coming back
- * (VO-13): nothing plays, or the microphone is louder than the echo the
+ * Whether the microphone holds more than the agent's own voice coming back:
+ * nothing plays, or the microphone is louder than the echo the
  * playback can leave by `VOICE_OVER_ECHO`.
  */
 export function heardOverPlayback(
@@ -125,7 +125,7 @@ export function heardOverPlayback(
 }
 
 /**
- * Whether the person spoke over the agent (VO-13): speech found since the
+ * Whether the person spoke over the agent: speech found since the
  * agent began answering, while it thinks or speaks. The microphone is opened
  * anew when the agent begins, so what it holds came since; the browser's
  * echo cancellation keeps most of the answer's sound out, and while the
@@ -152,7 +152,7 @@ export interface ConversationItemLike {
 }
 
 /**
- * The answer the person spoke over (VO-13): the agent's last message after
+ * The answer the person spoke over: the agent's last message after
  * the person's last one — still being written, or written and being said.
  * `undefined` while the agent has not answered the turn yet: there is
  * nothing to mark.

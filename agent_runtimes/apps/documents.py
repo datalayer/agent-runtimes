@@ -1,13 +1,13 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What an application knows: a tool that searches the documents it was given (U-24, R-29).
+"""What an application knows: a tool that searches the documents it was given.
 
 An Appspec's ``contents`` names its documents by their Home Folder paths. A
 Maker gives each one on the Build tab of its page (*What it knows*): Contents
 reads it there into passages, keeps them beside its objects, and searches them
 with Solr's text search — the documents never leave the platform and no
-embedding is computed (R-29).
+embedding is computed.
 
 Its agent is given one tool, ``search_documents``: a question in, the passages
 that answer it best out, each with its document and where in it (*page 3*,
@@ -15,12 +15,12 @@ that answer it best out, each with its document and where in it (*page 3*,
 rests on. It searches only the documents the version that runs names, and
 only those given to this application:
 
-- **on a deployment**, as the application's own principal (I-03, I-13):
+- **on a deployment**, as the application's own principal:
   Contents lets it read what its owner gave that application, and nothing
   else;
 - **in a Preview**, as the person trying it: what they gave it.
 
-The tool only reads (``read``, F-10), so a rule that leaves reading alone does
+The tool only reads (``read``), so a rule that leaves reading alone does
 not ask before it. An application whose ``contents`` names nothing is given
 no tool at all. One not saved on Datalayer — run from a file, tried from the
 catalogue — has nothing read for it: the tool says so, and the agent says it
@@ -40,7 +40,7 @@ from agent_runtimes.types import AppSpec
 
 logger = logging.getLogger(__name__)
 
-#: The tool its agent is given, and what it does (F-10's classes).
+#: The tool its agent is given, and what it does (by action class).
 SEARCH_TOOL = "search_documents"
 DOCUMENT_CLASSES: Mapping[str, List[str]] = {SEARCH_TOOL: ["read"]}
 
@@ -90,7 +90,7 @@ async def search_on_contents(
 
     A deployment's is its application's principal's, and nobody else's; a
     Preview's is the person's own — not the one its run carries, narrowed to
-    the Spaces its application is granted (R-25), which Contents does not
+    the Spaces its application is granted, which Contents does not
     read documents with (`record.own_token_for`).
     """
     import httpx

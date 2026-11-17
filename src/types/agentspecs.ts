@@ -1101,23 +1101,23 @@ export interface AppPapCompanySpec {
   signedOut: boolean;
   /**
    * Whether it offers personal agents no sign-in (PAP `auth.disabled`, 0.3 as
-   * published): they ask only what anybody may ask, in nobody's account (D4-08).
+   * published): they ask only what anybody may ask, in nobody's account.
    */
   signInDisabled: boolean;
   /**
    * Whether it publishes the application's skills to personal agents as a
    * `skill_index` (PAP 0.3 §9.4): only the public, secret-free ones, which the
-   * platform decides at Ship (D4-06).
+   * platform decides at Ship.
    */
   publishSkills: boolean;
   /**
    * Whether a browser signed in for the person on its website has everything
-   * the account can do there (PAP `web.unscoped`, draft 0.4 §6; D5-09).
+   * the account can do there (PAP `web.unscoped`, draft 0.4 §6).
    */
   webUnscoped: boolean;
   /**
    * Whether it asks personal agents to use its agent and APIs rather than its
-   * website (PAP `web.disabled`, draft 0.4 §6; D5-09).
+   * website (PAP `web.disabled`, draft 0.4 §6).
    */
   webDisabled: boolean;
   interfaces: PapInterface[];

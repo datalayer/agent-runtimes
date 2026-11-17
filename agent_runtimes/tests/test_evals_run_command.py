@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""`agent-runtimes evals run` and `evals launches` (B2-15).
+"""`agent-runtimes evals run` and `evals launches`.
 
 A cloud run is a launch the platform executes: the command imports the
 spec, finds or creates one experiment per subject, validates, submits and
@@ -537,7 +537,7 @@ def test_the_runner_cloud_target_is_a_launch(fake: FakeClient):
     assert (
         launched["config"]["concurrency"] == 3 and launched["config"]["budget"] == 8.0
     )
-    # Where CI made it from rides on the launch (B6-02); empty values do not.
+    # Where CI made it from rides on the launch; empty values do not.
     assert launched["config"]["git"] == {
         "sha": "abc123",
         "ref": "refs/pull/7/merge",

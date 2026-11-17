@@ -6,7 +6,7 @@
 The browser's Sales application asks Accounting over A2A. Accounting runs on a
 runtime, where its route answers the machine itself and a key granted to that
 route (`agent_runtimes.apps.a2a`). This script mints that key with IAM's
-task grants (O1-06, O1-17), and it reaches exactly this:
+task grants, and it reaches exactly this:
 
 - **the route**: the grant's task is ``a2a:<runtime uid>:<application>:<nonce>``,
   and the runtime's gate answers only a key whose task begins with its own
@@ -20,7 +20,7 @@ task grants (O1-06, O1-17), and it reaches exactly this:
   ``search_earth_datagranules`` and ``download_earth_data_granules``, so the
   read pair is ``search_earth_*`` and ``earthdata_*`` matches nothing — a
   member keyed from that pattern is refused every tool at the gateway
-  (2026-10-09, A-14's drill). Tavily's happen to be named for it
+  (2026-10-09, a drill). Tavily's happen to be named for it
   (``tavily_search``, ``tavily_extract``, …), so ``tavily_*`` is right. Read
   the names in the catalogue's server (``agentspecs/mcp-servers/<server>.yaml``)
   rather than guessing from the server's name. The gateway lets it call the ``odoo_accounting_*``

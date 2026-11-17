@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The Python API as its review asked for it (REVIEWS P-11, 28 October 2026).
+"""The Python API as its review asked for it (28 October 2026).
 
 A reviewer who did not design the API built three applications from the
 reference alone and wrote back the names to change. Each is held here: the

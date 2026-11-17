@@ -11,7 +11,7 @@
  * A new session's uid is the runtime's (a ULID), named back in the stream;
  * the host keeps it against its thread. What is the host's own (its thread
  * key, the place, the delivery target, its words) is injected as a
- * `HostShape`. Moved from the Slack service (DC-004).
+ * `HostShape`. Moved from the Slack service.
  *
  * @module portable/hosts/agentClient
  */
@@ -52,7 +52,7 @@ export type HostTurnRequest<P> = Readonly<{
   /**
    * The host user never linked: exchanged as a visitor, which ai-agents
    * answers only when the installation's owner opened it to visitors and the
-   * deployment opens to somebody signed out (WHATSAPP WA-03).
+   * deployment opens to somebody signed out.
    */
   visitor?: boolean;
 }>;
@@ -170,7 +170,7 @@ export class HostKeyCredentials<P> implements HostCredentials<P> {
     hostKey: string;
     /** Where the turn is asked from: Datalayer refuses a denied channel at once. */
     place?: Place;
-    /** As a visitor: the host user never linked (WHATSAPP WA-03). */
+    /** As a visitor: the host user never linked. */
     visitor?: boolean;
   }): Promise<HostExchange> {
     const response = await this.fetchImplementation(
@@ -290,7 +290,7 @@ export class DevelopmentCredentials<P> implements HostCredentials<P> {
   }
 }
 
-/** One of an application's starters (S-104): the words shown, and the message it suggests asking. */
+/** One of an application's starters: the words shown, and the message it suggests asking. */
 export type Starter = Readonly<{ label: string; message: string }>;
 
 /** Where an application's starters are read, as one linked person of one installation. */
@@ -308,7 +308,7 @@ const currentAppSchema = z.object({
 });
 
 /**
- * An application's starters (S-104), read from its runtime as the
+ * An application's starters, read from its runtime as the
  * linked person: the host credential exchange (no place: what is suggested
  * is private to them), then `GET /api/v1/apps/current` beside the session
  * API it answers. A runtime that does not answer starters is refused.

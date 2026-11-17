@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What an application hears (P-22, VO-46): ``@app.audio``.
+"""What an application hears: ``@app.audio``.
 
 A turn's sound comes in chunks and is heard by the engines a page's and
 ``loop --voice``'s are: a WAV recording on this machine when the pinned
@@ -33,7 +33,7 @@ class HeardSpeech:
     where: str
 
     def spoken(self) -> SpokenInput:
-        """The message's spoken metadata, for the run and the record (VO-27)."""
+        """The message's spoken metadata, for the run and the record."""
         return SpokenInput(language=self.language, engine=self.engine, where=self.where)
 
 

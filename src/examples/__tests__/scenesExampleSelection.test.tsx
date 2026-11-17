@@ -4,7 +4,7 @@
  */
 
 /**
- * The Scenes example's selection (SCENES S3-02): the page holds the line's
+ * The Scenes example's selection: the page holds the line's
  * key, so that a click on an edge of the graph selects in the transcript what
  * a click in the transcript selects on the graph.
  */

@@ -1,14 +1,14 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The ``agentcore`` runtime target (AC-10): an agentspec on AgentCore Runtime.
+"""The ``agentcore`` runtime target: an agentspec on AgentCore Runtime.
 
 One container image serves every agentspec; a deployment is that image made
 an AgentCore agent runtime with the agentspec's id in its environment
 (``AGENT_SPEC_ID``, and ``AGENT_RUNTIMES_TARGET=agentcore`` so the runtime
 knows where it runs and which identity provider it uses), speaking AG-UI
 (``protocolConfiguration.serverProtocol = AGUI``), optionally behind a JWT
-authorizer that trusts an OIDC issuer (Datalayer IAM, ID-02).
+authorizer that trusts an OIDC issuer (Datalayer IAM).
 
 The calls, as botocore names them:
 

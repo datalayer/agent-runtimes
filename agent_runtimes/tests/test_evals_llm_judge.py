@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The LLM judge grades with an explanation and a failure mode (B2-12).
+"""The LLM judge grades with an explanation and a failure mode.
 
 It asks the AI Inference service as the person, reads one JSON verdict,
 holds the score to the threshold, and names how a task failed from a closed
@@ -73,7 +73,7 @@ def test_a_passing_verdict_scores_and_explains():
 
 
 def test_a_judge_handed_a_record_reads_it_beside_the_answer():
-    """V-08: a test of an application is graded on what it did."""
+    """A test of an application is graded on what it did."""
     judge = _judge(
         {
             "score": 0,

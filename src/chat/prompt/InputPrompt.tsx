@@ -119,7 +119,7 @@ export interface InputPromptProps {
    */
   footerExtras?: ReactNode;
   /**
-   * The words in the box are still being heard by the microphone (VO-11):
+   * The words in the box are still being heard by the microphone:
    * shown greyed, in italics, until they are final.
    */
   interim?: boolean;
@@ -187,7 +187,7 @@ export interface InputPromptProps {
   promptVariant?: InputPromptVariant;
   /** Agents the prompt may address by typing `@`. Lexical only. */
   mentionableAgents?: MentionableAgent[];
-  /** Commands listed while `/` is typed, before the prompt's own (P-19). Lexical only. */
+  /** Commands listed while `/` is typed, before the prompt's own. Lexical only. */
   promptCommands?: PromptCommand[];
   /**
    * What was sent to this agent before this page loaded, oldest first.
@@ -495,7 +495,7 @@ export function InputPrompt({
 
   const body = (
     <Box
-      // Words still being heard, greyed until final (VO-11); the same Box
+      // Words still being heard, greyed until final; the same Box
       // either way, so the editor is never mounted again.
       data-voice-interim={interim ? '' : undefined}
       sx={
@@ -629,7 +629,7 @@ export function InputPrompt({
                   id: 'session-controls',
                   px: padding,
                   // Its right end — the voice controls — is never under
-                  // the floating assistant in its corner (T-27).
+                  // the floating assistant in its corner.
                   clearsAssistant: true,
                   py: 0.5,
                   minHeight: 36,

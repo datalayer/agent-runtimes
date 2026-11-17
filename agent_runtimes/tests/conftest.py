@@ -25,7 +25,7 @@ import tempfile  # noqa: E402
 os.environ["AGENT_RUNTIMES_PROTOCOL_STATE_PATH"] = os.path.join(
     tempfile.mkdtemp(prefix="agent-runtimes-tests-"), "protocol-state.sqlite"
 )
-# Sessions are kept in a file store of the test process's own (MH-F03): no
+# Sessions are kept in a file store of the test process's own: no
 # test reads or writes the platform's record, whatever the shell's
 # DATALAYER_* say; a test of the record store installs its fake.
 os.environ["AGENT_RUNTIMES_SESSION_STORE"] = "file"
@@ -175,7 +175,7 @@ def _ai_inference_not_asked(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
 
 @pytest.fixture(autouse=True)
 def _ai_agents_not_asked_for_previews() -> Iterator[None]:
-    """No test asks the real ai-agents for a Preview's token (R-25).
+    """No test asks the real ai-agents for a Preview's token.
 
     A Preview a person opens runs with their token narrowed to the Spaces its
     application is granted, asked of ai-agents; without this, a test opening
@@ -212,7 +212,7 @@ def _ai_agents_not_asked_for_previews() -> Iterator[None]:
 
 @pytest.fixture(autouse=True)
 def _ai_agents_not_asked_for_code() -> Iterator[None]:
-    """No test asks the real ai-agents for a deployment's code (R-14).
+    """No test asks the real ai-agents for a deployment's code.
 
     The agent of a deployment is made with the code of the version it runs,
     read from ai-agents (`GET /apps/deployments/{uid}/code`); without this, a

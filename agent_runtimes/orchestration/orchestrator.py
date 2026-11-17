@@ -1,20 +1,20 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The orchestrator as one agent, with a tree of executions behind it (O2-08).
+"""The orchestrator as one agent, with a tree of executions behind it.
 
 It is registered on the ACP route as any agent is, so an IDE or a coding
 agent sees one agent. Each turn is a root execution: the prompt is delegated,
 as the person the connection is, to the agent this orchestrator was
 registered with, and that agent's worker asks the control plane for its
-children (O2-06). While the tree works, the turn says what it is doing as
+children. While the tree works, the turn says what it is doing as
 thoughts; it answers with what the root produced. The client never names an
 execution.
 
 A turn asked again is the same execution. Its idempotency key is the session
 and the prompt, so a client that lost its connection, or a runtime that
 restarted mid-turn, finds the root already running rather than starting a
-second tree (O1-11, O2-01).
+second tree.
 """
 
 from __future__ import annotations
@@ -71,7 +71,7 @@ def root_binding(root: str) -> AgentBinding:
 
     An ``http(s)`` URL is an A2A agent's endpoint and a ``ws(s)`` URL an ACP
     agent's. Anything else names an agentspec of the library, which the
-    control plane brings a worker up for and reaches over A2A (O2-06).
+    control plane brings a worker up for and reaches over A2A.
 
     Parameters
     ----------

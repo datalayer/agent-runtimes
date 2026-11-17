@@ -49,7 +49,7 @@ class TestDefinitions:
     def test_the_spec_id_drops_the_version(self) -> None:
         assert spec_id_of("example-a2a-researcher:0.0.1") == "example-a2a-researcher"
         assert spec_id_of("example-a2a-researcher") == "example-a2a-researcher"
-        # A team's seat has a colon that is no version (O2-09).
+        # A team's seat has a colon that is no version.
         assert spec_id_of("team:jupyter/reviewer") == "team:jupyter/reviewer"
         assert spec_id_of(None) is None
 
@@ -246,7 +246,7 @@ class TestRelay:
 
     @pytest.mark.asyncio
     async def test_a_final_status_keeps_its_metadata(self) -> None:
-        """O1-07: which limit of a delegated model budget stopped the remote
+        """Which limit of a delegated model budget stopped the remote
         run travels on the final status, and reaches whoever follows it."""
         meta = {
             "datalayer": {
@@ -664,7 +664,7 @@ class TestWorker:
             for event in events
         ]
         # The worker ends the stream with its own `completed`, which carries the
-        # answer and what the run spent (O2-10).
+        # answer and what the run spent.
         assert kinds == [
             "working",
             "artifact",
@@ -749,7 +749,7 @@ class TestWorker:
 
     @pytest.mark.asyncio
     async def test_a_run_its_delegated_budget_stopped_says_which_limit(self) -> None:
-        """O1-07: the budget the message carries reaches the run, and a limit
+        """The budget the message carries reaches the run, and a limit
         reached comes back on the failed status, where the budget came from."""
         from agent_runtimes.adapters.base import StreamEvent
         from agent_runtimes.context.delegation import refusal_meta

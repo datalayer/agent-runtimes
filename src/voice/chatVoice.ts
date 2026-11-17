@@ -4,7 +4,7 @@
  */
 
 /**
- * A chat's voice, from what an application or an agent says of it (VO-41, VO-49):
+ * A chat's voice, from what an application or an agent says of it:
  * the `voice` a host gives `ChatBase`, `ChatFloating` or an
  * application's workspace, with Datalayer's places filled in — the browser's
  * models from Datalayer's CDN, the packages that hear loaded on first use.
@@ -26,7 +26,7 @@ import type { ChatVoice } from './index';
 
 /**
  * Datalayer's origin for the browser's speech models, as pinned
- * (`s3://datalayer-models-speech` behind its CDN; VO-48, VO-49): each model
+ * (`s3://datalayer-models-speech` behind its CDN): each model
  * at `<provider>/<model id>/<path>`, onnxruntime-web's own files at
  * `onnxruntime-web/<version>/`.
  */
@@ -63,11 +63,11 @@ export interface ChatVoicePlace {
  *
  * - **Listening**: a microphone in the composer — click it and speak, the
  *   words written in the box as they are heard, stopped by a second click
- *   or when the person stops speaking; or held, and let go (VO-10, VO-11).
- *   `hands_free` (VO-12): the microphone, and *Talk with it* beside it; it
+ *   or when the person stops speaking; or held, and let go.
+ *   `hands_free`: the microphone, and *Talk with it* beside it; it
  *   implies answers said as they are written.
  * - **Speaking**: its answers said by Datalayer's speech service, on request
- *   or always (VO-20, VO-21); refused here when its host says no service.
+ *   or always; refused here when its host says no service.
  */
 export function chatVoiceOf(
   spec: AppVoiceSpec | undefined,
@@ -86,7 +86,7 @@ export function chatVoiceOf(
   return {
     language,
     input: spec.input,
-    // Hands-free implies the answers heard as they are written (VO-12).
+    // Hands-free implies the answers heard as they are written.
     output: spec.input === 'hands_free' ? 'always' : spec.output,
     voice: spec.voice || voiceFor(language)?.id || '',
     modelsUrl: place.modelsUrl || DATALAYER_SPEECH_MODELS_URL,
@@ -95,14 +95,14 @@ export function chatVoiceOf(
     token: place.token,
     consentKey: place.consentKey,
     where: spec.where ?? 'auto',
-    // Kept as sound only when it listens, as its record says (VO-63).
+    // Kept as sound only when it listens, as its record says.
     ...(keepsAudio && spec.input !== 'off' ? { keepsAudio } : {}),
   };
 }
 
 /**
  * A chat's voice asked of the speech service as the chat itself speaks to
- * its runtime (VO-37, VO-19): the token its host gave, else the chat's own —
+ * its runtime: the token its host gave, else the chat's own —
  * a visitor's token minted from ai-inference, an embed's token, or the
  * person's. One token for the conversation and its voice, never a second.
  * An embed's deployment is the one its token names: the page
@@ -143,18 +143,18 @@ export type SettledVoice = Required<
     | 'silenceMs'
   >;
 
-/** How long a silence after speech stops a microphone clicked on, when unsaid (VO-10). */
+/** How long a silence after speech stops a microphone clicked on, when unsaid. */
 export const SILENCE_MS = 1500;
 
 /**
  * A chat's voice as the person hears it, with what it leaves unsaid filled
  * in: the person's own settings first where they made some (`voiceForPerson`:
- * their language, voice, rate, volume, microphone; VO-14, VO-25, VO-30),
+ * their language, voice, rate, volume, microphone),
  * else the host's; answers not heard, the language's first voice,
  * Datalayer's models and packages, a silence of 1.5 s. A person who pauses
  * longer before they are done has both silences — the one that stops a
  * microphone clicked on, and the one that ends a hands-free turn — made
- * longer by their choice (`pause`, VO-69). Answers heard need the speech
+ * longer by their choice (`pause`). Answers heard need the speech
  * service's address: refused without.
  */
 export function settledVoice(

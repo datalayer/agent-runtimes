@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Visa's Trusted Agent Protocol as a profile over Web Bot Auth (PR-24).
+"""Visa's Trusted Agent Protocol as a profile over Web Bot Auth.
 
 **Draft.** Built on 2026-10-13 from Visa's public *Merchant Specifications*
 (https://developer.visa.com/capabilities/trusted-agent-protocol/trusted-agent-protocol-specifications)
@@ -11,7 +11,7 @@ publishes no test vector; ``fixtures/tap.json`` is one computed here, held by
 both languages.
 
 What the profile says of the agent-recognition signature, over the RFC 9421
-signing and verifying of PR-21 and PR-23:
+Web Bot Auth's signing and verifying:
 
 - ``Signature-Input`` and ``Signature`` alone; Visa's page names no
   ``Signature-Agent``, so the verifier is handed the keys (Visa's directory,

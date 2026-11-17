@@ -4,7 +4,7 @@
  */
 
 /**
- * The floating assistant in the LOOP workspace (T-24): the character
+ * The floating assistant in the LOOP workspace: the character
  * drawn is the one the enabled plugins contribute under the id the
  * application names, else the person's, else the paper clip; an id nothing
  * contributes is said, not replaced; and it acts out the chat's turn.
@@ -54,7 +54,7 @@ const seen = vi.hoisted(() => ({
   waiting: [] as Array<Record<string, unknown>>,
 }));
 
-// The approvals path U-19 answers on (ai-agents `/ws`), as the rules card's
+// The approvals path answered on (ai-agents `/ws`), as the rules card's
 // tests stand it in.
 vi.mock('../../hooks/useToolApprovals', () => ({
   useToolApprovalsQuery: () => ({
@@ -337,7 +337,7 @@ describe("the character acts out the chat's turn", () => {
   });
 });
 
-describe('the balloon, as the configuration says (T-23)', () => {
+describe('the balloon, as the configuration says', () => {
   it('says what the agent does while a tool runs, and is current when asked', async () => {
     const el = await mount([
       AssistantCharactersPlugin,
@@ -377,7 +377,7 @@ describe('the balloon, as the configuration says (T-23)', () => {
   });
 });
 
-describe('an approval waits in the balloon (T-23)', () => {
+describe('an approval waits in the balloon', () => {
   const asked = {
     id: 'ap-1',
     agent_id: 'web-research',

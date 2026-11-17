@@ -4,10 +4,10 @@
  */
 
 /**
- * The `loop` theme's four reference screens (T-01) and the floating
- * assistant's states (T-27), as stories: the real chat components with fixed
+ * The `loop` theme's four reference screens and the floating
+ * assistant's states, as stories: the real chat components with fixed
  * data, in any theme of the registry and either mode. The same screens are
- * pictured and compared by `npm run test:pictures` (T-16).
+ * pictured and compared by `npm run test:pictures`.
  */
 
 import React from 'react';

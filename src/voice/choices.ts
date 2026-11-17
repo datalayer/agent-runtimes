@@ -4,7 +4,7 @@
  */
 
 /**
- * What a person may choose for their voice (VO-14, VO-21, VO-25, VO-30),
+ * What a person may choose for their voice,
  * from the catalogue: the languages a voice speaks and the device
  * hears, the voices of each, the speeds and loudnesses offered, and when
  * answers are heard. Read by the composer's menu (`VoiceMenu`) and by a
@@ -78,7 +78,7 @@ export const RATE_CHOICES: VoiceChoice<number>[] = [
 ];
 
 /** The loudnesses offered, 0 to 1. */
-/** How long the person pauses before they are done (VO-69): the silences, times this. */
+/** How long the person pauses before they are done: the silences, times this. */
 export const PAUSE_CHOICES: VoiceChoice<number>[] = [
   { value: 1, label: 'Usual' },
   { value: 2, label: 'Longer' },
@@ -92,7 +92,7 @@ export const VOLUME_CHOICES: VoiceChoice<number>[] = [
   { value: 1, label: 'Full' },
 ];
 
-/** When answers are heard (VO-21): what a person may choose where the application speaks. */
+/** When answers are heard: what a person may choose where the application speaks. */
 export const OUTPUT_CHOICES: VoiceChoice<NonNullable<ChatVoice['output']>>[] = [
   { value: 'off', label: 'Never' },
   { value: 'on_request', label: 'When I ask (Read aloud)' },

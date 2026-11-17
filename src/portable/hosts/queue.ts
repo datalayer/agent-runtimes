@@ -7,7 +7,7 @@
  * A host's durable work queue, its in-memory development stand-in, and the
  * structural Postgres connection every Postgres implementation here takes
  * (`pg.Pool` and `pg.PoolClient` satisfy it: no `pg` import). Moved from the
- * Slack service (DC-004).
+ * Slack service.
  *
  * @module portable/hosts/queue
  */

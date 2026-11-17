@@ -240,7 +240,7 @@ class RuntimeAddresses:
         for mode, slot in self.slots.items():
             await slot.fill(mode_app(addressed, mode))
         if addressed.hosts is not None:
-            # A2A at its agent host (D-6), whatever transport it was made for.
+            # A2A at its agent host, whatever transport it was made for.
             _answer_over_a2a(agent_id, addressed)
             company = (
                 company_of(addressed, agent_id) if addressed.role == "company" else None

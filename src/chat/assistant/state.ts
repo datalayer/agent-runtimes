@@ -4,8 +4,8 @@
  */
 
 /**
- * What the floating assistant acts out (T-22): the presence of the
- * application (T-08) — paused among them, when its owner paused it — and
+ * What the floating assistant acts out: the presence of the
+ * application — paused among them, when its owner paused it — and
  * three moments of its own — greeting when it
  * arrives, speaking while an answer streams in, goodbye when it is sent away.
  *
@@ -34,7 +34,7 @@ export interface AssistantMoment {
   /** The answer is arriving: words are being written. */
   speaking?: boolean;
   /**
-   * Its answer is being heard: sound is playing (VO-22). It speaks
+   * Its answer is being heard: sound is playing. It speaks
    * while the audio plays, even after the text has ended.
    */
   voicing?: boolean;
@@ -89,18 +89,18 @@ export function newestIsAnswer(items: readonly unknown[]): boolean {
 export const ASSISTANT_WORDS = {
   /** An approval waits and cannot be answered in the balloon itself. */
   waiting: 'Waiting for you — open the conversation to answer.',
-  /** It waits on the person's yes: Approve or Deny, in the balloon (T-23). */
+  /** It waits on the person's yes: Approve or Deny, in the balloon. */
   approval: 'Waiting for you',
   approve: 'Approve',
   deny: 'Deny',
-  /** Its deployment is paused (R-17). */
+  /** Its deployment is paused. */
   paused: 'Paused — it answers again once it is resumed.',
 } as const;
 
 /**
- * An approval asked of the person, answered in the balloon (T-23): what is
+ * An approval asked of the person, answered in the balloon: what is
  * asked, under which rule, and the two answers, sent where every approval is
- * answered (U-19).
+ * answered.
  */
 export interface BalloonApproval {
   /** Its id: a new one is a new question. */
@@ -181,7 +181,7 @@ export function markdownOf(content: unknown): string {
 
 /**
  * The newest thing the agent said, as the Office Assistant said it: in the
- * balloon, while the conversation is closed (T-23). Only its own messages
+ * balloon, while the conversation is closed. Only its own messages
  * with text — not a tool call, not the person's words; markdown is read as
  * plain words, and a long message is cut at a word with `more` set.
  */
@@ -227,7 +227,7 @@ export function latestSaying(
 }
 
 /**
- * How long the assistant is away, once sent (T-27): for the page — the
+ * How long the assistant is away, once sent: for the page — the
  * popup's button calls it back — for the session, or for good; the header's
  * *Floating assistant* always calls it back.
  */
@@ -280,7 +280,7 @@ export interface ScreenBox {
 }
 
 /**
- * What the assistant never sits over (T-27): an open dialog or overlay —
+ * What the assistant never sits over: an open dialog or overlay —
  * Primer's `Dialog`, an `ActionMenu` or `SelectPanel` overlay, a native
  * `<dialog>` — and the composer of a chat.
  */

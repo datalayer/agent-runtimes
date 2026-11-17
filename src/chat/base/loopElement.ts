@@ -4,14 +4,14 @@
  */
 
 /**
- * Where an element of an application's code shows (P-18): in a side
+ * Where an element of an application's code shows: in a side
  * panel beside the conversation, or on a page of its own over it. Inline,
- * an element is a message, and the chat draws it as one (P-04).
+ * an element is a message, and the chat draws it as one.
  *
  * The session API shows it as a `reactor.ui` display that says where it
  * shows in its data (`where: "panel" | "page"`, with its `title`) — an
- * answer's display (RU-2) — and closes it with a `remove` of its
- * id (RU-3). The chat does not draw it: it keeps what is open here, and
+ * answer's display — and closes it with a `remove` of its
+ * id. The chat does not draw it: it keeps what is open here, and
  * whoever draws panels and pages (the `app-elements` plugin) listens. One
  * store per page, as there is one chat per application on it.
  */

@@ -1,11 +1,11 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A local session's folder on its list row (DESKTOP DK-26, META_HARNESS MH-02).
+"""A local session's folder on its list row.
 
 A harness session runs in a folder: ``acp_agent.py``'s ``_keep_session``
 keeps ``workspace`` in the harness's row of the protocol state store, one
-row per (session, agent) under ``<agentspec>:<uid>`` (MH-04).
+row per (session, agent) under ``<agentspec>:<uid>``.
 ``GET /sessions/{uid}`` answers that row as ``harness_session`` for a session
 the runtime's agent holds; the list's rows did not say it, so a desktop
 could not say *on this machine · <folder>* nor resume a paused session on

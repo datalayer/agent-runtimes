@@ -6,7 +6,7 @@
 /**
  * Policy Catalog.
  *
- * The Shield's policy documents the platform ships or shows (SH-50).
+ * The Shield's policy documents the platform ships or shows.
  *
  * This file is AUTO-GENERATED from YAML specifications.
  * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The skill a ``load_skill`` call loads, on its tool span (AC-15).
+"""The skill a ``load_skill`` call loads, on its tool span.
 
 An agent with agent-skills' toolset over datalayer-skills' own skills
 loads ``datalayer-whoami``; the ``execute_tool`` span of that call carries

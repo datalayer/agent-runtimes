@@ -4,14 +4,14 @@
  */
 
 /**
- * What an application keeps, said before the first message (R-31).
+ * What an application keeps, said before the first message.
  *
  * A hosted or embedded application tells whoever uses it what its record
  * keeps of the conversation — what its `record.include` names — and for how
  * long — its `record.keep_for` — before they write anything. A session's
  * start is kept whatever `include` says, so an application that keeps
  * nothing else says that the conversation took place is kept. A visitor not
- * signed in has nothing kept (R-30), and is told so.
+ * signed in has nothing kept, and is told so.
  *
  * Pure: no React.
  *

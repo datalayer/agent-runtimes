@@ -212,7 +212,7 @@ def remote_toolset(
         How long the handshake is given, in seconds.
     auth : httpx2.Auth, optional
         Set each request's bearer as it is sent: an AgentCore Gateway's,
-        minted for the run (AC-20).
+        minted for the run.
 
     Returns
     -------

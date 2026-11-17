@@ -1,14 +1,14 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An Agentic Commerce Protocol client (PR-40 to PR-42), ``2026-04-17``.
+"""An Agentic Commerce Protocol client, ``2026-04-17``.
 
 Named ``agentic_commerce`` everywhere, never ``acp``: that is the Agent
-Client Protocol of :mod:`agent_runtimes.transports.acp` (PR-40).
+Client Protocol of :mod:`agent_runtimes.transports.acp`.
 
 Discovery (``/.well-known/acp.json``) and checkout sessions over REST, every
 answer read through the models generated from the specification's JSON
-Schema (:mod:`.models`, PR-41). Completing a checkout is a purchase, and
+Schema (:mod:`.models`). Completing a checkout is a purchase, and
 goes as every purchase does (:mod:`agent_runtimes.protocols.commerce`): an
 exact, revisioned :class:`~agent_runtimes.protocols.commerce.CheckoutProposal`
 approved by the person, completed once, paid with a delegated payment token
@@ -142,8 +142,8 @@ class AgenticCommerceClient:
     http: httpx.AsyncClient = field(
         default_factory=lambda: httpx.AsyncClient(timeout=15.0)
     )
-    #: How its public metadata is read: the PAP SDK's single egress path
-    #: (PI-13), or ``egress.client_fetch`` for a local test one.
+    #: How its public metadata is read: the PAP SDK's single egress path,
+    #: or ``egress.client_fetch`` for a local test one.
     metadata: Fetch = field(
         default_factory=lambda: metadata_fetch(
             accept="application/json", max_bytes=MAX_METADATA_BYTES

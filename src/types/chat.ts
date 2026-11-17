@@ -80,9 +80,9 @@ export interface ToolCallCompleteContext {
 }
 
 /**
- * A tool call said again while it runs (VSCODE VS-24): a coding agent's
+ * A tool call said again while it runs: a coding agent's
  * terminal output so far, a diff as it grows — the display its update
- * carries (`datalayer.harness.tool_call`, SH-13), handed to the host as
+ * carries (`datalayer.harness.tool_call`), handed to the host as
  * the stream brings it, before `onToolCallComplete`.
  */
 export interface ToolCallUpdateContext {
@@ -689,7 +689,7 @@ export interface ChatCommonProps {
 
   /**
    * Fires each time a running tool call's display is updated by the
-   * stream (a terminal's output as it streams, VS-24): a host drawing the
+   * stream (a terminal's output as it streams): a host drawing the
    * display elsewhere — an editor's terminal — follows it as it comes.
    */
   onToolCallUpdate?: (context: ToolCallUpdateContext) => void;
@@ -886,7 +886,7 @@ export type ThemeOverrides = {
 };
 
 /**
- * A conversation the chat goes on with (D-13): an embedded
+ * A conversation the chat goes on with: an embedded
  * application's session, reattached after its page reloaded.
  */
 export type ResumedThread = {
@@ -895,7 +895,7 @@ export type ResumedThread = {
   /** What it holds already; none for a new one. */
   messages: ChatMessage[];
   /**
-   * Opened from a person's history (P-24): its conversation is read
+   * Opened from a person's history: its conversation is read
    * from the runtime the application's chat runs on as the chat mounts —
    * held there, else resumed from its record — in place of `messages`.
    */
@@ -932,24 +932,24 @@ export interface ChatBaseProps {
        */
       thread: () => string;
       /**
-       * Stops the agent's voice (VO-10): the chat's own speaker,
+       * Stops the agent's voice: the chat's own speaker,
        * for a host whose composer holds the microphone and *Stop speaking*.
        * Absent while its answers are not heard.
        */
       stopSpeaking?: () => void;
       /**
-       * How loud the chat's speaker plays now, 0 to 1 (VO-13): a
+       * How loud the chat's speaker plays now, 0 to 1: a
        * host's hands-free gates barge-in on it. Absent while its answers
        * are not heard by a speaker that gives a level.
        */
       voiceLevel?: () => number;
       /**
-       * Marks the answer the person spoke over *interrupted* (VO-13),
+       * Marks the answer the person spoke over *interrupted*,
        * for a host whose composer holds the microphone.
        */
       markInterrupted: () => void;
       /**
-       * The person spoke over the run (VO-46, VO-13): it ends as Stop ends
+       * The person spoke over the run: it ends as Stop ends
        * it, but an application's session is told it was spoken over and
        * stays open for what is said next — Stop leaves it to be resumed.
        */
@@ -959,7 +959,7 @@ export interface ChatBaseProps {
 
   /**
    * Reports whether the agent's voice is speaking, for a host that draws the
-   * composer and so its *Stop speaking* (VO-10).
+   * composer and so its *Stop speaking*.
    */
   onSpeakingChange?: (speaking: boolean) => void;
 
@@ -1056,7 +1056,7 @@ export interface ChatBaseProps {
   mentionableAgents?: MentionableAgent[];
   /**
    * Commands the prompt lists while `/` is typed, before its own: an
-   * application's (P-19). Picking one writes `/<name> `. Lexical only.
+   * application's. Picking one writes `/<name> `. Lexical only.
    */
   promptCommands?: PromptCommand[];
   /**
@@ -1207,7 +1207,7 @@ export interface ChatBaseProps {
 
   /**
    * Properties laid over the theme's own, by mode — an application's accent
-   * over the theme it wears (T-05): without them the chat would wear the
+   * over the theme it wears: without them the chat would wear the
    * theme's default accent whatever the page around it set.
    */
   themeOverrides?: ThemeOverrides;
@@ -1363,21 +1363,21 @@ export interface ChatBaseProps {
   /**
    * The agent's welcome, said as the first message of the history: drawn as
    * the chat draws the agent's messages, and never sent nor kept. The floating
-   * assistant's balloon opens on it (T-23).
+   * assistant's balloon opens on it.
    */
   welcome?: string;
 
   /**
    * What follows the last message, inside the history and scrolled with it:
    * the floating assistant's balloon holds an approval there, as a message
-   * with *Approve* and *Deny* (T-23).
+   * with *Approve* and *Deny*.
    */
   trailingContent?: ReactNode;
 
   /**
    * Its voice (V1): a microphone in the composer, push-to-talk,
    * what is said heard on the device and put in the composer — or sent, with
-   * *Send what I say* — marked as spoken (VO-27).
+   * *Send what I say* — marked as spoken.
    */
   voice?: ChatVoice;
 
@@ -1385,24 +1385,24 @@ export interface ChatBaseProps {
   voiceSpeaking?: boolean;
 
   /**
-   * The sentence the host's speaker is saying, marked in the conversation
-   * (VO-65); a chat that speaks for itself marks its own.
+   * The sentence the host's speaker is saying, marked in the conversation;
+   * a chat that speaks for itself marks its own.
    */
   voiceSentence?: string;
 
-  /** Stops the agent's voice: the composer's *Stop speaking*, and the microphone opening (VO-13). */
+  /** Stops the agent's voice: the composer's *Stop speaking*, and the microphone opening. */
   onStopSpeaking?: () => void;
 
   /**
    * How loud the host's speaker plays now, between 0 and 1 (`useVoiceSpeaker`'s
    * `level`): hands-free's barge-in counts speech only above what the answer's
-   * own sound can leave in the microphone (VO-13). A chat that speaks
+   * own sound can leave in the microphone. A chat that speaks
    * for itself reads its own.
    */
   voiceLevel?: () => number;
 
   /**
-   * Reads an answer aloud (VO-21): given, each answer the agent has
+   * Reads an answer aloud: given, each answer the agent has
    * finished writing has a *Read aloud* under it, which calls it with the
    * answer's text.
    */
@@ -1651,7 +1651,7 @@ export interface ChatBaseProps {
   }>;
 
   /**
-   * The conversation to go on with (D-13): its AG-UI thread — an
+   * The conversation to go on with: its AG-UI thread — an
    * application's session — and what it holds, drawn in place of the
    * runtime's history, which is its agent's and not one session's. Read
    * when the chat mounts; a new thread (the header's +) is the chat's own.
@@ -1722,7 +1722,7 @@ export interface ChatBaseProps {
 
   /**
    * Fires each time a running tool call's display is updated by the
-   * stream (a terminal's output as it streams, VS-24): a host drawing the
+   * stream (a terminal's output as it streams): a host drawing the
    * display elsewhere — an editor's terminal — follows it as it comes.
    */
   onToolCallUpdate?: (context: ToolCallUpdateContext) => void;

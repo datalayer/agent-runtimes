@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The ``agentcore`` evals adapter (AC-14), against a stubbed AgentCore.
+"""The ``agentcore`` evals adapter, against a stubbed AgentCore.
 
 A case runs through the local runner on a pydantic-ai agent that calls one
 tool; its GenAI spans are sent to ``bedrock-agentcore`` ``Evaluate`` (botocore's

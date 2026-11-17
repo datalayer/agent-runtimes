@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Exchange the token AgentCore validated for the platform's tokens (AC-06).
+"""Exchange the token AgentCore validated for the platform's tokens.
 
 An AgentCore runtime behind Datalayer IAM's JWT authorizer is invoked with
 IAM's RS256 token, its audience the runtime's ARN. That token opens the

@@ -4,7 +4,7 @@
  */
 
 /**
- * Form (C-18, C-16): several fields asked at once, generated from the
+ * Form: several fields asked at once, generated from the
  * JSON Schema the builder gave it by `@datalayer/primer-rjsf` — the form the
  * properties panels are drawn with — checked as they are filled. It starts
  * from the values its `values` binding shows; a form the schema accepts is
@@ -12,12 +12,12 @@
  * its action is dispatched, so the action's context reads them. A form the
  * schema refuses says why beside each field and sends nothing.
  *
- * A form without an action is a set of settings (C-16) — an application's
+ * A form without an action is a set of settings — an application's
  * `interface.settings` drawn beside its conversation: no button, its values
  * written where `values` points as they are filled, for the next run to take;
  * the runtime checks them against the same schema.
  *
- * Its `ui` says how its fields are drawn (P-20): a uiSchema by field
+ * Its `ui` says how its fields are drawn: a uiSchema by field
  * name, `ui:widget` one of primer-rjsf's widgets or of `switch` and `tags`
  * (`formWidgets`) — the nine inputs a setting is drawn with.
  *
@@ -39,7 +39,7 @@ const formRefused = (error: Error) => (
 export type FormProps = OwnCommon & {
   title?: string;
   schema: Record<string, unknown>;
-  /** How its fields are drawn: a uiSchema by field name (P-20). */
+  /** How its fields are drawn: a uiSchema by field name. */
   ui?: Record<string, unknown>;
   submit_label?: string;
   values?: unknown;

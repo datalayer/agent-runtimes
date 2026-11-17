@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The ACP binding, client side (O0-07).
+"""The ACP binding, client side.
 
 Datalayer is the client here and the coding agent is the worker, which is
 the opposite of the ACP route this repository already serves. The mapping is
@@ -12,11 +12,11 @@ an approval is a permission request, and a cancel is ``session/cancel``.
 An ACP session is a projection of an execution, never the other way round.
 Nothing here keeps a connection between operations: each
 one connects, does its work and closes, so the adapter survives the step
-boundaries of the durable worker it will run inside (O1-03). The session
+boundaries of the durable worker it will run inside. The session
 identifier on the attempt is what makes that possible, and it is why every
 observation that learns one carries it back.
 
-A harness's file edits come back as artifacts (SH-45, the mapping on the client side):
+A harness's file edits come back as artifacts (the mapping on the client side):
 every ``diff`` content of the turn's tool calls —
 ``{path, oldText, newText}`` — is registered once per file at the turn's end
 as a ``text/x-diff`` artifact named by its path, the unified diff hashed in
@@ -28,13 +28,13 @@ Two things this module is honest about rather than quiet about.
 The first is what ACP does not have: no acceptance short of the first
 session update, no checkpoint, no pause, no resume, no session close, and no
 artifact — a turn's answer is registered as one artifact and file edits stay
-tool-call content until O1-10 commits them. All of it is in
+tool-call content until they are committed. All of it is in
 ``ACP_CAPABILITIES`` and reaches the execution as the first observation of a
 dispatch (the same reporting rule, applied to the other protocol).
 
 An agent that declares the Datalayer orchestration extension at initialize,
 under ``agentCapabilities._meta.datalayer.extensions``, gets three of them
-back from the agent rather than invented here (O2-05): it is resolved with
+back from the agent rather than invented here: it is resolved with
 ``ACP_EXTENDED_CAPABILITIES``; a steer reaches its running turn as the
 ``_datalayer/steer`` notification; a pause is a ``session/cancel`` asking for
 a checkpoint, and a turn that answers ``cancelled`` naming the checkpoint it
@@ -43,7 +43,7 @@ kept is read as a pause; and a resume is a new attempt whose prompt names it.
 The second is what carries the connection. The ``ACPChannel`` port below is
 the narrow surface this adapter needs — request, notify, respond, listen,
 close — and its one implementation, ``ShieldChannel``, is built on the
-``agent-shield`` package's client-side channels (SH-02): the
+``agent-shield`` package's client-side channels: the
 **stdio** channel, which launches a local agent as a subprocess (what 7.4
 asked for), and the **WebSocket** channel, both over the official ``acp`` SDK
 0.7. An endpoint ``stdio:<command line>`` launches; a ``ws://`` or ``wss://``
@@ -52,7 +52,7 @@ endpoint connects. The client this adapter was first built on
 against the installed SDK) is no longer under it; the ``loop connect -t acp``
 command still uses that client and is its only caller.
 
-The trace (O0-11) goes on the connection's headers, because a
+The trace goes on the connection's headers, because a
 WebSocket has no per-message header to stamp and the ``httpx`` instrumentation
 that carries it for A2A never sees this socket. Since every operation opens
 its own connection, each carries the context of whatever asked for it.
@@ -129,7 +129,7 @@ __all__ = [
 
 #: Who answers a permission request. It is given the request's parameters
 #: and returns the option the person chose, or ``None`` to refuse. The
-#: control plane owns approvals (O1-08); with nobody configured, this
+#: control plane owns approvals; with nobody configured, this
 #: adapter refuses and says so on the execution, because a request left
 #: unanswered stops the worker and hides the reason.
 ApprovalResponder = Callable[[Mapping[str, Any]], Awaitable[str | None]]
@@ -228,7 +228,7 @@ ACP_CAPABILITIES = AdapterCapabilities(
     ),
     #: A reduction that is about a milestone names it in quotes, so the
     #: conformance harness can find the adapter's own reason for skipping a
-    #: scenario about that milestone rather than inventing one (O0-12).
+    #: scenario about that milestone rather than inventing one.
     reductions=(
         "No 'accepted' acknowledgement: session/prompt answers only when the "
         "turn is over, so the first session update is the earliest evidence "
@@ -252,7 +252,7 @@ ACP_CAPABILITIES = AdapterCapabilities(
 )
 
 #: An agent that declares the Datalayer orchestration extension at
-#: initialize (O2-05): steered within its turn, paused at a checkpoint it
+#: initialize: steered within its turn, paused at a checkpoint it
 #: reports, and resumed by an attempt that names that checkpoint.
 ACP_EXTENDED_CAPABILITIES = ACP_CAPABILITIES.extended(
     without=(_NO_CHECKPOINTED, _STEER_IS_A_TURN),
@@ -608,14 +608,14 @@ class ACPWorkerAdapter(WorkerAdapter):
             How long one request may take.
         credential : str | None
             The execution's token for the run, handed to the agent with the
-            prompt (O1-17).
+            prompt.
         account_uid : str | None
             The account the execution belongs to, named to an agent that
-            speaks the extension, which asks for its children in it (O2-06).
+            speaks the extension, which asks for its children in it.
         workspace : str | None
             The directory a session works in, absolute as ACP requires its
             ``cwd`` to be: a Shield in front of the agent refuses a session
-            outside the workspace it guards (SH-45). This process's
+            outside the workspace it guards. This process's
             directory by default; a runtime's ACP route answers in its own.
         """
         import os
@@ -740,7 +740,7 @@ class ACPWorkerAdapter(WorkerAdapter):
         Observation
             What the worker did, as it did it.
         """
-        # O0-11: one span for this dispatch, inside the tree's trace. It
+        # One span for this dispatch, inside the tree's trace. It
         # stays current across the yields below, so the events the caller
         # records between observations land on it, and it is what the
         # connection's traceparent header is taken from.
@@ -755,7 +755,7 @@ class ACPWorkerAdapter(WorkerAdapter):
             extended = EXTENSION_URI in worker.capabilities.extensions
             channel = await self._open(_endpoint(worker))
             answer: list[str] = []
-            # Each file the turn's tool calls changed, by path (SH-45).
+            # Each file the turn's tool calls changed, by path.
             diffs: dict[str, tuple[str | None, str]] = {}
             try:
                 try:
@@ -782,11 +782,11 @@ class ACPWorkerAdapter(WorkerAdapter):
                         session_id,
                         objective_prompt(execution, attempt),
                         queue,
-                        # The model budget the agent's turn is held to (O1-07),
-                        # the execution's token it reaches Datalayer with
-                        # (O1-17), and, to an agent speaking the extension, the
+                        # The model budget the agent's turn is held to,
+                        # the execution's token it reaches Datalayer with,
+                        # and, to an agent speaking the extension, the
                         # execution and the checkpoint this attempt resumes
-                        # from (O2-05).
+                        # from.
                         meta=delegation_meta(
                             execution,
                             credential=self._credential,
@@ -960,7 +960,7 @@ class ACPWorkerAdapter(WorkerAdapter):
 
         An agent speaking the orchestration extension is sent the
         ``_datalayer/steer`` notification, and its model reads the
-        instructions before its next request, within the turn (O2-05).
+        instructions before its next request, within the turn.
 
         Plain ACP has no mid-turn steering (7.4 maps steering onto
         ``session/prompt`` because that is all there is), so for any other
@@ -1084,7 +1084,7 @@ class ACPWorkerAdapter(WorkerAdapter):
         reason: str | None = None,
     ) -> OperationOutcome:
         """
-        Ask the running turn to pause: ``session/cancel`` asking for a checkpoint (O2-05).
+        Ask the running turn to pause: ``session/cancel`` asking for a checkpoint.
 
         ``session/cancel`` is a notification, so this says only that the
         agent was asked. The pause arrives where a cancellation does: the
@@ -1148,7 +1148,7 @@ class ACPWorkerAdapter(WorkerAdapter):
         Nothing is sent here: the turn that paused was cancelled, and a
         cancelled turn is not carried on. The next attempt opens a session,
         and the agent restores the checkpoint's conversation before its
-        prompt (O2-05).
+        prompt.
 
         Parameters
         ----------
@@ -1215,7 +1215,7 @@ class ACPWorkerAdapter(WorkerAdapter):
         ``httpx`` instrumentation that carries it for A2A never sees this
         socket. ``with_trace`` is the injector this repository already uses
         for outgoing calls, so there is one place that decides what a
-        traceparent looks like on the wire (O0-11).
+        traceparent looks like on the wire.
 
         Parameters
         ----------
@@ -1361,7 +1361,7 @@ class ACPWorkerAdapter(WorkerAdapter):
             Whether the started milestone has already been reported.
         resumed : bool
             Whether the attempt resumes from a checkpoint: its first update
-            is then the paused execution resuming, not starting (O2-05).
+            is then the paused execution resuming, not starting.
 
         Yields
         ------
@@ -1475,7 +1475,7 @@ class ACPWorkerAdapter(WorkerAdapter):
         Read the turn's stop reason, and register what it produced.
 
         A turn of an agent speaking the orchestration extension that stopped
-        ``cancelled`` and names the checkpoint it kept has paused (O2-05):
+        ``cancelled`` and names the checkpoint it kept has paused:
         the execution pauses, the milestone names the checkpoint, and what
         the turn said so far is in the checkpoint rather than an artifact,
         since the attempt that resumes from it registers the answer.
@@ -1501,7 +1501,7 @@ class ACPWorkerAdapter(WorkerAdapter):
         list[Observation]
             The artifact, the move, and the milestone when there is one. The
             move carries what the agent says the turn spent, when it says so
-            in the response's ``_meta`` (O2-10).
+            in the response's ``_meta``.
         """
         reason = _stop_reason(response)
         spent = spent_of((response or {}).get("_meta"))
@@ -1548,7 +1548,7 @@ class ACPWorkerAdapter(WorkerAdapter):
         )
         if code is ErrorCode.BUDGET_EXHAUSTED:
             # Which limit: the delegation's budget when the agent says so in
-            # `_meta`, the agent's own otherwise (O1-07).
+            # `_meta`, the agent's own otherwise.
             error = budget_refusal(
                 (response or {}).get("_meta"), source="adapter:acp"
             ) or OrchestrationError(
@@ -1687,7 +1687,7 @@ def _prompt_params(
         What to say to it.
     meta : Mapping[str, Any] | None
         The schema's ``_meta``: what a delegation carries beside the
-        objective, its model budget (O1-07).
+        objective, its model budget.
 
     Returns
     -------
@@ -1723,7 +1723,7 @@ def _collect_diffs(
     message: Any, session_id: str, diffs: dict[str, tuple[str | None, str]]
 ) -> None:
     """
-    Keep the ``diff`` contents of a session's tool calls, by path (SH-45).
+    Keep the ``diff`` contents of a session's tool calls, by path.
 
     A file changed twice keeps what it first held and what it last holds.
 
@@ -1794,7 +1794,7 @@ def _read_update(params: Mapping[str, Any]) -> tuple[str, str]:
 
     As the ACP schema spells it: the update nested under ``update``, its
     text in a content block. agent-runtimes' own route spoke a flattened
-    dialect with a bare ``chunk`` until O1-11 made it speak the schema, so
+    dialect with a bare ``chunk`` until it was made to speak the schema, so
     the one shape read here is the one every agent is held to.
 
     Parameters

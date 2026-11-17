@@ -4,8 +4,8 @@
  */
 
 /**
- * The four reference screens of the `loop` theme (T-01), and the
- * floating assistant's states (T-27), drawn from the real chat components
+ * The four reference screens of the `loop` theme, and the
+ * floating assistant's states, drawn from the real chat components
  * with fixed data: no agent, no network, no clock.
  *
  * - a conversation;
@@ -15,7 +15,7 @@
  *
  * Each renders in any theme of the registry and in either mode, so the same
  * screen is the design reference (the stories) and the picture a token change
- * is compared against (`pictures/`, T-16).
+ * is compared against (`pictures/`).
  *
  * @module stories/loop/ReferenceScreens
  */
@@ -73,9 +73,9 @@ export const REFERENCE_SCREENS = [
 export type ReferenceScreen = (typeof REFERENCE_SCREENS)[number];
 
 /**
- * The floating assistant's pictures (T-27): its states — closed, a peek
+ * The floating assistant's pictures: its states — closed, a peek
  * where it has something to say — stepped aside, and open, the conversation
- * as its balloon (T-23).
+ * as its balloon.
  */
 export const ASSISTANT_PICTURES = [
   'idle',
@@ -91,7 +91,7 @@ export const ASSISTANT_PICTURES = [
 export type AssistantPicture = (typeof ASSISTANT_PICTURES)[number];
 
 /**
- * The characters pictured idle, each in light and dark (T-25, T-24):
+ * The characters pictured idle, each in light and dark:
  * Datalayer's wizard, cat and L👀P eyes — the paper clip's idle is
  * `assistant-idle` — and the owl an example plugin contributes, drawn
  * through `loop.assistant.character`.
@@ -537,20 +537,20 @@ export const REFERENCE_SCREEN_COMPONENTS: Record<
 };
 
 // ---------------------------------------------------------------------------
-// The floating assistant (T-27)
+// The floating assistant
 // ---------------------------------------------------------------------------
 
 const BALLOONS: Partial<
   Record<AssistantPicture, AssistantStageProps['balloon']>
 > = {
-  // A new message, peeked by its first words (T-23).
+  // A new message, peeked by its first words.
   speaking: {
     ...peekLine(
       'Three customers wrote about late deliveries this week: Ada, Grace and Alan.',
     ),
     onDismiss: () => undefined,
   },
-  // An approval it waits on, answered in the balloon (T-23).
+  // An approval it waits on, answered in the balloon.
   waiting: {
     text: ASSISTANT_WORDS.approval,
     approval: {
@@ -563,7 +563,7 @@ const BALLOONS: Partial<
     },
   },
   paused: { text: ASSISTANT_WORDS.paused },
-  // Current (T-23): only what it does now — the tool it calls.
+  // Current: only what it does now — the tool it calls.
   current: {
     text: 'Using list_invoices…',
     tool: {
@@ -649,7 +649,7 @@ const OPEN_CONVERSATION: DisplayItem[] = [
 ];
 
 /**
- * The conversation open, as the assistant's balloon (T-23): over the
+ * The conversation open, as the assistant's balloon: over the
  * character in the page's corner, its tail toward it, the history with the
  * welcome first, *Ask a decision* beside the composer, the Lexical composer
  * last, and its close in the corner — no header, no footer.
@@ -742,7 +742,7 @@ function OpenConversation(): JSX.Element {
 }
 
 // ---------------------------------------------------------------------------
-// The characters (T-25, T-24)
+// The characters
 // ---------------------------------------------------------------------------
 
 /** Datalayer's characters and the example plugin's owl, as contributed. */

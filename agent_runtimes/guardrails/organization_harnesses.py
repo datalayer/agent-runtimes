@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An organization's own harness, served on the runtime (SH-46).
+"""An organization's own harness, served on the runtime.
 
 The shared catalogue's ``custom`` harness names no command; an organization
 names one in its own catalogue — IAM's organization document, beside its own
@@ -199,7 +199,7 @@ def admission_refusal(policies: Sequence[Any], admitted: str) -> Optional[str]:
     )
 
 
-# --- the organization's harnesses as contributions (MH-F02) ------------------------------
+# --- the organization's harnesses as contributions ------------------------------
 
 #: The plugin that contributes an organization's own harnesses, per organization and per
 #: token: what IAM admits when it is read, under ``<id>@<organization>``.

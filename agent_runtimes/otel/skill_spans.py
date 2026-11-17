@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The skill a tool call loads, on its ``execute_tool`` span (AC-15).
+"""The skill a tool call loads, on its ``execute_tool`` span.
 
 AgentCore's skill evaluators (``Builtin.SkillSelectionAccuracy``,
 ``Builtin.SkillInstructionFollowing``) judge a skill invocation from three

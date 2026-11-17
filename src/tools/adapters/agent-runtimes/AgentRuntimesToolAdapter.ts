@@ -115,7 +115,7 @@ export function createAgentRuntimesTool(
     name: definition.toolReferenceName || definition.name,
     description: definition.description,
     parameters: definition.parameters,
-    // A tool that streams (AGENT_BATTLE B1-00): subscribed through its
+    // A tool that streams: subscribed through its
     // operation, its events pushed to the harness until stopped.
     ...(definition.streams && operation.subscribe
       ? {

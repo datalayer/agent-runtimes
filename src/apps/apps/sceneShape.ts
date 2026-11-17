@@ -4,7 +4,7 @@
  */
 
 /**
- * A scene's shape, refused as `loop` refuses it (S-10).
+ * A scene's shape, refused as `loop` refuses it.
  *
  * agentspecs reads a scene with pydantic, which refuses a scene of the wrong
  * shape — a list where a word is written, a choice that is none of its

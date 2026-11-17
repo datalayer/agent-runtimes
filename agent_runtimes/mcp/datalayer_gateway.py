@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The Datalayer MCP gateway, as one run reaches it (O1-17).
+"""The Datalayer MCP gateway, as one run reaches it.
 
 An agent that selected the Datalayer MCP server reaches the gateway through a
 process started once, with the runtime's own key. A run that carries an
@@ -112,7 +112,7 @@ def toolsets_for_the_run(
         The run's own token.
     in_users_name : frozenset[str]
         The gateway's servers an application reaches in the name of each
-        person who uses it (I-04): reached with `users_token`, never
+        person who uses it: reached with `users_token`, never
         with the run's.
     users_token : str
         The token of the person talking to it, naming the application;
@@ -148,7 +148,7 @@ def toolsets_for_the_run(
         reaches = True
         bearer = users_token if server_id in in_users_name else token
         # A catalogue Battle's run on the books reaches them with the books
-        # key; a server started with it is left out of any other run (B4-01).
+        # key; a server started with it is left out of any other run.
         from agent_runtimes.apps.battle_books import books_bearer
 
         books = books_bearer(server_id)
@@ -184,7 +184,7 @@ def toolsets_for_the_run(
         if not bearer:
             # A company reached in each person's name, and nobody signed in to Datalayer is
             # talking to it — a company's turn for a personal agent, run as the deployment's
-            # principal (B-04): left out, the turn answered without it.
+            # principal: left out, the turn answered without it.
             _left_out(sid)
             continue
         swapped.append(

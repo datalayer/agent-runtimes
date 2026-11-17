@@ -28,7 +28,7 @@
  *
  * - `visitor` — signed out, on the visitors' runtime beside ai-agents, with
  *   a visitor's token the chat mints from ai-inference for that one
- *   application (D-07, R-30); in agent-runtimes' anonymous mode unless
+ *   application; in agent-runtimes' anonymous mode unless
  *   `anonymous: false`: the limited preview, the turns left (`maxTurns`),
  *   the temporary key's clock, *Sign in* (`signInUrl` or `onSignIn`), and
  *   what its agent would bring that needs a connection of the visitor's
@@ -40,7 +40,7 @@
  *   to with the signed-in person's token (core's IAM store), nothing
  *   launched;
  * - `server` — an agent-runtimes server of the host's own (`url`), with the
- *   visit's embed token when it has one (R-20);
+ *   visit's embed token when it has one;
  * - `datalayer` — launched on a Datalayer runtime with the signed-in
  *   person's credentials.
  *
@@ -77,7 +77,7 @@ import {
   visitorsAt,
 } from './embed/visitorApp';
 
-/** Signed out, on the visitors' runtime (D-07, R-30). */
+/** Signed out, on the visitors' runtime. */
 export type ApplicationVisitor = {
   kind: 'visitor';
   /**
@@ -113,7 +113,7 @@ export type ApplicationRuntime = {
   /**
    * The agent that answers, by its name on that runtime (`default`): a
    * person's own agent, made from its agentspec. Unsaid, the application's
-   * own agent, made there under its id — a deployment kept always on (R-33).
+   * own agent, made there under its id — a deployment kept always on.
    */
   agentId?: string;
   /** The runtime's name. */
@@ -122,7 +122,7 @@ export type ApplicationRuntime = {
   thread?: ResumedThread;
 };
 
-/** An agent-runtimes server of the host's own (R-20). */
+/** An agent-runtimes server of the host's own. */
 export type ApplicationServer = {
   kind: 'server';
   url: string;

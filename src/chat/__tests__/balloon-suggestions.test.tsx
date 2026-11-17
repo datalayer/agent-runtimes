@@ -4,7 +4,7 @@
  */
 
 /**
- * What the balloon offers and shows besides its words (T-23): the
+ * What the balloon offers and shows besides its words: the
  * suggestions while it waits for a question, one clicked sent; the chat's
  * three dots while it works with nothing written; *more* and *less* for
  * words cut to fit; and the history drawn large with *Expand*, *Shrink* and
@@ -162,7 +162,7 @@ describe('the three dots', () => {
 
 /**
  * The balloon's words as the eye reads them: without the whole words a screen
- * reader is given beside a cut (H-21, `data-balloon-words-whole`) or the
+ * reader is given beside a cut (`data-balloon-words-whole`) or the
  * announcer that says them once written.
  */
 const drawnWords = (): string => {

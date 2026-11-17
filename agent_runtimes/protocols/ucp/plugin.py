@@ -1,15 +1,14 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""UCP as a Reactor plugin (PR-30 to PR-32).
+"""UCP as a Reactor plugin.
 
 Points it declares:
 
 - ``ucp.approver`` — asks the person to approve one exact purchase. No
-  default: without one, nothing is ever bought (Datalayer: tool approvals,
-  U-19, and approvals in advance, U-25).
+  default: without one, nothing is ever bought (Datalayer: tool approvals, and approvals in advance).
 - ``ucp.paymentInstruments`` — the payment instrument of an approved
-  purchase. No default: the host holds payment tokens (IAM custody, PI-11).
+  purchase. No default: the host holds payment tokens (IAM custody).
 - ``ucp.proposalStore`` — spends a proposal once; default ``memory``.
 - ``ucp.extension.fulfillment``, ``ucp.extension.discount``,
   ``ucp.extension.buyer_consent`` — UCP's capability extensions of checkout

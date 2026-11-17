@@ -291,7 +291,7 @@ function AgentA2ATeam(): JSX.Element {
         mb={3}
       >
         {/* The scene: its graph, and its transcript read from the same
-            tracer the inspectors read, behind Graph · Transcript (A-06). */}
+            tracer the inspectors read, behind Graph · Transcript. */}
         <SceneView
           members={sceneMembers}
           tracer={inspector}

@@ -4,12 +4,12 @@
  */
 
 /**
- * The floating assistant (T-21 to T-27): the chat as a character on the
+ * The floating assistant: the chat as a character on the
  * page, after the Office Assistant — Datalayer's own characters, chosen
  * here, acting out what the agent does and speaking in a balloon.
  *
  * The characters offered are what the enabled plugins contribute to
- * `loop.assistant.character` (T-24): Datalayer's four, and an owl from a
+ * `loop.assistant.character`: Datalayer's four, and an owl from a
  * small example plugin (`utils/owlCharacterPlugin`). Pixel, the test sprite,
  * is read through the clippy.js reader, as a character a person brings is,
  * and so are the characters clippy.js publishes, fetched when picked.
@@ -130,7 +130,7 @@ const AvatarExample: React.FC = () => {
       cancelled = true;
     };
   }, []);
-  // How the balloon shows the conversation (T-23): history, or current.
+  // How the balloon shows the conversation: history, or current.
   const [balloon, setBalloon] = useState<BalloonDisplay>('history');
   // What the agent does, for the menu's *Inspect the agent…*.
   const { tracer: inspector } = useAgentInspector();

@@ -5,7 +5,7 @@
 
 /**
  * The UI specs and the Reactor plugins they say, held to each other both
- * ways (F-03).
+ * ways.
  *
  * Each UI spec of the catalogue (`agentspecs/ui`, `src/specs/ui.ts`) is one
  * plugin of `src/apps/plugins/`: built on a reactor and started, the plugin

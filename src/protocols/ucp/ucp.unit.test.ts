@@ -4,8 +4,8 @@
  */
 
 /**
- * UCP 2026-08-25 in TypeScript (PR-30 to PR-32, PR-51,
- * PR-53): the revision fixture the Python package reads, and a purchase
+ * UCP 2026-08-25 in TypeScript:
+ * the revision fixture the Python package reads, and a purchase
  * proposed, approved and made once against an in-memory store that answers
  * as `agent_runtimes.protocols.ucp.merchant` does.
  */
@@ -219,7 +219,7 @@ describe('UCP', () => {
     expect(UCP_ACTION_CLASSES.complete).toBe('buy');
   });
 
-  it('reads an order after the sale, and refuses one it never placed (PR-31)', async () => {
+  it('reads an order after the sale, and refuses one it never placed', async () => {
     const merchant = exampleStore(STORE);
     const client = new UcpClient(
       STORE,

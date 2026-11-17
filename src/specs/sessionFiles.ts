@@ -4,7 +4,7 @@
  */
 
 /**
- * Session file format (MH-12).
+ * Session file format.
  *
  * The datalayer-session/1 JSONL file: its caps, the states, the entry kinds,
  * the redaction rules and the refusal sentences, as agentspecs says them.

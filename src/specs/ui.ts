@@ -2620,7 +2620,7 @@ export function listUI(): UISpec[] {
   return Object.values(UI_CATALOGUE);
 }
 
-/** The visual components the UI plugins render, by the name a surface gives them (C-13). */
+/** The visual components the UI plugins render, by the name a surface gives them. */
 export const COMPONENT_CATALOGUE: Record<string, ComponentSpec> =
   Object.fromEntries(
     Object.values(UI_CATALOGUE).flatMap(plugin =>

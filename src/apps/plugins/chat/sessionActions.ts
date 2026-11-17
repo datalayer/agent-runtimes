@@ -238,7 +238,7 @@ export const RESUME: SessionActionContribution = {
 export const CHAT_SESSION_ACTIONS: readonly SessionActionContribution[] = [
   SWITCH_AGENT,
   CLONE_FROM_HERE,
-  // The session's Rules over the thread (SH-54): every chat offers them,
+  // The session's Rules over the thread: every chat offers them,
   // a chat-layout application too.
   SESSION_RULES,
   EXPORT,

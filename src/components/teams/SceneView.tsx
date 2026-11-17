@@ -6,8 +6,8 @@
 /**
  * A scene on a page: its graph (`A2ATeamGraph`) and its transcript
  * ({@link TranscriptViews}: the lines, the table, the sequence diagram, the
- * drill-down — SCENES S2, S3), one shown at a time behind a *Graph ·
- * Transcript* toggle (A-06). The graph stays mounted while the transcript
+ * drill-down), one shown at a time behind a *Graph ·
+ * Transcript* toggle. The graph stays mounted while the transcript
  * shows, so that what its members were doing is still there when it comes
  * back.
  *
@@ -66,7 +66,7 @@ export type SceneViewProps = {
    * is there when it opens.
    */
   selected?: string | null;
-  /** The selected line changed (SCENES S3-02): the page hands the stage its edge (`selectedEdgeOf`). */
+  /** The selected line changed: the page hands the stage its edge (`selectedEdgeOf`). */
   onSelect?: (selection: TranscriptSelection | null) => void;
   /** The Inspector's page for a span, when the site has one. */
   inspectorHref?: (ids: TranscriptSpanIds) => string | undefined;

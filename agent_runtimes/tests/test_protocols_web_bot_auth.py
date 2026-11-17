@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Web Bot Auth against the draft's vectors, and end to end (PR-20 to PR-23, PR-51, PR-53)."""
+"""Web Bot Auth against the draft's vectors, and end to end."""
 
 from __future__ import annotations
 
@@ -132,7 +132,7 @@ def test_signed_directory_response_e23():
 
 @pytest.mark.asyncio
 async def test_a_directory_signature_that_does_not_bind_the_set_proves_nothing():
-    """REVIEWS R-22, the key directory: a directory signature is taken only when it covers
+    """The key directory: a directory signature is taken only when it covers
     the authority it was fetched at and the body, and says when it ends — one leaving
     the authority out could be served again from another origin, one without
     ``expires`` would be good forever."""
@@ -484,7 +484,7 @@ async def test_a_body_is_bound_by_its_digest():
 
 @pytest.mark.asyncio
 async def test_no_key_material_in_what_is_sent_or_published():
-    """PR-53: a private key never reaches a header, a directory or a log line."""
+    """A private key never reaches a header, a directory or a log line."""
     signer = LocalSigner.from_jwk(KEY)
     signed = await sign_request(
         method="GET",
@@ -514,7 +514,7 @@ def test_sync_client_is_refused():
 
 @pytest.mark.asyncio
 async def test_one_key_two_languages():
-    """EX-01, PR-51: the headers TypeScript signs (vitest checks it signs these) verify here."""
+    """The headers TypeScript signs (vitest checks it signs these) verify here."""
     from agent_runtimes.protocols.web_bot_auth import PublicKey
 
     cross = FIXTURES["cross"]

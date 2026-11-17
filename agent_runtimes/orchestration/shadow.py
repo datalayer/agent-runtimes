@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A gateway-started run, as its own execution (O4-05).
+"""A gateway-started run, as its own execution.
 
 MCP stays the tool and context protocol; a `tools/call` the gateway routes
 straight to a durable workflow (`NotebookRunWorkflow` and its kin, over
@@ -11,7 +11,7 @@ so it was never an `ExecutionsDelegate`. Its only record used to be its
 `mcp_task` row, `tsk_…`, which is why such a run showed on the Tasks surface
 and nowhere under `/executions`: the two surfaces were never the same object,
 by construction, for this kind of work (unlike a team's or an agentspec's
-run, which O4-05's other half — `_project_execution_task` in
+run, which the other half — `_project_execution_task` in
 `activities_orchestration.py` — already projects the other way).
 
 A *shadow* execution closes that gap without pretending the work is
@@ -60,7 +60,7 @@ _OUTCOME_EVENTS: dict[str, LifecycleEvent] = {
 }
 
 #: The idempotency key a shadow is created under: one gateway task, one
-#: shadow, found again rather than duplicated by a retried call (O2-01's
+#: shadow, found again rather than duplicated by a retried call (the delegation's
 #: rule, reused here for a root that is not a delegation).
 _KEY_PREFIX = "mcp-shadow:"
 

@@ -1,13 +1,13 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Inbox triage, end to end, on a mailbox of example mail (W-01 to W-07).
+"""Inbox triage, end to end, on a mailbox of example mail.
 
 The catalogue's Appspec, its rules, its record and Gmail's tools — under the
 names and with the arguments the Google Workspace server gives them — served
 from a `FixtureMailbox`, with a scripted model in place of its agent's. No
 real mailbox is reached here: a person's Gmail is reached on Datalayer only,
-in their name, through IAM (W-02).
+in their name, through IAM.
 
 What is shown: woken by a message arriving, with nobody there, it reads,
 labels, archives and drafts by itself, and a send waits for the person, its
@@ -229,7 +229,7 @@ def test_woken_by_a_message_it_reads_sorts_and_drafts_alone_and_asks_before_send
     assert "Message ID: m4" in seen[0] and "Message ID: m1" in seen[0]
     assert box.message("m1").labels == ("UNREAD", "Newsletters")
     # It drafted the reply alone; the send waited for the person, the draft whole.
-    # Each says who wrote it, closed with its byline (I-10): nobody opened
+    # Each says who wrote it, closed with its byline: nobody opened
     # the session, so on its own.
     reply = signed(REPLY, "Written by 📬 Inbox Triage, on its own.")
     assert reply.endswith("Eric\n\nWritten by 📬 Inbox Triage, on its own.")
@@ -286,7 +286,7 @@ def test_declined_nothing_is_sent() -> None:
 def test_a_hidden_instruction_in_a_mail_is_not_obeyed_even_by_a_model_that_obeys_it() -> (
     None
 ):
-    # The first attack (W-07): a received mail asks it to forward a colleague's
+    # The first attack: a received mail asks it to forward a colleague's
     # contract outside, then delete the evidence. The model here obeys; the
     # rules do not.
     agent, box, _, asked, sent, _ = worker(
@@ -355,7 +355,7 @@ def test_a_forward_inside_the_organization_is_asked() -> None:
 
 
 def test_its_rules_are_the_plans_defaults() -> None:
-    # W-04: label and archive, do it; draft, do it; send, ask me first;
+    # Label and archive, do it; draft, do it; send, ask me first;
     # delete, or forward outside the organization, leave it to me.
     spec = triage()
     send = "google-workspace.send_gmail_message"
@@ -400,7 +400,7 @@ def test_its_tools_reach_one_mailbox() -> None:
 
 
 def test_a_send_is_shown_whole_when_the_person_is_asked(monkeypatch) -> None:
-    # W-05: the draft in full before *Approve*; another call's arguments, cut.
+    # The draft in full before *Approve*; another call's arguments, cut.
     from agent_runtimes.guardrails.tool_approvals import ToolApprovalManager
 
     shown: Dict[str, Dict[str, Any]] = {}
@@ -425,7 +425,7 @@ def test_a_send_is_shown_whole_when_the_person_is_asked(monkeypatch) -> None:
     assert len(shown[f"{GW}manage_gmail_label"]["name"]) == 500
 
 
-# --- when a message arrives (W-03, R-14) ------------------------------------------------
+# --- when a message arrives ------------------------------------------------
 
 
 def test_what_arrived_is_told_once_with_its_ids_and_nothing_its_sender_wrote() -> None:

@@ -164,8 +164,8 @@ class CliTux:
             extra_suggestions: Additional suggestions provided via --suggestions flag
             startup_message: Optional startup summary line shown right after banner
             where: Where the agent runs when it is not this machine, in words
-            voice: Listen with this machine's microphone, Ctrl+T to start and stop (VO-15)
-            speak: Say the answers through this machine's speaker (VO-15)
+            voice: Listen with this machine's microphone, Ctrl+T to start and stop
+            speak: Say the answers through this machine's speaker
                 (a cloud runtime on Datalayer, reached through ``server_url``)
             cloud_runtime: The Datalayer runtime the agent runs on: its tool calls
                 that wait on an approval are read from ai-agents, said, and waited for
@@ -209,12 +209,12 @@ class CliTux:
         self.startup_message = startup_message
         #: A paused session to resume before the first prompt, by its uid.
         self.resume_at_start: Optional[str] = None
-        # Voice at the terminal (VO-15): the microphone on Ctrl+T,
+        # Voice at the terminal: the microphone on Ctrl+T,
         # the answers said with --speak; made on first use.
         self.voice = voice
         self.speak = speak
         self._voice_session: Any = None
-        # How the next message was said, sent with it (VO-15, VO-27).
+        # How the next message was said, sent with it.
         self._spoken_line: Optional[Dict[str, str]] = None
         # The answer being drawn, when a turn is under way (`MarkdownStream`).
         self._answer: Optional[MarkdownStream] = None
@@ -667,11 +667,11 @@ class CliTux:
             self.console.print()
 
     def voice_session(self) -> Any:
-        """Voice for this session (VO-15), made on first use."""
+        """Voice for this session, made on first use."""
         if self._voice_session is None:
             from agent_runtimes.voice.cli import Hearing, Speaker, VoiceSession
 
-            # On Datalayer (`--cloud`), heard and said there (VO-16).
+            # On Datalayer (`--cloud`), heard and said there.
             on_datalayer = bool(self.where)
             self._voice_session = VoiceSession(
                 hearing=Hearing(on_datalayer=on_datalayer),
@@ -709,7 +709,7 @@ class CliTux:
 
         try:
             # Use prompt_toolkit's async prompt method
-            # What the microphone heard goes on the prompt line, to edit or send (VO-15).
+            # What the microphone heard goes on the prompt line, to edit or send.
             heard = self._voice_session.take_prefill() if self._voice_session else None
             line = (
                 await self.prompt_session.prompt_async(
@@ -719,7 +719,7 @@ class CliTux:
                 )
             ).strip()
             # Said, then sent: the words may have been edited, they were
-            # still said — the message carries how (VO-15, VO-27).
+            # still said — the message carries how.
             self._spoken_line = (
                 dict(self._voice_session.metadata)
                 if heard and line and not line.startswith(("/", "!"))
@@ -1380,7 +1380,7 @@ class CliTux:
             # second time as something the browser did.
             self.sync.note_local(response_text)
 
-            # Said through this machine's speaker (--speak, VO-15); a refusal
+            # Said through this machine's speaker (--speak); a refusal
             # is a sentence, the answer stays written.
             if self.speak and response_text:
                 await self._say(response_text)
@@ -1527,7 +1527,7 @@ class CliTux:
 
         self.show_welcome()
         if self.voice:
-            # No microphone, no voice: said once, in a sentence (VO-17).
+            # No microphone, no voice: said once, in a sentence.
             problem = self.voice_session().problem()
             if problem:
                 self._failed(problem)
@@ -1552,7 +1552,7 @@ class CliTux:
                 )
                 speaker = self.voice_session().speaker
                 if speaker is not None and speaker.not_here:
-                    # Kokoro is installed but could not speak here (VO-16).
+                    # Kokoro is installed but could not speak here.
                     self.console.print(f"● {speaker.not_here}", style=STYLE_MUTED)
         if self.startup_message:
             # The message carries raw ANSI color codes; parse them so Rich

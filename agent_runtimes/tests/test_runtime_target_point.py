@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The `runtime.target` point (AC-10): the built-in `agentcore` target is
+"""The `runtime.target` point: the built-in `agentcore` target is
 accepted, and a malformed or duplicate target is refused naming the plugin
 while the host runs with the rest.
 """

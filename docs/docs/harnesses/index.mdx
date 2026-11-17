@@ -23,10 +23,10 @@ This page says what is built today and what is not; the boxes named below
 is the `datalayer-agent-shield` package, documented on its own site,
 [agent-shield.datalayer.tech](https://agent-shield.datalayer.tech): the
 standalone proxy (`agent-shield run`), the server (`agent-shield serve`, the
-sidecar bridge of SH-40), registration with Datalayer, the policy reference
+sidecar bridge), registration with Datalayer, the policy reference
 and the register.
 
-## The spec (built: agentspecs 0.0.100, SH-01)
+## The spec (built: agentspecs 0.0.100)
 
 A harness is a spec kind of agentspecs, one YAML per harness under
 `agentspecs/harnesses/`. An agent spec names one with `harness:` where it says
@@ -118,10 +118,10 @@ is **served by the Datalayer runtime** (`variantSupportsSpecHarness` is true
 for `local-pydanticai` and `cloud-pydanticai`, the runtimes that launch it,
 and false for `browser-vercelai`, which has no process to launch;
 `specHarnessOf` keeps the catalogue id; `isServedCatalogueHarness` says which),
-and `checkAppspec` passes an application on one (1.5.31, SH-10's Studio
+and `checkAppspec` passes an application on one (1.5.31, the Studio
 side). Nothing runs pydantic-ai in a refused harness's place.
 
-## The register (built: SH-04's part in agentspecs)
+## The register
 
 `agentspecs/harnesses/register.yaml` is the register: every
 harness of the catalogue with its adapter, the version pinned, its licence,
@@ -149,9 +149,9 @@ key of the person's, by the user's decision of 30 October 2026; counsel has not
 reviewed those entries against this use.
 
 Reviewed by counsel: not yet. The register's engine side — the Shield reading
-it to refuse a credential kind — is SH-04's part in `agent-shield`.
+it to refuse a credential kind — is `agent-shield`'s part.
 
-## What each harness honours (SH-20)
+## What each harness honours
 
 What the runtime may ask of each harness, read from its spec in the
 catalogue (`agent_runtimes.specs.harnesses`, generated from agentspecs): how
@@ -178,7 +178,7 @@ over after a restart, and says so. A mode such as `bypassPermissions` changes
 what the harness asks, never what the Shield decides: the Shield decides
 every action whether or not the harness asked.
 
-## The adapter (built: SH-10's adapter, SH-11, SH-12's runtime side, SH-13, SH-18, SH-19's `loop`; 15 October 2026)
+## The adapter
 
 `agent_runtimes/adapters/acp_agent.py` is `ACPAgent(BaseAgent)`, the harness
 as a Datalayer agent, on the `agent-shield` package's engine
@@ -191,8 +191,8 @@ what needs the runtime.
 
 - **Launch and negotiate.** `initialize` resolves the harness's command from
   its spec — an `npx` adapter is taken from `~/.agent-shield/harnesses/<id>@<version>`
-  (`agent-shield setup --harness <id>`) or from the PATH (the image's install,
-  SH-05), **never fetched at first run** — gives the process its spec's plain
+  (`agent-shield setup --harness <id>`) or from the PATH (the image's install),
+  **never fetched at first run** — gives the process its spec's plain
   variables and its declared secrets by name (a missing one is refused in a
   sentence), launches it over stdio in the workspace (`AGENT_RUNTIMES_WORKSPACE_ROOT`,
   refused when unset), runs `initialize` (protocol version 1, `fs` and
@@ -208,7 +208,7 @@ what needs the runtime.
   reason. A malformed update, or an action a policy leaves to the person, ends
   the turn with a sentence (`[Shield] …` as text, `done` with `stop_reason:
   refusal` and the sentence).
-- **Permissions are Rules** (SH-12). ACP's `kind` is classed by the
+- **Permissions are Rules**. ACP's `kind` is classed by the
   package's one table (`agent_shield.policy.class_of`: `other` → write, fail
   closed; the table-driven test both ways is `test_acp_agent.py`). The policies
   in force are the application's Rules on classes read into a `team`-scope
@@ -221,14 +221,14 @@ what needs the runtime.
   it to me* answers `reject_once` with the sentence; a turn cancelled while it
   waits answers `cancelled`. A Rule of the application is never loosened by a
   session rule.
-- **Files and terminals** (SH-13): `fs/read_text_file`,
+- **Files and terminals**: `fs/read_text_file`,
   `fs/write_text_file` and `terminal/*` are answered by the runtime against
   the workspace, each a tool row (`Read README.md — do it`, kind `read`;
   `Write hello.txt — do it`, kind `edit`, the diff as its display; `Run …`,
   kind `execute`, the terminal as its display, its output and exit kept) and a
   decision; a path outside the workspace is refused in a sentence before any
   rule.
-- **The record** (SH-18): the Shield's audit rows are the
+- **The record**: the Shield's audit rows are the
   application's record — a `decision` for what a policy decided, a `tool_call`
   for what was done (the diff as its hash and size), an `approval` for what
   the person answered, the `turn` and the run's end — kept as
@@ -241,7 +241,7 @@ what needs the runtime.
   AG-UI events — the thinking events, `TOOL_CALL_*`, `TOOL_CALL_RESULT` with
   the displays, `datalayer.harness.<plan|commands|mode|tool_call>` custom
   events), `acp` and `a2a`; `vercel-ai` is refused in a sentence (it reads a
-  pydantic-ai agent, SH-16).
+  pydantic-ai agent).
 - **`loop --harness <id>`** runs a harness on this machine over stdio, the
   directory `loop` runs from as its workspace, the platform's default policy, the record
   in the terminal; a missing adapter, secret or workspace is refused before
@@ -254,7 +254,7 @@ what needs the runtime.
   pinned), never fetched by `npx -y` at first run. **`loop harnesses`** lists
   the offered harnesses with each one's adapter, credential, third-party
   serving, licence and capabilities, then the ones not offered with why.
-- **The orchestrator's channel** (SH-02's agent-runtimes part):
+- **The orchestrator's channel** (the agent-runtimes part):
   `orchestration/adapters/acp.py` takes the package's channels as its
   `ShieldChannel` — `stdio:<command line>` launches a local agent, `ws://`
   connects — and no longer says *no stdio yet*; the client it was first built
@@ -366,7 +366,7 @@ already expired is refused at once. Elsewhere — a runtime started by
 hand, `loop --harness` — Claude Code takes `ANTHROPIC_API_KEY` from the
 environment, as above. The route is `adapters/harness_inference.py`.
 
-## In the runtime image (built: SH-05; the four since image 0.0.66, 28 October 2026)
+## In the runtime image (the four since image 0.0.66, 28 October 2026)
 
 The runtime image (`plane/etc/dockerfiles/agent-runtimes`) carries the four
 offered harnesses' adapters at the versions the register pins, installed at
@@ -391,7 +391,7 @@ is `AGENT_RUNTIMES_WORKSPACE_ROOT=/mnt/shared-agent/workspace`, a directory of
 the volume the agent-runtimes container shares with the sandbox (where
 `generated` and `skills` live), made by the entrypoint — the contents the
 companion mounts land in the sandbox container's `/home/datalayer`, which the
-agent-runtimes container does not see (SH-13's open point). Operator 1.0.92
+agent-runtimes container does not see (an open point). Operator 1.0.92
 pins the image (1.0.93 pins 0.0.45, the image on 1.5.34); the prepuller and the
 image pruner's keep-list know the tags.
 
@@ -420,10 +420,10 @@ image pruner's keep-list know the tags.
   1 in 1.5.34, image 0.0.45); the drill ran with 0.1.19 in that one pod, and
   the pod was deleted after. Not yet proved there: the harness's child
   process gone after `DELETE` (the count was muddied by earlier runs), the
-  keeper's relaunch (SH-18), and a kept application's permissions decided
-  from the page (SH-12).
+  keeper's relaunch, and a kept application's permissions decided
+  from the page.
 
-## Examples (SH-23)
+## Examples
 
 Runnable from the repository's [`examples/shield`](https://github.com/datalayer/agent-runtimes/tree/main/examples/shield),
 each on the ACP SDK's fake agent (no model, no key), each with its output as
@@ -449,21 +449,21 @@ and **Shield Policy** (`@datalayer/agent-shield`'s types and
   been run — Claude Code's and Codex's have (the sessions drills of 21–22
   October 2026). Gemini CLI stays unoffered: its API host is outside the pod's
   boundary and is not routed.
-- `plane local` running a harness beside the local runtime (SH-19's second
-  half); the Studio's Toolbox offering the catalogue's harnesses (SH-43) — an
+- `plane local` running a harness beside the local runtime (its second
+  half); the Studio's Toolbox offering the catalogue's harnesses — an
   application names `example-harness-claude-code` by hand today.
 - **Served over every protocol** — see [that page](./transports): MCP lent
-  through the gateway (SH-14) and the A2A face (SH-15) are built; the `diff`
+  through the gateway and the A2A face are built; the `diff`
   and `terminal` displays are drawn by the web chat and the embed, the
-  phone's contract and fixture given (SH-16); ACP in, ACP out is proved with
-  the SDK's client, not yet with Zed on r1 (SH-17); skills and the
+  phone's contract and fixture given; ACP in, ACP out is proved with
+  the SDK's client, not yet with Zed on r1; skills and the
   instructions file are written in the harness's format, Claude Code using one
-  end to end waits on the key (SH-21). Still open: the web chat's own transport
+  end to end waits on the key. Still open: the web chat's own transport
   (`vercel-ai`) for a harness; a harness's question (`elicitation/create`)
   answered from the page — declined today, in a sentence.
 - **The Shield** around a harness is built — the organization's rules from
   IAM, the limits soft then hard, the session's rules, the record and the
-  trace: see [The Shield](../shield/). Open there: the Shield report (SH-36),
-  the bypass drills run with a funded harness (SH-37: run with the fake
+  trace: see [The Shield](../shield/). Open there: the Shield report,
+  the bypass drills run with a funded harness (run with the fake
   agent).
-- **The long tail** of ACP agents as a listed tier of the register (SH-57).
+- **The long tail** of ACP agents as a listed tier of the register.

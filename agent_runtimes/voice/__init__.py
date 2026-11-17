@@ -9,16 +9,16 @@ as it always has. It knows three things more:
 - **an application's voice** (`voice_settings`): the block of its Appspec,
   resolved against the voice catalogue — the voice it speaks with and the
   language — answered by ``/apps/configure`` and ``/apps/current`` so that a
-  page knows it before the first answer (VO-45);
+  page knows it before the first answer;
 - **that a message was spoken** (`SpokenInput`): the page sends a transcript
-  as text, with ``metadata.input == "voice"`` (VO-27), and the record keeps
-  the turn marked spoken — the words, never the sound (VO-29);
+  as text, with ``metadata.input == "voice"``, and the record keeps
+  the turn marked spoken — the words, never the sound;
 - **that answers may be heard** (`VoiceCapability`): instructions telling the
-  agent to write what reads well aloud (VO-44). It changes no rule; it gives
+  agent to write what reads well aloud. It changes no rule; it gives
   the agent one tool, ``say_aloud``, for a short line heard and not written.
 
-Over AG-UI it says two things only the runtime knows, as custom events
-(VO-35): ``voice.settings`` — the voice and language of the running
+Over AG-UI it says two things only the runtime knows, as custom events:
+``voice.settings`` — the voice and language of the running
 application — at a run's start, and ``voice.say`` — a short line the agent
 wants heard, not written (*One moment*), shown as a caption. Nothing else:
 the page transcribes and speaks, and AG-UI carries text.
@@ -36,7 +36,7 @@ from pydantic_ai.toolsets import FunctionToolset
 
 from agent_runtimes.specs.voices import get_voice_spec, voice_for, voice_speaks
 
-#: What the agent is told when its answers may be heard (VO-44).
+#: What the agent is told when its answers may be heard.
 VOICE_INSTRUCTIONS = (
     "Your answers may be heard as well as read: they are read aloud, sentence by "
     "sentence, as you write them. Write short sentences. Prefer a sentence to a table "
@@ -44,9 +44,9 @@ VOICE_INSTRUCTIONS = (
     "it matters to a listener, and never rely on formatting alone to carry meaning."
 )
 
-#: The custom events voice adds to AG-UI (VO-35), and nothing else.
+#: The custom events voice adds to AG-UI, and nothing else.
 VOICE_SAY_EVENT = "voice.say"
-#: The person spoke over the agent (VO-46, VO-13): a client stops its voice.
+#: The person spoke over the agent: a client stops its voice.
 VOICE_INTERRUPTED_EVENT = "voice.interrupted"
 VOICE_SETTINGS_EVENT = "voice.settings"
 
@@ -124,7 +124,7 @@ def heard() -> Optional[SpokenInput]:
 
 
 def voice_settings(app: Any) -> Dict[str, Any]:
-    """An application's voice, resolved against the catalogue (VO-41, VO-45).
+    """An application's voice, resolved against the catalogue.
 
     Off when it has none. The voice is its own when it names one that speaks
     its language, else the first of the catalogue that speaks it; the
@@ -161,7 +161,7 @@ def settings_of(voice: Any) -> Dict[str, Any]:
 
 
 def say_aloud_event(line: str, settings: Mapping[str, Any]) -> Any:
-    """`voice.say` (VO-35): a line to hear, with the voice and language it is said in."""
+    """`voice.say`: a line to hear, with the voice and language it is said in."""
     from ag_ui.core import CustomEvent
 
     said = " ".join(str(line or "").split())
@@ -183,14 +183,14 @@ def say_aloud_event(line: str, settings: Mapping[str, Any]) -> Any:
 
 
 def data_part_of(event: Any) -> Any:
-    """A voice custom event as a Vercel AI data part, `data-voice.say` (VO-36)."""
+    """A voice custom event as a Vercel AI data part, `data-voice.say`."""
     from pydantic_ai.ui.vercel_ai.response_types import DataChunk
 
     return DataChunk(type=f"data-{event.name}", data=event.value)
 
 
 def settings_event(settings: Mapping[str, Any]) -> Any:
-    """`voice.settings` (VO-35): the running application's voice, said at a run's start."""
+    """`voice.settings`: the running application's voice, said at a run's start."""
     from ag_ui.core import CustomEvent
 
     return CustomEvent(name=VOICE_SETTINGS_EVENT, value=dict(settings))
@@ -198,10 +198,10 @@ def settings_event(settings: Mapping[str, Any]) -> Any:
 
 @dataclass
 class VoiceCapability(AbstractCapability[Any]):
-    """Answers that may be heard: the agent writes for the ear as well (VO-44).
+    """Answers that may be heard: the agent writes for the ear as well.
 
     It gives the agent ``say_aloud`` for a short line heard, not written
-    (`voice.say`, VO-35), and carries the voice resolved against the
+    (`voice.say`), and carries the voice resolved against the
     catalogue, which AG-UI says at a run's start (`voice.settings`).
     """
 
@@ -219,7 +219,7 @@ class VoiceCapability(AbstractCapability[Any]):
 
         def say_aloud(line: str) -> ToolReturn:
             event = say_aloud_event(line, settings)
-            # AG-UI takes the custom event, Vercel AI the data part (VO-36).
+            # AG-UI takes the custom event, Vercel AI the data part.
             return ToolReturn(
                 return_value="Said aloud.", metadata=[event, data_part_of(event)]
             )
@@ -258,7 +258,7 @@ def voice_capability(app: Any) -> Optional[VoiceCapability]:
 
 
 def agent_voice_capability(agent_spec: Any) -> Optional[VoiceCapability]:
-    """The capability for an agent spec whose `voice` says its answers may be heard (VO-41); None otherwise."""
+    """The capability for an agent spec whose `voice` says its answers may be heard; None otherwise."""
     return _capability_of(settings_of(getattr(agent_spec, "voice", None)))
 
 

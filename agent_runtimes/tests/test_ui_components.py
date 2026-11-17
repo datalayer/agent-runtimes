@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The visual components, hosted by the UI specs (C-13)."""
+"""The visual components, hosted by the UI specs."""
 
 import jsonschema
 
@@ -20,7 +20,7 @@ def test_the_component_catalog_is_the_ui_specs_own() -> None:
 
 def test_every_component_carries_a_version_and_a_schema() -> None:
     """Datalayer's own with an example its schema meets; A2UI's standard ones
-    with the catalog's own schema of what a builder sets (C-13)."""
+    with the catalog's own schema of what a builder sets."""
     for component in COMPONENT_CATALOGUE.values():
         assert component.version, component.id
         jsonschema.Draft202012Validator.check_schema(component.properties)

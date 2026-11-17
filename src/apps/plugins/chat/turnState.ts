@@ -50,7 +50,7 @@ export type TurnFeed = {
   conversation: ReadonlySignal<ConversationEntry[]>;
   /** The chat's items as they now stand, streaming included. */
   items: (items: DisplayItem[]) => void;
-  /** What the application is doing, as its chat says it (T-08), for readers. */
+  /** What the application is doing, as its chat says it, for readers. */
   presence: ReadonlySignal<PresenceState>;
   /** What the application is doing now. */
   setPresence: (state: PresenceState) => void;

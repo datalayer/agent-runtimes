@@ -4,8 +4,8 @@
  */
 
 /**
- * A public application in the element, for a visitor without an account
- * (D-07, R-30): an example kept warm or an address open to visitors
+ * A public application in the element, for a visitor without an account:
+ * an example kept warm or an address open to visitors
  * run on the visitors' runtime with a visitor's token for it; a decision
  * framed; a private address, one that reaches its owner's connections, or
  * an example not kept, said in one sentence naming the embed token.
@@ -207,7 +207,7 @@ describe('a visitor’s application', () => {
     expect(read.visitors.app).toBe('at:research');
   });
 
-  it('runs an address with code of its own on the runtime it is kept on, never the visitors’ (R-30)', async () => {
+  it('runs an address with code of its own on the runtime it is kept on, never the visitors’', async () => {
     const spec = {
       schema: 'loop.app/v1',
       id: 'research',

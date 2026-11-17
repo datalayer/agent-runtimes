@@ -5,7 +5,7 @@
 
 /**
  * `@datalayer/loop-plugin-app-rules` — an application's rules and the
- * approvals it waits on, as a plugin (R-01b, U-19): a card in the
+ * approvals it waits on, as a plugin: a card in the
  * workspace's sidebar (`LoopSlots.sidebar`), beside its page.
  *
  * @module apps/plugins/app-rules
@@ -40,7 +40,7 @@ export function defineAppRulesPlugin(
           slot: LoopSlots.sidebar,
           order: 10,
           Component: Card,
-          // Its line icon on the workspace's rail (T-07).
+          // Its line icon on the workspace's rail.
           rail: { label: 'Rules', icon: ShieldCheckIcon },
         },
       ],

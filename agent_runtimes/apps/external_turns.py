@@ -24,7 +24,7 @@ names the turn **for its caller**:
 Kept for a day, at most :data:`HELD` turns, in the runtime's protocol state
 store (kind :data:`KIND`: the agent-memories PostgreSQL on Kubernetes, a
 SQLite file elsewhere), so a retry after the runtime restarted is answered
-the original turn too (DC-205); a turn that was running when its process went
+the original turn too; a turn that was running when its process went
 is answered ``failed``. The turns of one caller never answer another's.
 """
 

@@ -4,11 +4,11 @@
  */
 
 /**
- * The agent's toolbox, contributed (C-20): one plugin per source of
+ * The agent's toolbox, contributed: one plugin per source of
  * parts — the servers of the catalogue a connection reaches, its skills, its
  * models, and the rules, tests and events an agent answers to — each
  * contributing to `loop.canvas.part`. The toolbox is what the enabled
- * plugins contribute, as the palette is (`canvas-blocks`, C-12).
+ * plugins contribute, as the palette is (`canvas-blocks`).
  *
  * @module apps/plugins/canvas-parts
  */
@@ -86,7 +86,7 @@ const partsPlugin = (
   });
 
 /**
- * The catalogue's harnesses as the agent (SH-43): each harness an
+ * The catalogue's harnesses as the agent: each harness an
  * agent program over ACP behind the Shield, offered by the catalogue agent
  * that runs on it — dropped on the surface, it is the application's agent.
  * A harness no agent of the catalogue runs yet is offered off, and says so;
@@ -221,7 +221,7 @@ export const TEST_PARTS: CanvasPartContribution[] = [
   },
 ];
 
-/** The events an application answers (C-21): on a schedule, on an event, once. */
+/** The events an application answers: on a schedule, on an event, once. */
 export const EVENT_PARTS: CanvasPartContribution[] = [
   {
     id: 'event:schedule',
@@ -262,7 +262,7 @@ export const EVENT_PARTS: CanvasPartContribution[] = [
   },
 ];
 
-/** Each protocol of the catalogue (PS-04): a planned one offered, not enabled. */
+/** Each protocol of the catalogue: a planned one offered, not enabled. */
 export const PROTOCOL_PARTS: CanvasPartContribution[] = listProtocolSpecs().map(
   protocol => ({
     id: `protocol:${protocol.id}`,
@@ -292,7 +292,7 @@ const familyWords = (family: string) =>
   ASSISTANT_CHARACTER_FAMILIES.find(each => each.family === family);
 
 /**
- * The avatars of its floating assistant, dropped on the agent (PS-05), by
+ * The avatars of its floating assistant, dropped on the agent, by
  * family: Datalayer's orb, the clippy.js characters (Microsoft's, fetched
  * from jsDelivr when shown), Datalayer's drawings, by id, and a 3D model
  * (the default robot; its `url` is changed in the Appspec).

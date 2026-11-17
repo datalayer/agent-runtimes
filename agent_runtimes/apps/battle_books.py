@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The demo books, for a catalogue Battle played on them (B4-01).
+"""The demo books, for a catalogue Battle played on them.
 
 Two Battles of the catalogue race scenes on Odoo books — the invoice race
 (Sales & Accounting) and the month-end report challenge (Month-end Close) —
@@ -17,7 +17,7 @@ the Odoo credentials from that account's secrets, so the key reaches those
 books and no other. It is taken out of the environment as the runtime starts
 (:func:`take_books_key`), so that nothing started from it — an MCP server's
 process, a command, a sandbox — inherits it; held, so that it is withheld
-from whatever the model reads (R-19); never logged.
+from whatever the model reads; never logged.
 
 **Who reaches the books with it.** A run of a catalogue Battle's member
 only: the visitor's token names the Battle (ai-inference's ``battle``,

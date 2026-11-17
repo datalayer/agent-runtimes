@@ -28,7 +28,7 @@ from agent_runtimes.evals.common import as_dict
 
 console = Console()
 
-from agent_runtimes.evals.links import (  # noqa: E402 — the product's addresses (B4-08)
+from agent_runtimes.evals.links import (  # noqa: E402 — the product's addresses
     agentspec_url,
     benchmark_url,
     run_url,
@@ -343,7 +343,7 @@ HEATMAP_RUNS = 6
 
 
 def _recent_run_heatmap(experiments: list[dict[str, Any]]) -> dict[str, Any]:
-    """The last few runs of every experiment, as one grid (B3-10).
+    """The last few runs of every experiment, as one grid.
 
     The columns are positions rather than run identifiers: two experiments'
     fourth runs are comparable as "the fourth", and no two experiments share a
@@ -373,7 +373,7 @@ def _recent_run_heatmap(experiments: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def _pairwise_deltas(experiments: list[dict[str, Any]]) -> dict[str, Any]:
-    """Every experiment against every other, candidate minus baseline (B3-10).
+    """Every experiment against every other, candidate minus baseline.
 
     Both directions of a pair, because which one is the candidate is the
     reader's question and not the report's: somebody comparing a new agent
@@ -570,7 +570,7 @@ def _run_detail_record(run: dict[str, Any]) -> dict[str, Any]:
     usage = _extract_run_usage(run)
     return {
         "id": str(run.get("id", "")),
-        # The launch a run belongs to is where its page is (B4-08).
+        # The launch a run belongs to is where its page is.
         "launch_id": str(run.get("launch_id", "") or ""),
         "status": str(run.get("status", "")),
         "created_at": str(run.get("created_at", "")),
@@ -3874,13 +3874,13 @@ def build_eval_report_lexical(
     run: Optional[dict[str, Any]] = None,
     cases: Optional[list[dict[str, Any]]] = None,
 ) -> dict[str, Any]:
-    """The report as a serialized Lexical editor state (B3-03)."""
+    """The report as a serialized Lexical editor state."""
     from agent_runtimes.evals.lexical import build_eval_report_lexical as _build
 
     return _build(report, evalset=evalset, launch=launch, run=run, cases=cases)
 
 
-#: What a review decision is called in a report (B4-03).
+#: What a review decision is called in a report.
 DECISION_KIND_LABELS = {
     "accepted_regression": "Accepted regression",
     "expected_change": "Expected change",
@@ -3900,7 +3900,7 @@ def _decision_cell(value: Any) -> str:
 
 
 def render_decisions_markdown(decisions: list[dict[str, Any]]) -> str:
-    """The "Decisions" appendix of a report (B4-03).
+    """The "Decisions" appendix of a report.
 
     What was decided about which part of the result, by whom and when, in
     the order it was decided. Empty when nothing was, so a report nobody has
@@ -3955,7 +3955,7 @@ def write_eval_report_csv(report: dict[str, Any], output_path: str | Path) -> Pa
     return path
 
 
-#: The columns a report object's CSV adds after the CLI's own (B4-08).
+#: The columns a report object's CSV adds after the CLI's own.
 REPORT_OBJECT_COLUMNS = [
     "block_index",
     "block_type",
@@ -3978,7 +3978,7 @@ def write_report_object_csv(
     narrative: list[dict[str, Any]],
     decisions: list[dict[str, Any]],
 ) -> Path:
-    """The CSV of a report object (B4-08).
+    """The CSV of a report object.
 
     The rows of the report over its runs, exactly as the CLI writes them,
     then a `narrative` row per block of its document and a `decision` row per

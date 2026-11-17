@@ -14,7 +14,7 @@
  * visitor's trial key. Its tools ask its peers (Accounting; Disaster
  * assessment and Change detection), one `ask_<peer>` tool per peer, with
  * {@link a2aPeerTool}. A team of two names its peer as `peerApp`; a team of
- * N names them as `peers` (A-08). An entry that runs on a runtime
+ * N names them as `peers`. An entry that runs on a runtime
  * itself (a scene of one member: Month-end Close, Crop Monitoring) is asked
  * over A2A from the page, with no agent in the browser: `entryPeer`.
  *
@@ -26,7 +26,7 @@
  * the latest notebook kept until another one comes ({@link A2ATeam.notebook}),
  * and each surface of components of the catalog a peer shows
  * (`application/json+a2ui`) kept with the peer that gave it, in the order
- * they came ({@link A2ATeam.surfaces}, H-02). A button pressed on
+ * they came ({@link A2ATeam.surfaces}). A button pressed on
  * one is a turn of the conversation ({@link A2ATeam.pressAction}): the
  * person's line to that member, its answer from it, in the entry's history.
  * The tools a peer calls on its connections (its MCP servers), told over
@@ -108,7 +108,7 @@ export type A2ATeamPersona = {
   insist: boolean;
   away: boolean;
   /**
-   * The tool it calls now, or just called (T-23): "Using
+   * The tool it calls now, or just called: "Using
    * list_invoices…", "Asking Accounting…"; said in place of its words.
    */
   tool?: BalloonToolLine;
@@ -125,7 +125,7 @@ export const AT_REST: A2ATeamPersona = {
 /**
  * One turn of the conversation with the entry. A button pressed on what
  * another member showed is a turn of it too: the person's line addressed to
- * that member, and its answer from it (`member`, H-02).
+ * that member, and its answer from it (`member`).
  */
 export type A2ATeamTurn = {
   role: 'user' | 'assistant';
@@ -154,7 +154,7 @@ export const NOTEBOOK_AND_WORDS: readonly string[] = [
 
 /**
  * What a page that draws an answer's components accepts besides: the
- * catalog's surfaces, a notebook, and words in Markdown (H-02).
+ * catalog's surfaces, a notebook, and words in Markdown.
  */
 export const COMPONENTS_NOTEBOOK_AND_WORDS: readonly string[] = [
   A2UI_MEDIA_TYPE,
@@ -233,7 +233,7 @@ export function balloonLine(text: string, length = 120): string {
  * The entry's words with a new block of text added: a block that starts
  * after another (the words before a tool, then the words after it) begins a
  * paragraph of its own. Appended as they streamed, the blocks ran together —
- * Orca read *…right away.Accounting looked up…* (H-21, 2026-10-11).
+ * Orca read *…right away.Accounting looked up…* (2026-10-11).
  */
 export function joinBlock(said: string, block: string): string {
   if (!said || !block || /\s$/.test(said) || /^\s/.test(block)) {
@@ -335,13 +335,13 @@ export type UseA2ATeamOptions = {
    */
   inspector?: OtelLiveTracer | null;
   /**
-   * The page's own tools for the entry, beside its peers' (AGENT_BATTLE
-   * B1-01): an arena's moves, a deck's slides, a spreadsheet's cells. With
+   * The page's own tools for the entry, beside its peers':
+   * an arena's moves, a deck's slides, a spreadsheet's cells. With
    * them, an entry in the browser has an agent even with no peer to ask.
    * Give the same array while nothing changed: a new one makes the agent again.
    */
   frontendTools?: readonly FrontendToolDefinition[];
-  /** Where a streaming tool's events go (B1-00); without it a streaming tool is refused. */
+  /** Where a streaming tool's events go; without it a streaming tool is refused. */
   onToolEvent?: FrontendToolsToVercelAIOptions['onToolEvent'];
 };
 
@@ -397,7 +397,7 @@ export type A2ATeam = {
   notebook: A2APeerArtifact | null;
   /**
    * Every surface of components the members showed in this conversation,
-   * in the order they came, with who showed it (H-02).
+   * in the order they came, with who showed it.
    */
   surfaces: A2ATeamSurface[];
   /** Which way the first peer's link carries a message now. */
@@ -411,7 +411,7 @@ export type A2ATeam = {
   send: (text: string) => Promise<void>;
   /**
    * A button pressed on what a member showed (its id: the entry's, or a
-   * peer's), as a turn of the conversation (H-02): the person's line
+   * peer's), as a turn of the conversation: the person's line
    * in the entry's history, the member asked directly over A2A with the
    * button's action beside its words (`askA2APeer({ action })`), and its
    * reply landing as an `ask_<peer>` answer does — in its history, its
@@ -599,8 +599,8 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
     undefined,
   );
   const [busy, setBusy] = useState(false);
-  // A streaming tool's events, when the page gives no handler of its own
-  // (AGENT_BATTLE B1-00): turns the entry did not ask for, through its send.
+  // A streaming tool's events, when the page gives no handler of its own:
+  // turns the entry did not ask for, through its send.
   const sendRef = useRef<(text: string) => unknown>(() => undefined);
   const ownToolEvent = useToolEventLoop(
     useCallback((text: string) => sendRef.current(text), []),

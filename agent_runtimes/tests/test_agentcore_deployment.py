@@ -388,7 +388,7 @@ def _principal_of_ada() -> None:
     principal.forget_principal_token(DEPLOYMENT)
 
 
-#: What the scheduler's tick says woke the session, relayed by ai-agents (AC-67).
+#: What the scheduler's tick says woke the session, relayed by ai-agents.
 TICK = {
     "kind": "schedule",
     "schedule_uid": "sch-1",

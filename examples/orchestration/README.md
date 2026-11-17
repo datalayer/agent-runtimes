@@ -1,6 +1,6 @@
 # One Objective, Two Protocols, One Code Path
 
-The proof-of-concept scenario of orchestration (O0-13).
+The proof-of-concept scenario of orchestration.
 
 A parent asks for a notebook to be analysed and delegates the work twice:
 once to a worker that speaks **A2A** and once to a worker that speaks **ACP**.
@@ -138,10 +138,10 @@ when the parent itself runs in the cloud.
 
 Deliberately, because each is a later item and a stub here would be a claim:
 
-- No durable control plane. The execution store is the in-memory one; Solr is
-  O1-02 and the durable workflow is O1-03.
-- No child executions. Trees are Phase 2 (O2-01).
+- No durable control plane. The execution store is the in-memory one; Solr and the
+  durable workflow come later.
+- No child executions. Trees are Phase 2.
 - No context resolution. The notebook is _named_; resolving a reference and
-  minting a scoped credential for it are O0-09 and O1-06.
+  minting a scoped credential for it come later.
 - No artifact bodies. An artifact keeps a summary and a content hash;
-  committing the body to contents or the Library is O1-10.
+  committing the body to contents or the Library comes later.

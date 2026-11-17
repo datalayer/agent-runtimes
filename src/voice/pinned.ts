@@ -4,7 +4,7 @@
  */
 
 /**
- * The browser's models, from Datalayer's origin and as pinned (VO-49, VO-03):
+ * The browser's models, from Datalayer's origin and as pinned:
  * every file a model is made of is fetched from the models'
  * origin, laid out as the pinned store is (`<provider>/<model id>/<path>`), and its
  * SHA-256 checked against the catalogue before anything reads it. A file
@@ -129,7 +129,7 @@ export async function pinnedBytes(
   return answered.arrayBuffer();
 }
 
-/** Where a model's files are, under the models' origin: `<provider>/<model id>` (VO-48). */
+/** Where a model's files are, under the models' origin: `<provider>/<model id>`. */
 export function modelFolder(modelId: string): string {
   const model = SPEECH_MODEL_CATALOGUE[modelId];
   if (!model) {

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The ``agent-runtimes`` reactor extension (MH-F01): the session's points
+"""The ``agent-runtimes`` reactor extension: the session's points
 — with where it runs (``runtime.target``) and the tokens it acts with
 (``identity.provider``) — and the built-in plugin that contributes today's
 implementations.

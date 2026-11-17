@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Skills and instructions lent to a harness in its own format (SH-21).
+"""Skills and instructions lent to a harness in its own format.
 
 Datalayer's skills are Python compositions of MCP tools (``agent-skills``,
 run through the skills toolset); a harness reads skills as folders with a
@@ -19,7 +19,7 @@ the Appspec.
 
 A folder's own instructions file — a person's ``CLAUDE.md``, one Datalayer
 did not write (every file Datalayer writes starts with :data:`LENT_MARK`) —
-is **kept as it is** (VSCODE VS-23): the application's instructions are
+is **kept as it is**: the application's instructions are
 written beside it, under ``.datalayer/``, and reach the harness ahead of the
 session's first prompt (:meth:`ACPAgent._traced_prompt`); the session's
 first line says so (:func:`kept_said`).
@@ -64,7 +64,7 @@ SKILL_FORMATS = ("skill-md", "none")
 READ_ONLY = 0o444
 
 #: The first line of every instructions file Datalayer writes: what tells a
-#: file of Datalayer's from a folder's own (VSCODE VS-23). A file without
+#: file of Datalayer's from a folder's own. A file without
 #: it is the person's and is never written over.
 LENT_MARK = (
     "<!-- Written by Datalayer from the application: read-only to the agent. -->"
@@ -86,7 +86,7 @@ class LentFiles:
     instructions: Path | None = None
     #: The folder's own instructions file, kept as it is: the harness reads
     #: it as its own, and the application's instructions reach it with its
-    #: first prompt (VS-23). ``None`` when the harness's file is Datalayer's.
+    #: first prompt. ``None`` when the harness's file is Datalayer's.
     kept: Path | None = None
     #: Paths the agent may not write: the skill folders and the instructions file.
     protected: list[Path] = field(default_factory=list)
@@ -311,7 +311,7 @@ def instructions_markdown(
     harness : HarnessSpec
         The harness it is written for.
     lent : Sequence[str]
-        The gateway toolsets it is lent, by name (SH-14).
+        The gateway toolsets it is lent, by name.
 
     Returns
     -------
@@ -555,7 +555,7 @@ def write_lent_files(
                 f"workspace ({harness.instructions_file}): nothing is written there."
             )
         # The folder's own file — one Datalayer did not write — is kept as it
-        # is (VS-23): the application's instructions go beside it, and reach
+        # is: the application's instructions go beside it, and reach
         # the harness ahead of its first prompt; a file Datalayer wrote is
         # written again in place.
         if instructions.exists() and not _is_datalayers(instructions):

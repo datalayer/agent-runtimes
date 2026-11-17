@@ -5,7 +5,7 @@
 """
 Generate Python and TypeScript code from the YAML standard specifications.
 
-One YAML per standard under ``agentspecs/standards`` (SH-60):
+One YAML per standard under ``agentspecs/standards``:
 its version, domains and controls, each control with its evidence items,
 cadence and crosswalks. The catalogue is carried whole: the Studio's
 conformance screens read a control's title, status words and crosswalks
@@ -73,7 +73,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         '"""',
         "Standard Catalog.",
         "",
-        "The standards a conformance report answers (SH-60): each a",
+        "The standards a conformance report answers: each a",
         "catalogue entry carrying the standard's domains and controls whole.",
         "",
         "This file is AUTO-GENERATED from YAML specifications.",
@@ -158,7 +158,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         "/**",
         " * Standard Catalog.",
         " *",
-        " * The standards a conformance report answers (SH-60).",
+        " * The standards a conformance report answers.",
         " *",
         " * This file is AUTO-GENERATED from YAML specifications.",
         " * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",

@@ -4,7 +4,7 @@
  */
 
 /**
- * An application's computer (R-23, I-01): the sandbox its agent runs on,
+ * An application's computer: the sandbox its agent runs on,
  * as the computer view shows it — its three parts, each off until it is
  * turned on; what its agent ran on it, from the conversation's tool calls;
  * its files, read-only; its browser's page, live; and *Take over* and
@@ -223,7 +223,7 @@ export type ComputerState = {
   /** Whether the person asking is who has it. */
   yours: boolean;
   /**
-   * The origin its files are served from, as the runtime says it (D-22):
+   * The origin its files are served from, as the runtime says it:
    * the host kept for what applications serve, or empty where the plane
    * keeps none and the runtime's own host serves them.
    */
@@ -254,7 +254,7 @@ export type ComputerContext = {
   /** The person's token; none on the machine itself. */
   token?: string;
   /**
-   * Where what an application serves a person is served from (D-22):
+   * Where what an application serves a person is served from:
    * `user-apps.datalayer.run`, the same runtime behind another name. A file
    * fetched from the runtimes' host would be same-origin with every other
    * runtime; from this one it is origin of its own. Unset, the runtime's own
@@ -268,7 +268,7 @@ export const computerUrl = (context: ComputerContext, tail = ''): string =>
   `${context.serverUrl.replace(/\/+$/, '')}/api/v1/apps/agents/${encodeURIComponent(context.agentId)}/computer${tail}`;
 
 /**
- * Where a file of its computer is read (D-22): the same path, on the
+ * Where a file of its computer is read: the same path, on the
  * host kept for what applications serve when there is one. Only the origin
  * changes — the runtime is the same, and its prefix is answered there too.
  */
@@ -339,7 +339,7 @@ export const listComputerFiles = async (
 
 /**
  * One of its files, to save. Fetched from the host kept for what
- * applications serve when there is one (D-22), with the person's token: the
+ * applications serve when there is one, with the person's token: the
  * runtime is the same, only the name it answers to differs.
  */
 export const downloadComputerFile = async (

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Applications on a runtime (R-03): configure, refuse, and decide.
+"""Applications on a runtime: configure, refuse, and decide.
 
 `POST /api/v1/apps/configure` runs an application's agent with what the
 application says differently; the agent creation itself is stubbed here — what
@@ -86,7 +86,7 @@ def client(monkeypatch: pytest.MonkeyPatch) -> Any:
     monkeypatch.setattr(agents, "delete_agent", delete_agent)
     monkeypatch.setattr(agents, "_emit_agent_assigned_event", lambda **kwargs: None)
     monkeypatch.setitem(agents._agentspecs, "default", None)
-    # What cog-crawler and its connection declare, set where it runs (R-19):
+    # What cog-crawler and its connection declare, set where it runs:
     # a spec whose secret is not there is refused before its agent is made.
     for name in (
         "TAVILY_API_KEY",
@@ -142,7 +142,7 @@ def test_configure_runs_the_applications_agent_with_what_it_says(client: Any) ->
 
 
 def test_current_answers_the_applications_starters(client: Any) -> None:
-    """S-104: what a host suggests asking, each label with its message."""
+    """What a host suggests asking, each label with its message."""
     starters = {
         **WEB_RESEARCH,
         "interface": {
@@ -225,7 +225,7 @@ def test_the_runtime_lists_applications_from_reactor_and_runs_its_own(
 def test_feedback_on_a_conversation_is_kept_in_the_record(
     client: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """V-18: a thumb and a comment, through the recorder of the session."""
+    """A thumb and a comment, through the recorder of the session."""
     from agent_runtimes.apps.record import AppRecorder
 
     keeps = {**WEB_RESEARCH, "record": {"include": ["outputs", "feedback"]}}
@@ -271,7 +271,7 @@ def test_feedback_on_a_conversation_is_kept_in_the_record(
 def test_feedback_is_heard_by_its_code(
     client: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """P-24: once kept, a Python application's `@app.feedback` hears it."""
+    """Once kept, a Python application's `@app.feedback` hears it."""
     from agent_runtimes.apps import (
         AppHost,
         Application,
@@ -423,7 +423,7 @@ async def opening(session: Session) -> None:
 
 
 def test_build_runs_the_file_apart_and_answers_its_spec(client: Any) -> None:
-    """P-10: the Studio's Run — the file built by a process of its own."""
+    """The Studio's Run — the file built by a process of its own."""
     built = client.post("/api/v1/apps/build", json={"file": "app.py", "text": APP_PY})
     assert built.status_code == 200, built.text
     spec = built.json()["spec"]
@@ -454,7 +454,7 @@ def test_a_file_that_never_ends_is_stopped_not_the_server() -> None:
 
 
 def test_eject_answers_an_app_py_that_builds_the_same_spec(client: Any) -> None:
-    """P-13: the Studio's Eject — nothing kept on the runtime."""
+    """The Studio's Eject — nothing kept on the runtime."""
     import yaml
 
     spec = yaml.safe_dump(WEB_RESEARCH, sort_keys=False, allow_unicode=True)

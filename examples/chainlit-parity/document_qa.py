@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Document QA — Chainlit's cookbook ``pdf-qa``, rebuilt with LOOP's API (P-27).
+"""Document QA — Chainlit's cookbook ``pdf-qa``, rebuilt with LOOP's API.
 
 Chainlit asks for a PDF or a text file when the chat starts (``AskFileMessage``),
 says it is processing it and updates that message when it is done, splits it
@@ -14,7 +14,7 @@ Here: ``session.ask(FileQuestion(...))``, ``session.send`` then
 passages shown as the catalog's Evidence. The retriever is words in common,
 not Pinecone's embeddings — a store of vectors is the developer's, as it is in
 Chainlit's example; on Datalayer, *What it knows* reads documents into a
-search of its own (U-24).
+search of its own.
 """
 
 import io

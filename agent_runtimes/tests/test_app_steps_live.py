@@ -1,9 +1,9 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What a step shows while it runs: an output written as it comes (P-31), and each tool call of the agent a step of its own, in this process
-(P-33) — through a `MemoryChannel`, the terminal, and the session API's
-AG-UI stream. And the blank agent this process builds (P-32).
+"""What a step shows while it runs: an output written as it comes, and each tool call of the agent a step of its own, in this process
+— through a `MemoryChannel`, the terminal, and the session API's
+AG-UI stream. And the blank agent this process builds.
 """
 
 import io
@@ -38,7 +38,7 @@ def ended(channel: MemoryChannel) -> List[Step]:
     return [e for e in channel.events if isinstance(e, Step) and e.ended_at]
 
 
-# --- a step that streams (P-31) -----------------------------------------------------
+# --- a step that streams -----------------------------------------------------
 
 
 def writer() -> Application:
@@ -132,7 +132,7 @@ async def test_the_session_api_says_the_step_again_with_what_it_wrote_so_far() -
             if line.startswith("data:")
         )
     # Shown running, its output patched in piece by piece, shown ended: one
-    # display, one row, in place, on the session's ui socket (RU-3, RU-W).
+    # display, one row, in place, on the session's ui socket (RU-W).
     assert [e["type"] for e in events] == ["STEP_STARTED", "STEP_FINISHED"]
     ops = [frame.op.model_dump(mode="json") for frame in sessions.UI_HUB.ops(live.uid)]
     assert [op["body"][0]["path"] for op in ops if op["op"] == "patch"] == [
@@ -175,7 +175,7 @@ async def test_the_terminal_writes_a_step_as_it_comes() -> None:
     assert lines.index("  ◦ gen_query…") < lines.index("    SELECT 1 FROM orders")
 
 
-# --- a tool call as a step, in this process (P-33) ------------------------------------
+# --- a tool call as a step, in this process ------------------------------------
 
 
 async def test_each_tool_call_of_the_agent_is_a_tool_step_nested_where_it_was_called() -> (
@@ -238,7 +238,7 @@ async def test_a_streamed_answer_shows_its_tool_calls_too() -> None:
     assert channel.messages[-1].text == "Order 7 has shipped."
 
 
-# --- a blank agent this process builds (P-32) -----------------------------------------
+# --- a blank agent this process builds -----------------------------------------
 
 
 def test_the_blank_agent_is_built_here_and_says_only_the_applications_words() -> None:
@@ -268,7 +268,7 @@ async def test_on_a_runtime_a_tool_call_of_the_codes_agent_reaches_the_chat_as_a
     None
 ):
     """The agent a runtime made (``agent_maker``), called by the code: each
-    call is said on the session API's stream as ``loop.step`` (P-33)."""
+    call is said on the session API's stream as ``loop.step``."""
     from agent_runtimes.apps.agent import AppAgent
 
     application = Application(id="order-desk", kind="chat", agent=BLANK_PYTHON_AGENT)

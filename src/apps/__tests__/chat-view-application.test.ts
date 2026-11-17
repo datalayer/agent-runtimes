@@ -4,8 +4,8 @@
  */
 
 /**
- * An application's conversation in the workspace's chat (T-17, T-18,
- * T-19): its face in the empty state at the page's size of the three, and no
+ * An application's conversation in the workspace's chat:
+ * its face in the empty state at the page's size of the three, and no
  * session controls under its composer — an agent's chat keeps them.
  *
  * Read from the source, as the other `ChatView` pins are: the view needs a
@@ -69,7 +69,7 @@ describe('an application in the chat', () => {
     );
   });
 
-  it('is switched off, with the reason, when its host says there is nothing to talk to (R-27)', () => {
+  it('is switched off, with the reason, when its host says there is nothing to talk to', () => {
     expect(chat).toContain('const ambient = useChatAvailability();');
     expect(chat).toMatch(
       /const chatDisabled =\s+anonymousValidating \|\|\s+Boolean\(anonymousRefused\) \|\|\s+gateBlocked \|\|\s+keyExpired \|\|\s+Boolean\(inPageRefusal\) \|\|\s+Boolean\(noRuntime\) \|\|\s+ambient\.disabled;/,
@@ -79,7 +79,7 @@ describe('an application in the chat', () => {
     );
   });
 
-  it('says so, sends nothing and is not Ready while no runtime is assigned (P-24)', () => {
+  it('says so, sends nothing and is not Ready while no runtime is assigned', () => {
     // The chat's server is the runtime's, with no stand-in: on a hosted page
     // the host's was the page's own origin, which answered a question 404.
     expect(chat).toContain(
@@ -92,7 +92,7 @@ describe('an application in the chat', () => {
     expect(chat).toMatch(/presence && !noRuntime \? \(\s+<PresenceLine/);
   });
 
-  it('speaks to its session API whether or not its plugin is up (D-15)', () => {
+  it('speaks to its session API whether or not its plugin is up', () => {
     // The host says it runs an application: while its runtime does not hold
     // it, its page plugin stands down, and its chat is still never sent to
     // the runtime's bare agent route.

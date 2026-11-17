@@ -4,7 +4,7 @@
  */
 
 /**
- * *Read aloud* (VO-21, `on_request`): under each answer the agent
+ * *Read aloud* (`on_request`): under each answer the agent
  * has finished, a button that reads that answer from its start — what was
  * being said stops first.
  */
@@ -33,7 +33,7 @@ function message(
   } as ChatMessage;
 }
 
-describe('reading an answer aloud (VO-21)', () => {
+describe('reading an answer aloud', () => {
   it('stops what was being said, then says the answer as plain words, sentence by sentence', () => {
     const calls: string[] = [];
     const said = readAloud(

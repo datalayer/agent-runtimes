@@ -173,7 +173,7 @@ def _normalize_ai_inference_base_url(raw_url: str | None) -> str:
 
 
 #: The headers datalayer-ai-inference reads the application and deployment
-#: of a call from, and stamps on its usage record (R-09). Spelled as
+#: of a call from, and stamps on its usage record. Spelled as
 #: ``datalayer_common.usage_dimensions`` spells them.
 APP_UID_HEADER = "X-Datalayer-App-Uid"
 DEPLOYMENT_UID_HEADER = "X-Datalayer-Deployment-Uid"
@@ -589,7 +589,7 @@ def resolve_model_for_inference_provider(
     # its agent before it is assigned and given its token, and a call without
     # one is refused in a sentence (``InferenceTokenMissing``), never made
     # with another key. A deployment's agent calls with its application's
-    # principal's token, and only with it (I-03).
+    # principal's token, and only with it.
     from agent_runtimes.apps.principal import api_key_for, deployment_of
     from agent_runtimes.apps.visitors import (
         or_visitors_key,
@@ -599,7 +599,7 @@ def resolve_model_for_inference_provider(
 
     deployment = deployment_of(app_instance)
     # On the visitors' runtime, every call is a visitor's, with their token
-    # and nothing else (R-30); on a deployment's runtime, a visitor's
+    # and nothing else; on a deployment's runtime, a visitor's
     # turn calls with their token too, so that they are held to the limits
     # they would be on the visitors' runtime and nobody's account pays, and
     # every other turn with its principal's.
@@ -659,7 +659,7 @@ def model_of_request(agent_id: str | None, model: str) -> Any:
 
     Through the provider the agent was made with (`agent_inference_provider`):
     on a Datalayer runtime, ai-inference, naming the application instance it
-    serves (R-09) — never a direct call around it. A direct Bedrock call
+    serves — never a direct call around it. A direct Bedrock call
     with no region to call is refused here, in a sentence, rather than at the
     model with boto3's.
 

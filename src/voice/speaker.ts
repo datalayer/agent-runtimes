@@ -4,11 +4,11 @@
  */
 
 /**
- * Answers heard, from Datalayer's speech service (VO-20, VO-33):
+ * Answers heard, from Datalayer's speech service:
  * each sentence is sent to ai-agents as soon as it is written
  * and played as soon as its audio arrives, one after the other, while the
  * next ones are being made. The level of what plays moves the assistant's
- * mouth (VO-23). Nothing is kept: each sentence's audio is dropped once played.
+ * mouth. Nothing is kept: each sentence's audio is dropped once played.
  *
  * @module voice/speaker
  */
@@ -21,12 +21,12 @@ export interface SpeakerState {
   /**
    * Sound is playing, or a sentence given is being made into sound to play
    * next: from the moment there is something to say, so that hands-free
-   * reads speech in that moment as the person speaking over it (VO-12,
-   * VO-13). What moves the mouth is the sound's level, and the sentence
+   * reads speech in that moment as the person speaking over it.
+   * What moves the mouth is the sound's level, and the sentence
    * marked is the one playing.
    */
   speaking: boolean;
-  /** The sentence being said, for the balloon (VO-26). */
+  /** The sentence being said, for the balloon. */
   sentence?: string;
   /** Why the last sentence could not be said, in a sentence. */
   refused?: string;
@@ -40,33 +40,33 @@ export interface SpeakerOptions {
   language: string;
   /**
    * The person's token, an application's principal's, a visitor's or an
-   * embed's — whose deployment is the one it names (VO-19).
+   * embed's — whose deployment is the one it names.
    */
   token?: string;
   /**
-   * How fast it speaks, as a multiplier of the voice's own pace (VO-25,
-   * VO-30). Applied here rather than asked of the service: `POST
+   * How fast it speaks, as a multiplier of the voice's own pace.
+   * Applied here rather than asked of the service: `POST
    * /speech/syntheses` takes a text, a voice, a language and a format, and
    * no speed. Playing a buffer faster lifts its pitch a little; a speed the
    * engine itself honoured would not, and is where this belongs once the
    * service takes one.
    */
   rate?: number;
-  /** How loud it is, 0 (silent) to 1 (the voice's own) (VO-25, VO-30). */
+  /** How loud it is, 0 (silent) to 1 (the voice's own) . */
   volume?: number;
   /** Called whenever the state changes. */
   onState?: (state: SpeakerState) => void;
   /** Called with how long a sentence took from asked to first sound, in ms. */
   onFirstSound?: (ms: number) => void;
   /**
-   * Say a long first sentence's first clause on its own (VO-52): the service
+   * Say a long first sentence's first clause on its own: the service
    * makes a sentence whole, in about the time its length takes, so the first
    * sound comes sooner when the first thing asked is shorter. Off for a
    * caller that follows its sentences one by one (a deck's narrator).
    */
   firstClauseFirst?: boolean;
   /**
-   * Ask each sentence streamed (VO-52): the speech service says it piece by
+   * Ask each sentence streamed: the speech service says it piece by
    * piece where it pauses and sends each piece's 16-bit PCM as soon as it is
    * said, and the speaker plays the pieces as they come — the first sound
    * after the first piece, not the whole sentence. A service that answers a
@@ -112,7 +112,7 @@ const SHORTEST_CLAUSE_CHARS = 15;
 
 /**
  * A sentence cut after its first clause — a comma, semicolon, colon or dash
- * followed by a space — when it is long and neither part is too short (VO-52);
+ * followed by a space — when it is long and neither part is too short;
  * else the sentence alone. Never cut inside a number (`1,000`).
  */
 export function firstClause(sentence: string): string[] {
@@ -172,7 +172,7 @@ export class ServerSpeaker {
       this.analyser.fftSize = 512;
       // The gain sits after the analyser, so the mouth keeps moving to what
       // the voice says rather than to how loud the person set it — a muted
-      // answer still shows the assistant speaking (VO-23).
+      // answer still shows the assistant speaking.
       this.gain = this.context.createGain();
       this.analyser.connect(this.gain);
       this.gain.connect(this.context.destination);
@@ -223,7 +223,7 @@ export class ServerSpeaker {
     if (!sentence) {
       return;
     }
-    // Nothing playing or waiting: this is the first thing heard (VO-52).
+    // Nothing playing or waiting: this is the first thing heard.
     const first =
       this.options.firstClauseFirst &&
       !this.options.streamed &&
@@ -354,7 +354,7 @@ export class ServerSpeaker {
   }
 
   /**
-   * A sentence streamed as 16-bit PCM (VO-52): played in slices as they
+   * A sentence streamed as 16-bit PCM: played in slices as they
    * come, each scheduled right after the last, until the last has ended.
    */
   private async playStreamed(
@@ -437,7 +437,7 @@ export class ServerSpeaker {
     this.playing = undefined;
   }
 
-  /** Stop at once: what plays and what waits (barge-in, `Esc`; VO-13). */
+  /** Stop at once: what plays and what waits (barge-in, `Esc`). */
   stop(): void {
     this.generation += 1;
     this.queue = [];

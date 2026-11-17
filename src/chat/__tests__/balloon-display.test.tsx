@@ -4,7 +4,7 @@
  */
 
 /**
- * The floating assistant's two balloon displays (T-23): `history`, a
+ * The floating assistant's two balloon displays: `history`, a
  * peek closed and the whole conversation open, counted in its header;
  * `current`, only what is said or done now, *Now* on it, nothing to scroll.
  * Either way a tool call is said in plain words — "Using list_invoices…",
@@ -222,7 +222,7 @@ describe('the two balloon displays', () => {
   });
 });
 
-describe('the words, to a screen reader (H-21)', () => {
+describe('the words, to a screen reader', () => {
   const words = (container: HTMLElement) =>
     container.querySelector('[data-balloon-words-announce]');
 

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The session's contribution points and `loop plugins` (MH-F01).
+"""The session's contribution points and `loop plugins`.
 
 The five points of the `agent-runtimes` reactor extension, the built-in
 plugin contributing today's implementations, a malformed or duplicate
@@ -84,7 +84,7 @@ def test_the_points_are_registered_at_start(platform: PluginPlatform) -> None:
         p for p in platform.list_plugins() if p["name"] == host.BUILTIN_PLUGIN
     ]
     assert manifest["contribution_points"] == [point.id for point in POINTS]
-    # The catalogue contributes itself, each harness under its id (MH-F02).
+    # The catalogue contributes itself, each harness under its id.
     harnesses = host.accepted(platform, HARNESSES)
     assert {c.id for c in harnesses} == set(HARNESS_CATALOGUE)
     assert all(
@@ -274,7 +274,7 @@ def test_a_contribution_is_its_extension_s_when_registered_through_it() -> None:
     )
 
 
-# --- the catalogue behind the point (MH-F02) ------------------------------------------
+# --- the catalogue behind the point ------------------------------------------
 
 
 def test_a_plugins_harness_is_listed_by_loop_harnesses_and_resolved_by_harness_agent(

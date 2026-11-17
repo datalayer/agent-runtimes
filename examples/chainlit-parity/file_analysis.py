@@ -2,14 +2,14 @@
 # Distributed under the terms of the Modified BSD License.
 
 """File analysis — Chainlit's cookbook ``openai-data-analyst``, rebuilt with
-LOOP's API (P-27).
+LOOP's API.
 
 Chainlit hands the files a user sends with a message to an OpenAI Assistant
 with its code interpreter, streams its steps, and shows the images it draws
 (the Tesla stock price CSV it ships, charted).
 
 Here: files sent without being asked for are an ``@app.file`` (its kinds and
-sizes limited in the Appspec, P-21); the CSV is read in code in a ``tool``
+sizes limited in the Appspec); the CSV is read in code in a ``tool``
 step, its figures computed there — never estimated — and charted with the
 catalog's Chart, and the application's agent says what they show. On
 Datalayer the agent itself runs code in its sandbox (``report-from-a-file``,
@@ -39,7 +39,7 @@ app = Application.from_spec(
             "sentences; never invent one. The chart is drawn beside your answer: "
             "never write code."
         ),
-        # What may be sent: a CSV of at most 10 MB (P-21).
+        # What may be sent: a CSV of at most 10 MB.
         "interface": {"uploads": {"kinds": [{"type": ".csv", "max_mb": 10}]}},
     }
 )

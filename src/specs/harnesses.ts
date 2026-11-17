@@ -6,7 +6,7 @@
 /**
  * Harness Catalog.
  *
- * An agent program driven over the Agent Client Protocol (SH-01).
+ * An agent program driven over the Agent Client Protocol.
  *
  * This file is AUTO-GENERATED from YAML specifications.
  * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
@@ -586,7 +586,7 @@ export function listHarnesses(): HarnessSpec[] {
 }
 
 /**
- * The register's listed tier (SH-57): agents known to speak ACP, registered
+ * The register's listed tier: agents known to speak ACP, registered
  * with their documented command and their terms, not drilled — offered by
  * nothing until moved to the catalogue.
  */

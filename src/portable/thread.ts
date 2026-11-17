@@ -6,7 +6,7 @@
 /**
  * A person's conversation with an application, read again: the person-facing
  * projection of a session's thread, and the thread opened from the runtime
- * that holds it — or resumed from its record (P-24, D-13, R-04).
+ * that holds it — or resumed from its record.
  *
  * The web chat (`ChatView`, an embed after its page reloads) and Datalayer
  * Mobile open a thread with these, so that what a person reads of their own

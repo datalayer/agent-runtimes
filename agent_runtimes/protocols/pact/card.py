@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A Brand's A2A Agent Card, as PACT 1.0 reads it (PR-11).
+"""A Brand's A2A Agent Card, as PACT 1.0 reads it.
 
 - the **interface URL**: the ``supportedInterfaces`` entry with
   ``protocolBinding: "HTTP+JSON"`` and ``protocolVersion: "1.0"`` — chosen
@@ -13,7 +13,7 @@
   ``oauth2SecurityScheme`` with a ``deviceCode`` flow, required together with
   the JWT in a second entry — its device authorization and token URLs, its
   RFC 8414 metadata URL and its scopes, ``{id: description}``, each mapped to
-  an action class (F-10) for Rules.
+  an action class for Rules.
 """
 
 from __future__ import annotations
@@ -50,7 +50,7 @@ class PactScope:
 
     @property
     def action_class(self) -> str:
-        """``read`` or ``write`` (F-10), from the id; unknown is the most restricted."""
+        """``read`` or ``write``, from the id; unknown is the most restricted."""
         verb = self.id.rsplit(":", 1)[-1].lower()
         if verb in ("read", "view", "list", "status", "lookup"):
             return "read"

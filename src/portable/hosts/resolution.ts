@@ -4,13 +4,13 @@
  */
 
 /**
- * Which application a host's turn runs (S-202): the
+ * Which application a host's turn runs: the
  * thread's own, else an explicit choice, else the one chosen for the
  * thread's next session, else the channel's, else the installation's
  * default; then that application allowed here and in this kind of
  * conversation. Datalayer's exchange checks the person may open it at every
  * turn: nothing here authorizes alone. The host says each refusal in its own
- * words. Moved from the Slack service (DC-004).
+ * words. Moved from the Slack service.
  *
  * @module portable/hosts/resolution
  */
@@ -44,7 +44,7 @@ export type ApplicationResolution<A extends AllowanceView> =
  */
 export async function resolveApplication<A extends AllowanceView>(input: {
   visibility: 'channel' | 'direct';
-  /** The thread's application once it has a session: switching is explicit (S-208). */
+  /** The thread's application once it has a session: switching is explicit. */
   threadApplication?: string;
   /** The application chosen with this very prompt. */
   explicit?: string;

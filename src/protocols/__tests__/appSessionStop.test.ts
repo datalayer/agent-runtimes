@@ -117,7 +117,7 @@ describe('Stop in an application’s chat', () => {
     ).toThrow(/needs its sessions/);
   });
 
-  it('spoken over, tells the session so on its own route, which keeps it open (VO-46)', async () => {
+  it('spoken over, tells the session so on its own route, which keeps it open', async () => {
     const { calls, fetch } = recording();
     globalThis.fetch = fetch;
     const adapter = createProtocolAdapter({

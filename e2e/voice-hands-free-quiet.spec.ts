@@ -4,7 +4,7 @@
  */
 
 /**
- * Hands-free, the answer heard whole (VO-12): 8 seconds of quiet, then
+ * Hands-free, the answer heard whole: 8 seconds of quiet, then
  * *Reply with just one word: hello.* (said by Kokoro), then 3 more
  * (`quiet-then-hello.wav`). Hands-free opens the microphone anew when the
  * agent begins answering, and Chrome's fake device then plays its file from
@@ -22,13 +22,13 @@ import { activate, hearing, inOrder, talkWith, unreachable } from './handsFree';
 
 test.use(hearing('quiet-then-hello.wav'));
 
-test.describe('a conversation by voice, the answer heard whole (VO-12)', () => {
+test.describe('a conversation by voice, the answer heard whole', () => {
   test.skip(Boolean(unreachable), unreachable);
   test('hands-free: listening again once the answer ends by itself, paused with Esc and resumed, the person’s longer pause kept', async ({
     page,
     context,
   }) => {
-    // *Pauses before I am done*: Longer (VO-69), twice the usual silence.
+    // *Pauses before I am done*: Longer, twice the usual silence.
     const { runs, syntheses, toggle, state, states, times, turnSilenceMs } =
       await talkWith(page, context, { pause: 2 });
     // The turn's silence the composer was given: twice the usual 500 ms.
@@ -47,10 +47,10 @@ test.describe('a conversation by voice, the answer heard whole (VO-12)', () => {
     const seen = await states();
     // Kept in the run's output: what the person saw, in order.
     console.log(`hands-free states: ${seen.join(' → ')}; runs ${runs.length}`);
-    // The moments the latency budgets are measured between (VO-52).
+    // The moments the latency budgets are measured between.
     console.log(`voice times: ${JSON.stringify(await times())}`);
     // Never *Listening…* while the answer's voice is being made: speech then
-    // is the person speaking over it (VO-13), not a new turn.
+    // is the person speaking over it, not a new turn.
     expect(seen.join(' ')).not.toContain('thinking listening speaking');
     expect([
       seen,

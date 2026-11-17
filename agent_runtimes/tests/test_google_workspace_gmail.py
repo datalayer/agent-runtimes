@@ -1,13 +1,13 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Gmail, reached in the name of whom a deployed application acts for (W-02).
+"""Gmail, reached in the name of whom a deployed application acts for.
 
 The catalogue's `google-workspace` server runs as a local HTTP process in its
 external OAuth provider mode; each run of a deployment's agent reaches it with
 a toolset of its own whose every request carries an access token IAM minted —
-asked with the person's token naming the application (I-04) for a connection
-`as: user`, with the principal's (I-03) for one `as: owner`. Without one, the
+asked with the person's token naming the application for a connection
+`as: user`, with the principal's for one `as: owner`. Without one, the
 run has no Gmail tool and says why; nobody else's mailbox is reached.
 """
 
@@ -126,7 +126,7 @@ async def test_in_the_users_name_iam_is_asked_with_the_persons_acting_token(
     # Held until it nearly ends: asked once.
     assert await gw.gmail_access_token(AGENT, "persons-own-token") == token
     assert iam == ["acting-token-of-the-person"]
-    # Withheld wherever it would be shown (R-19).
+    # Withheld wherever it would be shown.
     assert token not in credentials.withhold(f"the header was {token}")
     # Somebody signed in who has not let it act in their name: nothing.
     with pytest.raises(gw.GmailRefused, match="have not let it act in their name"):

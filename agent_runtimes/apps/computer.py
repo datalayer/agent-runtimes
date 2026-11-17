@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An application's computer (R-23, I-01): what its agent is given of it,
+"""An application's computer: what its agent is given of it,
 what it holds, and who has it.
 
 Its computer is the sandbox its agent runs on. Three permissions of its
@@ -46,7 +46,7 @@ PARTS: tuple[str, ...] = ("browse", "files", "shell")
 #: Tools that run code on the application's computer.
 SHELL_TOOLS: FrozenSet[str] = frozenset({"execute_code", "run_skill_script"})
 
-#: The tools of its files, and what each does (F-10's classes).
+#: The tools of its files, and what each does (by action class).
 FILE_CLASSES: Mapping[str, List[str]] = {
     "list_computer_files": ["read"],
     "read_computer_file": ["read"],

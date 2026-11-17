@@ -4,13 +4,13 @@
  */
 
 /**
- * `<datalayer-app>` and `AppEmbed` in the DOM (D-07, D-08, D-09, D-11,
- * T-13): the application drawn in the element's shadow root, in its mode, in
+ * `<datalayer-app>` and `AppEmbed` in the DOM:
+ * the application drawn in the element's shadow root, in its mode, in
  * its theme; the floating modes as `ChatFloating`'s chrome holding the
- * application as `AppRenderer` draws it (R-01), the assistant with the
+ * application as `AppRenderer` draws it, the assistant with the
  * application's character; a decision framed as before; a public chat or
  * widget named without a token run as a visitor without an account on the
- * visitors' runtime, in every mode (D-07), one a visitor may not talk to
+ * visitors' runtime, in every mode, one a visitor may not talk to
  * said in place.
  *
  * `ChatFloating`, `AppRenderer` and the runtime hook are stood in for: what
@@ -118,7 +118,7 @@ afterEach(() => {
 
 /**
  * What the floating window holds: the renderer's element, and its props —
- * beside what the session says when it resumes (D-13), in one fragment.
+ * beside what the session says when it resumes, in one fragment.
  */
 const held = (): Record<string, any> => {
   const body = seen.floating.at(-1)!.conversation.body;
@@ -256,7 +256,7 @@ describe('AppEmbed, the React component', () => {
     );
     expect(held()).toMatchObject({ app, target: 'datalayer', instance });
     // Its agent is the renderer's to launch and address (its session
-    // endpoint, R-04): the floating chrome launches nothing of its own.
+    // endpoint): the floating chrome launches nothing of its own.
     expect(seen.runtimes).toHaveLength(0);
     // What the workspace reports reaches the chrome: its balloon and blink.
     const conversation = () => seen.floating.at(-1)!.conversation;
@@ -294,7 +294,7 @@ describe('AppEmbed, the React component', () => {
     await act(async () => root.unmount());
   });
 
-  it('floats as the character alone for an application’s address, on the visitors’ runtime too (T-21)', async () => {
+  it('floats as the character alone for an application’s address, on the visitors’ runtime too', async () => {
     const app = chatApp();
     const visitors = { url: 'https://r1.example/visitors', token: 'v' };
     const { root } = await render(
@@ -354,7 +354,7 @@ describe('AppEmbed, the React component', () => {
     await act(async () => two.root.unmount());
   });
 
-  it('speaks to the host’s server with the visit’s embed token, and never hands it to a Datalayer runtime (R-20)', async () => {
+  it('speaks to the host’s server with the visit’s embed token, and never hands it to a Datalayer runtime', async () => {
     const hosted = await render(
       <AppEmbed
         app={chatApp()}
@@ -428,7 +428,7 @@ describe('the element', () => {
     expect(defineDatalayerAppElement()).toBe(Element);
   });
 
-  it('takes what the page passes and offers, and tells it what the application said (D-10)', async () => {
+  it('takes what the page passes and offers, and tells it what the application said', async () => {
     iamStore.setState({ token: 'jwt' } as never);
     const element = document.createElement('datalayer-app') as HTMLElement & {
       context: Record<string, unknown>;
@@ -481,7 +481,7 @@ deployment:
     element.remove();
   });
 
-  it('sends the token the host signed naming its user with every run, when the application takes only that (D-21)', async () => {
+  it('sends the token the host signed naming its user with every run, when the application takes only that', async () => {
     iamStore.setState({ token: 'jwt' } as never);
     const element = document.createElement('datalayer-app') as HTMLElement & {
       userToken: string;
@@ -614,7 +614,7 @@ deployment:
     await act(async () => element.remove());
   });
 
-  it('reads the application in the language its host says, and refuses one that is none (P-26)', async () => {
+  it('reads the application in the language its host says, and refuses one that is none', async () => {
     iamStore.setState({ token: 'jwt' } as never);
     const element = document.createElement('datalayer-app');
     element.setAttribute('mode', 'inline');
@@ -649,7 +649,7 @@ deployment:
     expect(frame.getAttribute('src')).toBe(
       `https://datalayer.app/public/apps/${ULID}/run?embed=1`,
     );
-    // The visitor's language, told to the framed page (P-26).
+    // The visitor's language, told to the framed page.
     await act(async () => element.setAttribute('language', 'pt-BR'));
     await settle();
     expect(
@@ -660,7 +660,7 @@ deployment:
     await act(async () => element.remove());
   });
 
-  it('runs a public example without a token as a visitor, on the visitors’ runtime, in every mode (D-07)', async () => {
+  it('runs a public example without a token as a visitor, on the visitors’ runtime, in every mode', async () => {
     // Nobody signed in: the visitor's token is the chat's to mint.
     for (const mode of ['inline', 'bubble', 'panel', 'assistant'] as const) {
       seen.renderer.length = 0;
@@ -740,7 +740,7 @@ deployment:
     }
   });
 
-  it('says, before anything is drawn, an address a visitor may not talk to, and the token it takes (D-07)', async () => {
+  it('says, before anything is drawn, an address a visitor may not talk to, and the token it takes', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async (url: string) => {

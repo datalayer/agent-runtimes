@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What a delegation hands its worker, and what the worker hands back (O1-17, O2-05).
+"""What a delegation hands its worker, and what the worker hands back.
 
 **The credential.** The control plane sends an execution's own token with the
 delegation, under ``datalayer.credential`` in the A2A message's ``metadata``
@@ -22,7 +22,7 @@ paused at (``datalayer.paused``); a delegation naming that checkpoint
 works is added to its run before the next model request (``SteerCapability``).
 
 **What a turn spent.** A worker answers each turn with the tokens it used and
-the cost of its model, where it could price it (``datalayer.usage``, O2-10):
+the cost of its model, where it could price it (``datalayer.usage``):
 the control plane records it on the attempt the turn ended, and nothing else
 would know what one execution of a tree spent.
 """
@@ -103,7 +103,7 @@ __all__ = [
 # `DELEGATION_META_KEY`, `CREDENTIAL_FIELD`, `EXECUTION_FIELD`,
 # `CHECKPOINT_FIELD`, `PAUSED_FIELD`, `PAUSE_FIELD` and `STEER_METHOD` are
 # imported above, from the standalone package this runtime's own delegation
-# metadata is checked against (O3-02), rather than declared here — a rename
+# metadata is checked against, rather than declared here — a rename
 # on either side is now a real import error, not a silent drift between two
 # hand-maintained copies of the same strings. What has no equivalent in that
 # package — held credentials, the current run's `ContextVar`,
@@ -127,10 +127,10 @@ WITHHELD = "withheld"
 #: Where a run's ``AgentContext.metadata`` holds the credential its delegation
 #: carried (ACP ``_meta`` or A2A ``metadata``), apart from ``user_token``, which
 #: any caller's token may be: the narrowest authority the run holds, so a
-#: harness's lent MCP is scoped by it before anything else (SH-33).
+#: harness's lent MCP is scoped by it before anything else.
 DELEGATED_CREDENTIAL = "delegated_credential"
 
-#: A team seat's facts on a delegation (MH-38): which seat of which team the
+#: A team seat's facts on a delegation: which seat of which team the
 #: worker is, and the seat's apps session to go on with — ``{team, seat}``
 #: and ``{uid}`` under the ``datalayer`` entry.
 SEAT_FIELD = "seat"
@@ -144,7 +144,7 @@ _pauses: set[str] = set()
 #: is here only while it can be steered.
 _steers: dict[str, list[str]] = {}
 #: The execution the current run works on, as its delegation named it, when
-#: the control plane dispatched the run; a tool reads it here (O2-06).
+#: the control plane dispatched the run; a tool reads it here.
 _run_execution: ContextVar[dict[str, Any] | None] = ContextVar(
     "datalayer_run_execution", default=None
 )
@@ -263,7 +263,7 @@ def enter_execution(meta: Any) -> None:
     Put on the current run the execution its delegation names, or none.
 
     Called by a transport as a run starts, so a run nobody orchestrates is
-    never taken for the one before it (O2-06).
+    never taken for the one before it.
 
     Parameters
     ----------
@@ -315,7 +315,7 @@ def checkpoint_of(meta: Any) -> str | None:
 
 def seat_of(meta: Any) -> dict[str, str] | None:
     """
-    The team seat a delegation is for (MH-38), when the control plane named one.
+    The team seat a delegation is for, when the control plane named one.
 
     Parameters
     ----------
@@ -337,7 +337,7 @@ def seat_of(meta: Any) -> dict[str, str] | None:
 
 def session_of_meta(meta: Any) -> str | None:
     """
-    The seat's apps session the control plane hands a task (MH-38, MH-P05):
+    The seat's apps session the control plane hands a task (MH-P05):
     the uid the seat's earlier task answered, which this one resumes.
 
     Parameters
@@ -358,7 +358,7 @@ def session_of_meta(meta: Any) -> str | None:
 
 def session_meta(uid: str, seat: str, execution_id: str) -> dict[str, Any]:
     """
-    What a seat's worker answers a task with about the session it worked in (MH-38).
+    What a seat's worker answers a task with about the session it worked in.
 
     Parameters
     ----------
@@ -420,7 +420,7 @@ def paused_at(meta: Any) -> str | None:
 
 def delegated_budget(meta: Any) -> dict[str, Any] | None:
     """
-    The model budget a delegation carries, when it carries one (O1-07).
+    The model budget a delegation carries, when it carries one.
 
     Parameters
     ----------
@@ -466,7 +466,7 @@ def refusal_meta(budget_reached: ModelBudgetReached) -> dict[str, Any]:
 
 def spent_meta(usage: Usage | None) -> dict[str, Any] | None:
     """
-    What a worker answers a turn with about what the turn spent (O2-10).
+    What a worker answers a turn with about what the turn spent.
 
     Parameters
     ----------
@@ -673,7 +673,7 @@ def take_steers(run_id: str) -> list[str]:
 @dataclass
 class SteerCapability(AbstractCapability[Any]):
     """
-    Add what was steered into a run to its next model request (O2-05).
+    Add what was steered into a run to its next model request.
 
     The instructions join the request about to be sent, as a user prompt part
     of it, so the model reads them with the tool results it is about to see —

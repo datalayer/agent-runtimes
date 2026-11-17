@@ -4,7 +4,7 @@
  */
 
 /**
- * The voice catalogue (VO-40): voices and speech models.
+ * The voice catalogue: voices and speech models.
  *
  * This file is AUTO-GENERATED from agentspecs (voices, speech-models).
  * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.

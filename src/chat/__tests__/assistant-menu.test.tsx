@@ -4,7 +4,7 @@
  */
 
 /**
- * The assistant's own menu (T-27): it opens on a right-click and on
+ * The assistant's own menu: it opens on a right-click and on
  * Shift+F10, shows what each host passes and nothing it does not, each entry
  * it offers does something, *Inspect the agent…* opens the Agent Inspector
  * over the page, and Esc closes it.

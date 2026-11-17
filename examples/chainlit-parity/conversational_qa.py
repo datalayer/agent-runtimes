@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """Conversational document QA — the example of Chainlit's documentation
-(``examples/qa``), rebuilt with LOOP's API (P-27).
+(``examples/qa``), rebuilt with LOOP's API.
 
 Chainlit asks for a text file until one comes (``AskFileMessage`` in a loop,
 three minutes each time), says it is processing it and updates that message,

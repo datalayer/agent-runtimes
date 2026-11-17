@@ -467,7 +467,7 @@ describe('dispatch', () => {
 });
 
 describe('the thread', () => {
-  it('is said by the chat and read by every plugin of the workspace (SH-54)', async () => {
+  it('is said by the chat and read by every plugin of the workspace', async () => {
     let seen: LoopWorkspaceContext | undefined;
     const probe = definePlugin({
       name: 'probe-thread',
