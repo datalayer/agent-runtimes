@@ -188,7 +188,8 @@ class AddressAccess:
                 raise OperationError(
                     401,
                     "Only the people its owner allowed may call it: "
-                    "call with your Datalayer API key (X-API-Key) or token.",
+                    "call with your Datalayer API key or token as a Bearer "
+                    "(Authorization: Bearer <key>).",
                 )
             if not self.policy.admits(uid):
                 raise OperationError(403, "Its owner has not allowed you to call it.")

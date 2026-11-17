@@ -33,6 +33,7 @@ import {
   record,
   words,
 } from '../../toolCards/kit';
+import { PhotoStrip } from '../../toolCards/productPhoto';
 
 export const PAP_PURCHASE_PLUGIN_NAME = '@datalayer/loop-plugin-pap-purchase';
 
@@ -66,6 +67,81 @@ export function readPapPurchase(
   });
 }
 
+/** The lists of products an operation's terms or result may carry, by their usual names. */
+const PRODUCT_LISTS = ['lines', 'items', 'products', 'basket'] as const;
+/** Where a tool's result may hold the operation's answer: itself, or nested. */
+const NESTED = [
+  'result',
+  'data',
+  'structured_content',
+  'structuredContent',
+] as const;
+
+function parsed(value: unknown): unknown {
+  if (typeof value !== 'string') {
+    return value;
+  }
+  try {
+    return JSON.parse(value);
+  } catch {
+    return undefined;
+  }
+}
+
+function photosIn(
+  value: unknown,
+  found: { url: string; alt: string }[],
+  depth = 0,
+): void {
+  const data = record(parsed(value));
+  if (!data || depth > 3) {
+    return;
+  }
+  for (const name of PRODUCT_LISTS) {
+    const list = data[name];
+    if (!Array.isArray(list)) {
+      continue;
+    }
+    for (const item of list) {
+      const product = record(item);
+      const url = words(product?.image) || words(product?.thumbnail);
+      if (
+        product &&
+        /^https:\/\//.test(url) &&
+        !found.some(photo => photo.url === url)
+      ) {
+        found.push({
+          url,
+          alt:
+            words(product.title) ||
+            words(product.name) ||
+            words(product.product_id),
+        });
+      }
+    }
+  }
+  for (const name of NESTED) {
+    if (name in data) {
+      photosIn(data[name], found, depth + 1);
+    }
+  }
+}
+
+/**
+ * The photos of the products a company's operation is about: from its terms (the
+ * approval's arguments) and, once it is done, its result — a shop's order answers its
+ * lines with their `image`. HTTPS photos only, each once.
+ */
+export function papPurchasePhotos(
+  args: Record<string, unknown>,
+  result?: unknown,
+): { url: string; alt: string }[] {
+  const found: { url: string; alt: string }[] = [];
+  photosIn(args.terms, found);
+  photosIn(result, found);
+  return found;
+}
+
 export function PapPurchaseCard({
   context,
 }: {
@@ -74,8 +150,14 @@ export function PapPurchaseCard({
   const args = record(context.args) ?? {};
   const rendered = readPapPurchase(context.toolName, args);
   const company = words(args.company_name) || words(args.company);
+  const photos = papPurchasePhotos(args, context.result);
   if (rendered.fields.length === 0) {
-    return <>{context.defaultUI}</>;
+    return (
+      <>
+        {context.defaultUI}
+        <PhotoStrip photos={photos} />
+      </>
+    );
   }
   return (
     <Box width="100%">
@@ -98,6 +180,7 @@ export function PapPurchaseCard({
             </Box>
           ))}
         </Box>
+        <PhotoStrip photos={photos} />
         {rendered.reasons.map(reason => (
           <Flash key={reason} variant="warning" sx={{ mt: 2, fontSize: 1 }}>
             {reason}
@@ -113,7 +196,7 @@ export const PapPurchasePlugin = defineToolCardPlugin({
   id: 'pap-purchase',
   displayName: 'Approve a purchase',
   description:
-    'A company’s operation the person approves: the company, its terms, the exact revision and until when it holds.',
+    'A company’s operation the person approves: the company, its terms, the exact revision and until when it holds, with the photos of the products it is about.',
   octicon: 'credit-card',
   emoji: '\u{1F4B3}',
   tools: ['pap_confirm'],

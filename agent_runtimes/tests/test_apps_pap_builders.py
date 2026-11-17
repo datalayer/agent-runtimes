@@ -47,13 +47,13 @@ def _exchange_desk() -> Application:
         scopes=[
             {
                 "name": "orders:read",
-                "description": "Read your orders and their status",
+                "description": "Read your orders and their status, to find the one to exchange; asked when you ask about an order; without it, only the exchange policy",
                 "changes": "none",
                 "personal_data": True,
             },
             {
                 "name": "orders:write",
-                "description": "Exchange an order you approved",
+                "description": "Exchange an order you approved; asked only when you say to exchange one; without it, the desk says what an exchange would be but changes nothing",
                 "changes": "reversible",
                 "personal_data": True,
             },

@@ -33,7 +33,7 @@ import { readEarthScenes } from '../plugins/earth-scenes';
 import { readIndexResult } from '../plugins/earth-index';
 import { readSavings } from '../plugins/aws-savings';
 import { readSocialAccounts } from '../plugins/social-accounts';
-import { readPapPurchase } from '../plugins/pap-purchase';
+import { papPurchasePhotos, readPapPurchase } from '../plugins/pap-purchase';
 import { linkedInAsks } from '../plugins/linkedin-link';
 import { xBudgetLeft } from '../plugins/x-budget/xBudget';
 import {
@@ -264,6 +264,42 @@ describe('what each card reads', () => {
       'at://p',
       'https://bsky.app/x',
     ]);
+  });
+
+  it('shows the photos of a purchase’s products, from its terms and its result', () => {
+    const image = (id: string) =>
+      `https://images.datalayer.io/landing/demo-shop/${id}.jpg`;
+    const args = {
+      company: 'demo-shop.agent.datalayer.ai',
+      terms: {
+        items: [
+          { product_id: 'p1', title: 'Tennis racket', image: image('p1') },
+        ],
+      },
+    };
+    // Done: the shop's test order answers its lines with their photos, nested as the gateway gives them.
+    const result = JSON.stringify({
+      status: 'confirmed',
+      result: {
+        order_id: 'TEST-1',
+        lines: [
+          { product_id: 'p1', title: 'Tennis racket', image: image('p1') },
+          { product_id: 'p2', title: 'Tennis ball', image: image('p2') },
+          {
+            product_id: 'p3',
+            title: 'Not a photo',
+            image: 'http://insecure.example/p3.jpg',
+          },
+        ],
+      },
+    });
+    expect(papPurchasePhotos(args, result)).toEqual([
+      { url: image('p1'), alt: 'Tennis racket' },
+      { url: image('p2'), alt: 'Tennis ball' },
+    ]);
+    expect(
+      papPurchasePhotos({ terms: { total: 'EUR 160' } }, 'not json'),
+    ).toEqual([]);
   });
 
   it('shows a purchase’s exact revision as the hosts do', () => {
