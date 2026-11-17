@@ -116,7 +116,7 @@
     ]
   },
   "visitor_exchange": {
-    "about": "WHATSAPP WA-03 (decided 28 October 2026): a host's user who never linked, answered as a visitor when the installation's owner turned its visitors switch on and the deployment opens to somebody signed out. sub is visitor:<hash of the host's id with the installation's salt>; no link; a daily cap per visitor at the exchange (429).",
+    "about": "Decided 28 October 2026: a host's user who never linked, answered as a visitor when the installation's owner turned its visitors switch on and the deployment opens to somebody signed out. sub is visitor:<hash of the host's id with the installation's salt>; no link; a daily cap per visitor at the exchange (429).",
     "request": {
       "external_user_id": "US.13491208655302741918",
       "deployment_uid": "dep-1",
