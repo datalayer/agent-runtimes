@@ -6,7 +6,7 @@
 The server in process, started as AgentCore starts it for a deployment
 (``AGENT_RUNTIMES_TARGET=agentcore``, ``AGENTCORE_DEPLOYMENT_UID``): the
 deployment's agent made at the first invocation from what ai-agents answers
-(`kept_payload`), each invocation run through the application's session
+(`deployment_runtime_payload`), each invocation run through the application's session
 routes, the session recorded under the deployment where it runs
 (``{kind: agentcore, arn}``), and resumed from its record on a new microVM —
 the person's earlier turns in context, whether they talk in AG-UI runs or in

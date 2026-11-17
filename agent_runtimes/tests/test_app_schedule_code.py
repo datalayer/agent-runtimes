@@ -361,7 +361,7 @@ def test_no_payload_that_makes_a_deployments_agent_carries_code() -> None:
     """ai-agents' `/wake` and its keeper make a deployment's agent with its
     Appspec and its instance, never its code: the runtime reads the
     version's `app.py` from the deployment as the agent is made."""
-    from agent_runtimes.apps.deployments import kept_payload, session_payload
+    from agent_runtimes.apps.deployments import deployment_runtime_payload, session_payload
 
     spec = tick_spec()
     woken_by = {"kind": "schedule", "position": 1}
@@ -370,7 +370,7 @@ def test_no_payload_that_makes_a_deployments_agent_carries_code() -> None:
     )
     assert "app_code" not in woken
     assert woken["app_instance"]["woken_by"] == woken_by
-    kept = kept_payload(spec, app_uid="app-14", deployment_uid="dep-14", version=2)
+    kept = deployment_runtime_payload(spec, app_uid="app-14", deployment_uid="dep-14", version=2)
     assert "app_code" not in kept
     assert kept["app_instance"]["version"] == 2
     with pytest.raises(TypeError):
@@ -383,7 +383,7 @@ def test_no_payload_that_makes_a_deployments_agent_carries_code() -> None:
             code=TICK_CODE,
         )
     with pytest.raises(TypeError):
-        kept_payload(  # type: ignore[call-arg]
+        deployment_runtime_payload(  # type: ignore[call-arg]
             spec, app_uid="app-14", deployment_uid="dep-14", version=2, code=TICK_CODE
         )
 
@@ -661,10 +661,10 @@ def test_the_agent_a_kept_runtime_is_made_with_runs_the_deployments_code(
     creation_spy: Dict[str, Any],  # noqa: F811 - the fixture
 ) -> None:
     """The keeper of a deployment kept always on makes its agent from
-    `kept_payload`, and the create route reads the version's `app.py` from
+    `deployment_runtime_payload`, and the create route reads the version's `app.py` from
     the deployment as for a tick, and every session of that agent — a visitor's at the
     address, not only a woken one — runs with the code; without it, none."""
-    from agent_runtimes.apps.deployments import kept_payload
+    from agent_runtimes.apps.deployments import deployment_runtime_payload
     from agent_runtimes.apps.loading import load_app
     from agent_runtimes.routes.agents import CreateAgentRequest, create_agent
 
@@ -675,7 +675,7 @@ def test_the_agent_a_kept_runtime_is_made_with_runs_the_deployments_code(
         asked = _reading(codes)
         for name, code in (("r14-kept", TICK_CODE), ("r14-kept-spec", None)):
             codes["dep-14"] = code
-            payload = kept_payload(
+            payload = deployment_runtime_payload(
                 spec, app_uid="app-14", deployment_uid="dep-14", version=2
             )
             request = CreateAgentRequest(**{**payload, "name": name})

@@ -17,10 +17,10 @@ with — and opens a session of it with `start_session`, on the session API,
 said to be woken: the handler the application's code declared for that
 schedule runs, or its agent is asked the trigger's prompt.
 
-And a deployment kept on a runtime of its own: a live deployment
-its owner keeps always on has one runtime, launched as its owner, whose
+And an always-on deployment's runtime: a live deployment its owner
+keeps always on has one runtime of its own, launched as its owner, whose
 agent is made from the deployment record every time that runtime starts —
-`kept_payload`, created with `create_agent` — so that a visitor waits for
+`deployment_runtime_payload`, created with `create_agent` — so that a visitor waits for
 the answer and never for the start.
 """
 
@@ -464,7 +464,7 @@ def session_payload(
     }
 
 
-def kept_payload(
+def deployment_runtime_payload(
     spec: Mapping[str, Any],
     *,
     app_uid: str,
@@ -474,16 +474,16 @@ def kept_payload(
     spend_limit: float = 0.0,
     runs: str = "kept on its runtime",
 ) -> dict[str, Any]:
-    """What creates a deployment's agent on the runtime it is kept on:
+    """What creates an always-on deployment's agent on its own runtime:
     the payload the hosted page sends (`AppRenderer`'s
     `appDatalayerCreatePayload`) — under the application's id, over AG-UI,
     with its Appspec and the deployment as its instance — so that the page's
     chat finds the agent it would have made, already there. Never with code:
     the runtime reads the version's ``app.py`` from the deployment.
 
-    `spend_limit` is the deployment's, in credits a day (the keeper's
-    `limit_of`): above zero, it travels in the instance, and the runtime
-    holds each session to it as a `team` document's `limits.spend` while the keeper holds the day.
+    `spend_limit` is the deployment's, in credits a day: above zero, it
+    travels in the instance, and the runtime holds each session to it as a
+    `team` document's `limits.spend` while the platform holds the day.
 
     `runs` is how its description says where it runs: a runtime launched for
     the deployment makes its agent from this too, whoever launched it.

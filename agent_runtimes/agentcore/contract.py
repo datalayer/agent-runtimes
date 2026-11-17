@@ -33,7 +33,7 @@ wall time between (what the usage reads as invocation hours), and when this
 process, the microVM's, started.
 
 A runtime the platform deployed for an application (``AGENTCORE_DEPLOYMENT_UID``)
-runs the deployment's agent, made as a kept runtime's is (`apps.deployments.kept_payload`):
+runs the deployment's agent, made as an always-on deployment's runtime makes it (`apps.deployments.deployment_runtime_payload`):
 its Appspec and the deployment as its instance, read from ai-agents with the first
 caller's token, once the secrets its MCP servers and skills declare were read
 at IAM as the caller and given to this process (`secrets`: never in the image,
@@ -493,7 +493,7 @@ def forget_deployment_agent() -> None:
 async def deployment_agent(server: Any, bearer: str) -> str:
     """The agent of the deployment this runtime runs, made at its first invocation.
 
-    Made as the keeper makes a kept deployment's (`kept_payload`): the version
+    Made as an always-on deployment's runtime makes it (`deployment_runtime_payload`): the version
     ai-agents answers the caller (`principal.read_deployment`), its Appspec,
     the deployment as its instance. Never from what the invocation sends.
 
@@ -503,7 +503,7 @@ async def deployment_agent(server: Any, bearer: str) -> str:
         With no token to ask with (401), when ai-agents does not say what the
         deployment runs (502), or it cannot be made, in its sentence.
     """
-    from agent_runtimes.apps.deployments import DeployRefused, kept_payload
+    from agent_runtimes.apps.deployments import DeployRefused, deployment_runtime_payload
     from agent_runtimes.apps.loading import AppNotRunnable
     from agent_runtimes.apps.principal import DeploymentCodeUnread, read_deployment
 
@@ -524,7 +524,7 @@ async def deployment_agent(server: Any, bearer: str) -> str:
         except DeploymentCodeUnread as unread:
             raise ContractRefused(502, str(unread)) from None
         try:
-            payload = kept_payload(
+            payload = deployment_runtime_payload(
                 answer["spec"],
                 app_uid=str(answer["app_uid"]),
                 deployment_uid=deployment,

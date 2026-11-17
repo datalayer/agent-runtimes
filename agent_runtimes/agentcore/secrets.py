@@ -96,7 +96,7 @@ async def give_declared(payload: Mapping[str, Any], bearer: str) -> list[str]:
     Parameters
     ----------
     payload : Mapping[str, Any]
-        What makes the deployment's agent (`apps.deployments.kept_payload`).
+        What makes the deployment's agent (`apps.deployments.deployment_runtime_payload`).
     bearer : str
         The caller's platform token.
 

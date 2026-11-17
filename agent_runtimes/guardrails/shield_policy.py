@@ -238,7 +238,7 @@ def deployment_spend_limit(app_instance: Optional[Mapping[str, Any]]) -> float:
     """The spend limit, in credits a day, of the deployment an agent serves; 0 for none.
 
     ai-agents' keeper hands it in the ``app_instance`` it launches the
-    deployment's agent with (``kept_payload``'s ``spend_limit``): its owner's,
+    deployment's agent with (``deployment_runtime_payload``'s ``spend_limit``): its owner's,
     or the default of a public application whose owner set none. A Preview, a
     test or an agent no deployment runs has none.
     """

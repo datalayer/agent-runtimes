@@ -468,9 +468,9 @@ def test_a_kept_deployment_is_made_as_its_hosted_page_would_make_it():
     one the hosted page's chat addresses — the application's id, over AG-UI —
     with the deployment as its instance and nothing woken."""
     pytest.importorskip("agentspecs.apps")
-    from agent_runtimes.apps.deployments import kept_payload
+    from agent_runtimes.apps.deployments import deployment_runtime_payload
 
-    payload = kept_payload(
+    payload = deployment_runtime_payload(
         DIGEST,
         app_uid="app-1",
         deployment_uid="dep-1",
@@ -487,21 +487,21 @@ def test_a_kept_deployment_is_made_as_its_hosted_page_would_make_it():
     }
     assert (
         "organization_uid"
-        not in kept_payload(DIGEST, app_uid="app-1", deployment_uid="dep-1", version=4)[
+        not in deployment_runtime_payload(DIGEST, app_uid="app-1", deployment_uid="dep-1", version=4)[
             "app_instance"
         ]
     )
     # The deployment's spend limit travels in the instance.
-    limited = kept_payload(
+    limited = deployment_runtime_payload(
         DIGEST, app_uid="app-1", deployment_uid="dep-1", version=4, spend_limit=500
     )
     assert limited["app_instance"]["spend_limit"] == 500.0
     with pytest.raises(DeployRefused, match="below zero"):
-        kept_payload(
+        deployment_runtime_payload(
             DIGEST, app_uid="app-1", deployment_uid="dep-1", version=4, spend_limit=-1
         )
     with pytest.raises(DeployRefused, match="not kept on a runtime yet"):
-        kept_payload(
+        deployment_runtime_payload(
             {
                 **{k: v for k, v in DIGEST.items() if k != "agent"},
                 "team": "analyze-support-tickets:0.0.1",

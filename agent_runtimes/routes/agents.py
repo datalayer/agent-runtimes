@@ -1511,7 +1511,7 @@ async def _as_deployed(
     deployment's principal, so nothing they send makes it: not its Appspec, and
     no other field either, each of which would change what runs as the
     principal. It is made as the keeper makes a kept deployment's
-    (`kept_payload`), from the version ai-agents answers, which it answers to
+    (`deployment_runtime_payload`), from the version ai-agents answers, which it answers to
     whoever would be let open a session of the deployment.
 
     Returns
@@ -1520,7 +1520,7 @@ async def _as_deployed(
         The request it is made from, and what ai-agents answered.
     """
     from agent_runtimes.apps.callers import bearer_of
-    from agent_runtimes.apps.deployments import DeployRefused, kept_payload
+    from agent_runtimes.apps.deployments import DeployRefused, deployment_runtime_payload
     from agent_runtimes.apps.loading import AppNotRunnable
     from agent_runtimes.apps.principal import (
         DeploymentCodeUnread,
@@ -1540,7 +1540,7 @@ async def _as_deployed(
     except DeploymentCodeUnread as unread:
         raise HTTPException(status_code=422, detail=str(unread)) from None
     try:
-        payload = kept_payload(
+        payload = deployment_runtime_payload(
             answer["spec"],
             app_uid=str(answer["app_uid"]),
             deployment_uid=deployment,

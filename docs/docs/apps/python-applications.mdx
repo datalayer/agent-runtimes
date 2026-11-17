@@ -607,7 +607,7 @@ a share of what the owner has left.
 A deployment kept **always on** runs your code too. Its version's `app.py`
 is kept with the deployment as it is deployed or moved to another version,
 beside its spec, and the runtime it is kept on reads it from the
-deployment each time its agent is made there (`kept_payload` carries none),
+deployment each time its agent is made there (`deployment_runtime_payload` carries none),
 with the key it was started with — also when the platform starts it again
 with nobody present, which reads no Spacer item; the runtime of a version
 it moves to, made before the move is written, reads that version's. Every session of that agent — a
