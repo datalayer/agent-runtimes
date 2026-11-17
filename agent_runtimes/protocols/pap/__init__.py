@@ -75,7 +75,7 @@ class CompanyServiceTickets:
 
 def pap_protocol_version() -> str:
     """The one PAP version a runtime speaks: its SDK's default, the newest it implements
-    (the 1.0 draft with personal-agent-protocol 0.36). Announced and accepted alone, as a
+    (1.0 as published with personal-agent-protocol 0.37). Announced and accepted alone, as a
     personal agent and as a company, as the SDK does by default: a company on an older
     version is refused, never negotiated down to.
     """

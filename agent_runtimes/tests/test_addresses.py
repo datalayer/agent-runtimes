@@ -461,6 +461,8 @@ def test_a_company_apps_poppy_json_is_the_sdks_company_document() -> None:
     assert parsed.agent.protocols[0].endpoint.startswith(
         "https://shop.agent.datalayer.ai/"
     )
+    # What its agent can help with (PAP 1.0 §3.1): the Appspec's description.
+    assert parsed.agent.protocols[0].description == COMPANY["description"]
     assert {(api.type, api.url) for api in parsed.apis} == {
         ("openapi", "https://shop.api.datalayer.ai/openapi.json"),
         ("mcp", "https://shop.mcp.datalayer.ai/mcp"),
@@ -481,6 +483,7 @@ def test_a_personal_agents_poppy_json_says_whom_it_acts_for() -> None:
     parsed = DiscoveryDocument.model_validate(document)
     assert parsed.organization.domain == "marketer-eric.agent.datalayer.ai"
     assert parsed.agent is not None and parsed.agent.protocols[0].type == "a2a"
+    assert parsed.agent.protocols[0].description == spec["description"]
     [entry] = document["extensions"][AGENT_EXTENSION]
     assert entry["role"] == "personal" and entry["acts_for"] == "eric"
     assert (
@@ -488,6 +491,15 @@ def test_a_personal_agents_poppy_json_says_whom_it_acts_for() -> None:
         and entry["web"] == "https://marketer-eric.web.datalayer.ai"
     )
     assert parsed.auth is None
+
+
+def test_an_agent_that_says_nothing_helps_with_anything_about_it() -> None:
+    spec = {**COMPANY, "description": ""}
+    parsed = DiscoveryDocument.model_validate(
+        poppy_document(addressed(Answers(), spec))
+    )
+    assert parsed.agent is not None
+    assert parsed.agent.protocols[0].description == f"Anything about {spec['name']}"
 
 
 def test_a_company_without_scopes_has_no_poppy_json_that_lies() -> None:

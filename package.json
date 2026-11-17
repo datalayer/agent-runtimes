@@ -1,6 +1,6 @@
 {
   "name": "@datalayer/agent-runtimes",
-  "version": "1.6.82",
+  "version": "1.6.83",
   "type": "module",
   "workspaces": [
     ".",
@@ -164,7 +164,7 @@
     "@datalayer/lexical-loro": "^1.0.6",
     "@datalayer/primer-addons": "^1.0.51",
     "@datalayer/primer-rjsf": "^1.0.3",
-    "@datalayer/personal-agent-protocol": ">=0.36.0 <0.37",
+    "@datalayer/personal-agent-protocol": ">=0.37.0 <0.38",
     "@datalayer/reactor": "^1.3.5",
     "@datalayer/reactor-commands": "^1.0.4",
     "@datalayer/reactor-manager": "^1.0.4",

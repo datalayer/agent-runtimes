@@ -320,6 +320,7 @@ const runJourney = async (): Promise<
         {
           type: 'poppy',
           endpoint: 'https://api.northstar.example/poppy/conversations',
+          description: 'Orders, returns and exchanges',
         },
       ],
     },

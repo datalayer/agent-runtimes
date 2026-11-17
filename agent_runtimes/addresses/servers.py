@@ -436,6 +436,7 @@ def company_of(addressed: AddressedAgent, agent_id: str) -> Any:
         plugins=plugins,
         hosted=True,
         operations=addressed,
+        description=addressed.app.description,
     )
     # A person signed in with their personal agent calls its addresses with its PAP token.
     access = addressed.access

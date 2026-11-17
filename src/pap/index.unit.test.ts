@@ -25,7 +25,13 @@ const company: DiscoveredCompany = {
       },
     },
     agent: {
-      protocols: [{ type: 'a2a', endpoint: 'https://shop.example/agent' }],
+      protocols: [
+        {
+          type: 'a2a',
+          endpoint: 'https://shop.example/agent',
+          description: 'The catalogue',
+        },
+      ],
     },
     apis: [
       {

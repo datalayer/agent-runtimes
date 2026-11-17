@@ -28,7 +28,7 @@ from personal_agent_protocol.company import build_company
 from personal_agent_protocol.models import DiscoveryDocument
 
 from agent_runtimes.addresses.addressed import AddressedAgent
-from agent_runtimes.pap.company import company_config
+from agent_runtimes.pap.company import agent_description, company_config
 from agent_runtimes.protocols.pap import pap_protocol_version
 
 #: The extension saying what a Datalayer agent is (its role, whom it acts for).
@@ -79,6 +79,7 @@ def company_document(addressed: AddressedAgent) -> Dict[str, Any]:
         hosts.host("agent"),
         company,
         web="web" in interfaces,
+        description=addressed.app.description,
     )
     service = build_company(config, http_client=_client())
     document = service.discovery_document()
@@ -106,7 +107,18 @@ def agent_document(addressed: AddressedAgent) -> Dict[str, Any]:
     return {
         "protocol_version": pap_protocol_version(),
         "organization": {"name": addressed.app.name, "domain": hosts.host("agent")},
-        "agent": {"protocols": [{"type": "a2a", "endpoint": f"{hosts.agent}/a2a"}]},
+        "agent": {
+            "protocols": [
+                {
+                    "type": "a2a",
+                    "endpoint": f"{hosts.agent}/a2a",
+                    # What it can help with (PAP 1.0 §3.1, required).
+                    "description": agent_description(
+                        addressed.app.name, addressed.app.description
+                    ),
+                }
+            ]
+        },
         "apis": _apis(addressed),
         "extensions": {AGENT_EXTENSION: [entry]},
     }

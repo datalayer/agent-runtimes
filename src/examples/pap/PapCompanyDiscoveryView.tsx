@@ -34,7 +34,14 @@ const sampleCompany = (domain: string): DiscoveredCompany => ({
       },
     },
     agent: {
-      protocols: [{ type: 'a2a', endpoint: `https://${domain}/agent` }],
+      protocols: [
+        {
+          type: 'a2a',
+          endpoint: `https://${domain}/agent`,
+          // What its agent can help with (1.0 §3.1, required).
+          description: 'Orders, exchanges and the catalogue',
+        },
+      ],
     },
     apis: [
       {

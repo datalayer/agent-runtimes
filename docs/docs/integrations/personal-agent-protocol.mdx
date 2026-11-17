@@ -7,12 +7,15 @@ title: Personal Agent Protocol
 
 Agent Runtimes depends on Personal Agent Protocol (PAP, or Poppy) in Python
 and TypeScript: `personal-agent-protocol[ui]` and
-`@datalayer/personal-agent-protocol` (0.36, `>=0.36.0,<0.37`). It speaks one
-version of the protocol, the newest its SDK implements and the SDK's default: the
-[1.0 draft](https://personalagentprotocol.org/docs/spec) as of upstream
-`c71f515` (2026-11-11), with the Operations extension version 3 and the
-Mediated Sign-In extension version 1; see the SDKs'
+`@datalayer/personal-agent-protocol` (0.37, `>=0.37.0,<0.38`). It speaks one
+version of the protocol, the newest its SDK implements and the SDK's default:
+[1.0](https://personalagentprotocol.org/docs/1.0/spec) as published and frozen
+on 2026-11-14 (upstream `8c02b42`), with the Operations extension version 3 and the
+Mediated Sign-In extension version 1 (retiring on 2027-03-17); see the SDKs'
 [protocol coverage](https://personal-agent-protocol.datalayer.tech/protocol/coverage/).
+Every agent's `poppy.json` says, in each `agent.protocols` entry's `description`
+(required by 1.0), what its agent can help with: the Appspec's `description`, or
+*Anything about* its name when the Appspec says nothing.
 `agent_runtimes.protocols.pap.pap_protocol_version()` (TypeScript:
 `PAP_PROTOCOL_VERSION`) names it.
 

@@ -31,17 +31,17 @@ feature while keeping protocol secrets outside model context.
 | [`local-company`](./local-company/)                       | `PapCompanyCapability`: the application as a company      | What the person was shown; ticket used once       |
 | [`shop`](./shop/)                                         | The Demo Shop and a personal agent buying from it         | Products, a quote, a test order approved once     |
 
-Every example runs against the PAP Python SDK 0.36 — Agent Runtimes pins
-`personal-agent-protocol[ui]>=0.36.0,<0.37` — at the one version Agent Runtimes
-speaks, the newest the SDK implements and, since SDK 0.36, its default: the
-[1.0 draft](https://personalagentprotocol.org/docs/spec) as of upstream
-`c71f515` (2026-11-11), the specification published at
+Every example runs against the PAP Python SDK 0.37 — Agent Runtimes pins
+`personal-agent-protocol[ui]>=0.37.0,<0.38` — at the one version Agent Runtimes
+speaks, the newest the SDK implements and its default:
+[1.0](https://personalagentprotocol.org/docs/1.0/spec) as published and frozen
+on 2026-11-14 (upstream `8c02b42`), the specification published at
 [personalagentprotocol.org](https://personalagentprotocol.org)
 from [personal-agent-protocol/personal-agent-protocol](https://github.com/personal-agent-protocol/personal-agent-protocol).
 The demo companies serve that version alone and the personal agents discover
 them at it alone, on the SDK's defaults: no example names a version; every
 request with the Session header names `1.0` in `Poppy-Version`. All of them ran
-on 16 November 2026 at the SDK 0.36.0
+on 17 November 2026 at the SDK 0.37.0
 (`python scripts/validate_pap_examples.py`). Most run
 the SDK's self-contained `demo` worlds: real keys, proofs and HTTP over ASGI in
 one process, with no network and no model.

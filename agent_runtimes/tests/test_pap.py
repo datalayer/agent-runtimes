@@ -38,6 +38,7 @@ class CompanyClient:
                             {
                                 "type": "a2a",
                                 "endpoint": "https://shop.example/agent",
+                                "description": "Orders, returns and the catalogue",
                             }
                         ]
                     },
