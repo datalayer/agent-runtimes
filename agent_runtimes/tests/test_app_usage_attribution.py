@@ -243,6 +243,11 @@ def _post(transport, model: str, monkeypatch) -> tuple[Any, list[Any]]:
         return PlainTextResponse("ran")
 
     monkeypatch.setattr(agui_transport.AGUIAdapter, "dispatch_request", dispatch)
+    # Its agent offers the model the request names: a run names only one of
+    # its agent's models.
+    from agent_runtimes.routes import agents
+
+    monkeypatch.setitem(agents._agentspecs, transport._agent_id, {"model": model})
     response = TestClient(transport.get_app()).post(
         "/",
         json={

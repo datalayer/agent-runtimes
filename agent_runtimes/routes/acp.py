@@ -995,6 +995,15 @@ async def _handle_new_session(
     return {"session_id": session_id}
 
 
+async def _run_model_refusal(session_id: str, model: Any) -> str | None:
+    """Why a turn of this session may not run on ``model``, or ``None``: one
+    its agent offers (`offered.run_model_refusal`)."""
+    from ..models.offered import run_model_refusal
+
+    session = await sessions.load_session(session_id) if session_id else None
+    return run_model_refusal(session.agent_id if session else None, model)
+
+
 async def _handle_prompt(
     websocket: WebSocket,
     message: ACPMessage,
@@ -1019,9 +1028,16 @@ async def _handle_prompt(
     )
 
     # Extract model from metadata for per-request model override
-    model = metadata.get("model") if isinstance(metadata, dict) else None
+    model = (metadata.get("model") if isinstance(metadata, dict) else None) or None
     if model:
         logger.info(f"ACP: Using model from request metadata: {model}")
+        # One the session's agent offers, or the turn is refused.
+        refusal = await _run_model_refusal(session_id, model)
+        if refusal:
+            await _send_error(
+                websocket, message.id, ACPErrorCode.INVALID_PARAMS, refusal
+            )
+            return
 
     # Audio the client sent is heard first, with the connection's token, and
     # the prompt is its transcript, marked spoken.
@@ -1641,6 +1657,14 @@ async def _handle_run(
     params = message.params or {}
     input_data = params.get("input", [])
     stream = params.get("stream", True)
+    metadata = params.get("metadata")
+    # A model the run names is one the session's agent offers, or it is refused.
+    refusal = await _run_model_refusal(
+        session_id, metadata.get("model") if isinstance(metadata, dict) else None
+    )
+    if refusal:
+        await _send_error(websocket, message.id, ACPErrorCode.INVALID_PARAMS, refusal)
+        return
 
     # Convert input to context
     from ..adapters.base import AgentContext

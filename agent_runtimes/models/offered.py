@@ -743,6 +743,16 @@ def agent_inference_provider(agent_id: str | None) -> str:
     return effective_inference_provider()
 
 
+def offered_of(*specs: Any) -> list[str]:
+    """The models these specs name (`spec_model_ids`), each once, in order."""
+    ids: list[str] = []
+    for spec in specs:
+        for model_id in spec_model_ids(spec):
+            if model_id not in ids:
+                ids.append(model_id)
+    return ids
+
+
 def offered_model_ids(agent_id: str | None) -> list[str] | None:
     """The models an agent of this runtime may run on, or ``None`` for no such agent.
 
@@ -764,15 +774,80 @@ def offered_model_ids(agent_id: str | None) -> list[str] | None:
     spec_id = stored.get("agent_spec_id")
     if isinstance(spec_id, str) and spec_id:
         library = get_library_agent_spec(spec_id)
-    ids: list[str] = []
-    for model_id in [
-        *spec_model_ids(library),
-        *spec_model_ids(stored.get("agent_spec")),
-        *spec_model_ids({"model": stored.get("model")}),
-    ]:
-        if model_id not in ids:
-            ids.append(model_id)
-    return ids
+    return offered_of(library, stored.get("agent_spec"), {"model": stored.get("model")})
+
+
+def _is_offered(model_id: str, offered: list[str]) -> bool:
+    """Whether a model is one of these, aliases read as the catalogue's ids."""
+    return _canonical(model_id) in {_canonical(m) for m in offered}
+
+
+def run_model_refusal(agent_id: str | None, model: Any) -> str | None:
+    """Why a run of this agent may not be on ``model``, in a sentence, or ``None``.
+
+    The one check of a run's model, wherever the run comes from (AG-UI,
+    Vercel AI, ACP, an application's session): it must be one of the models
+    the agent offers — its ``model`` or one of its ``model_additionals``
+    (`offered_model_ids`, what ``GET /configure/models`` lists). No model, or
+    an empty one, is the agent's own and always answered. Fail closed: when
+    the agent's models cannot be told, a run names none.
+
+    Parameters
+    ----------
+    agent_id : str | None
+        The agent the run is of.
+    model : Any
+        The model the run names, as the request says it.
+
+    Returns
+    -------
+    str | None
+        The refusal, for a ``400``; ``None`` when the run may go on.
+    """
+    if model is None or (isinstance(model, str) and not model.strip()):
+        return None
+    if not isinstance(model, str):
+        return "A run names its model by its id: the run was refused."
+    offered = offered_model_ids(agent_id)
+    if not offered:
+        return (
+            "The models this agent offers are not known here, so a run names "
+            f"none: {model} was refused."
+        )
+    if not _is_offered(model, offered):
+        return (
+            f"{model} is not one of the models this agent offers "
+            f"({', '.join(offered)}): the run was refused."
+        )
+    return None
+
+
+def mode_model_problems(app: Any, offered: list[str]) -> list[str]:
+    """The modes' options and the profiles of an Appspec that name a model its agent does not offer.
+
+    A mode's or a profile's model is the Maker's choice, run when a person
+    chooses it: it must be one of the agent's models (``offered``, the
+    library agent's ``model`` and ``model_additionals`` and the
+    application's own ``model``), as a run that names one must. Said when
+    the Appspec is loaded, never when a run is refused.
+    """
+    said = ", ".join(offered)
+    problems: list[str] = []
+    for mode in app.interface.modes:
+        for option in mode.options:
+            if option.model and not _is_offered(option.model, offered):
+                problems.append(
+                    f"The option {option.label or option.id} of the mode "
+                    f"{mode.label or mode.id} runs on {option.model}, which is not "
+                    f"one of the models its agent offers ({said})."
+                )
+    for profile in app.interface.profiles:
+        if profile.model and not _is_offered(profile.model, offered):
+            problems.append(
+                f"The profile {profile.label or profile.id} runs on {profile.model}, "
+                f"which is not one of the models its agent offers ({said})."
+            )
+    return problems
 
 
 def _canonical(model_id: str) -> str:
@@ -798,9 +873,7 @@ def model_refusal(
     if decision:
         return decision
     offered = offered_model_ids(agent_id)
-    if offered is not None and _canonical(model_id) not in {
-        _canonical(m) for m in offered
-    }:
+    if offered is not None and not _is_offered(model_id, offered):
         return (
             f"{model_id} is not one of this agent's models "
             f"({', '.join(offered)}): nothing was switched."

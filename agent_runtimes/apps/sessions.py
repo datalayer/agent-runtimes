@@ -2726,6 +2726,15 @@ class LiveSession:
         model one of them names is run on: through the code's ``session.agent``
         for an application written in Python, else on the run itself.
         """
+        # A model the run names is one its agent offers, or nothing runs:
+        # refused before the turn starts, so the refusal is the answer's
+        # status (`offered.run_model_refusal`); the agent's AG-UI app checks
+        # it again.
+        from agent_runtimes.models.offered import run_model_refusal
+
+        not_offered = run_model_refusal(self.agent_id, body.get("model"))
+        if not_offered:
+            raise SessionRefused(400, not_offered)
         run_id = str(body.get("runId") or "")
         messages = [
             dict(m) for m in body.get("messages") or [] if isinstance(m, Mapping)

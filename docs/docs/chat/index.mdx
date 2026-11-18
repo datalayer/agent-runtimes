@@ -64,7 +64,8 @@ the rows around it:
   runtime calls the providers itself or the service did not answer) and
   `modelsNote` says it in a sentence. A request naming a model the agent
   does not offer, or the service does not serve, is refused with a 400 and
-  that sentence. Only an in-page agent, with no runtime to ask, offers the
+  that sentence. A run's model is checked against the models its agent
+  offers; a run that names none runs on the agent's own. Only an in-page agent, with no runtime to ask, offers the
   catalogue's available chat models instead.
 
   For an agent that decides — one whose agentspec names a decisions spec
