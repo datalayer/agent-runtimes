@@ -1141,3 +1141,289 @@ def test_the_agent_host_serves_the_a2a_card_its_application_serves_at_its_own_ur
         "/.well-known/agent-card.json", headers={"host": "shop.agent.datalayer.ai"}
     ).json()
     assert said == {"name": "Shop", "url": "https://shop.agent.datalayer.ai/a2a/"}
+
+
+# --- a company's MCP server is an OAuth protected resource (PAP 1.0 §4.5, §7) -----------
+
+MCP_URL = "https://shop.mcp.datalayer.ai/mcp"
+MCP_DOCUMENT = "https://shop.mcp.datalayer.ai/.well-known/oauth-protected-resource/mcp"
+#: The MCP server's own host, which its transport answers at (and the loopback).
+AT_ITS_HOST = {"host": "shop.mcp.datalayer.ai"}
+
+
+def _secured(document: Dict[str, Any]) -> Dict[str, Any]:
+    """``document`` with `quote` requiring `orders:read` (OpenAPI ``security``)."""
+    import copy
+
+    secured = copy.deepcopy(document)
+    secured["paths"]["/quote"]["post"]["security"] = [{"company": ["orders:read"]}]
+    return secured
+
+
+COMPANY_WITH_A_SCOPED_OPERATION = {
+    **COMPANY,
+    "openapi": _secured(OPENAPI),
+    "pap": {
+        **COMPANY["pap"],
+        "company": {
+            **COMPANY["pap"]["company"],
+            "scopes": [
+                {"name": "orders:read", "description": "Read your orders"},
+                {"name": "orders:write", "description": "Change your orders"},
+            ],
+        },
+    },
+}
+
+
+class _IssuedHere:
+    """A company whose issuer issued two tokens: one for its MCP server, one default."""
+
+    def __init__(self, scopes: tuple[str, ...] = ("orders:read",)) -> None:
+        from datetime import datetime, timedelta, timezone
+        from types import SimpleNamespace
+
+        self.asked: List[tuple[str, str]] = []
+        issued = SimpleNamespace(
+            account_id="friend",
+            client_id="https://atlas.example/agent",
+            scopes=scopes,
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+        )
+
+        async def access_token_for(token: str, resource: str) -> Any:
+            self.asked.append((token, resource))
+            return issued if token == "for-the-mcp-server" else None
+
+        self.service = SimpleNamespace(access_token_for=access_token_for)
+
+
+def _company_agent(
+    policy: AddressPolicy,
+    spec: Dict[str, Any] = COMPANY,
+    company: Any = None,
+    *answers: Any,
+) -> AddressedAgent:
+    agent = addressed(
+        Answers(*answers),
+        spec,
+        policy=policy,
+        key_checker=_uid_of,
+        token_checker=_uid_of,
+    )
+    agent.company = company or _IssuedHere()
+    # What checked tokens before the company's own were added (`servers.company_of`).
+    agent.platform_tokens = _uid_of
+    return agent
+
+
+PRIVATE = AddressPolicy("private", owner_uid="owner", allowed=frozenset({"friend"}))
+HELLO = {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}
+QUOTE = {
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/call",
+    "params": {"name": "quote", "arguments": {"items": [1]}},
+}
+
+
+def test_a_companys_mcp_server_publishes_its_protected_resource_metadata() -> None:
+    """Its ``resource`` is its ``url`` as ``poppy.json`` lists it, and its authorization
+    server the company's issuer (§7), open to anybody, at both well-known paths."""
+    from agent_runtimes.addresses.mcp import mcp_app
+
+    agent = _company_agent(PRIVATE)
+    mcp_api = next(api for api in poppy_document(agent)["apis"] if api["type"] == "mcp")
+    with TestClient(mcp_app(agent)) as client:
+        for path in (
+            "/.well-known/oauth-protected-resource/mcp",
+            "/.well-known/oauth-protected-resource",
+        ):
+            said = client.get(path)
+            assert said.status_code == 200
+            assert said.json() == {
+                "resource": MCP_URL,
+                "authorization_servers": ["https://shop.agent.datalayer.ai"],
+                "scopes_supported": ["orders:read"],
+                "bearer_methods_supported": ["header"],
+                "resource_name": "Shop",
+            }
+        assert said.json()["resource"] == mcp_api["url"]
+        assert client.get("/healthz").status_code == 200
+
+
+def test_the_companys_issuer_lists_its_mcp_server_and_would_issue_for_it() -> None:
+    """``protected_resources`` of the issuer's metadata agrees with the MCP server's
+    document (§3.2), and the company is configured to issue tokens for it (§4.5)."""
+    from personal_agent_protocol.company import build_company
+
+    from agent_runtimes.pap.company import company_config
+
+    agent = _company_agent(PRIVATE)
+    config = company_config(
+        agent.app.name,
+        agent.hosts.host("agent"),  # type: ignore[union-attr]
+        agent.app.pap.company,
+        resource_servers=(agent.hosts.mcp,),  # type: ignore[union-attr]
+    )
+    assert config.resource_servers == (MCP_URL,)
+    metadata = build_company(config, http_client=httpx.AsyncClient()).oauth_metadata()
+    assert metadata["issuer"] == "https://shop.agent.datalayer.ai"
+    assert metadata["protected_resources"] == [
+        "https://shop.agent.datalayer.ai",
+        MCP_URL,
+    ]
+
+
+def test_a_private_companys_mcp_server_challenges_a_caller_it_does_not_know() -> None:
+    from agent_runtimes.addresses.mcp import mcp_app
+
+    with TestClient(mcp_app(_company_agent(PRIVATE))) as client:
+        refused = client.post("/mcp", json=HELLO, headers=AT_ITS_HOST)
+        assert refused.status_code == 401
+        assert refused.headers["www-authenticate"] == (
+            f'Bearer resource_metadata="{MCP_DOCUMENT}"'
+        )
+        # An API key nobody knows is no way in either.
+        unknown = client.post(
+            "/mcp", json=HELLO, headers={**AT_ITS_HOST, "X-API-Key": "nobody's"}
+        )
+        assert unknown.status_code == 401
+
+
+def test_it_takes_the_companys_token_issued_for_it_and_no_other() -> None:
+    """§4.5: a token issued for a ``resource`` is accepted only at that service; a
+    token not issued for it gets ``invalid_token`` with ``resource_metadata`` (§7)."""
+    from agent_runtimes.addresses.mcp import mcp_app
+
+    company = _IssuedHere()
+    accept = {**AT_ITS_HOST, "Accept": "application/json, text/event-stream"}
+    with TestClient(mcp_app(_company_agent(PRIVATE, COMPANY, company))) as client:
+        issued_for_it = client.post(
+            "/mcp",
+            json=HELLO,
+            headers={**accept, "Authorization": "Bearer for-the-mcp-server"},
+        )
+        assert issued_for_it.status_code not in (401, 403)
+        default = client.post(
+            "/mcp",
+            json=HELLO,
+            headers={**accept, "Authorization": "Bearer the-default-token"},
+        )
+        assert default.status_code == 401
+        challenge = default.headers["www-authenticate"]
+        assert 'error="invalid_token"' in challenge
+        assert f'resource_metadata="{MCP_DOCUMENT}"' in challenge
+    # Asked of the company for this server's own url, nothing else.
+    assert company.asked[0] == ("for-the-mcp-server", MCP_URL)
+
+
+def test_who_may_call_a_private_one_is_as_before() -> None:
+    """A Datalayer API key or token of the owner or of somebody allowed; somebody else
+    known is refused (403), as at every other address."""
+    from agent_runtimes.addresses.mcp import mcp_app
+
+    accept = {**AT_ITS_HOST, "Accept": "application/json, text/event-stream"}
+    with TestClient(mcp_app(_company_agent(PRIVATE))) as client:
+        for way_in in (
+            {"X-API-Key": "key-owner"},
+            {"X-API-Key": "key-friend"},
+            {"Authorization": "Bearer key-owner"},
+        ):
+            assert (
+                client.post(
+                    "/mcp", json=HELLO, headers={**accept, **way_in}
+                ).status_code
+                == 200
+            )
+        for way_in in (
+            {"X-API-Key": "key-other"},
+            {"Authorization": "Bearer key-other"},
+        ):
+            refused = client.post("/mcp", json=HELLO, headers={**accept, **way_in})
+            assert refused.status_code == 403
+            assert refused.json()["error"] == "access_denied"
+
+
+def test_a_company_token_is_held_to_the_scopes_an_operation_requires() -> None:
+    """An operation's OpenAPI ``security`` names its scopes: a company token without
+    them is ``insufficient_scope`` (403) naming them (§7); a Datalayer key is its
+    holder's own authority."""
+    from agent_runtimes.addresses.mcp import mcp_app, operation_scopes
+
+    without = _company_agent(
+        PRIVATE, COMPANY_WITH_A_SCOPED_OPERATION, _IssuedHere(("orders:write",))
+    )
+    assert operation_scopes(without) == {"quote": ("orders:read",)}
+    accept = {**AT_ITS_HOST, "Accept": "application/json, text/event-stream"}
+    with TestClient(mcp_app(without)) as client:
+        refused = client.post(
+            "/mcp",
+            json=QUOTE,
+            headers={**accept, "Authorization": "Bearer for-the-mcp-server"},
+        )
+        assert refused.status_code == 403
+        challenge = refused.headers["www-authenticate"]
+        assert (
+            'error="insufficient_scope"' in challenge
+            and 'scope="orders:read"' in challenge
+        )
+        by_key = client.post(
+            "/mcp", json=QUOTE, headers={**accept, "X-API-Key": "key-owner"}
+        )
+        assert by_key.status_code not in (401, 403)
+    held = _company_agent(PRIVATE, COMPANY_WITH_A_SCOPED_OPERATION, _IssuedHere())
+    with TestClient(mcp_app(held)) as client:
+        allowed = client.post(
+            "/mcp",
+            json=QUOTE,
+            headers={**accept, "Authorization": "Bearer for-the-mcp-server"},
+        )
+        assert allowed.status_code not in (401, 403)
+
+
+@pytest.mark.asyncio
+async def test_a_public_companys_mcp_server_stays_open_to_anybody() -> None:
+    from agent_runtimes.addresses.mcp import mcp_app
+
+    agent = _company_agent(
+        AddressPolicy("public"), COMPANY_WITH_A_SCOPED_OPERATION, None, {"total": 3}
+    )
+    async with served(mcp_app(agent)) as url:
+        async with httpx.AsyncClient() as client:
+            document = await client.get(
+                f"{url}/.well-known/oauth-protected-resource/mcp"
+            )
+            assert document.json()["authorization_servers"] == [
+                "https://shop.agent.datalayer.ai"
+            ]
+            # A token that is wrong is said to be, open or not.
+            wrong = await client.post(
+                f"{url}/mcp", json=HELLO, headers={"Authorization": "Bearer invented"}
+            )
+            assert wrong.status_code == 401
+        async with connected(f"{url}/mcp") as session:
+            assert {tool.name for tool in (await session.list_tools()).tools} == {
+                "getProduct",
+                "quote",
+            }
+            answer = await session.call_tool("quote", {"items": [1, 2]})
+            assert answer.structured_content == {"total": 3}
+
+
+def test_an_application_that_is_no_company_keeps_its_access_check() -> None:
+    """No issuer to name: no protected resource metadata, and the 401 it had."""
+    from agent_runtimes.addresses.mcp import mcp_app
+
+    agent = addressed(
+        Answers(),
+        policy=AddressPolicy("private", owner_uid="owner"),
+        key_checker=_uid_of,
+    )
+    with TestClient(mcp_app(agent)) as client:
+        refused = client.post("/mcp", json=HELLO, headers=AT_ITS_HOST)
+        assert refused.status_code == 401
+        assert refused.headers["www-authenticate"] == 'Bearer realm="datalayer"'
+        assert (
+            client.get("/.well-known/oauth-protected-resource/mcp").status_code == 401
+        )

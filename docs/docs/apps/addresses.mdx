@@ -77,6 +77,64 @@ The same rule at its four addresses, from its "Who may open it":
 
 `poppy.json`, the Agent Card and the page's script bundle answer anybody.
 
+### A company's MCP server: OAuth
+
+An application that is a company (`pap.company` enabled) has an issuer, its
+agent host, and its MCP server is an OAuth protected resource as the Personal
+Agent Protocol asks of a company's MCP server (1.0 §4.5, §7). It is served on
+Reactor's OAuth plugin (`reactor_mcp_server.oauth`, `addresses/mcp.py`
+`company_oauth`):
+
+| | |
+|---|---|
+| `GET https://{name}.mcp.<domain>/.well-known/oauth-protected-resource/mcp` | Its protected resource metadata (RFC 9728), open to anybody: `resource` is its `url` as `poppy.json` lists it (`https://{name}.mcp.<domain>/mcp`), `authorization_servers` the company's issuer (`https://{name}.agent.<domain>`), `scopes_supported` the company's scopes. Also at `/.well-known/oauth-protected-resource` |
+| The issuer's `/.well-known/oauth-authorization-server` | Lists the MCP server's `url` in `protected_resources`, after `https://{name}.agent.<domain>` (§3.2), and issues tokens for it: the company is configured with it as a resource server (`personal-agent-protocol` ≥ 0.37.3) |
+| A request it does not admit | `401`, `WWW-Authenticate: Bearer resource_metadata="…"` naming the document, with `scope` when the call needs scopes |
+| A token that is expired, or was not issued for this server | `401`, `error="invalid_token"`, with `resource_metadata` |
+| A company token without a scope the operation needs | `403`, `error="insufficient_scope"`, `scope="…"` |
+| Somebody known whom the owner did not allow | `403`, `access_denied` |
+
+Which tokens it takes:
+
+- **the company's access token issued for this server** — a personal agent
+  asks the issuer for it with `resource` set to the server's `url`, at the
+  request that completes its sign-in or at refresh (§4.5), and it is held to
+  its scopes;
+- **a Datalayer token or API key** of the owner or of somebody allowed, which
+  is their own authority here and no delegation.
+
+**A company token issued for another resource is refused here**, the default
+token — the one that works at its agent host and its API — among them: a
+token is accepted only at the service it was issued for (§4.5). Until this
+the MCP server took any token the company had issued; a personal agent
+that follows §7 already asks for the server's own.
+
+An operation names the scopes it requires with OpenAPI's `security` (one
+requirement, whose scopes the company offers); an operation that names none
+requires none at the door, and its agent decides what the caller's scopes
+allow:
+
+```yaml
+paths:
+  /orders:
+    get:
+      operationId: listOrders
+      security:
+        - company: ["orders:read"]
+```
+
+Who may call is unchanged. A public company's server answers anybody, for
+every operation; a private one takes an API key (`X-API-Key`) or a bearer of
+somebody allowed. A request that presents a bearer which is not valid is
+refused for it, whatever else it carries.
+
+The company offers personal agents Device Sign-In. An MCP client that is not
+a personal agent reads the same document and finds the issuer, which offers
+no sign-in for it: it calls a private application with an API key.
+
+An application that is no company has no issuer to name: its MCP server keeps
+the access check in front, and publishes no protected resource metadata.
+
 ### In a browser
 
 A browser carries no API key. A private agent's page (`{name}.web`) and its chat

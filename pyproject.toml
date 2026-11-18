@@ -32,7 +32,7 @@ dependencies = [
     "datalayer_reactor>=1.3.7",
     # An agent's MCP server at its address (`agent_runtimes.addresses.mcp`): one tool
     # per operation of its openapi, contributed to Reactor's MCP server.
-    "reactor_mcp_server>=1.3.7",
+    "reactor_mcp_server>=1.3.9",
     # PAP is a runtime protocol capability, not an example-only dependency.
     # 0.3.1 is the first release with matching Python/TypeScript Direct Sign-In
     # orchestration and a root-published TypeScript package.
@@ -62,7 +62,7 @@ dependencies = [
     # the domain beside a company's name.
     # 0.37.0: 1.0 as published (frozen 2026-11-14): each agent.protocols entry needs a
     # description (CompanyConfig.agent_description), prompt=consent, PAR, ports.
-    "personal-agent-protocol[ui]>=0.37.0,<0.38",
+    "personal-agent-protocol[ui]>=0.37.3,<0.38",
     # The first releases of both on mcp 2; an older one pins mcp<2.
     "agent-codemode>=1.1.0",
     # 1.4.0: agent-skills is the framework alone (and its `jokes` example).

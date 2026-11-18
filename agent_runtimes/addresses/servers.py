@@ -437,7 +437,14 @@ def company_of(addressed: AddressedAgent, agent_id: str) -> Any:
         hosted=True,
         operations=addressed,
         description=addressed.app.description,
+        # Its MCP server is a service at a URL of its own: its issuer lists it in
+        # `protected_resources` and issues tokens for it (PAP 1.0 §4.5, §7).
+        resource_servers=(addressed.hosts.mcp,),
     )
+    # Its MCP server verifies the tokens issued for it with the company, and a
+    # Datalayer token with what was checking tokens before the company's were added.
+    addressed.company = company
+    addressed.platform_tokens = addressed.access.token_checker
     # A person signed in with their personal agent calls its addresses with its PAP token.
     access = addressed.access
     access.token_checker = (

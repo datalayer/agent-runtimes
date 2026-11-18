@@ -80,6 +80,7 @@ def company_document(addressed: AddressedAgent) -> Dict[str, Any]:
         company,
         web="web" in interfaces,
         description=addressed.app.description,
+        resource_servers=(hosts.mcp,),
     )
     service = build_company(config, http_client=_client())
     document = service.discovery_document()

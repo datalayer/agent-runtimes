@@ -469,6 +469,7 @@ def company_config(
     device_page: str | None = None,
     web: bool = False,
     description: str = "",
+    resource_servers: Sequence[str] = (),
 ) -> CompanyConfig:
     """What a company publishes at ``domain``, from its Appspec's ``pap.company``:
     what :class:`PapCompanyCapability` serves and the ``poppy.json`` of an agent
@@ -477,6 +478,10 @@ def company_config(
     ``description``: what its agent can help with, the Appspec's ``description``
     (PAP 1.0 §3.1, §8.1: each ``agent.protocols`` entry says it); an application
     that says nothing is said to help with anything about it.
+
+    ``resource_servers``: its services at URLs of their own that take its access
+    tokens — its MCP server, at its MCP address (PAP 1.0 §4.5, §7): its issuer lists
+    each in ``protected_resources`` and issues tokens for it.
     """
     if not company.enabled:
         raise ValueError("The Appspec does not enable pap.company")
@@ -511,6 +516,7 @@ def company_config(
         web_disabled=bool(company.web_disabled),
         operations="operations" in company.extensions,
         device_page=device_page,
+        resource_servers=tuple(resource_servers),
     )
 
 
@@ -538,8 +544,12 @@ class PapCompanyCapability:
         hosted: bool = False,
         operations: Any = None,
         description: str = "",
+        resource_servers: Sequence[str] = (),
     ) -> None:
         """Configure the company's name, domain and application.
+
+        ``resource_servers``: its services at URLs of their own (its MCP server at
+        its MCP address), which its issuer lists and issues tokens for (§4.5, §7).
 
         ``hosted``: the company at its agent's address (``{name}.agent.<domain>``),
         whose MCP, API and web servers answer beside it: every interface the
@@ -567,6 +577,7 @@ class PapCompanyCapability:
             device_page=device_page,
             web=hosted and "web" in interfaces,
             description=description,
+            resource_servers=resource_servers,
         )
         self.service: CompanyService = build_company(
             self.config,

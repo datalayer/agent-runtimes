@@ -19,7 +19,12 @@ from typing import Any, Awaitable, Callable, Dict, List, Literal, Optional
 
 from agentspecs.openapi import OpenApiOperation, ask_document, openapi_operations
 
-from agent_runtimes.addresses.access import AddressAccess, AddressPolicy, Caller
+from agent_runtimes.addresses.access import (
+    AddressAccess,
+    AddressPolicy,
+    Caller,
+    TokenChecker,
+)
 from agent_runtimes.addresses.calls import CallRecord, CallRecorder, timed
 from agent_runtimes.addresses.hosts import AddressHosts
 from agent_runtimes.addresses.operations import (
@@ -49,6 +54,12 @@ class AddressedAgent:
     acts_for: str = ""
     #: Where its calls are recorded (a runtime launched for a deployment); none locally.
     calls: Optional[CallRecorder] = None
+    #: For a company served at its agent host: its PAP company
+    #: (``PapCompanyCapability``), which its MCP server verifies tokens with.
+    company: Any = None
+    #: Whose a Datalayer token is, for its MCP server: the access check's token
+    #: checker before the company's own tokens were added to it.
+    platform_tokens: Optional[TokenChecker] = None
 
     def __post_init__(self) -> None:
         self.document: Dict[str, Any] = copy.deepcopy(
