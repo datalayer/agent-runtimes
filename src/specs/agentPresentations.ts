@@ -38,7 +38,7 @@ export const AGENT_PRESENTATIONS: Record<string, AgentPresentation> = {
       'Explores the data in the notebook you have open — adds the cells and runs them, profiles and charts the data, checks it for the things that quietly ruin an analysis, and says plainly what it found, where everyone can see it.',
     tagline: 'Explores, charts and checks your data',
     presentation:
-      'Explores the data in the notebook you have open — adds the cells and runs\nthem, profiles and charts the data, checks it for the things that quietly\nruin an analysis, and says plainly what it found, where everyone can see it.\n\n- Reads the notebook first and builds on the cells already there\n- Writes the cells and runs them on your runtime, one idea per cell\n- Profiles every column: types, missing values and ranges that look wrong\n- Draws the chart when a chart is the clearest answer\n- Flags what would ruin the conclusion: duplicates, outliers, dropped rows\n\n[The seed agents, in slides](/visitors/decks/agents/seed-agents)',
+      'Explores the data in the notebook you have open — adds the cells and runs\nthem, profiles and charts the data, checks it for the things that quietly\nruin an analysis, and says plainly what it found, where everyone can see it.\n\n- Reads the notebook first and builds on the cells already there\n- Writes the cells and runs them, one idea per cell\n- Profiles every column: types, missing values and ranges that look wrong\n- Draws the chart when a chart is the clearest answer\n- Flags what would ruin the conclusion: repeated rows, outliers, dropped rows\n\n[The seed agents, in slides](/visitors/decks/agents/seed-agents)',
   },
   'worker-accountant': {
     id: 'worker-accountant',
