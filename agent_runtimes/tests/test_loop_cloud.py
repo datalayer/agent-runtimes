@@ -292,12 +292,12 @@ def test_a_new_runtime_asks_for_an_environment_then_an_agentspec(
         assert datalayer.created == {
             "environment": "ai-agents-env",
             "time_reservation": 10,
-            "agent_spec_id": "worker-accountant",
+            "agent_spec_id": "jupyter-data-analyst",
         }
-        # The catalogue's enabled agents are offered (agentspecs 0.0.186: the home
-        # page's five), the first proposed. Picked, so not said as a default.
-        assert not any("worker-accountant" in line for line in notes)
-        assert started.agent_spec_id == "worker-accountant"
+        # The catalogue's offered agents (agentspecs 0.0.215: the seven seed agents),
+        # by id, the first proposed. Picked, so not said as a default.
+        assert not any("jupyter-data-analyst" in line for line in notes)
+        assert started.agent_spec_id == "jupyter-data-analyst"
         assert started.credits == pytest.approx(0.0008 * 60 * 10)
     finally:
         started.relay.stop()
@@ -866,15 +866,17 @@ def test_the_agentspecs_offered_on_datalayer_are_the_enabled_ones() -> None:
         launch.choose_agentspec(specs, can_ask=True, ask=lambda *a: None)
 
 
-def test_loop_offers_the_five_agents_the_catalogue_enables() -> None:
+def test_loop_offers_the_seven_agents_the_catalogue_enables() -> None:
     """agentspecs 0.0.187 (the user, 14 November 2026): the cloud picker and the
-    local one offer the agents the catalogue enables and lists, the home page's
-    six (the Traveller since 15 November 2026); example-simple, enabled and not
-    listed, stays the neutral default."""
+    local one offer the agents the catalogue enables and lists, the seven seed
+    agents (the Traveller since 15 November 2026, the Jupyter Data Analyst since
+    18 November 2026); example-simple, enabled and not listed, stays the neutral
+    default."""
     from agent_runtimes.chat import cli
     from agent_runtimes.specs.agents import get_agent_spec, list_agentspecs
 
-    six = [
+    seven = [
+        "jupyter-data-analyst",
         "worker-accountant",
         "worker-marketer",
         "worker-shopper",
@@ -882,8 +884,8 @@ def test_loop_offers_the_five_agents_the_catalogue_enables() -> None:
         "worker-terra",
         "worker-traveller",
     ]
-    assert [value for _, value in launch.agentspec_choices(list_agentspecs())] == six
-    assert cli.offered_agentspec_ids() == six
+    assert [value for _, value in launch.agentspec_choices(list_agentspecs())] == seven
+    assert cli.offered_agentspec_ids() == seven
     simple = get_agent_spec("example-simple")
     assert simple is not None and simple.enabled and not simple.listed
     assert launch.choose_agentspec(list_agentspecs(), can_ask=False) == "example-simple"

@@ -4,8 +4,9 @@
  */
 
 /**
- * The agents offered: the six of the home page (the user, 14 November 2026;
- * the Traveller since 15 November 2026).
+ * The agents offered: the seven seed agents (the user, 14 November 2026;
+ * the Traveller since 15 November 2026, the Jupyter Data Analyst since
+ * 18 November 2026).
  * The new agent page, the chats, the assign menu and loop's pickers offer what
  * the catalogue enables and lists (`isAgentspecOffered`), and nothing else, so
  * these flags are the whole list. `listed: false` (agentspecs 0.0.187) keeps
@@ -17,7 +18,8 @@ import { describe, expect, it } from 'vitest';
 import { isAgentspecOffered } from '../../types/agentspecs';
 import { getAgentspecs, listAgentspecs } from '../agents';
 
-const SIX = [
+const SEVEN = [
+  'jupyter-data-analyst',
   'worker-accountant',
   'worker-marketer',
   'worker-shopper',
@@ -27,20 +29,16 @@ const SIX = [
 ];
 
 describe('the agents the catalogue offers', () => {
-  it('are the Marketer, the Shopper, the Accountant, the Traveller, Terra and the Steward for AWS', () => {
+  it('are the Marketer, the Shopper, the Accountant, the Traveller, Terra, the Steward for AWS and the Jupyter Data Analyst', () => {
     const offered = listAgentspecs()
       .filter(isAgentspecOffered)
       .map(spec => spec.id)
       .sort();
-    expect(offered).toEqual(SIX);
+    expect(offered).toEqual(SEVEN);
   });
 
   it('leave out an enabled agent that is not listed', () => {
-    for (const id of [
-      'example-simple',
-      'example-blank',
-      'jupyter-data-analyst',
-    ]) {
+    for (const id of ['example-simple', 'example-blank']) {
       const spec = getAgentspecs(id);
       expect(spec?.enabled).toBe(true);
       expect(spec?.listed).toBe(false);

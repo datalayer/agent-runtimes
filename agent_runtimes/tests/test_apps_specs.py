@@ -121,7 +121,7 @@ class TestTheCatalogue:
         # picker since agentspecs 0.0.164 (enabled: false), so the setup names it.
         assert triage.setup == ["The agent 'worker-mail-triage:0.0.1' is not enabled."]
         # worker-accountant is enabled since agentspecs 0.0.184; jupyter-data-analyst
-        # is enabled and out of the pickers since 0.0.187 (listed: false).
+        # is enabled, and offered by the pickers since 0.0.215 (the seventh seed agent).
         assert APP_CATALOGUE["accounting"].setup == []
         assert APP_CATALOGUE["quote-calculator"].setup == []
         assert APP_CATALOGUE["web-research"].setup == []

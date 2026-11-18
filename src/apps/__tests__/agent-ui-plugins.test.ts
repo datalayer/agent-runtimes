@@ -215,7 +215,8 @@ describe('where each UI goes', () => {
   });
 });
 
-describe('the six seed agents', () => {
+// The seventh, the Jupyter Data Analyst, brings no card: its results land in the notebook's cells.
+describe('the six seed agents that bring cards', () => {
   it.each([
     'worker-marketer',
     'worker-shopper',

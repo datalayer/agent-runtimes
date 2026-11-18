@@ -1999,7 +1999,7 @@ export interface AgentPolicy {
 
 /**
  * Whether the pickers offer an agent: the catalogue enables it and does not
- * keep it out (`listed: false`), as the home page's five since agentspecs 0.0.187.
+ * keep it out (`listed: false`); the seven seed agents are offered since agentspecs 0.0.215.
  */
 export const isAgentspecOffered = (
   spec: Pick<Agentspec, 'enabled' | 'listed'> | undefined | null,
