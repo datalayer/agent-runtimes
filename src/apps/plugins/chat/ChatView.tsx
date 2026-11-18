@@ -56,6 +56,7 @@ import {
   offeredModels as offeredModelsFor,
   readServerCatalogue,
   readServerDecisions,
+  visitorsModels,
   type Decisions,
 } from '../../../chat/base/modelChoice';
 import { SUGGESTION_CHIP_WIDTH } from '../../../chat/display/EmptyState';
@@ -126,6 +127,7 @@ import {
   type AgentsOutput,
 } from '../agents/plugin';
 import type { SandboxService } from '../agents/service';
+import { visitorForOf } from '../agents/visitorFor';
 import {
   BROWSER_CODE_TOOL,
   dataUrlBase64,
@@ -1468,9 +1470,13 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * Told whether an in-page agent is going to ask at all: a workspace on a
    * server-backed agent authenticates itself, and minting a visitor's one
    * trial key for it would start a clock against a conversation that never
-   * spends it.
+   * spends it. A visitor's key names what it is for (`visitorForOf`): the
+   * models it is served are that application's, team's or scene's.
    */
-  const { inference, anonymous } = useBrowserInference(inPage);
+  const visitorFor = visitorForOf(
+    reactor.getConfig<AgentsConfig>(AGENTS_PLUGIN_NAME),
+  );
+  const { inference, anonymous } = useBrowserInference(inPage, visitorFor);
   /* Read from the store rather than passed in: the sign-in form inside the
      expiry panel writes here, so the same render that gains a member gains
      the wording that goes with one. */
@@ -2167,17 +2173,22 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    */
   const offeredModels = useMemo<ModelConfig[]>(
     () =>
-      offeredModelsFor(catalogModels, () =>
-        Object.values(AI_MODEL_CATALOGUE)
-          // A typed-decision model answers typed questions, not a chat.
-          .filter(model => model.available && isChatModel(model))
-          .map(model => ({
-            id: model.id,
-            name: model.name,
-            provider: model.provider,
-          })),
+      // A visitor without an account is not offered the models kept for
+      // people signed in (`visitorsModels`).
+      visitorsModels(
+        offeredModelsFor(catalogModels, () =>
+          Object.values(AI_MODEL_CATALOGUE)
+            // A typed-decision model answers typed questions, not a chat.
+            .filter(model => model.available && isChatModel(model))
+            .map(model => ({
+              id: model.id,
+              name: model.name,
+              provider: model.provider,
+            })),
+        ),
+        Boolean(signedInUser),
       ),
-    [catalogModels],
+    [catalogModels, signedInUser],
   );
 
   /*

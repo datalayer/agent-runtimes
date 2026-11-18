@@ -184,6 +184,13 @@ export type LoopPresetOptions = {
   agentSummary?: boolean;
   /** The team whose agents are offered. */
   teamId?: string;
+  /**
+   * What a visitor's key for an in-page agent is for: `team:<id>`,
+   * `scene:<id>`, an application (an example's id, `at:<slug>`,
+   * `library:<uid>`) or `battle:<id>`; ai-inference serves the key the models
+   * of what it names. Unsaid, the team's (`team:<teamId>`), else none.
+   */
+  visitorFor?: string;
   /** What a local agent is created from, when one is. */
   localAgent?: AgentsConfig['localAgent'];
   /** The agentspec a Datalayer runtime is allocated with (the `datalayer` target). */
@@ -329,6 +336,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     showAgentVariants = false,
     agentSummary = true,
     teamId,
+    visitorFor,
     teamPicker = true,
     pageLayout = false,
     pageLayoutArrangement = 'page',
@@ -473,6 +481,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
       showAgentVariants,
       showAgentSummary: agentSummary,
       teamId,
+      visitorFor,
       showTeamPicker: teamPicker,
       localAgent:
         localAgent ??

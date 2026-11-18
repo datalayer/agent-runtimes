@@ -186,6 +186,7 @@ export function LoopEmbed({
       preset.showAgentVariants,
       preset.agentSummary,
       preset.teamId,
+      preset.visitorFor,
       preset.teamPicker,
       preset.pageLayout,
       preset.pageLayoutTurnPanel,

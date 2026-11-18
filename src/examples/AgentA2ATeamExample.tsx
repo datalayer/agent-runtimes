@@ -117,7 +117,12 @@ function AgentA2ATeam(): JSX.Element {
     import.meta.env.VITE_A2A_ACCOUNTING_URL ||
     `${runtimeUrl}/api/v1/a2a/agents/${ACCOUNTING.id}`;
   const accountingKey = import.meta.env.VITE_A2A_ACCOUNTING_KEY || undefined;
-  const { inference, needsSignIn, anonymous } = useBrowserInference(true);
+  // A visitor's key names the team it is for: its models are the team's.
+  const visitorFor = `team:${TEAM.id}`;
+  const { inference, needsSignIn, anonymous } = useBrowserInference(
+    true,
+    visitorFor,
+  );
   // The temporary key's own clock, read out of it: when it ends and how long
   // it was signed for, as core's countdown draws them.
   const accountingKeyClock = useMemo(() => {
@@ -233,7 +238,9 @@ function AgentA2ATeam(): JSX.Element {
               expiresAt={anonymous.expiresAt}
               grantedMs={anonymous.grantedMs}
               label={`${SALES.name}'s trial key`}
-              onExpire={() => useAnonymousSessionStore.getState().expire()}
+              onExpire={() =>
+                useAnonymousSessionStore.getState().expire(visitorFor)
+              }
             />
           )}
           {accountingKeyClock && !accountingKeyEnded && (

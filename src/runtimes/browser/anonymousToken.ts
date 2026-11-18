@@ -97,29 +97,40 @@ export type AnonymousSession = {
   error?: string;
 };
 
-type AnonymousSessionStore = AnonymousSession & {
-  /** Whether the one retry has been spent, so a refusal cannot loop. */
-  retried?: boolean;
+type AnonymousSessionStore = {
   /**
-   * Get a key, if this visitor has not had one.
+   * The keys this page holds, one per thing it runs (`visitorFor`): a team,
+   * a scene, an application, a Battle. Each is minted, counted down and
+   * spent apart, since ai-inference serves a key the models of what it names.
+   */
+  sessions: Record<string, KeyedSession>;
+  /**
+   * Get a key for `visitorFor`, if this visitor has not had one for it.
    *
    * Idempotent by design: every consumer may call it, and a session already
    * under way — or already spent — is left exactly as it is. Spent in
    * particular: minting again on the next render is how a trial that is
-   * supposed to end becomes one that never does.
+   * supposed to end becomes one that never does. Nothing is asked for
+   * nothing: a key always names what it is for.
    */
-  start: (inferenceUrl: string) => void;
+  start: (inferenceUrl: string, visitorFor: string) => void;
   /**
-   * Declare the key spent, now.
+   * Declare the key for `visitorFor` spent, now.
    *
    * Called by the store's own timer, and by anything that can see the clock
    * has passed — a countdown on screen recomputes from the wall clock every
    * tick, where a `setTimeout` in a background tab is only ever late.
    */
-  expire: () => void;
-  /** Give the key up. Called when a member signs in, whose token is better. */
-  clear: () => void;
+  expire: (visitorFor: string) => void;
+  /** Give the keys up — `visitorFor`'s, or every one. Called when a member signs in, whose token is better. */
+  clear: (visitorFor?: string) => void;
 };
+
+/** One key's session, and whether its one retry has been spent, so a refusal cannot loop. */
+type KeyedSession = AnonymousSession & { retried?: boolean };
+
+/** A key nobody has asked for. */
+const IDLE: AnonymousSession = { status: 'idle' };
 
 /**
  * What to assume when a token says nothing about its own life.
@@ -135,13 +146,18 @@ const DEFAULT_TTL_MS = 300_000;
 const RETRY_MS = 3_000;
 
 /**
- * The expiry timer, module-scoped because the store is.
+ * The expiry timers, one per key, module-scoped because the store is.
  *
- * Held outside the state so that clearing the session can cancel it — a timer
- * left running would mark a signed-in member's session expired a minute after
- * they signed in.
+ * Held outside the state so that clearing a session can cancel its timer — a
+ * timer left running would mark a signed-in member's session expired a
+ * minute after they signed in.
  */
-let pendingTimer: ReturnType<typeof setTimeout> | undefined;
+const pendingTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+function cancelTimer(visitorFor: string): void {
+  clearTimeout(pendingTimers.get(visitorFor));
+  pendingTimers.delete(visitorFor);
+}
 
 /** The claims this module reads. Everything else in the token is the service's. */
 type JwtClaims = {
@@ -213,18 +229,41 @@ export function tokenLifetimeMs(
 }
 
 /**
- * Mint one. Throws if the service refuses.
+ * What a key is asked for with (18 November 2026): what it is for. A team, a
+ * scene, an application — an example's id, `at:<slug>`, `library:<uid>` —
+ * is the service's `app`; `battle:<id>` is the catalogue Battle it is played
+ * for, its `battle`.
+ */
+export function anonymousTokenRequest(visitorFor: string): {
+  app?: string;
+  battle?: string;
+} {
+  return visitorFor.startsWith(BATTLE_PREFIX)
+    ? { battle: visitorFor.slice(BATTLE_PREFIX.length) }
+    : { app: visitorFor };
+}
+
+/** What `visitorFor` says to name a Battle. */
+const BATTLE_PREFIX = 'battle:';
+
+/**
+ * Mint one for `visitorFor`. Throws if the service refuses, or for nothing.
  *
  * The moment it dies is read off the token itself; see {@link tokenLifetimeMs}.
  */
 export async function fetchAnonymousToken(
   inferenceUrl: string,
+  visitorFor: string,
   signal?: AbortSignal,
 ): Promise<AnonymousToken> {
+  if (!visitorFor) {
+    throw new Error("A visitor's key names what it is for.");
+  }
   const base = inferenceUrl.replace(/\/+$/, '');
   const response = await fetch(`${base}/api/ai-inference/v1/anonymous/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(anonymousTokenRequest(visitorFor)),
     signal,
   });
   if (!response.ok) {
@@ -244,19 +283,39 @@ export async function fetchAnonymousToken(
   };
 }
 
+/** The session the store holds for `visitorFor`: `idle` when none was asked for. */
+export function anonymousSessionOf(
+  state: Pick<AnonymousSessionStore, 'sessions'>,
+  visitorFor: string,
+): AnonymousSession {
+  return state.sessions[visitorFor] ?? IDLE;
+}
+
 export const useAnonymousSessionStore = create<AnonymousSessionStore>(
   (set, get) => {
+    const of = (visitorFor: string): KeyedSession =>
+      get().sessions[visitorFor] ?? IDLE;
+    const put = (visitorFor: string, session: KeyedSession) =>
+      set(state => ({
+        sessions: { ...state.sessions, [visitorFor]: session },
+      }));
+
     /** Ask for a key, and arrange for the end of it. */
-    const mint = (inferenceUrl: string) => {
-      set({ status: 'minting', error: undefined });
-      void fetchAnonymousToken(inferenceUrl)
+    const mint = (inferenceUrl: string, visitorFor: string) => {
+      put(visitorFor, {
+        ...of(visitorFor),
+        status: 'minting',
+        error: undefined,
+      });
+      void fetchAnonymousToken(inferenceUrl, visitorFor)
         .then(minted => {
           // Somebody signed in while the request was in flight; their token is
           // the better one and this session was already cleared.
-          if (get().status !== 'minting') {
+          if (of(visitorFor).status !== 'minting') {
             return;
           }
-          set({
+          put(visitorFor, {
+            ...of(visitorFor),
             status: 'active',
             token: minted.token,
             // Both straight from the token: when it dies, and how long it was
@@ -267,7 +326,7 @@ export const useAnonymousSessionStore = create<AnonymousSessionStore>(
             error: undefined,
           });
 
-          clearTimeout(pendingTimer);
+          cancelTimer(visitorFor);
           /*
            * The store expires itself rather than waiting to be told.
            *
@@ -276,13 +335,16 @@ export const useAnonymousSessionStore = create<AnonymousSessionStore>(
            * go on sending a dead key and reading the 401 as the agent being
            * broken.
            */
-          pendingTimer = setTimeout(
-            () => get().expire(),
-            Math.max(0, minted.expiresAt - Date.now()),
+          pendingTimers.set(
+            visitorFor,
+            setTimeout(
+              () => get().expire(visitorFor),
+              Math.max(0, minted.expiresAt - Date.now()),
+            ),
           );
         })
         .catch((error: unknown) => {
-          if (get().status !== 'minting') {
+          if (of(visitorFor).status !== 'minting') {
             return;
           }
           const message =
@@ -297,88 +359,90 @@ export const useAnonymousSessionStore = create<AnonymousSessionStore>(
            * that was briefly unreachable — without turning a refusal into a
            * loop.
            */
-          const firstFailure = !get().retried;
-          set({ status: 'failed', error: message, retried: true });
+          const firstFailure = !of(visitorFor).retried;
+          put(visitorFor, {
+            ...of(visitorFor),
+            status: 'failed',
+            error: message,
+            retried: true,
+          });
           if (firstFailure) {
-            clearTimeout(pendingTimer);
-            pendingTimer = setTimeout(() => {
-              if (get().status === 'failed') {
-                mint(inferenceUrl);
-              }
-            }, RETRY_MS);
+            cancelTimer(visitorFor);
+            pendingTimers.set(
+              visitorFor,
+              setTimeout(() => {
+                if (of(visitorFor).status === 'failed') {
+                  mint(inferenceUrl, visitorFor);
+                }
+              }, RETRY_MS),
+            );
           }
         });
     };
 
     return {
-      status: 'idle',
+      sessions: {},
 
-      start: (inferenceUrl: string) => {
-        const { status } = get();
+      start: (inferenceUrl: string, visitorFor: string) => {
         // Minting, live, retrying, or spent: all four already have their
         // answer. Only a visitor who has never asked gets a key, which is what
         // stops one being handed out again on the next render.
-        if (status !== 'idle') {
+        if (!inferenceUrl || !visitorFor || of(visitorFor).status !== 'idle') {
           return;
         }
-        if (!inferenceUrl) {
-          return;
-        }
-        mint(inferenceUrl);
+        mint(inferenceUrl, visitorFor);
       },
 
-      expire: () => {
-        const { status } = get();
+      expire: (visitorFor: string) => {
+        const { status } = of(visitorFor);
         if (status === 'idle' || status === 'expired') {
           return;
         }
-        clearTimeout(pendingTimer);
-        pendingTimer = undefined;
+        cancelTimer(visitorFor);
         // The token goes with the status: anything still holding a reference
         // to this session must not be able to send a key the service will
         // refuse.
-        set({ status: 'expired', token: undefined });
+        put(visitorFor, {
+          ...of(visitorFor),
+          status: 'expired',
+          token: undefined,
+        });
       },
 
-      clear: () => {
-        if (get().status === 'idle') {
+      clear: (visitorFor?: string) => {
+        if (visitorFor === undefined) {
+          for (const key of pendingTimers.keys()) {
+            cancelTimer(key);
+          }
+          set({ sessions: {} });
           return;
         }
-        clearTimeout(pendingTimer);
-        pendingTimer = undefined;
-        set({
-          status: 'idle',
-          token: undefined,
-          expiresAt: undefined,
-          grantedMs: undefined,
-          error: undefined,
-          retried: false,
+        if (!get().sessions[visitorFor]) {
+          return;
+        }
+        cancelTimer(visitorFor);
+        set(state => {
+          const { [visitorFor]: _dropped, ...rest } = state.sessions;
+          return { sessions: rest };
         });
       },
     };
   },
 );
 
-/** Read the shared session without touching it. For anything that only draws it. */
-export function useAnonymousSession(): AnonymousSession {
-  /*
-   * The whole state, not a projection of it.
-   *
-   * A selector building `{status, token, ...}` returns a new object on every
-   * render, and React's `useSyncExternalStore` — which is what zustand is
-   * built on — treats an unstable snapshot as a loop. The store object itself
-   * changes identity exactly when something in it changed, which is the
-   * subscription that was wanted anyway.
-   */
-  return useAnonymousSessionStore();
+/** Read the session for `visitorFor` without touching it. For anything that only draws it. */
+export function useAnonymousSession(visitorFor: string): AnonymousSession {
+  // The session object itself, stable until it changes: a selector building a
+  // new object each render is a loop under `useSyncExternalStore`.
+  return useAnonymousSessionStore(state => state.sessions[visitorFor] ?? IDLE);
 }
 
 /**
  * Hold an anonymous key for as long as one is wanted.
  *
- * The driving half: exactly one component in a tree should call this — the
- * chat that would send the token — and everything else that needs to know
- * reads {@link useAnonymousSession}.
+ * The driving half: exactly one component per thing a page runs should call
+ * this — the chat that would send the token — and everything else that needs
+ * to know reads {@link useAnonymousSession} with the same `visitorFor`.
  *
  * @param inferenceUrl Where the service is.
  * @param enabled False when there is a signed-in member, whose own token is
@@ -386,24 +450,31 @@ export function useAnonymousSession(): AnonymousSession {
  *   not expire. Also false where no in-page agent will ask for inference at
  *   all, so a workspace on a server-backed agent does not burn a trial nobody
  *   is using.
+ * @param visitorFor What the key is for (18 November 2026): `team:<id>`,
+ *   `scene:<id>`, an application (an example's id, `at:<slug>`,
+ *   `library:<uid>`) or `battle:<id>`. ai-inference serves a key the models of
+ *   what it names, and mints none for nothing: empty, no key is asked for.
  */
 export function useAnonymousInferenceSession(
   inferenceUrl: string,
   enabled: boolean,
+  visitorFor: string,
 ): AnonymousSession {
-  const session = useAnonymousSession();
+  const session = useAnonymousSession(visitorFor);
 
   useEffect(() => {
     const { start, clear } = useAnonymousSessionStore.getState();
-    if (enabled && inferenceUrl) {
-      start(inferenceUrl);
+    if (enabled && inferenceUrl && visitorFor) {
+      start(inferenceUrl, visitorFor);
       return undefined;
     }
     // Somebody signed in, or the workspace moved to an agent that does its own
     // authenticating: the key is not ours to keep holding.
-    clear();
+    if (visitorFor) {
+      clear(visitorFor);
+    }
     return undefined;
-  }, [inferenceUrl, enabled]);
+  }, [inferenceUrl, enabled, visitorFor]);
 
   return session;
 }

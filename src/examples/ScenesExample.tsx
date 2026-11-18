@@ -194,8 +194,12 @@ function Scene({
   const entry = stage.entry;
   const entryInBrowser = entry.runsIn === 'browser';
   const runtimeMembers = useMemo(() => runtimeMembersOf(stage), [stage]);
-  const { inference, needsSignIn, anonymous } =
-    useBrowserInference(entryInBrowser);
+  // A visitor's key names the scene it is for: its models are the scene's.
+  const visitorFor = `scene:${scene.id}`;
+  const { inference, needsSignIn, anonymous } = useBrowserInference(
+    entryInBrowser,
+    visitorFor,
+  );
   // One tracer of what every member does: each inspector shows its own.
   const { tracer: inspector } = useAgentInspector();
   const [reached, setReached] = useState<Record<string, Reached>>({});
@@ -308,7 +312,9 @@ function Scene({
             expiresAt={anonymous.expiresAt}
             grantedMs={anonymous.grantedMs}
             label={`${entry.app.name}'s trial key`}
-            onExpire={() => useAnonymousSessionStore.getState().expire()}
+            onExpire={() =>
+              useAnonymousSessionStore.getState().expire(visitorFor)
+            }
           />
         </Box>
       )}

@@ -63,7 +63,9 @@ import {
  */
 export const DEFAULT_DATALAYER_AGENTSPEC = 'jupyter-tutor';
 
-export const AGENTS_PLUGIN_NAME = '@datalayer/loop-plugin-agents';
+import { AGENTS_PLUGIN_NAME } from './pluginName';
+
+export { AGENTS_PLUGIN_NAME };
 
 export type AgentsConfig = {
   /** Server the server-backed targets are reached through. */
@@ -117,6 +119,13 @@ export type AgentsConfig = {
    * teamspec decides what each of them is told about the conversation.
    */
   teamId?: string;
+  /**
+   * What a visitor's key for an in-page agent is for (`visitorForOf`):
+   * `team:<id>`, `scene:<id>`, an application (an example's id, `at:<slug>`,
+   * `library:<uid>`) or `battle:<id>`. ai-inference serves the key the models
+   * of what it names and mints none for nothing. Unsaid, the team's.
+   */
+  visitorFor?: string;
   /**
    * Whether the header offers the team's member picker.
    *
