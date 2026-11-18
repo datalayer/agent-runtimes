@@ -408,6 +408,41 @@ export. While the page lives, the person's edits and the agent's writes are one 
 of its own, which a deck kept in the page does not have. The two are cards in the conversation
 (`placements: [message]`) until an application has side panels.
 
+## Under its composer: what it runs with
+
+An application's composer lists what its agent runs with, in three menus beside its other
+controls: its **MCP servers**, its **skills** and its **model** (`EquipmentBar`,
+`chat/prompt/menus/EquipmentMenus`). Each lists everything the agent declares, on or off, and
+each trigger counts what is on: `1/2` servers running, `3/5` skills active, the model's name (its
+icon alone on a phone).
+
+| Menu | A row says |
+|------|-----------|
+| MCP servers | **Running** (with how many tools), **Starting**, **Failed** (with the reason its start gave), **Not started**, or **Off**: an optional server whose secrets are not set up, with what it needs, such as `needs DISCORD_BOT_TOKEN, DISCORD_GUILD_ID`. |
+| Skills | **Active**, or **Not activated** with what it needs: `needs TAVILY_API_KEY`, or `needs one of PEXELS_API_KEY, UNSPLASH_ACCESS_KEY` for a skill that one key among several sets up. |
+| Model | **In use**, **Available**, or **Not available** with the runtime's reason. |
+
+What is said of a secret is the *name* of its variable, never its value.
+
+**They are read, not chosen.** A person using an application chooses none of these: its builder
+did, in its spec. A row is a menu item a keyboard reaches and a screen reader reads whole (its
+name, its state, why); choosing one does nothing and leaves the menu open, and each menu says so
+at its foot. Nothing is switched from here, and no model is sent with a run. This holds for
+everybody: a visitor at a demo, somebody signed in at a deployment's page, and its builder in the
+Preview. An agent's own chat keeps its selectors, which do switch.
+
+**Where it is read.** The servers and the skills come from the runtime the application runs on,
+`GET /api/v1/apps/agents/{agent}/equipment` ([the session API](./session-api.mdx)), asked with
+the caller's token and again every half minute; the models from the chat's read of them,
+`GET /api/v1/configure/models`. Both are answered wherever an application runs: the visitors'
+runtime and a deployment's included. Until the runtime answers, the menus list what the agent's
+spec declares, with no state, and say **Declared**; they stay so on a runtime that does not have
+the route, and for models when the runtime calls none of them usable (the visitors' runtime
+calls the model with each visitor's own token).
+
+Shown for an application that runs on a runtime with its Appspec; not for an agent turned in
+the page, which has no runtime to ask.
+
 ## Before its page: a host's left panel
 
 A host may say something *about* the application on the leading edge of its
@@ -991,7 +1026,7 @@ conversation, and a decision drawn by the real workspace as its host's page
 says when one is not (`app-page-blocks.test.tsx`); components its developer
 wrote, reviewed, contributed by its own plugin and drawn in their frame
 (`app-custom-components.test.tsx`); the presence state (`presence-status.test.ts`); in
-a header UI — its tool's typed arguments, a call changing an indicator, a drop-down's option going with the next run, a button's message, names and roles (`header-items.test.tsx`), and the sentences the runtime tells for a drop-down (`test_app_header.py`, `test_app_sessions.py`); in
+the three menus under the composer — every server, skill and model listed with its state and why, read only, the spec until the runtime answers (`equipment-menus.test.tsx`, `test_app_equipment.py`); a header UI — its tool's typed arguments, a call changing an indicator, a drop-down's option going with the next run, a button's message, names and roles (`header-items.test.tsx`), and the sentences the runtime tells for a drop-down (`test_app_header.py`, `test_app_sessions.py`); in
 the landing, the home page's line — the model resolved as the chat resolves
 it, the words of the line — and its *How it is built* (`homeLight.spec.ts`).
 With nobody present: reading goes on, acting without a rule refused, a rule

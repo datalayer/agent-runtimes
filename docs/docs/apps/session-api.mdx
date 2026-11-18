@@ -266,6 +266,7 @@ as `GET` says it — then the turn's events.
 | `GET /sessions/{uid}/messages` | **Its conversation**, as AG-UI messages: `{uid, messages}`. What a page that reloaded draws again. |
 | `GET /sessions` | The caller's sessions on this runtime (`?agent=`). |
 | `POST /agents/{agent}/ag-ui/` | The application's agent over **AG-UI**, each thread a session, opened at its first run. |
+| `GET /agents/{agent}/equipment` | **What its agent runs with**: every MCP server and skill it declares, each with its state and why one is off, as `{agent, mcp_servers: [{id, name, optional, state, reason, missing_env_vars, tools?}], skills: [{id, name, description, optional, state, reason, missing_env_vars, one_of_env_vars}]}`. A server is `started`, `starting`, `failed`, `not_started` or `left_out`; a skill `active` or `not_activated`. A reason names the variables needed (`needs TAVILY_API_KEY`, `needs one of A, B`), never a value. For whoever may talk to the application, a visitor at a public one included; it reads only. What an application's composer lists ([Under its composer](./app-renderer.mdx#under-its-composer-what-it-runs-with)). |
 | `POST /visitors/agent` | On the visitors' runtime, for a visitor's token only: **the agent the token names**, made if it is not (an address's), as `{agent, app_id}` — `at-<slug>` and the application it runs, or an example's id. Refused in ai-agents' sentence for an address a visitor may not talk to, `404` for an example not kept and on any other runtime. |
 
 What `GET` says of a session:
@@ -616,6 +617,13 @@ besides the message:
   }
 }
 ```
+
+`header` (not in the example) says the option each drop-down of the chat's title
+bar is on, by header UI then by item: `{"shop-header": {"budget": "100"}}`.
+The runtime tells the agent the sentence the UI spec declares for each, for
+that run, and refuses with 422 a header, a drop-down or an option the
+catalogue does not have (*Budget has no option '75'.*): the page sends ids,
+never words ([In its title bar](./app-renderer.mdx#in-its-title-bar-buttons-drop-downs-and-indicators)).
 
 `modes` says the option of each of the application's modes the person is in;
 unsaid, each stays where it was, else on its default or first

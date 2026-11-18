@@ -104,6 +104,8 @@ import {
 } from '../../../stores';
 import { useIAMStore } from '../../../state';
 import { useVisitorToken } from '../../apps/visitorToken';
+import { useEquipment } from '../../../hooks/useEquipment';
+import { EquipmentBar } from '../../../chat/prompt/menus/EquipmentMenus';
 import {
   ANONYMOUS_MINUTES,
   ANONYMOUS_WORDS,
@@ -1755,6 +1757,23 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * socket, no runtime-wide model switch. A Preview runs on the Maker's.
    */
   const ownRoutesOnly = Boolean(deploymentUid || visitors);
+  /*
+   * What an application runs with, for its composer to list: its agent's
+   * MCP servers, skills and models, each with its state, read from its
+   * runtime (`/api/v1/apps/agents/{agent}/equipment`, the models' own read),
+   * its spec until the runtime answers. To read only: nothing is switched
+   * from it, and no model is sent with a run.
+   */
+  const equipmentShown = Boolean(presence) && runsApp && !inPage;
+  const equipment = useEquipment({
+    agentServerUrl,
+    agentId,
+    token: iamToken || undefined,
+    specId: appAgentOf(
+      blueprintTurn?.createPayload?.app_spec ?? hostCreatePayload?.app_spec,
+    ),
+    enabled: equipmentShown,
+  });
   if (ownRoutesOnly && !runsApp) {
     throw new Error(
       'A deployment’s page runs its application: its host gave no app_spec.',
@@ -2347,11 +2366,15 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       ) : undefined,
     footerExtras:
       anonymousConfig ||
+      equipmentShown ||
       promptActions.length > 0 ||
       (voice && voice.input !== 'off') ? (
         <>
           {/* Who is talking: nobody signed in (the user, 15 November 2026). */}
           {anonymousConfig ? <AnonymousFooterLabel /> : null}
+          {/* What an application runs with, to read: its MCP servers, its
+              skills and its model, each with its state (18 November 2026). */}
+          {equipmentShown ? <EquipmentBar equipment={equipment} /> : null}
           {promptActions.length > 0 ? (
             <ReactorSlot slot={LoopSlots.promptAction} props={{ workspace }} />
           ) : null}
@@ -2401,7 +2424,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       under its composer — the agents, the model, the tools and their servers,
       the skills: a person using an application is not
       choosing them, and its builder chose them in its spec. An agent's chat
-      keeps them.
+      keeps them. An application shows them to read instead (`EquipmentBar`,
+      in `footerExtras`): every server, skill and model, with its state.
     */
     showAgentsMenu: !presence,
     showInlineAgentsMenu: false,
@@ -3300,6 +3324,12 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
  * Rendered only when a plugin contributed one — a chat on its own has nothing
  * to pick between, and a control with a single option is noise.
  */
+/** The agent an application's spec names (`worker-shopper:0.0.1`), if it names one. */
+function appAgentOf(appSpec: unknown): string | undefined {
+  const agent = (appSpec as { agent?: unknown } | null | undefined)?.agent;
+  return typeof agent === 'string' && agent ? agent : undefined;
+}
+
 function SurfacePicker({
   surfaces,
   active,

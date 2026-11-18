@@ -2868,6 +2868,39 @@ def _said_sound(forwarded: Any) -> Optional[Tuple[bytes, str, float, str]]:
     return raw, kind, seconds, str(voice.get("language") or "")
 
 
+@router.get("/agents/{agent}/equipment")
+async def agent_equipment(agent: str, request: Request) -> Dict[str, Any]:
+    """What an application's agent is equipped with: its MCP servers and skills, each with its state.
+
+    What the composer of an application's page lists (the user, 18 November
+    2026: "those selectors should indicate all the available (enabled or
+    disabled)"): every MCP server and skill its agent declares — started,
+    failed, left out, not activated — with why one is off, by the names of
+    the variables it needs and never by a value
+    (:mod:`agent_runtimes.apps.equipment`). Read by whoever may talk to the
+    application, a visitor at a public one included; it only reads, and
+    gives nobody a way to switch anything. The models it may run on are the
+    chat's own read (``GET /api/v1/configure/models``).
+    """
+    from agent_runtimes.apps.equipment import equipment_of_agent
+    from agent_runtimes.apps.sessions import SessionRefused, session_app
+
+    try:
+        app, instance = session_app(agent)
+    except SessionRefused as refused:
+        raise _refused(refused) from None
+    authorized = await _authorize(
+        request, False, app, str(instance.get("app_uid") or "")
+    )
+    _reaches(authorized.caller, agent)
+    said = equipment_of_agent(agent)
+    if said is None:
+        raise HTTPException(
+            status_code=404, detail=f"No agent {agent} runs on this runtime."
+        )
+    return said
+
+
 @router.post("/agents/{agent}/ag-ui/")
 async def session_agui(agent: str, request: Request) -> Any:
     """An application's agent over AG-UI, each thread a session of it.
