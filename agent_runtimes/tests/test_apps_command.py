@@ -165,6 +165,8 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
         "demo-traveller",
         "demo-accountant",
         "demo-aws-steward",
+        # The seventh seed agent's demo (agentspecs 0.0.215).
+        "demo-jupyter-data-analyst",
         # The Demo Shop, a company of DummyJSON's products (agentspecs 0.0.204).
         "demo-shop",
     }
@@ -173,9 +175,8 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
     # Its agent, example-simple, the neutral default: enabled, out of the pickers
     # since agentspecs 0.0.187 (listed: false).
     assert reports["decide"].setup == []
-    # The home page's demos run on the six agents the catalogue enables (the Traveller's
-    # on example-blank until the visitors' runtime image carries worker-traveller).
-    for demo in ("marketer", "shopper", "accountant", "traveller", "terra", "aws-steward"):
+    # The public pages' demos run on the seven agents the catalogue enables.
+    for demo in ("marketer", "shopper", "accountant", "traveller", "terra", "aws-steward", "jupyter-data-analyst"):
         assert reports[f"demo-{demo}"].setup == [], demo
     # Gmail's server is offered since agentspecs 0.0.128; Inbox triage's worker is out of
     # the picker since agentspecs 0.0.164 (enabled: false), so its setup names it.

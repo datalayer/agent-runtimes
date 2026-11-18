@@ -1155,6 +1155,9 @@ async def gateway_toolsets_of_the_run(
         # A visitor acts in nobody's name: only a company the deployment lets its
         # visitors use, in its owner's account, with the principal's token ai-agents
         # gave this runtime for it (`visitors_pap`); every other one is left out.
+        # Of that company's tools the run is offered three — read, propose, confirm —
+        # and no other: `pap_mcp_call` could reach the company's order operation
+        # around the approval the gateway records, so the model never sees it.
         from agent_runtimes.apps import visitors_pap
         from agent_runtimes.apps.pap_connections import domain_of
 
@@ -1171,6 +1174,7 @@ async def gateway_toolsets_of_the_run(
                 for sid, acting in companies_of_agent(agent_id)
                 if acting == "owner" and domain_of(sid) in let_in
             ),
+            company_tools=visitors_pap.VISITOR_COMPANY_TOOLS,
         )
     from agent_runtimes.apps.acting import acting_token, servers_in_users_name
 

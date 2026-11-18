@@ -93,6 +93,15 @@ def _left_out(server_id: str) -> None:
     )
 
 
+def _only(names: frozenset[str]) -> Any:
+    """A toolset's filter that offers the tools named, and no other."""
+
+    def offered(_ctx: Any, tool: Any) -> bool:
+        return str(getattr(tool, "name", "")) in names
+
+    return offered
+
+
 def toolsets_for_the_run(
     toolsets: list[Any],
     token: str,
@@ -100,6 +109,7 @@ def toolsets_for_the_run(
     in_users_name: frozenset[str] = frozenset(),
     users_token: str = "",
     companies: tuple[tuple[str, str], ...] = (),
+    company_tools: frozenset[str] | None = None,
 ) -> list[Any]:
     """
     A run's toolsets, with the Datalayer gateway reached as the run.
@@ -124,6 +134,12 @@ def toolsets_for_the_run(
         (ADR-1), as `(server id, in whose name)`: each the
         gateway's `pap` toolset for that company, its tools named with the
         server id, reached in the person's name unless it says `owner`.
+    company_tools : frozenset[str] | None
+        The only tools of a company's toolset the run is offered, by the
+        gateway's own names (`pap_read`); every tool when unsaid. A visitor's
+        run is offered three (`visitors_pap.VISITOR_COMPANY_TOOLS`): the model
+        never sees the others, so it cannot reach a company's operation
+        around the approval the gateway records.
 
     Returns
     -------
@@ -187,15 +203,15 @@ def toolsets_for_the_run(
             # principal: left out, the turn answered without it.
             _left_out(sid)
             continue
-        swapped.append(
-            DisplayMCPToolset(
-                f"{gateway_url()}?{query}",
-                id=sid,
-                http_client=tracing_client(
-                    headers={"Authorization": f"Bearer {bearer}"}
-                ),
-            ).prefixed(tool_prefix(sid))
+        company: Any = DisplayMCPToolset(
+            f"{gateway_url()}?{query}",
+            id=sid,
+            http_client=tracing_client(headers={"Authorization": f"Bearer {bearer}"}),
         )
+        if company_tools is not None:
+            # By the gateway's own names, before the company's prefix.
+            company = company.filtered(_only(company_tools))
+        swapped.append(company.prefixed(tool_prefix(sid)))
     if not reaches:
         # An agent not given the gateway is not given it by a delegation.
         return toolsets

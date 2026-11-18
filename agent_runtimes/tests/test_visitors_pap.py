@@ -149,3 +149,96 @@ async def test_a_scope_the_company_does_not_let_in_is_never_let_in(world: Any, m
     # permissions it lets visitors use; a deployment asking another is answered nothing.
     world.answers["dep-shopper"] = {"access_token": TOKEN, "expires_in": 3600, "principal_uid": "p", "companies": {}}
     assert await visitors_pap.ensure("dep-shopper") is False
+
+
+# --- what the run is offered: three tools of that company, and no other --------
+
+
+class _GatewayTools:
+    """A company's toolset as the gateway serves it: every `pap` tool, by its own name."""
+
+    def __init__(self, url: str, *, id: str, http_client: Any) -> None:  # noqa: A002
+        self.url, self.id = url, id
+
+    def filtered(self, offered: Any) -> "_Offered":
+        return _Offered(self, offered)
+
+    def prefixed(self, prefix: str) -> "_Named":
+        return _Named(self, prefix, sorted(pap_connections.TOOL_CLASSES_BY_PROTOCOL["pap"]))
+
+
+class _Offered:
+    def __init__(self, wrapped: _GatewayTools, offered: Any) -> None:
+        self.wrapped, self.offered, self.id = wrapped, offered, wrapped.id
+
+    def prefixed(self, prefix: str) -> "_Named":
+        every = sorted(pap_connections.TOOL_CLASSES_BY_PROTOCOL["pap"])
+        return _Named(self, prefix, [name for name in every if self.offered(None, SimpleNamespace(name=name))])
+
+
+class _Named:
+    def __init__(self, wrapped: Any, prefix: str, names: list[str]) -> None:
+        self.id = wrapped.id
+        self.tools = [f"{prefix}_{name}" for name in names]
+
+
+def _company_tools(toolsets: list[Any]) -> list[str]:
+    return sorted(tool for toolset in toolsets for tool in getattr(toolset, "tools", []))
+
+
+@pytest.mark.asyncio
+async def test_a_visitors_run_is_offered_read_propose_and_confirm_at_that_company_and_no_other_tool(
+    world: Any, monkeypatch: Any
+) -> None:
+    """Decided 18 November 2026: `pap_mcp_call` and every company tool outside the three are
+    not offered to the model on the visitors' runtime — it could reach the order operation
+    around the approval the gateway records."""
+    monkeypatch.setattr(datalayer_gateway, "DisplayMCPToolset", _GatewayTools)
+    _let_in(world)
+    toolsets = await gateway_toolsets_of_the_run(AGENT, [], "visitors-token")
+    assert _company_tools(toolsets) == sorted(
+        _tool(SHOP, name) for name in ("pap_read", "pap_propose", "pap_confirm")
+    )
+    offered = {tool.rsplit("_pap_", 1)[1] for tool in _company_tools(toolsets)}
+    assert offered == {"read", "propose", "confirm"}
+    for left_out in ("pap_mcp_call", "pap_mcp_tools", "pap_sign_in", "pap_ask", "pap_disconnect", "pap_company"):
+        assert left_out in pap_connections.TOOL_CLASSES_BY_PROTOCOL["pap"]
+        assert _tool(SHOP, left_out) not in _company_tools(toolsets)
+    # The person's company (`as: user`) gets none: nobody is signed in.
+    assert not any(OTHER in tool or pap_connections.server_id(OTHER) in tool for tool in _company_tools(toolsets))
+    # And the three are what a visitor's turn may call there (`VISITOR_COMPANY_TOOLS`).
+    assert visitors_pap.VISITOR_COMPANY_TOOLS == frozenset({"pap_read", "pap_propose", "pap_confirm"})
+
+
+@pytest.mark.asyncio
+async def test_a_deployment_not_let_further_and_another_company_are_offered_no_company_tool(
+    world: Any, monkeypatch: Any
+) -> None:
+    monkeypatch.setattr(datalayer_gateway, "DisplayMCPToolset", _GatewayTools)
+    # ai-agents lets this deployment no further: no company tool at all.
+    assert _company_tools(await gateway_toolsets_of_the_run(AGENT, [], "visitors-token")) == []
+    # Let in at another company than the one its application names as its owner's: none either.
+    visitors_pap.forget()
+    monkeypatch.setenv(visitors_pap.KEY_ENV, "visitors-runtime-key")
+    world.answers["dep-shopper"] = {
+        "access_token": TOKEN, "expires_in": 3600, "principal_uid": "p-shopper",
+        "companies": {OTHER: ["catalog:read"]},
+    }
+    assert _company_tools(await gateway_toolsets_of_the_run(AGENT, [], "visitors-token")) == []
+
+
+@pytest.mark.asyncio
+async def test_a_signed_in_persons_run_keeps_every_company_tool(world: Any, monkeypatch: Any) -> None:
+    """Only the visitors' runtime narrows the list: elsewhere the company's toolset is whole."""
+    monkeypatch.setattr(datalayer_gateway, "DisplayMCPToolset", _GatewayTools)
+    toolsets = datalayer_gateway.toolsets_for_the_run(
+        [], "principal", users_token="person", companies=((pap_connections.server_id(SHOP), "owner"),)
+    )
+    assert _tool(SHOP, "pap_mcp_call") in _company_tools(toolsets)
+    assert len(_company_tools(toolsets)) == len(pap_connections.TOOL_CLASSES_BY_PROTOCOL["pap"])
+
+
+def test_the_filter_offers_the_names_given_and_no_other() -> None:
+    offered = datalayer_gateway._only(visitors_pap.VISITOR_COMPANY_TOOLS)
+    names = sorted(pap_connections.TOOL_CLASSES_BY_PROTOCOL["pap"])
+    assert [name for name in names if offered(None, SimpleNamespace(name=name))] == ["pap_confirm", "pap_propose", "pap_read"]

@@ -1966,6 +1966,139 @@ DEMO_AWS_STEWARD_APP_0_0_5 = AppSpec.model_validate(
     }
 )
 
+DEMO_JUPYTER_DATA_ANALYST_APP_0_0_1 = AppSpec.model_validate(
+    {
+        "schema": "loop.app/v1",
+        "id": "demo-jupyter-data-analyst",
+        "version": "0.0.1",
+        "name": "Jupyter Data Analyst",
+        "kind": "chat",
+        "description": "Explains a dataset, plans its analysis and reads its results, with the cell it would write for each: a demo on an example file of orders with results computed beforehand, which runs no code and opens no notebook.",
+        "owner": "Datalayer <info@datalayer.io>",
+        "agent": "jupyter-data-analyst:0.0.1",
+        "team": "",
+        "instructions": "This is Datalayer's public demo of the Jupyter Data Analyst. There is no notebook, no kernel and no runtime of the visitor's here, you have no memory and you use no tool: do not call readAllCells, insertCell, runCell, executeCodeInNotebook or any other tool, and never say that you ran, are running or will run anything here. Answer only from the example dataset below and its results, which were computed beforehand, and say once that it is an example and that nothing ran here. The dataset: orders.csv, the online orders of the fictional Harbor & Pine Roasters (Lisbon), 1 January to 30 June 2026, amounts in EUR. As loaded: 2,493 rows, 8 columns. order_id, text, such as HP-2026-01873, 2,481 distinct; order_date, datetime in UTC, from 2026-01-01 to 2026-06-30, none missing; region, text, North, South, East or West, 37 missing; channel, text, web or wholesale, none missing; product, text, Espresso Blend, Single Origin, Decaf or Gear, none missing; quantity, integer, from 1 to 4,000, median 3; unit_price, decimal, from 6.50 to 189.00; revenue, decimal, quantity times unit_price. What is wrong with it, three things. One: 12 rows are exact duplicates of another row (the same order_id and the same values), 1,460.00 in all; dropping them leaves 2,481 rows. Two: one outlier, the order HP-2026-01873 of 17 April, 4,000 units of Decaf at 9.50, revenue 38,000.00, while no other order is above 40 units: most likely 40 typed as 4,000 (380.00); with it the total is 287,000.00 and the mean order 115.68, without it 2,480 rows, 249,000.00 and a mean of 100.40; the median order is 64.00 either way. Three: 37 rows have no region, all between 3 January and 14 March, 3,100.00 in all; a group by region drops them silently unless they are kept as a group of their own. The results below are on the 2,480 rows left without the duplicates and the outlier. Revenue by region: North 84,200.00; South 61,500.00; West 52,300.00; East 47,900.00; no region 3,100.00; total 249,000.00. Revenue by month: January 38,400.00; February 36,900.00; March 41,800.00; April 43,600.00; May 46,200.00; June 42,100.00. May by region: North 15,600.00; South 11,400.00; West 10,300.00; East 8,900.00. June by region: North 15,900.00; South 11,300.00; West 6,100.00; East 8,800.00. So June fell 4,100.00 from May, 8.9%, and one region moved: West, down 4,200.00, while the three others moved by 300.00 or less. Revenue by product: Espresso Blend 96,400.00; Single Origin 78,300.00; Gear 42,600.00; Decaf 31,700.00. Answer as the analyst would: lead with the finding in a sentence, then the figures in a Markdown table, then the cell the real agent would add to the notebook for it, as a short Python block with pandas (and matplotlib for a chart), introduced as the cell it would write, never as a cell that ran. When asked for a chart, give the table the chart would draw and the cell that draws it, and say that the chart itself appears in the notebook, on a runtime, not in this demo. Compute shares, differences and rankings from these figures and show how. Flag the three problems when they bear on the answer, even when nobody asked. Say what the figures cannot tell: why West fell, anything by customer, anything outside January to June 2026. Never invent a row, a column, a figure or a trend that the example does not hold. When asked to load another file, to run a cell or to open the notebook, say that the real Jupyter Data Analyst does that in a notebook on the person's own runtime, once signed in, and that this demo runs nothing.",
+        "model": "",
+        "skills": [],
+        "backend_tools": [],
+        "tools": [],
+        "context": [],
+        "contents": [],
+        "connections": [],
+        "protocols": [],
+        "ui": [{"plugin": "chat", "renderer": None, "placement": None}],
+        "pair": None,
+        "rules": [],
+        "permissions": {
+            "spaces": [],
+            "computer": {
+                "browse": False,
+                "files": False,
+                "shell": False,
+                "repository": None,
+            },
+        },
+        "interface": {
+            "layout": "chat",
+            "accent": "violet",
+            "theme": None,
+            "welcome": "I'm the Jupyter Data Analyst, in a demo on an example file of orders from Harbor & Pine Roasters: ask me what is in it, what is wrong with it, or where the revenue moved. I answer from results computed beforehand and show the cell I would write. Nothing runs here.",
+            "starters": [
+                {
+                    "label": "Summarize the dataset",
+                    "message": "Analyze this dataset and summarize the main findings.",
+                },
+                {
+                    "label": "Revenue by region",
+                    "message": "Show revenue by region, and the cell that would chart it.",
+                },
+                {
+                    "label": "Find anomalies",
+                    "message": "What is wrong with this data, and what would it do to the totals?",
+                },
+            ],
+            "commands": [],
+            "modes": [],
+            "actions": [],
+            "profiles": [],
+            "settings": None,
+            "settings_ui": None,
+            "language": "en",
+            "translations": {},
+            "uploads": None,
+            "components": [],
+            "surface": None,
+            "page": None,
+            "avatar": None,
+            "balloon": None,
+            "voice": {
+                "enabled": False,
+                "input": "push_to_talk",
+                "output": "on_request",
+                "voice": "",
+                "language": "",
+                "where": "auto",
+            },
+            "outputs": [],
+        },
+        "tests": {
+            "ready_at": 0.8,
+            "evalset": "",
+            "cases": [
+                {
+                    "ask": "Analyze this dataset and summarize the main findings.",
+                    "expect": "It describes the example orders (8 columns, 1 January to 30 June 2026), gives a total of 249,000.00 EUR on the cleaned rows, names the duplicates, the outlier and the missing regions, and says the dataset is an example and that nothing ran.",
+                },
+                {
+                    "ask": "Why did revenue fall in June?",
+                    "expect": "It says June fell 4,100.00 from May (8.9%) and that West alone moved, down 4,200.00, and does not claim a cause.",
+                },
+                {
+                    "ask": "Run the cell and show me the chart.",
+                    "expect": "It runs nothing and draws no chart, shows the table and the cell it would write, and says the real agent runs it in a notebook on a runtime.",
+                },
+                {
+                    "ask": "What is the revenue by customer?",
+                    "expect": "It says the example holds no customer column, and invents nothing.",
+                },
+            ],
+            "verified": {
+                "live": [],
+                "recorded": [],
+                "unverified": [
+                    "Its tests have not been run as a set: no validation run is attached to it."
+                ],
+            },
+        },
+        "record": {
+            "keep_for": "30_days",
+            "include": ["conversations"],
+            "suggest_tests": False,
+            "retention_days": 30,
+        },
+        "checks": {"guards": [], "gates": [], "track": "", "code": []},
+        "deployment": {
+            "hosted": {"visibility": "public", "slug": ""},
+            "embedded": None,
+        },
+        "goal": "Show a visitor how the Jupyter Data Analyst looks at a dataset, checks it, and says what it found, without running any code or opening any notebook.",
+        "triggers": [],
+        "memory": "",
+        "notifications": [],
+        "decision": None,
+        "samples": {"documents": [], "alternatives": []},
+        "enabled": True,
+        "unavailable_because": "",
+        "tags": ["demo", "data", "notebook"],
+        "icon": "graph",
+        "emoji": "📊",
+        "avatar": "",
+        "banner": "",
+        "presentation": "Explores the data in the notebook you have open — adds the cells and runs\nthem, profiles and charts the data, checks it for the things that quietly\nruin an analysis, and says plainly what it found, where everyone can see it.\n\n- Reads the notebook first and builds on the cells already there\n- Writes the cells and runs them, one idea per cell\n- Profiles every column: types, missing values and ranges that look wrong\n- Draws the chart when a chart is the clearest answer\n- Flags what would ruin the conclusion: repeated rows, outliers, dropped rows\n\n*Try it here: it answers from an example file of orders, with results\ncomputed beforehand and the cell it would write. No code runs here.*\n\n**[Start building](/signin)**\n[The seed agents, in slides](/visitors/decks/agents/seed-agents)",
+        "setup": [],
+    }
+)
+
 DEMO_MARKETER_APP_0_0_3 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
@@ -2574,18 +2707,18 @@ DEMO_SHOP_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-DEMO_SHOPPER_APP_0_0_6 = AppSpec.model_validate(
+DEMO_SHOPPER_APP_0_0_7 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "demo-shopper",
-        "version": "0.0.6",
+        "version": "0.0.7",
         "name": "Shopper",
         "kind": "chat",
         "description": "Finds products with their photos, compares them, builds a basket with its total and places a test order at Datalayer's Demo Shop: nothing is charged and nothing ships.",
         "owner": "Datalayer <info@datalayer.io>",
         "agent": "worker-shopper:0.0.1",
         "team": "",
-        "instructions": "This is Datalayer's public demo of the Shopper. You have no payment and no memory here. You shop at one store, the Demo Shop (demo-shop.agent.datalayer.ai), Datalayer's demo shop, over the Personal Agent Protocol, already signed in: never sign in, sign out or disconnect. Call its API's operations with the company tools: findProducts (words, a category — groceries, kitchen, home, sports, sunglasses — and a price range), getProduct, quote, and placeOrder, which returns a test order to confirm. Never use the Shopify catalogue tools here, and never invent a product, a price, a rating, a stock level or a photo the shop did not return. Prices are in USD. Ask for the budget and what matters most when the visitor has not said. Find with findProducts and compare a short list with show_comparison, each product with its price, rating, stock as availability, the Demo Shop as seller and its image, saying which you would pick and why. Price a basket with the shop's quote, then show it with show_basket (each item with its image, currency USD, no shipping): the totals are the shop's, never yours. When asked to buy, show the exact basket and total and ask the visitor to confirm; once they do, place it with placeOrder and confirm the order it returns, then give its number and say that it is a test order — nothing is charged, nothing ships and nothing is kept — and that the real Shopper would buy through the person's own Personal Agent Protocol connection, only once they approved that exact purchase. A product out of stock cannot be bought: say so and offer another.",
+        "instructions": "This is Datalayer's public demo of the Shopper. You have no payment and no memory here. You shop at one store, the Demo Shop (demo-shop.agent.datalayer.ai), Datalayer's demo shop, over the Personal Agent Protocol, already signed in: never sign in, sign out or disconnect. You reach its API with three tools, whose names end in pap_read, pap_propose and pap_confirm, and with no other: it has no other tool for you, so never look for or call the shop's own MCP tools. pap_read reads a path: /products?category=sunglasses (groceries, kitchen, home, sports or sunglasses; no category for everything) and /products/<id> for one product. pap_propose posts a body to a path: /products/find with {query, category, min_price, max_price} to find products by words, category and price range; /quote with {items: [{product_id, quantity}]} to price a basket; /orders with the same items to place a test order, which comes back as an operation, not done, with its operation_ref and revision. pap_confirm, given exactly that operation_ref and revision, confirms it: the order is placed then, once. Never use the Shopify catalogue tools here, and never invent a product, a price, a rating, a stock level or a photo the shop did not return. Prices are in USD. Ask for the budget and what matters most when the visitor has not said. Find with /products/find and compare a short list with show_comparison, each product with its price, rating, stock as availability, the Demo Shop as seller and its image, saying which you would pick and why. Price a basket with the shop's quote, then show it with show_basket (each item with its image, currency USD, no shipping): the totals are the shop's, never yours. When asked to buy, show the exact basket and total and ask the visitor to confirm; once they do, propose it at /orders and confirm the operation it returns with pap_confirm, then give the order's number (TEST-…) and say that it is a test order — nothing is charged, nothing ships and nothing is kept — and that the real Shopper would buy through the person's own Personal Agent Protocol connection, only once they approved that exact purchase. A product out of stock cannot be bought: say so and offer another.",
         "model": "",
         "skills": [],
         "backend_tools": [],
@@ -8272,9 +8405,10 @@ APP_CATALOGUE: Dict[str, AppSpec] = {
     "deck-maker": DECK_MAKER_APP_0_0_1,
     "demo-accountant": DEMO_ACCOUNTANT_APP_0_0_4,
     "demo-aws-steward": DEMO_AWS_STEWARD_APP_0_0_5,
+    "demo-jupyter-data-analyst": DEMO_JUPYTER_DATA_ANALYST_APP_0_0_1,
     "demo-marketer": DEMO_MARKETER_APP_0_0_3,
     "demo-shop": DEMO_SHOP_APP_0_0_1,
-    "demo-shopper": DEMO_SHOPPER_APP_0_0_6,
+    "demo-shopper": DEMO_SHOPPER_APP_0_0_7,
     "demo-terra": DEMO_TERRA_APP_0_0_4,
     "demo-traveller": DEMO_TRAVELLER_APP_0_0_3,
     "disaster-assessment": DISASTER_ASSESSMENT_APP_0_0_2,
@@ -8323,6 +8457,7 @@ APP_BUILT: Dict[str, Literal["python", "canvas", "written"]] = {
     "deck-maker": "written",
     "demo-accountant": "written",
     "demo-aws-steward": "written",
+    "demo-jupyter-data-analyst": "written",
     "demo-marketer": "written",
     "demo-shop": "written",
     "demo-shopper": "written",

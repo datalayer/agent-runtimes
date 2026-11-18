@@ -18,7 +18,10 @@ With that token held, the gateway's toolsets of the run reach that company in
 the deployment's owner's account (`as: owner`), and a visitor's turn may read,
 propose and confirm there — those three tools of that company, with the rules
 saying *do it* — and nothing else: any other company, any other tool, any
-other deployment still only reads. Each call is still held by the gateway to
+other deployment still only reads. The run is offered those three tools alone
+(`principal.gateway_toolsets_of_the_run`): the company's other tools, its own
+MCP tools among them (`pap_mcp_call`), are never shown to the model, so an
+order goes through propose and confirm, the approval the gateway records. Each call is still held by the gateway to
 the deployment's grant, and its confirmations to what the owner lets the
 gateway approve as the agent.
 """
