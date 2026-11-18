@@ -2278,6 +2278,33 @@ export const ODOO_CONTEXT_UI_0_0_1: UISpec = {
   components: [],
 };
 
+export const PAGE_DECK_UI_0_0_1: UISpec = {
+  id: 'page-deck',
+  version: '0.0.1',
+  name: 'Deck in the page',
+  description:
+    'A deck the agent builds in the conversation, slide by slide, with tools run in the page: shown as it is built, its notes under it, presented full screen.',
+  emoji: '🎞️',
+  octicon: 'project',
+  plugin: '@datalayer/loop-plugin-page-deck',
+  folder: 'page-deck',
+  contributions: {
+    slots: [],
+    points: [
+      'loop.chat.extras',
+      'reactor.ui.renderer',
+      'reactor.ui.toolBinding',
+    ],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  placements: ['message'],
+  catalog: '',
+  components: [],
+};
+
 export const PAGE_LAYOUT_UI_0_0_1: UISpec = {
   id: 'page-layout',
   version: '0.0.1',
@@ -2364,6 +2391,33 @@ export const PAGE_LAYOUT_UI_0_0_1: UISpec = {
   },
   renderers: [],
   placements: [],
+  catalog: '',
+  components: [],
+};
+
+export const PAGE_SHEET_UI_0_0_1: UISpec = {
+  id: 'page-sheet',
+  version: '0.0.1',
+  name: 'Sheet in the page',
+  description:
+    'A spreadsheet the agent fills in the conversation, with tools run in the page: shown as it is built, editable by the person, its formulas computed by Datalayer Cells, exported as CSV.',
+  emoji: '📑',
+  octicon: 'table',
+  plugin: '@datalayer/loop-plugin-page-sheet',
+  folder: 'page-sheet',
+  contributions: {
+    slots: [],
+    points: [
+      'loop.chat.extras',
+      'reactor.ui.renderer',
+      'reactor.ui.toolBinding',
+    ],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  placements: ['message'],
   catalog: '',
   components: [],
 };
@@ -3089,7 +3143,9 @@ export const UI_CATALOGUE: Record<string, UISpec> = {
   'notebook-view': NOTEBOOK_VIEW_UI_0_0_1,
   notebook: NOTEBOOK_UI_0_0_1,
   'odoo-context': ODOO_CONTEXT_UI_0_0_1,
+  'page-deck': PAGE_DECK_UI_0_0_1,
   'page-layout': PAGE_LAYOUT_UI_0_0_1,
+  'page-sheet': PAGE_SHEET_UI_0_0_1,
   'pap-purchase': PAP_PURCHASE_UI_0_0_1,
   'pap-sign-in': PAP_SIGN_IN_UI_0_0_1,
   'product-cards': PRODUCT_CARDS_UI_0_0_1,

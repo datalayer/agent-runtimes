@@ -176,6 +176,50 @@ export const LEXICAL_DOCUMENT_FRONTEND_TOOL_SPEC_0_0_1: FrontendToolSpec = {
   emoji: '📄',
 };
 
+export const PAGE_DECK_FRONTEND_TOOL_SPEC_0_0_1: FrontendToolSpec = {
+  id: 'page-deck',
+  version: '0.0.1',
+  name: 'Deck in the page',
+  description:
+    'Build a slide deck in the conversation — create it, add, replace, move and delete slides with speaker notes and pictures, set its look, read it back — shown to the person as it is built.',
+  tags: ['frontend', 'decks', 'presentations', 'page'],
+  enabled: true,
+  toolset: [
+    'deck_create',
+    'deck_set_title',
+    'deck_add_slide',
+    'deck_update_slide',
+    'deck_move_slide',
+    'deck_delete_slide',
+    'deck_set_theme',
+    'deck_read',
+  ],
+  icon: '@primer/octicons-react:project',
+  emoji: '🎞️',
+};
+
+export const PAGE_SHEET_FRONTEND_TOOL_SPEC_0_0_1: FrontendToolSpec = {
+  id: 'page-sheet',
+  version: '0.0.1',
+  name: 'Sheet in the page',
+  description:
+    'Fill a spreadsheet in the conversation — a sheet with named columns, rows and ranges, formulas, number and currency formats, a frozen header, tabs, a chart — shown to the person as it is built, editable and exported as CSV.',
+  tags: ['frontend', 'cells', 'spreadsheets', 'page'],
+  enabled: true,
+  toolset: [
+    'sheet_create',
+    'sheet_write_range',
+    'sheet_read_range',
+    'sheet_format_range',
+    'sheet_freeze',
+    'sheet_add_tab',
+    'sheet_show_tab',
+    'sheet_insert_chart',
+  ],
+  icon: '@primer/octicons-react:table',
+  emoji: '📑',
+};
+
 // ============================================================================
 // Frontend Tool Catalog
 // ============================================================================
@@ -190,6 +234,8 @@ export const FRONTEND_TOOL_CATALOG: Record<string, FrontendToolSpec> = {
   'jupyter-notebook-read': JUPYTER_NOTEBOOK_READ_FRONTEND_TOOL_SPEC_0_0_1,
   'jupyter-notebook': JUPYTER_NOTEBOOK_FRONTEND_TOOL_SPEC_0_0_1,
   'lexical-document': LEXICAL_DOCUMENT_FRONTEND_TOOL_SPEC_0_0_1,
+  'page-deck': PAGE_DECK_FRONTEND_TOOL_SPEC_0_0_1,
+  'page-sheet': PAGE_SHEET_FRONTEND_TOOL_SPEC_0_0_1,
 };
 
 export function getFrontendToolSpecs(): FrontendToolSpec[] {

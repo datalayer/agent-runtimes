@@ -32,7 +32,7 @@ import { createContext, createElement, useContext, type JSX } from 'react';
 import type { ReactNode } from 'react';
 import { Heading, Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
-import { contribution, definePlugin } from '@datalayer/reactor';
+import { contribution, definePlugin, signal } from '@datalayer/reactor';
 import type { ReactorPlatform, ReactorPlugin } from '@datalayer/reactor';
 import {
   pickRenderer,
@@ -46,6 +46,8 @@ import {
   type RendererProps,
 } from '@datalayer/reactor/ui/react';
 import type { ToolCallRenderContext } from '../../types/chat';
+import type { FrontendToolDefinition } from '../../types/tools';
+import { LoopChatExtras, type LoopChatExtrasValue } from '../core';
 import {
   encodeFormSubmission,
   type FormSubmission,
@@ -383,6 +385,13 @@ export type ToolCardPluginOptions = {
   tools: readonly string[];
   /** What it draws for one call. */
   Card: (props: { context: ToolCallRenderContext }) => JSX.Element;
+  /**
+   * The frontend tools it hands the chat's agent, run in the page: the
+   * tools whose calls it draws, when they are the page's own (a deck or a
+   * sheet built in the conversation) rather than the runtime's `show_*`.
+   * They reach the agent with the chat's extras, wherever it runs.
+   */
+  frontendTools?: FrontendToolDefinition[];
 };
 
 /** The plugin's name: `@datalayer/loop-plugin-<id>`. */
@@ -427,6 +436,20 @@ export function defineToolCardPlugin(
           { id: `${options.id}-${tool}` },
         ),
       ),
+      ...(options.frontendTools?.length
+        ? [
+            contribution(
+              LoopChatExtras,
+              {
+                id: `${options.id}-tools`,
+                extras: signal<LoopChatExtrasValue>({
+                  frontendTools: options.frontendTools,
+                }),
+              },
+              { id: `${options.id}-tools` },
+            ),
+          ]
+        : []),
     ],
   });
   return plugin as unknown as ReactorPlugin<

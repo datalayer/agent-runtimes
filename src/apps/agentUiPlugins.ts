@@ -71,6 +71,8 @@ import { LinkedInPostPreviewPlugin } from './plugins/linkedin-post-preview';
 import { lockedUiPlugin } from './plugins/locked-ui';
 import { notebookHeaderPlugin } from './plugins/notebook-header';
 import { OdooContextChip, odooContextPlugin } from './plugins/odoo-context';
+import { PageDeckPlugin } from './plugins/page-deck';
+import { PageSheetPlugin } from './plugins/page-sheet';
 import { PapPurchasePlugin } from './plugins/pap-purchase';
 import { ProductCardsPlugin } from './plugins/product-cards';
 import { ProductComparisonPlugin } from './plugins/product-comparison';
@@ -208,6 +210,14 @@ export const AGENT_UI_PLUGINS: Readonly<Record<string, AgentUiPlugin>> = {
   'earth-header': { needsConnection: false, chrome: earthHeaderPlugin },
   'aws-header': { needsConnection: false, chrome: awsHeaderPlugin },
   'notebook-header': { needsConnection: false, chrome: notebookHeaderPlugin },
+  /*
+   * What an agent builds in the conversation with frontend tools run in the
+   * page (18 November 2026): the Marketer's deck, the Accountant's sheet.
+   * Each hands the chat's agent its tool set and draws the calls. Neither
+   * needs a connection of the person's: a visitor's demo has them.
+   */
+  'page-deck': { needsConnection: false, message: PageDeckPlugin },
+  'page-sheet': { needsConnection: false, message: PageSheetPlugin },
   // Stripe (test mode).
   'stripe-checkout': { needsConnection: true, message: StripeCheckoutPlugin },
 };

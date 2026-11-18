@@ -356,6 +356,58 @@ In a Loop workspace: an `Application`, and a chat mounted with the preset's `uiP
 plain `Chat` component does not draw header UIs yet: there the older chips stay. A visitor's demo
 has them: they need no connection of the person's.
 
+## In its conversation: a deck and a sheet the agent builds
+
+An application's `ui` may name a **page UI** — `page-deck`, `page-sheet` — and its agent then has a
+set of frontend tools that run in the page, on a deck or a workbook kept there for the conversation
+(`apps/pageTools`). Nothing reaches the runtime: the page checks each call, changes what it keeps,
+and answers the model.
+
+| UI | Tools | Drawn by |
+| --- | --- | --- |
+| `page-deck` | `deck_create`, `deck_set_title`, `deck_add_slide`, `deck_update_slide`, `deck_move_slide`, `deck_delete_slide`, `deck_set_theme`, `deck_read` | Datalayer Decks' `DeckView`: the slides, **Notes**, **Present** for the full screen. |
+| `page-sheet` | `sheet_create`, `sheet_write_range`, `sheet_read_range`, `sheet_format_range`, `sheet_freeze`, `sheet_add_tab`, `sheet_show_tab`, `sheet_insert_chart` | Datalayer Cells' `Spreadsheet`, with its formula bar and tabs, editable; **Export CSV** through Cells' own writer. |
+
+Each is a tool card plugin (`defineToolCardPlugin`) that also takes `frontendTools`: the kit
+contributes them through `LoopChatExtras`, so they reach the agent wherever it runs — in the page,
+or on a runtime, where they are sent with each run and executed here when it calls one. The plugin
+binds every tool of its set to one card:
+
+- the **last call that changed** the deck or the workbook draws it, live;
+- every call before it is **one line** saying what it did (*Added a bullets slide “The plan”*,
+  *Wrote 6 rows from A2*);
+- a call the page refused, or one that failed, keeps the chat's own row.
+
+```tsx
+import { deckTools, emptyDeck } from '@datalayer/agent-runtimes/lib/apps/pageTools/deck';
+
+// The same tools, bound to a deck of your own: what a Battle's deck arena does.
+let deck = emptyDeck();
+const tools = deckTools({ read: () => deck, change: next => (deck = next(deck)) });
+```
+
+**What the page checks.** Every argument is typed and checked before anything changes; a refusal is
+a sentence for the model, and leaves the deck or the sheet as it was. A slide's text is drawn as
+text and a cell as a number, a text or a boolean: markup in either is shown as written. A picture,
+and a link in a slide's text, is an `https://` address. A text starting with `=` is a formula,
+computed by Cells' engine and nothing else; a format is named (`currency` with `EUR`), never a
+format code. A deck holds 40 slides; a workbook 8 tabs, a tab 20,000 cells, a write 2,000.
+
+**The theme of a deck** (`deck_set_theme`) is the deck's alone: it is given to Decks as its host's
+theme and never to the page, so a dark deck does not turn the conversation dark.
+
+**What is kept** (`pageTools/conversation`). The deck or the workbook belongs to the conversation
+on the page and stays as the transcript is drawn again. It is written nowhere else. When the page
+is loaded again and the conversation comes back with its recorded calls, it is built again by
+replaying those that succeeded, in order; when the conversation starts over, it is emptied.
+**What a person typed into the sheet's cells is not replayed**: the sheet says so and offers the
+export. While the page lives, the person's edits and the agent's writes are one workbook:
+`sheet_read_range` answers what is on screen.
+
+**Not there.** A deck is not printed or saved from a conversation: Decks prints a deck from a page
+of its own, which a deck kept in the page does not have. The two are cards in the conversation
+(`placements: [message]`) until an application has side panels.
+
 ## Before its page: a host's left panel
 
 A host may say something *about* the application on the leading edge of its
