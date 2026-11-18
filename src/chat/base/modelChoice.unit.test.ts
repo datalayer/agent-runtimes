@@ -22,6 +22,7 @@ import {
   readServerCatalogue,
   readServerDecisions,
   usableModels,
+  visitorsModels,
 } from './modelChoice';
 
 const model = (id: string, isAvailable?: boolean): ModelConfig => ({
@@ -276,5 +277,24 @@ describe('the Decisions group of an agent’s model menu', () => {
         isAvailable: false,
       },
     ]);
+  });
+});
+
+describe('the models a visitor without an account is offered', () => {
+  const offered = [
+    model('bedrock:us.anthropic.claude-sonnet-4-6'),
+    model('alibaba:qwen-max'),
+    model('openrouter:anthropic/claude-opus-5.5'),
+  ];
+
+  it('leaves OpenRouter Opus out for somebody signed out', () => {
+    expect(visitorsModels(offered, false).map(m => m.id)).toEqual([
+      'bedrock:us.anthropic.claude-sonnet-4-6',
+      'alibaba:qwen-max',
+    ]);
+  });
+
+  it('keeps every model for somebody signed in', () => {
+    expect(visitorsModels(offered, true)).toEqual(offered);
   });
 });
