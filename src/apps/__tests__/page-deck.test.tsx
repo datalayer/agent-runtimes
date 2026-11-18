@@ -40,6 +40,7 @@ import {
 } from '../pageTools/deck';
 import { ConversationBound, succeeded } from '../pageTools/conversation';
 import { LoopChatExtras } from '../core';
+import { agentUiIdsOf, agentUiPluginsFor } from '../agentUiPlugins';
 import { PAGE_TOOL_RESULTS } from '../toolCards/toolResults';
 import {
   PageDeckCard,
@@ -521,6 +522,19 @@ describe('the page-deck plugin', () => {
     expect((PageDeckPlugin as { name: string }).name).toBe(
       '@datalayer/loop-plugin-page-deck',
     );
+  });
+
+  it('is mounted for a visitor too, with the Accountant’s sheet: neither needs a connection', () => {
+    const mounted = agentUiPluginsFor(
+      [{ plugin: 'page-deck' }, { plugin: 'page-sheet' }],
+      { anonymous: true },
+    ).map(plugin => (plugin as { name: string }).name);
+    expect(mounted).toEqual([
+      '@datalayer/loop-plugin-page-deck',
+      '@datalayer/loop-plugin-page-sheet',
+    ]);
+    expect(agentUiIdsOf('worker-marketer')).toContain('page-deck');
+    expect(agentUiIdsOf('worker-accountant')).toContain('page-sheet');
   });
 
   it('draws the deck at the last call that changed it, and a line at each call before', async () => {
