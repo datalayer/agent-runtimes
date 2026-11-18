@@ -141,13 +141,13 @@ speaks MCP's own OAuth flow. It is a switch of the deployment, off by
 default; a public one has no such switch, since its MCP server answers
 anybody already. On (`AddressedAgent.mcp_clients`, read from the deployment's
 record, `servers.mcp_clients_of`), the company is configured with the SDK's
-public clients (`personal-agent-protocol` ≥ 0.37.4, `pap.company.company_config`
+public clients (`personal-agent-protocol` ≥ 0.37.5, `pap.company.company_config`
 `mcp_clients`):
 
 | | |
 |---|---|
 | The issuer's `/.well-known/oauth-authorization-server` | Adds `authorization_endpoint` (`/oauth/authorize`, PKCE `S256`), `registration_endpoint` (`/oauth/register`), and `none` in `token_endpoint_auth_methods_supported` |
-| How a client is known | By its client ID metadata document (its `client_id` is that URL: verified by its domain), or registered at `/oauth/register` (RFC 7591: unverified). A registration says `"token_endpoint_auth_method": "none"`; one that leaves it out or names another is refused, and told what to send |
+| How a client is known | By its client ID metadata document (its `client_id` is that URL: verified by its domain), or registered at `/oauth/register` (RFC 7591: unverified). Every client that registers is registered as a public client and answered `"token_endpoint_auth_method": "none"`, whether it left the method out or asked for `none`, `client_secret_post` or `client_secret_basic`; one that names a key or a secret of its own, or another method, is refused, and a secret sent afterwards is `invalid_client` |
 | Where the person allows it | Datalayer's consent page (`https://datalayer.ai/pap/consent?slug={name}&request=…`), signed in to Datalayer. Only somebody who may open the application can allow, and only a client of this kind is allowed there: for personal agents the switch changes nothing |
 | What it gets | A Bearer token for this MCP server alone (`resource` its `url`, named in the authorization request and at every token request), with the company's own scopes it asked for, and a refresh token that rotates at every use; 30 days after the person allowed it, they allow it again |
 | What it never gets | The default token, a Session, a conversation with the company's agent: every address but this one refuses its token (`servers.pap_token_checker`) |

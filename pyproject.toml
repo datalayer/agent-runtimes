@@ -62,7 +62,7 @@ dependencies = [
     # the domain beside a company's name.
     # 0.37.0: 1.0 as published (frozen 2026-11-14): each agent.protocols entry needs a
     # description (CompanyConfig.agent_description), prompt=consent, PAR, ports.
-    "personal-agent-protocol[ui]>=0.37.4,<0.38",
+    "personal-agent-protocol[ui]>=0.37.5,<0.38",
     # The first releases of both on mcp 2; an older one pins mcp<2.
     "agent-codemode>=1.1.0",
     # 1.4.0: agent-skills is the framework alone (and its `jokes` example).
