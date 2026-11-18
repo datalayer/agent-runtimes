@@ -68,6 +68,8 @@ OWN = {
     ("POST", "/api/v1/apps/principal"),
     ("PUT", "/api/v1/apps/runtime-proof"),
     ("GET", "/api/v1/apps/agents/{agent}/deployment"),
+    # What it runs with, which its composer lists.
+    ("GET", "/api/v1/apps/agents/{agent}/equipment"),
     ("GET", "/api/v1/apps"),
     ("GET", "/api/v1/apps/current"),
     ("POST", "/api/v1/apps/decide"),
