@@ -485,6 +485,18 @@ export type SheetColumnArgs = {
   decimals?: number;
 };
 
+/** A column's width in pixels, from what it holds and how long its header is. */
+export function columnWidth(column: SheetColumnArgs): number {
+  const header = column.name.length * 8 + 28;
+  const body =
+    column.format === undefined || column.format === 'text'
+      ? 168
+      : column.format === 'currency'
+        ? 128
+        : 104;
+  return Math.min(240, Math.max(header, body));
+}
+
 /**
  * A sheet with named columns: the tab shown when it is still empty (given
  * the name), a new tab otherwise; the header row written bold and kept in
@@ -566,6 +578,17 @@ export function createSheet(
     }),
   );
   COLUMN_FORMATS.set(model, kept);
+  // Room for what a column holds: words want more than a figure does.
+  read.forEach((column, col) => {
+    run(model, {
+      type: 'RESIZE_AXIS',
+      sheet,
+      axis: 'cols',
+      from: col,
+      to: col,
+      size: columnWidth(column),
+    });
+  });
   if (args.freeze_header !== false) {
     run(model, { type: 'FREEZE', sheet, rows: 1, cols: 0 });
   }

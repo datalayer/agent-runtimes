@@ -34,8 +34,22 @@ export type DeckState = {
 /** The template a deck starts with: the application's own. */
 export const DECK_TEMPLATE = 'datalayer';
 
-/** The templates a deck may wear: the decks library's. */
+/** The templates a deck may wear, as a tool names them. */
 export const DECK_TEMPLATES = ['datalayer', 'brand', 'ink'] as const;
+
+/** Each by the name the decks library registers it under (`deckTemplates`). */
+export const DECK_TEMPLATE_NAMES: Record<
+  (typeof DECK_TEMPLATES)[number],
+  string
+> = {
+  datalayer: 'datalayer',
+  brand: 'datalayer-brand',
+  ink: 'datalayer-ink',
+};
+
+/** A template as a tool names it, from the library's name. */
+const templateSaid = (name: string): string =>
+  DECK_TEMPLATES.find(each => DECK_TEMPLATE_NAMES[each] === name) ?? name;
 
 /** The themes a deck may ask for: primer-addons' variants. */
 export const DECK_THEMES = [
@@ -480,7 +494,7 @@ export const withTheme = (state: DeckState, args: DeckThemeArgs): DeckState => {
       ...state.spec,
       deck: {
         ...state.spec.deck,
-        ...(template ? { template } : {}),
+        ...(template ? { template: DECK_TEMPLATE_NAMES[template] } : {}),
         ...(theme ? { theme } : {}),
         ...(colorMode ? { colorMode } : {}),
       },
@@ -838,7 +852,7 @@ export function deckTools(
         const { template, theme, colorMode } = state.spec.deck;
         return {
           ok: true,
-          template,
+          template: templateSaid(template),
           ...(theme ? { theme } : {}),
           ...(colorMode ? { color_mode: colorMode } : {}),
         };

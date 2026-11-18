@@ -40,6 +40,28 @@ export function useConversationBound<S>(
   return { state: bound.read(), latest: done[done.length - 1]?.toolCallId };
 }
 
+/** Whether a tool answered a refusal: a sentence, or an error, rather than what it did or read. */
+export function refused(result: unknown): boolean {
+  if (typeof result === 'string') {
+    const text = result.trim();
+    if (!text.startsWith('{')) {
+      return true;
+    }
+    try {
+      return refused(JSON.parse(text));
+    } catch {
+      return true;
+    }
+  }
+  return (
+    result === null ||
+    result === undefined ||
+    typeof result !== 'object' ||
+    Array.isArray(result) ||
+    'error' in result
+  );
+}
+
 /** Where a call stands among its conversation's: the live card, a line, or the chat's own row. */
 export function cardRole(
   context: ToolCallRenderContext,
@@ -51,11 +73,14 @@ export function cardRole(
   if (context.status !== 'complete') {
     return 'pending';
   }
-  if (!succeeded({ result: context.result })) {
+  if (refused(context.result)) {
     // Refused in a sentence: the chat's own row says it.
     return 'default';
   }
-  return context.toolCallId === latest ? 'live' : 'line';
+  // A read changes nothing: it is a line, and the card stays where it was.
+  return context.toolCallId === latest && succeeded({ result: context.result })
+    ? 'live'
+    : 'line';
 }
 
 /** A tool's bare name, among those a card draws. */

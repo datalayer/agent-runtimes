@@ -32,6 +32,7 @@ import {
   SHEET_LIMITS,
   SHEET_TOOL_NAMES,
   applySheetCall,
+  columnWidth,
   formatCode,
   sheetArenaTools,
   sheetSays,
@@ -185,6 +186,18 @@ describe('the sheet tools', () => {
     ]);
     expect(model.style(sheet, 0, 0).bold).toBe(true);
     expect(model.sheet(sheet).frozen).toEqual({ rows: 1, cols: 0 });
+    // Words get more room than figures.
+    expect(columnWidth({ name: 'Customer' })).toBe(168);
+    expect(
+      columnWidth({ name: 'Amount', format: 'currency', currency: 'EUR' }),
+    ).toBe(128);
+    expect(columnWidth({ name: 'Due', format: 'date' })).toBe(104);
+    expect(
+      columnWidth({
+        name: 'A very long header for a narrow figure',
+        format: 'integer',
+      }),
+    ).toBe(240);
     // Nothing is written under the header yet: the sheet's used range is its header.
     expect(await call(tools, 'sheet_read_range', {})).toMatchObject({
       range: 'A1:D1',
@@ -619,6 +632,9 @@ describe('the page-sheet plugin', () => {
       screen.getByText('Started the sheet “Aged receivables”, 4 columns'),
     ).toBeTruthy();
     expect(screen.getByText('Wrote 6 rows from A2')).toBeTruthy();
+    // A read changes nothing: a line of its own, the sheet staying at the last write.
+    expect(screen.getByText('Read the sheet')).toBeTruthy();
+    expect(screen.queryByTestId('default-row')).toBeNull();
     const stages = await screen.findAllByTestId('sheet-stage');
     expect(stages).toHaveLength(1);
     expect(stages[0].getAttribute('data-tab')).toBe('Aged receivables');

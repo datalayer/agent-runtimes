@@ -27,6 +27,8 @@ import {
   DECK_ARENA_TOOL_NAMES,
   DECK_LIMITS,
   DECK_SLIDE_KINDS,
+  DECK_TEMPLATES,
+  DECK_TEMPLATE_NAMES,
   DECK_TOOL_NAMES,
   applyDeckCall,
   deckArenaTools,
@@ -252,7 +254,7 @@ describe('the deck tools', () => {
     expect(themed).toEqual({ ok: true, template: 'brand', color_mode: 'dark' });
     expect(read().spec.deck).toMatchObject({
       title: 'Autumn launch',
-      template: 'brand',
+      template: 'datalayer-brand',
       colorMode: 'dark',
     });
 
@@ -401,6 +403,16 @@ describe('the deck tools', () => {
     expect(deckSays(state)).toBe(
       'Deck “Why a newsletter”, 1 slide.\n1. section: The why',
     );
+  });
+});
+
+describe('the deck’s templates', () => {
+  it('are the decks library’s own, each under the name it registers', async () => {
+    const { deckTemplates } = await import('@datalayer/decks');
+    for (const name of DECK_TEMPLATES) {
+      expect(deckTemplates[DECK_TEMPLATE_NAMES[name]], name).toBeDefined();
+    }
+    expect(deckTemplates[emptyDeck().spec.deck.template]).toBeDefined();
   });
 });
 

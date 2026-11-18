@@ -127,22 +127,8 @@ export function DeckFrame({ state }: { state: DeckState }): JSX.Element {
         >
           {PAGE_DECK_WORDS.kicker}
         </Text>
-        <Text
-          as="h4"
-          sx={{
-            m: 0,
-            fontSize: 2,
-            fontWeight: 'semibold',
-            color: 'fg.default',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            minWidth: 0,
-            flex: 1,
-          }}
-        >
-          {deck.title}
-        </Text>
+        {/* The deck's own title is drawn by Decks, under this strip. */}
+        <Box flex={1} />
         <Text
           sx={{
             fontSize: 0,
