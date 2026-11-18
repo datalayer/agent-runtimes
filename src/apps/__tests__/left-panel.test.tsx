@@ -5,10 +5,13 @@
 
 /**
  * The left panel (`LoopSlots.leftPanel`): what a host says about the work on
- * the leading edge of the workspace — closed to start with, opened and
- * closed by a toggle that says what it controls, with nothing to show
- * (`panel.when`) no toggle and no panel; and the application the workspace
- * draws, said to the host's plugins (`LoopApplication`).
+ * the leading edge of the workspace — closed to start with, opened by a
+ * toggle that says what it controls and is there only while it is closed,
+ * closed by one Close control (its component's own, else the shell's) or by
+ * Escape, the focus moved in on opening and back to the toggle on closing;
+ * with nothing to show (`panel.when`) no toggle and no panel; and the
+ * application the workspace draws, said to the host's plugins
+ * (`LoopApplication`).
  */
 
 import React, { act } from 'react';
@@ -31,6 +34,7 @@ import {
   leftPanelShown,
   useLeftPanel,
   type LoopLeftPanelComponent,
+  type LoopLeftPanelProps,
 } from '../shell/LeftPanel';
 import { appExtension, applicationPlugin } from '../apps/AppRenderer';
 import { agentAppspec } from '../Application';
@@ -134,7 +138,7 @@ describe('the left panel', () => {
     expect(leftPanelLabel([bare], presented())).toBe('Panel');
   });
 
-  it('is closed to start with, and its toggle opens and closes it', () => {
+  it('is closed to start with, its toggle opens it, and the toggle is gone while it is open', () => {
     mounted.length = 0;
     const app = presented('Plans and drafts.');
     const page = render([applicationPlugin(app, app), aboutPlugin]);
@@ -152,35 +156,118 @@ describe('the left panel', () => {
     expect(page.querySelector('[data-about]')).toBeNull();
 
     act(() => toggle.click());
-    expect(toggle.getAttribute('aria-expanded')).toBe('true');
     expect(panel.hasAttribute('data-open')).toBe(true);
     expect(page.querySelector('[data-about]')?.textContent).toBe(
       'Plans and drafts.',
     );
+    // Open, the toggle is gone: the panel's Close control closes it, and
+    // the focus has moved onto that control.
+    expect(page.querySelector('[data-loop-left-panel-toggle]')).toBeNull();
+    const close = page.querySelector<HTMLButtonElement>(
+      '[data-loop-left-panel-close]',
+    )!;
+    expect(nameOf(close)).toBe('Close: About the Marketer');
+    expect(document.activeElement).toBe(close);
 
-    act(() => toggle.click());
-    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    act(() => close.click());
     expect(panel.hasAttribute('data-open')).toBe(false);
+    // The toggle shows back, the focus on it.
+    const back = page.querySelector<HTMLButtonElement>(
+      '[data-loop-left-panel-toggle]',
+    )!;
+    expect(back.getAttribute('aria-expanded')).toBe('false');
+    expect(document.activeElement).toBe(back);
     // Kept mounted once opened: opening it again mounts nothing anew.
-    act(() => toggle.click());
+    act(() => back.click());
     expect(mounted).toEqual(['about']);
   });
 
   it('closes on Escape from inside it, the focus back on its toggle', () => {
     const app = presented();
     const page = render([applicationPlugin(app, app), aboutPlugin]);
-    const toggle = page.querySelector<HTMLButtonElement>(
-      '[data-loop-left-panel-toggle]',
-    )!;
     const panel = page.querySelector<HTMLElement>('[data-loop-left-panel]')!;
-    act(() => toggle.click());
+    act(() =>
+      page
+        .querySelector<HTMLButtonElement>('[data-loop-left-panel-toggle]')!
+        .click(),
+    );
+    // The toggle is gone: the focus is inside the panel, where Escape is heard.
+    expect(page.querySelector('[data-loop-left-panel-toggle]')).toBeNull();
+    expect(panel.contains(document.activeElement)).toBe(true);
     act(() => {
-      panel.dispatchEvent(
+      document.activeElement!.dispatchEvent(
         new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
       );
     });
     expect(panel.hasAttribute('data-open')).toBe(false);
+    expect(document.activeElement).toBe(
+      page.querySelector('[data-loop-left-panel-toggle]'),
+    );
+  });
+
+  it('hands its component the panel’s state; a component that closes it draws the one Close control', () => {
+    const handed: Array<Pick<LoopLeftPanelProps, 'open' | 'panelId'>> = [];
+    const closing: LoopLeftPanelComponent = {
+      id: 'closing',
+      slot: LoopSlots.leftPanel,
+      Component: (props: Record<string, unknown>) => {
+        const { open, close, toggle, panelId, application } =
+          props as LoopLeftPanelProps;
+        handed.push({ open, panelId });
+        return (
+          <div>
+            <h2>{application?.name}</h2>
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={close}
+              data-loop-left-panel-close=""
+              data-own-close=""
+            />
+            <button type="button" onClick={toggle} data-own-toggle="" />
+          </div>
+        );
+      },
+      panel: { label: 'About', closes: true },
+    };
+    const plugin = definePlugin<
+      Record<string, never>,
+      unknown,
+      ReactorReactOutput
+    >({
+      name: 'test-closing',
+      build: () => ({ components: [closing] }),
+    }) as PluginRef;
+    const app = presented();
+    const page = render([applicationPlugin(app, app), plugin]);
+    const panel = page.querySelector<HTMLElement>('[data-loop-left-panel]')!;
+    act(() =>
+      page
+        .querySelector<HTMLButtonElement>('[data-loop-left-panel-toggle]')!
+        .click(),
+    );
+    expect(handed.at(-1)).toEqual({ open: true, panelId: panel.id });
+    // Its Close control is the only one, and the focus is on it.
+    const own = page.querySelector<HTMLButtonElement>('[data-own-close]')!;
+    expect(page.querySelectorAll('[data-loop-left-panel-close]')).toHaveLength(
+      1,
+    );
+    expect(document.activeElement).toBe(own);
+
+    act(() => own.click());
+    expect(panel.hasAttribute('data-open')).toBe(false);
+    expect(handed.at(-1)?.open).toBe(false);
+    const toggle = page.querySelector<HTMLButtonElement>(
+      '[data-loop-left-panel-toggle]',
+    )!;
     expect(document.activeElement).toBe(toggle);
+
+    // `toggle` opens it again, and closes it.
+    act(() => toggle.click());
+    act(() =>
+      page.querySelector<HTMLButtonElement>('[data-own-toggle]')!.click(),
+    );
+    expect(panel.hasAttribute('data-open')).toBe(false);
   });
 
   it('has no toggle and no panel when nothing has anything to show', () => {

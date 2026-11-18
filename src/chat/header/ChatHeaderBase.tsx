@@ -172,6 +172,9 @@ export interface ChatBaseHeaderProps {
 // Component
 // ---------------------------------------------------------------------------
 
+/** Under this width of its title row, in pixels, the header's inline content is not drawn: the name keeps the room. */
+export const HEADER_CONTENT_NARROW = 400;
+
 export function ChatBaseHeader({
   title,
   subtitle,
@@ -342,20 +345,27 @@ export function ChatBaseHeader({
       borderBottom="1px solid"
       borderColor="border.default"
     >
-      {/* Title row */}
+      {/* Title row: its own width is what its parts read (a container). */}
       <Box
         display="flex"
         alignItems="center"
         justifyContent="space-between"
         p={padding}
+        sx={{ containerType: 'inline-size' }}
+        data-chat-header-row=""
       >
+        {/* What it is: up to two thirds of the row, and never less than
+            what the toggle, the face and a short name take (13rem), so that
+            a narrow chat (a phone, the panel's toggle leading) keeps
+            "Shopper" whole; the toolbar, after it, moves into "…". */}
         <Box
           display="flex"
           alignItems="center"
           gap={2}
           minWidth={0}
-          maxWidth="65%"
+          maxWidth="min(100%, max(65%, 13rem))"
           flex="0 1 auto"
+          data-chat-header-what=""
         >
           {headerLeading}
           {kernelIndicatorPlacement === 'left' && kernelIndicatorElement}
@@ -366,6 +376,8 @@ export function ChatBaseHeader({
               flexDirection="column"
               minWidth={0}
               maxWidth="100%"
+              flex="0 1 auto"
+              data-chat-header-title=""
             >
               {title && (
                 <Heading
@@ -398,10 +410,30 @@ export function ChatBaseHeader({
               )}
             </Box>
           )}
-          {/* Inline header content (e.g., protocol label) */}
-          {headerContent}
+          {/* Inline header content (e.g., protocol label, its state): what
+              gives way first when the row is short, long before the name,
+              and not drawn at all in a row as narrow as a phone's, where it
+              would show only its first letters. */}
+          {headerContent ? (
+            <Box
+              display="flex"
+              alignItems="center"
+              minWidth={0}
+              overflow="hidden"
+              flex="0 1000 auto"
+              sx={{
+                [`@container (max-width: ${HEADER_CONTENT_NARROW}px)`]: {
+                  display: 'none',
+                },
+              }}
+              data-chat-header-content=""
+            >
+              {headerContent}
+            </Box>
+          ) : null}
           {showInformation && (
             <IconButton
+              sx={{ flexShrink: 0 }}
               icon={InfoIcon}
               aria-label="Information"
               variant="invisible"

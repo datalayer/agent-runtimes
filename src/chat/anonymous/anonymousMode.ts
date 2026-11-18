@@ -30,6 +30,24 @@ export type ChatAnonymous = {
   signInUrl?: string;
   /** What *Sign in* does, in place of going to `signInUrl`. */
   onSignIn?: () => void;
+  /**
+   * The box's call to action in the host's words, for a viewer who has no
+   * reason to sign in (a signed-in person trying a demo on the visitors'
+   * runtime): its sentence in place of *Limited preview: sign in to save
+   * your work.*, its button's word in place of *Sign in*, and what the
+   * button does. The turns left and the rest of the box stay.
+   */
+  callToAction?: ChatCallToAction;
+};
+
+/** A host's call to action, in the box on top of a visitor's conversation. */
+export type ChatCallToAction = {
+  /** The box's first sentence: *Make it yours: open your own Shopper.* */
+  says: string;
+  /** Its button's word: *Open your own Shopper*. */
+  label: string;
+  /** What its button does. */
+  onAction: () => void;
 };
 
 /**

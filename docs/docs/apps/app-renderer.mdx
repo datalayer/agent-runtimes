@@ -322,15 +322,59 @@ The shell does the rest. The panel is **closed to start with**, so the page
 keeps the whole width; its toggle is an icon button leading the chat's title bar, before the
 application's face and name
 (in the workspace's header when it draws one), which says what it opens
-(`panel.label`), whether it is open (`aria-expanded`) and which element it
-controls (`aria-controls`). Open, the panel is a column of
-`LEFT_PANEL_WIDTH` (400px) beside the page; in a workspace narrower than
-`LEFT_PANEL_NARROW` (720px, a phone) it opens over the page instead, with a
-close button of its own, and Escape closes it from inside. Its width and
-opacity move in 200ms, and not at all under `prefers-reduced-motion`.
-Closed, it is out of the tab order, and its components are mounted on the
-first opening only. Make the plugin once, outside the host's render: a new
-plugin restarts the workspace.
+(`panel.label`), that it is closed (`aria-expanded="false"`) and which
+element it controls (`aria-controls`). The toggle is there **only while the
+panel is closed**: open, the panel's Close control closes it, and the toggle
+shows back with the focus on it. On opening, the focus moves into the panel,
+to its Close control, so that a keyboard or a screen reader is not left on
+a button that has gone; Escape closes it from anywhere inside. Open, the
+panel is a column of `LEFT_PANEL_WIDTH` (400px) beside the page; in a
+workspace narrower than `LEFT_PANEL_NARROW` (720px, a phone) it opens over
+the page instead. Its width and opacity move in 200ms, and not at all under
+`prefers-reduced-motion`. Closed, it is out of the tab order, and its
+components are mounted on the first opening only. Make the plugin once,
+outside the host's render: a new plugin restarts the workspace.
+
+### Closing it from inside
+
+The shell keeps whether the panel is open, and hands it to each component of
+the slot (`LoopLeftPanelProps`), beside the workspace and the application:
+
+| Prop | Type | What it is |
+| --- | --- | --- |
+| `application` | `AppSpec \| undefined` | The application the workspace draws. |
+| `open` | `boolean` | Whether the panel is open. |
+| `close` | `() => void` | Close it: the toggle shows back, the focus on it. |
+| `toggle` | `() => void` | Open it when closed, close it when open. |
+| `panelId` | `string` | The panel's element id, which its toggle controls. |
+
+There is always **one** Close control. Unless the component says otherwise,
+the shell draws it: an X icon button at the top of the panel, named
+*Close: …* after the toggle. A component that draws its own says so with
+`panel.closes: true`, and the shell draws none; mark that control with
+`data-loop-left-panel-close` and the focus goes to it when the panel opens:
+
+```tsx
+import { IconButton } from '@primer/react';
+import { XIcon } from '@primer/octicons-react';
+import type { LoopLeftPanelComponent, LoopLeftPanelProps } from '@datalayer/agent-runtimes/lib/apps/shell';
+
+function About({ application, close }: LoopLeftPanelProps) {
+  return (
+    <>
+      <IconButton icon={XIcon} aria-label="Close" onClick={close} data-loop-left-panel-close="" />
+      <h3>{application?.name}</h3>
+    </>
+  );
+}
+
+const about: LoopLeftPanelComponent = {
+  id: 'about',
+  slot: LoopSlots.leftPanel,
+  Component: About as LoopLeftPanelComponent['Component'],
+  panel: { label: application => `About ${application?.name}`, closes: true },
+};
+```
 
 The application is said to the host's plugins by `AppRenderer` itself, as
 the `LoopApplication` contribution (`{ app }`, the Appspec in the words the

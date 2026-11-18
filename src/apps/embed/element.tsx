@@ -83,6 +83,7 @@ import {
 } from '../Application';
 import type { AppEmbedHost, HostFunction, WindowPost } from './hostBridge';
 import { WINDOW_NOT_YET } from './embedSession';
+import { MISSING_SENTENCE } from './visitorApp';
 import {
   EMBED_HOST_VARIABLES,
   EMBED_OBSERVED_ATTRIBUTES,
@@ -124,7 +125,9 @@ export type EmbedSource =
   /** An Appspec to draw; with `visitors`, run as a visitor without an account on the visitors' runtime. */
   | { kind: 'spec'; app: AppSpec; visitors?: DatalayerVisitors }
   | { kind: 'frame'; src: string }
-  | { kind: 'said'; text: string; expired?: boolean };
+  | { kind: 'said'; text: string; expired?: boolean }
+  /** Nothing at the address: one sentence on screen, the detail in the console. */
+  | { kind: 'missing'; detail: string };
 
 /** An Appspec from its text, YAML or JSON; refused in a sentence when it is neither. */
 export function appspecOfText(text: string): AppSpec {
@@ -625,11 +628,11 @@ export function defineDatalayerAppElement(
       return shadow;
     }
 
-    private say(text: string): void {
+    private say(text: string, className = 'datalayer-app-said'): void {
       this.setAttribute('data-embed-mode', 'inline');
       const shadow = this.skeleton();
       const note = document.createElement('p');
-      note.className = 'datalayer-app-said';
+      note.className = className;
       note.setAttribute('role', 'status');
       note.textContent = text;
       shadow.appendChild(note);
@@ -642,6 +645,11 @@ export function defineDatalayerAppElement(
       }
       if (source.kind === 'said') {
         this.say(source.text);
+        return;
+      }
+      if (source.kind === 'missing') {
+        console.warn(source.detail);
+        this.say(MISSING_SENTENCE, 'datalayer-app-missing');
         return;
       }
       if (source.kind === 'frame') {

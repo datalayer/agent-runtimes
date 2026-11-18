@@ -30,7 +30,8 @@
  *   a visitor's token the chat mints from ai-inference for that one
  *   application; in agent-runtimes' anonymous mode unless
  *   `anonymous: false`: the limited preview, the turns left (`maxTurns`),
- *   the temporary key's clock, *Sign in* (`signInUrl` or `onSignIn`), and
+ *   the temporary key's clock, *Sign in* (`signInUrl` or `onSignIn`, or the
+ *   host's own words and action in its place, `callToAction`), and
  *   what its agent would bring that needs a connection of the visitor's
  *   locked in the title bar;
  * - `runtime` — an agent already running on a runtime: a person's own
@@ -61,9 +62,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { JSX, ReactNode } from 'react';
 import { SkeletonText } from '@primer/react/experimental';
+import { Box } from '@datalayer/primer-addons';
 import { coreStore } from '@datalayer/core/lib/state/substates/CoreState';
 import type { Agentspec, AppSpec } from '../types/agentspecs';
 import type { ResumedThread } from '../types/chat';
+import type { ChatCallToAction } from '../chat/anonymous/anonymousMode';
 import { getApp } from '../specs/apps';
 import { emptyAppspec } from './apps/appspec';
 import type { DatalayerVisitors } from './apps/visitorToken';
@@ -73,6 +76,7 @@ import { frameInLanguage, frameSrcOf } from './embed/embedConfig';
 import {
   DEFAULT_API,
   DEFAULT_INFERENCE,
+  MISSING_SENTENCE,
   readVisitorApp,
   visitorsAt,
 } from './embed/visitorApp';
@@ -103,6 +107,12 @@ export type ApplicationVisitor = {
   signInUrl?: string;
   /** What *Sign in* does, in place of `signInUrl`. */
   onSignIn?: () => void;
+  /**
+   * The preview's call to action in the host's words, in place of *Sign in*:
+   * for a viewer the host knows is signed in, who tries the demo on the
+   * visitors' runtime all the same (*Open your own Shopper*).
+   */
+  callToAction?: ChatCallToAction;
 };
 
 /** A person's own agent, already running on a runtime of theirs. */
@@ -150,7 +160,9 @@ export type ResolvedApplication =
   /** A decision: Datalayer's run page, framed. */
   | { kind: 'frame'; src: string }
   /** Not run, and why, in a sentence. */
-  | { kind: 'said'; text: string };
+  | { kind: 'said'; text: string }
+  /** Nothing at the address: said to the person in one sentence, the detail to the developer. */
+  | { kind: 'missing'; detail: string };
 
 /** ai-agents for a visitor: the host's, else the platform's, else the AI plane's. */
 export function visitorApiOf(runsOn: Pick<ApplicationVisitor, 'api'>): string {
@@ -236,7 +248,7 @@ export async function resolveApplication({
         src: frameSrcOf(runsOn.origin || pageOrigin(), visitor.app),
       };
     }
-    if (visitor.kind === 'said') {
+    if (visitor.kind === 'said' || visitor.kind === 'missing') {
       return visitor;
     }
     return { kind: 'spec', app: visitor.app, visitors: visitor.visitors };
@@ -349,6 +361,43 @@ export function ApplicationSkeleton({
   );
 }
 
+/**
+ * Where no application is at the address: one sentence, centred in the
+ * application's frame in the theme's muted ink — no internal name, no
+ * prefix. The detail (which examples are kept for visitors, the embed
+ * token) goes to the developer, in the console.
+ */
+export function ApplicationMissing({
+  height,
+  detail,
+}: {
+  height: number | string;
+  detail: string;
+}): JSX.Element {
+  useEffect(() => {
+    console.warn(detail);
+  }, [detail]);
+  return (
+    <Box
+      role="status"
+      className="datalayer-app-missing"
+      height={height}
+      minHeight="160px"
+      p={3}
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      textAlign="center"
+      color="fg.muted"
+      fontSize={1}
+      sx={{ boxSizing: 'border-box' }}
+      data-application-missing=""
+    >
+      {MISSING_SENTENCE}
+    </Box>
+  );
+}
+
 export function Application({
   app,
   runsOn,
@@ -396,6 +445,9 @@ export function Application({
   if (!resolved) {
     return <>{skeleton ?? <ApplicationSkeleton height={height} />}</>;
   }
+  if (resolved.kind === 'missing') {
+    return <ApplicationMissing height={height} detail={resolved.detail} />;
+  }
   if (resolved.kind === 'said') {
     return (
       <p role="status" className="datalayer-app-said">
@@ -429,6 +481,9 @@ export function Application({
             ...(visitor.maxTurns ? { maxTurns: visitor.maxTurns } : {}),
             ...(visitor.signInUrl ? { signInUrl: visitor.signInUrl } : {}),
             ...(visitor.onSignIn ? { onSignIn: visitor.onSignIn } : {}),
+            ...(visitor.callToAction
+              ? { callToAction: visitor.callToAction }
+              : {}),
           }
         : {})}
       {...(runsOn.kind === 'runtime'

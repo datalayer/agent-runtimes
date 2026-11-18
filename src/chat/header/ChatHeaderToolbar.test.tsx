@@ -30,7 +30,7 @@ vi.mock('../../apps/agentUiPlugins', () => ({
   },
 }));
 
-import { ChatBaseHeader } from './ChatHeaderBase';
+import { ChatBaseHeader, HEADER_CONTENT_NARROW } from './ChatHeaderBase';
 import { uiChromeHeaderItems } from './uiChromeItems';
 
 /** Every item is 40px wide; the toolbar's room is `room`. */
@@ -180,5 +180,46 @@ describe('the chat header toolbar', () => {
     ).toBeTruthy();
     // Never an item of the toolbar: a narrow chat cannot move it into "…".
     expect(leading.closest('[role="toolbar"]')).toBeNull();
+  });
+  it('gives the name room in a narrow chat: its state gives way first, the actions move into “…”', () => {
+    const { container } = header({
+      title: 'Shopper',
+      headerLeading: (
+        <button type="button" aria-label="Shopper: what it does">
+          i
+        </button>
+      ),
+      headerContent: <span data-testid="state">Ready</span>,
+    });
+    const what = container.querySelector<HTMLElement>(
+      '[data-chat-header-what]',
+    )!;
+    const title = container.querySelector<HTMLElement>(
+      '[data-chat-header-title]',
+    )!;
+    const content = container.querySelector<HTMLElement>(
+      '[data-chat-header-content]',
+    )!;
+    // Never less than a toggle, a face and a short name take, at most two thirds of a wide row.
+    expect(getComputedStyle(what).maxWidth).toBe('min(100%, max(65%, 13rem))');
+    // The state beside the name shrinks long before the name does.
+    expect(getComputedStyle(title).flexShrink).toBe('1');
+    expect(getComputedStyle(content).flexShrink).toBe('1000');
+    expect(getComputedStyle(content).minWidth).toBe('0');
+    expect(getComputedStyle(content).overflow).toBe('hidden');
+    // Not drawn at all in a title row as narrow as a phone's (a container query on the row).
+    const row = container.querySelector<HTMLElement>('[data-chat-header-row]')!;
+    expect(getComputedStyle(row).getPropertyValue('container-type')).toBe(
+      'inline-size',
+    );
+    expect(HEADER_CONTENT_NARROW).toBe(400);
+    expect(content.textContent).toBe('Ready');
+    expect(title.textContent).toBe('Shopper');
+    // The actions are the toolbar's, which moves what does not fit into “…”.
+    room = 40;
+    act(() => {
+      window.dispatchEvent(new Event('resize'));
+    });
+    expect(title.closest('[role="toolbar"]')).toBeNull();
   });
 });

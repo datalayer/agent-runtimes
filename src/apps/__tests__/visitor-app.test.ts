@@ -21,6 +21,7 @@ import {
   AT_PREFIX,
   DEFAULT_API,
   DEFAULT_INFERENCE,
+  MISSING_SENTENCE,
   TOKEN_HINT,
   VISITORS_PATH,
   VISITOR_EXAMPLES,
@@ -137,7 +138,7 @@ describe('a visitor’s application', () => {
     expect(read.visitors.app).toBe('at:demo-marketer');
   });
 
-  it('says an example the visitors’ runtime does not keep, naming the ones it does, when no address of its name is deployed', async () => {
+  it('finds nothing for an example the visitors’ runtime does not keep when no address of its name is deployed, naming the ones it keeps to the developer', async () => {
     const read = await readVisitorApp({
       app: 'accounting',
       fetcher: answer(404, {
@@ -146,15 +147,17 @@ describe('a visitor’s application', () => {
       }),
       catalogue: id => (id === 'accounting' ? emptyAppspec('chat') : undefined),
     });
-    expect(read.kind).toBe('said');
-    if (read.kind !== 'said') return;
-    expect(read.text).toContain(
+    expect(read.kind).toBe('missing');
+    if (read.kind !== 'missing') return;
+    // The detail is the developer's, in the console; the person reads MISSING_SENTENCE.
+    expect(read.detail).toContain(
       '"accounting" is an example Datalayer does not keep ready for visitors',
     );
     for (const kept of VISITOR_EXAMPLES) {
-      expect(read.text).toContain(kept);
+      expect(read.detail).toContain(kept);
     }
-    expect(read.text).toContain(TOKEN_HINT);
+    expect(read.detail).toContain(TOKEN_HINT);
+    expect(MISSING_SENTENCE).toBe('No application is at this address.');
   });
 
   it('frames a decision, named by its id or as an example', async () => {
@@ -283,15 +286,15 @@ describe('a visitor’s application', () => {
     });
   });
 
-  it('says a private address as ai-agents refuses it: nothing is there without a token (fail fast)', async () => {
+  it('finds nothing at a private address as ai-agents refuses it, the token named to the developer (fail fast)', async () => {
     const read = await readVisitorApp({
       app: 'private-desk',
       fetcher: answer(404, { detail: 'No application is at this address.' }),
       catalogue: () => undefined,
     });
     expect(read).toEqual({
-      kind: 'said',
-      text: `datalayer-app: No application is at this address. ${TOKEN_HINT}`,
+      kind: 'missing',
+      detail: `datalayer-app: No application is at this address. ${TOKEN_HINT}`,
     });
   });
 

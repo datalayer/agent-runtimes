@@ -50,4 +50,5 @@ export {
   type LeftPanelState,
   type LoopLeftPanel,
   type LoopLeftPanelComponent,
+  type LoopLeftPanelProps,
 } from './LeftPanel';

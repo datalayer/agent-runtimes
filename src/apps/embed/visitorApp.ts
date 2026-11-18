@@ -92,7 +92,15 @@ export type VisitorApp =
   /** A decision, framed from Datalayer's run page. */
   | { kind: 'decision'; app: string }
   /** Not run, and why, in a sentence. */
-  | { kind: 'said'; text: string };
+  | { kind: 'said'; text: string }
+  /**
+   * Nothing at the address: the person reads {@link MISSING_SENTENCE}, the
+   * developer the detail, in the console.
+   */
+  | { kind: 'missing'; detail: string };
+
+/** What a person reads where no application is at the address: no internal name, no prefix. */
+export const MISSING_SENTENCE = 'No application is at this address.';
 
 /**
  * Where a visitor's conversation with `app` runs: the visitors' runtime beside
@@ -200,12 +208,16 @@ export async function readVisitorApp({
     unknown
   >;
   if (!response.ok || body.success === false) {
-    if (example && response.status === 404) {
-      return { kind: 'said', text: notKeptSentence(named) };
-    }
     const reason = String(
       body.detail ?? body.message ?? `No application is at "${named}".`,
     );
+    // Nothing there: one sentence for the person, the detail for the developer.
+    if (response.status === 404) {
+      return {
+        kind: 'missing',
+        detail: example ? notKeptSentence(named) : refusedSentence(reason),
+      };
+    }
     return { kind: 'said', text: refusedSentence(reason) };
   }
   const session = (body.session ?? {}) as { opens?: unknown; reason?: unknown };

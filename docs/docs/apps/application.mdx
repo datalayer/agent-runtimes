@@ -86,12 +86,21 @@ one application, and mints it again before it runs out.
 | `anonymous` | The limited preview, on unless `false`. The preview shows the turns left, the temporary key's clock and *Sign in*. What the agent would bring that needs one of the visitor's own connections shows as locked chips in the title bar. |
 | `maxTurns` | The turns a visitor has today, as the preview counts them. |
 | `signInUrl` / `onSignIn` | Where *Sign in* goes, or what it does. |
+| `callToAction` | The preview's call to action in the host's words, in place of *Sign in*: `{ says, label, onAction }`, the box's sentence, its button's word and what the button does. For a viewer the host knows is signed in and who tries the demo on the visitors' runtime all the same: the turns are still counted, only the words and the action change. |
 | `origin` | Where Datalayer's run page is, for a decision. Default: the page's origin. |
 | `visitors` | The runtime and token target, when the host has already read them. The element passes this. |
 
 What a visitor may not use is said in one sentence in the application's place:
-a private address, an application that acts through its owner's connections,
-or an example the visitors' runtime does not keep.
+an application that acts through its owner's connections, or one that runs
+code of its own on a runtime that is not running.
+
+Where nothing is at the address (ai-agents answers 404: an address nobody
+deployed, a private one, an example the visitors' runtime does not keep), the
+person reads *No application is at this address.*, centred in the
+application's frame in the theme's muted text, with no internal name. The
+detail for the developer (which examples are kept for visitors, the embed
+token a private address takes) is written to the browser's console. The
+element (`<datalayer-app>`) says it the same way.
 
 ### `runtime`
 

@@ -740,7 +740,8 @@ deployment:
     }
   });
 
-  it('says, before anything is drawn, an address a visitor may not talk to, and the token it takes', async () => {
+  it('says, before anything is drawn, that no application is at an address a visitor may not reach, the token it takes in the console', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     vi.stubGlobal(
       'fetch',
       vi.fn(async (url: string) => {
@@ -763,10 +764,14 @@ deployment:
     await settle();
     // The sentence said, not the shadow root's text: its stylesheet is in it too.
     expect(
-      element.shadowRoot!.querySelector('.datalayer-app-said')?.textContent,
-    ).toBe(
+      element.shadowRoot!.querySelector('.datalayer-app-missing')?.textContent,
+    ).toBe('No application is at this address.');
+    expect(element.shadowRoot!.querySelector('.datalayer-app-said')).toBeNull();
+    // The detail is the developer's.
+    expect(warn).toHaveBeenCalledWith(
       'datalayer-app: No application is at this address. Embedded for a visitor it refuses, it takes its embed token (the "token" attribute).',
     );
+    warn.mockRestore();
     expect(seen.renderer).toHaveLength(0);
     expect(seen.floating).toHaveLength(0);
     await act(async () => element.remove());

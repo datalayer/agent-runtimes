@@ -65,6 +65,7 @@ import type {
   AppThemeVariant,
 } from '../../types/agentspecs';
 import type { ResumedThread, ThemeOverrides } from '../../types/chat';
+import type { ChatCallToAction } from '../../chat/anonymous/anonymousMode';
 import { generateSessionUid } from '../../types/messages';
 import type { AssistantCharacter } from '../../chat/assistant/characters';
 import type { AssistantCharacterData } from '../../chat/assistant/formats/types';
@@ -179,6 +180,11 @@ export type AppEmbedProps = {
   signInUrl?: string;
   /** With `runAsAnonymous`, what *Sign in* does, in place of `signInUrl` (a React host). */
   onSignIn?: () => void;
+  /**
+   * With `runAsAnonymous`, the preview box's call to action in the host's
+   * words, in place of *Sign in* (a React host whose viewer is signed in).
+   */
+  callToAction?: ChatCallToAction;
   /**
    * Where its voice runs: Datalayer's speech service and
    * the browser's models, in every mode, when its Appspec's `interface.voice`
@@ -573,6 +579,7 @@ export type AppFloatingProps = {
       | 'maxTurns'
       | 'signInUrl'
       | 'onSignIn'
+      | 'callToAction'
     >
   > &
     AppRendererExtras;
@@ -777,6 +784,7 @@ export function AppEmbed({
   maxTurns,
   signInUrl,
   onSignIn,
+  callToAction,
   speech,
   kept,
   agentId,
@@ -817,6 +825,7 @@ export function AppEmbed({
                   ...(maxTurns ? { maxTurns } : {}),
                   ...(signInUrl ? { signInUrl } : {}),
                   ...(onSignIn ? { onSignIn } : {}),
+                  ...(callToAction ? { callToAction } : {}),
                 }
               : {}),
             ...(speech ? { speech } : {}),
@@ -829,6 +838,7 @@ export function AppEmbed({
       maxTurns,
       signInUrl,
       onSignIn,
+      callToAction,
       kept,
       agentId,
       thread,

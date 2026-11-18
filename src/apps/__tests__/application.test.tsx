@@ -165,7 +165,41 @@ describe('Application in visitor mode', () => {
     await act(async () => root.unmount());
   });
 
-  it('says, in place, an address a visitor may not talk to', async () => {
+  it('hands the host’s call to action to the preview, for a viewer who is signed in', async () => {
+    vi.stubGlobal('fetch', atDemoMarketer());
+    const onAction = vi.fn();
+    const { root } = await render(
+      <Application
+        app="demo-marketer"
+        runsOn={{
+          kind: 'visitor',
+          api: 'https://r1.example/',
+          maxTurns: 10,
+          callToAction: {
+            says: 'Make it yours: open your own Marketer.',
+            label: 'Open your own Marketer',
+            onAction,
+          },
+        }}
+      />,
+    );
+    const loop = seen.loop.at(-1)!;
+    // Still the visitors' runtime and its turns: only the words and the action change.
+    expect(loop).toMatchObject({
+      runAsAnonymous: true,
+      maxTurns: 10,
+      callToAction: {
+        says: 'Make it yours: open your own Marketer.',
+        label: 'Open your own Marketer',
+      },
+    });
+    loop.callToAction.onAction();
+    expect(onAction).toHaveBeenCalledOnce();
+    await act(async () => root.unmount());
+  });
+
+  it('says, in place and in plain words, that no application is at an address a visitor may not reach', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     vi.stubGlobal(
       'fetch',
       vi.fn(
@@ -184,10 +218,19 @@ describe('Application in visitor mode', () => {
         runsOn={{ kind: 'visitor', api: 'https://r1.example' }}
       />,
     );
-    expect(
-      container.querySelector('.datalayer-app-said')?.textContent,
-    ).toContain('No application is at this address.');
+    const said = container.querySelector<HTMLElement>(
+      '[data-application-missing]',
+    )!;
+    expect(said.getAttribute('role')).toBe('status');
+    // One sentence, no internal name, no prefix: the detail goes to the console.
+    expect(said.textContent).toBe('No application is at this address.');
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'datalayer-app: No application is at this address.',
+      ),
+    );
     expect(seen.loop).toHaveLength(0);
+    warn.mockRestore();
     await act(async () => root.unmount());
   });
 

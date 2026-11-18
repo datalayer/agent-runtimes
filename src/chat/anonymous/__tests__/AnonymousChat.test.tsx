@@ -66,6 +66,41 @@ describe('the box on top', () => {
     expect(signIn).toHaveBeenCalledOnce();
   });
 
+  it('says the host’s call to action in place of Sign in, for a viewer who need not sign in', () => {
+    const signIn = vi.fn();
+    const onAction = vi.fn();
+    themed(
+      <AnonymousPreviewBox
+        state={state({
+          taken: 3,
+          signIn,
+          config: {
+            maxTurns: 10,
+            callToAction: {
+              says: 'Make it yours: open your own Shopper.',
+              label: 'Open your own Shopper',
+              onAction,
+            },
+          },
+        })}
+      />,
+    );
+    expect(
+      screen.getByText('Make it yours: open your own Shopper.'),
+    ).toBeTruthy();
+    // The turns are still counted: the demo runs on the visitors' runtime.
+    expect(
+      screen.getByText('7 of 10 turns left today. Some features are disabled.'),
+    ).toBeTruthy();
+    expect(screen.queryByText(/sign in/i)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Sign in' })).toBeNull();
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Open your own Shopper' }),
+    );
+    expect(onAction).toHaveBeenCalledOnce();
+    expect(signIn).not.toHaveBeenCalled();
+  });
+
   it('counts no turns when the host gives no maxTurns', () => {
     themed(<AnonymousPreviewBox state={state({ config: {} })} />);
     expect(screen.getByText('Some features are disabled.')).toBeTruthy();

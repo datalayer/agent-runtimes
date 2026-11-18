@@ -109,6 +109,11 @@ export function LoopEmbed({
   const onSignInRef = useRef(preset.onSignIn);
   onSignInRef.current = preset.onSignIn;
   const hasOnSignIn = Boolean(preset.onSignIn);
+  // The box's call to action: its words by content, its action through a ref.
+  const callToActionRef = useRef(preset.callToAction);
+  callToActionRef.current = preset.callToAction;
+  const callToActionSays = preset.callToAction?.says;
+  const callToActionLabel = preset.callToAction?.label;
 
   // Built once: rebuilding would restart every plugin on each render.
   const reactor = useMemo(
@@ -121,6 +126,14 @@ export function LoopEmbed({
           windowFrame: preset.windowFrame || frameTitle !== undefined,
           firstPromptHook: () => firstPromptHookRef.current?.(),
           onSignIn: hasOnSignIn ? () => onSignInRef.current?.() : undefined,
+          callToAction:
+            callToActionSays !== undefined && callToActionLabel !== undefined
+              ? {
+                  says: callToActionSays,
+                  label: callToActionLabel,
+                  onAction: () => callToActionRef.current?.onAction(),
+                }
+              : undefined,
         }),
         ...plugins,
       ]),
@@ -144,6 +157,8 @@ export function LoopEmbed({
       preset.maxTurns,
       preset.signInUrl,
       hasOnSignIn,
+      callToActionSays,
+      callToActionLabel,
       // Its voice by its content, the packages that hear aside (functions),
       // and its token aside: a renewed sign-in must not restart the workspace.
       JSON.stringify({

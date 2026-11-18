@@ -66,7 +66,10 @@ import { WindowFramePlugin } from './plugins/window-frame';
 import { DocumentExtension, NotebookExtension } from './extensions';
 import { LoopPageLayoutPlugin, type PageSize } from './plugins/page-layout';
 import type { ResumedThread, ThemeOverrides } from '../types/chat';
-import { maxTurnsOf } from '../chat/anonymous/anonymousMode';
+import {
+  maxTurnsOf,
+  type ChatCallToAction,
+} from '../chat/anonymous/anonymousMode';
 import {
   agentUiChoicesOf,
   agentUiPluginsFor,
@@ -219,6 +222,8 @@ export type LoopPresetOptions = {
   signInUrl?: string;
   /** With `runAsAnonymous`, what *Sign in* does, in place of going to `signInUrl`. */
   onSignIn?: () => void;
+  /** With `runAsAnonymous`, the box's call to action in the host's words, in place of *Sign in*. */
+  callToAction?: ChatCallToAction;
   /** Whether the counters are shown under the prompt; on unless said. */
   showTokenUsage?: boolean;
   /** Its voice, when it has one: the chat's `voice`. */
@@ -348,6 +353,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     maxTurns,
     signInUrl,
     onSignIn,
+    callToAction,
     showTokenUsage,
     voice,
     thread,
@@ -409,6 +415,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
                 : {}),
               ...(signInUrl ? { signInUrl } : {}),
               ...(onSignIn ? { onSignIn } : {}),
+              ...(callToAction ? { callToAction } : {}),
             },
           }
         : {}),

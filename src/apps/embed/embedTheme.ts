@@ -171,6 +171,21 @@ export function embedShadowCss(themeCss?: string): string {
   color: #1f2328;
   background: #ffffff;
 }
+.datalayer-app-missing {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  height: 100%;
+  margin: 0;
+  padding: 16px;
+  text-align: center;
+  font-family: var(--fontStack-sansSerif, system-ui, sans-serif);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--fgColor-muted);
+}
 .datalayer-app-waiting {
   display: flex;
   flex-direction: column;

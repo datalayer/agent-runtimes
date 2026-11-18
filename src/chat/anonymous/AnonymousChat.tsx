@@ -8,9 +8,10 @@
  * 2026), so that every host that runs one gets it without drawing it:
  *
  * - **the box on top**: *Limited preview: sign in to save your work. N of M
- *   turns left today. Some features are disabled*, with *Sign in*; a
- *   skeleton while the temporary key is asked for and checked; the reason
- *   once no turn is left;
+ *   turns left today. Some features are disabled*, with *Sign in* — or the
+ *   host's own sentence and button (`callToAction`) for a viewer who has no
+ *   reason to sign in; a skeleton while the temporary key is asked for and
+ *   checked; the reason once no turn is left;
  * - **the temporary key's clock** in the header (core's `AnonymousKeyTimer`):
  *   held full until the first question, counting the conversation's minutes
  *   after it; in the box when the chat draws no header;
@@ -209,8 +210,9 @@ export function AnonymousFooterLabel(): JSX.Element {
 
 /**
  * The box on top of the conversation: the limited preview, the turns left
- * and what is disabled, with *Sign in*; a skeleton while the key is checked;
- * the reason once no turn is left.
+ * and what is disabled, with *Sign in* — or, when the host gives one, its
+ * call to action's sentence and button in their place; a skeleton while the
+ * key is checked; the reason once no turn is left.
  */
 export function AnonymousPreviewBox({
   state,
@@ -218,6 +220,7 @@ export function AnonymousPreviewBox({
   state: AnonymousChatState;
 }): JSX.Element {
   const max = state.config.maxTurns;
+  const cta = state.config.callToAction;
   const details = [
     max !== undefined
       ? ANONYMOUS_WORDS.turnsLeft(turnsLeft(state.taken, max), max)
@@ -259,7 +262,7 @@ export function AnonymousPreviewBox({
                 sx={{ fontWeight: 'semibold', fontSize: 1 }}
                 role={state.refused ? 'alert' : undefined}
               >
-                {state.refused || ANONYMOUS_WORDS.preview}
+                {state.refused || cta?.says || ANONYMOUS_WORDS.preview}
               </Text>
               <Text sx={{ fontSize: 0 }} data-anonymous-turns="">
                 {details}
@@ -272,9 +275,23 @@ export function AnonymousPreviewBox({
           {state.headerShown || state.validating || state.refused ? null : (
             <AnonymousKeyClock state={state} />
           )}
-          <Button size="small" onClick={state.signIn} data-anonymous-sign-in="">
-            {ANONYMOUS_WORDS.signIn}
-          </Button>
+          {cta ? (
+            <Button
+              size="small"
+              onClick={cta.onAction}
+              data-anonymous-call-to-action=""
+            >
+              {cta.label}
+            </Button>
+          ) : (
+            <Button
+              size="small"
+              onClick={state.signIn}
+              data-anonymous-sign-in=""
+            >
+              {ANONYMOUS_WORDS.signIn}
+            </Button>
+          )}
         </Box>
       </Box>
     </Flash>
