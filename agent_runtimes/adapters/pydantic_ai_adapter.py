@@ -517,6 +517,23 @@ class PydanticAIAdapter(BaseAgent):
         token — a deployment's reach the gateway as its principal."""
         return await self._toolsets_of_the_run(None)
 
+    def _offered_model_of(self, context: AgentContext) -> Any:
+        """The model a run's context names, ``None`` for the agent's own.
+
+        Raises
+        ------
+        ValueError
+            When it is not one the agent offers (`offered.run_model_refusal`):
+            whoever made the context, nothing runs.
+        """
+        from ..models.offered import run_model_refusal
+
+        model = (context.metadata.get("model") if context.metadata else None) or None
+        refusal = run_model_refusal(self._agent_id, model)
+        if refusal:
+            raise ValueError(refusal)
+        return model
+
     async def _toolsets_of_the_run(self, user_token: str | None) -> list[Any]:
         """The toolsets of one run, the Datalayer MCP gateway reached as whom the run is.
 
@@ -769,8 +786,8 @@ class PydanticAIAdapter(BaseAgent):
         # The conversation before the prompt, as pydantic-ai's own messages.
         message_history = model_messages(context.conversation_history)
 
-        # Extract model from context metadata for per-request model override
-        model_override = context.metadata.get("model") if context.metadata else None
+        # A model the context names: one the agent offers, or refused.
+        model_override = self._offered_model_of(context)
         user_token_override = (
             context.metadata.get("user_token") if context.metadata else None
         )
@@ -952,8 +969,9 @@ class PydanticAIAdapter(BaseAgent):
         # The conversation before the prompt, as pydantic-ai's own messages.
         message_history = model_messages(context.conversation_history)
 
-        # Extract per-request overrides from context metadata
-        model_override = context.metadata.get("model") if context.metadata else None
+        # Extract per-request overrides from context metadata. A model it
+        # names: one the agent offers, or refused.
+        model_override = self._offered_model_of(context)
         user_token_override = (
             context.metadata.get("user_token") if context.metadata else None
         )

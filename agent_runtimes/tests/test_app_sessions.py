@@ -1550,7 +1550,7 @@ PROFILES = [
         "id": "sales",
         "label": "Sales",
         "instructions": "Talk about plans.",
-        "model": "alibaba:qwen3-32b",
+        "model": "bedrock:us.anthropic.claude-sonnet-4-6",
     },
 ]
 
@@ -1589,7 +1589,7 @@ def test_a_conversation_keeps_the_profile_it_started_with(
     url = "/api/v1/apps/agents/notes-assistant/ag-ui/"
     local.post(url, json=run)
     assert forwarded[-1]["told"] == "Talk about plans.\n\nAnswer in two sentences."
-    assert forwarded[-1]["model"] == "alibaba:qwen3-32b"
+    assert forwarded[-1]["model"] == "bedrock:us.anthropic.claude-sonnet-4-6"
     live = sessions.session_of("thread-profiles")
     assert live is not None
     assert live.profile == "sales"

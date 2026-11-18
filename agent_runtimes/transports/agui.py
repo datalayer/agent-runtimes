@@ -452,7 +452,8 @@ class AGUITransport(BaseTransport):
                         from starlette.responses import JSONResponse
 
                         return JSONResponse({"detail": str(refused)}, status_code=422)
-                    model = body.get("model")
+                    # An empty model is none: the agent's own.
+                    model = body.get("model") or None
                     if model:
                         logger.info(f"AG-UI using model from request body: {model}")
 
@@ -555,6 +556,15 @@ class AGUITransport(BaseTransport):
                 # naming the application it serves — never handed to
                 # pydantic-ai as a bare string it would call directly (a
                 # hosted page's agent called Bedrock with no region).
+                # A model the agent does not offer is refused before
+                # anything runs (`offered.run_model_refusal`).
+                from ..models.offered import run_model_refusal
+
+                not_offered = run_model_refusal(transport_self._agent_id, model)
+                if not_offered:
+                    from starlette.responses import JSONResponse
+
+                    return JSONResponse({"detail": not_offered}, status_code=400)
                 run_model: Any = model
                 if isinstance(model, str) and model:
                     from ..models.models import RequestModelRefused, model_of_request
