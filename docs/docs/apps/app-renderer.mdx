@@ -405,8 +405,12 @@ export. While the page lives, the person's edits and the agent's writes are one 
 `sheet_read_range` answers what is on screen.
 
 **Not there.** A deck is not printed or saved from a conversation: Decks prints a deck from a page
-of its own, which a deck kept in the page does not have. The two are cards in the conversation
-(`placements: [message]`) until an application has side panels.
+of its own, which a deck kept in the page does not have.
+
+**Where it is drawn.** A page UI's placements are `message`, `right` and `left`. The Marketer and
+the Accountant, and their demos, place theirs `right`: the deck or the sheet is drawn in the
+workspace's right panel, which opens with the first call, and the conversation keeps one line per
+call. Placed `message`, the last call that changed it draws it in the conversation instead.
 
 ## Under its composer: what it runs with
 
