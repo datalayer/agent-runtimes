@@ -113,6 +113,13 @@ export type ApplicationVisitor = {
    * visitors' runtime all the same (*Open your own Shopper*).
    */
   callToAction?: ChatCallToAction;
+  /**
+   * The application is one of this bundle's (a demo agent of the landing):
+   * drawn from the catalogue this bundle carries, never from a deployment's
+   * copy — one the bundle does not carry is refused in a sentence rather
+   * than read from elsewhere (`readVisitorApp`'s `bundled`).
+   */
+  bundled?: boolean;
 };
 
 /** A person's own agent, already running on a runtime of theirs. */
@@ -240,6 +247,7 @@ export async function resolveApplication({
       api: visitorApiOf(runsOn),
       inference: visitorInferenceOf(runsOn),
       app,
+      ...(runsOn.bundled ? { bundled: true } : {}),
       ...(fetcher ? { fetcher } : {}),
     });
     if (visitor.kind === 'decision') {

@@ -20,6 +20,17 @@
  *   answers `at:<slug>`, making the address's agent when first talked to —
  *   or, for a version with code of its own (`runs_code`), the runtime its
  *   deployment is kept on (`kept.url`), which runs that code;
+ * - **an example of this bundle deployed at the address of its name** (the
+ *   landing's demo agents, `demo-marketer`): drawn from the Appspec this
+ *   bundle carries — its UI, its title bar's items, its presentation, its
+ *   starters, its frontend tools — never from the deployment's copy (the
+ *   user, 18 November 2026: "the demo agents' specs must not be loaded from
+ *   r1; they ship directly in the JavaScript code"). The deployment says
+ *   only what the runtime decides: whether a visitor may talk to it, and
+ *   where it runs (`runs_code`, `kept.url`, `at:<slug>`). The runtime there
+ *   runs the version it was deployed with, its own instructions with it, so
+ *   the page may draw what that version does not set yet (a header's items
+ *   stay empty, a drop-down's option is not read) until its next roll;
  * - **a decision**, named by its id (`01M…`): framed from Datalayer's run
  *   page, as before.
  *
@@ -99,6 +110,10 @@ export type VisitorApp =
    */
   | { kind: 'missing'; detail: string };
 
+/** Said of a demo this bundle does not carry: it is not drawn from anybody else's copy. */
+export const notBundledSentence = (app: string): string =>
+  `“${app}” is not in this page's build, so it is not shown: its spec ships with the page, never from elsewhere.`;
+
 /** What a person reads where no application is at the address: no internal name, no prefix. */
 export const MISSING_SENTENCE = 'No application is at this address.';
 
@@ -152,16 +167,25 @@ export async function readVisitorApp({
   app,
   fetcher = fetch,
   catalogue = getApp,
+  bundled = false,
 }: {
   api?: string;
   inference?: string;
   app: string;
   fetcher?: typeof fetch;
   catalogue?: (ref: string) => AppSpec | undefined;
+  /**
+   * It must be one of this bundle's (a demo agent of the landing): one the
+   * bundle does not carry is refused in a sentence, and nothing is asked.
+   */
+  bundled?: boolean;
 }): Promise<VisitorApp> {
   const agents = api || DEFAULT_API;
   const mints = inference || api || DEFAULT_INFERENCE;
   const named = app.trim();
+  if (bundled && !catalogue(named)) {
+    return { kind: 'said', text: notBundledSentence(named) };
+  }
   if (isAppUid(named)) {
     return { kind: 'decision', app: named };
   }
@@ -229,6 +253,25 @@ export async function readVisitorApp({
       ),
     };
   }
+  const runtime = signedOutRuntime(body);
+  if ('said' in runtime) {
+    return { kind: 'said', text: refusedSentence(runtime.said) };
+  }
+  const visitors = visitorsAt(
+    agents,
+    `${AT_PREFIX}${named}`,
+    runtime.url,
+    mints,
+  );
+  // An example of this bundle: its Appspec is the bundle's, never the
+  // deployment's copy. The deployment said where it runs, and nothing more.
+  if (example) {
+    return {
+      kind: 'visitors',
+      app: runnable({ app: example, problems: [] }),
+      visitors,
+    };
+  }
   const deployment = (body.deployment ?? {}) as { app_name?: unknown };
   const parsed = parseAppspec(body.spec);
   if (parsed.app.kind === 'decision') {
@@ -238,14 +281,10 @@ export async function readVisitorApp({
     typeof deployment.app_name === 'string' && deployment.app_name
       ? deployment.app_name
       : parsed.app.name;
-  const runtime = signedOutRuntime(body);
-  if ('said' in runtime) {
-    return { kind: 'said', text: refusedSentence(runtime.said) };
-  }
   return {
     kind: 'visitors',
     app: runnable({ app: { ...parsed.app, name }, problems: parsed.problems }),
-    visitors: visitorsAt(agents, `${AT_PREFIX}${named}`, runtime.url, mints),
+    visitors,
   };
 }
 
