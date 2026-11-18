@@ -1177,7 +1177,7 @@ export const APP_BEHAVIOURS: Record<string, Record<string, AppBehaviour>> = {
   'demo-shop': {},
   'demo-shopper': {},
   'demo-terra': {},
-  'demo-voyager': {},
+  'demo-traveller': {},
   'disaster-assessment': {
     'earthdata.download_earth_data_granules': 'leave_to_me',
     'earthdata.search_earth_datagranules': 'do_it',
@@ -1521,7 +1521,7 @@ export const APP_ESCALATIONS: Record<
   'demo-shop': {},
   'demo-shopper': {},
   'demo-terra': {},
-  'demo-voyager': {},
+  'demo-traveller': {},
   'disaster-assessment': {},
   'errand-runner': {},
   'event-response': {},

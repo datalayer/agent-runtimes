@@ -12,7 +12,7 @@
  * The preset mounts what every chat needs; these are each one agent's own —
  * the Marketer's linked accounts, X budget and post previews, the Shopper's
  * comparison, basket and purchase approval, the Accountant's
- * reconciliation, trial balance and VAT, the Voyager's options, itinerary
+ * reconciliation, trial balance and VAT, the Traveller's options, itinerary
  * and budget, Terra's scenes and index, the Steward's savings. Each draws
  * one tool or one fact, so an agent that names it gets it and every other
  * chat stays as it was.
@@ -163,7 +163,7 @@ export const AGENT_UI_PLUGINS: Readonly<Record<string, AgentUiPlugin>> = {
     chrome: odooContextPlugin,
     Chrome: OdooContextChip,
   },
-  // The Voyager.
+  // The Traveller.
   'trip-options': { needsConnection: false, message: TripOptionsPlugin },
   'trip-itinerary': { needsConnection: false, message: TripItineraryPlugin },
   'trip-budget': { needsConnection: false, message: TripBudgetPlugin },

@@ -4,7 +4,7 @@
  */
 
 /**
- * The Voyager's itinerary (`show_itinerary`), read. Pure.
+ * The Traveller's itinerary (`show_itinerary`), read. Pure.
  *
  * @module apps/plugins/trip-itinerary/read
  */

@@ -5,7 +5,7 @@
 
 /**
  * The agents offered: the six of the home page (the user, 14 November 2026;
- * the Voyager since 15 November 2026).
+ * the Traveller since 15 November 2026).
  * The new agent page, the chats, the assign menu and loop's pickers offer what
  * the catalogue enables and lists (`isAgentspecOffered`), and nothing else, so
  * these flags are the whole list. `listed: false` (agentspecs 0.0.187) keeps
@@ -23,11 +23,11 @@ const SIX = [
   'worker-shopper',
   'worker-steward-aws',
   'worker-terra',
-  'worker-voyager',
+  'worker-traveller',
 ];
 
 describe('the agents the catalogue offers', () => {
-  it('are the Marketer, the Shopper, the Accountant, the Voyager, Terra and the Steward for AWS', () => {
+  it('are the Marketer, the Shopper, the Accountant, the Traveller, Terra and the Steward for AWS', () => {
     const offered = listAgentspecs()
       .filter(isAgentspecOffered)
       .map(spec => spec.id)

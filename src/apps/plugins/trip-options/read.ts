@@ -4,7 +4,7 @@
  */
 
 /**
- * The Voyager's trip options (`show_trip_options`), read. Pure.
+ * The Traveller's trip options (`show_trip_options`), read. Pure.
  *
  * @module apps/plugins/trip-options/read
  */

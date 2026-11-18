@@ -106,7 +106,7 @@ def test_the_accountants_cards_compute_their_figures():
     assert (vat["due"], vat["deductible"], vat["net"]) == (210.0, 60.0, 150.0)
 
 
-def test_the_voyager_and_terra_cards_order_and_complete_their_data():
+def test_the_traveller_and_terra_cards_order_and_complete_their_data():
     options = cards.show_trip_options(
         [{"title": "Lisbon"}, {"title": "Porto", "currency": "USD"}], "EUR"
     )

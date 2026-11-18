@@ -4,7 +4,7 @@
  */
 
 /**
- * The Voyager's trip budget (`show_trip_budget`), read. Pure.
+ * The Traveller's trip budget (`show_trip_budget`), read. Pure.
  *
  * @module apps/plugins/trip-budget/read
  */

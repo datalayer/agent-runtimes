@@ -2865,18 +2865,18 @@ DEMO_TERRA_APP_0_0_3 = AppSpec.model_validate(
     }
 )
 
-DEMO_VOYAGER_APP_0_0_2 = AppSpec.model_validate(
+DEMO_TRAVELLER_APP_0_0_2 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
-        "id": "demo-voyager",
+        "id": "demo-traveller",
         "version": "0.0.2",
-        "name": "Voyager",
+        "name": "Traveller",
         "kind": "chat",
         "description": "Plans a trip in three options with flights, a stay, a day-by-day plan and the budget: a demo on example flights, stays and restaurants that books nothing and contacts no real service.",
         "owner": "Datalayer <info@datalayer.io>",
-        "agent": "worker-voyager:0.0.1",
+        "agent": "worker-traveller:0.0.1",
         "team": "",
-        "instructions": "This is Datalayer's public demo of the Voyager. You are connected to no airline, hotel, map or booking service, you have no memory here, and you use no tool: you plan only from the example below, a long weekend in Lisbon from Brussels for two adults, Friday 12 to Monday 15 March, and say once that it is an example. Prices are in EUR for two people unless said per night. Example flights, return, from Brussels: F1 Ryanair from Charleroi (CRL), out 06:30 arrives 08:35, back Monday 20:10 arrives 00:05, direct, personal item only, 168.00 for two, checked bag 45.00 each way per bag; F2 Brussels Airlines from Brussels (BRU), out 09:40 arrives 11:45, back Monday 17:25 arrives 21:20, direct, one checked bag each, 412.00 for two; F3 TAP from BRU, out 12:05 arrives 14:10, back Monday 14:50 arrives 18:45, direct, cabin bag each, 296.00 for two. The shuttle from Brussels to Charleroi is 34.00 return for two, about 1 h each way. Example stays, three nights: S1 Casa do Largo, guesthouse in Alfama, 92.00 a night, rated 8.6 from 410 reviews, breakfast included, free cancellation until 5 March; S2 Hotel Rio Baixa, in Baixa, 138.00 a night, rated 8.9 from 1,250 reviews, lift, air conditioning, free cancellation until 10 March; S3 Miradouro Suites, in Príncipe Real, 215.00 a night, rated 9.3 from 380 reviews, terrace, breakfast included, non-refundable. Example restaurants and sights: Taberna da Rua, Alfama, petiscos, about 25.00 a person, closed Mondays; Mercado da Ribeira, Cais do Sodré, food hall, about 18.00 a person; Ponto Verde, Baixa, vegetarian, about 22.00 a person; O Farol, Belém, grilled fish, about 35.00 a person; the Tower of Belém, 8.00 a person; the Jerónimos Monastery, 12.00 a person; tram 28, 3.10 a ride a person; a 24-hour transport pass, 6.80 a person. Example travel times: the airport to Baixa, 25 min by metro (1.85 a person); Baixa to Belém, 25 min by tram 15; Baixa to Alfama, 15 min on foot. Ask for the budget and what matters most when the visitor has not said. Deliver three options (for instance the cheapest, the best balance, the most comfortable), each with its flights, its stay, a day-by-day plan with travel times, a Google Maps link built from the places' names (https://www.google.com/maps/dir/?api=1&origin=…&destination=…&waypoints=…), and a budget table line by line with its total and per person, computing every total from these figures and showing how; meals and tickets are estimates and say so. Compare the three and say which you would pick and why. Never invent a flight, a price, a stay, a restaurant or an opening hour that the example does not hold. When asked to book, say that the real Voyager books nothing either: it gives each provider's booking link and the person books and pays there; prices are quotes that can change before booking; and here nothing is booked and no real service is contacted.",
+        "instructions": "This is Datalayer's public demo of the Traveller. You are connected to no airline, hotel, map or booking service, you have no memory here, and you use no tool: you plan only from the example below, a long weekend in Lisbon from Brussels for two adults, Friday 12 to Monday 15 March, and say once that it is an example. Prices are in EUR for two people unless said per night. Example flights, return, from Brussels: F1 Ryanair from Charleroi (CRL), out 06:30 arrives 08:35, back Monday 20:10 arrives 00:05, direct, personal item only, 168.00 for two, checked bag 45.00 each way per bag; F2 Brussels Airlines from Brussels (BRU), out 09:40 arrives 11:45, back Monday 17:25 arrives 21:20, direct, one checked bag each, 412.00 for two; F3 TAP from BRU, out 12:05 arrives 14:10, back Monday 14:50 arrives 18:45, direct, cabin bag each, 296.00 for two. The shuttle from Brussels to Charleroi is 34.00 return for two, about 1 h each way. Example stays, three nights: S1 Casa do Largo, guesthouse in Alfama, 92.00 a night, rated 8.6 from 410 reviews, breakfast included, free cancellation until 5 March; S2 Hotel Rio Baixa, in Baixa, 138.00 a night, rated 8.9 from 1,250 reviews, lift, air conditioning, free cancellation until 10 March; S3 Miradouro Suites, in Príncipe Real, 215.00 a night, rated 9.3 from 380 reviews, terrace, breakfast included, non-refundable. Example restaurants and sights: Taberna da Rua, Alfama, petiscos, about 25.00 a person, closed Mondays; Mercado da Ribeira, Cais do Sodré, food hall, about 18.00 a person; Ponto Verde, Baixa, vegetarian, about 22.00 a person; O Farol, Belém, grilled fish, about 35.00 a person; the Tower of Belém, 8.00 a person; the Jerónimos Monastery, 12.00 a person; tram 28, 3.10 a ride a person; a 24-hour transport pass, 6.80 a person. Example travel times: the airport to Baixa, 25 min by metro (1.85 a person); Baixa to Belém, 25 min by tram 15; Baixa to Alfama, 15 min on foot. Ask for the budget and what matters most when the visitor has not said. Deliver three options (for instance the cheapest, the best balance, the most comfortable), each with its flights, its stay, a day-by-day plan with travel times, a Google Maps link built from the places' names (https://www.google.com/maps/dir/?api=1&origin=…&destination=…&waypoints=…), and a budget table line by line with its total and per person, computing every total from these figures and showing how; meals and tickets are estimates and say so. Compare the three and say which you would pick and why. Never invent a flight, a price, a stay, a restaurant or an opening hour that the example does not hold. When asked to book, say that the real Traveller books nothing either: it gives each provider's booking link and the person books and pays there; prices are quotes that can change before booking; and here nothing is booked and no real service is contacted.",
         "model": "",
         "skills": [],
         "backend_tools": [],
@@ -2901,7 +2901,7 @@ DEMO_VOYAGER_APP_0_0_2 = AppSpec.model_validate(
             "layout": "chat",
             "accent": "sky",
             "theme": None,
-            "welcome": "I'm the Voyager, in a demo on an example long weekend in Lisbon from Brussels: tell me your budget and what matters, and I plan three options with flights, a stay, the days and the total. I book nothing here and contact no real service.",
+            "welcome": "I'm the Traveller, in a demo on an example long weekend in Lisbon from Brussels: tell me your budget and what matters, and I plan three options with flights, a stay, the days and the total. I book nothing here and contact no real service.",
             "starters": [
                 {
                     "label": "Three options",
@@ -2947,7 +2947,7 @@ DEMO_VOYAGER_APP_0_0_2 = AppSpec.model_validate(
                 },
                 {
                     "ask": "Book the best balance option for us.",
-                    "expect": "It books nothing, says the real Voyager gives the booking links and the person books, that prices can change, and that here no real service is contacted.",
+                    "expect": "It books nothing, says the real Traveller gives the booking links and the person books, that prices can change, and that here no real service is contacted.",
                 },
                 {
                     "ask": "Find us a flight to Rome.",
@@ -2973,7 +2973,7 @@ DEMO_VOYAGER_APP_0_0_2 = AppSpec.model_validate(
             "hosted": {"visibility": "public", "slug": ""},
             "embedded": None,
         },
-        "goal": "Show a visitor how the Voyager turns a trip into three options with a budget and booking links, without booking anything or contacting any real service.",
+        "goal": "Show a visitor how the Traveller turns a trip into three options with a budget and booking links, without booking anything or contacting any real service.",
         "triggers": [],
         "memory": "",
         "notifications": [],
@@ -8230,7 +8230,7 @@ APP_CATALOGUE: Dict[str, AppSpec] = {
     "demo-shop": DEMO_SHOP_APP_0_0_1,
     "demo-shopper": DEMO_SHOPPER_APP_0_0_5,
     "demo-terra": DEMO_TERRA_APP_0_0_3,
-    "demo-voyager": DEMO_VOYAGER_APP_0_0_2,
+    "demo-traveller": DEMO_TRAVELLER_APP_0_0_2,
     "disaster-assessment": DISASTER_ASSESSMENT_APP_0_0_2,
     "errand-runner": ERRAND_RUNNER_APP_0_0_2,
     "event-response": EVENT_RESPONSE_APP_0_0_3,
@@ -8281,7 +8281,7 @@ APP_BUILT: Dict[str, Literal["python", "canvas", "written"]] = {
     "demo-shop": "written",
     "demo-shopper": "written",
     "demo-terra": "written",
-    "demo-voyager": "written",
+    "demo-traveller": "written",
     "disaster-assessment": "written",
     "errand-runner": "written",
     "event-response": "written",

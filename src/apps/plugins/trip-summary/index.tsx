@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-trip-summary` — the trip the Voyager is planning,
+ * `@datalayer/loop-plugin-trip-summary` — the trip the Traveller is planning,
  * in the chat's title bar: where and when, from the last itinerary it showed
  * (`show_itinerary`: its title, its first and last days), and its budget so
  * far (`show_trip_budget`'s total). Nothing before either. Brought by the

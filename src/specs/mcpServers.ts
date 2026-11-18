@@ -177,7 +177,7 @@ export const BOOKING_COM_MCP_SERVER_0_0_1: MCPServer = {
   signupUrl: 'https://www.booking.com/affiliate-program/v2/index.html',
   apiKeyUrl: 'https://developers.booking.com/mcp-server/docs/get-started',
   setup:
-    "For Booking.com partners only: once your partner onboarding is done, Booking.com issues an affiliate id and a Demand API key. Paste them into `BOOKING_AFFILIATE_ID` and `BOOKING_DEMAND_API_KEY`; the runtime reaches [Booking.com's MCP server](https://developers.booking.com/mcp-server/docs/get-started) with them. Your Account Manager says which tools your account has. Without partner access, leave it: the Voyager finds stays with Google Maps instead.",
+    "For Booking.com partners only: once your partner onboarding is done, Booking.com issues an affiliate id and a Demand API key. Paste them into `BOOKING_AFFILIATE_ID` and `BOOKING_DEMAND_API_KEY`; the runtime reaches [Booking.com's MCP server](https://developers.booking.com/mcp-server/docs/get-started) with them. Your Account Manager says which tools your account has. Without partner access, leave it: the Traveller finds stays with Google Maps instead.",
   install: {
     type: 'remote',
     command: '',

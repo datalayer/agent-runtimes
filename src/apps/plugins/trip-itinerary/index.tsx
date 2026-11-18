@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-trip-itinerary` — the Voyager's itinerary, day by
+ * `@datalayer/loop-plugin-trip-itinerary` — the Traveller's itinerary, day by
  * day: each stop with its time and place, and the place on a map. Draws
  * `show_itinerary`.
  *

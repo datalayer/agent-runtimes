@@ -37,7 +37,7 @@ const nameOf = (ref: unknown): string =>
 
 describe('the chat’s UI, merged', () => {
   it('is the agent’s, then its servers’, then its skills’, then its tools’, each once', () => {
-    const ids = agentUiIdsOf('worker-voyager');
+    const ids = agentUiIdsOf('worker-traveller');
     // The servers (kiwi, booking-com, google-maps) before the skills.
     expect(ids.slice(0, 3)).toEqual([
       'trip-options',
@@ -208,10 +208,10 @@ describe('where each UI goes', () => {
   });
 
   it('takes a UI out of its slot when its server goes', () => {
-    const voyager = (running: string[]) =>
+    const traveller = (running: string[]) =>
       agentUiChromeOf(agentUiChoicesOf('worker-terra', { running })).header;
-    expect(voyager(['earthdata'])).toContain('earth-area');
-    expect(voyager([])).not.toContain('earth-area');
+    expect(traveller(['earthdata'])).toContain('earth-area');
+    expect(traveller([])).not.toContain('earth-area');
   });
 });
 
@@ -220,7 +220,7 @@ describe('the six seed agents', () => {
     'worker-marketer',
     'worker-shopper',
     'worker-accountant',
-    'worker-voyager',
+    'worker-traveller',
     'worker-terra',
     'worker-steward-aws',
   ])('%s has UI in the chat and an A2UI message', agent => {

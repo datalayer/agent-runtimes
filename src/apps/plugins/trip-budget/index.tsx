@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-trip-budget` — what the Voyager's trip costs: each
+ * `@datalayer/loop-plugin-trip-budget` — what the Traveller's trip costs: each
  * line (travel, stay, food, activities) with its amount, quotes apart from
  * estimates, the total summed here, and what is left of the person's
  * budget. Draws `show_trip_budget`.

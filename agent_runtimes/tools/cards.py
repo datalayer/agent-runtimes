@@ -5,7 +5,7 @@
 
 Each tool takes what the agent wants the person to see — the Shopper's
 comparison and basket, the Accountant's reconciliation, trial balance and VAT,
-the Voyager's options, itinerary and budget, Terra's scenes and index — checks
+the Traveller's options, itinerary and budget, Terra's scenes and index — checks
 it, and answers it normalized under ``shown``. The page draws the call with the
 agent's own UI plugin (agent-runtimes ``src/apps/plugins/<id>``, bound to the
 tool by name), from the arguments while the call runs and from the answer once
@@ -363,7 +363,7 @@ def show_vat_summary(
     }
 
 
-# ---- The Voyager -----------------------------------------------------------
+# ---- The Traveller -----------------------------------------------------------
 
 
 class _TripOption(_Row):

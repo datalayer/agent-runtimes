@@ -1084,7 +1084,7 @@ APP_BEHAVIOURS: Dict[str, Dict[str, str]] = {
     "demo-shop": {},
     "demo-shopper": {},
     "demo-terra": {},
-    "demo-voyager": {},
+    "demo-traveller": {},
     "disaster-assessment": {
         "earthdata.download_earth_data_granules": "leave_to_me",
         "earthdata.search_earth_datagranules": "do_it",
@@ -1422,7 +1422,7 @@ APP_ESCALATIONS: Dict[str, Dict[str, List[Dict[str, Any]]]] = {
     "demo-shop": {},
     "demo-shopper": {},
     "demo-terra": {},
-    "demo-voyager": {},
+    "demo-traveller": {},
     "disaster-assessment": {},
     "errand-runner": {},
     "event-response": {},
