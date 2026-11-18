@@ -206,8 +206,10 @@ export interface SpeechBalloonProps {
   onDecisionActive?: (active: boolean) => void;
   /**
    * The balloon's width, fixed whatever it says (the user, 17 November 2026:
-   * "stable and fixed"), never wider than its container; `BALLOON_WIDTH`
-   * unless given.
+   * "stable and fixed"), never wider than the window; `BALLOON_WIDTH`
+   * unless given. Not capped by its container: it hangs from an avatar
+   * narrower than itself, and a percentage there squeezed it to the
+   * avatar's width (18 November 2026).
    */
   width?: number;
   /** Puts the peek away: a × beside its line. Never for an approval. */
@@ -487,7 +489,9 @@ export function SpeechBalloon({
         [align]: 0,
         // Fixed, whatever it says: never sized by its words.
         width,
-        maxWidth: '100%',
+        // The window, not the containing block: the balloon is absolute in
+        // an avatar's box, a few dozen pixels wide.
+        maxWidth: 'calc(100vw - 32px)',
         bg: 'canvas.overlay',
         // The current balloon is the agent's voice now: its accent's edge.
         borderColor: current ? 'accent.muted' : 'border.default',

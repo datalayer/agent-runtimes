@@ -32,6 +32,7 @@ import {
   type BalloonToolLine,
 } from '../assistant/toolLine';
 import { conversationHeaderText } from '../assistant/BalloonParts';
+import balloonSource from '../assistant/SpeechBalloon.tsx?raw';
 
 const mounted: Array<() => void> = [];
 
@@ -500,5 +501,14 @@ describe('the history balloon lists the conversation', () => {
     expect(
       container.querySelector('[data-balloon-current-text]')?.textContent,
     ).toBe('Yes, it ran at 9:40.');
+  });
+});
+
+describe('the balloon width', () => {
+  it('is capped by the window, never by the avatar it hangs from (18 November 2026)', () => {
+    // Absolute in an avatar's box a few dozen pixels wide: a percentage
+    // there squeezed the balloon to a column two words wide.
+    expect(balloonSource).not.toContain("maxWidth: '100%'");
+    expect(balloonSource).toContain("maxWidth: 'calc(100vw - 32px)'");
   });
 });
