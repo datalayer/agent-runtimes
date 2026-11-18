@@ -63,6 +63,7 @@ import {
 import { PAGE_TOOL_RESULTS } from '../toolCards/toolResults';
 import { UI_CATALOGUE } from '../../specs/ui';
 import { AGENTSPECS } from '../../specs/agents';
+import { agentAppspec } from '../Application';
 import type { UiHeaderItemSpec } from '../../types/agentspecs';
 
 const HEADERS = [
@@ -176,6 +177,20 @@ describe('a header UI in the catalogue', () => {
       ),
     ).toEqual([`@datalayer/loop-plugin-${ui}`]);
   });
+
+  it.each(Object.keys(SEED))(
+    'a person’s own %s, drawn as an application (the Personal pages), carries its header and mounts it',
+    agent => {
+      const app = agentAppspec(AGENTSPECS[agent]);
+      const ui = SEED[agent][1];
+      expect(app.ui.map(choice => choice.plugin)).toContain(ui);
+      expect(
+        agentUiPluginsFor(app.ui).map(
+          plugin => (plugin as { name: string }).name,
+        ),
+      ).toContain(`@datalayer/loop-plugin-${ui}`);
+    },
+  );
 
   it('stands in for the chip that said the same fact, where it is drawn', () => {
     const names = (ids: string[], anonymous = false) =>
