@@ -10,7 +10,9 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const editors = vi.hoisted(() => ({ list: [] as { value: { surfaceId: string } }[] }));
+const editors = vi.hoisted(() => ({
+  list: [] as { value: { surfaceId: string } }[],
+}));
 vi.mock('@datalayer/reactor/react', async importOriginal => ({
   ...(await importOriginal<object>()),
   useContributions: () => editors.list,
@@ -18,7 +20,9 @@ vi.mock('@datalayer/reactor/react', async importOriginal => ({
 
 import { ChatViewPlugin } from '../plugins/chat-view';
 
-(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+(
+  globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+).IS_REACT_ACT_ENVIRONMENT = true;
 
 let root: Root | null = null;
 afterEach(() => {
@@ -28,7 +32,12 @@ afterEach(() => {
 });
 
 function drawn(): HTMLElement {
-  const output = ChatViewPlugin.build?.({ config: {}, reactor: {} as never, contribute: (() => {}) as never, state: {} as never } as never) as {
+  const output = ChatViewPlugin.build?.({
+    config: {},
+    reactor: {} as never,
+    contribute: (() => {}) as never,
+    state: {} as never,
+  } as never) as {
     components: { Component: React.ComponentType }[];
   };
   const Icon = output.components[0].Component;
@@ -46,6 +55,8 @@ describe("the footer's 'Show the chat' (the user, 18 November 2026: clicking it 
 
   it('is drawn once an editor is, to come back to the chat from it', () => {
     editors.list = [{ value: { surfaceId: 'notebook' } }];
-    expect(drawn().querySelector('button[data-component="IconButton"]')).not.toBeNull();
+    expect(
+      drawn().querySelector('button[data-component="IconButton"]'),
+    ).not.toBeNull();
   });
 });
