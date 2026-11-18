@@ -1177,25 +1177,55 @@ COMPANY_WITH_A_SCOPED_OPERATION = {
 
 
 class _IssuedHere:
-    """A company whose issuer issued two tokens: one for its MCP server, one default."""
+    """A company whose issuer issued tokens: one for its MCP server and one default, to
+    a personal agent; and one for its MCP server to another MCP client (the SDK's
+    public clients), whose account is ``mcp_client_account``. Each is the SDK's own
+    record of an access token."""
 
-    def __init__(self, scopes: tuple[str, ...] = ("orders:read",)) -> None:
+    def __init__(
+        self,
+        scopes: tuple[str, ...] = ("orders:read",),
+        mcp_client_account: str = "friend",
+    ) -> None:
         from datetime import datetime, timedelta, timezone
         from types import SimpleNamespace
 
+        from personal_agent_protocol.company.store import IssuedAccessToken
+
         self.asked: List[tuple[str, str]] = []
-        issued = SimpleNamespace(
-            account_id="friend",
-            client_id="https://atlas.example/agent",
-            scopes=scopes,
-            expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
-        )
+        expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+        issued = {
+            "for-the-mcp-server": IssuedAccessToken(
+                client_id="https://atlas.example/agent",
+                account_id="friend",
+                scopes=scopes,
+                expires_at=expires_at,
+                family="family-1",
+                resource=MCP_URL,
+            ),
+            "another-clients": IssuedAccessToken(
+                client_id="mcpc_Yx2b7Qd_Kp8mR3vT1nWc4A",
+                account_id=mcp_client_account,
+                scopes=scopes,
+                expires_at=expires_at,
+                family="family-2",
+                resource=MCP_URL,
+                public=True,
+            ),
+        }
+        self.issued = issued
 
         async def access_token_for(token: str, resource: str) -> Any:
             self.asked.append((token, resource))
-            return issued if token == "for-the-mcp-server" else None
+            found = issued.get(token)
+            return found if found is not None and found.resource == resource else None
 
-        self.service = SimpleNamespace(access_token_for=access_token_for)
+        async def _access_token(token: str) -> Any:
+            return issued.get(token)
+
+        self.service = SimpleNamespace(
+            access_token_for=access_token_for, _access_token=_access_token
+        )
 
 
 def _company_agent(
@@ -1427,3 +1457,265 @@ def test_an_application_that_is_no_company_keeps_its_access_check() -> None:
         assert (
             client.get("/.well-known/oauth-protected-resource/mcp").status_code == 401
         )
+
+
+# --- other MCP clients (a private company's "Let other MCP clients sign in") -----------
+
+
+def _with_an_approved_operation() -> Dict[str, Any]:
+    """The company, its ``quote`` operation one a person approves (``x-pap``)."""
+    document = json.loads(json.dumps(OPENAPI))
+    document["paths"]["/quote"]["post"]["x-pap"] = {
+        "action": "quote_basket",
+        "tool": "quote",
+        "summary": "Quote {items}",
+    }
+    company = json.loads(json.dumps(COMPANY))
+    company["pap"]["company"]["extensions"] = ["operations"]
+    company["pap"]["company"]["scopes"].append(
+        {"name": "orders:write", "description": "Change your orders"}
+    )
+    return {**company, "openapi": document}
+
+
+def test_a_company_offers_other_mcp_clients_nothing_unless_its_owner_said_so() -> None:
+    from datetime import timedelta
+
+    from personal_agent_protocol.company import build_company
+
+    from agent_runtimes.addresses.hosts import consent_page
+    from agent_runtimes.pap.company import company_config
+
+    agent = _company_agent(PRIVATE)
+    assert agent.mcp_clients is False
+    said = {
+        "name": agent.app.name,
+        "domain": agent.hosts.host("agent"),  # type: ignore[union-attr]
+        "company": agent.app.pap.company,
+        "resource_servers": (MCP_URL,),
+    }
+    off = company_config(**said)
+    assert (off.direct, off.public_clients, off.client_registration) == (
+        False,
+        False,
+        False,
+    )
+    metadata = build_company(off, http_client=httpx.AsyncClient()).oauth_metadata()
+    assert metadata["token_endpoint_auth_methods_supported"] == ["private_key_jwt"]
+    assert "registration_endpoint" not in metadata
+    assert "authorization_endpoint" not in metadata
+
+    page = consent_page("shop")
+    assert page == "https://datalayer.ai/pap/consent?slug=shop&request={request_id}"
+    on = company_config(**said, mcp_clients=True, consent_page=page)
+    assert (on.direct, on.public_clients, on.client_registration) == (True, True, True)
+    assert on.consent_page == page
+    assert on.public_client_refresh_lifetime == timedelta(days=30)
+    # The company's own scopes, never the protocol's browser sign-in.
+    assert on.public_scopes == ("orders:read",)
+    metadata = build_company(on, http_client=httpx.AsyncClient()).oauth_metadata()
+    assert metadata["token_endpoint_auth_methods_supported"] == [
+        "private_key_jwt",
+        "none",
+    ]
+    issuer = "https://shop.agent.datalayer.ai"
+    assert metadata["registration_endpoint"] == f"{issuer}/oauth/register"
+    assert metadata["authorization_endpoint"] == f"{issuer}/oauth/authorize"
+    assert metadata["code_challenge_methods_supported"] == ["S256"]
+    # Never without the page a person allows them on, nor without its MCP address.
+    for missing in ({"consent_page": page}, {"resource_servers": (MCP_URL,)}):
+        with pytest.raises(ValueError, match="consent page"):
+            company_config(
+                **{**said, "resource_servers": (), **missing, "mcp_clients": True}
+            )
+
+
+def test_only_a_private_deployment_that_says_so_lets_them_in() -> None:
+    from agent_runtimes.addresses.servers import mcp_clients_of
+
+    public = AddressPolicy("public")
+    assert mcp_clients_of({"mcp_clients": True}, PRIVATE) is True
+    assert mcp_clients_of({"mcp_clients": True}, public) is False
+    assert mcp_clients_of({}, PRIVATE) is False
+    assert mcp_clients_of({"mcp_clients": "yes"}, PRIVATE) is False
+
+
+@pytest.mark.asyncio
+async def test_another_mcp_client_calls_what_its_scopes_allow_as_the_person() -> None:
+    from agent_runtimes.addresses.mcp import NEEDS_A_PERSONAL_AGENT, mcp_app
+
+    spec = _with_an_approved_operation()
+    agent = _company_agent(PRIVATE, spec, None, {"title": "A lamp", "price": 12.5})
+    agent.mcp_clients = True
+    recorded: List[Any] = []
+    agent.calls = type("Calls", (), {"record": staticmethod(recorded.append)})()
+    theirs = {"Authorization": "Bearer another-clients"}
+    async with served(mcp_app(agent)) as url:
+        async with connected(f"{url}/mcp", theirs) as session:
+            assert {tool.name for tool in (await session.list_tools()).tools} == {
+                "getProduct",
+                "quote",
+            }
+            answer = await session.call_tool("getProduct", {"product_id": 7})
+            assert answer.is_error is not True
+            assert answer.structured_content == {"title": "A lamp", "price": 12.5}
+            # What a person approves is not done for it: nothing was asked of the agent.
+            refused = await session.call_tool("quote", {"items": [1]})
+            assert refused.is_error is True
+            assert NEEDS_A_PERSONAL_AGENT in refused.content[0].text
+    # The one call made is recorded as the person's who allowed the client.
+    assert [(call.operation, call.person, call.status) for call in recorded] == [
+        ("getProduct", "friend", 200)
+    ]
+
+
+def test_a_company_that_takes_none_refuses_another_mcp_clients_token() -> None:
+    from agent_runtimes.addresses.mcp import mcp_app
+
+    accept = {**AT_ITS_HOST, "Accept": "application/json, text/event-stream"}
+    theirs = {**accept, "Authorization": "Bearer another-clients"}
+    # The switch off: its token is nobody's here, a personal agent's is as before.
+    agent = _company_agent(PRIVATE)
+    with TestClient(mcp_app(agent)) as client:
+        assert client.post("/mcp", json=HELLO, headers=theirs).status_code == 401
+        mine = {**accept, "Authorization": "Bearer for-the-mcp-server"}
+        assert client.post("/mcp", json=HELLO, headers=mine).status_code not in (
+            401,
+            403,
+        )
+    # On, for somebody the owner does not let in (any more): refused, as anybody else is.
+    stranger = _company_agent(PRIVATE, COMPANY, _IssuedHere(mcp_client_account="other"))
+    stranger.mcp_clients = True
+    with TestClient(mcp_app(stranger)) as client:
+        assert client.post("/mcp", json=HELLO, headers=theirs).status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_another_mcp_clients_token_is_nobodys_at_the_other_addresses() -> None:
+    """Issued for its MCP address alone: at its agent, API and web hosts the access
+    check does not know it, where a personal agent's token says whose it is."""
+    from agent_runtimes.addresses.mcp import mcp_client_caller
+    from agent_runtimes.addresses.servers import pap_token_checker
+
+    agent = _company_agent(PRIVATE)
+    agent.mcp_clients = True
+    check = pap_token_checker(agent)
+    assert await check("for-the-mcp-server") == "friend"
+    assert await check("another-clients") is None
+    assert await check("invented") is None
+    # At its MCP address it is the person who allowed it; no other bearer is.
+    caller = await mcp_client_caller(
+        agent,
+        {"authorization": "Bearer another-clients", "x-forwarded-for": "203.0.113.9"},
+    )
+    assert caller is not None
+    assert (caller.kind, caller.uid, caller.address) == (
+        "token",
+        "friend",
+        "203.0.113.9",
+    )
+    for other in ("Bearer for-the-mcp-server", "Bearer key-owner", "Basic abc", ""):
+        assert await mcp_client_caller(agent, {"Authorization": other}) is None
+    agent.mcp_clients = False
+    with pytest.raises(OperationError) as refused:
+        await mcp_client_caller(agent, {"Authorization": "Bearer another-clients"})
+    assert refused.value.status == 403
+
+
+@pytest.mark.asyncio
+async def test_a_company_that_lists_its_personal_agents_takes_other_clients_apart() -> (
+    None
+):
+    from agent_runtimes.pap.company import RegisteredAgents
+
+    listed = RegisteredAgents(["https://atlas.example/agent"])
+    assert await listed.allows("https://atlas.example/agent") is True
+    assert await listed.allows("mcpc_Yx2b7Qd_Kp8mR3vT1nWc4A") is False
+    assert await listed.allows_public("mcpc_Yx2b7Qd_Kp8mR3vT1nWc4A") is False
+    taking = RegisteredAgents(["https://atlas.example/agent"], public_clients=True)
+    assert await taking.allows_public("mcpc_Yx2b7Qd_Kp8mR3vT1nWc4A") is True
+    assert await taking.allows("https://other.example/agent") is False
+
+
+@pytest.mark.asyncio
+async def test_requests_nobody_signed_are_capped_by_address() -> None:
+    from agent_runtimes.addresses.servers import UnsignedRequestsCap
+
+    now = [0.0]
+    cap = UnsignedRequestsCap(2, clock=lambda: now[0])
+    assert await cap.admit("registration:203.0.113.9", None) is None
+    assert await cap.admit("registration:203.0.113.9", None) is None
+    wait = await cap.admit("registration:203.0.113.9", None)
+    assert wait is not None and 0 < wait <= 61
+    # Another address, and the other kind of request, have their own counts.
+    assert await cap.admit("registration:203.0.113.10", None) is None
+    assert await cap.admit("public:203.0.113.9", None) is None
+    # A personal agent's requests are not counted here.
+    for _ in range(5):
+        assert await cap.admit("https://atlas.example/agent", "friend") is None
+    now[0] = 61.0
+    assert await cap.admit("registration:203.0.113.9", None) is None
+
+
+@pytest.mark.asyncio
+async def test_the_company_is_built_again_when_its_owner_turns_the_switch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from agent_runtimes.addresses import servers
+
+    agent = _company_agent(PRIVATE)
+    built: List[bool] = []
+
+    def build(addressed_agent: AddressedAgent, agent_id: str) -> Any:
+        built.append(addressed_agent.mcp_clients)
+        return f"company-{len(built)}"
+
+    monkeypatch.setattr(servers, "build_company_of", build)
+    agent.company = "company-0"
+    record: Dict[str, Any] = {"mcp_clients": False}
+    reads: List[str] = []
+
+    async def read(slug: str) -> Dict[str, Any]:
+        reads.append(slug)
+        if record.get("unreadable"):
+            raise RuntimeError("ai-agents did not answer")
+        return record
+
+    now = [0.0]
+    deployed = servers.CompanyAsDeployed(
+        agent, "agent-1", read=read, clock=lambda: now[0]
+    )
+    # Taken as read for a minute: nothing is asked.
+    record["mcp_clients"] = True
+    assert await deployed.current() == "company-0" and reads == []
+    now[0] = 61.0
+    assert await deployed.current() == "company-1"
+    assert (agent.mcp_clients, agent.company, built, reads) == (
+        True,
+        "company-1",
+        [True],
+        ["shop"],
+    )
+    # Unchanged: read again a minute later, not built again.
+    now[0] = 122.0
+    assert await deployed.current() == "company-1" and built == [True]
+    # Not read: it answers as it did.
+    record["unreadable"] = True
+    now[0] = 183.0
+    assert await deployed.current() == "company-1" and agent.mcp_clients is True
+    # Turned off: built again without it.
+    record.update(unreadable=False, mcp_clients=False)
+    now[0] = 244.0
+    assert await deployed.current() == "company-2"
+    assert (agent.mcp_clients, built) == (False, [True, False])
+
+
+def test_the_companys_poppy_document_is_the_same_with_the_switch_on() -> None:
+    """Its sign-in for personal agents is what it was: what it offers other MCP clients
+    is in its issuer's metadata, where they read it."""
+    agent = _company_agent(PRIVATE)
+    before = poppy_document(agent)
+    agent.mcp_clients = True
+    after = poppy_document(agent)
+    assert after["apis"] == before["apis"]
+    assert after["organization"] == before["organization"]

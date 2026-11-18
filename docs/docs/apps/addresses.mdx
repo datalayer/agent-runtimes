@@ -130,7 +130,41 @@ refused for it, whatever else it carries.
 
 The company offers personal agents Device Sign-In. An MCP client that is not
 a personal agent reads the same document and finds the issuer, which offers
-no sign-in for it: it calls a private application with an API key.
+no sign-in for it unless the application's owner said so (below): it calls a
+private application with an API key.
+
+#### Other MCP clients: "Let other MCP clients sign in"
+
+A **private** company's owner may let MCP clients that are no personal agents
+sign in at its MCP address: a desktop assistant, an IDE, any client that
+speaks MCP's own OAuth flow. It is a switch of the deployment, off by
+default; a public one has no such switch, since its MCP server answers
+anybody already. On (`AddressedAgent.mcp_clients`, read from the deployment's
+record, `servers.mcp_clients_of`), the company is configured with the SDK's
+public clients (`personal-agent-protocol` ≥ 0.37.4, `pap.company.company_config`
+`mcp_clients`):
+
+| | |
+|---|---|
+| The issuer's `/.well-known/oauth-authorization-server` | Adds `authorization_endpoint` (`/oauth/authorize`, PKCE `S256`), `registration_endpoint` (`/oauth/register`), and `none` in `token_endpoint_auth_methods_supported` |
+| How a client is known | By its client ID metadata document (its `client_id` is that URL: verified by its domain), or registered at `/oauth/register` (RFC 7591: unverified). A registration says `"token_endpoint_auth_method": "none"`; one that leaves it out or names another is refused, and told what to send |
+| Where the person allows it | Datalayer's consent page (`https://datalayer.ai/pap/consent?slug={name}&request=…`), signed in to Datalayer. Only somebody who may open the application can allow, and only a client of this kind is allowed there: for personal agents the switch changes nothing |
+| What it gets | A Bearer token for this MCP server alone (`resource` its `url`, named in the authorization request and at every token request), with the company's own scopes it asked for, and a refresh token that rotates at every use; 30 days after the person allowed it, they allow it again |
+| What it never gets | The default token, a Session, a conversation with the company's agent: every address but this one refuses its token (`servers.pap_token_checker`) |
+
+At the MCP server such a client calls the tools its scopes allow, as the person
+who allowed it, who must still be somebody the owner lets in (`403` otherwise).
+**An operation a person approves (`x-pap`) is refused to it**, with a sentence
+saying a personal agent is needed: nothing at this address asks a person to
+approve, and only their personal agent does. Its calls are recorded as that
+person's, as a token's are.
+
+Turned off, the company stops offering it within a minute (the deployment's
+record is read again at most once a minute when a request of the company's
+comes, `servers.CompanyAsDeployed`), and Datalayer ends the sign-ins it gave at
+once. A client registering itself, or asking for tokens without a client
+assertion, is capped by address (`servers.UnsignedRequestsCap`, the deployment's
+calls a minute).
 
 An application that is no company has no issuer to name: its MCP server keeps
 the access check in front, and publishes no protected resource metadata.

@@ -24,12 +24,13 @@ is the main server's, untouched.
 
 from __future__ import annotations
 
-import os
-from typing import Any, Optional
+from typing import Any, Awaitable, Callable, Optional
 
 from agent_runtimes.addresses import browser_sign_in
+from agent_runtimes.addresses.access import client_address
 from agent_runtimes.addresses.addressed import AddressedAgent
 from agent_runtimes.addresses.asgi import answer_json, headers_of, peer_of
+from agent_runtimes.addresses.hosts import studio_url
 from agent_runtimes.addresses.operations import OperationError
 from agent_runtimes.addresses.poppy import poppy_document
 
@@ -41,13 +42,6 @@ CARD = "/.well-known/agent-card.json"
 #: The company's Device Sign-In link (``verification_uri``), on its agent host: a
 #: personal agent shows a link only on the issuer's host (PAP §4.6).
 DEVICE_PATH = "/pap/device"
-
-
-def studio_url() -> str:
-    """Where a person approves a personal agent: Datalayer's own pages."""
-    return (
-        os.environ.get("DATALAYER_PAP_STUDIO_URL") or "https://datalayer.ai"
-    ).rstrip("/")
 
 
 def device_redirect(addressed: AddressedAgent, scope: dict) -> str:
@@ -76,6 +70,8 @@ class AgentHost:
         addressed: AddressedAgent,
         agent_id: str,
         company: Optional[Any] = None,
+        *,
+        current_company: Optional[Callable[[], Awaitable[Any]]] = None,
     ) -> None:
         if addressed.hosts is None:
             raise ValueError(
@@ -87,6 +83,9 @@ class AgentHost:
         self.addressed = addressed
         self.agent_id = agent_id
         self.company = company
+        #: The company as its deployment says it now (its owner may have let other MCP
+        #: clients sign in, or stopped): asked before each of its requests is answered.
+        self.current_company = current_company
         self.host = addressed.hosts.host("agent")
 
     async def _card(self) -> dict[str, Any]:
@@ -134,8 +133,15 @@ class AgentHost:
                 await answer_json(send, 200, await self._card())
                 return
             if self.company is not None and path.startswith(COMPANY_PREFIXES):
+                if self.current_company is not None:
+                    self.company = await self.current_company()
                 # Its sign-in and Sessions are the protocol's: the SDK checks each request.
-                await self.company.asgi()(scope, receive, send)
+                # The caller's address, as the access check reads it, is what the SDK
+                # limits a client's registration by: the peer here is the ingress.
+                address = client_address(headers_of(scope), peer_of(scope))
+                await self.company.asgi()(
+                    {**scope, "client": (address, 0)}, receive, send
+                )
                 return
             caller = await self.addressed.access.identify(
                 headers_of(scope), peer_of(scope)
@@ -175,4 +181,4 @@ class AgentHost:
         await self.app(scope, receive, send)
 
 
-__all__ = ["AgentHost", "COMPANY_PREFIXES"]
+__all__ = ["AgentHost", "COMPANY_PREFIXES", "studio_url"]

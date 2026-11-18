@@ -19,6 +19,13 @@ with the challenge naming that document; and it takes the company's access
 tokens issued for it alone, their scopes enforced. Who may call is unchanged:
 anyone at a public one, a Datalayer API key or token of somebody allowed at a
 private one.
+
+A private company whose owner lets other MCP clients sign in also takes the token
+of such a client (the SDK's public clients: an MCP client that is no personal agent),
+issued for this server after somebody who may open the application allowed it. It
+calls the tools its scopes allow, as that person, except those that act for them on
+approval (an operation carrying ``x-pap``): only a personal agent asks a person to
+approve, so those are refused to it (:data:`NEEDS_A_PERSONAL_AGENT`).
 """
 
 from __future__ import annotations
@@ -43,7 +50,7 @@ from reactor_mcp_server import (
 )
 from reactor_mcp_server.oauth import AccessToken, Forbidden
 
-from agent_runtimes.addresses.access import Caller
+from agent_runtimes.addresses.access import Caller, client_address
 from agent_runtimes.addresses.addressed import AddressedAgent
 from agent_runtimes.addresses.asgi import guarded, headers_of
 from agent_runtimes.addresses.operations import OperationError
@@ -95,10 +102,15 @@ class OperationsExtension(McpExtension):
                 # Who calls, from this request's own headers (the session's task
                 # outlives the request that opened it): checked, then counted.
                 request = ctx.request_context.request
-                caller = await addressed.access.identify(
-                    dict(ctx.headers or {}),
-                    str(getattr(getattr(request, "client", None), "host", "") or ""),
-                )
+                headers = dict(ctx.headers or {})
+                peer = str(getattr(getattr(request, "client", None), "host", "") or "")
+                caller = await mcp_client_caller(addressed, headers, peer)
+                if caller is None:
+                    caller = await addressed.access.identify(headers, peer)
+                elif addressed.operation(operation_id).pap:
+                    # What a person approves is asked of them by their personal agent:
+                    # another MCP client has no way to, so it is not done for it.
+                    raise OperationError(403, NEEDS_A_PERSONAL_AGENT)
                 addressed.access.count(caller)
                 return _result(
                     await addressed.call(
@@ -153,6 +165,52 @@ API_KEY_CLIENT = "datalayer-api-key"
 DATALAYER_CLIENT = "datalayer"
 
 NOT_ALLOWED = "Its owner has not allowed you to call it."
+
+#: What another MCP client is told of an operation a person approves (``x-pap``).
+NEEDS_A_PERSONAL_AGENT = (
+    "This is done only once the person approved it, which their personal agent asks "
+    "them: this client cannot."
+)
+
+#: In a verified token's ``claims``: the token is another MCP client's, not a personal agent's.
+MCP_CLIENT_CLAIM = "datalayer.ai/mcp_client"
+
+
+async def mcp_client_token(addressed: AddressedAgent, token: str) -> Any:
+    """The SDK's record of ``token`` when it is another MCP client's (a public client's)
+    issued for this MCP server and still good, else ``None``: asked of the company each
+    time, so a sign-in its owner ended, or a switch turned off, stops it at once."""
+    company, hosts = addressed.company, addressed.hosts
+    if company is None or hosts is None or not token:
+        return None
+    issued = await company.service.access_token_for(token, hosts.mcp)
+    return issued if issued is not None and issued.public else None
+
+
+async def mcp_client_caller(
+    addressed: AddressedAgent, headers: Dict[str, Any], peer: str = ""
+) -> Optional[Caller]:
+    """Who calls, when the request's bearer is another MCP client's token: the person
+    who allowed it, who must still be somebody its owner lets in. ``None`` for any other
+    request, which the access check identifies as before."""
+    authorization = next(
+        (
+            str(value)
+            for key, value in headers.items()
+            if key.lower() == "authorization"
+        ),
+        "",
+    )
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer":
+        return None
+    issued = await mcp_client_token(addressed, token.strip())
+    if issued is None:
+        return None
+    uid = str(issued.account_id)
+    if not addressed.mcp_clients or not addressed.access.policy.admits(uid):
+        raise OperationError(403, NOT_ALLOWED)
+    return Caller(kind="token", uid=uid, address=client_address(headers, peer))
 
 
 def operation_scopes(addressed: AddressedAgent) -> Dict[str, tuple[str, ...]]:
@@ -229,6 +287,9 @@ def company_oauth(addressed: AddressedAgent) -> OAuthExtension:
             else None
         )
         if issued is not None:
+            if issued.public and not addressed.mcp_clients:
+                # Another MCP client's token, at a company that takes none (any more).
+                return None
             admitted(str(issued.account_id))
             return AccessToken(
                 token=token,
@@ -237,6 +298,8 @@ def company_oauth(addressed: AddressedAgent) -> OAuthExtension:
                 expires_at=int(issued.expires_at.timestamp()),
                 resource=hosts.mcp,
                 subject=str(issued.account_id),
+                # Whose kind of client it is, for whoever reads the verified token.
+                claims={MCP_CLIENT_CLAIM: True} if issued.public else None,
             )
         checker = addressed.platform_tokens or (
             addressed.access.token_checker if company is None else None
@@ -334,4 +397,13 @@ def _app_options(addressed: AddressedAgent) -> Dict[str, Any]:
     }
 
 
-__all__ = ["OperationsExtension", "company_oauth", "mcp_app", "operation_scopes"]
+__all__ = [
+    "MCP_CLIENT_CLAIM",
+    "NEEDS_A_PERSONAL_AGENT",
+    "OperationsExtension",
+    "company_oauth",
+    "mcp_app",
+    "mcp_client_caller",
+    "mcp_client_token",
+    "operation_scopes",
+]

@@ -34,6 +34,7 @@ import secrets
 import time
 import uuid
 from collections.abc import Awaitable, Callable, Iterable, Sequence
+from datetime import timedelta
 from typing import Any
 
 import httpx
@@ -63,6 +64,10 @@ from agent_runtimes.protocols.pap import OPERATION_TICKETS, pap_protocol_version
 
 #: How long a perform turn's ticket can be redeemed.
 TICKET_LIFETIME_SECONDS = 300.0
+
+#: How long another MCP client stays signed in once a person allowed it: its refresh
+#: tokens rotate at every use, and after this long the person allows it again.
+MCP_CLIENT_SIGN_IN_LIFETIME = timedelta(days=30)
 
 
 def a2a_parts(result: Any) -> list[dict[str, Any]]:
@@ -385,15 +390,27 @@ def openapi_operation_of(operations: Any, action: str) -> str | None:
 
 
 class RegisteredAgents:
-    """``pap.company.clientPolicy``: only the personal agents the Appspec registers."""
+    """``pap.company.clientPolicy``: only the personal agents the Appspec registers.
 
-    def __init__(self, client_ids: Iterable[str]) -> None:
+    ``public_clients``: whether the company lets other MCP clients sign in. They are
+    no personal agents and are on no list: the policy answers for them apart
+    (``allows_public``), all of them or none.
+    """
+
+    def __init__(
+        self, client_ids: Iterable[str], *, public_clients: bool = False
+    ) -> None:
         """Accept the given client ids."""
         self.client_ids = frozenset(client_ids)
+        self.public_clients = public_clients
 
     async def allows(self, client_id: str) -> bool:
         """Tell whether ``client_id`` is registered."""
         return client_id in self.client_ids
+
+    async def allows_public(self, client_id: str) -> bool:
+        """Tell whether a client that is no personal agent may sign in at all."""
+        return self.public_clients
 
 
 class _CompanyPlugin:
@@ -420,9 +437,18 @@ class _CompanyPlugin:
         ):
             contribute(
                 CLIENT_POLICIES,
-                RegisteredAgents(company.registered_agents),
+                RegisteredAgents(
+                    company.registered_agents,
+                    public_clients=capability.config.public_clients,
+                ),
                 contribution_id="registered",
                 order=10,
+            )
+        if capability.rate_limit is not None:
+            from personal_agent_protocol.company import COMPANY_RATE_LIMITS
+
+            contribute(
+                COMPANY_RATE_LIMITS, capability.rate_limit, contribution_id="host"
             )
         for declared in company.operations:
             operation_id = (
@@ -470,6 +496,8 @@ def company_config(
     web: bool = False,
     description: str = "",
     resource_servers: Sequence[str] = (),
+    mcp_clients: bool = False,
+    consent_page: str | None = None,
 ) -> CompanyConfig:
     """What a company publishes at ``domain``, from its Appspec's ``pap.company``:
     what :class:`PapCompanyCapability` serves and the ``poppy.json`` of an agent
@@ -482,7 +510,21 @@ def company_config(
     ``resource_servers``: its services at URLs of their own that take its access
     tokens — its MCP server, at its MCP address (PAP 1.0 §4.5, §7): its issuer lists
     each in ``protected_resources`` and issues tokens for it.
+
+    ``mcp_clients``: its owner lets other MCP clients sign in ("Let other MCP clients
+    sign in", a private deployment's switch). Clients that are no personal agents (the
+    SDK's public clients) then sign in with MCP's own OAuth flow, an authorization
+    code with PKCE, after the person allowed them on ``consent_page`` (Datalayer's,
+    with ``{request_id}``): by their client ID metadata document, or registered at
+    ``/oauth/register``. They get tokens for ``resource_servers`` alone, with the
+    company's own scopes, for 30 days, and nothing of the protocol: no Session, no
+    default token. Off, nothing of this is offered.
     """
+    if mcp_clients and not (consent_page and resource_servers):
+        raise ValueError(
+            "Other MCP clients sign in on a consent page, for its MCP address: "
+            "give both, or leave them out"
+        )
     if not company.enabled:
         raise ValueError("The Appspec does not enable pap.company")
     if not company.scopes:
@@ -506,7 +548,14 @@ def company_config(
         excluded_tasks=_excluded_tasks(company),
         write_scopes=tuple(scope for scope in scopes if scope.endswith(":write")),
         device=True,
-        direct=False,
+        # Direct Sign-In's authorization endpoint is what other MCP clients sign in at.
+        direct=mcp_clients,
+        public_clients=mcp_clients,
+        client_registration=mcp_clients,
+        # The company's own scopes, never `poppy:browser-sign-in` (a personal agent's).
+        public_client_scopes=scopes if mcp_clients else None,
+        public_client_refresh_lifetime=MCP_CLIENT_SIGN_IN_LIFETIME,
+        consent_page=consent_page if mcp_clients else None,
         # `auth.disabled` (PAP 0.3 as published §3.2): it offers personal agents no sign-in.
         sign_in_disabled=bool(company.sign_in_disabled),
         # Its website (§6): a browser joins the person's Session there when it offers `web`.
@@ -545,8 +594,15 @@ class PapCompanyCapability:
         operations: Any = None,
         description: str = "",
         resource_servers: Sequence[str] = (),
+        mcp_clients: bool = False,
+        consent_page: str | None = None,
+        rate_limit: Any = None,
     ) -> None:
         """Configure the company's name, domain and application.
+
+        ``mcp_clients``, ``consent_page``: other MCP clients sign in
+        (:func:`company_config`). ``rate_limit``: the host's ``pap.company.rateLimit``,
+        which the SDK asks before it registers a client or reads one's document.
 
         ``resource_servers``: its services at URLs of their own (its MCP server at
         its MCP address), which its issuer lists and issues tokens for (§4.5, §7).
@@ -569,6 +625,7 @@ class PapCompanyCapability:
         self.application = application
         self.accounts = accounts
         self.operations = operations
+        self.rate_limit = rate_limit
         self.tickets = MemoryOperationTickets()
         self.config = company_config(
             name,
@@ -578,6 +635,8 @@ class PapCompanyCapability:
             web=hosted and "web" in interfaces,
             description=description,
             resource_servers=resource_servers,
+            mcp_clients=mcp_clients,
+            consent_page=consent_page,
         )
         self.service: CompanyService = build_company(
             self.config,

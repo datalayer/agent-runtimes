@@ -49,7 +49,13 @@ from agent_runtimes.addresses.addressed import (
 )
 from agent_runtimes.addresses.agent_host import AgentHost
 from agent_runtimes.addresses.asgi import answer_json
-from agent_runtimes.addresses.hosts import API_PORT, MCP_PORT, WEB_PORT, AddressHosts
+from agent_runtimes.addresses.hosts import (
+    API_PORT,
+    MCP_PORT,
+    WEB_PORT,
+    AddressHosts,
+    consent_page,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -245,7 +251,17 @@ class RuntimeAddresses:
             company = (
                 company_of(addressed, agent_id) if addressed.role == "company" else None
             )
-            self.agent_host = AgentHost(None, addressed, agent_id, company)
+            self.agent_host = AgentHost(
+                None,
+                addressed,
+                agent_id,
+                company,
+                current_company=(
+                    CompanyAsDeployed(addressed, agent_id).current
+                    if company is not None and launched
+                    else None
+                ),
+            )
         self.addressed = addressed
         logger.info("Agent %s answers at its addresses (%s)", agent_id, addressed.role)
         return True
@@ -322,17 +338,91 @@ def _policy_and_checkers() -> tuple[Optional[str], Any, Any]:
     )
 
 
-def pap_token_checker(company: Any) -> Any:
+def pap_token_checker(addressed: AddressedAgent) -> Any:
     """Whose a PAP access token this runtime's company issued is: the account a person
     signed in to with their personal agent (the SDK's record of the token, while it
-    works: unexpired, its sign-in not ended)."""
+    works: unexpired, its sign-in not ended).
+
+    Never the token of another MCP client (the SDK's public clients): that one is for
+    its MCP address alone, where its MCP server verifies it (``mcp.company_oauth``);
+    here, at its agent, API and web hosts, it is nobody's.
+    """
 
     async def check(token: str) -> Optional[str]:
+        company = addressed.company
+        if company is None:
+            return None
         # The SDK's own reading of a bearer it issued (`CompanyService._access_token`).
         issued = await company.service._access_token(token)
-        return str(issued.account_id) if issued is not None else None
+        if issued is None or issued.public:
+            return None
+        return str(issued.account_id)
 
     return check
+
+
+#: How long what a deployment says of other MCP clients is taken as read.
+MCP_CLIENTS_READ_SECONDS = 60.0
+
+
+def mcp_clients_of(record: Dict[str, Any], policy: AddressPolicy) -> bool:
+    """Whether the deployment lets other MCP clients sign in: its owner turned it on
+    (``mcp_clients``), and it is private — a public one is open at its MCP address
+    already, to anybody, and has no such switch."""
+    return record.get("mcp_clients") is True and policy.visibility == "private"
+
+
+class CompanyAsDeployed:
+    """A runtime's company, built again when its deployment's "Let other MCP clients
+    sign in" changed: the record is read again at most once a minute, when a request
+    of the company's comes. Its records are Datalayer's, so nothing is forgotten; a
+    record that cannot be read leaves the company as it is."""
+
+    def __init__(
+        self,
+        addressed: AddressedAgent,
+        agent_id: str,
+        *,
+        read: Any = read_deployment_record,
+        clock: Any = None,
+    ) -> None:
+        import time
+
+        self.addressed = addressed
+        self.agent_id = agent_id
+        self.read = read
+        self.clock = clock or time.monotonic
+        self.read_at = self.clock()
+        self._lock = asyncio.Lock()
+
+    async def current(self) -> Any:
+        addressed = self.addressed
+        assert addressed.hosts is not None
+        if self.clock() - self.read_at < MCP_CLIENTS_READ_SECONDS:
+            return addressed.company
+        async with self._lock:
+            if self.clock() - self.read_at < MCP_CLIENTS_READ_SECONDS:
+                return addressed.company
+            self.read_at = self.clock()
+            try:
+                record = await self.read(addressed.hosts.name)
+            except Exception as error:  # noqa: BLE001 - said; it answers as it did
+                logger.warning(
+                    "The deployment at %s was not read again: %s",
+                    addressed.hosts.name,
+                    error,
+                )
+                return addressed.company
+            said = mcp_clients_of(record, addressed.access.policy)
+            if said != addressed.mcp_clients:
+                addressed.mcp_clients = said
+                addressed.company = build_company_of(addressed, self.agent_id)
+                logger.info(
+                    "%s %s other MCP clients sign in",
+                    addressed.hosts.name,
+                    "lets" if said else "no longer lets",
+                )
+            return addressed.company
 
 
 async def addressed_in_runtime(
@@ -373,8 +463,11 @@ async def addressed_in_runtime(
         acts_for = (os.environ.get(ACTS_FOR_VARIABLE) or "").strip()
         role = "personal" if acts_for else "app"
     policy: AddressPolicy
+    mcp_clients = False
     if slug and launched_for():
-        policy = policy_of_deployment(await read_deployment_record(slug))
+        record = await read_deployment_record(slug)
+        policy = policy_of_deployment(record)
+        mcp_clients = mcp_clients_of(record, policy)
     else:
         policy = policy_from_environment()
     _, key_checker, token_checker = _policy_and_checkers()
@@ -394,10 +487,30 @@ async def addressed_in_runtime(
         role=role,  # type: ignore[arg-type]
         acts_for=acts_for,
         calls=calls,
+        mcp_clients=mcp_clients and role == "company" and hosts is not None,
     )
 
 
-def company_of(addressed: AddressedAgent, agent_id: str) -> Any:
+class UnsignedRequestsCap:
+    """``pap.company.rateLimit`` for what the SDK asks before it knows who calls: a
+    client registering itself (``registration:{address}``) and a token or revocation
+    request without a client assertion (``public:{address}``), each so many a minute
+    for an address. A personal agent's requests are counted elsewhere, not here."""
+
+    def __init__(self, per_minute: int, clock: Any = None) -> None:
+        import time
+
+        from agent_runtimes.addresses.access import RateCap
+
+        self.cap = RateCap(per_minute, clock or time.monotonic)
+
+    async def admit(self, client_id: str, account_id: Optional[str]) -> Optional[int]:
+        if not client_id.startswith(("registration:", "public:")):
+            return None
+        return self.cap.take(client_id) or None
+
+
+def build_company_of(addressed: AddressedAgent, agent_id: str) -> Any:
     """The PAP company of an agent that is one, at its agent host (the SDK's, as
     :class:`PapCompanyCapability` assembles it), its turns asked over its own A2A route."""
     import httpx
@@ -440,7 +553,20 @@ def company_of(addressed: AddressedAgent, agent_id: str) -> Any:
         # Its MCP server is a service at a URL of its own: its issuer lists it in
         # `protected_resources` and issues tokens for it (PAP 1.0 §4.5, §7).
         resource_servers=(addressed.hosts.mcp,),
+        # "Let other MCP clients sign in": at its authorization endpoint, allowed on
+        # Datalayer's consent page by somebody who may open it, for its MCP address alone.
+        mcp_clients=addressed.mcp_clients,
+        consent_page=consent_page(addressed.hosts.name)
+        if addressed.mcp_clients
+        else None,
+        rate_limit=UnsignedRequestsCap(addressed.access.policy.rate_per_minute),
     )
+    return company
+
+
+def company_of(addressed: AddressedAgent, agent_id: str) -> Any:
+    """The company (:func:`build_company_of`), and its tokens taken at its addresses."""
+    company = build_company_of(addressed, agent_id)
     # Its MCP server verifies the tokens issued for it with the company, and a
     # Datalayer token with what was checking tokens before the company's were added.
     addressed.company = company
@@ -448,9 +574,9 @@ def company_of(addressed: AddressedAgent, agent_id: str) -> Any:
     # A person signed in with their personal agent calls its addresses with its PAP token.
     access = addressed.access
     access.token_checker = (
-        either_token(access.token_checker, pap_token_checker(company))
+        either_token(access.token_checker, pap_token_checker(addressed))
         if access.token_checker is not None
-        else pap_token_checker(company)
+        else pap_token_checker(addressed)
     )
     return company
 
@@ -492,8 +618,12 @@ __all__ = [
     "PORTS",
     "RUNTIME_ADDRESSES",
     "RuntimeAddresses",
+    "CompanyAsDeployed",
+    "UnsignedRequestsCap",
     "addressed_in_runtime",
+    "build_company_of",
     "company_of",
+    "mcp_clients_of",
     "pap_token_checker",
     "mode_app",
     "serve_mode",

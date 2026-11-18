@@ -28,6 +28,7 @@ from personal_agent_protocol.company import build_company
 from personal_agent_protocol.models import DiscoveryDocument
 
 from agent_runtimes.addresses.addressed import AddressedAgent
+from agent_runtimes.addresses.hosts import consent_page
 from agent_runtimes.pap.company import agent_description, company_config
 from agent_runtimes.protocols.pap import pap_protocol_version
 
@@ -81,6 +82,9 @@ def company_document(addressed: AddressedAgent) -> Dict[str, Any]:
         web="web" in interfaces,
         description=addressed.app.description,
         resource_servers=(hosts.mcp,),
+        # What its issuer offers other MCP clients is what its company serves.
+        mcp_clients=addressed.mcp_clients,
+        consent_page=consent_page(hosts.name) if addressed.mcp_clients else None,
     )
     service = build_company(config, http_client=_client())
     document = service.discovery_document()

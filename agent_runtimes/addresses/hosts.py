@@ -34,6 +34,20 @@ DEFAULT_DOMAIN = "datalayer.ai"
 NAME = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$")
 
 
+def studio_url() -> str:
+    """Where a person approves a personal agent or another MCP client: Datalayer's own pages."""
+    return (
+        os.environ.get("DATALAYER_PAP_STUDIO_URL") or "https://datalayer.ai"
+    ).rstrip("/")
+
+
+def consent_page(name: str) -> str:
+    """Datalayer's consent page for the company at ``name``, with the request the
+    company's authorization endpoint names (``{request_id}``): where a person signed in
+    to Datalayer allows or refuses a client that asks to sign in."""
+    return f"{studio_url()}/pap/consent?slug={name}&request={{request_id}}"
+
+
 def hosts_domain() -> str:
     """The domain the four hosts are under."""
     return (
@@ -94,5 +108,7 @@ __all__ = [
     "DOMAIN_VARIABLE",
     "MCP_PORT",
     "WEB_PORT",
+    "consent_page",
     "hosts_domain",
+    "studio_url",
 ]

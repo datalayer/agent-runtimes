@@ -60,6 +60,9 @@ class AddressedAgent:
     #: Whose a Datalayer token is, for its MCP server: the access check's token
     #: checker before the company's own tokens were added to it.
     platform_tokens: Optional[TokenChecker] = None
+    #: Whether its owner lets other MCP clients sign in at its MCP address ("Let other
+    #: MCP clients sign in"): a private company's switch, off unless its deployment says so.
+    mcp_clients: bool = False
 
     def __post_init__(self) -> None:
         self.document: Dict[str, Any] = copy.deepcopy(
