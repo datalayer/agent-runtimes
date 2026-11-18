@@ -345,7 +345,10 @@ def pap_token_checker(addressed: AddressedAgent) -> Any:
 
     Never the token of another MCP client (the SDK's public clients): that one is for
     its MCP address alone, where its MCP server verifies it (``mcp.company_oauth``);
-    here, at its agent, API and web hosts, it is nobody's.
+    here, at its agent, API and web hosts, it is nobody's. Nor any token issued for a
+    resource: a company accepts a token issued for a resource only at that service
+    (Poppy 1.0 §4.5), so a personal agent's token for the MCP server is nobody's here
+    too. Only the default token, issued for no resource, names its account.
     """
 
     async def check(token: str) -> Optional[str]:
@@ -354,7 +357,7 @@ def pap_token_checker(addressed: AddressedAgent) -> Any:
             return None
         # The SDK's own reading of a bearer it issued (`CompanyService._access_token`).
         issued = await company.service._access_token(token)
-        if issued is None or issued.public:
+        if issued is None or issued.public or issued.resource is not None:
             return None
         return str(issued.account_id)
 

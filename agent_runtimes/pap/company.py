@@ -42,9 +42,12 @@ from personal_agent_protocol.company import (
     CLIENT_POLICIES,
     COMPANY_ACCOUNTS,
     COMPANY_AGENTS,
+    COMPANY_APIS,
     OPERATION_EXECUTORS,
     AccountDirectory,
     ActionResult,
+    ApiCall,
+    ApiResult,
     CompanyConfig,
     CompanyService,
     OperationFailed,
@@ -381,6 +384,85 @@ class OpenApiOperationExecutor:
         return ActionResult(summary=f"{self.action}: done.", data=data)
 
 
+class ApprovedOperationsApi:
+    """``pap.company.api`` for the operations of the Appspec's ``openapi`` a person
+    approves (those carrying ``x-pap``): what its API address hands the SDK when a
+    personal agent calls one in its Session (``addresses.api``).
+
+    It performs nothing. A call is answered with the operation to approve — its
+    ``x-pap`` action, the request's inputs as its terms, the Maker's summary — and the
+    SDK does the rest as the Operations extension says: ``403 approval_required``
+    with the operation, the approval verified on the same request sent again, the
+    action performed once through its executor (:class:`OpenApiOperationExecutor`),
+    and a repeat answered with what it came to. Every other operation of the
+    ``openapi`` is the API address's own to answer, and is not found here.
+    """
+
+    description = "The operations a person approves"
+
+    def __init__(self, operations: Any) -> None:
+        """Answer for the ``x-pap`` operations of ``operations`` (an ``AddressedAgent``)."""
+        self.operations = operations
+
+    def openapi(self) -> dict[str, Any]:
+        """The application's own document, as its API address publishes it."""
+        return dict(self.operations.published_document())
+
+    def _found(self, call: ApiCall) -> tuple[Any, dict[str, Any]] | None:
+        """The ``x-pap`` operation at the call's method and path, and its path values."""
+        import re
+
+        for found in getattr(self.operations, "operations", ()) or ():
+            if not found.pap or found.method.upper() != call.method.upper():
+                continue
+            pattern = "".join(
+                f"(?P<{part[1:-1]}>[^/]+)"
+                if part.startswith("{") and part.endswith("}")
+                else re.escape(part)
+                for part in re.split(r"(\{[^/{}]+\})", found.path)
+            )
+            matched = re.fullmatch(pattern, call.path)
+            if matched is not None:
+                return found, matched.groupdict()
+        return None
+
+    async def handle(self, call: ApiCall) -> ApiResult:
+        """The operation to approve for ``call``; never its effect."""
+        from agent_runtimes.addresses.api import coerced
+        from agent_runtimes.addresses.operations import input_problems
+
+        found = self._found(call)
+        if found is None:
+            return ApiResult.not_found()
+        operation, in_path = found
+        policy = self.operations.access.policy
+        if not policy.admits(call.account_id or ""):
+            # Who may call a private company is its owner's to say, here as at every address.
+            return ApiResult(403, {"error": "access_denied"})
+        scope = str(operation.pap.get("scope") or "")
+        if scope and (call.account_id is None or scope not in call.scopes):
+            return ApiResult.insufficient_scope(scope)
+        inputs: dict[str, Any] = dict(call.body) if isinstance(call.body, dict) else {}
+        properties = operation.input_schema.get("properties") or {}
+        for name, location in operation.parameters:
+            value = in_path.get(name) if location == "path" else call.query.get(name)
+            if value is not None:
+                inputs[name] = coerced(str(value), properties.get(name) or {})
+        problems = input_problems(operation, inputs)
+        if problems:
+            # Nothing is proposed that could not be performed as asked.
+            return ApiResult(400, {"error": "invalid_request", "errors": problems})
+        template = str(operation.pap.get("summary") or operation.summary or "")
+        return ApiResult(
+            operation=ProposedOperation(
+                action=str(operation.pap.get("action") or operation.operation_id),
+                terms=inputs,
+                summary=summary_of(template, inputs) if template else None,
+                scopes=(scope,) if scope else (),
+            )
+        )
+
+
 def openapi_operation_of(operations: Any, action: str) -> str | None:
     """The ``operationId`` whose ``x-pap`` says ``action``, or ``None``."""
     for found in getattr(operations, "operations", ()) or ():
@@ -449,6 +531,16 @@ class _CompanyPlugin:
 
             contribute(
                 COMPANY_RATE_LIMITS, capability.rate_limit, contribution_id="host"
+            )
+        if capability.operations is not None and any(
+            found.pap for found in getattr(capability.operations, "operations", ())
+        ):
+            # Its API address hands the calls of what a person approves to the SDK
+            # (``addresses.api``): proposed here, approved and performed there.
+            contribute(
+                COMPANY_APIS,
+                ApprovedOperationsApi(capability.operations),
+                contribution_id="approved-operations",
             )
         for declared in company.operations:
             operation_id = (
@@ -655,6 +747,66 @@ class PapCompanyCapability:
         """The company's ASGI application, answering at ``https://<domain>``."""
         return company_app(self.service)
 
+    async def api_call(
+        self,
+        method: str,
+        url: str,
+        path: str,
+        headers: Any,
+        body: bytes,
+        client_address: str | None = None,
+    ) -> Any:
+        """Answer a personal agent's call of the company's API made at an address of
+        the API's own (``{name}.api.<domain>``), as the SDK answers one at its issuer.
+
+        The SDK serves a company's API under its issuer (``/api/…``) and has no public
+        entry for one served elsewhere, while a Session JWT is signed for the request's
+        own method and URL (PAP §5.3). So the request is handed over as it came, its
+        ``url`` the one the agent called, to the SDK's own handler of an API call
+        (``CompanyService._api_call``: the Session, the access token, the approval, the
+        idempotency key), and its refusals are answered as its dispatcher answers them.
+        These are the SDK's internals, held to its ``0.37`` line by the dependency's
+        bounds and by the test that drives a personal agent through an approval.
+
+        Returns
+        -------
+        CompanyResponse
+            The SDK's answer: a status, a JSON body and its headers.
+        """
+        from personal_agent_protocol.company import CompanyRequest
+        from personal_agent_protocol.company import service as sdk
+        from pydantic import ValidationError
+
+        service = self.service
+        request = CompanyRequest(
+            method=method,
+            url=url,
+            headers=headers,
+            body=body,
+            client_address=client_address,
+        )
+        try:
+            return await service._api_call(request, method.upper(), f"/api{path}")
+        except sdk._RateLimitedError as limited:
+            return service._rate_limited(limited.retry_after)
+        except sdk._RefusedError as refused:
+            return sdk._json_error(
+                refused.status,
+                refused.error,
+                refused.headers,
+                schemes=service.config.token_schemes,
+                **refused.extra,
+            )
+        except (sdk.SessionError, sdk.ProofError) as error:
+            if error.code in {"invalid_session", "session_ended"}:
+                return sdk._json_error(400, error.code)
+            return sdk._json_error(
+                error.status_code or (401 if error.code == "invalid_client" else 400),
+                error.code,
+            )
+        except (sdk.ProtocolValidationError, ValidationError):
+            return sdk._json_error(400, "invalid_request")
+
     def runtime_plugin(self) -> tuple[PluginManifest, object]:
         """For the runtime's platform: its perform turns redeem this company's tickets."""
         return (
@@ -675,6 +827,7 @@ __all__ = [
     "A2AApplication",
     "ApplicationCompanyAgent",
     "ApplicationOperationExecutor",
+    "ApprovedOperationsApi",
     "MemoryOperationTickets",
     "OpenApiOperationExecutor",
     "PapCompanyCapability",

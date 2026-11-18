@@ -30,12 +30,17 @@ from agent_runtimes.addresses.hosts import AddressHosts
 from agent_runtimes.addresses.operations import (
     OperationAgent,
     OperationError,
+    approval_required,
     call_operation,
 )
 from agent_runtimes.types import AppSpec
 
 #: What an agent is to the people and agents that reach it (its `poppy.json` says).
 Role = Literal["company", "personal", "app"]
+
+#: The interface an approved operation is performed through: the company's executor,
+#: after the SDK verified the person's approval. No address calls with it.
+APPROVED_INTERFACE = "agent"
 
 #: How the agent that answers a call is reached.
 AgentSource = Callable[[], Awaitable[OperationAgent]]
@@ -94,12 +99,20 @@ class AddressedAgent:
         caller: Optional[Caller] = None,
     ) -> Any:
         """Answer ``operation_id`` with ``inputs`` (:func:`call_operation`), the call
-        recorded (:attr:`calls`) with who made it by which address."""
+        recorded (:attr:`calls`) with who made it by which address.
+
+        An operation a person approves (``x-pap``) is answered only once its company
+        verified their approval of its exact terms: then its executor calls it, as the
+        ``agent`` interface (``pap.company.OpenApiOperationExecutor``). Called from
+        any address — its API, its MCP server, its web page — by anybody, a key of its
+        owner's included, it is refused ``403 approval_required`` and nothing is done."""
         elapsed = timed()
         usage: Dict[str, int] = {}
         status = 200
         try:
             operation = self.operation(operation_id)
+            if operation.pap and interface != APPROVED_INTERFACE:
+                raise approval_required()
             return await call_operation(
                 await self.agent_source(), operation, inputs, usage
             )
@@ -212,6 +225,7 @@ def local_addressed(
 
 
 __all__ = [
+    "APPROVED_INTERFACE",
     "AddressedAgent",
     "AgentSource",
     "Role",

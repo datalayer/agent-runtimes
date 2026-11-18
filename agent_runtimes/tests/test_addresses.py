@@ -1203,6 +1203,14 @@ class _IssuedHere:
                 family="family-1",
                 resource=MCP_URL,
             ),
+            # The default token: issued for no resource, for the company's own endpoints.
+            "the-default": IssuedAccessToken(
+                client_id="https://atlas.example/agent",
+                account_id="friend",
+                scopes=scopes,
+                expires_at=expires_at,
+                family="family-1",
+            ),
             "another-clients": IssuedAccessToken(
                 client_id="mcpc_Yx2b7Qd_Kp8mR3vT1nWc4A",
                 account_id=mcp_client_account,
@@ -1593,14 +1601,18 @@ def test_a_company_that_takes_none_refuses_another_mcp_clients_token() -> None:
 @pytest.mark.asyncio
 async def test_another_mcp_clients_token_is_nobodys_at_the_other_addresses() -> None:
     """Issued for its MCP address alone: at its agent, API and web hosts the access
-    check does not know it, where a personal agent's token says whose it is."""
+    check does not know it. Nor a personal agent's token issued for the MCP server: a
+    company accepts a token issued for a resource only at that service (Poppy 1.0
+    §4.5). There a personal agent's default token, issued for no resource, says whose
+    it is."""
     from agent_runtimes.addresses.mcp import mcp_client_caller
     from agent_runtimes.addresses.servers import pap_token_checker
 
     agent = _company_agent(PRIVATE)
     agent.mcp_clients = True
     check = pap_token_checker(agent)
-    assert await check("for-the-mcp-server") == "friend"
+    assert await check("the-default") == "friend"
+    assert await check("for-the-mcp-server") is None
     assert await check("another-clients") is None
     assert await check("invented") is None
     # At its MCP address it is the person who allowed it; no other bearer is.

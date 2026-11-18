@@ -37,18 +37,40 @@ _WRAPPED = "result"
 class OperationError(Exception):
     """Why an operation was not answered, with its HTTP status."""
 
-    def __init__(self, status: int, detail: str, errors: Sequence[str] = ()) -> None:
+    def __init__(
+        self, status: int, detail: str, errors: Sequence[str] = (), code: str = ""
+    ) -> None:
         super().__init__(detail)
         self.status = status
         self.detail = detail
         self.errors = tuple(errors)
+        #: The error's code, when a protocol names one (``approval_required``).
+        self.code = code
 
     def as_dict(self) -> dict[str, Any]:
         """What a caller is answered."""
         return {
+            **({"error": self.code} if self.code else {}),
             "detail": self.detail,
             **({"errors": list(self.errors)} if self.errors else {}),
         }
+
+
+#: The Operations extension's code for an action a person approves first (Operations 4).
+APPROVAL_REQUIRED = "approval_required"
+
+#: What a caller is told of an operation a person approves (``x-pap``), wherever it is
+#: called from, when the call carries no approval the company verified.
+NEEDS_APPROVAL = (
+    "This is done only once the person approved it. A personal agent asks them: it "
+    "calls the company's API in its Session, gets the operation to approve, and sends "
+    "the same request again with the approval."
+)
+
+
+def approval_required() -> OperationError:
+    """The refusal of an operation a person approves, called without their approval."""
+    return OperationError(403, NEEDS_APPROVAL, code=APPROVAL_REQUIRED)
 
 
 @dataclass
@@ -98,6 +120,11 @@ def operation_prompt(operation: OpenApiOperation, inputs: Mapping[str, Any]) -> 
             + json.dumps(operation.output_schema, indent=2, sort_keys=True),
         ]
     )
+
+
+def input_problems(operation: OpenApiOperation, inputs: Mapping[str, Any]) -> list[str]:
+    """Why ``inputs`` are not ``operation``'s, in sentences; none when they are."""
+    return list(_problems(operation.input_schema, dict(inputs)))
 
 
 async def call_operation(
@@ -176,8 +203,12 @@ async def call_operation(
 
 
 __all__ = [
+    "APPROVAL_REQUIRED",
+    "NEEDS_APPROVAL",
     "OperationAgent",
     "OperationError",
+    "approval_required",
     "call_operation",
+    "input_problems",
     "operation_prompt",
 ]

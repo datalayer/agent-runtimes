@@ -120,7 +120,7 @@ dependencies = [
     # 1.6.58 with agentspecs 0.0.194: X through the linked account, held to the x-api-budget guardrail.
     # 1.6.65 with agentspecs 0.0.199: datalayer-email, the Marketer's alerts.at.
     # agentspecs 0.0.203: the Appspec's openapi, the one source of an app's MCP tools, REST endpoints and PAP operations.
-    "agentspecs>=0.0.215",  # the Jupyter Data Analyst, the seventh seed agent, its demo-jupyter-data-analyst, and demo-shopper 0.0.7 on read, propose, confirm (0.0.215); the Appspec's presentation and the six demos that say theirs (0.0.214); the Traveller (worker-traveller, demo-traveller; 0.0.213); the Demo Shop: its bundled catalogue, read by agent_runtimes.tools.demo_shop (0.0.204); the Buy from a shop Stage (0.0.206); x-datalayer-gallery, OpenApiOperation.gallery (0.0.207); scope descriptions as the protocol's guide asks (0.0.208 to 0.0.210)
+    "agentspecs>=0.0.217",  # demo-shopper 0.0.9, which orders through an approval at the Demo Shop (0.0.217; 0.0.8 browsed only, 0.0.216); the Jupyter Data Analyst, the seventh seed agent, its demo-jupyter-data-analyst, and demo-shopper 0.0.7 on read, propose, confirm (0.0.215); the Appspec's presentation and the six demos that say theirs (0.0.214); the Traveller (worker-traveller, demo-traveller; 0.0.213); the Demo Shop: its bundled catalogue, read by agent_runtimes.tools.demo_shop (0.0.204); the Buy from a shop Stage (0.0.206); x-datalayer-gallery, OpenApiOperation.gallery (0.0.207); scope descriptions as the protocol's guide asks (0.0.208 to 0.0.210)
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than

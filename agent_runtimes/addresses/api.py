@@ -9,6 +9,15 @@ against the operation's schema, and the agent's answer is the response
 (:func:`call_operation`). ``/openapi.json`` is the agent's own document (not
 FastAPI's), ``/docs`` its reference. Every route is behind the agent's access
 check: who may call it, and its rate cap.
+
+An operation a person approves (``x-pap``) is never answered by a call alone, for
+anybody, a key of its owner's included. A personal agent calling it in its Session
+(the ``Poppy-Session`` header) at a company is handed to the company's own service
+(the PAP SDK's ``pap.company.api``), which answers as the Operations extension says:
+``403 approval_required`` with the operation to approve, then the same request with
+the person's approval performed once, and a repeat answered with what it came to.
+Any other caller has nobody to ask and is refused ``403 approval_required`` with a
+sentence: nothing is done.
 """
 
 from __future__ import annotations
@@ -19,14 +28,48 @@ from typing import Any, Dict
 from agentspecs.openapi import OpenApiOperation
 from fastapi import FastAPI, Request
 from fastapi.openapi.docs import get_swagger_ui_html
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 
 from agent_runtimes.addresses.addressed import AddressedAgent
 from agent_runtimes.addresses.asgi import headers_of, peer_of
-from agent_runtimes.addresses.operations import OperationError
+from agent_runtimes.addresses.operations import OperationError, approval_required
+
+#: The header a personal agent's requests carry (PAP §5.3): its Session at the company.
+SESSION_HEADER = "poppy-session"
 
 
-def _coerced(value: str, schema: Dict[str, Any]) -> Any:
+async def approved_through_the_company(
+    addressed: AddressedAgent, request: Request
+) -> Response:
+    """A personal agent's call of an operation a person approves, answered by the
+    company's own service (``PapCompanyCapability.api_call``): the request as it came,
+    its answer as it is — the operation to approve, what the approved action came to,
+    or the SDK's refusal with its challenge."""
+    from agent_runtimes.addresses.access import client_address
+
+    assert addressed.company is not None
+    headers = headers_of(request.scope)
+    answered = await addressed.company.api_call(
+        request.method,
+        str(request.url),
+        request.url.path,
+        headers,
+        await request.body(),
+        client_address(headers, peer_of(request.scope)) or None,
+    )
+    body = answered.body
+    return Response(
+        content=b""
+        if body is None
+        else body
+        if isinstance(body, (bytes, str))
+        else json.dumps(body, ensure_ascii=False),
+        status_code=answered.status,
+        headers={"Content-Type": "application/json", **dict(answered.headers or {})},
+    )
+
+
+def coerced(value: str, schema: Dict[str, Any]) -> Any:
     """A path or query value as its schema types it; left as written when it does not parse
     (the schema check then says why)."""
     kind = schema.get("type")
@@ -68,7 +111,7 @@ async def inputs_of(request: Request, operation: OpenApiOperation) -> Dict[str, 
             else request.query_params.get(name)
         )
         if value is not None:
-            inputs[name] = _coerced(str(value), properties.get(name) or {})
+            inputs[name] = coerced(str(value), properties.get(name) or {})
     return inputs
 
 
@@ -109,7 +152,18 @@ def api_app(addressed: AddressedAgent) -> FastAPI:
         }
 
     def route(operation: OpenApiOperation) -> Any:
-        async def answer(request: Request) -> JSONResponse:
+        async def answer(request: Request) -> Response:
+            if operation.pap:
+                if addressed.company is not None and request.headers.get(
+                    SESSION_HEADER
+                ):
+                    return await approved_through_the_company(addressed, request)
+                # Who may call it is checked first, as for any operation; then nobody
+                # is there to approve it, whoever calls.
+                await addressed.access.admit(
+                    headers_of(request.scope), peer_of(request.scope)
+                )
+                raise approval_required()
             caller = await addressed.access.admit(
                 headers_of(request.scope), peer_of(request.scope)
             )
@@ -134,4 +188,10 @@ def api_app(addressed: AddressedAgent) -> FastAPI:
     return app
 
 
-__all__ = ["api_app", "inputs_of"]
+__all__ = [
+    "SESSION_HEADER",
+    "api_app",
+    "approved_through_the_company",
+    "coerced",
+    "inputs_of",
+]

@@ -63,6 +63,46 @@ paths:
         title: The shop's products
 ```
 
+## An operation a person approves
+
+An operation of the `openapi` that carries `x-pap` (its `action`, `tool`, `summary`
+and, when it names one, `scope`) is one a person approves before it is done: placing
+an order, changing a booking. **It is never done by a call alone, at any address, for
+anybody** — a signed-out caller, a Datalayer token, an API key, its owner's included.
+One rule, since 1.6.90:
+
+| Address | A call without the person's approval | With it |
+|---|---|---|
+| API (`{name}.api.<domain>`) | `403` `{"error": "approval_required"}`; to a personal agent in its Session, with the `operation` to approve | The same request sent again with the approval (`Poppy-Approval`) is performed, once |
+| MCP (`{name}.mcp.<domain>`) | The tool is listed; calling it is an error, `403: …` with the same sentence | Not here: the personal agent approves through the API or the conversation |
+| Agent (`{name}.agent.<domain>`) | In a conversation the company's agent proposes the operation; its tool does not run | Performed, once, on the approved revision |
+| Web (`{name}.web.<domain>`) | The page lists it and never calls it | — |
+
+Before 1.6.90 the API and the MCP server answered such an operation as any other,
+at once, for whoever might call them; only the conversation asked first. A caller
+that relied on that gets `403 approval_required` now.
+
+At the API the answer is the PAP SDK's own, as the Operations extension says it
+(Poppy 1.0, Operations 4 and 6). A personal agent calls in its Session
+(`Poppy-Session`) with the account's access token; the company answers
+`403 approval_required` with the operation — its id, its revision, its terms (the
+request's inputs), its summary and when it expires — and nothing is done. The agent
+shows the person the exact terms, and sends **the same request** again with their
+approval of that revision. The company verifies it, performs the action once, and
+answers `200` with `{"summary": …, "data": …}`, `data` being the operation's own
+answer. The same request sent again is answered with that original response; the
+action is not done twice. A caller with no Session has nobody to ask: it is answered
+`403` `{"error": "approval_required", "detail": …}` and no operation.
+
+```bash
+# Anybody, or a key: refused, nothing done.
+curl -s -X POST https://demo-shop.api.datalayer.ai/orders \
+  -H 'Content-Type: application/json' -d '{"items": [{"product_id": "tennis-ball"}]}'
+# 403 {"error": "approval_required", "detail": "This is done only once the person approved it. …"}
+```
+
+An operation that carries no `x-pap` is answered as before, at every address.
+
 ## Who may call it
 
 The same rule at its four addresses, from its "Who may open it":
@@ -73,7 +113,10 @@ The same rule at its four addresses, from its "Who may open it":
   (`X-API-Key`) or a token (`Authorization: Bearer …`).
 
 - **a person signed in with their personal agent** calls a company's addresses
-  with the PAP access token its company issued them.
+  with the PAP access token its company issued them. At its API, web and
+  agent addresses that is its default token, issued for no resource: a token
+  issued for its MCP server is accepted at the MCP server alone (Poppy 1.0 §4.5;
+  since 1.6.90 the other addresses refuse it).
 
 `poppy.json`, the Agent Card and the page's script bundle answer anybody.
 
