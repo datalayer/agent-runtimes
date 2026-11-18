@@ -61,7 +61,7 @@ from agent_runtimes.tests.test_addresses import (
 )
 
 DOMAIN = "shop.example"
-API = "https://api.shop.example"
+API = "https://shop.api.datalayer.ai"
 ORDER = {"total": 9.5}
 
 
@@ -251,6 +251,40 @@ async def test_a_private_companys_contribution_admits_only_whom_its_owner_allows
     ).operation is not None
 
 
+def test_the_url_handed_to_the_company_is_the_one_the_agent_called() -> None:
+    """Behind the ingress the server sees plain http and its own side of the connection;
+    a Session JWT is signed for the public URL (found on r1, 18 November 2026: every
+    such call was `invalid_session`)."""
+    from types import SimpleNamespace
+
+    from agent_runtimes.addresses.api import called_url
+
+    def asked(url: str, path: str, query: str = "") -> Any:
+        return SimpleNamespace(
+            url=SimpleNamespace(path=path, query=query, __str__=lambda: url)
+        )
+
+    agent = _agent()
+    assert (
+        agent.hosts is not None and agent.hosts.api == "https://shop.api.datalayer.ai"
+    )
+    seen = asked("http://10.244.1.7:8767/orders", "/orders")
+    assert called_url(agent, seen) == "https://shop.api.datalayer.ai/orders"
+    with_query = asked(
+        "http://shop.api.datalayer.ai/orders?a=1&b=2", "/orders", "a=1&b=2"
+    )
+    assert (
+        called_url(agent, with_query) == "https://shop.api.datalayer.ai/orders?a=1&b=2"
+    )
+    # Served locally, with no public address: the URL the request carries.
+    agent.hosts = None
+
+    class Local:
+        url = "http://127.0.0.1:8767/orders"
+
+    assert called_url(agent, Local()) == "http://127.0.0.1:8767/orders"  # type: ignore[arg-type]
+
+
 # --- a personal agent, in its Session: approved, performed once, repeated ----------
 
 
@@ -310,7 +344,7 @@ async def test_a_personal_agent_gets_the_operation_approves_it_and_it_is_done_on
     agent.access.token_checker = pap_token_checker(agent)
     network.add(DOMAIN, company.asgi())
     # Its API, at an address of its own, as a hosted company's is.
-    network.add("api.shop.example", api_app(agent))
+    network.add("shop.api.datalayer.ai", api_app(agent))
     http = network.client()
     reactor = personal_agent_reactor(
         PersonalAgentHost(atlas, clock),

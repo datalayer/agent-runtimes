@@ -38,6 +38,23 @@ from agent_runtimes.addresses.operations import OperationError, approval_require
 SESSION_HEADER = "poppy-session"
 
 
+def called_url(addressed: AddressedAgent, request: Request) -> str:
+    """The URL a caller requested, as the caller wrote it: the agent's public API
+    address (``https://{name}.api.<domain>``), then the request's path and query.
+
+    A personal agent signs its Session JWT for the method and URL it called (PAP
+    §5.3). Behind the ingress the server sees its own side of the connection —
+    plain ``http``, since TLS ends at the ingress — so the URL the request carries
+    here is not the one that was signed, and the company refused every such call
+    ``invalid_session`` (found on r1, 18 November 2026). An agent with no public
+    address (served locally) was called at the URL the request carries.
+    """
+    if addressed.hosts is None:
+        return str(request.url)
+    query = request.url.query
+    return f"{addressed.hosts.api}{request.url.path}" + (f"?{query}" if query else "")
+
+
 async def approved_through_the_company(
     addressed: AddressedAgent, request: Request
 ) -> Response:
@@ -51,7 +68,7 @@ async def approved_through_the_company(
     headers = headers_of(request.scope)
     answered = await addressed.company.api_call(
         request.method,
-        str(request.url),
+        called_url(addressed, request),
         request.url.path,
         headers,
         await request.body(),
@@ -192,6 +209,7 @@ __all__ = [
     "SESSION_HEADER",
     "api_app",
     "approved_through_the_company",
+    "called_url",
     "coerced",
     "inputs_of",
 ]
