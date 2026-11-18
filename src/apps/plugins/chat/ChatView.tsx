@@ -22,6 +22,7 @@
  */
 
 import type { JSX } from 'react';
+import { NO_SURFACE, surfaceChoice } from './surfaceChoice';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
@@ -243,7 +244,6 @@ type ChatControls = {
 };
 
 /** No editor: the conversation on its own. */
-const NO_SURFACE = '';
 
 /**
  * How fast the full-screen control breathes once it starts asking.
@@ -334,6 +334,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * The effect below opens it the moment it can actually be opened.
    */
   const [surfaceId, setSurfaceId] = useState<string>(NO_SURFACE);
+  const [suspendedId, setSuspendedId] = useState<string | null>(null);
 
   /**
    * Whether the reader has chosen a surface themselves.
@@ -841,7 +842,11 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    */
   const chooseSurface = useCallback((next: string) => {
     surfaceChosen.current = true;
-    setSurfaceId(next);
+    // A choice of the reader's own: an editor waiting to come back is no
+    // longer wanted, or it keeps the column and "Show the chat" shows nothing.
+    const chosen = surfaceChoice(next);
+    setSuspendedId(chosen.suspendedId);
+    setSurfaceId(chosen.surfaceId);
   }, []);
 
   /*
@@ -910,7 +915,6 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    */
   /* State, not a ref: the layout below keeps this surface's column while it
      is away, and a ref changing re-renders nothing. */
-  const [suspendedId, setSuspendedId] = useState<string | null>(null);
 
   /*
    * Full screen: the whole view, on the whole screen.

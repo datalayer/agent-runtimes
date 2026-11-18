@@ -17,7 +17,8 @@
  * The icon knows its own standing: the active view's icon shows in the
  * accent colour, and an editor's icon withdraws entirely while its editor is
  * not on offer (no notebook plugin, no notebook button). The chat's icon is
- * always there — the conversation is the view that remains.
+ * there whenever an editor is: with no editor, the conversation is all there is
+ * and its icon would change nothing.
  *
  * @module apps/plugins/view-switch
  */
@@ -83,10 +84,13 @@ function makeViewSwitchAction({
     const editors = useContributions(LoopEditorView);
     // An editor's icon withdraws while its editor is not contributed: a
     // button that switches to nothing is the trap the fail-loud rules exist
-    // to prevent. The chat has no such condition to fail.
+    // to prevent. The chat's icon withdraws too while no editor is: with the
+    // conversation all there is, "Show the chat" had nothing to change, and a
+    // click on it did nothing at all (the user, 18 November 2026).
     if (
-      viewId !== NONE_EDITOR &&
-      !editors.some(entry => entry.value.surfaceId === viewId)
+      viewId === NONE_EDITOR
+        ? editors.length === 0
+        : !editors.some(entry => entry.value.surfaceId === viewId)
     ) {
       return null;
     }
