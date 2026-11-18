@@ -96,7 +96,8 @@ describe('<datalayer-app anonymous max-turns sign-in>', () => {
     expect(element).toContain(
       "if (source.visitors && anonymousOf(this.getAttribute('anonymous')))",
     );
-    expect(element).toContain('{...(preview ?? {})}');
+    // Through the `Application` component since it draws the element (16 November 2026).
+    expect(element).toContain('anonymous: Boolean(preview),');
     // No member named after the new attributes (React 19 sets props as properties).
     expect(element).not.toMatch(
       /^\s+(private |public )?(anonymous|maxTurns|signIn)\(/m,

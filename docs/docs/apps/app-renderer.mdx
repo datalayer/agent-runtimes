@@ -319,7 +319,8 @@ export const AboutPlugin = definePlugin<Record<string, never>, unknown, ReactorR
 ```
 
 The shell does the rest. The panel is **closed to start with**, so the page
-keeps the whole width; its toggle is an icon button in the chat's title bar
+keeps the whole width; its toggle is an icon button leading the chat's title bar, before the
+application's face and name
 (in the workspace's header when it draws one), which says what it opens
 (`panel.label`), whether it is open (`aria-expanded`) and which element it
 controls (`aria-controls`). Open, the panel is a column of

@@ -404,6 +404,7 @@ export function Chat({
   submitOnSuggestionClick = true,
   description,
   headerContent,
+  headerLeading,
   headerActions,
   autoFocus = false,
   identityProviders,
@@ -1174,6 +1175,7 @@ export function Chat({
                         </>
                       ) : undefined
                     }
+                    headerLeading={headerLeading}
                     footerContent={chromeOf('footer') ?? undefined}
                     toolbarExtras={chromeOf('toolbar') ?? undefined}
                     headerItems={headerItems}

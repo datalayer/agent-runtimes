@@ -265,6 +265,12 @@ export type LoopWorkspaceContext = {
    */
   chatHeaderActions?: ReactNode;
   /**
+   * What leads the chat's title bar, before the agent's face and name: the
+   * shell's own, the toggle of the workspace's left panel
+   * (`LoopSlots.leftPanel`), on the side the panel opens from.
+   */
+  chatHeaderLeading?: ReactNode;
+  /**
    * The chat's view, as the host keeps it: the chat's title bar offers the
    * views with its view-mode toggle (`ChatViewModeToggle`). Unsaid, the
    * title bar offers none.
@@ -1330,8 +1336,9 @@ export const LoopSlots = {
    * The leading edge, beside the view: what is said *about* the work rather
    * than part of it — a host's presentation of the application, a guide.
    *
-   * Closed until the person opens it: the shell draws its toggle (in the
-   * chat's title bar, or the workspace's header when it has one), the view
+   * Closed until the person opens it: the shell draws its toggle (leading
+   * the chat's title bar, before the agent's name, or leading the
+   * workspace's header when it has one), the view
    * keeps the whole width meanwhile, and in a narrow workspace the panel
    * opens over the view. A component names its toggle and says whether it
    * has anything to show with its `panel` (`LoopLeftPanelComponent`); with

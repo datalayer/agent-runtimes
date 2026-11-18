@@ -9,8 +9,8 @@
  * application, a guide.
  *
  * Closed to start with, always: the view has the whole width, and a toggle
- * (an icon button in the chat's title bar, or in the workspace's header when
- * it has one) opens and closes it. Open, it takes a column beside the view;
+ * (an icon button leading the chat's title bar, before the agent's name, or
+ * leading the workspace's header when it has one) opens and closes it. Open, it takes a column beside the view;
  * in a narrow workspace (a phone) it opens over the view instead, with a
  * close button of its own since it covers the toggle. Its width and its
  * opacity move as it opens and closes, and nothing moves when the person

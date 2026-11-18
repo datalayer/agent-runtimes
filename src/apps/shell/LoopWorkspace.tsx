@@ -322,22 +322,11 @@ function WorkspaceBody({
     ],
   );
   /*
-   * Where the left panel's toggle goes: the workspace's header when it draws
-   * one, else the chat's title bar, the first of its actions, before the
-   * host's own additions.
+   * Where the left panel's toggle goes: leading the workspace's header when
+   * it draws one, else leading the chat's title bar, before the agent's face
+   * and name — on the side the panel opens from.
    */
-  const chatHeaderActionsWithToggle = useMemo(
-    () =>
-      leftPanelToggle && !showHeader ? (
-        <>
-          {leftPanelToggle}
-          {chatHeaderActions}
-        </>
-      ) : (
-        chatHeaderActions
-      ),
-    [leftPanelToggle, showHeader, chatHeaderActions],
-  );
+  const chatHeaderLeading = showHeader ? null : leftPanelToggle;
   const commandsRef = useRef(commands);
   const currentWorkspace = useRef<LoopWorkspaceContext | null>(null);
   const compact = layout === 'panel';
@@ -408,7 +397,8 @@ function WorkspaceBody({
       submit,
       viewControls,
       setViewControls,
-      chatHeaderActions: chatHeaderActionsWithToggle,
+      chatHeaderActions,
+      chatHeaderLeading,
       chatViewModes,
     }),
     [
@@ -423,7 +413,8 @@ function WorkspaceBody({
       submit,
       viewControls,
       setViewControls,
-      chatHeaderActionsWithToggle,
+      chatHeaderActions,
+      chatHeaderLeading,
       chatViewModes,
     ],
   );

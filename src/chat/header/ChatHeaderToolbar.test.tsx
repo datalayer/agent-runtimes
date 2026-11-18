@@ -163,4 +163,22 @@ describe('the chat header toolbar', () => {
     expect(getByLabelText('Close chat')).toBeTruthy();
     expect(onLine(container)).toContain('chat-header-actions');
   });
+
+  it('leads the title row with what the workspace gives it, before the name and outside the toolbar', () => {
+    const { container, getByLabelText } = header({
+      headerLeading: (
+        <button type="button" aria-label="Marketer: what it does">
+          i
+        </button>
+      ),
+    });
+    const leading = getByLabelText('Marketer: what it does');
+    const name = container.querySelector('h3')!;
+    // Before the agent's name in the document, so on its leading side.
+    expect(
+      leading.compareDocumentPosition(name) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    // Never an item of the toolbar: a narrow chat cannot move it into "…".
+    expect(leading.closest('[role="toolbar"]')).toBeNull();
+  });
 });

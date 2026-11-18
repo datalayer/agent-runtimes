@@ -170,6 +170,7 @@ ACCOUNTING_APP_0_0_2 = AppSpec.model_validate(
         "emoji": "🧾",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": [],
     }
 )
@@ -384,6 +385,7 @@ AWS_STEWARD_AGENT_APP_0_0_1 = AppSpec.model_validate(
         "emoji": "☁️",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": [],
     }
 )
@@ -579,6 +581,7 @@ BOOKKEEPING_DESK_APP_0_0_3 = AppSpec.model_validate(
         "emoji": "🗂️",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": [],
     }
 )
@@ -745,6 +748,7 @@ CHANGE_DETECTION_APP_0_0_2 = AppSpec.model_validate(
         "emoji": "🔍",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": ["The agent 'worker-change-detection:0.0.1' is not enabled."],
     }
 )
@@ -883,6 +887,7 @@ CODE_EXPLAINER_APP_0_0_1 = AppSpec.model_validate(
         "emoji": "🔦",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": ["The agent 'example-harness-opencode:0.0.1' is not enabled."],
     }
 )
@@ -1053,6 +1058,7 @@ CROP_MONITORING_APP_0_0_2 = AppSpec.model_validate(
         "emoji": "🌾",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": ["The agent 'worker-crop-monitoring:0.0.1' is not enabled."],
     }
 )
@@ -1272,6 +1278,7 @@ CUSTOMER_INTERVIEW_APP_0_0_3 = AppSpec.model_validate(
         "emoji": "🎙️",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": [],
     }
 )
@@ -1460,6 +1467,7 @@ DATA_QUALITY_APP_0_0_3 = AppSpec.model_validate(
         "emoji": "🧹",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": [],
     }
 )
@@ -1590,6 +1598,7 @@ DECIDE_APP_0_0_2 = AppSpec.model_validate(
         "emoji": "⚖️",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": [],
     }
 )
@@ -1694,15 +1703,16 @@ DECK_MAKER_APP_0_0_1 = AppSpec.model_validate(
         "emoji": "🎞️",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": ["The agent 'example-decks:0.0.1' is not enabled."],
     }
 )
 
-DEMO_ACCOUNTANT_APP_0_0_3 = AppSpec.model_validate(
+DEMO_ACCOUNTANT_APP_0_0_4 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "demo-accountant",
-        "version": "0.0.3",
+        "version": "0.0.4",
         "name": "Accountant",
         "kind": "chat",
         "description": "Answers questions on a set of books, such as open invoices, aged receivables, payments to match or a trial balance: a demo on an example company's books that changes nothing.",
@@ -1822,15 +1832,16 @@ DEMO_ACCOUNTANT_APP_0_0_3 = AppSpec.model_validate(
         "emoji": "🧮",
         "avatar": "",
         "banner": "",
+        "presentation": "Work with Odoo accounting data to reconcile invoices and payments, analyze\njournal balances, and prepare close-ready summaries.\n\n- Reads your Odoo books: invoices, payments, journals and ledgers\n- Lists unpaid invoices and the customers behind them\n- Matches payments against open invoices and flags what does not reconcile\n- Prepares a close summary with the balances that moved\n- Changes nothing in the books without a person\n\n*Try it here: it answers from the books of an example roaster and changes\nnothing.*\n\n**[Start building](/signin)**\n[Watch it in the Sales and Accounting Stage](/stages?stage=sales-and-accounting)",
         "setup": [],
     }
 )
 
-DEMO_AWS_STEWARD_APP_0_0_4 = AppSpec.model_validate(
+DEMO_AWS_STEWARD_APP_0_0_5 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "demo-aws-steward",
-        "version": "0.0.4",
+        "version": "0.0.5",
         "name": "Steward for AWS",
         "kind": "chat",
         "description": "Recommends savings on an AWS account, each with the evidence it read, the estimated monthly saving and the fix to review: a demo over findings recorded from an example account, reading no AWS.",
@@ -1950,15 +1961,16 @@ DEMO_AWS_STEWARD_APP_0_0_4 = AppSpec.model_validate(
         "emoji": "☁️",
         "avatar": "",
         "banner": "",
+        "presentation": "Reads your AWS account's cost recommendations, right-sizing findings and spend\nwith a read-only role, and recommends savings, each with the evidence it read,\nthe estimated monthly saving and the fix to review.\n\n- Runs in your own Amazon Bedrock AgentCore, launched from Datalayer\n- Reads Cost Optimization Hub, Compute Optimizer and Cost Explorer with a read-only role\n- Recommends each saving with the evidence it read\n- Estimates the monthly saving and says how\n- Hands you the fix to review: it changes nothing in the account\n\n*Try it here: it reads no AWS account, only findings recorded from an example\naccount.*\n\n**[Start building](/signin)**\n[How the Steward works](/docs/integration-aws-agentcore)",
         "setup": [],
     }
 )
 
-DEMO_MARKETER_APP_0_0_2 = AppSpec.model_validate(
+DEMO_MARKETER_APP_0_0_3 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "demo-marketer",
-        "version": "0.0.2",
+        "version": "0.0.3",
         "name": "Marketer",
         "kind": "chat",
         "description": "Plans a campaign and drafts the posts for X, Bluesky, LinkedIn and Discord in a brand's voice, and reads what came back: a demo on an example brand that posts nothing.",
@@ -2078,6 +2090,7 @@ DEMO_MARKETER_APP_0_0_2 = AppSpec.model_validate(
         "emoji": "📣",
         "avatar": "",
         "banner": "",
+        "presentation": "Plans and drafts social posts for X, Bluesky, LinkedIn and Discord in the\nbrand's voice, reads what comes back (on LinkedIn once signed in there from\nthe chat), remembers what worked, and publishes only with approval.\n\n- Plans a campaign around the goal you give it\n- Drafts each post for its network, in your brand’s voice\n- Reads what the audience says back\n- Remembers the voice, what was posted and what worked\n- Publishes nothing until you approve the exact text\n\n*Try it here: it plans and drafts for an example coffee roaster, or for your\nbrand, and posts nothing.*\n\n**[Start building](/signin)**\n[The seed agents, in slides](/visitors/decks/agents/seed-agents)",
         "setup": [],
     }
 )
@@ -2556,15 +2569,16 @@ DEMO_SHOP_APP_0_0_1 = AppSpec.model_validate(
         "emoji": "🛍️",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": [],
     }
 )
 
-DEMO_SHOPPER_APP_0_0_5 = AppSpec.model_validate(
+DEMO_SHOPPER_APP_0_0_6 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "demo-shopper",
-        "version": "0.0.5",
+        "version": "0.0.6",
         "name": "Shopper",
         "kind": "chat",
         "description": "Finds products with their photos, compares them, builds a basket with its total and places a test order at Datalayer's Demo Shop: nothing is charged and nothing ships.",
@@ -2733,15 +2747,16 @@ DEMO_SHOPPER_APP_0_0_5 = AppSpec.model_validate(
         "emoji": "🛍️",
         "avatar": "",
         "banner": "",
+        "presentation": "Finds products on Shopify stores, compares prices, variants and sellers,\nbuilds the basket, and buys for you through the Personal Agent Protocol only\nonce you approve the exact purchase.\n\n- Searches products across Shopify stores\n- Compares price, shipping, rating and seller, and says which it would pick\n- Builds the basket and shows its total\n- Remembers your sizes, budgets and the stores you like\n- Buys through the Personal Agent Protocol only once you approve the exact purchase\n\n*Try it here: it shops at the Demo Shop, an example shop of real products with\ntheir photos, quotes the basket and places a test order: nothing is charged\nand nothing ships.*\n\n**[Start building](/signin)**\n[How a personal agent acts for you](/docs/applications/personal-agent-protocol)",
         "setup": [],
     }
 )
 
-DEMO_TERRA_APP_0_0_3 = AppSpec.model_validate(
+DEMO_TERRA_APP_0_0_4 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "demo-terra",
-        "version": "0.0.3",
+        "version": "0.0.4",
         "name": "Terra",
         "kind": "chat",
         "description": "Picks satellite scenes, compares them and explains what their figures show: a demo on an example scene catalogue that reads no live imagery.",
@@ -2861,15 +2876,16 @@ DEMO_TERRA_APP_0_0_3 = AppSpec.model_validate(
         "emoji": "🌏",
         "avatar": "",
         "banner": "",
+        "presentation": "Analyses satellite images and Earth observation data: finds the scenes in NASA\nEarthdata, computes indices such as NDVI and change between dates in a\nnotebook, and reports what the pixels show with their dates and cloud cover.\n\n- Finds satellite scenes in NASA Earthdata by place, date and cloud cover\n- Downloads the images and analyses them in a notebook\n- Computes indices such as NDVI and the change between two dates\n- Names each scene by its sensor, date and cloud cover\n- Says what the images cannot tell\n\n*Try it here: it reasons over an example catalogue of scenes near Lleida and\nreads no live imagery.*\n\n**[Start building](/signin)**\n[The Earthdata connection it uses](/docs/mcp/toolsets)",
         "setup": [],
     }
 )
 
-DEMO_TRAVELLER_APP_0_0_2 = AppSpec.model_validate(
+DEMO_TRAVELLER_APP_0_0_3 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "demo-traveller",
-        "version": "0.0.2",
+        "version": "0.0.3",
         "name": "Traveller",
         "kind": "chat",
         "description": "Plans a trip in three options with flights, a stay, a day-by-day plan and the budget: a demo on example flights, stays and restaurants that books nothing and contacts no real service.",
@@ -2986,6 +3002,7 @@ DEMO_TRAVELLER_APP_0_0_2 = AppSpec.model_validate(
         "emoji": "🧭",
         "avatar": "",
         "banner": "",
+        "presentation": "A travel companion: finds flights, stays, restaurants and things to do, and\nputs them together into three practical trip options, each with a map, a daily\nschedule, a budget with its total and the booking links. It books nothing: you\nbook on the provider's site.\n\n- Asks your dates, places, travellers, preferences and budget\n- Compares flights on Kiwi.com by fare, baggage, connections and travel time\n- Finds stays, restaurants and sights with Google Maps, and Booking.com with your partner access\n- Plans three options, each with a map, a daily schedule and a budget with its total\n- Hands you the booking links: it books and pays nothing\n\n*Try it here: it plans an example weekend in Lisbon from example flights,\nstays and restaurants, books nothing and contacts no real service.*\n\n**[Start building](/signin)**\n[The seed agents, in slides](/visitors/decks/agents/seed-agents)",
         "setup": [],
     }
 )
@@ -3152,6 +3169,7 @@ DISASTER_ASSESSMENT_APP_0_0_2 = AppSpec.model_validate(
         "emoji": "🌊",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": ["The agent 'worker-disaster-assessment:0.0.1' is not enabled."],
     }
 )
@@ -3286,6 +3304,7 @@ ERRAND_RUNNER_APP_0_0_2 = AppSpec.model_validate(
         "emoji": "🏃",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": [],
     }
 )
@@ -3430,6 +3449,7 @@ EVENT_RESPONSE_APP_0_0_3 = AppSpec.model_validate(
         "emoji": "🛡️",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": ["The agent 'worker-event-response:0.0.1' is not enabled."],
     }
 )
@@ -3661,6 +3681,7 @@ EXCHANGE_DESK_APP_0_0_3 = AppSpec.model_validate(
         "emoji": "🏪",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": [],
     }
 )
@@ -3799,6 +3820,7 @@ GUEST_DESK_APP_0_0_2 = AppSpec.model_validate(
         "emoji": "🏨",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": [],
     }
 )
@@ -4005,6 +4027,7 @@ INBOX_TRIAGE_APP_0_0_2 = AppSpec.model_validate(
         "emoji": "📬",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": ["The agent 'worker-mail-triage:0.0.1' is not enabled."],
     }
 )
@@ -4179,6 +4202,7 @@ LIVE_SHOP_CHAT_APP_0_0_2 = AppSpec.model_validate(
         "emoji": "💬",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": [],
     }
 )
@@ -4366,6 +4390,7 @@ MARKETER_APP_0_0_1 = AppSpec.model_validate(
         "emoji": "📣",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": [],
     }
 )
@@ -4620,6 +4645,7 @@ MODEL_CHOICE_APP_0_0_3 = AppSpec.model_validate(
         "emoji": "🧠",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": [],
     }
 )
@@ -4783,6 +4809,7 @@ MONTH_END_CLOSE_APP_0_0_2 = AppSpec.model_validate(
         "emoji": "🗓️",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": ["The agent 'worker-month-end-close:0.0.1' is not enabled."],
     }
 )
@@ -4962,6 +4989,7 @@ ORDER_DESK_APP_0_0_2 = AppSpec.model_validate(
         "emoji": "📦",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": [],
     }
 )
@@ -5132,6 +5160,7 @@ ORDER_TRACKER_APP_0_0_2 = AppSpec.model_validate(
         "emoji": "🔖",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": [],
     }
 )
@@ -5404,6 +5433,7 @@ PIPELINE_REPORT_APP_0_0_2 = AppSpec.model_validate(
         "emoji": "📈",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": ["The agent 'cog-sales-pipeline-board-report:0.0.1' is not enabled."],
     }
 )
@@ -5508,6 +5538,7 @@ PLAYER_APP_0_0_1 = AppSpec.model_validate(
         "emoji": "🏓",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": ["The agent 'example-player:0.0.1' is not enabled."],
     }
 )
@@ -5746,6 +5777,7 @@ QUOTE_CALCULATOR_APP_0_0_6 = AppSpec.model_validate(
         "emoji": "🧮",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": [],
     }
 )
@@ -5989,6 +6021,7 @@ REPORT_FROM_A_FILE_APP_0_0_5 = AppSpec.model_validate(
         "emoji": "📑",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": [],
     }
 )
@@ -6168,6 +6201,7 @@ RETURNS_DESK_APP_0_0_2 = AppSpec.model_validate(
         "emoji": "↩️",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": [],
     }
 )
@@ -6305,6 +6339,7 @@ SALES_APP_0_0_3 = AppSpec.model_validate(
         "emoji": "💼",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": [
             "The agent 'worker-sales-pipeline-board-report:0.0.1' is not enabled."
         ],
@@ -6411,6 +6446,7 @@ SHEET_MAKER_APP_0_0_1 = AppSpec.model_validate(
         "emoji": "📊",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": [
             "The agent 'example-analyze-excel-spreadsheet:0.0.1' is not enabled."
         ],
@@ -6637,6 +6673,7 @@ SHIP_OR_FIX_APP_0_0_3 = AppSpec.model_validate(
         "emoji": "🚢",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": [],
     }
 )
@@ -6810,6 +6847,7 @@ SHOP_CONCIERGE_APP_0_0_2 = AppSpec.model_validate(
         "emoji": "🛎️",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": [],
     }
 )
@@ -6935,6 +6973,7 @@ SHOPPER_APP_0_0_2 = AppSpec.model_validate(
         "emoji": "🧺",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": [],
     }
 )
@@ -7096,6 +7135,7 @@ SHOPPING_DESK_APP_0_0_2 = AppSpec.model_validate(
         "emoji": "🛍️",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": [],
     }
 )
@@ -7266,6 +7306,7 @@ SIGN_IN_DESK_APP_0_0_2 = AppSpec.model_validate(
         "emoji": "🔐",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": [],
     }
 )
@@ -7405,6 +7446,7 @@ SIGNED_READER_APP_0_0_2 = AppSpec.model_validate(
         "emoji": "🔏",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": [],
     }
 )
@@ -7616,6 +7658,7 @@ SUPPLIER_COMPARISON_APP_0_0_3 = AppSpec.model_validate(
         "emoji": "🚚",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": [],
     }
 )
@@ -7901,6 +7944,7 @@ SUPPORT_DESK_APP_0_0_5 = AppSpec.model_validate(
         "emoji": "🛟",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": ["The agent 'worker-document-qa:0.0.1' is not enabled."],
     }
 )
@@ -8055,6 +8099,7 @@ TRAVEL_DESK_APP_0_0_2 = AppSpec.model_validate(
         "emoji": "✈️",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": [],
     }
 )
@@ -8204,6 +8249,7 @@ WEB_RESEARCH_APP_0_0_2 = AppSpec.model_validate(
         "emoji": "🔎",
         "avatar": "",
         "banner": "",
+        "presentation": "",
         "setup": [],
     }
 )
@@ -8224,13 +8270,13 @@ APP_CATALOGUE: Dict[str, AppSpec] = {
     "data-quality": DATA_QUALITY_APP_0_0_3,
     "decide": DECIDE_APP_0_0_2,
     "deck-maker": DECK_MAKER_APP_0_0_1,
-    "demo-accountant": DEMO_ACCOUNTANT_APP_0_0_3,
-    "demo-aws-steward": DEMO_AWS_STEWARD_APP_0_0_4,
-    "demo-marketer": DEMO_MARKETER_APP_0_0_2,
+    "demo-accountant": DEMO_ACCOUNTANT_APP_0_0_4,
+    "demo-aws-steward": DEMO_AWS_STEWARD_APP_0_0_5,
+    "demo-marketer": DEMO_MARKETER_APP_0_0_3,
     "demo-shop": DEMO_SHOP_APP_0_0_1,
-    "demo-shopper": DEMO_SHOPPER_APP_0_0_5,
-    "demo-terra": DEMO_TERRA_APP_0_0_3,
-    "demo-traveller": DEMO_TRAVELLER_APP_0_0_2,
+    "demo-shopper": DEMO_SHOPPER_APP_0_0_6,
+    "demo-terra": DEMO_TERRA_APP_0_0_4,
+    "demo-traveller": DEMO_TRAVELLER_APP_0_0_3,
     "disaster-assessment": DISASTER_ASSESSMENT_APP_0_0_2,
     "errand-runner": ERRAND_RUNNER_APP_0_0_2,
     "event-response": EVENT_RESPONSE_APP_0_0_3,

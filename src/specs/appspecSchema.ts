@@ -3175,6 +3175,14 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       title: 'Banner',
       type: 'string',
     },
+    presentation: {
+      default: '',
+      description:
+        'What it is, as one Markdown document, for a page that presents it beside its conversation (a panel a host adds to the application): a paragraph, a bullet list of what it does, a note wholly in emphasis, and a paragraph of links for its actions, the main one in bold. Its name and its emoji are the heading above it; raw HTML and headings are refused. Nothing is presented when unsaid',
+      maxLength: 4000,
+      title: 'Presentation',
+      type: 'string',
+    },
   },
   required: ['id', 'name', 'kind'],
   title: 'Appspec',

@@ -99,6 +99,12 @@ export interface ChatBaseHeaderProps {
   disableReason?: string;
   brandIcon?: ReactNode;
   headerContent?: ReactNode;
+  /**
+   * What leads the title row, before the agent's face and name: a control
+   * for what stands on the leading edge of the chat (the workspace's left
+   * panel's toggle).
+   */
+  headerLeading?: ReactNode;
   headerActions?: ReactNode;
   /**
    * Items of the actions toolbar, after the chat's own controls: the agent's
@@ -172,6 +178,7 @@ export function ChatBaseHeader({
   disableReason,
   brandIcon,
   headerContent,
+  headerLeading,
   headerActions,
   headerItems,
   showInformation,
@@ -350,6 +357,7 @@ export function ChatBaseHeader({
           maxWidth="65%"
           flex="0 1 auto"
         >
+          {headerLeading}
           {kernelIndicatorPlacement === 'left' && kernelIndicatorElement}
           {brandIcon || <AiAgentIcon colored size={20} />}
           {(title || subtitle) && (

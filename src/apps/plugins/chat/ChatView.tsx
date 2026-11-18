@@ -2736,6 +2736,9 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                   <BrandIcon size={20} />
                 )
               }
+              // What the workspace leads the title bar with: its left
+              // panel's toggle, on the side the panel opens from.
+              headerLeading={workspace.chatHeaderLeading}
               // An application says what it is doing, in plain words, beside
               // its name; an agent's chat keeps its header as it is.
               headerContent={

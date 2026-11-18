@@ -845,6 +845,13 @@ export interface ChatCommonProps {
   /** Custom header content (rendered below title row) */
   headerContent?: ReactNode;
 
+  /**
+   * What leads the title row, before the agent's face and name: a control
+   * for what stands on the leading edge of the chat (the workspace's left
+   * panel's toggle).
+   */
+  headerLeading?: ReactNode;
+
   /** Custom header actions (rendered in title row, right side) */
   headerActions?: ReactNode;
 
@@ -1420,6 +1427,13 @@ export interface ChatBaseProps {
 
   /** Custom header content (rendered below title row) */
   headerContent?: ReactNode;
+
+  /**
+   * What leads the title row, before the agent's face and name: a control
+   * for what stands on the leading edge of the chat (the workspace's left
+   * panel's toggle).
+   */
+  headerLeading?: ReactNode;
 
   /** Children to render in the messages area (for custom content) */
   children?: ReactNode;
