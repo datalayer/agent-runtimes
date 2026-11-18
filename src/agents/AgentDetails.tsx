@@ -1689,8 +1689,8 @@ export function AgentDetails({
         {/* Back button */}
         {showBackHeader && (
           <Box mt={2}>
-            <Button variant="primary" onClick={onBack} sx={{ width: '100%' }}>
-              Back to Chat
+            <Button leadingVisual={ArrowLeftIcon} onClick={onBack}>
+              Back to chat
             </Button>
           </Box>
         )}
