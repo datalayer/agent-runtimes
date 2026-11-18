@@ -1309,7 +1309,7 @@ export const AWS_HEADER_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
-  placements: ['header'],
+  placements: ['header', 'right', 'left'],
   header: {
     tool: 'set_aws_header',
     when: 'Call it once you have read them: the savings found so far (the number of recommendations as the value, their estimated monthly sum as the label, such as "$2,701/month"), and the Savings Plans coverage of compute in percent. Nothing is changed in the account.',
@@ -1506,7 +1506,7 @@ export const BOOKS_HEADER_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
-  placements: ['header'],
+  placements: ['header', 'right', 'left'],
   header: {
     tool: 'set_books_header',
     when: 'Call it each time you have counted them in the books: the payments not matched yet, and the open invoices with their total due as the label. Every figure comes from the books.',
@@ -1951,7 +1951,7 @@ export const EARTH_HEADER_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
-  placements: ['header'],
+  placements: ['header', 'right', 'left'],
   header: {
     tool: 'set_earth_header',
     when: 'Call it each time you settle on a scene to read: its cloud cover in percent as the value, and the scene as the label (sensor and date, such as "Sentinel-2 · 8 May").',
@@ -2151,7 +2151,7 @@ export const NOTEBOOK_HEADER_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
-  placements: ['header'],
+  placements: ['header', 'right', 'left'],
   header: {
     tool: 'set_notebook_header',
     when: 'Call it once you know the dataset (its name and size as the label of dataset), and after each answer to say what ran: the cells run, or that nothing ran. Never show a run that did not happen.',
@@ -2255,6 +2255,33 @@ export const NOTEBOOK_UI_0_0_1: UISpec = {
   components: [],
 };
 
+export const NOTICES_UI_0_0_1: UISpec = {
+  id: 'notices',
+  version: '0.0.1',
+  name: 'Notices',
+  description:
+    'A short notice the agent slides in from an edge of the chat for a few seconds: info, success, warning or error, a title and a line, said to come from the agent.',
+  emoji: '🔔',
+  octicon: 'bell',
+  plugin: '@datalayer/loop-plugin-notices',
+  folder: 'notices',
+  contributions: {
+    slots: ['loop.viewOverlay'],
+    points: [
+      'loop.chat.extras',
+      'reactor.ui.renderer',
+      'reactor.ui.toolBinding',
+    ],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  placements: ['message'],
+  catalog: '',
+  components: [],
+};
+
 export const ODOO_CONTEXT_UI_0_0_1: UISpec = {
   id: 'odoo-context',
   version: '0.0.1',
@@ -2300,7 +2327,7 @@ export const PAGE_DECK_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
-  placements: ['message'],
+  placements: ['message', 'right', 'left'],
   catalog: '',
   components: [],
 };
@@ -2417,7 +2444,7 @@ export const PAGE_SHEET_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
-  placements: ['message'],
+  placements: ['message', 'right', 'left'],
   catalog: '',
   components: [],
 };
@@ -2555,7 +2582,7 @@ export const SHOP_HEADER_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
-  placements: ['header'],
+  placements: ['header', 'right', 'left'],
   header: {
     tool: 'set_shop_header',
     when: "Call it each time the basket changes (how many items, and the total as its label), when an order is proposed and waits for the person's approval, and again once it is confirmed or dropped.",
@@ -2636,6 +2663,33 @@ export const SHOPPING_BASKET_UI_0_0_1: UISpec = {
   components: [],
 };
 
+export const SIDE_PANELS_UI_0_0_1: UISpec = {
+  id: 'side-panels',
+  version: '0.0.1',
+  name: 'Side panels',
+  description:
+    "The agent opens and closes the chat's left and right panels, where its UI placed there shows: the deck it builds, the sheet it fills, its title bar's controls.",
+  emoji: '🗂️',
+  octicon: 'sidebar-expand',
+  plugin: '@datalayer/loop-plugin-side-panels',
+  folder: 'side-panels',
+  contributions: {
+    slots: [],
+    points: [
+      'loop.chat.extras',
+      'reactor.ui.renderer',
+      'reactor.ui.toolBinding',
+    ],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  placements: ['message'],
+  catalog: '',
+  components: [],
+};
+
 export const SOCIAL_ACCOUNTS_UI_0_0_1: UISpec = {
   id: 'social-accounts',
   version: '0.0.1',
@@ -2677,7 +2731,7 @@ export const SOCIAL_HEADER_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
-  placements: ['header'],
+  placements: ['header', 'right', 'left'],
   header: {
     tool: 'set_social_header',
     when: "Call it each time the number of drafts waiting for the person's approval changes: after you show a draft, and after one is approved, posted or dropped.",
@@ -2884,7 +2938,7 @@ export const TRIP_HEADER_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
-  placements: ['header'],
+  placements: ['header', 'right', 'left'],
   header: {
     tool: 'set_trip_header',
     when: 'Call it once the trip is known (where and when, as the label of trip), and each time you have options ready to compare (their number). Nothing is booked by showing it.',
@@ -3142,6 +3196,7 @@ export const UI_CATALOGUE: Record<string, UISpec> = {
   'notebook-toolbar': NOTEBOOK_TOOLBAR_UI_0_0_1,
   'notebook-view': NOTEBOOK_VIEW_UI_0_0_1,
   notebook: NOTEBOOK_UI_0_0_1,
+  notices: NOTICES_UI_0_0_1,
   'odoo-context': ODOO_CONTEXT_UI_0_0_1,
   'page-deck': PAGE_DECK_UI_0_0_1,
   'page-layout': PAGE_LAYOUT_UI_0_0_1,
@@ -3153,6 +3208,7 @@ export const UI_CATALOGUE: Record<string, UISpec> = {
   prompt: PROMPT_UI_0_0_1,
   'shop-header': SHOP_HEADER_UI_0_0_1,
   'shopping-basket': SHOPPING_BASKET_UI_0_0_1,
+  'side-panels': SIDE_PANELS_UI_0_0_1,
   'social-accounts': SOCIAL_ACCOUNTS_UI_0_0_1,
   'social-header': SOCIAL_HEADER_UI_0_0_1,
   'spreadsheet-view': SPREADSHEET_VIEW_UI_0_0_1,

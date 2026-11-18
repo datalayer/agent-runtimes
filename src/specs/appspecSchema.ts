@@ -2831,8 +2831,16 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     },
     UiPlacement: {
       description:
-        'Where a UI goes in the chat (the user, 15 November 2026: "make sure ui can be used to be\ninjected in the chat itself (toolbar, header...) or as chat message (a2ui)").\n\nThe chat\'s own chrome — ``header`` (beside its title), ``toolbar`` (the input toolbar\'s\ncontrols), ``footer`` (under the prompt), ``banner`` (above the messages), ``panel`` (beside\nthe chat, where it has one) — or ``message``: a card in the conversation, drawn by a tool\nrenderer or the A2UI renderer.',
-      enum: ['header', 'toolbar', 'footer', 'banner', 'panel', 'message'],
+        'Where a UI goes in the chat (the user, 15 November 2026: "make sure ui can be used to be\ninjected in the chat itself (toolbar, header...) or as chat message (a2ui)").\n\nThe chat\'s own chrome — ``header`` (beside its title), ``toolbar`` (the input toolbar\'s\ncontrols), ``footer`` (under the prompt), ``banner`` (above the messages) — its two side\npanels, ``left`` and ``right`` (beside the conversation, closed until opened; the user,\n18 November 2026: "left and right side panels ... real panels that receive controls and\nvisuals: an agent\'s UI plugins placed there") — or ``message``: a card in the conversation,\ndrawn by a tool renderer or the A2UI renderer.',
+      enum: [
+        'header',
+        'toolbar',
+        'footer',
+        'banner',
+        'left',
+        'right',
+        'message',
+      ],
       title: 'UiPlacement',
       type: 'string',
     },

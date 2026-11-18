@@ -86,6 +86,12 @@ import {
   type HeaderState,
 } from './headerState';
 import { PAGE_TOOL_RESULTS, useToolCalls } from './toolResults';
+import {
+  CHROME_SLOTS,
+  SIDE_PANEL_ORDER,
+  isSidePlacement,
+  type ChromePlacement,
+} from './chrome';
 
 /** The height of every header part: Primer's small control. */
 export const HEADER_PART_HEIGHT = 28;
@@ -322,6 +328,30 @@ export function HeaderIndicator({
   );
 }
 
+/**
+ * An indicator in a side panel's row: what it draws, or the row's dash when
+ * it draws nothing yet (its live region stays, empty, for its first words).
+ */
+function IndicatorOrNothing({
+  children,
+}: {
+  children: JSX.Element;
+}): JSX.Element {
+  return (
+    <Box
+      display="inline-flex"
+      sx={{
+        '&:has([data-header-shown="false"])::after': {
+          content: '"—"',
+          color: 'fg.subtle',
+        },
+      }}
+    >
+      {children}
+    </Box>
+  );
+}
+
 /** A drop-down: one option chosen, told to the agent with every turn. */
 export function HeaderChoice({
   item,
@@ -452,14 +482,88 @@ export function headerToolOf(id: string): FrontendToolDefinition | undefined {
 }
 
 /**
+ * A header UI's items in a side panel (placed `left` or `right`): under its
+ * name, one row each — its name, and its control or what the agent said,
+ * a dash before it said anything.
+ */
+export function HeaderItemsPanel({
+  title,
+  rows,
+}: {
+  title: string;
+  rows: ReadonlyArray<{ item: UiHeaderItemSpec; part: JSX.Element | null }>;
+}): JSX.Element {
+  return (
+    <Box
+      as="section"
+      aria-label={title}
+      data-header-panel=""
+      display="flex"
+      flexDirection="column"
+      sx={{ gap: 2 }}
+    >
+      <Box
+        as="h3"
+        m={0}
+        sx={{
+          fontSize: 0,
+          fontWeight: 'semibold',
+          color: 'fg.muted',
+          letterSpacing: '0.04em',
+          textTransform: 'uppercase',
+        }}
+      >
+        {title}
+      </Box>
+      {rows.map(({ item, part }) => (
+        <Box
+          key={item.id}
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          data-header-panel-row={item.id}
+          sx={{ gap: 3, minHeight: HEADER_PART_HEIGHT + 4 }}
+        >
+          {item.kind === 'action' ? null : (
+            <Box as="span" sx={{ fontSize: 1, color: 'fg.default' }}>
+              {item.label}
+            </Box>
+          )}
+          <Box
+            display="flex"
+            justifyContent="flex-end"
+            flex={item.kind === 'action' ? 1 : undefined}
+            minWidth={0}
+          >
+            {part ?? (
+              <Box
+                as="span"
+                aria-label={`${item.label}: not said yet`}
+                sx={{ color: 'fg.subtle', fontSize: 1 }}
+              >
+                —
+              </Box>
+            )}
+          </Box>
+        </Box>
+      ))}
+    </Box>
+  );
+}
+
+/**
  * A header UI's plugin: `@datalayer/loop-plugin-<id>`. Built per workspace,
- * so that what a person picked is that workspace's.
+ * so that what a person picked is that workspace's. In the chat's title bar
+ * (`header`), each item its own entry; placed in a side panel (`left`,
+ * `right`), the items stacked under its name.
  */
 export function defineHeaderPlugin(
   options: HeaderPluginOptions,
-): () => ReactorPlugin<Record<string, never>, unknown, unknown> {
+): (
+  placement?: ChromePlacement,
+) => ReactorPlugin<Record<string, never>, unknown, unknown> {
   const { id } = options;
-  return () => {
+  return (placement = 'header') => {
     const spec = UI_CATALOGUE[id];
     const header = headerSpecOf(id);
     const tool = headerToolOf(id);
@@ -475,7 +579,7 @@ export function defineHeaderPlugin(
       return useMemo(() => headerStateOf(header, calls), [calls]);
     }
 
-    const components = header.items.map(item => {
+    const parts = header.items.map(item => {
       const derive = options.derive?.[item.id];
       function Item({ workspace }: SlotProps): JSX.Element | null {
         const state = useHeaderState();
@@ -516,12 +620,41 @@ export function defineHeaderPlugin(
         );
       }
       Item.displayName = `Header(${id}.${item.id})`;
-      return {
-        slot: LoopSlots.chatHeader,
-        id: `${id}-${item.id}`,
-        Component: Item as ComponentType<SlotProps> as never,
-      };
+      return { item, Item };
     });
+    function Stacked({ workspace }: SlotProps): JSX.Element {
+      return (
+        <HeaderItemsPanel
+          title={spec.name}
+          rows={parts.map(({ item, Item }) => ({
+            item,
+            part:
+              item.kind === 'indicator' ? (
+                <IndicatorOrNothing>
+                  <Item workspace={workspace} />
+                </IndicatorOrNothing>
+              ) : (
+                <Item workspace={workspace} />
+              ),
+          }))}
+        />
+      );
+    }
+    const components = isSidePlacement(placement)
+      ? [
+          {
+            slot: CHROME_SLOTS[placement],
+            id: `${id}-${placement}`,
+            Component: Stacked as ComponentType<SlotProps> as never,
+            order: SIDE_PANEL_ORDER,
+            panel: { label: spec.name },
+          },
+        ]
+      : parts.map(({ item, Item }) => ({
+          slot: LoopSlots.chatHeader,
+          id: `${id}-${item.id}`,
+          Component: Item as ComponentType<SlotProps> as never,
+        }));
 
     return definePlugin({
       name: `@datalayer/loop-plugin-${id}`,

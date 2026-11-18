@@ -45,6 +45,8 @@ import { ANONYMOUS_WORDS } from '../chat/anonymous/anonymousMode';
 import {
   CHROME_SLOTS,
   isChromePlacement,
+  isSidePlacement,
+  type SidePlacement,
   type ChromeComponentProps,
   type ChromePlacement,
   type UiPlacement,
@@ -71,13 +73,15 @@ import { LinkedInPostPreviewPlugin } from './plugins/linkedin-post-preview';
 import { lockedUiPlugin } from './plugins/locked-ui';
 import { notebookHeaderPlugin } from './plugins/notebook-header';
 import { OdooContextChip, odooContextPlugin } from './plugins/odoo-context';
-import { PageDeckPlugin } from './plugins/page-deck';
-import { PageSheetPlugin } from './plugins/page-sheet';
+import { NoticesPlugin } from './plugins/notices';
+import { PageDeckPlugin, pageDeckSidePlugin } from './plugins/page-deck';
+import { PageSheetPlugin, pageSheetSidePlugin } from './plugins/page-sheet';
 import { PapPurchasePlugin } from './plugins/pap-purchase';
 import { ProductCardsPlugin } from './plugins/product-cards';
 import { ProductComparisonPlugin } from './plugins/product-comparison';
 import { shopHeaderPlugin } from './plugins/shop-header';
 import { ShoppingBasketPlugin } from './plugins/shopping-basket';
+import { SidePanelsPlugin } from './plugins/side-panels';
 import {
   SocialAccountsChips,
   SocialAccountsMessagePlugin,
@@ -108,6 +112,11 @@ export type AgentUiPlugin = {
   locked?: string;
   /** Its card in the conversation, when it has one. */
   message?: PluginRef;
+  /**
+   * Its card's live view in a side panel, its calls a line each in the
+   * conversation (a deck, a sheet built in the page), when it can go there.
+   */
+  side?: (side: SidePlacement) => PluginRef;
   /** Its plugin for a chrome placement, when it has one (a Loop workspace). */
   chrome?: (placement: ChromePlacement) => PluginRef;
   /** What it draws in the chat's chrome (`Chat`, outside a Loop workspace). */
@@ -216,8 +225,23 @@ export const AGENT_UI_PLUGINS: Readonly<Record<string, AgentUiPlugin>> = {
    * Each hands the chat's agent its tool set and draws the calls. Neither
    * needs a connection of the person's: a visitor's demo has them.
    */
-  'page-deck': { needsConnection: false, message: PageDeckPlugin },
-  'page-sheet': { needsConnection: false, message: PageSheetPlugin },
+  'page-deck': {
+    needsConnection: false,
+    message: PageDeckPlugin,
+    side: pageDeckSidePlugin,
+  },
+  'page-sheet': {
+    needsConnection: false,
+    message: PageSheetPlugin,
+    side: pageSheetSidePlugin,
+  },
+  /*
+   * Every agent's: it opens and closes the side panels (`side-panels`), and
+   * slides a short notice in from an edge (`notices`), with frontend tools
+   * run in the page (18 November 2026). Nothing needs a connection.
+   */
+  'side-panels': { needsConnection: false, message: SidePanelsPlugin },
+  notices: { needsConnection: false, message: NoticesPlugin },
   // Stripe (test mode).
   'stripe-checkout': { needsConnection: true, message: StripeCheckoutPlugin },
 };
@@ -374,7 +398,8 @@ const asChoice = (given: string | UiChoice | AgentUiChoice): AgentUiChoice =>
  * The Reactor plugins of these UIs, each once, in the order named, each for
  * its placement: a message UI's card plugin, a chrome UI's plugin in its
  * placement's slot. Ids the preset mounts anyway (`chat`, `a2ui-surface`…),
- * unknown, or placed where the chat has no slot (`panel`) are passed over.
+ * or unknown are passed over. A message UI placed in a side panel draws its
+ * live view there (`side`), a chrome UI its component.
  * For an anonymous visitor, only those that need no connection.
  */
 export function agentUiPluginsFor(
@@ -400,6 +425,8 @@ export function agentUiPluginsFor(
     let plugin: PluginRef | undefined;
     if (choice.placement === 'message') {
       plugin = entry.message;
+    } else if (isSidePlacement(choice.placement) && entry.side) {
+      plugin = entry.side(choice.placement);
     } else if (
       isChromePlacement(choice.placement) &&
       CHROME_SLOTS[choice.placement]
@@ -424,7 +451,8 @@ export function agentUiChromeOf(
     toolbar: [],
     footer: [],
     banner: [],
-    panel: [],
+    left: [],
+    right: [],
   };
   for (const choice of withoutSuperseded((given ?? []).map(asChoice), plugin =>
     Boolean(AGENT_UI_PLUGINS[plugin]?.Chrome),

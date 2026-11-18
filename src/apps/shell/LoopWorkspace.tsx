@@ -61,7 +61,7 @@ import {
 import { SIDEBAR_WIDTH } from '../plugins/plugins-panel';
 import { ViewSwitcher } from './ViewSwitcher';
 import { SidebarRail } from './SidebarRail';
-import { LeftPanel, LeftPanelToggle, useLeftPanel } from './LeftPanel';
+import { SidePanel, SidePanelToggle, useSidePanels } from './SidePanel';
 
 export type LoopWorkspaceProps = {
   /** Server backing this session. */
@@ -302,14 +302,19 @@ function WorkspaceBody({
   // Read to decide whether the column exists at all, not to render it: the
   // slot does that.
   const sidebar = useSlotComponents(LoopSlots.sidebar);
-  // What a host says about the work, on the leading edge: closed until its
-  // toggle opens it (`LoopSlots.leftPanel`).
-  const leftPanel = useLeftPanel();
+  // The side panels: what a host says about the work on the leading edge
+  // (`LoopSlots.leftPanel`), what the agent builds beside the conversation
+  // on the trailing one (`LoopSlots.rightPanel`). Closed until the person
+  // or the agent opens them; decided together, so that two never leave the
+  // view too narrow (`useSidePanels`).
   const rowRef = useRef<HTMLDivElement | null>(null);
+  const sidePanels = useSidePanels(rowRef);
+  const leftPanel = sidePanels.left;
+  const rightPanel = sidePanels.right;
   const leftPanelToggle = useMemo(
     () =>
       leftPanel.components.length > 0 ? (
-        <LeftPanelToggle panel={leftPanel} />
+        <SidePanelToggle panel={leftPanel} />
       ) : null,
     // The toggle is drawn again when what it says changes, not on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -319,14 +324,32 @@ function WorkspaceBody({
       leftPanel.label,
       leftPanel.icon,
       leftPanel.panelId,
+      leftPanel.setOpen,
+    ],
+  );
+  const rightPanelToggle = useMemo(
+    () =>
+      rightPanel.components.length > 0 ? (
+        <SidePanelToggle panel={rightPanel} />
+      ) : null,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      rightPanel.components.length,
+      rightPanel.open,
+      rightPanel.label,
+      rightPanel.icon,
+      rightPanel.panelId,
+      rightPanel.setOpen,
     ],
   );
   /*
-   * Where the left panel's toggle goes: leading the workspace's header when
-   * it draws one, else leading the chat's title bar, before the agent's face
-   * and name — on the side the panel opens from.
+   * Where the toggles go: in the workspace's header when it draws one, else
+   * in the chat's title bar — the left one leading it, before the agent's
+   * face and name, the right one trailing it — each on the side its panel
+   * opens from.
    */
   const chatHeaderLeading = showHeader ? null : leftPanelToggle;
+  const chatHeaderTrailing = showHeader ? null : rightPanelToggle;
   const commandsRef = useRef(commands);
   const currentWorkspace = useRef<LoopWorkspaceContext | null>(null);
   const compact = layout === 'panel';
@@ -399,6 +422,7 @@ function WorkspaceBody({
       setViewControls,
       chatHeaderActions,
       chatHeaderLeading,
+      chatHeaderTrailing,
       chatViewModes,
     }),
     [
@@ -415,6 +439,7 @@ function WorkspaceBody({
       setViewControls,
       chatHeaderActions,
       chatHeaderLeading,
+      chatHeaderTrailing,
       chatViewModes,
     ],
   );
@@ -454,6 +479,7 @@ function WorkspaceBody({
       {showViewSelector ? (
         <ViewSwitcher views={views} workspace={workspace} compact={compact} />
       ) : null}
+      {showHeader ? rightPanelToggle : null}
     </>
   );
 
@@ -547,8 +573,14 @@ function WorkspaceBody({
         // What the left panel opens over, in a narrow workspace.
         position="relative"
       >
-        <LeftPanel panel={leftPanel} rowRef={rowRef} props={{ workspace }} />
+        <SidePanel
+          panel={leftPanel}
+          narrow={sidePanels.narrow}
+          props={{ workspace }}
+        />
         <Box flex="1 1 auto" minWidth={0} minHeight={0} position="relative">
+          {/* What slides in over the view, inside its bounds: the agent's notices. */}
+          <ReactorSlot slot={LoopSlots.viewOverlay} props={{ workspace }} />
           <ReactorViewHost
             point={LoopViewType}
             active={effectiveViewType}
@@ -560,6 +592,11 @@ function WorkspaceBody({
             )}
           />
         </Box>
+        <SidePanel
+          panel={rightPanel}
+          narrow={sidePanels.narrow}
+          props={{ workspace }}
+        />
         {sidebar.length > 0 && sidebarRail && !compact ? (
           <SidebarRail
             components={sidebar}

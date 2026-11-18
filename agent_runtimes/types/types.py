@@ -413,7 +413,7 @@ class UISpec(BaseModel):
         default_factory=list,
         description=(
             "Where in the chat it may go, its default first: header, toolbar, footer, "
-            "banner, panel or message (agentspecs 0.0.197)"
+            "banner, the side panels left and right, or message (agentspecs 0.0.197)"
         ),
     )
     header: Optional[Dict[str, Any]] = Field(

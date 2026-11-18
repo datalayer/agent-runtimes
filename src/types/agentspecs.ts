@@ -157,11 +157,11 @@ export interface UISpec {
   renderers: string[];
   /**
    * Where in the chat it may go, its default first (agentspecs 0.0.197): the
-   * chat's chrome — `header`, `toolbar`, `footer`, `banner`, `panel` — or a
-   * `message`. None for a part of the workspace itself.
+   * chat's chrome — `header`, `toolbar`, `footer`, `banner` — a side panel,
+   * `left` or `right`, or a `message`. None for a part of the workspace itself.
    */
   placements?: Array<
-    'header' | 'toolbar' | 'footer' | 'banner' | 'panel' | 'message'
+    'header' | 'toolbar' | 'footer' | 'banner' | 'left' | 'right' | 'message'
   >;
   /**
    * What it puts in the chat's title bar, and the frontend tool that sets it
@@ -253,7 +253,8 @@ export interface UiChoice {
   /** The UI renderer of `agentspecs/ui-renderers` it is exposed through, by id. */
   renderer?: string;
   /** Where in the chat it goes, one of its spec's `placements`; its default unsaid. */
-  placement?: 'header' | 'toolbar' | 'footer' | 'banner' | 'panel' | 'message';
+  placement?:
+    'header' | 'toolbar' | 'footer' | 'banner' | 'left' | 'right' | 'message';
 }
 
 /** The layer of an agent's visit a protocol answers. */

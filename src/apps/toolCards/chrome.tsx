@@ -15,7 +15,8 @@
  * | `toolbar` | `loop.promptAction`       | the input toolbar (`toolbarExtras`)  |
  * | `footer`  | `loop.status`             | the band over the prompt (`footerContent`) |
  * | `banner`  | `loop.chatBanner`         | under the title (`headerContent`)    |
- * | `panel`   | none yet                  | none yet                             |
+ * | `left`    | `loop.leftPanel`          | none (no side panels)                |
+ * | `right`   | `loop.rightPanel`         | none (no side panels)                |
  *
  * A `message` UI is a card in the conversation (`defineToolCardPlugin`).
  *
@@ -29,7 +30,7 @@ import type { ReactorPlugin } from '@datalayer/reactor';
 import { LoopSlots } from '../core';
 
 export type UiPlacement =
-  'header' | 'toolbar' | 'footer' | 'banner' | 'panel' | 'message';
+  'header' | 'toolbar' | 'footer' | 'banner' | 'left' | 'right' | 'message';
 
 export type ChromePlacement = Exclude<UiPlacement, 'message'>;
 
@@ -38,17 +39,32 @@ export const CHROME_PLACEMENTS: readonly ChromePlacement[] = [
   'toolbar',
   'footer',
   'banner',
-  'panel',
+  'left',
+  'right',
 ];
 
-/** The Loop slot of each chrome placement; none where the chat has none. */
+/** The Loop slot of each chrome placement. */
 export const CHROME_SLOTS: Record<ChromePlacement, string | undefined> = {
   header: LoopSlots.chatHeader,
   toolbar: LoopSlots.promptAction,
   footer: LoopSlots.status,
   banner: LoopSlots.chatBanner,
-  panel: undefined,
+  left: LoopSlots.leftPanel,
+  right: LoopSlots.rightPanel,
 };
+
+/** The two side panels' placements. */
+export type SidePlacement = 'left' | 'right';
+
+export const isSidePlacement = (
+  placement: string | undefined,
+): placement is SidePlacement => placement === 'left' || placement === 'right';
+
+/**
+ * Where an agent's UI sits in a side panel: after the host's own (a
+ * presentation of the application, order 0), in the order placed.
+ */
+export const SIDE_PANEL_ORDER = 10;
 
 export const isChromePlacement = (
   placement: string | undefined,
@@ -96,6 +112,13 @@ export function defineChromePlugin(
                   slot,
                   id: `${options.id}-${placement}`,
                   Component: Slotted as never,
+                  // In a side panel: after the host's own, named for itself.
+                  ...(isSidePlacement(placement)
+                    ? {
+                        order: SIDE_PANEL_ORDER,
+                        panel: { label: options.displayName },
+                      }
+                    : {}),
                 },
               ]
             : [],

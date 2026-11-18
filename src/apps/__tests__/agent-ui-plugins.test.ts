@@ -38,10 +38,10 @@ const nameOf = (ref: unknown): string =>
 describe('the chat’s UI, merged', () => {
   it('is the agent’s, then its servers’, then its skills’, then its tools’, each once', () => {
     const ids = agentUiIdsOf('worker-traveller');
-    // Its own (its title bar's header), then the servers (kiwi,
-    // booking-com, google-maps) before the skills.
-    expect(ids[0]).toBe('trip-header');
-    expect(ids.slice(1, 4)).toEqual([
+    // Its own (its title bar's header, its notices), then the servers
+    // (kiwi, booking-com, google-maps) before the skills.
+    expect(ids.slice(0, 2)).toEqual(['trip-header', 'notices']);
+    expect(ids.slice(2, 5)).toEqual([
       'trip-options',
       'trip-budget',
       'trip-itinerary',
@@ -176,9 +176,10 @@ describe('where each UI goes', () => {
       'reactor.ui.renderer',
       'reactor.ui.toolBinding',
     ]);
-    // No panel in the chat yet: nothing mounted rather than a misplaced chip.
+    // A placement the chat has no place for: nothing mounted rather than a
+    // misplaced chip (the old `panel`, gone since the side panels).
     expect(
-      agentUiPluginsFor([{ plugin: 'x-budget', placement: 'panel' }]),
+      agentUiPluginsFor([{ plugin: 'x-budget', placement: 'panel' as never }]),
     ).toEqual([]);
   });
 

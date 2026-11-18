@@ -4,219 +4,67 @@
  */
 
 /**
- * The left panel: what a host says *about* the work, on the leading edge of
- * the workspace (`LoopSlots.leftPanel`) — its presentation of the
- * application, a guide.
+ * The left panel: the leading side of the workspace's side panels
+ * (`apps/shell/SidePanel`, `LoopSlots.leftPanel`) — what a host says about
+ * the work, its presentation of the application, and the agent's UI placed
+ * `left`. The right one is the same panel on the trailing side
+ * (`LoopSlots.rightPanel`).
  *
- * Closed to start with, always: the view has the whole width, and a toggle
- * (an icon button leading the chat's title bar, before the agent's name, or
- * leading the workspace's header when it has one) opens it. The toggle is
- * there only while the panel is closed: open, the panel's own Close control
- * closes it, and the toggle shows back, the focus on it. Open, the panel
- * takes a column beside the view; in a narrow workspace (a phone) it opens
- * over the view instead. On opening the focus moves into it, to its Close
- * control, and Escape closes it from anywhere inside. Its width and its
- * opacity move as it opens and closes, and nothing moves when the person
- * asked for reduced motion. Closed, it is out of the tab order and of the
- * accessibility tree (`visibility: hidden`), and its components are mounted
- * on the first opening only, so that a panel nobody opens loads nothing.
- *
- * A component names its toggle and says whether it has anything to show for
- * the application the workspace draws with its `panel`
- * (`LoopLeftPanelComponent`): with nothing to show, no toggle and no panel.
- * The shell keeps whether the panel is open and hands it to each component
- * (`LoopLeftPanelProps`: `open`, `close`, `toggle`, `panelId`). A component
- * that draws its own Close control, calling `close`, says so
- * (`panel.closes`) and the shell draws none; otherwise the shell draws one,
- * so that there is always exactly one.
+ * Its names here are those of the left side, which a host's plugin writes
+ * (`LoopLeftPanelComponent`, `LoopLeftPanelProps`, the
+ * `data-loop-left-panel-close` mark on its own Close control).
  *
  * @module apps/shell/LeftPanel
  */
 
-import type { ElementType, JSX, RefObject } from 'react';
+import type { JSX, RefObject } from 'react';
 import {
-  useCallback,
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
-import { IconButton } from '@primer/react';
-import { SidebarExpandIcon, XIcon } from '@primer/octicons-react';
-import { Box } from '@datalayer/primer-addons';
-import {
-  useContributions,
-  useSlotComponents,
-  type ReactorSlotComponent,
-} from '@datalayer/reactor/react';
-import type { AppSpec } from '../../types/agentspecs';
-import { LoopApplication, LoopSlots } from '../core';
+  SIDE_PANEL_MOTION,
+  SIDE_PANEL_NARROW,
+  SIDE_PANEL_WIDTH,
+  SidePanel,
+  SidePanelToggle,
+  sidePanelLabel,
+  sidePanelShown,
+  useNarrow,
+  useSidePanel,
+  type LoopSidePanel,
+  type LoopSidePanelComponent,
+  type LoopSidePanelProps,
+  type SidePanelState,
+} from './SidePanel';
 
-/** How a left panel's component shows: its toggle's name, and whether it has anything to show. */
-export type LoopLeftPanel = {
-  /**
-   * Its name, on its toggle: said to a screen reader and shown on hover
-   * (*About the Marketer*). A function reads it off the application.
-   */
-  label: string | ((application: AppSpec | undefined) => string);
-  /** A line icon (an octicon) for its toggle, in place of the sidebar's. */
-  icon?: ElementType;
-  /**
-   * Whether it has anything to show for the application the workspace draws
-   * (none when it draws none). Always, when unsaid.
-   */
-  when?: (application: AppSpec | undefined) => boolean;
-  /**
-   * Whether the component draws its own Close control, calling the `close`
-   * it is handed: the shell then draws none. Mark that control with
-   * `data-loop-left-panel-close`, and the focus goes to it when the panel
-   * opens. Unsaid, the shell draws its own.
-   */
-  closes?: boolean;
-};
+/** How a left panel's component shows (`LoopSidePanel`). */
+export type LoopLeftPanel = LoopSidePanel;
 
-/**
- * What a component of the left panel is rendered with: what the workspace
- * hands every component of it (`workspace`), the application, and the
- * panel's state, which the shell keeps.
- */
-export type LoopLeftPanelProps = Record<string, unknown> & {
-  /** The application the workspace draws, when it draws one. */
-  application: AppSpec | undefined;
-  /** Whether the panel is open. */
-  open: boolean;
-  /** Close the panel: its toggle shows back, the focus on it. */
-  close: () => void;
-  /** Open the panel when closed, close it when open. */
-  toggle: () => void;
-  /** The panel's element id, which its toggle controls. */
-  panelId: string;
-};
+/** What a component of the left panel is rendered with (`LoopSidePanelProps`). */
+export type LoopLeftPanelProps = LoopSidePanelProps;
 
-/** A component of the left panel's slot, with how it shows. */
-export type LoopLeftPanelComponent = ReactorSlotComponent & {
-  panel?: LoopLeftPanel;
-};
+/** A component of the left panel's slot (`LoopSidePanelComponent`). */
+export type LoopLeftPanelComponent = LoopSidePanelComponent;
 
-/** The panel's width when open beside the view, in pixels. */
-export const LEFT_PANEL_WIDTH = 400;
+/** The left panel, as its shell keeps it. */
+export type LeftPanelState = SidePanelState;
 
-/** Under this width, in pixels, the workspace is narrow: the panel opens over the view. */
-export const LEFT_PANEL_NARROW = 720;
+export const LEFT_PANEL_WIDTH = SIDE_PANEL_WIDTH;
+export const LEFT_PANEL_NARROW = SIDE_PANEL_NARROW;
+export const LEFT_PANEL_MOTION = SIDE_PANEL_MOTION;
 
-/** How long the panel takes to open or close. */
-export const LEFT_PANEL_MOTION = '200ms';
+export const leftPanelShown = sidePanelShown;
+export const leftPanelLabel = sidePanelLabel;
 
-/** The components that have something to show for an application, in the slot's order. */
-export function leftPanelShown(
-  components: ReadonlyArray<LoopLeftPanelComponent>,
-  application: AppSpec | undefined,
-): LoopLeftPanelComponent[] {
-  return components.filter(component =>
-    component.panel?.when ? component.panel.when(application) : true,
-  );
-}
-
-/** The toggle's name: the first component's, or *Panel* when it names none. */
-export function leftPanelLabel(
-  components: ReadonlyArray<LoopLeftPanelComponent>,
-  application: AppSpec | undefined,
-): string {
-  const label = components[0]?.panel?.label;
-  return (typeof label === 'function' ? label(application) : label) || 'Panel';
-}
-
-/** The left panel of a workspace, as its shell keeps it. */
-export type LeftPanelState = {
-  /** What has something to show: empty, there is no toggle and no panel. */
-  components: LoopLeftPanelComponent[];
-  /** The application the workspace draws, when it draws one. */
-  application: AppSpec | undefined;
-  open: boolean;
-  setOpen: (open: boolean) => void;
-  /** The toggle's name. */
-  label: string;
-  /** The toggle's icon, when a component gives one. */
-  icon: ElementType | undefined;
-  /** The panel's element id, which the toggle controls. */
-  panelId: string;
-  /** The toggle, to give the focus back to. */
-  toggleRef: RefObject<HTMLButtonElement | null>;
-};
-
-/** The workspace's left panel: what fills its slot for this application, closed to start with. */
+/** The workspace's left panel, closed to start with. */
 export function useLeftPanel(): LeftPanelState {
-  const slot = useSlotComponents(
-    LoopSlots.leftPanel,
-  ) as LoopLeftPanelComponent[];
-  const application = useContributions(LoopApplication)[0]?.value.app;
-  const components = useMemo(
-    () => leftPanelShown(slot, application),
-    [slot, application],
-  );
-  // Closed to start with, whatever it was on another visit.
-  const [open, setOpen] = useState(false);
-  const panelId = `loop-left-panel-${useId().replace(/[^A-Za-z0-9_-]/g, '')}`;
-  const toggleRef = useRef<HTMLButtonElement | null>(null);
-  return {
-    components,
-    application,
-    // Nothing to show is nothing open.
-    open: open && components.length > 0,
-    setOpen,
-    label: leftPanelLabel(components, application),
-    icon: components[0]?.panel?.icon,
-    panelId,
-    toggleRef,
-  };
+  return useSidePanel('left');
 }
 
-/**
- * The panel's toggle: an icon button that says what it opens and which
- * element it controls, there only while the panel is closed (open, the
- * panel's Close control closes it).
- */
+/** The left panel's toggle, leading the chat's title bar. */
 export function LeftPanelToggle({
   panel,
 }: {
   panel: LeftPanelState;
 }): JSX.Element | null {
-  if (panel.components.length === 0 || panel.open) {
-    return null;
-  }
-  const Icon = panel.icon ?? SidebarExpandIcon;
-  return (
-    <IconButton
-      ref={panel.toggleRef}
-      icon={Icon}
-      aria-label={panel.label}
-      aria-expanded={panel.open}
-      aria-controls={panel.panelId}
-      variant="invisible"
-      size="small"
-      onClick={() => panel.setOpen(true)}
-      data-loop-left-panel-toggle=""
-    />
-  );
-}
-
-/** Whether an element is narrower than the width under which the panel opens over the view. */
-function useNarrow(ref: RefObject<HTMLElement | null>): boolean {
-  const [narrow, setNarrow] = useState(false);
-  useEffect(() => {
-    const element = ref.current;
-    if (!element || typeof ResizeObserver === 'undefined') {
-      return undefined;
-    }
-    const observer = new ResizeObserver(entries => {
-      const width = entries[0]?.contentRect.width ?? 0;
-      setNarrow(width > 0 && width < LEFT_PANEL_NARROW);
-    });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [ref]);
-  return narrow;
+  return <SidePanelToggle panel={panel} />;
 }
 
 export type LeftPanelProps = {
@@ -227,159 +75,14 @@ export type LeftPanelProps = {
   props: Record<string, unknown>;
 };
 
-/** What can take the focus inside the panel, when no Close control is marked. */
-const FOCUSABLE =
-  'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-
+/** The left panel, beside the view, or over it in a narrow workspace. */
 export function LeftPanel({
   panel,
   rowRef,
   props,
 }: LeftPanelProps): JSX.Element | null {
-  const { components, open, setOpen, toggleRef } = panel;
   const narrow = useNarrow(rowRef);
-  const panelRef = useRef<HTMLElement | null>(null);
-  // Mounted on the first opening, and kept: a panel nobody opens loads nothing.
-  const [opened, setOpened] = useState(false);
-  useEffect(() => {
-    if (open) {
-      setOpened(true);
-    }
-  }, [open]);
-  // Closed by its Close control or by Escape: the focus goes back to the
-  // toggle, which shows back once the panel has closed.
-  const refocus = useRef(false);
-  const close = useCallback(() => {
-    refocus.current = true;
-    setOpen(false);
-  }, [setOpen]);
-  const toggle = useCallback(() => {
-    if (open) {
-      close();
-    } else {
-      setOpen(true);
-    }
-  }, [open, close, setOpen]);
-  useEffect(() => {
-    if (open) {
-      // The toggle is gone while it is open: the focus moves in, to its
-      // Close control, else what first takes it, else the panel itself.
-      const element = panelRef.current;
-      const target =
-        element?.querySelector<HTMLElement>('[data-loop-left-panel-close]') ??
-        element?.querySelector<HTMLElement>(FOCUSABLE) ??
-        element;
-      target?.focus({ preventScroll: true });
-    } else if (refocus.current) {
-      refocus.current = false;
-      toggleRef.current?.focus({ preventScroll: true });
-    }
-  }, [open, toggleRef]);
-  if (components.length === 0) {
-    return null;
-  }
-  // One Close control: the component's own when it draws one, else the shell's.
-  const ownClose = !components.some(component => component.panel?.closes);
-  const motion = LEFT_PANEL_MOTION;
-  return (
-    <Box
-      ref={panelRef}
-      as="aside"
-      id={panel.panelId}
-      role="region"
-      aria-label={panel.label}
-      // Focusable by script only, for a panel with nothing that takes the focus.
-      tabIndex={-1}
-      data-loop-left-panel=""
-      data-open={open ? '' : undefined}
-      data-narrow={narrow ? '' : undefined}
-      onKeyDown={(event: { key: string; stopPropagation: () => void }) => {
-        if (event.key === 'Escape' && open) {
-          event.stopPropagation();
-          close();
-        }
-      }}
-      flex="0 0 auto"
-      minWidth={0}
-      minHeight={0}
-      overflow="hidden"
-      sx={{
-        boxSizing: 'border-box',
-        width: 0,
-        opacity: 0,
-        // Out of the tab order and of the accessibility tree once it has closed.
-        visibility: 'hidden',
-        borderRight: '0 solid',
-        borderColor: 'border.default',
-        outline: 'none',
-        transition: `width ${motion} ease, opacity ${motion} ease, visibility 0s linear ${motion}`,
-        '&[data-open]': {
-          width: `${LEFT_PANEL_WIDTH}px`,
-          maxWidth: '100%',
-          opacity: 1,
-          visibility: 'visible',
-          borderRightWidth: 'var(--theme-hairline, 1px)',
-          transition: `width ${motion} ease, opacity ${motion} ease, visibility 0s`,
-        },
-        // A narrow workspace: over the view, the whole of it.
-        '&[data-narrow]': {
-          position: 'absolute',
-          inset: 0,
-          zIndex: 2,
-          width: '100%',
-          borderRightWidth: 0,
-          backgroundColor: 'var(--overlay-bgColor, var(--bgColor-default))',
-        },
-        '@media (prefers-reduced-motion: reduce)': {
-          transition: 'none',
-          '&[data-open]': { transition: 'none' },
-        },
-      }}
-    >
-      <Box
-        data-loop-left-panel-body=""
-        position="relative"
-        height="100%"
-        overflowY="auto"
-        px={3}
-        py={3}
-        // Its open width while the column moves, so that its words do not reflow.
-        width={narrow ? '100%' : `${LEFT_PANEL_WIDTH}px`}
-        maxWidth={narrow ? '100%' : undefined}
-        sx={{ boxSizing: 'border-box' }}
-      >
-        {ownClose ? (
-          <Box display="flex" justifyContent="flex-end" mb={1}>
-            <IconButton
-              icon={XIcon}
-              aria-label={`Close: ${panel.label}`}
-              variant="invisible"
-              size="small"
-              onClick={close}
-              data-loop-left-panel-close=""
-            />
-          </Box>
-        ) : null}
-        {/* Rendered with the opening itself, so that the focus finds its Close control. */}
-        {opened || open
-          ? components.map(component => {
-              const { Component } = component;
-              return (
-                <Component
-                  key={component.id}
-                  {...props}
-                  application={panel.application}
-                  open={open}
-                  close={close}
-                  toggle={toggle}
-                  panelId={panel.panelId}
-                />
-              );
-            })
-          : null}
-      </Box>
-    </Box>
-  );
+  return <SidePanel panel={panel} narrow={narrow} props={props} />;
 }
 
 export default LeftPanel;

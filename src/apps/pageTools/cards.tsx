@@ -17,6 +17,7 @@
 
 import { useEffect, useSyncExternalStore, type JSX } from 'react';
 import type { Icon } from '@primer/octicons-react';
+import { Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import type { ToolCallRenderContext } from '../../types/chat';
 import { useToolCalls } from '../toolCards/toolResults';
@@ -66,6 +67,11 @@ export function refused(result: unknown): boolean {
 export function cardRole(
   context: ToolCallRenderContext,
   latest: string | undefined,
+  /**
+   * The side panel its UI is placed in (`useCardSide`): the live view is
+   * drawn there, and every call here is a line.
+   */
+  side?: 'left' | 'right',
 ): 'live' | 'line' | 'pending' | 'default' {
   if (context.status === 'error') {
     return 'default';
@@ -78,7 +84,9 @@ export function cardRole(
     return 'default';
   }
   // A read changes nothing: it is a line, and the card stays where it was.
-  return context.toolCallId === latest && succeeded({ result: context.result })
+  return !side &&
+    context.toolCallId === latest &&
+    succeeded({ result: context.result })
     ? 'live'
     : 'line';
 }
@@ -130,6 +138,42 @@ export function CallLine({
       >
         {children}
       </Box>
+    </Box>
+  );
+}
+
+/** A side panel's words before its tools built anything in this conversation. */
+export function PanelEmpty({
+  icon: Glyph,
+  title,
+  children,
+  data,
+}: {
+  icon: Icon;
+  title: string;
+  children: string;
+  data: string;
+}): JSX.Element {
+  return (
+    <Box
+      data-page-tool-panel-empty={data}
+      display="flex"
+      flexDirection="column"
+      alignItems="center"
+      justifyContent="center"
+      textAlign="center"
+      flex={1}
+      minHeight={220}
+      px={4}
+      sx={{ gap: 2, color: 'fg.muted' }}
+    >
+      <Box aria-hidden="true" sx={{ color: 'fg.subtle' }}>
+        <Glyph size={24} />
+      </Box>
+      <Text sx={{ fontSize: 1, fontWeight: 'semibold', color: 'fg.default' }}>
+        {title}
+      </Text>
+      <Text sx={{ fontSize: 0, maxWidth: 280 }}>{children}</Text>
     </Box>
   );
 }

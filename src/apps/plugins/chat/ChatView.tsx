@@ -2964,6 +2964,19 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                     render: () => <Contributed workspace={workspace} />,
                   };
                 }),
+                /* The right panel's toggle, trailing the bar on the side
+                   its panel opens from (`chatHeaderTrailing`): pinned, as
+                   the left one leads it. */
+                ...(workspace.chatHeaderTrailing
+                  ? [
+                      {
+                        key: 'right-panel-toggle',
+                        type: 'custom' as const,
+                        pinned: true,
+                        render: () => workspace.chatHeaderTrailing,
+                      },
+                    ]
+                  : []),
                 {
                   key: 'full-screen',
                   type: 'custom' as const,

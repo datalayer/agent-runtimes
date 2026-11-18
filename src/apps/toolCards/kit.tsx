@@ -28,7 +28,13 @@
  * @module apps/toolCards/kit
  */
 
-import { createContext, createElement, useContext, type JSX } from 'react';
+import {
+  createContext,
+  createElement,
+  useContext,
+  type ComponentType,
+  type JSX,
+} from 'react';
 import type { ReactNode } from 'react';
 import { Heading, Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
@@ -48,6 +54,8 @@ import {
 import type { ToolCallRenderContext } from '../../types/chat';
 import type { FrontendToolDefinition } from '../../types/tools';
 import { LoopChatExtras, type LoopChatExtrasValue } from '../core';
+import type { LoopSidePanelProps } from '../shell/SidePanel';
+import { CHROME_SLOTS, SIDE_PANEL_ORDER, type SidePlacement } from './chrome';
 import {
   encodeFormSubmission,
   type FormSubmission,
@@ -392,7 +400,38 @@ export type ToolCardPluginOptions = {
    * They reach the agent with the chat's extras, wherever it runs.
    */
   frontendTools?: FrontendToolDefinition[];
+  /**
+   * What it draws in a side panel, when its UI is placed there (`left`,
+   * `right`): the live view of what its tools built (the deck, the sheet),
+   * the conversation keeping a line per call (`useCardSide`). The panel
+   * opens with its tools' first call.
+   */
+  Panel?: ComponentType<LoopSidePanelProps>;
+  /** The width its panel needs, in pixels. */
+  panelWidth?: number;
+  /**
+   * Components it draws in the workspace's slots besides its cards (the
+   * notices over the view, `LoopSlots.viewOverlay`).
+   */
+  components?: ReadonlyArray<{
+    slot: string;
+    id: string;
+    Component: ComponentType<Record<string, unknown>>;
+  }>;
 };
+
+/**
+ * The side panel a card's UI is placed in, when it is placed in one: its
+ * live view is drawn there, and the conversation keeps a line per call.
+ */
+export const CardSideContext = createContext<SidePlacement | undefined>(
+  undefined,
+);
+
+/** The side panel the card being drawn is placed in, if any (`CardSideContext`). */
+export function useCardSide(): SidePlacement | undefined {
+  return useContext(CardSideContext);
+}
 
 /** The plugin's name: `@datalayer/loop-plugin-<id>`. */
 export const toolCardPluginName = (id: string): string =>
@@ -407,9 +446,15 @@ export const toolCardType = (id: string): string =>
  */
 export function defineToolCardPlugin(
   options: ToolCardPluginOptions,
+  side?: SidePlacement,
 ): ReactorPlugin<Record<string, never>, unknown, unknown> {
   const type = toolCardType(options.id);
-  const { Card } = options;
+  const { Card, Panel } = options;
+  if (side && !Panel) {
+    throw new Error(
+      `The card ${options.id} has no view for a side panel: it is drawn in the conversation only.`,
+    );
+  }
   function Rendered({
     display,
     context,
@@ -417,7 +462,10 @@ export function defineToolCardPlugin(
     if (!context) {
       return createElement('span', null, display.text);
     }
-    return createElement(Card, { key: display.id, context });
+    const card = createElement(Card, { key: display.id, context });
+    return side
+      ? createElement(CardSideContext.Provider, { value: side }, card)
+      : card;
   }
   const plugin = definePlugin({
     name: toolCardPluginName(options.id),
@@ -451,6 +499,33 @@ export function defineToolCardPlugin(
           ]
         : []),
     ],
+    // Placed in a side panel: its live view there, opened by its first call.
+    ...(side || options.components?.length
+      ? {
+          build: () => ({
+            components: [
+              ...(options.components ?? []),
+              ...(side && Panel
+                ? [
+                    {
+                      slot: CHROME_SLOTS[side],
+                      id: `${options.id}-${side}`,
+                      Component: Panel as never,
+                      order: SIDE_PANEL_ORDER,
+                      panel: {
+                        label: options.displayName,
+                        follows: options.tools,
+                        ...(options.panelWidth
+                          ? { width: options.panelWidth }
+                          : {}),
+                      },
+                    },
+                  ]
+                : []),
+            ],
+          }),
+        }
+      : {}),
   });
   return plugin as unknown as ReactorPlugin<
     Record<string, never>,

@@ -344,6 +344,8 @@ export function ChatBaseHeader({
       bg="canvas.default"
       borderBottom="1px solid"
       borderColor="border.default"
+      // What the agent's notices never slide over (`apps/plugins/notices`).
+      data-chat-header=""
     >
       {/* Title row: its own width is what its parts read (a container). */}
       <Box

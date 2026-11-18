@@ -29,9 +29,15 @@ import {
   cardRole,
   toolOf,
   useConversationBound,
+  PanelEmpty,
 } from '../../pageTools/cards';
 import { SHEET_TOOL_NAMES } from '../../pageTools/sheetSchemas';
-import { defineToolCardPlugin } from '../../toolCards/kit';
+import {
+  defineToolCardPlugin,
+  useCardSide,
+  type ToolCardPluginOptions,
+} from '../../toolCards/kit';
+import type { SidePlacement } from '../../toolCards/chrome';
 import { PAGE_SHEET, pageSheetTools } from './store';
 
 export const PAGE_SHEET_PLUGIN_NAME = '@datalayer/loop-plugin-page-sheet';
@@ -40,6 +46,9 @@ const SheetStage = lazy(() => import('./SheetStage'));
 
 export const PAGE_SHEET_LINES = {
   writing: 'Writing the sheet…',
+  panelTitle: 'The sheet',
+  panelEmpty:
+    'The sheet the agent fills in this conversation shows here, to read and edit.',
 } as const;
 
 const said = (value: unknown): string =>
@@ -89,7 +98,8 @@ export function PageSheetCard({
 }): JSX.Element {
   const { state, latest } = useConversationBound(PAGE_SHEET, SHEET_TOOL_NAMES);
   const tool = toolOf(context, SHEET_TOOL_NAMES);
-  const role = cardRole(context, latest);
+  // Placed in a side panel, the sheet is drawn there: every call is a line here.
+  const role = cardRole(context, latest, useCardSide());
   if (role === 'default') {
     return <>{context.defaultUI}</>;
   }
@@ -113,7 +123,25 @@ export function PageSheetCard({
   );
 }
 
-export const PageSheetPlugin = defineToolCardPlugin({
+/** The sheet in a side panel, live and editable, when the UI is placed there. */
+export function PageSheetPanel(): JSX.Element {
+  const { state } = useConversationBound(PAGE_SHEET, SHEET_TOOL_NAMES);
+  return state ? (
+    <Suspense fallback={<Box minHeight={420} aria-busy="true" />}>
+      <SheetStage model={state.model} />
+    </Suspense>
+  ) : (
+    <PanelEmpty
+      icon={TableIcon}
+      title={PAGE_SHEET_LINES.panelTitle}
+      data="page-sheet"
+    >
+      {PAGE_SHEET_LINES.panelEmpty}
+    </PanelEmpty>
+  );
+}
+
+const PAGE_SHEET_CARD: ToolCardPluginOptions = {
   id: 'page-sheet',
   displayName: 'Sheet in the page',
   description:
@@ -123,6 +151,14 @@ export const PageSheetPlugin = defineToolCardPlugin({
   tools: SHEET_TOOL_NAMES,
   Card: PageSheetCard,
   frontendTools: pageSheetTools(),
-});
+  Panel: PageSheetPanel,
+  panelWidth: 600,
+};
+
+export const PageSheetPlugin = defineToolCardPlugin(PAGE_SHEET_CARD);
+
+/** Placed in a side panel (`right`, `left`): the sheet there, a line per call here. */
+export const pageSheetSidePlugin = (side: SidePlacement) =>
+  defineToolCardPlugin(PAGE_SHEET_CARD, side);
 
 export default PageSheetPlugin;

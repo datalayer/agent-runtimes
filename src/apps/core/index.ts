@@ -271,6 +271,12 @@ export type LoopWorkspaceContext = {
    */
   chatHeaderLeading?: ReactNode;
   /**
+   * What trails the chat's title bar, after its controls: the toggle of the
+   * workspace's right panel (`LoopSlots.rightPanel`), on the side the panel
+   * opens from.
+   */
+  chatHeaderTrailing?: ReactNode;
+  /**
    * The chat's view, as the host keeps it: the chat's title bar offers the
    * views with its view-mode toggle (`ChatViewModeToggle`). Unsaid, the
    * title bar offers none.
@@ -1374,6 +1380,20 @@ export const LoopSlots = {
    * nothing to show there is no toggle and no panel.
    */
   leftPanel: 'loop.leftPanel',
+  /**
+   * The trailing edge, beside the view: what the agent builds beside the
+   * conversation — its UI placed `right`, such as the deck or the sheet it
+   * makes in the page. The left panel's twin (`apps/shell/SidePanel`): closed
+   * until the person or the agent opens it, its toggle trailing the chat's
+   * title bar, over the view in a narrow workspace.
+   */
+  rightPanel: 'loop.rightPanel',
+  /**
+   * Over the view, inside its bounds: what slides in from one of its edges
+   * for a moment — the agent's notices (`apps/plugins/notices`). Never over
+   * the page around the workspace.
+   */
+  viewOverlay: 'loop.viewOverlay',
 } as const;
 
 /**

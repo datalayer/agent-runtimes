@@ -29,13 +29,19 @@ import {
   cardRole,
   toolOf,
   useConversationBound,
+  PanelEmpty,
 } from '../../pageTools/cards';
 import {
   DECK_TOOL_NAMES,
   DECK_WORDS,
   type DeckState,
 } from '../../pageTools/deck';
-import { defineToolCardPlugin } from '../../toolCards/kit';
+import {
+  defineToolCardPlugin,
+  useCardSide,
+  type ToolCardPluginOptions,
+} from '../../toolCards/kit';
+import type { SidePlacement } from '../../toolCards/chrome';
 import { PAGE_DECK, pageDeckTools } from './store';
 
 export const PAGE_DECK_PLUGIN_NAME = '@datalayer/loop-plugin-page-deck';
@@ -47,6 +53,9 @@ export const PAGE_DECK_WORDS = {
   writing: 'Writing the deck…',
   empty: 'No slide yet: the first one lands here.',
   kept: 'Kept in this conversation, on this page. Present shows it full screen.',
+  panelTitle: 'The deck',
+  panelEmpty:
+    'The deck the agent builds in this conversation shows here, slide by slide.',
 } as const;
 
 const number = (value: unknown): string =>
@@ -177,7 +186,8 @@ export function PageDeckCard({
 }): JSX.Element {
   const { state, latest } = useConversationBound(PAGE_DECK, DECK_TOOL_NAMES);
   const tool = toolOf(context, DECK_TOOL_NAMES);
-  const role = cardRole(context, latest);
+  // Placed in a side panel, the deck is drawn there: every call is a line here.
+  const role = cardRole(context, latest, useCardSide());
   if (role === 'default') {
     return <>{context.defaultUI}</>;
   }
@@ -199,7 +209,23 @@ export function PageDeckCard({
   );
 }
 
-export const PageDeckPlugin = defineToolCardPlugin({
+/** The deck in a side panel, live, when the UI is placed there. */
+export function PageDeckPanel(): JSX.Element {
+  const { state } = useConversationBound(PAGE_DECK, DECK_TOOL_NAMES);
+  return PAGE_DECK.built ? (
+    <DeckFrame state={state} />
+  ) : (
+    <PanelEmpty
+      icon={ProjectIcon}
+      title={PAGE_DECK_WORDS.panelTitle}
+      data="page-deck"
+    >
+      {PAGE_DECK_WORDS.panelEmpty}
+    </PanelEmpty>
+  );
+}
+
+const PAGE_DECK_CARD: ToolCardPluginOptions = {
   id: 'page-deck',
   displayName: 'Deck in the page',
   description:
@@ -209,6 +235,14 @@ export const PageDeckPlugin = defineToolCardPlugin({
   tools: DECK_TOOL_NAMES,
   Card: PageDeckCard,
   frontendTools: pageDeckTools(),
-});
+  Panel: PageDeckPanel,
+  panelWidth: 520,
+};
+
+export const PageDeckPlugin = defineToolCardPlugin(PAGE_DECK_CARD);
+
+/** Placed in a side panel (`right`, `left`): the deck there, a line per call here. */
+export const pageDeckSidePlugin = (side: SidePlacement) =>
+  defineToolCardPlugin(PAGE_DECK_CARD, side);
 
 export default PageDeckPlugin;

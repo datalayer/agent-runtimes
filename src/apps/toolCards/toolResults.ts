@@ -37,6 +37,7 @@ export class ToolResultsStore {
   private listeners = new Set<() => void>();
   private revision = 0;
   private counter = 0;
+  private generation = 0;
 
   /** Records the completed calls among a transcript's items; tells listeners once if any is new. */
   record(
@@ -79,6 +80,7 @@ export class ToolResultsStore {
   clear(): void {
     if (this.calls.size > 0) {
       this.calls.clear();
+      this.generation += 1;
       this.revision += 1;
       this.listeners.forEach(listener => listener());
     }
@@ -98,6 +100,18 @@ export class ToolResultsStore {
   };
 
   getRevision = (): number => this.revision;
+
+  /** How many times the conversation started over: what the person said of it before is forgotten. */
+  getGeneration = (): number => this.generation;
+
+  /** The order of the last call recorded, of any tool; 0 before any. */
+  latestOrder(): number {
+    let latest = 0;
+    for (const call of this.calls.values()) {
+      latest = Math.max(latest, call.order);
+    }
+    return latest;
+  }
 }
 
 /** The page's store: a Loop workspace's chrome and transcript share it. */

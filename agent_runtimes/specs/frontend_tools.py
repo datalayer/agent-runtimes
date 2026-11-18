@@ -159,6 +159,18 @@ LEXICAL_DOCUMENT_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
     emoji="📄",
 )
 
+NOTICES_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
+    id="notices",
+    version="0.0.1",
+    name="Notices",
+    description="Slide a short notice in from an edge of the chat — info, success, warning or error, a title and a line — for a few seconds or until closed; run in the page.",
+    tags=["frontend", "page", "notices"],
+    enabled=True,
+    toolset=["show_notice"],
+    icon="@primer/octicons-react:bell",
+    emoji="🔔",
+)
+
 PAGE_DECK_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
     id="page-deck",
     version="0.0.1",
@@ -201,6 +213,18 @@ PAGE_SHEET_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
     emoji="📑",
 )
 
+SIDE_PANELS_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
+    id="side-panels",
+    version="0.0.1",
+    name="Side panels",
+    description="Open and close the chat's left and right panels, where the UI placed there shows — run in the page, changing nothing else.",
+    tags=["frontend", "page", "panels"],
+    enabled=True,
+    toolset=["open_side_panel", "close_side_panel"],
+    icon="@primer/octicons-react:sidebar-expand",
+    emoji="🗂️",
+)
+
 # ============================================================================
 # Frontend Tool Catalog
 # ============================================================================
@@ -215,8 +239,10 @@ FRONTEND_TOOL_CATALOG: Dict[str, FrontendToolSpec] = {
     "jupyter-notebook-read": JUPYTER_NOTEBOOK_READ_FRONTEND_TOOL_SPEC_0_0_1,
     "jupyter-notebook": JUPYTER_NOTEBOOK_FRONTEND_TOOL_SPEC_0_0_1,
     "lexical-document": LEXICAL_DOCUMENT_FRONTEND_TOOL_SPEC_0_0_1,
+    "notices": NOTICES_FRONTEND_TOOL_SPEC_0_0_1,
     "page-deck": PAGE_DECK_FRONTEND_TOOL_SPEC_0_0_1,
     "page-sheet": PAGE_SHEET_FRONTEND_TOOL_SPEC_0_0_1,
+    "side-panels": SIDE_PANELS_FRONTEND_TOOL_SPEC_0_0_1,
 }
 
 

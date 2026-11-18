@@ -443,7 +443,58 @@ calls the model with each visitor's own token).
 Shown for an application that runs on a runtime with its Appspec; not for an agent turned in
 the page, which has no runtime to ask.
 
-## Before its page: a host's left panel
+## Beside its conversation: the side panels
+
+The workspace has two side panels, one on each side of the view (`apps/shell/SidePanel`): the
+**left** one (`LoopSlots.leftPanel`), where a host says what the application is (next section),
+and the **right** one (`LoopSlots.rightPanel`), where the agent's UI placed `right` shows. A UI
+spec that lists `left` or `right` among its placements may be placed in either:
+
+| Placed there | What it draws | In the conversation |
+| --- | --- | --- |
+| `page-deck`, `page-sheet` | The deck or the sheet, live (`defineToolCardPlugin(options, side)`, its `Panel`) | A line per call (`useCardSide`, `cardRole`) |
+| A header UI | Its items stacked under its name (`defineHeaderPlugin(...)(side)`) | Nothing |
+| A chrome UI | Its component (`defineChromePlugin`) | Nothing |
+
+```yaml
+# agentspecs/agents/worker-marketer.yaml (abridged)
+ui:
+  - plugin: page-deck
+    placement: right
+  - plugin: side-panels
+```
+
+Both panels follow one contract. Closed to start with; a toggle while closed and something fills
+it, the left one leading the chat's title bar (`chatHeaderLeading`), the right one trailing it
+(`chatHeaderTrailing`), each with `aria-expanded` and `aria-controls`; open, the toggle is gone,
+the panel's Close control or Escape closes it and the focus goes back to the toggle. A panel takes
+the width its widest component asks (`panel.width`: the deck 520, the sheet 600), and when two
+open panels would leave the conversation under 480px, the one opened last stays
+(`useSidePanels`, `bothFit`). Under 720px a panel opens over the conversation, the whole of it.
+
+**What opens it is the conversation's.** It opens with the first call of the tools its UI
+follows (`panel.follows`: the deck's first slide), with the agent's `open_side_panel` and closes
+with `close_side_panel` (the `side-panels` UI, `{side}` each; `open_side_panel` is refused in a
+sentence when nothing is placed on that side), and with the person's toggle, whose word holds
+until the agent's next call (`sidePanelCallEvent`, `sidePanelOpen`). It is all read from the
+conversation's recorded calls (`toolResults`), so a conversation opened again shows its panels
+as they stood, and one started over closes them (`ToolResultsStore.getGeneration`).
+
+## Over its conversation, for a moment: notices
+
+The agent slides a short notice in from an edge of the conversation with one frontend tool,
+`show_notice({tone, title, text?, edge?, seconds?})`, of the `notices` UI (`apps/plugins/notices`):
+info, success, warning or error, a title of up to 80 characters and a line of up to 280, from the
+north (unsaid), east, south or west. It is primer-addons' `SlidingPanel`, `contained` in the
+conversation (`LoopSlots.viewOverlay`, between the chat's title bar and its composer,
+`conversationInsets`): never over the page around the workspace, the application's controls or
+the person's typing. It says it comes from the agent, holds words only and no control but its
+Close, and goes after its seconds (8 for info and success, 12 for a warning; an error stays until
+closed), with Close, Escape or a click. One per edge: a new one on the same edge replaces the old,
+and the agent is told (`replaced`). An error is read out at once (`role="alert"`), the others
+politely (`role="status"`). Nothing is kept: a conversation opened again shows none.
+
+## The left panel: what a host says about it
 
 A host may say something *about* the application on the leading edge of its
 workspace: its presentation, a guide. That is the left panel
@@ -1026,7 +1077,7 @@ conversation, and a decision drawn by the real workspace as its host's page
 says when one is not (`app-page-blocks.test.tsx`); components its developer
 wrote, reviewed, contributed by its own plugin and drawn in their frame
 (`app-custom-components.test.tsx`); the presence state (`presence-status.test.ts`); in
-the three menus under the composer — every server, skill and model listed with its state and why, read only, the spec until the runtime answers (`equipment-menus.test.tsx`, `test_app_equipment.py`); a header UI — its tool's typed arguments, a call changing an indicator, a drop-down's option going with the next run, a button's message, names and roles (`header-items.test.tsx`), and the sentences the runtime tells for a drop-down (`test_app_header.py`, `test_app_sessions.py`); in
+the side panels — the deck placed right drawn there and a line per call, opened by its first call, by the agent's tools and by the person, the one opened last kept, a conversation started over closing them, a header UI stacked — and the notices — one per edge, words only, between the title bar and the composer (`side-panels.test.tsx`, `left-panel.test.tsx`); the three menus under the composer — every server, skill and model listed with its state and why, read only, the spec until the runtime answers (`equipment-menus.test.tsx`, `test_app_equipment.py`); a header UI — its tool's typed arguments, a call changing an indicator, a drop-down's option going with the next run, a button's message, names and roles (`header-items.test.tsx`), and the sentences the runtime tells for a drop-down (`test_app_header.py`, `test_app_sessions.py`); in
 the landing, the home page's line — the model resolved as the chat resolves
 it, the words of the line — and its *How it is built* (`homeLight.spec.ts`).
 With nobody present: reading goes on, acting without a rule refused, a rule
