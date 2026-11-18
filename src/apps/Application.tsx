@@ -259,7 +259,13 @@ export async function resolveApplication({
 export function agentAppspec(
   spec: Pick<
     Agentspec,
-    'id' | 'name' | 'description' | 'emoji' | 'welcomeMessage' | 'suggestions'
+    | 'id'
+    | 'name'
+    | 'description'
+    | 'emoji'
+    | 'welcomeMessage'
+    | 'suggestions'
+    | 'presentation'
   >,
 ): AppSpec {
   const app = emptyAppspec('chat');
@@ -270,6 +276,10 @@ export function agentAppspec(
   app.owner = 'Datalayer <info@datalayer.io>';
   if (spec.emoji) {
     app.emoji = spec.emoji;
+  }
+  // How it presents itself, for a host that adds a panel for it (`LoopSlots.leftPanel`).
+  if (spec.presentation) {
+    app.presentation = spec.presentation;
   }
   app.interface.layout = 'chat';
   app.interface.welcome = spec.welcomeMessage || spec.description;

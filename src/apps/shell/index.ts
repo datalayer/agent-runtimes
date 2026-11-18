@@ -37,3 +37,17 @@ export {
   paneOpenAnimation,
   paneOpenKeyframes,
 } from './paneMotion';
+export {
+  LeftPanel,
+  LeftPanelToggle,
+  LEFT_PANEL_MOTION,
+  LEFT_PANEL_NARROW,
+  LEFT_PANEL_WIDTH,
+  leftPanelLabel,
+  leftPanelShown,
+  useLeftPanel,
+  type LeftPanelProps,
+  type LeftPanelState,
+  type LoopLeftPanel,
+  type LoopLeftPanelComponent,
+} from './LeftPanel';

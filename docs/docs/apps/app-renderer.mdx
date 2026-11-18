@@ -285,6 +285,67 @@ beside it what it is allowed to do and what it did:
 The words are `BEHAVIOUR_WORDS`, `ACTION_WORDS` and `coverOf`
 (`apps/apps/rules`), the record's reader `apps/apps/records`.
 
+## Before its page: a host's left panel
+
+A host may say something *about* the application on the leading edge of its
+workspace: its presentation, a guide. That is the left panel
+(`LoopSlots.leftPanel`), and any host fills it with a plugin of its own,
+handed to the application (`<Application renderer={{ plugins: [MyPlugin] }} />`,
+or `AppRenderer`'s `plugins`):
+
+```tsx
+import { definePlugin } from '@datalayer/reactor';
+import type { ReactorReactOutput } from '@datalayer/reactor/react';
+import { LoopSlots } from '@datalayer/agent-runtimes/lib/apps/core';
+import type { LoopLeftPanelComponent } from '@datalayer/agent-runtimes/lib/apps/shell';
+
+const about: LoopLeftPanelComponent = {
+  id: 'about',
+  slot: LoopSlots.leftPanel,
+  // Rendered with the workspace and the application it draws.
+  Component: ({ application }) => <About app={application} />,
+  panel: {
+    // Its toggle's name; a function reads it off the application.
+    label: application => `About ${application?.name}`,
+    // No toggle and no panel for an application with nothing to present.
+    when: application => Boolean(application?.presentation),
+  },
+};
+
+export const AboutPlugin = definePlugin<Record<string, never>, unknown, ReactorReactOutput>({
+  name: 'my-host-about',
+  build: () => ({ components: [about] }),
+});
+```
+
+The shell does the rest. The panel is **closed to start with**, so the page
+keeps the whole width; its toggle is an icon button in the chat's title bar
+(in the workspace's header when it draws one), which says what it opens
+(`panel.label`), whether it is open (`aria-expanded`) and which element it
+controls (`aria-controls`). Open, the panel is a column of
+`LEFT_PANEL_WIDTH` (400px) beside the page; in a workspace narrower than
+`LEFT_PANEL_NARROW` (720px, a phone) it opens over the page instead, with a
+close button of its own, and Escape closes it from inside. Its width and
+opacity move in 200ms, and not at all under `prefers-reduced-motion`.
+Closed, it is out of the tab order, and its components are mounted on the
+first opening only. Make the plugin once, outside the host's render: a new
+plugin restarts the workspace.
+
+The application is said to the host's plugins by `AppRenderer` itself, as
+the `LoopApplication` contribution (`{ app }`, the Appspec in the words the
+person reads): a host that names an application (`app="demo-marketer"`)
+has not read its spec, and its plugin reads it there
+(`useContributions(LoopApplication)`), or takes the `application` prop the
+left panel renders its components with.
+
+What an application says of itself for such a panel is its Appspec's
+`presentation`, one Markdown document
+([agentspecs: Its presentation](https://agentspecs.datalayer.tech/docs/apps#its-presentation));
+a person's own agent carries its agentspec's (`agentAppspec`). The few
+blocks drawn in a way of their own (a check mark before each item of a
+list, a note in emphasis, links as buttons) are the host's to draw:
+agent-runtimes ships the slot, not the panel.
+
 ## Its computer
 
 An application's computer is the sandbox its agent runs on. Its

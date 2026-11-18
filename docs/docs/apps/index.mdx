@@ -90,7 +90,8 @@ inside the Datalayer app, and inside a JupyterLab panel.
 | `LoopCommand` | — | every plugin; each command is a slash command, a palette entry, and (optionally) a keystroke |
 | `LoopAgentGate` | chat plugin | agents plugin — whether there is anything to talk to, and why not |
 | `LoopNotebookToolbar` / `LoopDocumentToolbar` items | toolbar plugins | the chat contributes its agent actions onto the editors' toolbars |
-| Slots (`LoopSlots.header`, `chatHeader`, `promptAction`, `inpromptMenu`, `footer`, `status`, `sidebar`, `root`) | shell | anything with chrome to add — the floating prompt uses `root`, the + uses `promptAction` |
+| Slots (`LoopSlots.header`, `chatHeader`, `promptAction`, `inpromptMenu`, `footer`, `status`, `sidebar`, `leftPanel`, `root`) | shell | anything with chrome to add — the floating prompt uses `root`, the + uses `promptAction`, a host's presentation of the application uses `leftPanel` ([closed until opened](./app-renderer#before-its-page-a-hosts-left-panel)) |
+| `LoopApplication` | `AppRenderer` | a host's plugins — the Appspec of the application the workspace draws |
 
 The segmented editor control shows **nothing at all** until a plugin
 contributes an editor: an empty workspace is an empty control, not a fake one.

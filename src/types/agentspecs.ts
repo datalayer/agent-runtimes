@@ -1971,6 +1971,14 @@ export interface AppSpec {
   avatar: string;
   /** Its banner, by name, from the same profile's set. Empty, its id seeds one. */
   banner: string;
+  /**
+   * What it is, as one Markdown document, for a page that presents it beside
+   * its conversation: what a host's plugin draws in the workspace's left
+   * panel (`LoopSlots.leftPanel`). A paragraph, a bullet list of what it
+   * does, a note wholly in emphasis, and a paragraph of links for its
+   * actions, the main one in bold. Unsaid or empty, nothing is presented.
+   */
+  presentation?: string;
 }
 
 /**
@@ -2128,6 +2136,13 @@ export interface Agentspec {
   emoji?: string;
   /** Its colour: a name of the palette (`teal`, `indigo`…), drawn in the theme's value for it, or a hex where no name fits (`resolvePaletteColor`, primer-addons) */
   color?: string;
+  /** What it does on its own, in one line: under its name in a list of agents. */
+  tagline?: string;
+  /**
+   * What it is, as one Markdown document, for a page that presents it: a
+   * paragraph, a bullet list of what it does, links for where to read more.
+   */
+  presentation?: string;
   /** Chat suggestions to show users what this agent can do */
   suggestions?: AgentSuggestion[];
   /** Welcome message shown when agent starts */

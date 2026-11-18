@@ -487,6 +487,7 @@ const KNOWN_KEYS = [
   'emoji',
   'avatar',
   'banner',
+  'presentation',
 ] as const;
 
 /** Where a check of its code runs. */
@@ -1601,6 +1602,10 @@ export function parseAppspec(document: unknown): ParsedAppspec {
     avatar: text(data.avatar).trim(),
     banner: text(data.banner).trim(),
   };
+  const presentation = text(data.presentation).trim();
+  if (presentation) {
+    app.presentation = presentation;
+  }
   if (isData(data.decision)) {
     app.decision = parseDecision(data.decision);
   }
@@ -2351,7 +2356,8 @@ export function dumpAppspec(app: AppSpec): Data {
     .text('icon', app.icon ?? DEFAULT_ICON, DEFAULT_ICON)
     .text('emoji', app.emoji, DEFAULT_EMOJI)
     .text('avatar', app.avatar ?? '', '')
-    .text('banner', app.banner ?? '', '');
+    .text('banner', app.banner ?? '', '')
+    .text('presentation', app.presentation ?? '', '');
   return writer.data;
 }
 

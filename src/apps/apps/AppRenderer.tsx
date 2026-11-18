@@ -51,7 +51,9 @@
 
 import { useMemo, type ComponentType } from 'react';
 import {
+  contribution,
   defineExtension,
+  definePlugin,
   type PlatformInput,
   type PluginRef,
   type ReactorExtension,
@@ -72,6 +74,7 @@ import {
   CANVAS_BLOCK_PLUGINS,
   canvasBlocksPluginName,
 } from '../plugins/canvas-blocks';
+import { LoopApplication } from '../core';
 import { LoopEmbed, type LoopEmbedProps } from '../embed/LoopEmbed';
 import type { LoopPresetOptions } from '../presets';
 import {
@@ -220,8 +223,27 @@ export function appExtension(
     description: shown.description || `The ${shown.name} application`,
     emoji: app.emoji,
     version: app.version,
-    plugins,
+    plugins: [applicationPlugin(app, shown), ...plugins],
   });
+}
+
+/**
+ * The application itself, said to the workspace (`LoopApplication`): what a
+ * host's plugin reads of the application it was added to — the left panel's
+ * presentation reads its `presentation`, its name and its face — in the
+ * words the person reads.
+ */
+export function applicationPlugin(app: AppSpec, shown: AppSpec): PluginRef {
+  return definePlugin({
+    name: `loop-app-${app.id}-application`,
+    displayName: `${shown.name}: the application`,
+    description: `The Appspec of ${shown.name}, for the plugins its host adds to it.`,
+    octicon: 'apps',
+    emoji: app.emoji,
+    contributes: [
+      contribution(LoopApplication, { app: shown }, { id: 'application' }),
+    ],
+  }) as PluginRef;
 }
 
 /** Which instance of an application runs, as the platform knows it. */

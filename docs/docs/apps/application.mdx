@@ -67,7 +67,7 @@ import {
 | `host` | What the page gives the application and what it is told: values, functions, events ([the page and the application, talking](./embedding.mdx#the-page-and-the-application-talking)). |
 | `plugins` | The host's plugins for the assistant mode's characters. |
 | `instance` | What its record is kept under on Datalayer. |
-| `renderer` | What the host's own page adds to its workspace: `plugins` (cards, panels, menu actions), `pluginsOff` (UI plugins its organization turned off), `computer`, `sidebar`, `autoFocusPrompt`. Datalayer's page at an application's address (`/apps/<slug>`) passes these. |
+| `renderer` | What the host's own page adds to its workspace: `plugins` (cards, panels, menu actions; a [left panel](./app-renderer#before-its-page-a-hosts-left-panel) that presents the application), `pluginsOff` (UI plugins its organization turned off), `computer`, `sidebar`, `autoFocusPrompt`. Datalayer's page at an application's address (`/apps/<slug>`) passes these. |
 | `resume` | On a host's server with an embed token: keep the visit's session in the page's storage (on by default). |
 | `ownPortal` | Draw overlays inside its own root. Only for a component mounted in a root of its own, such as the element's shadow root. |
 

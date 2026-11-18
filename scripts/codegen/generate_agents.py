@@ -654,6 +654,14 @@ from agent_runtimes.types import (
                 else ""
             )
 
+            # How it presents itself: its tagline and its Markdown document,
+            # written only for an agent that says them.
+            presentation_py_lines = "".join(
+                f"    {key}={_fmt_py_literal(str(spec[key]).strip())},\n"
+                for key in ("tagline", "presentation")
+                if spec.get(key)
+            )
+
             # Format optional fields
             icon = f'"{spec.get("icon")}"' if spec.get("icon") else "None"
             emoji = f'"{spec.get("emoji")}"' if spec.get("emoji") else "None"
@@ -852,7 +860,7 @@ from agent_runtimes.types import (
     icon={icon},
     emoji={emoji},
     color={color},
-    suggestions={suggestions_str},
+{presentation_py_lines}    suggestions={suggestions_str},
     welcome_message="{welcome}",
     welcome_notebook={f'"{welcome_notebook}"' if welcome_notebook else "None"},
     welcome_document={f'"{welcome_document}"' if welcome_document else "None"},
@@ -1323,6 +1331,13 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             suggestions = spec.get("suggestions", [])
             suggestions_str = _fmt_ts_suggestions(suggestions)
 
+            # How it presents itself, written only for an agent that says it.
+            presentation_ts_lines = "".join(
+                f"    {key}: {_fmt_ts_literal(str(spec[key]).strip())},\n"
+                for key in ("tagline", "presentation")
+                if spec.get(key)
+            )
+
             # Format optional fields
             icon = f"'{spec.get('icon')}'" if spec.get("icon") else "undefined"
             emoji = f"'{spec.get('emoji')}'" if spec.get("emoji") else "undefined"
@@ -1466,7 +1481,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
     icon: {icon},
     emoji: {emoji},
     color: {color},
-    suggestions: {suggestions_str},
+{presentation_ts_lines}    suggestions: {suggestions_str},
     welcomeMessage: {_fmt_ts_literal(welcome_message)},
     welcomeNotebook: {_fmt_ts_literal(welcome_notebook)},
     welcomeDocument: {_fmt_ts_literal(welcome_document)},
@@ -1897,6 +1912,77 @@ export function getAgentspecRequiredEnvVars(spec: Agentspec): string[] {
     print(f"✓ Generated {len(specs_by_folder)} subfolder(s)")
 
 
+def generate_presentations_typescript_code(
+    specs: List[tuple[str, Dict[str, Any]]],
+) -> str:
+    """The agents that present themselves, without the catalogue.
+
+    A page that only names an agent (a tab, a card, a slide) reads its name,
+    its emoji, its tagline and its presentation here: a module of a few
+    kilobytes, where the catalogue of every agent is several hundred.
+    """
+    entries = []
+    for _folder, spec in sorted(specs, key=lambda item: item[1]["id"]):
+        if not spec.get("presentation") and not spec.get("tagline"):
+            continue
+        entry = {
+            "id": spec["id"],
+            "version": spec.get("version", "0.0.1"),
+            "name": spec.get("title", spec["name"]),
+            "emoji": spec.get("emoji") or "",
+            "description": " ".join(str(spec.get("description", "")).split()),
+            "tagline": str(spec.get("tagline") or "").strip(),
+            "presentation": str(spec.get("presentation") or "").strip(),
+        }
+        entries.append(
+            f"  {json.dumps(spec['id'])}: "
+            + json.dumps(entry, ensure_ascii=False, indent=2).replace("\n", "\n  ")
+            + ","
+        )
+    body = "\n".join(entries)
+    return f"""/*
+ * Copyright (c) 2025-2026 Datalayer, Inc.
+ * Distributed under the terms of the Modified BSD License.
+ */
+
+/**
+ * The agents that present themselves: each one's name, emoji, description,
+ * one-line tagline and presentation (a Markdown document), by its id —
+ * without the catalogue of every agent, for a page that only names them.
+ *
+ * This file is AUTO-GENERATED from YAML specifications.
+ * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
+ *
+ * @module specs/agentPresentations
+ */
+
+/** How an agent presents itself. */
+export type AgentPresentation = {{
+  /** Its id in the catalogue. */
+  id: string;
+  version: string;
+  name: string;
+  emoji: string;
+  description: string;
+  /** What it does on its own, in one line. */
+  tagline: string;
+  /** What it is, as one Markdown document. */
+  presentation: string;
+}};
+
+export const AGENT_PRESENTATIONS: Record<string, AgentPresentation> = {{
+{body}
+}};
+
+/** An agent's presentation, by `id` or `id:version`; none for one that says none. */
+export function getAgentPresentation(
+  agentId: string,
+): AgentPresentation | undefined {{
+  return AGENT_PRESENTATIONS[agentId.split(':')[0]];
+}}
+"""
+
+
 def ensure_specs_barrel(specs_dir: Path) -> None:
     """Ensure top-level TypeScript specs barrel file exists.
 
@@ -1998,6 +2084,11 @@ def main():
         # Generate separate files per subfolder
         generate_subfolder_structure(specs, args)
         ensure_specs_barrel(args.typescript_output.parent)
+        # The agents that present themselves, beside the catalogue and out of
+        # the barrel: read alone, by a page that does not load the catalogue.
+        presentations_path = args.typescript_output.parent / "agentPresentations.ts"
+        print(f"Generating agent presentations to {presentations_path}...")
+        presentations_path.write_text(generate_presentations_typescript_code(specs))
     else:
         # Generate Python code (single file)
         print(f"Generating Python code to {args.python_output}...")

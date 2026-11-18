@@ -2322,6 +2322,17 @@ class Agentspec(BaseModel):
         default=None,
         description="Theme color for the agent (hex code)",
     )
+    tagline: Optional[str] = Field(
+        default=None,
+        description="What it does on its own, in one line: under its name in a list of agents",
+    )
+    presentation: Optional[str] = Field(
+        default=None,
+        description=(
+            "What it is, as one Markdown document, for a page that presents it: "
+            "a paragraph, a bullet list of what it does, links for where to read more"
+        ),
+    )
     suggestions: List[AgentSuggestion] = Field(
         default_factory=list,
         description="Chat suggestions to show users what this agent can do",

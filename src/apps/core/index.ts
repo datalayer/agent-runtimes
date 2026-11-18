@@ -23,7 +23,7 @@ import type { ComponentType, ReactNode } from 'react';
 import type { ExecutionState } from '@datalayer/jupyter-react/kernel-indicator';
 import type { ToolbarItem } from '@datalayer/primer-addons';
 import type { FrontendToolDefinition } from '../../types/tools';
-import type { AppModeEffect } from '../../types/agentspecs';
+import type { AppModeEffect, AppSpec } from '../../types/agentspecs';
 import type { ContextSnapshotData } from '../../types/context';
 import type { AssistantCharacter } from '../../chat/assistant/characters';
 import type { AssistantCharacterData } from '../../chat/assistant/formats/types';
@@ -1217,6 +1217,22 @@ export { focusPrompt, onPromptFocusRequest } from './focusRequests';
 export const LoopCommand =
   defineContributionPoint<CommandContribution>('loop.command');
 
+/**
+ * The application a workspace draws, as its renderer says it: its Appspec in
+ * the words the person reads. What a host's plugin reads of the application
+ * it was added to — its name, its face, its `presentation` — without the
+ * host having read the spec itself (`<Application app="demo-marketer">`
+ * reads a name). One per workspace, contributed by `AppRenderer`; none in a
+ * workspace that draws no application.
+ */
+export type ApplicationContribution = {
+  app: AppSpec;
+};
+
+/** The application the workspace draws (`ApplicationContribution`). */
+export const LoopApplication =
+  defineContributionPoint<ApplicationContribution>('loop.application');
+
 /** What goes with every run besides the message (`forwardedProps`). */
 export const LoopRunProps =
   defineContributionPoint<RunPropsContribution>('loop.runProps');
@@ -1310,6 +1326,18 @@ export const LoopSlots = {
    * column is not drawn when nothing fills it.
    */
   sidebar: 'loop.sidebar',
+  /**
+   * The leading edge, beside the view: what is said *about* the work rather
+   * than part of it — a host's presentation of the application, a guide.
+   *
+   * Closed until the person opens it: the shell draws its toggle (in the
+   * chat's title bar, or the workspace's header when it has one), the view
+   * keeps the whole width meanwhile, and in a narrow workspace the panel
+   * opens over the view. A component names its toggle and says whether it
+   * has anything to show with its `panel` (`LoopLeftPanelComponent`); with
+   * nothing to show there is no toggle and no panel.
+   */
+  leftPanel: 'loop.leftPanel',
 } as const;
 
 /**

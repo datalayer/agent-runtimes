@@ -61,6 +61,7 @@ import {
 import { SIDEBAR_WIDTH } from '../plugins/plugins-panel';
 import { ViewSwitcher } from './ViewSwitcher';
 import { SidebarRail } from './SidebarRail';
+import { LeftPanel, LeftPanelToggle, useLeftPanel } from './LeftPanel';
 
 export type LoopWorkspaceProps = {
   /** Server backing this session. */
@@ -301,6 +302,42 @@ function WorkspaceBody({
   // Read to decide whether the column exists at all, not to render it: the
   // slot does that.
   const sidebar = useSlotComponents(LoopSlots.sidebar);
+  // What a host says about the work, on the leading edge: closed until its
+  // toggle opens it (`LoopSlots.leftPanel`).
+  const leftPanel = useLeftPanel();
+  const rowRef = useRef<HTMLDivElement | null>(null);
+  const leftPanelToggle = useMemo(
+    () =>
+      leftPanel.components.length > 0 ? (
+        <LeftPanelToggle panel={leftPanel} />
+      ) : null,
+    // The toggle is drawn again when what it says changes, not on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      leftPanel.components.length,
+      leftPanel.open,
+      leftPanel.label,
+      leftPanel.icon,
+      leftPanel.panelId,
+    ],
+  );
+  /*
+   * Where the left panel's toggle goes: the workspace's header when it draws
+   * one, else the chat's title bar, the first of its actions, before the
+   * host's own additions.
+   */
+  const chatHeaderActionsWithToggle = useMemo(
+    () =>
+      leftPanelToggle && !showHeader ? (
+        <>
+          {leftPanelToggle}
+          {chatHeaderActions}
+        </>
+      ) : (
+        chatHeaderActions
+      ),
+    [leftPanelToggle, showHeader, chatHeaderActions],
+  );
   const commandsRef = useRef(commands);
   const currentWorkspace = useRef<LoopWorkspaceContext | null>(null);
   const compact = layout === 'panel';
@@ -371,7 +408,7 @@ function WorkspaceBody({
       submit,
       viewControls,
       setViewControls,
-      chatHeaderActions,
+      chatHeaderActions: chatHeaderActionsWithToggle,
       chatViewModes,
     }),
     [
@@ -386,7 +423,7 @@ function WorkspaceBody({
       submit,
       viewControls,
       setViewControls,
-      chatHeaderActions,
+      chatHeaderActionsWithToggle,
       chatViewModes,
     ],
   );
@@ -420,6 +457,7 @@ function WorkspaceBody({
    */
   const headerControls = (
     <>
+      {showHeader ? leftPanelToggle : null}
       {headerActions}
       <ReactorSlot slot={LoopSlots.header} props={{ workspace }} />
       {showViewSelector ? (
@@ -510,7 +548,15 @@ function WorkspaceBody({
         </Box>
       ) : null}
 
-      <Box flex="1 1 auto" minHeight={0} display="flex">
+      <Box
+        ref={rowRef}
+        flex="1 1 auto"
+        minHeight={0}
+        display="flex"
+        // What the left panel opens over, in a narrow workspace.
+        position="relative"
+      >
+        <LeftPanel panel={leftPanel} rowRef={rowRef} props={{ workspace }} />
         <Box flex="1 1 auto" minWidth={0} minHeight={0} position="relative">
           <ReactorViewHost
             point={LoopViewType}
