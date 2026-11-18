@@ -215,6 +215,34 @@ def mark_spoken(body: Any) -> None:
     hear(spoken_of(forwarded.get("voice")) if isinstance(forwarded, dict) else None)
 
 
+def header_of_run(body: Any) -> str:
+    """
+    What a run is told of its chat's title bar: the sentences of the options
+    its drop-downs are on (``forwardedProps.loop.header``).
+
+    Parameters
+    ----------
+    body : Any
+        The run's JSON body.
+
+    Returns
+    -------
+    str
+        The sentences, a line each; empty when the run names none.
+
+    Raises
+    ------
+    ValueError
+        When it names a header, a drop-down or an option the catalogue does
+        not have.
+    """
+    from ..apps.header import header_instructions  # noqa: PLC0415
+
+    forwarded = body.get("forwardedProps") if isinstance(body, dict) else None
+    loop = forwarded.get("loop") if isinstance(forwarded, dict) else None
+    return header_instructions(loop.get("header") if isinstance(loop, dict) else None)
+
+
 @contextmanager
 def run_instructions(instructions: str | None) -> Iterator[None]:
     """Tell the runs started inside this block ``instructions`` besides their agent's."""
@@ -390,6 +418,7 @@ class AGUITransport(BaseTransport):
                 builtin_tools_from_request: list[str] | None = None
                 skills_from_request: list[str] | None = None
                 identities_from_request: list[dict[str, Any]] | None = None
+                header_told = ""
                 metric_user_id: str | None = None
                 metric_user_provider: str | None = None
                 metric_user_jwt_token = extract_jwt_token(
@@ -413,6 +442,16 @@ class AGUITransport(BaseTransport):
                         # A message said and heard by the client: marked
                         # spoken for the run and the record.
                         mark_spoken(body)
+                    # What the chat's title bar says: the option each of its
+                    # drop-downs is on, told to the agent for this run
+                    # (`forwardedProps.loop.header`; a session of an
+                    # application has told it already and sends no `loop`).
+                    try:
+                        header_told = header_of_run(body)
+                    except ValueError as refused:
+                        from starlette.responses import JSONResponse
+
+                        return JSONResponse({"detail": str(refused)}, status_code=422)
                     model = body.get("model")
                     if model:
                         logger.info(f"AG-UI using model from request body: {model}")
@@ -779,7 +818,9 @@ class AGUITransport(BaseTransport):
                     logger.info("[AG-UI] Passing 0 toolsets to agent run (empty list)")
 
                 try:
-                    told = _run_instructions.get()
+                    told = "\n\n".join(
+                        part for part in (_run_instructions.get(), header_told) if part
+                    )
                     response = await AGUIAdapter.dispatch_request(
                         request,
                         agent=pydantic_agent,

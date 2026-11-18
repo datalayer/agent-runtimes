@@ -416,6 +416,18 @@ class UISpec(BaseModel):
             "banner, panel or message (agentspecs 0.0.197)"
         ),
     )
+    header: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description=(
+            "What it puts in the chat's title bar — its buttons, drop-downs and "
+            "indicators (`items`) — and the frontend tool that sets them (`tool`, "
+            "`when`), as its agentspecs UI spec declares them"
+        ),
+    )
+    supersedes: List[str] = Field(
+        default_factory=list,
+        description="The UI plugins it stands in for: a chat that has it leaves them out",
+    )
     catalog: str = Field(
         default="", description="The catalog its components are written in"
     )

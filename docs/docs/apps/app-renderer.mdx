@@ -285,6 +285,77 @@ beside it what it is allowed to do and what it did:
 The words are `BEHAVIOUR_WORDS`, `ACTION_WORDS` and `coverOf`
 (`apps/apps/rules`), the record's reader `apps/apps/records`.
 
+## In its title bar: buttons, drop-downs and indicators
+
+An application's `ui` may name a **header UI** — `shop-header`, `trip-header`, `social-header`,
+`books-header`, `aws-header`, `earth-header`, `notebook-header`, one per seed agent — and its
+chat's title bar then carries up to three small parts, all 28px high and in the theme's own
+tokens (`apps/toolCards/headerItems`):
+
+| Part | What it is | How it talks with the chat |
+|------|------------|----------------------------|
+| `HeaderAction` | A button. | Pressing it says its message to the agent, as the person (`viewControls.send`). |
+| `HeaderChoice` | A drop-down: an `ActionMenu` whose button is named for what it is on (`Network: Bluesky`), its options `menuitemradio`. | The option it is on goes with **every run**: `forwardedProps.loop.header.<ui id>.<item id>`, contributed through `LoopRunProps`. The runtime tells the agent the sentence the UI spec declares for it, for that run only (`agent_runtimes.apps.header`). |
+| `HeaderIndicator` | What the agent shows: words (`label`), a number and its words (`counter`), a dot and its words (`status`) or a small bar (`meter`), in a tone (`neutral`, `accent`, `success`, `attention`, `danger`). A polite live region (`role="status"`, `aria-live="polite"`): a screen reader says it when it changes. | Set by the agent through the header's **frontend tool**. Nothing is drawn before the agent said it. |
+
+What a header holds is declared, not coded: its UI spec's `header` in agentspecs
+(`agentspecs/ui/shop-header.yaml`), carried by the catalogue (`UI_CATALOGUE['shop-header'].header`).
+A plugin folder is a few lines:
+
+```tsx
+// src/apps/plugins/social-header/index.tsx
+import { defineHeaderPlugin } from '../../toolCards/headerItems';
+
+export const socialHeaderPlugin = defineHeaderPlugin({ id: 'social-header' });
+```
+
+`defineHeaderPlugin` registers, under `@datalayer/loop-plugin-<id>`:
+
+- **each item as its own entry of `LoopSlots.chatHeader`**, so that a narrow chat moves them into
+  the title bar's "…" menu one by one, before the chat's own controls;
+- **the header's frontend tool**, `set_<id>` (`set_shop_header`), handed to the chat through
+  `LoopChatExtras`. The extras of several plugins now add up their `frontendTools`, each name once
+  (`mergeChatExtras`): a header's tool beside a host example's;
+- **its drop-downs' options with every run**, through `LoopRunProps`.
+
+### The tool, and why one per header
+
+The model calls `set_shop_header({ basket: { value: 3, label: "$84.00" }, approval: { label:
+"Approval needed", tone: "attention" } })`; the page runs it — it checks the arguments against the
+header's items and answers `{ set: ["basket", "approval"] }` — and the title bar changes, with no
+call to a server. Its arguments are one per item it sets, typed from the declaration
+(`headerToolParameters`): an indicator takes `{ value?, max?, label?, tone?, visible? }`, a
+drop-down one of its option ids, and only the items named change. An argument the header does
+not have is said back to the model (`ignored`); a call that sets nothing is an error it can read.
+
+One tool per header rather than one shared `set_header_indicator`: a frontend tool is offered to
+the model by name with its JSON Schema, so a header's own tool has exactly its items as
+arguments, each described in the words of its spec, and an agent is offered only the tool of the
+header it has. A shared tool would take a free item name and an untyped value.
+
+### Where the state lives
+
+- **Indicators** are the fold of the tool's answered calls in the conversation, in order
+  (`headerStateOf` over `toolCards/toolResults`, which the transcript feeds): a re-render changes
+  nothing, and a conversation opened again shows them as they stood, since its calls are in its
+  transcript. A conversation started over forgets them (the transcript's record is cleared when a
+  chat that held messages holds none).
+- **A drop-down** is what the person picked last, kept by the plugin for the workspace on screen,
+  unless the tool set it since (the person says "we are three", the agent sets `travellers`). A
+  pick is not written in the conversation: opened again, a conversation shows the default, or
+  what the tool last set.
+- **An indicator that an older chip already read** keeps reading it until the tool says
+  otherwise (`derive`): `shop-header`'s basket from the last `show_basket`, `trip-header`'s trip
+  from the itinerary shown, `aws-header`'s savings from the recommendations listed. Such a header
+  `supersedes` the chip (`basket-total`, `trip-summary`, `aws-savings-badge`): a workspace that
+  mounts the header leaves the chip out, whoever brought it.
+
+### Where it is drawn
+
+In a Loop workspace: an `Application`, and a chat mounted with the preset's `uiPlugins`. The
+plain `Chat` component does not draw header UIs yet: there the older chips stay. A visitor's demo
+has them: they need no connection of the person's.
+
 ## Before its page: a host's left panel
 
 A host may say something *about* the application on the leading edge of its
@@ -868,6 +939,7 @@ conversation, and a decision drawn by the real workspace as its host's page
 says when one is not (`app-page-blocks.test.tsx`); components its developer
 wrote, reviewed, contributed by its own plugin and drawn in their frame
 (`app-custom-components.test.tsx`); the presence state (`presence-status.test.ts`); in
+a header UI — its tool's typed arguments, a call changing an indicator, a drop-down's option going with the next run, a button's message, names and roles (`header-items.test.tsx`), and the sentences the runtime tells for a drop-down (`test_app_header.py`, `test_app_sessions.py`); in
 the landing, the home page's line — the model resolved as the chat resolves
 it, the words of the line — and its *How it is built* (`homeLight.spec.ts`).
 With nobody present: reading goes on, acting without a rule refused, a rule

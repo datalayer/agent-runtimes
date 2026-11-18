@@ -114,6 +114,7 @@ from agent_runtimes.apps.callers import Caller
 from agent_runtimes.apps.components import AnswerShows, answer_actions
 from agent_runtimes.apps.composer import mode_choice, profile_choice, run_effect
 from agent_runtimes.apps.forms import field_title, form_fields
+from agent_runtimes.apps.header import header_instructions
 from agent_runtimes.apps.host_user import HostUser, reads_user, signed_host_context
 from agent_runtimes.apps.pages import LOOP_PAGE, page_values
 from agent_runtimes.apps.record import (
@@ -2509,11 +2510,13 @@ class LiveSession:
         }
         await self.forward(body, bearer=bearer)
 
-    async def _agent_turn(self, asked: str, body: Dict[str, Any], bearer: str) -> None:
+    async def _agent_turn(
+        self, asked: str, body: Dict[str, Any], bearer: str, *, told: str = ""
+    ) -> None:
         """A turn of an agent run as such: the run is its agent's, as the
         chat sent it, and the session keeps the turn — what was asked and
         what it answered — since its agent was made with no record of an
-        application.
+        application. ``told`` is what the chat's title bar says for this run.
         """
         forwarded = body.get("forwardedProps")
         if isinstance(forwarded, Mapping):
@@ -2537,7 +2540,7 @@ class LiveSession:
         }
         completed = False
         try:
-            await self.forward(run, bearer=bearer)
+            await self.forward(run, bearer=bearer, instructions=told)
             completed = True
         finally:
             answered = "\n\n".join(
@@ -2718,8 +2721,10 @@ class LiveSession:
 
         ``forwardedProps.loop`` says what the page did besides the message: the
         settings it holds (``settings``), the option of each mode the person is
-        in (``modes``), the files given (``files``), and a press
-        checked on the ui socket (``press``, RU-W) — never an
+        in (``modes``), the option each drop-down of the chat's title bar is on
+        (``header``, told to the agent for this run:
+        :mod:`agent_runtimes.apps.header`), the files given (``files``), and a
+        press checked on the ui socket (``press``, RU-W) — never an
         action of its own.
 
         The modes' instructions are told to the agent for this run, and the
@@ -2762,6 +2767,11 @@ class LiveSession:
             raise SessionRefused(422, str(wrong)) from None
         if self.session is not None:
             self.session._update_modes(self.modes)
+        # What the chat's title bar says: its drop-downs, in the UI specs' words.
+        try:
+            header_told = header_instructions(loop.get("header"))
+        except ValueError as wrong:
+            raise SessionRefused(422, str(wrong)) from None
         files = given_files(
             loop.get("files"), scope=self.uid, owner=owner_of(self.opened_by)
         )
@@ -2819,7 +2829,7 @@ class LiveSession:
         async def work() -> None:
             """The turn."""
             if self.kind == "agent":
-                await self._agent_turn(text, body, bearer)
+                await self._agent_turn(text, body, bearer, told=header_told)
                 return
             words, parts = await asyncio.to_thread(self._files_for_agent, files)
             content: Any = f"{text}\n\n{words}" if words else text
@@ -2846,7 +2856,13 @@ class LiveSession:
                 "forwardedProps": forwarded or None,
                 **({"model": effect.model} if effect.model else {}),
             }
-            await self.forward(run, bearer=bearer, instructions=effect.instructions)
+            await self.forward(
+                run,
+                bearer=bearer,
+                instructions="\n\n".join(
+                    part for part in (effect.instructions, header_told) if part
+                ),
+            )
 
         return self._start_turn(work, run_id=run_id, wraps_run=False)
 

@@ -163,10 +163,71 @@ export interface UISpec {
   placements?: Array<
     'header' | 'toolbar' | 'footer' | 'banner' | 'panel' | 'message'
   >;
+  /**
+   * What it puts in the chat's title bar, and the frontend tool that sets it
+   * (a UI whose first placement is `header`).
+   */
+  header?: UiHeaderSpec;
+  /** The UI plugins it stands in for: a chat that has it leaves them out. */
+  supersedes?: string[];
   /** The catalog its components are written in. */
   catalog: string;
   /** The visual components it renders. */
   components: ComponentSpec[];
+}
+
+/** What an indicator's colour says, in the theme's own tokens. */
+export type UiHeaderTone =
+  'neutral' | 'accent' | 'success' | 'attention' | 'danger';
+
+/** One option of a header drop-down. */
+export interface UiHeaderOptionSpec {
+  /** What the page sends when it is chosen. */
+  id: string;
+  /** What the person reads. */
+  label: string;
+  /** What the agent is told while it is chosen, in place of the item's; empty for nothing. */
+  says?: string;
+}
+
+/**
+ * One item of a header UI: a button that says its `message` (`action`), a
+ * drop-down told to the agent with every turn (`choice`), or something the
+ * agent shows through the header's frontend tool (`indicator`).
+ */
+export interface UiHeaderItemSpec {
+  /** Its name: the argument of the header's frontend tool that sets it. */
+  id: string;
+  kind: 'action' | 'choice' | 'indicator';
+  /** Its name, as the person reads and hears it. */
+  label: string;
+  /** What it means: the person's tooltip, and what the model reads. */
+  description: string;
+  octicon?: string;
+  /** An action's: what pressing it says to the agent, as the person. */
+  message?: string;
+  /** A choice's options, in order. */
+  options?: UiHeaderOptionSpec[];
+  /** A choice's option to start with; its first unsaid. */
+  default?: string;
+  /** A choice's: what the agent is told with every turn, `{label}` the option chosen. */
+  says?: string;
+  /** An indicator's: how it is drawn. */
+  display?: 'label' | 'counter' | 'status' | 'meter';
+  /** A meter's unit, after its value. */
+  unit?: string;
+  /** A meter's full value; 100 unsaid. */
+  max?: number;
+}
+
+/** A header UI's declaration (`agentspecs/ui/<id>.yaml`, `header`). */
+export interface UiHeaderSpec {
+  /** The frontend tool its agent sets it with: `set_<the UI's id>`. */
+  tool?: string;
+  /** When the agent calls the tool, as the model reads it. */
+  when?: string;
+  /** Three items at most. */
+  items: UiHeaderItemSpec[];
 }
 
 /**

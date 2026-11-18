@@ -1291,6 +1291,88 @@ export const APP_RULES_UI_0_0_1: UISpec = {
   components: [],
 };
 
+export const AWS_HEADER_UI_0_0_1: UISpec = {
+  id: 'aws-header',
+  version: '0.0.1',
+  name: 'AWS header',
+  description:
+    "The Steward's title bar: the monthly savings it found, a drop-down for the region it looks at, and how much of the compute Savings Plans cover.",
+  emoji: '💸',
+  octicon: 'graph',
+  plugin: '@datalayer/loop-plugin-aws-header',
+  folder: 'aws-header',
+  contributions: {
+    slots: ['loop.chatHeader'],
+    points: ['loop.chat.extras', 'loop.runProps'],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  placements: ['header'],
+  header: {
+    tool: 'set_aws_header',
+    when: 'Call it once you have read them: the savings found so far (the number of recommendations as the value, their estimated monthly sum as the label, such as "$2,701/month"), and the Savings Plans coverage of compute in percent. Nothing is changed in the account.',
+    items: [
+      {
+        id: 'savings',
+        kind: 'indicator',
+        display: 'counter',
+        label: 'Savings found',
+        description:
+          'The recommendations found in this session (the value) and their estimated monthly sum (the label). Estimates only, nothing is changed in the account.',
+        octicon: 'graph',
+      },
+      {
+        id: 'region',
+        kind: 'choice',
+        label: 'Region',
+        description: 'The AWS region the readings are narrowed to.',
+        octicon: 'globe',
+        default: 'all',
+        says: "Chosen in the chat's header: look at the region {label} only, and say so in the answer.",
+        options: [
+          {
+            id: 'all',
+            label: 'All regions',
+            says: '',
+          },
+          {
+            id: 'us-east-1',
+            label: 'us-east-1',
+          },
+          {
+            id: 'us-west-2',
+            label: 'us-west-2',
+          },
+          {
+            id: 'eu-west-1',
+            label: 'eu-west-1',
+          },
+          {
+            id: 'eu-central-1',
+            label: 'eu-central-1',
+          },
+        ],
+      },
+      {
+        id: 'coverage',
+        kind: 'indicator',
+        display: 'meter',
+        unit: '%',
+        max: 100,
+        label: 'Savings Plans coverage',
+        description:
+          'How much of the compute spend Savings Plans cover, in percent, as Cost Explorer says it. Tone "attention" under 50, "success" from 70.',
+        octicon: 'meter',
+      },
+    ],
+  },
+  supersedes: ['aws-savings-badge'],
+  catalog: '',
+  components: [],
+};
+
 export const AWS_SAVINGS_BADGE_UI_0_0_1: UISpec = {
   id: 'aws-savings-badge',
   version: '0.0.1',
@@ -1402,6 +1484,80 @@ export const BLUESKY_POST_PREVIEW_UI_0_0_1: UISpec = {
   settings: {},
   renderers: ['a2ui'],
   placements: ['message'],
+  catalog: '',
+  components: [],
+};
+
+export const BOOKS_HEADER_UI_0_0_1: UISpec = {
+  id: 'books-header',
+  version: '0.0.1',
+  name: 'Books header',
+  description:
+    "The Accountant's title bar: a drop-down for the period it reads, how many payments are still to match, and the invoices still open.",
+  emoji: '🧮',
+  octicon: 'book',
+  plugin: '@datalayer/loop-plugin-books-header',
+  folder: 'books-header',
+  contributions: {
+    slots: ['loop.chatHeader'],
+    points: ['loop.chat.extras', 'loop.runProps'],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  placements: ['header'],
+  header: {
+    tool: 'set_books_header',
+    when: 'Call it each time you have counted them in the books: the payments not matched yet, and the open invoices with their total due as the label. Every figure comes from the books.',
+    items: [
+      {
+        id: 'period',
+        kind: 'choice',
+        label: 'Period',
+        description: 'The accounting period the answers are about.',
+        octicon: 'calendar',
+        default: 'last-month',
+        says: "Chosen in the chat's header: the period to read is {label}, counted from today's date in the books, unless the person names another.",
+        options: [
+          {
+            id: 'last-month',
+            label: 'Last month',
+          },
+          {
+            id: 'this-month',
+            label: 'This month',
+          },
+          {
+            id: 'this-quarter',
+            label: 'This quarter',
+          },
+          {
+            id: 'year-to-date',
+            label: 'Year to date',
+          },
+        ],
+      },
+      {
+        id: 'unmatched',
+        kind: 'indicator',
+        display: 'counter',
+        label: 'Payments to match',
+        description:
+          'How many payments received are not matched to an invoice yet. Tone "attention" while some remain, "success" at none.',
+        octicon: 'git-compare',
+      },
+      {
+        id: 'open_invoices',
+        kind: 'indicator',
+        display: 'counter',
+        label: 'Open invoices',
+        description:
+          'How many customer invoices are still open; the label carries the total due, such as "open · 14,585.50 EUR".',
+        octicon: 'file',
+      },
+    ],
+  },
   catalog: '',
   components: [],
 };
@@ -1777,6 +1933,70 @@ export const EARTH_AREA_UI_0_0_1: UISpec = {
   components: [],
 };
 
+export const EARTH_HEADER_UI_0_0_1: UISpec = {
+  id: 'earth-header',
+  version: '0.0.1',
+  name: 'Earth header',
+  description:
+    "Terra's title bar: a drop-down for the sensor it searches, and the cloud cover of the scene it is reading.",
+  emoji: '🛰️',
+  octicon: 'globe',
+  plugin: '@datalayer/loop-plugin-earth-header',
+  folder: 'earth-header',
+  contributions: {
+    slots: ['loop.chatHeader'],
+    points: ['loop.chat.extras', 'loop.runProps'],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  placements: ['header'],
+  header: {
+    tool: 'set_earth_header',
+    when: 'Call it each time you settle on a scene to read: its cloud cover in percent as the value, and the scene as the label (sensor and date, such as "Sentinel-2 · 8 May").',
+    items: [
+      {
+        id: 'sensor',
+        kind: 'choice',
+        label: 'Sensor',
+        description: 'The satellite sensor the scenes are searched from.',
+        octicon: 'broadcast',
+        default: 'any',
+        says: "Chosen in the chat's header: use {label} scenes only, and say when it holds none for what is asked.",
+        options: [
+          {
+            id: 'any',
+            label: 'Any sensor',
+            says: '',
+          },
+          {
+            id: 'sentinel-2',
+            label: 'Sentinel-2',
+          },
+          {
+            id: 'landsat',
+            label: 'Landsat',
+          },
+        ],
+      },
+      {
+        id: 'cloud',
+        kind: 'indicator',
+        display: 'meter',
+        unit: '%',
+        max: 100,
+        label: 'Cloud cover',
+        description:
+          'The cloud cover of the scene being read, in percent; its label names the scene. Tone "success" under 10, "attention" from 30, "danger" from 60, where a scene misleads.',
+        octicon: 'cloud',
+      },
+    ],
+  },
+  catalog: '',
+  components: [],
+};
+
 export const EARTH_INDEX_UI_0_0_1: UISpec = {
   id: 'earth-index',
   version: '0.0.1',
@@ -1909,6 +2129,62 @@ export const MODELS_UI_0_0_1: UISpec = {
   settings: {},
   renderers: [],
   placements: [],
+  catalog: '',
+  components: [],
+};
+
+export const NOTEBOOK_HEADER_UI_0_0_1: UISpec = {
+  id: 'notebook-header',
+  version: '0.0.1',
+  name: 'Notebook header',
+  description:
+    "The Jupyter Data Analyst's title bar: the dataset it works on, what has run, and a button that asks for a profile of the data.",
+  emoji: '📓',
+  octicon: 'table',
+  plugin: '@datalayer/loop-plugin-notebook-header',
+  folder: 'notebook-header',
+  contributions: {
+    slots: ['loop.chatHeader'],
+    points: ['loop.chat.extras'],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  placements: ['header'],
+  header: {
+    tool: 'set_notebook_header',
+    when: 'Call it once you know the dataset (its name and size as the label of dataset), and after each answer to say what ran: the cells run, or that nothing ran. Never show a run that did not happen.',
+    items: [
+      {
+        id: 'dataset',
+        kind: 'indicator',
+        display: 'label',
+        label: 'Dataset',
+        description:
+          'The dataset being worked on, such as "orders.csv · 2,493 rows".',
+        octicon: 'table',
+      },
+      {
+        id: 'run',
+        kind: 'indicator',
+        display: 'status',
+        label: 'Run',
+        description:
+          'What ran, said honestly, such as "3 cells run" (tone "success"), "Cell failed" (tone "danger") or "Nothing ran here" (tone "neutral") where there is no kernel.',
+        octicon: 'play',
+      },
+      {
+        id: 'profile',
+        kind: 'action',
+        label: 'Profile data',
+        description: 'Asks for a profile of every column.',
+        octicon: 'search',
+        message:
+          'Profile every column — types, missing values, and ranges that look wrong.',
+      },
+    ],
+  },
   catalog: '',
   components: [],
 };
@@ -2207,6 +2483,82 @@ export const PROMPT_UI_0_0_1: UISpec = {
   components: [],
 };
 
+export const SHOP_HEADER_UI_0_0_1: UISpec = {
+  id: 'shop-header',
+  version: '0.0.1',
+  name: 'Shopping header',
+  description:
+    "The Shopper's title bar: the basket it is putting together (items and total), a budget drop-down, and whether a purchase waits for the person's approval.",
+  emoji: '🛍️',
+  octicon: 'package',
+  plugin: '@datalayer/loop-plugin-shop-header',
+  folder: 'shop-header',
+  contributions: {
+    slots: ['loop.chatHeader'],
+    points: ['loop.chat.extras', 'loop.runProps'],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  placements: ['header'],
+  header: {
+    tool: 'set_shop_header',
+    when: "Call it each time the basket changes (how many items, and the total as its label), when an order is proposed and waits for the person's approval, and again once it is confirmed or dropped.",
+    items: [
+      {
+        id: 'basket',
+        kind: 'indicator',
+        display: 'counter',
+        label: 'Basket',
+        description:
+          'How many items the basket holds, and its total as the label (such as "$84.00"). Nothing is bought by showing it.',
+        octicon: 'package',
+      },
+      {
+        id: 'budget',
+        kind: 'choice',
+        label: 'Budget',
+        description: 'The most the person wants to spend on the basket.',
+        octicon: 'credit-card',
+        default: 'none',
+        says: "The person's budget for the whole basket, chosen in the chat's header: {label}. Keep the basket within it, and say so when something does not fit.",
+        options: [
+          {
+            id: 'none',
+            label: 'No limit',
+            says: '',
+          },
+          {
+            id: '50',
+            label: 'Under $50',
+          },
+          {
+            id: '100',
+            label: 'Under $100',
+          },
+          {
+            id: '250',
+            label: 'Under $250',
+          },
+        ],
+      },
+      {
+        id: 'approval',
+        kind: 'indicator',
+        display: 'status',
+        label: 'Approval',
+        description:
+          'Whether a purchase waits for the person\'s approval. Show it with the tone "attention" while one waits, and take it off (visible false) once it is confirmed or dropped.',
+        octicon: 'shield-check',
+      },
+    ],
+  },
+  supersedes: ['basket-total'],
+  catalog: '',
+  components: [],
+};
+
 export const SHOPPING_BASKET_UI_0_0_1: UISpec = {
   id: 'shopping-basket',
   version: '0.0.1',
@@ -2249,6 +2601,76 @@ export const SOCIAL_ACCOUNTS_UI_0_0_1: UISpec = {
   settings: {},
   renderers: [],
   placements: ['header', 'message'],
+  catalog: '',
+  components: [],
+};
+
+export const SOCIAL_HEADER_UI_0_0_1: UISpec = {
+  id: 'social-header',
+  version: '0.0.1',
+  name: 'Social header',
+  description:
+    "The Marketer's title bar: a drop-down for the network it drafts for, and how many drafts wait for the person's approval.",
+  emoji: '📣',
+  octicon: 'megaphone',
+  plugin: '@datalayer/loop-plugin-social-header',
+  folder: 'social-header',
+  contributions: {
+    slots: ['loop.chatHeader'],
+    points: ['loop.chat.extras', 'loop.runProps'],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  placements: ['header'],
+  header: {
+    tool: 'set_social_header',
+    when: "Call it each time the number of drafts waiting for the person's approval changes: after you show a draft, and after one is approved, posted or dropped.",
+    items: [
+      {
+        id: 'network',
+        kind: 'choice',
+        label: 'Network',
+        description: 'The network the next drafts are written for.',
+        octicon: 'broadcast',
+        default: 'all',
+        says: "Chosen in the chat's header: draft for {label}, in that network's own voice and length, unless the person names another.",
+        options: [
+          {
+            id: 'all',
+            label: 'All networks',
+            says: '',
+          },
+          {
+            id: 'x',
+            label: 'X',
+          },
+          {
+            id: 'bluesky',
+            label: 'Bluesky',
+          },
+          {
+            id: 'linkedin',
+            label: 'LinkedIn',
+          },
+          {
+            id: 'discord',
+            label: 'Discord',
+          },
+        ],
+      },
+      {
+        id: 'drafts',
+        kind: 'indicator',
+        display: 'counter',
+        label: 'Drafts to approve',
+        description:
+          'How many drafts wait for the person\'s approval; nothing is posted before it. Tone "attention" while some wait, and visible false at none.',
+        octicon: 'pencil',
+      },
+    ],
+  },
   catalog: '',
   components: [],
 };
@@ -2386,6 +2808,81 @@ export const TRIP_BUDGET_UI_0_0_1: UISpec = {
   settings: {},
   renderers: [],
   placements: ['message'],
+  catalog: '',
+  components: [],
+};
+
+export const TRIP_HEADER_UI_0_0_1: UISpec = {
+  id: 'trip-header',
+  version: '0.0.1',
+  name: 'Trip header',
+  description:
+    "The Traveller's title bar: the trip being planned (where and when), a drop-down for how many travel, and how many options are ready to compare.",
+  emoji: '🧭',
+  octicon: 'paper-airplane',
+  plugin: '@datalayer/loop-plugin-trip-header',
+  folder: 'trip-header',
+  contributions: {
+    slots: ['loop.chatHeader'],
+    points: ['loop.chat.extras', 'loop.runProps'],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  placements: ['header'],
+  header: {
+    tool: 'set_trip_header',
+    when: 'Call it once the trip is known (where and when, as the label of trip), and each time you have options ready to compare (their number). Nothing is booked by showing it.',
+    items: [
+      {
+        id: 'trip',
+        kind: 'indicator',
+        display: 'label',
+        label: 'Trip',
+        description:
+          'The trip being planned, in a few words, such as "Lisbon · 12–15 Mar". Nothing is booked.',
+        octicon: 'paper-airplane',
+      },
+      {
+        id: 'travellers',
+        kind: 'choice',
+        label: 'Travellers',
+        description: 'How many people travel.',
+        octicon: 'people',
+        default: '2',
+        says: "Chosen in the chat's header: the trip is for {label}. Price flights, stays and totals for that many.",
+        options: [
+          {
+            id: '1',
+            label: '1 traveller',
+          },
+          {
+            id: '2',
+            label: '2 travellers',
+          },
+          {
+            id: '3',
+            label: '3 travellers',
+          },
+          {
+            id: '4',
+            label: '4 travellers',
+          },
+        ],
+      },
+      {
+        id: 'options',
+        kind: 'indicator',
+        display: 'counter',
+        label: 'Options ready',
+        description:
+          'How many flight and stay options are ready for the person to compare; its label says of what, such as "options ready".',
+        octicon: 'list-unordered',
+      },
+    ],
+  },
+  supersedes: ['trip-summary'],
   catalog: '',
   components: [],
 };
@@ -2561,11 +3058,13 @@ export const UI_CATALOGUE: Record<string, UISpec> = {
   'app-elements': APP_ELEMENTS_UI_0_0_1,
   'app-page': APP_PAGE_UI_0_0_1,
   'app-rules': APP_RULES_UI_0_0_1,
+  'aws-header': AWS_HEADER_UI_0_0_1,
   'aws-savings-badge': AWS_SAVINGS_BADGE_UI_0_0_1,
   'aws-savings': AWS_SAVINGS_UI_0_0_1,
   'bank-reconciliation': BANK_RECONCILIATION_UI_0_0_1,
   'basket-total': BASKET_TOTAL_UI_0_0_1,
   'bluesky-post-preview': BLUESKY_POST_PREVIEW_UI_0_0_1,
+  'books-header': BOOKS_HEADER_UI_0_0_1,
   'browser-session': BROWSER_SESSION_UI_0_0_1,
   'canvas-blocks': CANVAS_BLOCKS_UI_0_0_1,
   'canvas-parts': CANVAS_PARTS_UI_0_0_1,
@@ -2578,12 +3077,14 @@ export const UI_CATALOGUE: Record<string, UISpec> = {
   'document-view': DOCUMENT_VIEW_UI_0_0_1,
   document: DOCUMENT_UI_0_0_1,
   'earth-area': EARTH_AREA_UI_0_0_1,
+  'earth-header': EARTH_HEADER_UI_0_0_1,
   'earth-index': EARTH_INDEX_UI_0_0_1,
   'earth-scenes': EARTH_SCENES_UI_0_0_1,
   'input-prompt': INPUT_PROMPT_UI_0_0_1,
   'linkedin-link': LINKEDIN_LINK_UI_0_0_1,
   'linkedin-post-preview': LINKEDIN_POST_PREVIEW_UI_0_0_1,
   models: MODELS_UI_0_0_1,
+  'notebook-header': NOTEBOOK_HEADER_UI_0_0_1,
   'notebook-toolbar': NOTEBOOK_TOOLBAR_UI_0_0_1,
   'notebook-view': NOTEBOOK_VIEW_UI_0_0_1,
   notebook: NOTEBOOK_UI_0_0_1,
@@ -2594,14 +3095,17 @@ export const UI_CATALOGUE: Record<string, UISpec> = {
   'product-cards': PRODUCT_CARDS_UI_0_0_1,
   'product-comparison': PRODUCT_COMPARISON_UI_0_0_1,
   prompt: PROMPT_UI_0_0_1,
+  'shop-header': SHOP_HEADER_UI_0_0_1,
   'shopping-basket': SHOPPING_BASKET_UI_0_0_1,
   'social-accounts': SOCIAL_ACCOUNTS_UI_0_0_1,
+  'social-header': SOCIAL_HEADER_UI_0_0_1,
   'spreadsheet-view': SPREADSHEET_VIEW_UI_0_0_1,
   spreadsheet: SPREADSHEET_UI_0_0_1,
   'stripe-checkout': STRIPE_CHECKOUT_UI_0_0_1,
   'subagent-activity': SUBAGENT_ACTIVITY_UI_0_0_1,
   'trial-balance': TRIAL_BALANCE_UI_0_0_1,
   'trip-budget': TRIP_BUDGET_UI_0_0_1,
+  'trip-header': TRIP_HEADER_UI_0_0_1,
   'trip-itinerary': TRIP_ITINERARY_UI_0_0_1,
   'trip-options': TRIP_OPTIONS_UI_0_0_1,
   'trip-summary': TRIP_SUMMARY_UI_0_0_1,

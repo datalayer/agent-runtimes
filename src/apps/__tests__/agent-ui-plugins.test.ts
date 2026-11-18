@@ -38,8 +38,10 @@ const nameOf = (ref: unknown): string =>
 describe('the chat’s UI, merged', () => {
   it('is the agent’s, then its servers’, then its skills’, then its tools’, each once', () => {
     const ids = agentUiIdsOf('worker-traveller');
-    // The servers (kiwi, booking-com, google-maps) before the skills.
-    expect(ids.slice(0, 3)).toEqual([
+    // Its own (its title bar's header), then the servers (kiwi,
+    // booking-com, google-maps) before the skills.
+    expect(ids[0]).toBe('trip-header');
+    expect(ids.slice(1, 4)).toEqual([
       'trip-options',
       'trip-budget',
       'trip-itinerary',

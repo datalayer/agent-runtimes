@@ -263,6 +263,8 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 f"    settings={spec.get('settings') or {}!r},",
                 f"    renderers={list(spec.get('renderers') or [])!r},",
                 f"    placements={list(spec.get('placements') or [])!r},",
+                f"    header={spec.get('header')!r},",
+                f"    supersedes={list(spec.get('supersedes') or [])!r},",
                 f"    catalog={_py(str(spec.get('catalog') or ''))},",
                 "    components=[",
                 *[f"        {_py_component(c)}," for c in spec.get("components") or []],
@@ -369,6 +371,18 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 f"  settings: {json.dumps(spec.get('settings') or {}, ensure_ascii=False)},",
                 f"  renderers: {json.dumps(list(spec.get('renderers') or []))},",
                 f"  placements: {json.dumps(list(spec.get('placements') or []))},",
+                *(
+                    [
+                        f"  header: {json.dumps(spec['header'], indent=2, ensure_ascii=False)},"
+                    ]
+                    if spec.get("header")
+                    else []
+                ),
+                *(
+                    [f"  supersedes: {json.dumps(list(spec['supersedes']))},"]
+                    if spec.get("supersedes")
+                    else []
+                ),
                 f"  catalog: {_ts(str(spec.get('catalog') or ''))},",
                 f"  components: {json.dumps([{**c, 'events': c.get('events', [])} for c in spec.get('components') or []], indent=2, ensure_ascii=False)},",
                 "};",

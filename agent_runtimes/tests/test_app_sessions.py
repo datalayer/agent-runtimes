@@ -1393,6 +1393,74 @@ DEPTH = {
 }
 
 
+def test_the_title_bars_drop_downs_are_told_to_its_agent_for_that_run(
+    runtime: Runtime, local: TestClient
+) -> None:
+    """``forwardedProps.loop.header`` — the option each drop-down of a header
+    UI is on, told in its UI spec's words for the run; what the catalogue
+    does not have is refused, and nothing of it is kept in the conversation."""
+    from pydantic_ai.messages import ModelRequest
+
+    model = runtime.make("notes-assistant", dict(ASSISTANT), {"app_uid": "app-1"})
+    told: List[str] = []
+    heard = model.said
+
+    def said(messages: List[ModelMessage]) -> str:
+        told.append(
+            next(
+                m.instructions or ""
+                for m in reversed(messages)
+                if isinstance(m, ModelRequest)
+            )
+        )
+        return heard(messages)
+
+    model.said = said  # type: ignore[method-assign]
+    run: Dict[str, Any] = {
+        "threadId": "thread-header",
+        "runId": "run-1",
+        "state": None,
+        "messages": [{"id": "m1", "role": "user", "content": "Hi there"}],
+        "tools": [],
+        "context": [],
+        "forwardedProps": {"loop": {"header": {"shop-header": {"budget": "100"}}}},
+    }
+    url = "/api/v1/apps/agents/notes-assistant/ag-ui/"
+    assert answer_of(events_of(local.post(url, json=run))) == "Heard 1: Hi there"
+    assert "chosen in the chat's header: Under $100." in told[-1]
+    kept = sessions.session_of("thread-header")
+    assert kept is not None
+    assert all(m["role"] != "system" for m in kept.messages)
+
+    # The next run, on another option: only that one is told.
+    again = {
+        **run,
+        "runId": "run-2",
+        "messages": [
+            *run["messages"],
+            {"id": "m2", "role": "assistant", "content": "Heard 1: Hi there"},
+            {"id": "m3", "role": "user", "content": "And now?"},
+        ],
+        "forwardedProps": {"loop": {"header": {"shop-header": {"budget": "none"}}}},
+    }
+    events_of(local.post(url, json=again))
+    assert "chosen in the chat's header" not in told[-1]
+
+    for wrong, sentence in (
+        ({"shop-header": {"budget": "75"}}, "Budget has no option '75'."),
+        (
+            {"shop-header": {"basket": "3"}},
+            "The header 'shop-header' has no drop-down 'basket'.",
+        ),
+        ({"nope": {}}, "There is no header UI named 'nope'."),
+    ):
+        refused = local.post(
+            url, json={**run, "forwardedProps": {"loop": {"header": wrong}}}
+        )
+        assert refused.status_code == 422
+        assert refused.json()["detail"] == sentence
+
+
 def test_the_mode_a_run_says_is_told_to_its_agent_for_that_run(
     runtime: Runtime, local: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:

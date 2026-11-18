@@ -819,7 +819,18 @@ export function ChatMessageList({
   // The calls answered, for the agent's UI in the chat's chrome to read
   // (`apps/toolCards/toolResults`): the header chips say only what came back.
   const toolResults = useContext(ToolResultsContext);
+  // A conversation started over (it held messages, it holds none): what its
+  // calls said is forgotten, so the title bar starts over with it.
+  const heldItems = useRef(false);
   useEffect(() => {
+    if (displayItems.length === 0) {
+      if (heldItems.current) {
+        toolResults.clear();
+      }
+      heldItems.current = false;
+      return;
+    }
+    heldItems.current = true;
     toolResults.record(displayItems as never);
   }, [toolResults, displayItems]);
   const pagePlatform = useOptionalReactorPlatform();

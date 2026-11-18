@@ -157,6 +157,7 @@ import {
   type SessionFacts,
   LoopFrontendTool,
   LoopRunProps,
+  mergeChatExtras,
   LoopSlots,
   agentServerOf,
   noRuntimeSaid,
@@ -372,7 +373,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const agentNameRef = useRef<string>('');
   const extrasEntries = useContributions(LoopChatExtras);
   /*
-   * Every contribution, merged, a later one winning a key both set.
+   * Every contribution, merged, a later one winning a key both set — but
+   * the frontend tools, which add up (`mergeChatExtras`).
    *
    * Only the first used to be read, which made the extras the property of
    * whichever plugin registered first: the loop's own surface plugin
@@ -383,7 +385,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     () =>
       computed<LoopChatExtrasValue>(() =>
         extrasEntries.reduce<LoopChatExtrasValue>(
-          (merged, entry) => ({ ...merged, ...entry.value.extras.value }),
+          (merged, entry) => mergeChatExtras(merged, entry.value.extras.value),
           {},
         ),
       ),

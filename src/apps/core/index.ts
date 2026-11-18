@@ -1040,6 +1040,28 @@ export async function sendInstead(
   }
 }
 
+/**
+ * Two contributions' extras as one: a later one wins a key both set, but
+ * the frontend tools add up, each name once and the first kept — a header
+ * UI's tool beside a host example's, neither silencing the other.
+ */
+export function mergeChatExtras(
+  merged: LoopChatExtrasValue,
+  next: LoopChatExtrasValue,
+): LoopChatExtrasValue {
+  const tools = [...(merged.frontendTools ?? [])];
+  for (const tool of next.frontendTools ?? []) {
+    if (!tools.some(taken => taken.name === tool.name)) {
+      tools.push(tool);
+    }
+  }
+  return {
+    ...merged,
+    ...next,
+    ...(tools.length > 0 ? { frontendTools: tools } : {}),
+  };
+}
+
 export type ChatExtrasContribution = {
   /** Stable id, for the registry and the graph. */
   id: string;
@@ -1245,7 +1267,8 @@ export const LoopRunProps =
 
 /**
  * The `forwardedProps` of a run: what the contributions say, then what the
- * sender gave, the `loop` part merged key by key.
+ * sender gave, the `loop` part merged key by key, and its `header` (the
+ * title bar's drop-downs) by header UI.
  */
 export function runForwardedProps(
   contributed: readonly RunPropsContribution[],
@@ -1254,10 +1277,16 @@ export function runForwardedProps(
   let merged: Record<string, unknown> | undefined;
   for (const part of [...contributed.map(entry => entry.props()), given]) {
     if (!part) continue;
-    const loop = {
-      ...((merged?.loop as Record<string, unknown> | undefined) ?? {}),
-      ...((part.loop as Record<string, unknown> | undefined) ?? {}),
-    };
+    const before = (merged?.loop as Record<string, unknown> | undefined) ?? {};
+    const given = (part.loop as Record<string, unknown> | undefined) ?? {};
+    const loop: Record<string, unknown> = { ...before, ...given };
+    // The title bar's drop-downs, by header UI: each header says its own.
+    if (before.header && given.header) {
+      loop.header = {
+        ...(before.header as Record<string, unknown>),
+        ...(given.header as Record<string, unknown>),
+      };
+    }
     merged = { ...merged, ...part };
     if (Object.keys(loop).length > 0) {
       merged.loop = loop;

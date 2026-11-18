@@ -49,6 +49,7 @@ import {
   type ChromePlacement,
   type UiPlacement,
 } from './toolCards/chrome';
+import { awsHeaderPlugin } from './plugins/aws-header';
 import { AwsSavingsPlugin } from './plugins/aws-savings';
 import {
   AwsSavingsBadge,
@@ -56,8 +57,10 @@ import {
 } from './plugins/aws-savings-badge';
 import { BankReconciliationPlugin } from './plugins/bank-reconciliation';
 import { BasketTotalChip, basketTotalPlugin } from './plugins/basket-total';
+import { booksHeaderPlugin } from './plugins/books-header';
 import { BlueskyPostPreviewPlugin } from './plugins/bluesky-post-preview';
 import { EarthAreaChip, earthAreaPlugin } from './plugins/earth-area';
+import { earthHeaderPlugin } from './plugins/earth-header';
 import { EarthIndexPlugin } from './plugins/earth-index';
 import { EarthScenesPlugin } from './plugins/earth-scenes';
 import {
@@ -66,19 +69,23 @@ import {
 } from './plugins/linkedin-link';
 import { LinkedInPostPreviewPlugin } from './plugins/linkedin-post-preview';
 import { lockedUiPlugin } from './plugins/locked-ui';
+import { notebookHeaderPlugin } from './plugins/notebook-header';
 import { OdooContextChip, odooContextPlugin } from './plugins/odoo-context';
 import { PapPurchasePlugin } from './plugins/pap-purchase';
 import { ProductCardsPlugin } from './plugins/product-cards';
 import { ProductComparisonPlugin } from './plugins/product-comparison';
+import { shopHeaderPlugin } from './plugins/shop-header';
 import { ShoppingBasketPlugin } from './plugins/shopping-basket';
 import {
   SocialAccountsChips,
   SocialAccountsMessagePlugin,
   socialAccountsPlugin,
 } from './plugins/social-accounts';
+import { socialHeaderPlugin } from './plugins/social-header';
 import { StripeCheckoutPlugin } from './plugins/stripe-checkout';
 import { TrialBalancePlugin } from './plugins/trial-balance';
 import { TripBudgetPlugin } from './plugins/trip-budget';
+import { tripHeaderPlugin } from './plugins/trip-header';
 import { TripItineraryPlugin } from './plugins/trip-itinerary';
 import { TripOptionsPlugin } from './plugins/trip-options';
 import { TripSummaryChip, tripSummaryPlugin } from './plugins/trip-summary';
@@ -187,6 +194,20 @@ export const AGENT_UI_PLUGINS: Readonly<Record<string, AgentUiPlugin>> = {
     chrome: awsSavingsBadgePlugin,
     Chrome: AwsSavingsBadge,
   },
+  /*
+   * Each seed agent's title bar (18 November 2026): buttons, drop-downs and
+   * indicators, declared by its UI spec's `header` and set by the agent with
+   * the header's frontend tool (`toolCards/headerItems`). None needs a
+   * connection of the person's: a visitor's demo has them. A Loop
+   * workspace's (an Application's); `Chat` does not draw them.
+   */
+  'social-header': { needsConnection: false, chrome: socialHeaderPlugin },
+  'shop-header': { needsConnection: false, chrome: shopHeaderPlugin },
+  'books-header': { needsConnection: false, chrome: booksHeaderPlugin },
+  'trip-header': { needsConnection: false, chrome: tripHeaderPlugin },
+  'earth-header': { needsConnection: false, chrome: earthHeaderPlugin },
+  'aws-header': { needsConnection: false, chrome: awsHeaderPlugin },
+  'notebook-header': { needsConnection: false, chrome: notebookHeaderPlugin },
   // Stripe (test mode).
   'stripe-checkout': { needsConnection: true, message: StripeCheckoutPlugin },
 };
@@ -313,6 +334,27 @@ export function uiPluginIdsOfSpec(specId: string | undefined): string[] {
   return agentUiIdsOf(specId);
 }
 
+/**
+ * These choices without the UI another of them stands in for (a UI spec's
+ * `supersedes`: `shop-header` for `basket-total`…), whoever brought it: the
+ * fact is said once in the title bar. Only a UI that is drawn stands in for
+ * another (`drawn`): where a header UI is not (`Chat`, which draws the
+ * chips), the chip stays.
+ */
+export function withoutSuperseded<T extends { plugin: string }>(
+  choices: readonly T[],
+  drawn: (plugin: string) => boolean = () => true,
+): T[] {
+  const superseded = new Set(
+    choices
+      .filter(choice => drawn(choice.plugin))
+      .flatMap(choice => UI_CATALOGUE[choice.plugin]?.supersedes ?? []),
+  );
+  return superseded.size > 0
+    ? choices.filter(choice => !superseded.has(choice.plugin))
+    : [...choices];
+}
+
 const asChoice = (given: string | UiChoice | AgentUiChoice): AgentUiChoice =>
   typeof given === 'string'
     ? { plugin: given, placement: placementOf({ plugin: given }) }
@@ -331,7 +373,12 @@ export function agentUiPluginsFor(
 ): PluginRef[] {
   const seen = new Set<string>();
   const plugins: PluginRef[] = [];
-  for (const choice of (given ?? []).map(asChoice)) {
+  for (const choice of withoutSuperseded((given ?? []).map(asChoice), plugin =>
+    Boolean(
+      AGENT_UI_PLUGINS[plugin]?.chrome &&
+      !(options.anonymous && AGENT_UI_PLUGINS[plugin].needsConnection),
+    ),
+  )) {
     const entry = AGENT_UI_PLUGINS[choice.plugin];
     if (
       !entry ||
@@ -369,7 +416,9 @@ export function agentUiChromeOf(
     banner: [],
     panel: [],
   };
-  for (const choice of (given ?? []).map(asChoice)) {
+  for (const choice of withoutSuperseded((given ?? []).map(asChoice), plugin =>
+    Boolean(AGENT_UI_PLUGINS[plugin]?.Chrome),
+  )) {
     if (!isChromePlacement(choice.placement)) {
       continue;
     }
