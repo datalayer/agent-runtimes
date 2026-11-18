@@ -138,6 +138,11 @@ async def _show(tux: "CliTux") -> None:
                 f"      missing {', '.join(skill['missing_env_vars'])}",
                 style=STYLE_WARNING,
             )
+        elif skill.get("any_of_env_vars") and not skill.get("ready", True):
+            tux.console.print(
+                f"      needs one of {', '.join(skill['any_of_env_vars'])}",
+                style=STYLE_WARNING,
+            )
 
     if not running:
         tux.console.print()

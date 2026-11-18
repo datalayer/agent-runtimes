@@ -185,6 +185,41 @@ GITHUB_SKILL_SPEC_0_0_1 = SkillSpec(
     enabled=True,
 )
 
+IMAGE_STOCK_SKILL_SPEC_0_0_1 = SkillSpec(
+    id="image-stock",
+    version="0.0.1",
+    name="Stock Image Skill",
+    description="Stock photos searched on Unsplash, Pexels, Pixabay and Freepik (the ones the person has a key for), the credit line each asks for, and a photo downloaded into the workspace",
+    module="datalayer_skills.skills.image_stock",
+    package=None,
+    method=None,
+    path=None,
+    envvars=[],
+    optional_env_vars=[
+        "UNSPLASH_ACCESS_KEY:0.0.1",
+        "PEXELS_API_KEY:0.0.1",
+        "PIXABAY_API_KEY:0.0.1",
+        "FREEPIK_API_KEY:0.0.1",
+        "UNSPLASH_TIER:0.0.1",
+    ],
+    any_of_env_vars=[
+        "UNSPLASH_ACCESS_KEY:0.0.1",
+        "PEXELS_API_KEY:0.0.1",
+        "PIXABAY_API_KEY:0.0.1",
+        "FREEPIK_API_KEY:0.0.1",
+    ],
+    dependencies=["datalayer-skills>=0.7.0"],
+    install=InstallSpec(
+        type="python",
+        command='pip install "datalayer-skills>=0.7.0"',
+        note="Standard library only. One provider's key is enough; agent-skills 1.5.0 or later keeps it out without any.",
+    ),
+    tags=["image", "photo", "stock", "media"],
+    icon="@primer/octicons-react:image",
+    emoji="📷",
+    enabled=True,
+)
+
 IMAGE_SKILL_SPEC_0_0_1 = SkillSpec(
     id="image",
     version="0.0.1",
@@ -340,6 +375,7 @@ SKILLS_CATALOG: Dict[str, SkillSpec] = {
     "events": EVENTS_SKILL_SPEC_0_0_1,
     "fare-and-stay-comparison": FARE_AND_STAY_COMPARISON_SKILL_SPEC_0_0_1,
     "github": GITHUB_SKILL_SPEC_0_0_1,
+    "image-stock": IMAGE_STOCK_SKILL_SPEC_0_0_1,
     "image": IMAGE_SKILL_SPEC_0_0_1,
     "jokes": JOKES_SKILL_SPEC_0_0_1,
     "pdf": PDF_SKILL_SPEC_0_0_1,

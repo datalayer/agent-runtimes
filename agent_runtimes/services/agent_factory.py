@@ -773,7 +773,14 @@ def wire_skills_into_codemode(
 
     # --- 1. Generate skill bindings -------------------------------------------
     codegen = getattr(executor, "_codegen", None)
-    discovered = getattr(skills_toolset, "_discovered_skills", {})
+    # The skills offered now: one without the environment it needs is kept out
+    # of the toolset (agent-skills 1.5.0), and gets no binding either.
+    active_skills = getattr(skills_toolset, "get_active_skills", None)
+    discovered = (
+        active_skills()
+        if callable(active_skills)
+        else getattr(skills_toolset, "_discovered_skills", {})
+    )
     skills_metadata: list[dict[str, Any]] = []
 
     if codegen is not None and discovered:

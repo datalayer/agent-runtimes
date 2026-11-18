@@ -150,6 +150,18 @@ export const EARTHDATA_USERNAME_SPEC_0_0_1: EnvvarSpec = {
   emoji: '🔑',
 };
 
+export const FREEPIK_API_KEY_SPEC_0_0_1: EnvvarSpec = {
+  id: 'FREEPIK_API_KEY',
+  version: '0.0.1',
+  name: 'Freepik API Key',
+  description:
+    "API key for Freepik's stock content (its API is now served as Magnific's, with the same key), for the stock image skill to search and download its photos. Optional, as one stock image provider's key is enough.",
+  registrationUrl: 'https://www.magnific.com/api',
+  tags: ['authentication', 'api-key', 'images', 'stock', 'skill'],
+  icon: 'key',
+  emoji: '🔑',
+};
+
 export const GEMINI_API_KEY_SPEC_0_0_1: EnvvarSpec = {
   id: 'GEMINI_API_KEY',
   version: '0.0.1',
@@ -291,6 +303,30 @@ export const OPENROUTER_API_KEY_SPEC_0_0_1: EnvvarSpec = {
   emoji: '🔑',
 };
 
+export const PEXELS_API_KEY_SPEC_0_0_1: EnvvarSpec = {
+  id: 'PEXELS_API_KEY',
+  version: '0.0.1',
+  name: 'Pexels API Key',
+  description:
+    "API key for Pexels, for the stock image skill to search its photos (200 requests an hour). Optional, as one stock image provider's key is enough.",
+  registrationUrl: 'https://www.pexels.com/api/',
+  tags: ['authentication', 'api-key', 'images', 'stock', 'skill'],
+  icon: 'key',
+  emoji: '🔑',
+};
+
+export const PIXABAY_API_KEY_SPEC_0_0_1: EnvvarSpec = {
+  id: 'PIXABAY_API_KEY',
+  version: '0.0.1',
+  name: 'Pixabay API Key',
+  description:
+    "API key for Pixabay, for the stock image skill to search its photos (100 requests a minute). Optional, as one stock image provider's key is enough.",
+  registrationUrl: 'https://pixabay.com/api/docs/',
+  tags: ['authentication', 'api-key', 'images', 'stock', 'skill'],
+  icon: 'key',
+  emoji: '🔑',
+};
+
 export const SLACK_BOT_TOKEN_SPEC_0_0_1: EnvvarSpec = {
   id: 'SLACK_BOT_TOKEN',
   version: '0.0.1',
@@ -350,6 +386,30 @@ export const TAVILY_API_KEY_SPEC_0_0_1: EnvvarSpec = {
   emoji: '🔑',
 };
 
+export const UNSPLASH_ACCESS_KEY_SPEC_0_0_1: EnvvarSpec = {
+  id: 'UNSPLASH_ACCESS_KEY',
+  version: '0.0.1',
+  name: 'Unsplash Access Key',
+  description:
+    "Access key of an Unsplash application, for the stock image skill to search Unsplash's photos. Optional, as one stock image provider's key is enough. A new application is in demo mode (50 requests an hour); set UNSPLASH_TIER to production once Unsplash has approved it.",
+  registrationUrl: 'https://unsplash.com/oauth/applications',
+  tags: ['authentication', 'api-key', 'images', 'stock', 'skill'],
+  icon: 'key',
+  emoji: '🔑',
+};
+
+export const UNSPLASH_TIER_SPEC_0_0_1: EnvvarSpec = {
+  id: 'UNSPLASH_TIER',
+  version: '0.0.1',
+  name: 'Unsplash Tier',
+  description:
+    'The rate limit of the Unsplash application whose key is UNSPLASH_ACCESS_KEY, either demo (50 requests an hour, the default) or production (1000 an hour, once Unsplash approved the application). A setting, not a secret; optional.',
+  registrationUrl: 'https://unsplash.com/documentation#rate-limiting',
+  tags: ['setting', 'images', 'stock', 'skill'],
+  icon: 'gear',
+  emoji: '⚙️',
+};
+
 export const X_BEARER_TOKEN_SPEC_0_0_1: EnvvarSpec = {
   id: 'X_BEARER_TOKEN',
   version: '0.0.1',
@@ -378,6 +438,7 @@ export const ENVVAR_CATALOG: Record<string, EnvvarSpec> = {
   DISCORD_GUILD_ID: DISCORD_GUILD_ID_SPEC_0_0_1,
   EARTHDATA_PASSWORD: EARTHDATA_PASSWORD_SPEC_0_0_1,
   EARTHDATA_USERNAME: EARTHDATA_USERNAME_SPEC_0_0_1,
+  FREEPIK_API_KEY: FREEPIK_API_KEY_SPEC_0_0_1,
   GEMINI_API_KEY: GEMINI_API_KEY_SPEC_0_0_1,
   GITHUB_TOKEN: GITHUB_TOKEN_SPEC_0_0_1,
   GOOGLE_MAPS_API_KEY: GOOGLE_MAPS_API_KEY_SPEC_0_0_1,
@@ -389,11 +450,15 @@ export const ENVVAR_CATALOG: Record<string, EnvvarSpec> = {
   LLM_API_KEY: LLM_API_KEY_SPEC_0_0_1,
   OPENAI_API_KEY: OPENAI_API_KEY_SPEC_0_0_1,
   OPENROUTER_API_KEY: OPENROUTER_API_KEY_SPEC_0_0_1,
+  PEXELS_API_KEY: PEXELS_API_KEY_SPEC_0_0_1,
+  PIXABAY_API_KEY: PIXABAY_API_KEY_SPEC_0_0_1,
   SLACK_BOT_TOKEN: SLACK_BOT_TOKEN_SPEC_0_0_1,
   SLACK_CHANNEL_IDS: SLACK_CHANNEL_IDS_SPEC_0_0_1,
   SLACK_TEAM_ID: SLACK_TEAM_ID_SPEC_0_0_1,
   STRIPE_TEST_AGENT_API_KEY: STRIPE_TEST_AGENT_API_KEY_SPEC_0_0_1,
   TAVILY_API_KEY: TAVILY_API_KEY_SPEC_0_0_1,
+  UNSPLASH_ACCESS_KEY: UNSPLASH_ACCESS_KEY_SPEC_0_0_1,
+  UNSPLASH_TIER: UNSPLASH_TIER_SPEC_0_0_1,
   X_BEARER_TOKEN: X_BEARER_TOKEN_SPEC_0_0_1,
 };
 

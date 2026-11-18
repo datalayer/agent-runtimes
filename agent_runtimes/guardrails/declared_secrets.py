@@ -9,7 +9,11 @@ given is what the specs it is configured from **declare**, read off them:
 - each MCP server it reaches — the agent's ``mcp_servers`` and an
   application's ``connections`` — its ``envvars`` and every ``${VAR}`` its
   command line, its environment or its address names;
-- each skill its agent runs — the skill's ``envvars``;
+- each skill its agent runs — the skill's ``envvars``, and its
+  ``optional_env_vars`` (agentspecs 0.0.218: the stock image skill's provider
+  keys), given to the runtime and its sandbox when the account has them, never
+  required; a skill that says ``any_of_env_vars`` is left out, never refused,
+  when none of them is there;
 - a subagent the agent *is* by reference (``ref``), the same, read off that
   agentspec;
 - the harness its agent runs on (``harness: claude-code``) — the
@@ -368,14 +372,44 @@ def _harness_env_names(harness_id: str) -> FrozenSet[str]:
     return frozenset(str(name) for name in harness.requires.secrets)
 
 
-def _skill_env_names(skill_ref: Any) -> FrozenSet[str]:
+def _skill_spec(skill_ref: Any) -> Any:
     from agent_runtimes.specs.skills import get_skill_spec
 
     ref = _get(skill_ref, "id", "name") if not isinstance(skill_ref, str) else skill_ref
-    spec = get_skill_spec(str(ref or ""))
+    return get_skill_spec(str(ref or ""))
+
+
+def _names(refs: Any) -> FrozenSet[str]:
+    return frozenset(name for name in (env_name(ref) for ref in refs or []) if name)
+
+
+def _skill_env_names(skill_ref: Any) -> FrozenSet[str]:
+    spec = _skill_spec(skill_ref)
+    return frozenset() if spec is None else _names(spec.envvars)
+
+
+def skill_any_of_env_names(skill_ref: Any) -> FrozenSet[str]:
+    """A skill's activation rule: its ``any_of_env_vars``, one of which is enough."""
+    spec = _skill_spec(skill_ref)
     if spec is None:
         return frozenset()
-    return frozenset(name for name in (env_name(ref) for ref in spec.envvars) if name)
+    return _names(getattr(spec, "any_of_env_vars", None))
+
+
+def skill_optional_env_names(skill_ref: Any) -> FrozenSet[str]:
+    """
+    What a skill reads when the account has it: its ``optional_env_vars``.
+
+    Never required. With the names of its ``any_of_env_vars``, which are
+    optional each by itself (the stock image skill's provider keys, 18
+    November 2026).
+    """
+    spec = _skill_spec(skill_ref)
+    if spec is None:
+        return frozenset()
+    return _names(getattr(spec, "optional_env_vars", None)) | skill_any_of_env_names(
+        skill_ref
+    )
 
 
 def server_consumer(server_id: str) -> str:
@@ -429,9 +463,62 @@ class LeftOut:
     skills: Dict[str, List[str]] = field(default_factory=dict)
     #: By backend tool id: the linked account it lacks (agentspecs 0.0.189).
     tools: Dict[str, List[str]] = field(default_factory=dict)
+    #: By skill id, also in ``skills``: the secrets of which it has none and
+    #: one would do (its ``any_of_env_vars``, agentspecs 0.0.218).
+    one_of: Dict[str, List[str]] = field(default_factory=dict)
 
     def __bool__(self) -> bool:
         return bool(self.servers or self.skills or self.tools)
+
+    def needs(self, kind: str, key: str) -> Optional[str]:
+        """
+        What one left-out entry needs, by variable name and never by value.
+
+        ``kind`` is ``server``, ``skill`` or ``tool``: ``needs TAVILY_API_KEY``,
+        ``needs one of PEXELS_API_KEY, PIXABAY_API_KEY``, ``needs a linked X
+        account``. None for an entry that was not left out.
+        """
+        names = {"server": self.servers, "skill": self.skills, "tool": self.tools}[
+            kind
+        ].get(key)
+        if names is None:
+            return None
+        parts = [", ".join(names)] if names and kind != "tool" else []
+        if kind == "tool" and names:
+            parts.append(" or ".join(names))
+        if kind == "skill" and key in self.one_of:
+            parts.append(f"one of {', '.join(self.one_of[key])}")
+        return "needs " + " and ".join(parts) if parts else "not set up"
+
+    def as_names(self) -> Dict[str, Any]:
+        """
+        What was left out, for a page to show: names alone, never a value.
+
+        By kind then id: ``missing_env_vars`` (each is needed), ``one_of_env_vars``
+        (a skill's any-of rule: one is enough), ``linked_accounts`` (a backend
+        tool) and ``reason``, the same words as :meth:`needs`.
+        """
+        return {
+            "mcp_servers": {
+                key: {
+                    "missing_env_vars": list(names),
+                    "reason": self.needs("server", key),
+                }
+                for key, names in self.servers.items()
+            },
+            "skills": {
+                key: {
+                    "missing_env_vars": list(names),
+                    "one_of_env_vars": list(self.one_of.get(key, [])),
+                    "reason": self.needs("skill", key),
+                }
+                for key, names in self.skills.items()
+            },
+            "backend_tools": {
+                key: {"linked_accounts": list(names), "reason": self.needs("tool", key)}
+                for key, names in self.tools.items()
+            },
+        }
 
     def sentence(self) -> str:
         """What the agent is told, in its instructions: what is off and why."""
@@ -441,7 +528,18 @@ class LeftOut:
                 for key, names in self.servers.items()
             ]
             + [
-                f"{skill_consumer(key)} (no {', '.join(names)})"
+                f"{skill_consumer(key)} ("
+                + "; ".join(
+                    ([f"no {', '.join(names)}"] if names else [])
+                    + (
+                        [
+                            f"none of {', '.join(self.one_of[key])}, one of which is enough"
+                        ]
+                        if key in self.one_of
+                        else []
+                    )
+                )
+                + ")"
                 for key, names in self.skills.items()
             ]
             + [
@@ -493,6 +591,15 @@ class DeclaredSecrets:
     #: Whether ``at_least_one`` was decided by an application, through its own
     #: connections: merged with an agent's alone, the application's wins.
     groups_of_an_app: bool = False
+    #: Consumers set up by one at least of these (a skill's ``any_of_env_vars``,
+    #: agentspecs 0.0.218): ``the skill image-stock`` → its provider keys. With
+    #: none it is left out, never refused, whether the agent says it optional
+    #: or not.
+    any_of: Dict[str, FrozenSet[str]] = field(default_factory=dict)
+    #: What skills read when the account has it (their ``optional_env_vars``),
+    #: also in ``kernel`` and ``offered``. Never a reason to refuse a runtime:
+    #: where the sandbox may not hold them, their skill is left out.
+    skill_offered: FrozenSet[str] = frozenset()
 
     @property
     def runtime(self) -> FrozenSet[str]:
@@ -533,13 +640,26 @@ class DeclaredSecrets:
             ),
             linked={**self.linked, **other.linked},
             groups_of_an_app=self.groups_of_an_app or other.groups_of_an_app,
+            any_of={
+                key: self.any_of.get(key, frozenset())
+                | other.any_of.get(key, frozenset())
+                for key in {*self.any_of, *other.any_of}
+            },
+            skill_offered=self.skill_offered | other.skill_offered,
         )
 
     def _set_up(self, consumer: str, available: Callable[[str], bool]) -> bool:
         if consumer in self.linked:
             # Set up by a linked account, read off IAM with the runtime's social token.
             return any(account_linked(account) for account in self.linked[consumer])
-        return all(available(name) for name in self.consumers.get(consumer, ()))
+        return all(
+            available(name) for name in self.consumers.get(consumer, ())
+        ) and self._one_is_there(consumer, available)
+
+    def _one_is_there(self, consumer: str, available: Callable[[str], bool]) -> bool:
+        """Whether a consumer with an any-of rule has one of its secrets; True without a rule."""
+        names = self.any_of.get(consumer)
+        return not names or any(available(name) for name in names)
 
     def _counts(self, consumer: str, available: Callable[[str], bool]) -> bool:
         """
@@ -598,12 +718,23 @@ class DeclaredSecrets:
                 )
         return sentences
 
-    def left_out(self, available: Callable[[str], bool]) -> LeftOut:
-        """The optional consumers not set up, which the agent starts without."""
+    def left_out(
+        self, available: Callable[[str], bool], *, sandbox_holds: bool = True
+    ) -> LeftOut:
+        """
+        The consumers not set up, which the agent starts without.
+
+        Its ``optional`` ones, and any skill with an any-of rule none of whose
+        secrets is there. ``sandbox_holds`` is whether what the runtime is
+        given may reach its sandbox (not on a runtime its deployment's owner
+        did not launch): where it may not, a skill that reads optional secrets
+        there is left out too, having none to read.
+        """
         servers: Dict[str, List[str]] = {}
         skills: Dict[str, List[str]] = {}
         tools: Dict[str, List[str]] = {}
-        for consumer in sorted(self.optional):
+        one_of: Dict[str, List[str]] = {}
+        for consumer in sorted(self.optional | set(self.any_of)):
             if consumer in self.linked:
                 if not self._set_up(consumer, available):
                     tools[consumer[len(tool_consumer("")) :]] = [
@@ -611,10 +742,22 @@ class DeclaredSecrets:
                         for account in sorted(self.linked[consumer])
                     ]
                 continue
-            lacking = sorted(
-                name for name in self.consumers.get(consumer, ()) if not available(name)
+            lacking = (
+                sorted(
+                    name
+                    for name in self.consumers.get(consumer, ())
+                    if not available(name)
+                )
+                if consumer in self.optional
+                else []
             )
-            if not lacking:
+            none_of = (
+                sorted(self.any_of[consumer])
+                if consumer in self.any_of
+                and not (sandbox_holds and self._one_is_there(consumer, available))
+                else []
+            )
+            if not lacking and not none_of:
                 continue
             for prefix, into in (
                 (server_consumer(""), servers),
@@ -622,7 +765,9 @@ class DeclaredSecrets:
             ):
                 if consumer.startswith(prefix):
                     into[consumer[len(prefix) :]] = lacking
-        return LeftOut(servers=servers, skills=skills, tools=tools)
+                    if none_of:
+                        one_of[consumer[len(prefix) :]] = none_of
+        return LeftOut(servers=servers, skills=skills, tools=tools, one_of=one_of)
 
     def kernel_refused(self, available: Callable[[str], bool], who: str) -> List[str]:
         """Why ``who`` cannot run here, a sentence per secret its kernel would need.
@@ -636,7 +781,9 @@ class DeclaredSecrets:
             f"{who} is not available here: it needs {name} in its sandbox, and its "
             "owner's secrets reach a sandbox only on a runtime they launched themselves."
             for name in sorted(self.kernel)
-            if name not in self.offered or available(name)
+            # A skill's optional secret refuses nothing: its skill is left out.
+            if name not in self.skill_offered
+            and (name not in self.offered or available(name))
         ]
 
     def as_names(self) -> Dict[str, Any]:
@@ -681,6 +828,8 @@ def declared_secrets(
     optional: Set[str] = set()
     at_least_one: List[FrozenSet[str]] = []
     linked: Dict[str, FrozenSet[str]] = {}
+    any_of: Dict[str, FrozenSet[str]] = {}
+    skill_offered: Set[str] = set()
     seen_agents: Set[str] = set()
     for_a_deployment = on_a_deployment(app_instance)
 
@@ -737,17 +886,29 @@ def declared_secrets(
 
     def add_skill(skill: Any) -> None:
         names = _skill_env_names(skill)
-        if names:
+        unrequired = skill_optional_env_names(skill)
+        one_of = skill_any_of_env_names(skill)
+        if names or unrequired:
             label = _ref_id(
                 skill if isinstance(skill, str) else _get(skill, "id", "name")
             )
-            reserved = [name for name in names if is_reserved(name)]
+            reserved = sorted(name for name in names | unrequired if is_reserved(name))
             if reserved and for_a_deployment:
                 raise ReservedSecretName(
                     _reserved_sentence(f"The skill {label}", reserved)
                 )
-            consumers.setdefault(skill_consumer(label), set()).update(names)
+            if names:
+                consumers.setdefault(skill_consumer(label), set()).update(names)
             kernel.update(names)
+            # Given to the runtime and its sandbox when the account has them,
+            # never required (agentspecs 0.0.218).
+            kernel.update(unrequired)
+            offered.update(unrequired)
+            skill_offered.update(unrequired - names)
+            if one_of:
+                any_of[skill_consumer(label)] = (
+                    any_of.get(skill_consumer(label), frozenset()) | one_of
+                )
 
     def add_optional(said: Any) -> None:
         """The agent's ``optional``: what it starts without, and its groups."""
@@ -876,6 +1037,8 @@ def declared_secrets(
         at_least_one=tuple(at_least_one),
         linked=linked,
         groups_of_an_app=app_spec is not None,
+        any_of=any_of,
+        skill_offered=frozenset(skill_offered),
     )
 
 
@@ -986,6 +1149,8 @@ __all__ = [
     "server_consumer",
     "server_env_names",
     "optional_env_names",
+    "skill_optional_env_names",
+    "skill_any_of_env_names",
     "skill_consumer",
     "tool_consumer",
     "account_linked",

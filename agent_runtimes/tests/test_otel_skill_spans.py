@@ -59,6 +59,13 @@ def loading(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
     return ModelResponse(parts=[ToolCallPart("load_skill", {"skill_name": WHOAMI})])
 
 
+@pytest.fixture(autouse=True)
+def whoami_has_its_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The whoami skill needs its two variables to be offered at all (agent-skills 1.5.0)."""
+    monkeypatch.setenv("DATALAYER_API_KEY", "a-key")
+    monkeypatch.setenv("DATALAYER_RUN_URL", "https://example.datalayer.run")
+
+
 @pytest.fixture()
 def exported() -> Iterator[tuple[SDKTracerProvider, InMemorySpanExporter]]:
     memory = InMemorySpanExporter()

@@ -683,9 +683,27 @@ Earthdata connection's bearer does.
 | --- | --- |
 | the runtime's process | every declared secret |
 | an MCP server | its own, and no other server's |
-| the code sandbox (the kernel the model's code runs in) | the skills' and the servers' `sandbox_envvars` alone: a server's credential stays with the server |
+| the code sandbox (the kernel the model's code runs in) | the skills' (their `envvars`, and the `optional_env_vars` the account has) and the servers' `sandbox_envvars` alone: a server's credential stays with the server |
 | a person's notebook (a runtime with no agentspec and no application) | its kernel keeps the account's secrets (decided 2026-10-07) |
 | anything else | nothing: a secret no spec declares is given to nothing |
+
+**A skill's optional secrets, and its any-of rule** (agentspecs 0.0.218). A
+skill's `optional_env_vars` are given to the runtime and its sandbox when the
+account has them and are never required. A skill that says `any_of_env_vars`
+is activated when one at least of them is there: the stock image skill,
+`image-stock`, with one key among `UNSPLASH_ACCESS_KEY`, `PEXELS_API_KEY`,
+`PIXABAY_API_KEY` and `FREEPIK_API_KEY`, which a person sets in Settings ›
+Secrets under those names. With none, the agent starts without the skill,
+whether its spec lists it under `optional` or not: it is not offered its
+tools, and its instructions say which keys would set it up. With some, the
+skill offers those providers alone. Such a secret never refuses a runtime: on
+one its deployment's owner did not launch, whose sandbox holds none of the
+owner's secrets, the skill is left out. The toolset decides the same from the
+skill's own `SKILL.md` (`env`, agent-skills 1.5.0), read at each call: a skill
+whose required variable is not set, or none of whose any-of variables is, is
+not listed, not loaded and not run. `GET /api/v1/configure/skills` says for
+each skill its `optional_env_vars`, its `any_of_env_vars`, which are set
+(`set_env_vars`, by name) and whether it is `ready`.
 
 **An application's runtime is launched with its Appspec.** Whoever launches
 one for an application sends its Appspec with the launch —

@@ -192,6 +192,27 @@ def _kernel_names(declared: DeclaredSecrets) -> frozenset[str]:
     return declared.kernel if kernel_holds_owner_secrets() else frozenset()
 
 
+def left_out_of(declared: DeclaredSecrets) -> Any:
+    """
+    What an agent built from these declarations starts without, on this runtime, now.
+
+    The one place that decides it (a ``LeftOut``): its ``as_names()`` is what a
+    page reads, by variable name and never by value.
+    """
+    return _left_out(declared)
+
+
+def _left_out(declared: DeclaredSecrets) -> Any:
+    """What an agent starts without here: what is not set up in this runtime's
+    environment, and a skill whose optional secrets its sandbox may not hold."""
+    from agent_runtimes.apps.principal import kernel_holds_owner_secrets
+
+    return declared.left_out(
+        lambda name: bool((os.environ.get(name) or "").strip()),
+        sandbox_holds=kernel_holds_owner_secrets(),
+    )
+
+
 def _kernel_refused(
     declared: DeclaredSecrets, available: Callable[[str], bool], who: str
 ) -> list[str]:
@@ -2067,9 +2088,7 @@ async def create_agent(
 
         # What it declares optional and is not set up for is left out, and
         # it is told which (agentspecs 0.0.188, the user, 14 November 2026).
-        left_out = declared_by_it.left_out(
-            lambda name: bool((os.environ.get(name) or "").strip())
-        )
+        left_out = _left_out(declared_by_it)
         if left_out:
             request.skills = [
                 skill
@@ -6189,9 +6208,7 @@ async def configure_from_spec_endpoint(
     new_spec_dict.pop("jupyter_sandbox", None)
     # What it starts without is part of what it is: a secret set up since
     # the last configure recreates the agent with what it brings.
-    left_out_now = declared.left_out(
-        lambda name: bool((os.environ.get(name) or "").strip())
-    )
+    left_out_now = _left_out(declared)
     new_spec_dict["left_out"] = (
         sorted(left_out_now.servers)
         + sorted(left_out_now.skills)

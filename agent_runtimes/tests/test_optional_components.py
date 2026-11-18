@@ -41,7 +41,12 @@ def test_the_catalogue_says_what_the_marketer_and_the_shopper_start_without():
     # No bluesky server (agentspecs 0.0.192) nor x server (0.0.194): Bluesky and X
     # are read and acted on with the linked account.
     assert marketer.optional.mcp_servers == ["discord", "linkedin"]
-    assert marketer.optional.skills == ["crawl", "github", "datalayer-email"]
+    assert marketer.optional.skills == [
+        "crawl",
+        "github",
+        "datalayer-email",
+        "image-stock",
+    ]
     # Its posting tools, set up by a linked account (agentspecs 0.0.189), count for a network.
     assert marketer.optional.backend_tools == [
         "social-post-x",
@@ -157,7 +162,8 @@ def test_what_is_not_set_up_is_left_out_and_said():
     declared = declared_secrets(get_agent_spec("worker-marketer"))
     left = declared.left_out(_having(["GITHUB_TOKEN"]))
     assert left.servers == {"discord": NETWORKS["discord"]}
-    assert left.skills == {"crawl": ["TAVILY_API_KEY"]}
+    # image-stock requires nothing and has none of its provider keys (agentspecs 0.0.218).
+    assert left.skills == {"crawl": ["TAVILY_API_KEY"], "image-stock": []}
     assert left.tools == {
         "social-post-bluesky": ["a linked Bluesky account"],
         "social-read-bluesky": ["a linked Bluesky account"],
@@ -179,7 +185,8 @@ def test_what_is_not_set_up_is_left_out_and_said():
     assert "say that you cannot" in sentence
     everything = sum(NETWORKS.values(), []) + ["GITHUB_TOKEN", "TAVILY_API_KEY"]
     assert not declared.left_out(_having(everything)).servers
-    assert not declared.left_out(_having(everything)).skills
+    assert declared.left_out(_having(everything)).skills == {"image-stock": []}
+    assert not declared.left_out(_having([*everything, "PEXELS_API_KEY"])).skills
 
 
 def test_a_required_one_still_refuses_the_start():

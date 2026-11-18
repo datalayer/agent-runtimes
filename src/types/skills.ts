@@ -116,8 +116,10 @@ export interface SkillSpec {
   skillMetadata?: Record<string, string>;
   /** Environment variables required by this skill */
   requiredEnvVars: string[];
-  /** Optional environment variables */
+  /** Optional environment variables: given when the account has them, never required */
   optionalEnvVars?: string[];
+  /** Its activation rule: one at least of these must be set, or the skill is left out */
+  anyOfEnvVars?: string[];
   /** Python package dependencies */
   dependencies?: string[];
   /** How it is installed where an agent runs it */

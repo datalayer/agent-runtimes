@@ -139,6 +139,22 @@ class SkillSpec(BaseModel):
         default_factory=list,
         description="Environment variable IDs required by this skill",
     )
+    optional_env_vars: List[str] = Field(
+        default_factory=list,
+        description=(
+            "Environment variable IDs the skill reads when they are set: given "
+            "to the runtime and its sandbox when the account has them, never "
+            "required"
+        ),
+    )
+    any_of_env_vars: List[str] = Field(
+        default_factory=list,
+        description=(
+            "Its activation rule (agentspecs 0.0.218): one at least of these, "
+            "each among optional_env_vars, must be set, or the skill is not "
+            "activated and the agent starts without it"
+        ),
+    )
     dependencies: List[str] = Field(
         default_factory=list, description="Python package dependencies"
     )

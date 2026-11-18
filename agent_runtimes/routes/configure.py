@@ -758,14 +758,18 @@ async def list_catalog_skills(agent_id: str | None = None) -> dict[str, Any]:
         # Env var refs are versioned (`TAVILY_API_KEY:0.0.1`); the variable is
         # the part before the colon.
         required = [ref.split(":")[0] for ref in (spec.envvars or [])]
-        # `optional_env_vars` and `enabled` are written in the YAML but are not
-        # fields on SkillSpec, so pydantic drops them: read them defensively
-        # rather than assuming either shape.
+        # Given when the account has them, never required; of `any_of`, one at
+        # least must be set for the skill to be activated (agentspecs 0.0.218).
         optional = [
             str(ref).split(":")[0]
             for ref in (getattr(spec, "optional_env_vars", None) or [])
         ]
+        any_of = [
+            str(ref).split(":")[0]
+            for ref in (getattr(spec, "any_of_env_vars", None) or [])
+        ]
         missing = [name for name in required if not os.getenv(name)]
+        one_is_set = not any_of or any(os.getenv(name) for name in any_of)
 
         skills.append(
             {
@@ -780,8 +784,10 @@ async def list_catalog_skills(agent_id: str | None = None) -> dict[str, Any]:
                 "dependencies": list(spec.dependencies or []),
                 "required_env_vars": required,
                 "optional_env_vars": optional,
+                "any_of_env_vars": any_of,
+                "set_env_vars": [name for name in optional if os.getenv(name)],
                 "missing_env_vars": missing,
-                "ready": not missing,
+                "ready": not missing and one_is_set,
             }
         )
 
