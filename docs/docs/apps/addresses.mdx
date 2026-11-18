@@ -120,6 +120,44 @@ The same rule at its four addresses, from its "Who may open it":
 
 `poppy.json`, the Agent Card and the page's script bundle answer anybody.
 
+### A change takes effect at once
+
+On a runtime launched for a deployment, who may call is what the deployment says
+now, not what it said when the runtime started. Its record (ai-agents'
+`GET /api/ai-agents/v1/apps/internal/addresses/{slug}`, asked with the runtime's
+proof) is read again when a request comes and the last read is 10 seconds old or
+more (`access.POLICY_READ_SECONDS`), one read at a time: the requests that come
+meanwhile are answered with what it reads (`access.DeploymentPolicy`). Every way
+in asks it, at all four addresses: an API key, a Datalayer token, a personal
+agent's PAP token, another MCP client's token and the signed-in browser's cookie.
+
+- **Somebody removed from "People I invite"** is refused (`403`) on their first
+  request after that window. Their sign-ins at a company end once: each agent's
+  they signed in with, their personal agent's and any other MCP client's, as its
+  Disconnect does (its refresh and access tokens revoked, its Sessions go on
+  signed out); and the SDK is told their sign-ins are over
+  (`AccountSignOuts.signed_out_before`), so a token left anywhere is refused and
+  revoked when it is next presented. A conversation they are streaming at the
+  agent address (A2A), or any answer streamed to them by its page or by the MCP
+  server of an application that is no company, ends before its next event.
+- **Somebody added** is admitted on their first request after the window.
+- **A public deployment turned private** refuses anybody who does not say who
+  they are, and ends the sign-ins of anybody it does not admit, the same way.
+- **"Let other MCP clients sign in"** follows the same read: there is one reader
+  of the record.
+
+**When ai-agents does not answer**, a public deployment goes on answering
+anybody: there is nobody to keep out. A private one goes on answering from its
+last record read for 30 seconds after it (`access.POLICY_GRACE_SECONDS`), then
+admits **its owner alone** until a read succeeds again. It fails closed, since
+somebody removed meanwhile must not go on calling; and the owner stays in, since
+they own the application whatever "People I invite" says, and an outage should
+not lock them out of it. An outage ends no sign-in: only a record read that no
+longer admits somebody does.
+
+A runtime served locally (`agent-runtimes serve --mode`) keeps the
+configuration's policy, below, for as long as it runs.
+
 ### A company's MCP server: OAuth
 
 An application that is a company (`pap.company` enabled) has an issuer, its
@@ -202,10 +240,10 @@ saying a personal agent is needed: nothing at this address asks a person to
 approve, and only their personal agent does. Its calls are recorded as that
 person's, as a token's are.
 
-Turned off, the company stops offering it within a minute (the deployment's
-record is read again at most once a minute when a request of the company's
-comes, `servers.CompanyAsDeployed`), and Datalayer ends the sign-ins it gave at
-once. A client registering itself, or asking for tokens without a client
+Turned off, the company stops offering it within 10 seconds (the deployment's
+record is read again when a request comes and the last read is 10 seconds old,
+the same read as who may call, `servers.CompanyAsDeployed`), and Datalayer ends
+the sign-ins it gave at once. A client registering itself, or asking for tokens without a client
 assertion, is capped by address (`servers.UnsignedRequestsCap`, the deployment's
 calls a minute).
 
@@ -291,7 +329,8 @@ On Datalayer the platform says them: a person's own agent is named
 `{agent}-{handle}` (`marketer-eric`), told to the runtime as it is assigned; a
 deployment's name is its address, said by Datalayer with what it runs, once its
 owner turned its addresses on. A runtime launched for a deployment reads who may
-call it from Datalayer, with its proof; the others from the variables above.
+call it from Datalayer, with its proof, and again while it runs (a change takes
+effect at once, above); the others from the variables above.
 
 A company on a runtime launched for a deployment keeps its sign-ins, Sessions,
 device codes and operations where Datalayer keeps that deployment's, through

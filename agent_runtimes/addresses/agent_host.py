@@ -29,7 +29,12 @@ from typing import Any, Awaitable, Callable, Optional
 from agent_runtimes.addresses import browser_sign_in
 from agent_runtimes.addresses.access import client_address
 from agent_runtimes.addresses.addressed import AddressedAgent
-from agent_runtimes.addresses.asgi import answer_json, headers_of, peer_of
+from agent_runtimes.addresses.asgi import (
+    answer_json,
+    headers_of,
+    peer_of,
+    while_admitted,
+)
 from agent_runtimes.addresses.hosts import studio_url
 from agent_runtimes.addresses.operations import OperationError
 from agent_runtimes.addresses.poppy import poppy_document
@@ -84,7 +89,8 @@ class AgentHost:
         self.agent_id = agent_id
         self.company = company
         #: The company as its deployment says it now (its owner may have let other MCP
-        #: clients sign in, or stopped): asked before each of its requests is answered.
+        #: clients sign in, or stopped; somebody removed has their sign-ins ended): asked
+        #: before each of its requests is answered.
         self.current_company = current_company
         self.host = addressed.hosts.host("agent")
 
@@ -150,10 +156,14 @@ class AgentHost:
                 self.addressed.access.count(caller)
                 rest = path[len("/a2a") :].lstrip("/")
                 routed = f"/api/v1/a2a/agents/{self.agent_id}/{rest}"
-                await self.app(
+                # A conversation streamed here ends once its caller may call no more.
+                await while_admitted(
+                    self.app,
                     {**scope, "path": routed, "raw_path": routed.encode()},
                     receive,
                     send,
+                    self.addressed.access,
+                    caller.uid,
                 )
                 return
             if path == "/" and scope.get("method") in ("GET", "HEAD"):

@@ -51,6 +51,34 @@ def peer_of(scope: dict) -> str:
     return str(client[0] or "")
 
 
+class _AccessEnded(Exception):
+    """A streamed answer's caller is no longer admitted: the answer was ended."""
+
+
+async def while_admitted(
+    app: Any, scope: dict, receive: Any, send: Any, access: Any, uid: str
+) -> None:
+    """``app``'s answer; a streamed one (a conversation's events) ends before its next
+    chunk once ``access`` (an ``AddressAccess``) no longer admits ``uid`` — somebody
+    removed from "People I invite", anybody nobody names once it turned private. The
+    policy is asked as at every request (read again at most every
+    ``POLICY_READ_SECONDS``): the stream closes, and asking again is refused."""
+
+    async def checked(message: dict) -> None:
+        if message.get("type") == "http.response.body" and message.get("more_body"):
+            if not (await access.current_policy()).admits(uid):
+                await send(
+                    {"type": "http.response.body", "body": b"", "more_body": False}
+                )
+                raise _AccessEnded()
+        await send(message)
+
+    try:
+        await app(scope, receive, checked)
+    except* _AccessEnded:
+        pass
+
+
 def guarded(
     app: Any,
     addressed: AddressedAgent,
@@ -95,11 +123,11 @@ def guarded(
             return
         token = caller.set(found)
         try:
-            await app(scope, receive, send)
+            await while_admitted(app, scope, receive, send, addressed.access, found.uid)
         finally:
             caller.reset(token)
 
     return guard
 
 
-__all__ = ["answer_json", "guarded", "headers_of", "peer_of"]
+__all__ = ["answer_json", "guarded", "headers_of", "peer_of", "while_admitted"]

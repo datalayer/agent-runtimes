@@ -35,11 +35,12 @@ import uvicorn
 from agent_runtimes.addresses.access import (
     AddressAccess,
     AddressPolicy,
+    DeploymentPolicy,
     either_token,
     iam_key_checker,
     iam_token_checker,
+    lost_access,
     policy_from_environment,
-    policy_of_deployment,
     read_deployment_record,
 )
 from agent_runtimes.addresses.addressed import (
@@ -258,7 +259,7 @@ class RuntimeAddresses:
                 company,
                 current_company=(
                     CompanyAsDeployed(addressed, agent_id).current
-                    if company is not None and launched
+                    if company is not None and addressed.access.source is not None
                     else None
                 ),
             )
@@ -364,10 +365,6 @@ def pap_token_checker(addressed: AddressedAgent) -> Any:
     return check
 
 
-#: How long what a deployment says of other MCP clients is taken as read.
-MCP_CLIENTS_READ_SECONDS = 60.0
-
-
 def mcp_clients_of(record: Dict[str, Any], policy: AddressPolicy) -> bool:
     """Whether the deployment lets other MCP clients sign in: its owner turned it on
     (``mcp_clients``), and it is private — a public one is open at its MCP address
@@ -376,56 +373,74 @@ def mcp_clients_of(record: Dict[str, Any], policy: AddressPolicy) -> bool:
 
 
 class CompanyAsDeployed:
-    """A runtime's company, built again when its deployment's "Let other MCP clients
-    sign in" changed: the record is read again at most once a minute, when a request
-    of the company's comes. Its records are Datalayer's, so nothing is forgotten; a
-    record that cannot be read leaves the company as it is."""
+    """A runtime's company, as its deployment's record says it now.
 
-    def __init__(
-        self,
-        addressed: AddressedAgent,
-        agent_id: str,
-        *,
-        read: Any = read_deployment_record,
-        clock: Any = None,
-    ) -> None:
-        import time
+    Told of each read of the record by the one reader of it, the access check's
+    :class:`~agent_runtimes.addresses.access.DeploymentPolicy` (read again at most
+    every ``POLICY_READ_SECONDS``, when a request comes):
 
+    - "Let other MCP clients sign in" turned: the company is built again, with or
+      without them. Its records are Datalayer's, so nothing is forgotten;
+    - somebody it admitted is admitted no more (removed from "People I invite", or
+      the deployment turned private): their sign-ins at the company end, once — each
+      agent's they signed in with, a personal agent's or another MCP client's, as its
+      Disconnect does (``CompanyService.disconnect``): its tokens revoked, its
+      Sessions signed out. The SDK refuses what is left on its next request
+      (``DatalayerAccounts.signed_out_before``).
+
+    A record that cannot be read changes nothing here.
+    """
+
+    def __init__(self, addressed: AddressedAgent, agent_id: str) -> None:
         self.addressed = addressed
         self.agent_id = agent_id
-        self.read = read
-        self.clock = clock or time.monotonic
-        self.read_at = self.clock()
-        self._lock = asyncio.Lock()
+        source = addressed.access.source
+        if source is None:
+            raise ValueError("A company as deployed is a deployment's: it has none.")
+        source.listen(self.read)
 
     async def current(self) -> Any:
+        """The company, the deployment's record read again first when it is time to."""
+        await self.addressed.access.refresh()
+        return self.addressed.company
+
+    async def read(
+        self, record: Dict[str, Any], before: AddressPolicy, after: AddressPolicy
+    ) -> None:
         addressed = self.addressed
         assert addressed.hosts is not None
-        if self.clock() - self.read_at < MCP_CLIENTS_READ_SECONDS:
-            return addressed.company
-        async with self._lock:
-            if self.clock() - self.read_at < MCP_CLIENTS_READ_SECONDS:
-                return addressed.company
-            self.read_at = self.clock()
-            try:
-                record = await self.read(addressed.hosts.name)
-            except Exception as error:  # noqa: BLE001 - said; it answers as it did
-                logger.warning(
-                    "The deployment at %s was not read again: %s",
-                    addressed.hosts.name,
-                    error,
-                )
-                return addressed.company
-            said = mcp_clients_of(record, addressed.access.policy)
-            if said != addressed.mcp_clients:
-                addressed.mcp_clients = said
-                addressed.company = build_company_of(addressed, self.agent_id)
+        said = mcp_clients_of(record, after)
+        if said != addressed.mcp_clients:
+            addressed.mcp_clients = said
+            addressed.company = build_company_of(addressed, self.agent_id)
+            logger.info(
+                "%s %s other MCP clients sign in",
+                addressed.hosts.name,
+                "lets" if said else "no longer lets",
+            )
+        if lost_access(before, after):
+            ended = await end_sign_ins_not_admitted(addressed.company, after)
+            if ended:
                 logger.info(
-                    "%s %s other MCP clients sign in",
+                    "%s: the sign-ins of %d people no longer allowed ended",
                     addressed.hosts.name,
-                    "lets" if said else "no longer lets",
+                    len(ended),
                 )
-            return addressed.company
+
+
+async def end_sign_ins_not_admitted(company: Any, policy: AddressPolicy) -> set[str]:
+    """End every sign-in at ``company`` of an account ``policy`` does not admit, each
+    agent's as its Disconnect does; the accounts whose sign-ins ended."""
+    if company is None:
+        return set()
+    service = company.service
+    ended: set[str] = set()
+    for client_id, account_id in (await service.open_work()).sign_ins:
+        if policy.admits(str(account_id)):
+            continue
+        await service.disconnect(client_id, account_id)
+        ended.add(str(account_id))
+    return ended
 
 
 async def addressed_in_runtime(
@@ -465,15 +480,23 @@ async def addressed_in_runtime(
         )
         acts_for = (os.environ.get(ACTS_FOR_VARIABLE) or "").strip()
         role = "personal" if acts_for else "app"
-    policy: AddressPolicy
     mcp_clients = False
-    if slug and launched_for():
-        record = await read_deployment_record(slug)
-        policy = policy_of_deployment(record)
-        mcp_clients = mcp_clients_of(record, policy)
-    else:
-        policy = policy_from_environment()
     _, key_checker, token_checker = _policy_and_checkers()
+    if slug and launched_for():
+        # Who may call is its deployment's, read again while it runs.
+        source = DeploymentPolicy(
+            slug, await read_deployment_record(slug), read=read_deployment_record
+        )
+        mcp_clients = mcp_clients_of(source.record, source.policy)
+        access = AddressAccess(
+            source=source, key_checker=key_checker, token_checker=token_checker
+        )
+    else:
+        access = AddressAccess(
+            policy_from_environment(),
+            key_checker=key_checker,
+            token_checker=token_checker,
+        )
     calls = None
     if slug and launched_for():
         # Every call recorded on its deployment (who, which operation, what it cost).
@@ -482,9 +505,7 @@ async def addressed_in_runtime(
         calls = CallRecorder(ai_agents_sender(slug))
     return AddressedAgent(
         app=app,
-        access=AddressAccess(
-            policy, key_checker=key_checker, token_checker=token_checker
-        ),
+        access=access,
         agent_source=runtime_agent_source(agent_id),
         hosts=hosts,
         role=role,  # type: ignore[arg-type]
@@ -546,7 +567,8 @@ def build_company_of(addressed: AddressedAgent, agent_id: str) -> Any:
         application=A2AApplication(
             f"http://127.0.0.1:{port}/api/v1/a2a/agents/{agent_id}/", http_client=client
         ),
-        accounts=DatalayerAccounts(),
+        # Whose sign-ins are over: those of an account its deployment admits no more.
+        accounts=DatalayerAccounts(addressed.access),
         http_client=client,
         device_page=f"{addressed.hosts.agent}{DEVICE_PATH}",
         plugins=plugins,
@@ -626,6 +648,7 @@ __all__ = [
     "addressed_in_runtime",
     "build_company_of",
     "company_of",
+    "end_sign_ins_not_admitted",
     "mcp_clients_of",
     "pap_token_checker",
     "mode_app",

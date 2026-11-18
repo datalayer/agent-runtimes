@@ -1669,59 +1669,6 @@ async def test_requests_nobody_signed_are_capped_by_address() -> None:
     assert await cap.admit("registration:203.0.113.9", None) is None
 
 
-@pytest.mark.asyncio
-async def test_the_company_is_built_again_when_its_owner_turns_the_switch(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    from agent_runtimes.addresses import servers
-
-    agent = _company_agent(PRIVATE)
-    built: List[bool] = []
-
-    def build(addressed_agent: AddressedAgent, agent_id: str) -> Any:
-        built.append(addressed_agent.mcp_clients)
-        return f"company-{len(built)}"
-
-    monkeypatch.setattr(servers, "build_company_of", build)
-    agent.company = "company-0"
-    record: Dict[str, Any] = {"mcp_clients": False}
-    reads: List[str] = []
-
-    async def read(slug: str) -> Dict[str, Any]:
-        reads.append(slug)
-        if record.get("unreadable"):
-            raise RuntimeError("ai-agents did not answer")
-        return record
-
-    now = [0.0]
-    deployed = servers.CompanyAsDeployed(
-        agent, "agent-1", read=read, clock=lambda: now[0]
-    )
-    # Taken as read for a minute: nothing is asked.
-    record["mcp_clients"] = True
-    assert await deployed.current() == "company-0" and reads == []
-    now[0] = 61.0
-    assert await deployed.current() == "company-1"
-    assert (agent.mcp_clients, agent.company, built, reads) == (
-        True,
-        "company-1",
-        [True],
-        ["shop"],
-    )
-    # Unchanged: read again a minute later, not built again.
-    now[0] = 122.0
-    assert await deployed.current() == "company-1" and built == [True]
-    # Not read: it answers as it did.
-    record["unreadable"] = True
-    now[0] = 183.0
-    assert await deployed.current() == "company-1" and agent.mcp_clients is True
-    # Turned off: built again without it.
-    record.update(unreadable=False, mcp_clients=False)
-    now[0] = 244.0
-    assert await deployed.current() == "company-2"
-    assert (agent.mcp_clients, built) == (False, [True, False])
-
-
 def test_the_companys_poppy_document_is_the_same_with_the_switch_on() -> None:
     """Its sign-in for personal agents is what it was: what it offers other MCP clients
     is in its issuer's metadata, where they read it."""

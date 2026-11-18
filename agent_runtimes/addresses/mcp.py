@@ -204,11 +204,13 @@ async def mcp_client_caller(
     scheme, _, token = authorization.partition(" ")
     if scheme.lower() != "bearer":
         return None
+    # Who may call, as the deployment says now: the switch and the people both.
+    policy = await addressed.access.current_policy()
     issued = await mcp_client_token(addressed, token.strip())
     if issued is None:
         return None
     uid = str(issued.account_id)
-    if not addressed.mcp_clients or not addressed.access.policy.admits(uid):
+    if not addressed.mcp_clients or not policy.admits(uid):
         raise OperationError(403, NOT_ALLOWED)
     return Caller(kind="token", uid=uid, address=client_address(headers, peer))
 
@@ -273,13 +275,16 @@ def company_oauth(addressed: AddressedAgent) -> OAuthExtension:
     hosts = addressed.hosts
     assert hosts is not None
     offered = _offered_scopes(addressed)
-    policy = addressed.access.policy
 
-    def admitted(uid: str) -> None:
-        if not policy.admits(uid):
+    async def admitted(uid: str) -> None:
+        # Who may call, as the deployment says now: never a copy kept from before.
+        if not (await addressed.access.current_policy()).admits(uid):
             raise Forbidden(NOT_ALLOWED)
 
     async def verify(token: str) -> Optional[AccessToken]:
+        # The deployment read again first: the company is built again with it when
+        # its owner turned "Let other MCP clients sign in".
+        await addressed.access.refresh()
         company = addressed.company
         issued = (
             await company.service.access_token_for(token, hosts.mcp)
@@ -290,7 +295,7 @@ def company_oauth(addressed: AddressedAgent) -> OAuthExtension:
             if issued.public and not addressed.mcp_clients:
                 # Another MCP client's token, at a company that takes none (any more).
                 return None
-            admitted(str(issued.account_id))
+            await admitted(str(issued.account_id))
             return AccessToken(
                 token=token,
                 client_id=str(issued.client_id),
@@ -307,7 +312,7 @@ def company_oauth(addressed: AddressedAgent) -> OAuthExtension:
         uid = await checker(token) if checker is not None else None
         if not uid:
             return None
-        admitted(uid)
+        await admitted(uid)
         # A Datalayer token is its holder's own authority here, not a delegation.
         return AccessToken(
             token=token, client_id=DATALAYER_CLIENT, scopes=list(offered), subject=uid
@@ -320,7 +325,7 @@ def company_oauth(addressed: AddressedAgent) -> OAuthExtension:
         if key and checker is not None:
             uid = await checker(key)
             if uid:
-                admitted(uid)
+                await admitted(uid)
                 return AccessToken(
                     token=key,
                     client_id=API_KEY_CLIENT,
@@ -329,7 +334,7 @@ def company_oauth(addressed: AddressedAgent) -> OAuthExtension:
                 )
             return None
         if (
-            policy.visibility == "public"
+            (await addressed.access.current_policy()).visibility == "public"
             and not key
             and not headers.get("authorization")
         ):

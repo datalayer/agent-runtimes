@@ -435,7 +435,8 @@ class ApprovedOperationsApi:
         if found is None:
             return ApiResult.not_found()
         operation, in_path = found
-        policy = self.operations.access.policy
+        # Who may call, as the deployment says now: never a copy kept from before.
+        policy = await self.operations.access.current_policy()
         if not policy.admits(call.account_id or ""):
             # Who may call a private company is its owner's to say, here as at every address.
             return ApiResult(403, {"error": "access_denied"})

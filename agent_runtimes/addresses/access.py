@@ -16,12 +16,16 @@ The same rule for its agent, MCP, API and web hosts:
 What a key or a token says is asked of whoever can tell (:class:`KeyChecker`,
 :class:`TokenChecker`): IAM for a Datalayer key or token, the company service
 for a PAP token. The policy is the deployment's, read from ai-agents
-(:func:`read_policy`), or the configuration's for a local run
+(:func:`read_deployment_record`) and read again while the runtime runs
+(:class:`DeploymentPolicy`: somebody removed is refused within
+:data:`POLICY_READ_SECONDS`), or the configuration's for a local run
 (:func:`policy_from_environment`).
 """
 
 from __future__ import annotations
 
+import asyncio
+import logging
 import os
 import time
 from collections import deque
@@ -30,6 +34,7 @@ from typing import Any, Awaitable, Callable, Deque, Dict, Literal, Mapping, Opti
 
 from agent_runtimes.addresses.operations import OperationError
 
+logger = logging.getLogger(__name__)
 #: Says whose a Datalayer API key is: its account's uid, or ``None``.
 KeyChecker = Callable[[str], Awaitable[Optional[str]]]
 #: Says whose a bearer token is: its account's uid, or ``None``.
@@ -119,21 +124,169 @@ def client_address(headers: Mapping[str, str], peer: str) -> str:
     return forwarded.split(",")[0].strip() if forwarded else peer
 
 
-class AddressAccess:
-    """The access check of one agent's addresses (one per process, shared by its servers)."""
+#: How long a deployment's record read from ai-agents is taken as current: somebody
+#: its owner removed from "People I invite" is refused within this.
+POLICY_READ_SECONDS = 10.0
+#: How long a private deployment keeps answering from its last record read when
+#: ai-agents does not answer; after it, its owner alone is admitted until it answers.
+POLICY_GRACE_SECONDS = 30.0
+
+#: Told of each record read (``record``, the policy before, the policy now).
+RecordListener = Callable[
+    [Dict[str, Any], "AddressPolicy", "AddressPolicy"], Awaitable[None]
+]
+
+
+class DeploymentPolicy:
+    """Who may call a deployment's addresses, as its record says now.
+
+    The record (ai-agents' ``GET /apps/internal/addresses/{slug}``) is read again when
+    a request comes and the last read is :data:`POLICY_READ_SECONDS` old or more: one
+    read at a time, the requests that come meanwhile answered with what it reads. It is
+    the one reader of the record in the runtime: its listeners (:meth:`listen`) are told
+    of each read — the company built again when "Let other MCP clients sign in" turned,
+    the sign-ins of somebody removed ended.
+
+    When ai-agents cannot be read, a **public** deployment goes on answering as it was
+    (there is nobody to keep out). A **private** one goes on answering from its last
+    record read for :data:`POLICY_GRACE_SECONDS` after it, and then admits its owner
+    alone until a read succeeds: it fails closed, since somebody removed in the meantime
+    must not go on calling, while its owner is its owner whatever "People I invite"
+    says and is never kept out of their own application by an outage.
+    """
 
     def __init__(
         self,
-        policy: AddressPolicy,
+        slug: str,
+        record: Mapping[str, Any],
         *,
+        read: Callable[[str], Awaitable[Mapping[str, Any]]],
+        clock: Callable[[], float] = time.monotonic,
+        rate_per_minute: int = DEFAULT_RATE_PER_MINUTE,
+    ) -> None:
+        self.slug = slug
+        self.read = read
+        self.clock = clock
+        self.rate_per_minute = rate_per_minute
+        self.record: Dict[str, Any] = dict(record)
+        #: The policy of the last record read.
+        self.policy = policy_of_deployment(record, rate_per_minute)
+        #: When a read was last asked, and when one last succeeded.
+        self.read_at = self.read_ok_at = clock()
+        self.listeners: list[RecordListener] = []
+        self._lock = asyncio.Lock()
+
+    def listen(self, listener: RecordListener) -> None:
+        """Tell ``listener`` of each record read from now on."""
+        self.listeners.append(listener)
+
+    @property
+    def current(self) -> AddressPolicy:
+        """The policy to admit by now: the last read's, or its owner's alone when a
+        private deployment's record has not been read for longer than the grace."""
+        policy = self.policy
+        if (
+            policy.visibility == "private"
+            and self.clock() - self.read_ok_at > POLICY_GRACE_SECONDS
+        ):
+            return AddressPolicy(
+                "private",
+                owner_uid=policy.owner_uid,
+                rate_per_minute=policy.rate_per_minute,
+            )
+        return policy
+
+    def _fresh(self) -> bool:
+        return self.clock() - self.read_at < POLICY_READ_SECONDS
+
+    async def refresh(self) -> None:
+        """Read the record again when the last read is old: at most one read a window."""
+        if self._fresh():
+            return
+        async with self._lock:
+            if self._fresh():
+                return
+            self.read_at = self.clock()
+            try:
+                record = dict(await self.read(self.slug))
+                policy = policy_of_deployment(record, self.rate_per_minute)
+            except Exception as error:  # noqa: BLE001 - said; `current` fails closed
+                logger.warning(
+                    "Who may call %s was not read again: %s", self.slug, error
+                )
+                return
+            before, self.record, self.policy = self.policy, record, policy
+            self.read_ok_at = self.clock()
+            if before != policy:
+                logger.info("Who may call %s changed", self.slug)
+            for listener in self.listeners:
+                try:
+                    await listener(record, before, policy)
+                except Exception as error:  # noqa: BLE001 - said; the others are told
+                    logger.warning(
+                        "A change of who may call %s was not followed: %s",
+                        self.slug,
+                        error,
+                    )
+
+
+def lost_access(before: AddressPolicy, after: AddressPolicy) -> bool:
+    """Whether somebody ``before`` admitted is not admitted ``after``: anybody, when a
+    public deployment turned private; somebody removed, else."""
+    if after.visibility == "public":
+        return False
+    if before.visibility == "public":
+        return True
+    return any(
+        not after.admits(uid) for uid in (before.owner_uid, *before.allowed) if uid
+    )
+
+
+class AddressAccess:
+    """The access check of one agent's addresses (one per process, shared by its servers).
+
+    Its policy is the configuration's, fixed; or a deployment's, read again from
+    ai-agents (``source``, a :class:`DeploymentPolicy`): every check asks
+    :meth:`current_policy`, never a copy kept from before."""
+
+    def __init__(
+        self,
+        policy: Optional[AddressPolicy] = None,
+        *,
+        source: Optional[DeploymentPolicy] = None,
         key_checker: Optional[KeyChecker] = None,
         token_checker: Optional[TokenChecker] = None,
         clock: Callable[[], float] = time.monotonic,
     ) -> None:
-        self.policy = policy
+        if (policy is None) == (source is None):
+            raise ValueError(
+                "An access check has a policy or a deployment's, not both."
+            )
+        self.source = source
+        self._policy = policy if policy is not None else source.policy  # type: ignore[union-attr]
         self.key_checker = key_checker
         self.token_checker = token_checker
-        self.rate = RateCap(policy.rate_per_minute, clock)
+        self.rate = RateCap(self._policy.rate_per_minute, clock)
+
+    @property
+    def policy(self) -> AddressPolicy:
+        """Who may call by now, as last read (:meth:`current_policy` reads it again)."""
+        return self.source.current if self.source is not None else self._policy
+
+    @property
+    def last_read(self) -> AddressPolicy:
+        """The policy of the deployment's last record read, whatever the grace says."""
+        return self.source.policy if self.source is not None else self._policy
+
+    async def refresh(self) -> None:
+        """Read the deployment's record again, when it is time to."""
+        if self.source is not None:
+            await self.source.refresh()
+
+    async def current_policy(self) -> AddressPolicy:
+        """Who may call now: the deployment's record read again when it is old."""
+        await self.refresh()
+        return self.policy
 
     async def _who(self, headers: Mapping[str, str]) -> tuple[str, str]:
         """``(kind, uid)`` from the request's credential; ``("anonymous", "")`` without one."""
@@ -183,7 +336,8 @@ class AddressAccess:
         """The caller, when they may call at all (not counted); 401 or 403 otherwise."""
         kind, uid = await self._who(headers)
         caller = Caller(kind=kind, uid=uid, address=client_address(headers, peer))  # type: ignore[arg-type]
-        if self.policy.visibility == "private":
+        policy = await self.current_policy()
+        if policy.visibility == "private":
             if not uid:
                 raise OperationError(
                     401,
@@ -191,7 +345,7 @@ class AddressAccess:
                     "call with your Datalayer API key or token as a Bearer "
                     "(Authorization: Bearer <key>).",
                 )
-            if not self.policy.admits(uid):
+            if not policy.admits(uid):
                 raise OperationError(403, "Its owner has not allowed you to call it.")
         return caller
 
@@ -343,13 +497,18 @@ __all__ = [
     "AddressPolicy",
     "AddressRecordUnread",
     "Caller",
+    "DeploymentPolicy",
     "KeyChecker",
+    "POLICY_GRACE_SECONDS",
+    "POLICY_READ_SECONDS",
     "RateCap",
+    "RecordListener",
     "TokenChecker",
     "client_address",
     "either_token",
     "iam_key_checker",
     "iam_token_checker",
+    "lost_access",
     "policy_from_environment",
     "policy_of_deployment",
     "read_deployment_record",
