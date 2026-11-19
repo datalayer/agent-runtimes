@@ -69,9 +69,18 @@ import {
 import { LinkedInPostPreviewPlugin } from './plugins/linkedin-post-preview';
 import { lockedUiPlugin } from './plugins/locked-ui';
 import { notebookHeaderPlugin } from './plugins/notebook-header';
+import { analysisHeaderPlugin } from './plugins/analysis-header';
 import { OdooContextChip, odooContextPlugin } from './plugins/odoo-context';
 import { NoticesPlugin } from './plugins/notices';
 import { PageDeckPlugin, pageDeckSidePlugin } from './plugins/page-deck';
+import {
+  PageExcalidrawPlugin,
+  pageExcalidrawSidePlugin,
+} from './plugins/page-excalidraw';
+import {
+  PageMermaidPlugin,
+  pageMermaidSidePlugin,
+} from './plugins/page-mermaid';
 import { PageSheetPlugin, pageSheetSidePlugin } from './plugins/page-sheet';
 import { PapPurchasePlugin } from './plugins/pap-purchase';
 import { ProductCardsPlugin } from './plugins/product-cards';
@@ -218,6 +227,7 @@ export const AGENT_UI_PLUGINS: Readonly<Record<string, AgentUiPlugin>> = {
   'earth-header': { needsConnection: false, chrome: earthHeaderPlugin },
   'aws-header': { needsConnection: false, chrome: awsHeaderPlugin },
   'notebook-header': { needsConnection: false, chrome: notebookHeaderPlugin },
+  'analysis-header': { needsConnection: false, chrome: analysisHeaderPlugin },
   /*
    * What an agent builds in the conversation with frontend tools run in the
    * page (18 November 2026): the Marketer's deck, the Accountant's sheet.
@@ -233,6 +243,18 @@ export const AGENT_UI_PLUGINS: Readonly<Record<string, AgentUiPlugin>> = {
     needsConnection: false,
     message: PageSheetPlugin,
     side: pageSheetSidePlugin,
+  },
+  // The Analyst's canvas and diagrams (19 November 2026): the tools of
+  // @datalayer/reactor-excalidraw and @datalayer/reactor-mermaid, in the page.
+  'page-excalidraw': {
+    needsConnection: false,
+    message: PageExcalidrawPlugin,
+    side: pageExcalidrawSidePlugin,
+  },
+  'page-mermaid': {
+    needsConnection: false,
+    message: PageMermaidPlugin,
+    side: pageMermaidSidePlugin,
   },
   /*
    * Every agent's: it opens and closes the side panels (`side-panels`), and

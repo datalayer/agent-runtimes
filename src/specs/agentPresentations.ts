@@ -51,6 +51,17 @@ export const AGENT_PRESENTATIONS: Record<string, AgentPresentation> = {
     presentation:
       'Work with Odoo accounting data to reconcile invoices and payments, analyze\njournal balances, and prepare close-ready summaries.\n\n- Reads your Odoo books: invoices, payments, journals and ledgers\n- Lists unpaid invoices and the customers behind them\n- Matches payments against open invoices and flags what does not reconcile\n- Prepares a close summary with the balances that moved\n- Changes nothing in the books without a person\n\n[Watch it in the Sales and Accounting Stage](/stages?stage=sales-and-accounting)',
   },
+  'worker-analyst': {
+    id: 'worker-analyst',
+    version: '0.0.1',
+    name: 'Analyst',
+    emoji: '📐',
+    description:
+      "Works out how a system, a process or a plan fits together and draws it — Mermaid diagrams checked by Mermaid's own parser, and Excalidraw drawings you can draw on with it — then says what the picture shows and what it leaves open.",
+    tagline: 'Works out how it fits, and draws it',
+    presentation:
+      "Works out how a system, a process or a plan fits together and draws it —\nMermaid diagrams checked by Mermaid's own parser, and Excalidraw drawings\nyou can draw on with it — then says what the picture shows and what it\nleaves open.\n\n- Asks what the parts are before it draws them\n- Writes flowcharts, sequences, class and entity models, states and timelines in Mermaid\n- Checks every diagram with Mermaid's parser, and fixes the line it names\n- Sketches freer pictures on an Excalidraw canvas, arrows bound to their shapes\n- Says what the diagram leaves out, and where it guessed\n\n[The seed agents, in slides](/visitors/decks/agents/seed-agents)",
+  },
   'worker-marketer': {
     id: 'worker-marketer',
     version: '0.0.1',

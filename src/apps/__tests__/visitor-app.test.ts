@@ -164,6 +164,7 @@ describe('a visitor’s application', () => {
       'demo-terra',
       'demo-aws-steward',
       'demo-jupyter-data-analyst',
+      'demo-analyst',
     ];
     for (const id of demos) {
       const bundled = getApp(id);

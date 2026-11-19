@@ -74,6 +74,7 @@ const HEADERS = [
   'earth-header',
   'aws-header',
   'notebook-header',
+  'analysis-header',
 ];
 
 /** Each seed agent, its public demo and its header UI. */
@@ -85,6 +86,7 @@ const SEED: Record<string, [string, string]> = {
   'worker-terra': ['demo-terra', 'earth-header'],
   'worker-steward-aws': ['demo-aws-steward', 'aws-header'],
   'jupyter-data-analyst': ['demo-jupyter-data-analyst', 'notebook-header'],
+  'worker-analyst': ['demo-analyst', 'analysis-header'],
 };
 
 const item = (ui: string, id: string): UiHeaderItemSpec =>
@@ -153,7 +155,7 @@ describe('a header UI in the catalogue', () => {
     }
   });
 
-  it('shows a button, a drop-down and each kind of indicator among the seven', () => {
+  it('shows a button, a drop-down and each kind of indicator among the eight', () => {
     const items = HEADERS.flatMap(ui => headerSpecOf(ui).items);
     expect(new Set(items.map(each => each.kind))).toEqual(
       new Set(['action', 'choice', 'indicator']),
