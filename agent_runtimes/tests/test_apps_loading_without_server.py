@@ -21,17 +21,20 @@ import pytest
 
 PACKAGE = Path(__file__).resolve().parents[1]
 REPO = PACKAGE.parent
-CATALOGUE_APP = REPO / "agentspecs" / "agentspecs" / "apps" / "customer-interview.yaml"
 
 
 def test_an_application_and_its_deployment_load_without_ag_ui() -> None:
-    """A catalogue application with code, its agent a Cog, loads with `ag_ui` blocked."""
+    """A catalogue application with code, its agent a Cog, loads with `ag_ui` blocked.
+
+    Its document is read from the installed ``agentspecs`` package.
+    """
     pytest.importorskip("agentspecs.apps")
-    assert CATALOGUE_APP.is_file()
     script = textwrap.dedent(
-        f"""
+        """
         import sys
         sys.modules["ag_ui"] = None  # any import of ag_ui fails
+
+        from importlib.resources import files
 
         import yaml
 
@@ -39,7 +42,9 @@ def test_an_application_and_its_deployment_load_without_ag_ui() -> None:
         from agent_runtimes.apps.loading import load_app
         from agent_runtimes.specs.apps import APP_BUILT
 
-        document = yaml.safe_load(open({str(CATALOGUE_APP)!r}).read())
+        document = yaml.safe_load(
+            (files("agentspecs") / "apps" / "customer-interview.yaml").read_text()
+        )
         assert APP_BUILT[document["id"]] == "python", "an application with code"
         app = load_app(document)
         assert app.agent.startswith("cog-"), app.agent
