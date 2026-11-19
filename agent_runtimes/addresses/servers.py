@@ -181,7 +181,7 @@ class RuntimeAddresses:
             "yes",
         )
 
-    async def start(self, host: str = "0.0.0.0") -> None:
+    async def start(self, host: str = "0.0.0.0") -> None:  # nosec B104 - the pod's address servers answer on its own IP
         """Start the three servers, answering 503 until the agent is made."""
         for mode, port in PORTS.items():
             server = _Server(

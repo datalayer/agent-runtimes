@@ -724,7 +724,12 @@ class ApiBudgetCapability(AbstractCapability[Any]):
                 continue
             try:
                 args = call.args_as_dict()
-            except Exception:  # noqa: BLE001 - unreadable arguments are the approval's to show
+            except Exception as error:  # noqa: BLE001 - unreadable arguments are the approval's to show
+                logger.debug(
+                    "Usage limit: %s's arguments could not be read (%s); left to the approval.",
+                    call.tool_name,
+                    error,
+                )
                 continue
             unit, most, _, _ = self.estimate(call.tool_name, dict(args))
             if not unit:
