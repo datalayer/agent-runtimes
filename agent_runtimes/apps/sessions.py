@@ -152,6 +152,7 @@ from agent_runtimes.apps.session import (
     shown_step,
 )
 from agent_runtimes.apps.speech import HeardSpeech
+from agent_runtimes.apps.switches import ConversationSwitches
 from agent_runtimes.apps.uploads import (
     given_refused,
     media_part,
@@ -742,6 +743,8 @@ class LiveSession:
     """What its last pause gave its agent's memory: ``{saved, turns}``, with ``refused`` when it took nothing, or ``{}`` without memory."""
     remembered_turns: int = 0
     """How many of its turns its agent's memory was given already."""
+    switches: ConversationSwitches = field(default_factory=ConversationSwitches)
+    """What the conversation switched of its agent's MCP tools and skills: in force during its turns alone (`apps.switches`)."""
 
     # The code's, for an application written in Python.
     host: Any = None
@@ -1250,6 +1253,7 @@ class LiveSession:
         async def runner() -> None:
             """The turn, framed, its failure said on the stream."""
             from agent_runtimes.apps.memory import remember_for
+            from agent_runtimes.apps.switches import enter_conversation_switches
             from agent_runtimes.apps.visitors import (
                 enter_battle_run,
                 enter_visitor_run,
@@ -1259,6 +1263,9 @@ class LiveSession:
             # It remembers for whoever opened the session, each person apart,
             # a visitor not signed in nothing.
             remember_for(self.opened_by, token)
+            # What this conversation switched, for its turn alone: never the
+            # agent's, which every conversation with it shares.
+            enter_conversation_switches(self.agent_id, self.switches)
             # A visitor's turn calls its models with their own token, and
             # reads only; anybody else's with what it always did.
             use_turn_token(token if visitor else "")
