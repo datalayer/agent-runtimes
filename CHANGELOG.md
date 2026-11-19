@@ -9,6 +9,8 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
+- **1.6.98** (19 November 2026), with agentspecs 0.1.4: the MCP and skills dots open the same overlay as the footer's menus, with the switches back; a conversation's switches on the session API, also where no monitoring stream is open.
+
 - **1.6.97** (19 November 2026), with agentspecs 0.1.4: everything below that says "not released yet" — the Analyst, the eighth seed agent (its Excalidraw and Mermaid panels, @datalayer/reactor-excalidraw and @datalayer/reactor-mermaid ^1.3.11).
 
 - **The Analyst, the eighth seed agent** (19 November 2026; not released yet; the user: "a seed agent in the technology family called Analyst, which will have mermaid and excalidraw frontend tools"). Specs regenerated with agentspecs 0.1.4 (`worker-analyst`, `demo-analyst`). Two page UIs run a reactor plugin's tools in the page: `page-excalidraw` (`@datalayer/reactor-excalidraw` 1.3.10, its eleven tools over the conversation's drawings, drawn by Excalidraw, editable) and `page-mermaid` (`@datalayer/reactor-mermaid` 1.3.10, its six tools, each source checked by Mermaid's parser before it is kept), through `apps/pageTools/reactorTools`; the header `analysis-header`; `check-circle`, `paintbrush` and `workflow` among the header icons; `@excalidraw/mermaid-to-excalidraw` for drawing Mermaid as shapes. With agentspecs 0.1.4 (`agentspecs>=0.1.4`), whose env-vars say OPENAI_API_KEY, ANTHROPIC_API_KEY and OPENROUTER_API_KEY are required for those direct providers on a Datalayer runtime too (`specs/envvars` regenerated). Docs: App renderer. Tests: page-diagrams (9), and the seed agents' lists now eight.
