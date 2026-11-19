@@ -722,6 +722,9 @@ async def ensure_address_agent(app_key: str) -> str:
             "deployment_uid": str(deployment.get("uid") or ""),
             "version": int(deployment.get("version") or 0),
             "visitor_app": app_key,
+            # Whose deployment it is, as ai-agents said it: a demo of the
+            # account that keeps the demo books reaches them (`battle_books`).
+            "owner_uid": str(deployment.get("account_uid") or ""),
         }
         held = (agent_routes._agentspecs.get(name) or {}).get("app_instance") or {}
         if held and all(held.get(key) == value for key, value in instance.items()):

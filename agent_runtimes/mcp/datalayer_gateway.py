@@ -112,6 +112,7 @@ def toolsets_for_the_run(
     companies: tuple[tuple[str, str], ...] = (),
     company_tools: frozenset[str] | None = None,
     renew: Callable[[str], Awaitable[str]] | None = None,
+    owners_books: frozenset[str] = frozenset(),
 ) -> list[Any]:
     """
     A run's toolsets, with the Datalayer gateway reached as the run.
@@ -148,6 +149,10 @@ def toolsets_for_the_run(
         after the deployment moved to a new spec version): given the stale
         token, the new one, or `""` for none. Given to the toolsets reached
         with `token`, never to those reached with `users_token` or the books.
+    owners_books : frozenset[str]
+        The gateway's servers a visitor's run of a public demo of the account
+        that keeps the demo books reaches with that account's own key
+        (`battle_books.owners_servers_of_the_run`); none elsewhere.
 
     Returns
     -------
@@ -175,7 +180,7 @@ def toolsets_for_the_run(
         # key; a server started with it is left out of any other run.
         from agent_runtimes.apps.battle_books import books_bearer
 
-        books = books_bearer(server_id)
+        books = books_bearer(server_id, owners_books)
         if books is not None:
             bearer = books
         renews = renew if books is None and server_id not in in_users_name else None

@@ -411,7 +411,12 @@ class Address:
             return 404, {"detail": "No application is at this address."}
         return 200, {
             "visitor": True,
-            "deployment": {"uid": "dep-1", "app_uid": "app-1", "version": self.version},
+            "deployment": {
+                "uid": "dep-1",
+                "app_uid": "app-1",
+                "version": self.version,
+                "account_uid": "u-owner",
+            },
             "spec": ASSISTANT,
             "session": {
                 "opens": self.opens,
@@ -461,6 +466,8 @@ def test_an_address_is_made_here_once_and_again_when_its_version_moves(
         "deployment_uid": "dep-1",
         "version": 2,
         "visitor_app": "at:notes",
+        # Whose deployment it is (a demo of the books' account reaches them).
+        "owner_uid": "u-owner",
     }
     address.version = 3
     asyncio.run(ensure_address_agent("at:notes"))
@@ -697,6 +704,7 @@ def test_the_kept_runtime_talks_to_a_visitor_of_its_own_address(
         "deployment_uid": "dep-1",
         "version": 2,
         "visitor_app": "at:notes",
+        "owner_uid": "u-owner",
     }
     answered = client.post(
         "/api/v1/apps/agents/at-notes/ag-ui/", headers=visitor, json=agui("thread-k1")

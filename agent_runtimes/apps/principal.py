@@ -1264,6 +1264,13 @@ async def gateway_toolsets_of_the_run(
         if await visitors_pap.ensure(deployment):
             visitors_pap.enter_run(deployment)
             let_in = dict(visitors_pap.companies_of(deployment))
+        # A public demo of the account that keeps the demo books reaches the
+        # gateway's servers it connects to read only in its owner's account
+        # with that account's own key (`battle_books`): the Accountant's demo
+        # reads the books the Stages' Accounting reads.
+        from agent_runtimes.apps.battle_books import owners_servers_of_the_run
+
+        owners_books = await owners_servers_of_the_run(agent_id, instance)
         return toolsets_for_the_run(
             toolsets,
             principal_token(deployment) or "" if let_in else "",
@@ -1277,6 +1284,7 @@ async def gateway_toolsets_of_the_run(
             renew=renewer_after_execution_ended(
                 deployment, _visitors_renewal(deployment)
             ),
+            owners_books=owners_books,
         )
     from agent_runtimes.apps.acting import acting_token, servers_in_users_name
 

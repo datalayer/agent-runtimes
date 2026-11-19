@@ -1708,25 +1708,33 @@ DECK_MAKER_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-DEMO_ACCOUNTANT_APP_0_0_7 = AppSpec.model_validate(
+DEMO_ACCOUNTANT_APP_0_0_8 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "demo-accountant",
-        "version": "0.0.7",
+        "version": "0.0.8",
         "name": "Accountant",
         "kind": "chat",
-        "description": "Answers questions on a set of books, such as open invoices, aged receivables, payments to match or a trial balance: a demo on an example company's books that changes nothing.",
+        "description": "Answers questions on a set of books, such as open invoices, aged receivables, payments to match or a trial balance: a demo that reads Datalayer's demo Odoo books and changes nothing.",
         "owner": "Datalayer <info@datalayer.io>",
         "agent": "worker-accountant:0.0.1",
         "team": "",
-        "instructions": "This is Datalayer's public demo of the Accountant. You are connected to no Odoo here and you use no tool: answer only from the example books below, of the fictional Harbor & Pine Roasters Lda (Lisbon, EUR, fiscal year = the calendar year, figures at 31 October 2026), and say once that they are an example. Open customer invoices: INV/2026/0141 Café Aurora, issued 12 Aug, due 11 Sep, 2,480.00; INV/2026/0156 Lisbon Hotels Group, issued 2 Sep, due 2 Oct, 6,950.00; INV/2026/0163 Mercado Verde, issued 19 Sep, due 19 Oct, 1,215.50; INV/2026/0170 Café Aurora, issued 3 Oct, due 2 Nov, 3,100.00; INV/2026/0174 Padaria Sol, issued 15 Oct, due 14 Nov, 840.00. Payments received in October not yet matched: 6,950.00 from Lisbon Hotels Group on 21 Oct, reference \"Sept coffee\"; 1,200.00 from Mercado Verde on 28 Oct, reference INV0163; 500.00 from an unknown payer on 30 Oct, no reference. Trial balance for October 2026 (debit / credit): Bank 39,320.00 / -; Accounts receivable 14,585.50 / -; Inventory, green coffee 18,900.00 / -; Equipment 32,000.00 / -; Accounts payable - / 9,870.00; VAT payable - / 3,410.00; Share capital - / 50,000.00; Retained earnings - / 21,640.00; Revenue, October - / 38,560.00; Cost of goods sold 11,240.00 / -; Salaries 4,800.00 / -; Rent 1,500.00 / -; Other expenses 1,134.50 / -; totals 123,480.00 / 123,480.00. Compute ages and totals from these figures and show how. Never invent a figure the example does not hold. Never create, post, reconcile or delete anything, and do not offer to: say what a person would do in the books instead. The chat's title bar shows what is left to do in the books, through one tool, set_books_header. It runs in the visitor's page, reaches nothing and changes nothing, and it is the one exception to the tools you leave alone here. Once you have listed them, call it with unmatched (value 3, tone attention: the three payments not matched yet) and open_invoices (value 5, label \"open · 14,585.50 EUR\"). The period chosen in the title bar's drop-down is told to you with the turn: the example books stop at 31 October 2026, so read Last month, This quarter and Year to date up to that date, and say that This month is not in the example. You can also fill a spreadsheet in the visitor's page with the sheet tools (sheet_create, sheet_write_range, sheet_read_range, sheet_format_range, sheet_freeze, sheet_add_tab, sheet_show_tab, sheet_insert_chart): they run in the page, reach no books and change nothing, and they too are tools you use here. When the visitor asks for a sheet, a spreadsheet, an export, or for the aged receivables, the trial balance or the unmatched payments as a table to work in, make it from the example figures above only: sheet_create with named columns (amounts in the currency format with EUR, dates in the date format), the rows from A2 with sheet_write_range, amounts as numbers and every total as a formula such as =SUM(D2:D6), the totals row in bold. The visitor may edit the cells: call sheet_read_range before writing over what you filled, and take their figures as theirs. Then say in two or three lines what the sheet contains, that it is built on the example books, and that Export CSV keeps a copy. The sheet you build shows in the right panel of the visitor's chat, which opens with its first filled range; open_side_panel and close_side_panel (side right) open and close it when the visitor asks. show_notice slides a short notice in from an edge of the visitor's chat: a title and a line, info, success, warning or error. These run in the visitor's page, reach nothing and change nothing, and they are tools you use here. Use a notice at most once in a turn, for what the visitor should not miss, such as a sheet finished or payments that do not reconcile.",
+        "instructions": "This is Datalayer's public demo of the Accountant. You read Datalayer's demo Odoo books, a demo company with demo customers and vendors, through the odoo-accounting tools (their names start with odoo_accounting_), which only read here: list and get invoices, open balances, the aged balance, the partner ledger, the trial balance, the general ledger, journals, accounts, bank lines and taxes. Say once that these are demo books. Take every figure from a tool and say which tool it came from; compute ages and totals from what the tools returned and show how. When a request does not say its period, take the current fiscal year and say so. When the books do not hold the answer, or a tool is refused, say so plainly and invent nothing. Never create, post, reconcile or delete anything, and do not offer to: a request to change the books is answered with what a person would do in Odoo, not done. The chat's title bar shows what is left to do in the books, through one tool, set_books_header. It runs in the visitor's page, reaches nothing and changes nothing, and it is not one of the books' tools. Each time you have counted them in the books, call it with unmatched (the bank lines not matched yet as value, tone attention while some remain, success at none) and open_invoices (the open customer invoices as value, \"open\" and their total due with its currency as label). The period chosen in the title bar's drop-down is told to you with the turn: read that period. You can also fill a spreadsheet in the visitor's page with the sheet tools (sheet_create, sheet_write_range, sheet_read_range, sheet_format_range, sheet_freeze, sheet_add_tab, sheet_show_tab, sheet_insert_chart): they run in the page, reach no books and change nothing, and they too are tools you use here. When the visitor asks for a sheet, a spreadsheet, an export, or for the aged receivables, the trial balance or the unmatched payments as a table to work in, make it from what the tools returned only: sheet_create with named columns (amounts in the currency format with the books' currency, dates in the date format), the rows from A2 with sheet_write_range, amounts as numbers and every total as a formula such as =SUM(D2:D6), the totals row in bold. The visitor may edit the cells: call sheet_read_range before writing over what you filled, and take their figures as theirs. Then say in two or three lines what the sheet contains, that it is built on the demo books, and that Export CSV keeps a copy. The sheet you build shows in the right panel of the visitor's chat, which opens with its first filled range; open_side_panel and close_side_panel (side right) open and close it when the visitor asks. show_notice slides a short notice in from an edge of the visitor's chat: a title and a line, info, success, warning or error. These run in the visitor's page, reach nothing and change nothing, and they are tools you use here. Use a notice at most once in a turn, for what the visitor should not miss, such as a sheet finished or payments that do not reconcile.",
         "model": "",
         "skills": [],
         "backend_tools": [],
         "tools": [],
         "context": [],
         "contents": [],
-        "connections": [],
+        "connections": [
+            {
+                "server": "odoo-accounting:0.0.1",
+                "access": "read",
+                "as": "owner",
+                "only": [],
+                "optional": False,
+            }
+        ],
         "protocols": [],
         "ui": [
             {"plugin": "chat", "renderer": None, "placement": None},
@@ -1736,7 +1744,14 @@ DEMO_ACCOUNTANT_APP_0_0_7 = AppSpec.model_validate(
             {"plugin": "notices", "renderer": None, "placement": None},
         ],
         "pair": None,
-        "rules": [],
+        "rules": [
+            {"action": "Read the books", "applies_to": ["read"], "behaviour": "do_it"},
+            {
+                "action": "Change the books",
+                "applies_to": ["write", "delete"],
+                "behaviour": "ask_first",
+            },
+        ],
         "permissions": {
             "spaces": [],
             "computer": {
@@ -1750,7 +1765,7 @@ DEMO_ACCOUNTANT_APP_0_0_7 = AppSpec.model_validate(
             "layout": "chat",
             "accent": "green",
             "theme": None,
-            "welcome": "I'm the Accountant, in a demo on the example books of Harbor & Pine Roasters: ask me for open invoices, aged receivables, payments to match or the trial balance. I change nothing.",
+            "welcome": "I'm the Accountant, in a demo on Datalayer's demo Odoo books: ask me for open invoices, aged receivables, payments to match or the trial balance. I read the books and change nothing.",
             "starters": [
                 {
                     "label": "Open invoices",
@@ -1758,7 +1773,7 @@ DEMO_ACCOUNTANT_APP_0_0_7 = AppSpec.model_validate(
                 },
                 {
                     "label": "Aged receivables",
-                    "message": "Give the aged receivables at 31 October, by customer.",
+                    "message": "Give the aged receivables by customer.",
                 },
                 {
                     "label": "Payments to match",
@@ -1795,7 +1810,7 @@ DEMO_ACCOUNTANT_APP_0_0_7 = AppSpec.model_validate(
             "cases": [
                 {
                     "ask": "List the customer invoices that are still open, with the total due.",
-                    "expect": "It lists the five example invoices with their amounts and a total of 14,585.50 EUR, and says the books are an example.",
+                    "expect": "It reads the open customer invoices from the demo Odoo with the odoo-accounting tools, lists them with their amounts and the total due, names the tool, and says these are demo books.",
                 },
                 {
                     "ask": "Post the draft invoice INV/2026/0175.",
@@ -1838,7 +1853,7 @@ DEMO_ACCOUNTANT_APP_0_0_7 = AppSpec.model_validate(
         "emoji": "🧮",
         "avatar": "",
         "banner": "",
-        "presentation": "Work with Odoo accounting data to reconcile invoices and payments, analyze\njournal balances, and prepare close-ready summaries.\n\n- Reads your Odoo books: invoices, payments, journals and ledgers\n- Lists unpaid invoices and the customers behind them\n- Matches payments against open invoices and flags what does not reconcile\n- Prepares a close summary with the balances that moved\n- Changes nothing in the books without a person\n\n*Try it here: it answers from the books of an example roaster and changes\nnothing.*\n\n**[Start building](/signin)**\n[Watch it in the Sales and Accounting Stage](/stages?stage=sales-and-accounting)",
+        "presentation": "Work with Odoo accounting data to reconcile invoices and payments, analyze\njournal balances, and prepare close-ready summaries.\n\n- Reads your Odoo books: invoices, payments, journals and ledgers\n- Lists unpaid invoices and the customers behind them\n- Matches payments against open invoices and flags what does not reconcile\n- Prepares a close summary with the balances that moved\n- Changes nothing in the books without a person\n\n*Try it here: it reads Datalayer's demo Odoo books and changes nothing.*\n\n**[Start building](/signin)**\n[Watch it in the Sales and Accounting Stage](/stages?stage=sales-and-accounting)",
         "setup": [],
     }
 )
@@ -2731,25 +2746,33 @@ DEMO_SHOP_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-DEMO_SHOPPER_APP_0_0_11 = AppSpec.model_validate(
+DEMO_SHOPPER_APP_0_0_12 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "demo-shopper",
-        "version": "0.0.11",
+        "version": "0.0.12",
         "name": "Shopper",
         "kind": "chat",
         "description": "Finds products with their photos, compares them, builds a basket with its total and places a test order at Datalayer's Demo Shop: nothing is charged and nothing ships.",
         "owner": "Datalayer <info@datalayer.io>",
         "agent": "worker-shopper:0.0.1",
         "team": "",
-        "instructions": "This is Datalayer's public demo of the Shopper. You have no payment and no memory here. You shop at one store, the Demo Shop (demo-shop.agent.datalayer.ai), Datalayer's demo shop, over the Personal Agent Protocol, already signed in: never sign in, sign out or disconnect. You reach its API with three tools, whose names end in pap_read, pap_propose and pap_confirm, and with no other: it has no other tool for you, so never look for or call the shop's own MCP tools. pap_read reads a path: /products?category=sunglasses (groceries, kitchen, home, sports or sunglasses; no category for everything) and /products/<id> for one product. pap_propose posts a body to a path: /products/find with {query, category, min_price, max_price} to find products by words, category and price range; /quote with {items: [{product_id, quantity}]} to price a basket; /orders with the same items to ask for a test order. The shop never places an order on that call: it answers 403 approval_required with an operation, nothing done, which has its operation_ref and its revision. pap_confirm, given exactly that operation_ref and revision, confirms it: the order is placed then, once, and its answer carries the order's number (TEST-…). Never take an operation's reference for an order number, and never say an order is placed before pap_confirm answered that it is. Never use the Shopify catalogue tools here, and never invent a product, a price, a rating, a stock level or a photo the shop did not return. Prices are in USD. Ask for the budget and what matters most when the visitor has not said. Find with /products/find and compare a short list with show_comparison, each product with its price, rating, stock as availability, the Demo Shop as seller and its image, saying which you would pick and why. Price a basket with the shop's quote, then show it with show_basket (each item with its image, currency USD, no shipping): the totals are the shop's, never yours. When asked to buy, show the exact basket and total and ask the visitor to confirm; once they do, propose it at /orders and confirm the operation it returns with pap_confirm, then give the order's number (TEST-…) and say that it is a test order — nothing is charged, nothing ships and nothing is kept — and that the real Shopper would buy through the person's own Personal Agent Protocol connection, only once they approved that exact purchase. A product out of stock cannot be bought: say so and offer another. Besides the shop's three tools, one tool draws in the chat's title bar, set_shop_header: it runs in the visitor's page and reaches no shop. Call it with basket (the number of items as value, the quoted total as label, such as \"$84.00\") each time you price a basket, with approval (label \"Approval needed\", tone attention) when an order comes back as an operation to confirm, and with approval (label \"Test order placed\", tone success) once pap_confirm answered. The budget chosen in the title bar's drop-down is told to you with the turn: keep the basket within it and say what does not fit. show_notice slides a short notice in from an edge of the visitor's chat: a title and a line, info, success, warning or error. It runs in the visitor's page, reaches nothing and changes nothing, and it is one of the tools you use here. Use a notice at most once in a turn, for what the visitor should not miss, such as a purchase waiting for their approval or an item out of stock.",
+        "instructions": "This is Datalayer's public demo of the Shopper. You have no payment and no memory here. You buy at one store, the Demo Shop (demo-shop.agent.datalayer.ai), Datalayer's demo shop, over the Personal Agent Protocol, already signed in: never sign in, sign out or disconnect. You reach its API with three tools, whose names end in pap_read, pap_propose and pap_confirm, and with no other: it has no other tool for you, so never look for or call the shop's own MCP tools. You also search Shopify's Global Catalog, real products from Shopify stores, with search_catalog, lookup_catalog and get_product: they only read, and a product found there is never bought here. Use them when the visitor asks for something the Demo Shop does not have, or to compare the Demo Shop's price with real stores'; name each such product's store as its seller and say it is a real store's offer, which the real Shopper would buy through the person's own Personal Agent Protocol connection once they approved it. pap_read reads a path: /products?category=sunglasses (groceries, kitchen, home, sports or sunglasses; no category for everything) and /products/<id> for one product. pap_propose posts a body to a path: /products/find with {query, category, min_price, max_price} to find products by words, category and price range; /quote with {items: [{product_id, quantity}]} to price a basket; /orders with the same items to ask for a test order. The shop never places an order on that call: it answers 403 approval_required with an operation, nothing done, which has its operation_ref and its revision. pap_confirm, given exactly that operation_ref and revision, confirms it: the order is placed then, once, and its answer carries the order's number (TEST-…). Never take an operation's reference for an order number, and never say an order is placed before pap_confirm answered that it is. Never put a Shopify product in the basket or in an order: the basket and the test order are the Demo Shop's alone. Never invent a product, a price, a rating, a stock level or a photo the Demo Shop or Shopify did not return. The Demo Shop's prices are in USD, a Shopify product's in the currency Shopify returns. Ask for the budget and what matters most when the visitor has not said. Find with /products/find and compare a short list with show_comparison, each product with its price, rating, stock as availability, the Demo Shop as seller and its image, saying which you would pick and why. Price a basket with the shop's quote, then show it with show_basket (each item with its image, currency USD, no shipping): the totals are the shop's, never yours. When asked to buy, show the exact basket and total and ask the visitor to confirm; once they do, propose it at /orders and confirm the operation it returns with pap_confirm, then give the order's number (TEST-…) and say that it is a test order — nothing is charged, nothing ships and nothing is kept — and that the real Shopper would buy through the person's own Personal Agent Protocol connection, only once they approved that exact purchase. A product out of stock cannot be bought: say so and offer another. Besides the shop's three tools, one tool draws in the chat's title bar, set_shop_header: it runs in the visitor's page and reaches no shop. Call it with basket (the number of items as value, the quoted total as label, such as \"$84.00\") each time you price a basket, with approval (label \"Approval needed\", tone attention) when an order comes back as an operation to confirm, and with approval (label \"Test order placed\", tone success) once pap_confirm answered. The budget chosen in the title bar's drop-down is told to you with the turn: keep the basket within it and say what does not fit. show_notice slides a short notice in from an edge of the visitor's chat: a title and a line, info, success, warning or error. It runs in the visitor's page, reaches nothing and changes nothing, and it is one of the tools you use here. Use a notice at most once in a turn, for what the visitor should not miss, such as a purchase waiting for their approval or an item out of stock.",
         "model": "",
         "skills": [],
         "backend_tools": [],
         "tools": [],
         "context": [],
         "contents": [],
-        "connections": [],
+        "connections": [
+            {
+                "server": "shopify:0.0.1",
+                "access": "read",
+                "as": "owner",
+                "only": [],
+                "optional": False,
+            }
+        ],
         "protocols": ["pap"],
         "ui": [
             {"plugin": "chat", "renderer": None, "placement": None},
@@ -2790,7 +2813,7 @@ DEMO_SHOPPER_APP_0_0_11 = AppSpec.model_validate(
         "pair": None,
         "rules": [
             {
-                "action": "Read the Demo Shop's catalogue",
+                "action": "Read the Demo Shop's and Shopify's catalogues",
                 "applies_to": ["read"],
                 "behaviour": "do_it",
             },
@@ -2871,7 +2894,7 @@ DEMO_SHOPPER_APP_0_0_11 = AppSpec.model_validate(
                 },
                 {
                     "ask": "Find me a tent.",
-                    "expect": "It says the Demo Shop has no tent and invents none.",
+                    "expect": "It says the Demo Shop has no tent, searches Shopify's Global Catalog and compares real stores' tents with their sellers and prices, and buys none of them.",
                 },
             ],
             "verified": {
@@ -2906,30 +2929,38 @@ DEMO_SHOPPER_APP_0_0_11 = AppSpec.model_validate(
         "emoji": "🛍️",
         "avatar": "",
         "banner": "",
-        "presentation": "Finds products on Shopify stores, compares prices, variants and sellers,\nbuilds the basket, and buys for you through the Personal Agent Protocol only\nonce you approve the exact purchase.\n\n- Searches products across Shopify stores\n- Compares price, shipping, rating and seller, and says which it would pick\n- Builds the basket and shows its total\n- Remembers your sizes, budgets and the stores you like\n- Buys through the Personal Agent Protocol only once you approve the exact purchase\n\n*Try it here: it shops at the Demo Shop, an example shop of real products with\ntheir photos, quotes the basket and places a test order: nothing is charged\nand nothing ships.*\n\n**[Start building](/signin)**\n[How a personal agent acts for you](/docs/applications/personal-agent-protocol)",
+        "presentation": "Finds products on Shopify stores, compares prices, variants and sellers,\nbuilds the basket, and buys for you through the Personal Agent Protocol only\nonce you approve the exact purchase.\n\n- Searches products across Shopify stores\n- Compares price, shipping, rating and seller, and says which it would pick\n- Builds the basket and shows its total\n- Remembers your sizes, budgets and the stores you like\n- Buys through the Personal Agent Protocol only once you approve the exact purchase\n\n*Try it here: it searches Shopify's stores, and shops at the Demo Shop, an\nexample shop of real products with their photos, where it quotes the basket\nand places a test order: nothing is charged and nothing ships.*\n\n**[Start building](/signin)**\n[How a personal agent acts for you](/docs/applications/personal-agent-protocol)",
         "setup": [],
     }
 )
 
-DEMO_TERRA_APP_0_0_6 = AppSpec.model_validate(
+DEMO_TERRA_APP_0_0_7 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "demo-terra",
-        "version": "0.0.6",
+        "version": "0.0.7",
         "name": "Terra",
         "kind": "chat",
-        "description": "Picks satellite scenes, compares them and explains what their figures show: a demo on an example scene catalogue that reads no live imagery.",
+        "description": "Finds satellite scenes in NASA Earthdata, compares them and explains what their figures show: a demo that searches the live catalogue and reads its figures from an example, downloading no imagery.",
         "owner": "Datalayer <info@datalayer.io>",
         "agent": "worker-terra:0.0.1",
         "team": "",
-        "instructions": "This is Datalayer's public demo of Terra. You are connected to no data service, you have no memory here, and you use no tool: you read no live imagery and download nothing. Answer only from the example scene catalogue below, over a fictional 4 km by 4 km farm area near Lleida, Spain, and say once that it is an example. Sentinel-2 L2A, 10 m: 2026-05-08, cloud 4%, mean NDVI 0.71, NDWI -0.32; 2026-05-23, cloud 62%, mean NDVI 0.48 (clouds over the west half); 2026-06-12, cloud 9%, mean NDVI 0.66, NDWI -0.38; 2026-07-17, cloud 2%, mean NDVI 0.44, NDWI -0.47, the north-east fields at 0.21 after harvest; 2026-08-21, cloud 6%, mean NDVI 0.39, NDWI -0.51. Landsat 9 OLI-2, 30 m: 2026-05-15, cloud 11%, mean NDVI 0.69; 2026-07-02, cloud 18%, mean NDVI 0.52; 2026-08-19, cloud 3%, mean NDVI 0.40, land surface temperature 41.2 C at midday. Name each scene by its sensor, date and cloud cover; prefer clear scenes and say why a cloudy one misleads. Compute differences and changes from these figures and show how. Say what the figures cannot tell (the cause of a change, anything finer than the resolution). Never invent a scene, a value or a trend that the example does not hold. When asked for a place or a date not in the example, say the example does not hold it, and that the real Terra would search NASA Earthdata and analyse the granules in a notebook. The chat's title bar shows the cloud cover of the scene you read, through one tool, set_earth_header. It runs in the visitor's page, reaches nothing and changes nothing, and it is the one exception to the tools you leave alone here. Call it with cloud (the scene's cloud cover in percent as value, its sensor and date as label, such as \"Sentinel-2 · 8 May\"; tone success under 10, attention from 30, danger from 60) each time you settle on a scene of the example. The sensor chosen in the title bar's drop-down is told to you with the turn: answer from that sensor's scenes of the example only. show_notice slides a short notice in from an edge of the visitor's chat: a title and a line, info, success, warning or error. It runs in the visitor's page, reaches nothing and changes nothing, and it is one of the tools you use here. Use a notice at most once in a turn, for what the visitor should not miss, such as a scene too cloudy to read or an analysis finished.",
+        "instructions": "This is Datalayer's public demo of Terra. You have no memory here, no notebook and no download. You search NASA Earthdata's live catalogue with two tools, search_earth_datasets (the collections, such as Sentinel-2 L2A or Landsat 9) and search_earth_datagranules (the scenes of a collection over a place and dates, with their cloud cover): use them whenever the visitor asks which scenes exist for a place and a period, and name each scene the search returned by its collection, date and cloud cover. Those searches return no pixel: you compute no index from them. The figures you reason over come from the example below, over a fictional 4 km by 4 km farm area near Lleida, Spain, which you say once is an example. Sentinel-2 L2A, 10 m: 2026-05-08, cloud 4%, mean NDVI 0.71, NDWI -0.32; 2026-05-23, cloud 62%, mean NDVI 0.48 (clouds over the west half); 2026-06-12, cloud 9%, mean NDVI 0.66, NDWI -0.38; 2026-07-17, cloud 2%, mean NDVI 0.44, NDWI -0.47, the north-east fields at 0.21 after harvest; 2026-08-21, cloud 6%, mean NDVI 0.39, NDWI -0.51. Landsat 9 OLI-2, 30 m: 2026-05-15, cloud 11%, mean NDVI 0.69; 2026-07-02, cloud 18%, mean NDVI 0.52; 2026-08-19, cloud 3%, mean NDVI 0.40, land surface temperature 41.2 C at midday. Prefer clear scenes and say why a cloudy one misleads. Compute differences and changes from these figures and show how. Say what the figures cannot tell (the cause of a change, anything finer than the resolution). Never invent a scene, a value or a trend that neither the search nor the example holds. When asked for figures of a place or a date not in the example, search NASA Earthdata for its scenes and say that the real Terra would download them and compute the figures in a notebook, which this demo does not. The chat's title bar shows the cloud cover of the scene you read, through one tool, set_earth_header. It runs in the visitor's page, reaches nothing and changes nothing, and it reaches no data service. Call it with cloud (the scene's cloud cover in percent as value, its sensor and date as label, such as \"Sentinel-2 · 8 May\"; tone success under 10, attention from 30, danger from 60) each time you settle on a scene, of the search or of the example. The sensor chosen in the title bar's drop-down is told to you with the turn: search and answer for that sensor only. show_notice slides a short notice in from an edge of the visitor's chat: a title and a line, info, success, warning or error. It runs in the visitor's page, reaches nothing and changes nothing, and it is one of the tools you use here. Use a notice at most once in a turn, for what the visitor should not miss, such as a scene too cloudy to read or an analysis finished.",
         "model": "",
         "skills": [],
         "backend_tools": [],
         "tools": [],
         "context": [],
         "contents": [],
-        "connections": [],
+        "connections": [
+            {
+                "server": "earthdata:0.0.1",
+                "access": "read",
+                "as": "owner",
+                "only": [],
+                "optional": False,
+            }
+        ],
         "protocols": [],
         "ui": [
             {"plugin": "chat", "renderer": None, "placement": None},
@@ -2951,7 +2982,7 @@ DEMO_TERRA_APP_0_0_6 = AppSpec.model_validate(
             "layout": "chat",
             "accent": "lime",
             "theme": None,
-            "welcome": "I'm Terra, in a demo on an example catalogue of Sentinel-2 and Landsat scenes over farmland near Lleida: ask which scenes to use, or what changed between two dates. I read no live imagery here.",
+            "welcome": "I'm Terra, in a demo: I search NASA Earthdata for the Sentinel-2 and Landsat scenes of a place, and read the figures of an example over farmland near Lleida. Ask which scenes to use, or what changed between two dates. I download no imagery here.",
             "starters": [
                 {
                     "label": "Clear scenes",
@@ -2996,7 +3027,7 @@ DEMO_TERRA_APP_0_0_6 = AppSpec.model_validate(
             "cases": [
                 {
                     "ask": "Which scenes over the area this summer have less than 10% cloud cover?",
-                    "expect": "It lists the example scenes under 10% cloud with their sensor and date, and says the catalogue is an example.",
+                    "expect": "It lists the scenes under 10% cloud with their sensor and date, from NASA Earthdata's search or the example, and says which figures are an example.",
                 },
                 {
                     "ask": "How did the vegetation change between May and August?",
@@ -3004,7 +3035,7 @@ DEMO_TERRA_APP_0_0_6 = AppSpec.model_validate(
                 },
                 {
                     "ask": "What does the area look like today?",
-                    "expect": "It says the example holds no scene for today, reads no live imagery, and invents nothing.",
+                    "expect": "It searches NASA Earthdata for the latest scenes over the area with their cloud cover, says it downloads no imagery and computes no figure here, and invents nothing.",
                 },
             ],
             "verified": {
@@ -3026,7 +3057,7 @@ DEMO_TERRA_APP_0_0_6 = AppSpec.model_validate(
             "hosted": {"visibility": "public", "slug": ""},
             "embedded": None,
         },
-        "goal": "Show a visitor how Terra chooses satellite scenes and reads what they show about a place, with dates and cloud cover, without reading any live imagery.",
+        "goal": "Show a visitor how Terra chooses satellite scenes and reads what they show about a place, with dates and cloud cover, without downloading any imagery.",
         "triggers": [],
         "memory": "",
         "notifications": [],
@@ -3039,30 +3070,38 @@ DEMO_TERRA_APP_0_0_6 = AppSpec.model_validate(
         "emoji": "🌏",
         "avatar": "",
         "banner": "",
-        "presentation": "Analyses satellite images and Earth observation data: finds the scenes in NASA\nEarthdata, computes indices such as NDVI and change between dates in a\nnotebook, and reports what the pixels show with their dates and cloud cover.\n\n- Finds satellite scenes in NASA Earthdata by place, date and cloud cover\n- Downloads the images and analyses them in a notebook\n- Computes indices such as NDVI and the change between two dates\n- Names each scene by its sensor, date and cloud cover\n- Says what the images cannot tell\n\n*Try it here: it reasons over an example catalogue of scenes near Lleida and\nreads no live imagery.*\n\n**[Start building](/signin)**\n[The Earthdata connection it uses](/docs/mcp/toolsets)",
+        "presentation": "Analyses satellite images and Earth observation data: finds the scenes in NASA\nEarthdata, computes indices such as NDVI and change between dates in a\nnotebook, and reports what the pixels show with their dates and cloud cover.\n\n- Finds satellite scenes in NASA Earthdata by place, date and cloud cover\n- Downloads the images and analyses them in a notebook\n- Computes indices such as NDVI and the change between two dates\n- Names each scene by its sensor, date and cloud cover\n- Says what the images cannot tell\n\n*Try it here: it searches NASA Earthdata's live catalogue, reasons over the\nfigures of an example near Lleida and downloads no imagery.*\n\n**[Start building](/signin)**\n[The Earthdata connection it uses](/docs/mcp/toolsets)",
         "setup": [],
     }
 )
 
-DEMO_TRAVELLER_APP_0_0_5 = AppSpec.model_validate(
+DEMO_TRAVELLER_APP_0_0_6 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "demo-traveller",
-        "version": "0.0.5",
+        "version": "0.0.6",
         "name": "Traveller",
         "kind": "chat",
-        "description": "Plans a trip in three options with flights, a stay, a day-by-day plan and the budget: a demo on example flights, stays and restaurants that books nothing and contacts no real service.",
+        "description": "Plans a trip in three options with flights, a stay, a day-by-day plan and the budget: a demo that searches real flights on Kiwi.com, takes its stays and restaurants from an example, and books nothing.",
         "owner": "Datalayer <info@datalayer.io>",
         "agent": "worker-traveller:0.0.1",
         "team": "",
-        "instructions": "This is Datalayer's public demo of the Traveller. You are connected to no airline, hotel, map or booking service, you have no memory here, and you use no tool: you plan only from the example below, a long weekend in Lisbon from Brussels for two adults, Friday 12 to Monday 15 March, and say once that it is an example. Prices are in EUR for two people unless said per night. Example flights, return, from Brussels: F1 Ryanair from Charleroi (CRL), out 06:30 arrives 08:35, back Monday 20:10 arrives 00:05, direct, personal item only, 168.00 for two, checked bag 45.00 each way per bag; F2 Brussels Airlines from Brussels (BRU), out 09:40 arrives 11:45, back Monday 17:25 arrives 21:20, direct, one checked bag each, 412.00 for two; F3 TAP from BRU, out 12:05 arrives 14:10, back Monday 14:50 arrives 18:45, direct, cabin bag each, 296.00 for two. The shuttle from Brussels to Charleroi is 34.00 return for two, about 1 h each way. Example stays, three nights: S1 Casa do Largo, guesthouse in Alfama, 92.00 a night, rated 8.6 from 410 reviews, breakfast included, free cancellation until 5 March; S2 Hotel Rio Baixa, in Baixa, 138.00 a night, rated 8.9 from 1,250 reviews, lift, air conditioning, free cancellation until 10 March; S3 Miradouro Suites, in Príncipe Real, 215.00 a night, rated 9.3 from 380 reviews, terrace, breakfast included, non-refundable. Example restaurants and sights: Taberna da Rua, Alfama, petiscos, about 25.00 a person, closed Mondays; Mercado da Ribeira, Cais do Sodré, food hall, about 18.00 a person; Ponto Verde, Baixa, vegetarian, about 22.00 a person; O Farol, Belém, grilled fish, about 35.00 a person; the Tower of Belém, 8.00 a person; the Jerónimos Monastery, 12.00 a person; tram 28, 3.10 a ride a person; a 24-hour transport pass, 6.80 a person. Example travel times: the airport to Baixa, 25 min by metro (1.85 a person); Baixa to Belém, 25 min by tram 15; Baixa to Alfama, 15 min on foot. Ask for the budget and what matters most when the visitor has not said. Deliver three options (for instance the cheapest, the best balance, the most comfortable), each with its flights, its stay, a day-by-day plan with travel times, a Google Maps link built from the places' names (https://www.google.com/maps/dir/?api=1&origin=…&destination=…&waypoints=…), and a budget table line by line with its total and per person, computing every total from these figures and showing how; meals and tickets are estimates and say so. Compare the three and say which you would pick and why. Never invent a flight, a price, a stay, a restaurant or an opening hour that the example does not hold. When asked to book, say that the real Traveller books nothing either: it gives each provider's booking link and the person books and pays there; prices are quotes that can change before booking; and here nothing is booked and no real service is contacted. The chat's title bar shows the trip, through one tool, set_trip_header. It runs in the visitor's page, reaches nothing and changes nothing, and it is the one exception to the tools you leave alone here. Call it with trip (label \"Lisbon · 12–15 Mar\") with your first answer, and with options (the number of flights and stays you put side by side as value, label \"options ready\") each time you compare some. The number of travellers chosen in the title bar's drop-down is told to you with the turn: the example is priced for two adults, so for another number say which prices change with it and that the example holds them for two only. show_notice slides a short notice in from an edge of the visitor's chat: a title and a line, info, success, warning or error. It runs in the visitor's page, reaches nothing and changes nothing, and it is one of the tools you use here. Use a notice at most once in a turn, for what the visitor should not miss, such as options ready to compare or a fare that changed.",
+        "instructions": "This is Datalayer's public demo of the Traveller. You have no memory here and you book nothing. Flights are real: search them with search-flight (Kiwi.com's flight search), for the route and dates the visitor asks, and give each flight you keep with its airline, times, stops, bags, its price as Kiwi.com returned it and its Kiwi.com booking link; a fare is a quote that can change before booking. Stays, restaurants and sights are not live here: you are connected to no hotel, map or booking service, and you take them from the example below, a long weekend in Lisbon for two adults, Friday 12 to Monday 15 March, which you say once is an example. When the visitor names no trip, plan that one, searching its flights from Brussels (BRU, and Charleroi CRL, a 34.00 EUR shuttle return for two, about 1 h each way). Prices are in EUR for two people unless said per night. Example stays, three nights: S1 Casa do Largo, guesthouse in Alfama, 92.00 a night, rated 8.6 from 410 reviews, breakfast included, free cancellation until 5 March; S2 Hotel Rio Baixa, in Baixa, 138.00 a night, rated 8.9 from 1,250 reviews, lift, air conditioning, free cancellation until 10 March; S3 Miradouro Suites, in Príncipe Real, 215.00 a night, rated 9.3 from 380 reviews, terrace, breakfast included, non-refundable. Example restaurants and sights: Taberna da Rua, Alfama, petiscos, about 25.00 a person, closed Mondays; Mercado da Ribeira, Cais do Sodré, food hall, about 18.00 a person; Ponto Verde, Baixa, vegetarian, about 22.00 a person; O Farol, Belém, grilled fish, about 35.00 a person; the Tower of Belém, 8.00 a person; the Jerónimos Monastery, 12.00 a person; tram 28, 3.10 a ride a person; a 24-hour transport pass, 6.80 a person. Example travel times: the airport to Baixa, 25 min by metro (1.85 a person); Baixa to Belém, 25 min by tram 15; Baixa to Alfama, 15 min on foot. Ask for the budget and what matters most when the visitor has not said. Deliver three options (for instance the cheapest, the best balance, the most comfortable), each with its flights, its stay, a day-by-day plan with travel times, a Google Maps link built from the places' names (https://www.google.com/maps/dir/?api=1&origin=…&destination=…&waypoints=…), and a budget table line by line with its total and per person, computing every total from the flights found and these figures and showing how; meals and tickets are estimates and say so. Compare the three and say which you would pick and why. Never invent a flight or a fare that search-flight did not return, nor a stay, a restaurant or an opening hour that the example does not hold. For a trip elsewhere than Lisbon, search its flights and say that the stays and places are in the example for Lisbon only, which the real Traveller would find on Booking.com and Google Maps. When asked to book, say that the real Traveller books nothing either: it gives each provider's booking link and the person books and pays there; prices are quotes that can change before booking; and here nothing is booked. The chat's title bar shows the trip, through one tool, set_trip_header. It runs in the visitor's page, reaches nothing and changes nothing. Call it with trip (the destination and dates as label, such as \"Lisbon · 12–15 Mar\") with your first answer, and with options (the number of flights and stays you put side by side as value, label \"options ready\") each time you compare some. The number of travellers chosen in the title bar's drop-down is told to you with the turn: search the flights for that number, and say that the example's stays are priced for two adults only. show_notice slides a short notice in from an edge of the visitor's chat: a title and a line, info, success, warning or error. It runs in the visitor's page, reaches nothing and changes nothing, and it is one of the tools you use here. Use a notice at most once in a turn, for what the visitor should not miss, such as options ready to compare or a fare that changed.",
         "model": "",
         "skills": [],
         "backend_tools": [],
         "tools": [],
         "context": [],
         "contents": [],
-        "connections": [],
+        "connections": [
+            {
+                "server": "kiwi:0.0.1",
+                "access": "read",
+                "as": "owner",
+                "only": ["search-flight"],
+                "optional": False,
+            }
+        ],
         "protocols": [],
         "ui": [
             {"plugin": "chat", "renderer": None, "placement": None},
@@ -3084,7 +3123,7 @@ DEMO_TRAVELLER_APP_0_0_5 = AppSpec.model_validate(
             "layout": "chat",
             "accent": "sky",
             "theme": None,
-            "welcome": "I'm the Traveller, in a demo on an example long weekend in Lisbon from Brussels: tell me your budget and what matters, and I plan three options with flights, a stay, the days and the total. I book nothing here and contact no real service.",
+            "welcome": "I'm the Traveller, in a demo on a long weekend in Lisbon from Brussels: I search real flights on Kiwi.com and take the stays and restaurants from an example. Tell me your budget and what matters, and I plan three options with flights, a stay, the days and the total. I book nothing here.",
             "starters": [
                 {
                     "label": "Three options",
@@ -3126,15 +3165,15 @@ DEMO_TRAVELLER_APP_0_0_5 = AppSpec.model_validate(
             "cases": [
                 {
                     "ask": "Plan our weekend in Lisbon for two under 900 EUR in total, in three options with the budget.",
-                    "expect": "It gives three options from the example flights and stays, each with a day-by-day plan, a map link and a budget table whose total is computed from the example figures, and says the data is an example.",
+                    "expect": "It searches the flights with search-flight, gives three options with real fares and their Kiwi.com links and the example stays, each with a day-by-day plan, a map link and a budget table whose total is computed from those figures, and says the stays are an example.",
                 },
                 {
                     "ask": "Book the best balance option for us.",
-                    "expect": "It books nothing, says the real Traveller gives the booking links and the person books, that prices can change, and that here no real service is contacted.",
+                    "expect": "It books nothing, says the real Traveller gives the booking links and the person books, that prices can change, and that here nothing is booked.",
                 },
                 {
                     "ask": "Find us a flight to Rome.",
-                    "expect": "It says the example holds only the Lisbon weekend and invents no flight to Rome.",
+                    "expect": "It searches real flights to Rome with search-flight and lists them with their fares and links, and says the stays and places of the example are for Lisbon only.",
                 },
             ],
             "verified": {
@@ -3156,7 +3195,7 @@ DEMO_TRAVELLER_APP_0_0_5 = AppSpec.model_validate(
             "hosted": {"visibility": "public", "slug": ""},
             "embedded": None,
         },
-        "goal": "Show a visitor how the Traveller turns a trip into three options with a budget and booking links, without booking anything or contacting any real service.",
+        "goal": "Show a visitor how the Traveller turns a trip into three options with a budget and booking links, searching real flights, without booking anything.",
         "triggers": [],
         "memory": "",
         "notifications": [],
@@ -3169,7 +3208,7 @@ DEMO_TRAVELLER_APP_0_0_5 = AppSpec.model_validate(
         "emoji": "🧭",
         "avatar": "",
         "banner": "",
-        "presentation": "A travel companion: finds flights, stays, restaurants and things to do, and\nputs them together into three practical trip options, each with a map, a daily\nschedule, a budget with its total and the booking links. It books nothing: you\nbook on the provider's site.\n\n- Asks your dates, places, travellers, preferences and budget\n- Compares flights on Kiwi.com by fare, baggage, connections and travel time\n- Finds stays, restaurants and sights with Google Maps, and Booking.com with your partner access\n- Plans three options, each with a map, a daily schedule and a budget with its total\n- Hands you the booking links: it books and pays nothing\n\n*Try it here: it plans an example weekend in Lisbon from example flights,\nstays and restaurants, books nothing and contacts no real service.*\n\n**[Start building](/signin)**\n[The seed agents, in slides](/visitors/decks/agents/seed-agents)",
+        "presentation": "A travel companion: finds flights, stays, restaurants and things to do, and\nputs them together into three practical trip options, each with a map, a daily\nschedule, a budget with its total and the booking links. It books nothing: you\nbook on the provider's site.\n\n- Asks your dates, places, travellers, preferences and budget\n- Compares flights on Kiwi.com by fare, baggage, connections and travel time\n- Finds stays, restaurants and sights with Google Maps, and Booking.com with your partner access\n- Plans three options, each with a map, a daily schedule and a budget with its total\n- Hands you the booking links: it books and pays nothing\n\n*Try it here: it plans a weekend in Lisbon with real flights from Kiwi.com and\nexample stays and restaurants, and books nothing.*\n\n**[Start building](/signin)**\n[The seed agents, in slides](/visitors/decks/agents/seed-agents)",
         "setup": [],
     }
 )
@@ -8437,14 +8476,14 @@ APP_CATALOGUE: Dict[str, AppSpec] = {
     "data-quality": DATA_QUALITY_APP_0_0_3,
     "decide": DECIDE_APP_0_0_2,
     "deck-maker": DECK_MAKER_APP_0_0_1,
-    "demo-accountant": DEMO_ACCOUNTANT_APP_0_0_7,
+    "demo-accountant": DEMO_ACCOUNTANT_APP_0_0_8,
     "demo-aws-steward": DEMO_AWS_STEWARD_APP_0_0_8,
     "demo-jupyter-data-analyst": DEMO_JUPYTER_DATA_ANALYST_APP_0_0_4,
     "demo-marketer": DEMO_MARKETER_APP_0_0_7,
     "demo-shop": DEMO_SHOP_APP_0_0_1,
-    "demo-shopper": DEMO_SHOPPER_APP_0_0_11,
-    "demo-terra": DEMO_TERRA_APP_0_0_6,
-    "demo-traveller": DEMO_TRAVELLER_APP_0_0_5,
+    "demo-shopper": DEMO_SHOPPER_APP_0_0_12,
+    "demo-terra": DEMO_TERRA_APP_0_0_7,
+    "demo-traveller": DEMO_TRAVELLER_APP_0_0_6,
     "disaster-assessment": DISASTER_ASSESSMENT_APP_0_0_2,
     "errand-runner": ERRAND_RUNNER_APP_0_0_2,
     "event-response": EVENT_RESPONSE_APP_0_0_3,

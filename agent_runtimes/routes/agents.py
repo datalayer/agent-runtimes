@@ -3063,6 +3063,14 @@ async def create_agent(
             remember_servers_in_users_name(
                 agent_id, running_app.connections if running_app is not None else None
             )
+            # Which it connects to read only in its owner's account: a visitor's
+            # run of a demo of the account that keeps the demo books reaches
+            # them with that account's key (`battle_books`).
+            from agent_runtimes.apps.battle_books import remember_owners_servers
+
+            remember_owners_servers(
+                agent_id, running_app.connections if running_app is not None else None
+            )
             # The companies it works with as a personal agent, each the
             # gateway's `pap` toolset for it (ADR-1).
             from agent_runtimes.apps.pap_connections import remember_agent
