@@ -27,6 +27,12 @@ class _Manager:
         self.agent_sandboxes[agent_id] = made
         return made
 
+    def ensure_agent_sandbox(self, agent_id: str, variant: str = "eval", **_: object):
+        existing = self.agent_sandboxes.get(agent_id)
+        if existing is not None:
+            return existing
+        return self.create_agent_sandbox(agent_id, variant)
+
     def get_sandbox(self):
         return self.global_sandbox
 

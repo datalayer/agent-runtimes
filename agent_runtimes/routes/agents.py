@@ -2444,6 +2444,9 @@ async def create_agent(
         # When a sandbox variant is explicitly requested, eagerly ensure a sandbox
         # is configured and started for that variant even if no MCP servers are
         # selected. This guarantees that sandbox status/WS reflects availability.
+        # Every start runs off the event loop: a Jupyter server takes seconds
+        # to start, and on the loop the runtime answered nothing meanwhile,
+        # its readiness probe included.
         if request.sandbox_variant:
             try:
                 from ..services.code_sandbox_manager import get_code_sandbox_manager
@@ -2464,8 +2467,9 @@ async def create_agent(
                     )
                 elif effective_variant == "jupyter-server":
                     # Prefer per-agent sandbox creation when available.
-                    if hasattr(sandbox_manager, "create_agent_sandbox"):
-                        sandbox_manager.create_agent_sandbox(
+                    if hasattr(sandbox_manager, "ensure_agent_sandbox"):
+                        await asyncio.to_thread(
+                            sandbox_manager.ensure_agent_sandbox,
                             agent_id=agent_id,
                             variant="jupyter-server",
                         )
@@ -2478,7 +2482,7 @@ async def create_agent(
                         # used in tests that only expose configure/get_sandbox.
                         # jupyter_sandbox URL is already applied above when provided;
                         # without URL, manager may start local jupyter (standalone).
-                        sandbox_manager.get_sandbox()
+                        await asyncio.to_thread(sandbox_manager.get_sandbox)
                         logger.info("Eager-started jupyter sandbox")
                 else:
                     # Every other variant, eval included, is one the
@@ -2490,7 +2494,7 @@ async def create_agent(
                     sandbox_manager.configure(
                         variant=cast(SandboxVariant, effective_variant)
                     )
-                    sandbox_manager.get_sandbox()
+                    await asyncio.to_thread(sandbox_manager.get_sandbox)
                     logger.info("Eager-started %s sandbox", effective_variant)
             except HTTPException:
                 raise
@@ -2561,36 +2565,31 @@ async def create_agent(
 
                     sandbox_manager = get_code_sandbox_manager()
 
-                    # Reuse sandbox already created by the eager-start block.
-                    if hasattr(sandbox_manager, "get_agent_sandbox"):
-                        shared_sandbox = sandbox_manager.get_agent_sandbox(agent_id)
-
-                    if shared_sandbox is None:
-                        if hasattr(sandbox_manager, "create_agent_sandbox"):
-                            shared_sandbox = sandbox_manager.create_agent_sandbox(
-                                agent_id=agent_id,
-                                variant="jupyter-server",
-                            )
-                            logger.info(
-                                f"Created per-agent Jupyter sandbox for '{agent_id}'"
-                            )
-                        else:
-                            # Backward-compatible fallback for simple managers used
-                            # in tests that expose only get_sandbox().
-                            shared_sandbox = sandbox_manager.get_sandbox()
-                            logger.info(
-                                f"Using shared Jupyter sandbox for '{agent_id}'"
-                            )
-                    else:
-                        logger.info(
-                            f"Reusing existing Jupyter sandbox for '{agent_id}'"
+                    # Reuse sandbox already created by the eager-start block,
+                    # or start it, off the event loop. Started here rather than
+                    # on the first code run: the codemode toolset initialized
+                    # below already runs code in it.
+                    if hasattr(sandbox_manager, "ensure_agent_sandbox"):
+                        shared_sandbox = await asyncio.to_thread(
+                            sandbox_manager.ensure_agent_sandbox,
+                            agent_id=agent_id,
+                            variant="jupyter-server",
                         )
+                        logger.info(f"Per-agent Jupyter sandbox ready for '{agent_id}'")
+                    else:
+                        # Backward-compatible fallback for simple managers used
+                        # in tests that expose only get_sandbox().
+                        shared_sandbox = await asyncio.to_thread(
+                            sandbox_manager.get_sandbox
+                        )
+                        logger.info(f"Using shared Jupyter sandbox for '{agent_id}'")
                     # The toolset holds a proxy to the agent's sandbox, not the
                     # sandbox itself: switched to another variant or restarted,
-                    # the agent keeps executing in whatever it has now.
+                    # the agent keeps executing in whatever it has now, and one
+                    # lost is made again of the variant the agent asked for.
                     if hasattr(sandbox_manager, "get_agent_managed_sandbox"):
                         shared_sandbox = sandbox_manager.get_agent_managed_sandbox(
-                            agent_id
+                            agent_id, variant="jupyter-server"
                         )
                 except ImportError as e:
                     raise HTTPException(
@@ -4437,7 +4436,10 @@ async def ensure_agent_sandbox(
                 )
                 existing = None
         if existing is None:
-            manager.create_agent_sandbox(agent_id=agent_id, variant=wanted)
+            # Off the event loop: a Jupyter server takes seconds to start.
+            await asyncio.to_thread(
+                manager.create_agent_sandbox, agent_id=agent_id, variant=wanted
+            )
             logger.info(
                 "Started the %s sandbox for agent '%s' on request", wanted, agent_id
             )

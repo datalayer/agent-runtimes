@@ -37,11 +37,12 @@ Usage:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from collections.abc import AsyncIterator, Iterator
 from dataclasses import dataclass
-from threading import Lock
+from threading import Lock, RLock
 from typing import TYPE_CHECKING, Any, Literal, Optional
 from urllib.parse import parse_qs, urlparse
 
@@ -112,7 +113,10 @@ class ManagedSandbox:
     """
 
     def __init__(
-        self, manager: CodeSandboxManager, agent_id: str | None = None
+        self,
+        manager: CodeSandboxManager,
+        agent_id: str | None = None,
+        variant: SandboxVariant | None = None,
     ) -> None:
         # Use object.__setattr__ to avoid triggering our __setattr__ override
         # before _manager is available.
@@ -121,6 +125,9 @@ class ManagedSandbox:
         # then follows that agent's sandbox across a variant switch or a
         # restart, the way the global proxy follows a reconfiguration.
         object.__setattr__(self, "_agent_id", agent_id)
+        # The variant the agent asked for: its sandbox, when the proxy has
+        # to make it, is of this variant rather than the manager's.
+        object.__setattr__(self, "_agent_variant", variant)
 
     # -- Transparent attribute forwarding --------------------------------
 
@@ -145,7 +152,7 @@ class ManagedSandbox:
         Attributes that belong to the proxy itself (``_manager``) are stored
         on the proxy; everything else is forwarded.
         """
-        if name in ("_manager", "_agent_id"):
+        if name in ("_manager", "_agent_id", "_agent_variant"):
             object.__setattr__(self, name, value)
         else:
             setattr(self._sandbox(), name, value)
@@ -158,13 +165,32 @@ class ManagedSandbox:
         if agent_id:
             sandbox = self._manager.get_agent_sandbox(agent_id)
             if sandbox is None:
-                # Gone with a restart or a switch: made again on demand, of
-                # the variant the manager is configured for.
-                sandbox = self._manager.create_agent_sandbox(
-                    agent_id=agent_id, variant=self._manager.variant
+                # Not made yet, or gone with a restart or a switch: made on
+                # demand, once however many callers ask at the same moment,
+                # of the agent's variant (the manager's when it named none).
+                sandbox = self._manager.ensure_agent_sandbox(
+                    agent_id=agent_id,
+                    variant=self._agent_variant or self._manager.variant,
                 )
             return sandbox
         return self._manager.get_sandbox()
+
+    def _has_sandbox(self) -> bool:
+        """Whether the sandbox this proxy stands for exists already."""
+        if self._agent_id:
+            return self._manager.get_agent_sandbox(self._agent_id) is not None
+        return self._manager._sandbox is not None
+
+    async def _sandbox_async(self) -> Sandbox:
+        """The sandbox, started off the event loop when it has to be started.
+
+        Starting one (a Jupyter server, a remote machine) takes seconds; on
+        the loop, the runtime answered nothing meanwhile, its readiness
+        probe included.
+        """
+        if self._has_sandbox():
+            return self._sandbox()
+        return await asyncio.to_thread(self._sandbox)
 
     # -- Sandbox interface -----------------------------------------------
 
@@ -173,7 +199,7 @@ class ManagedSandbox:
         self._sandbox()
 
     async def start_async(self) -> None:
-        self._sandbox()
+        await self._sandbox_async()
 
     def stop(self) -> None:
         # Stopping is managed by the manager — not by individual consumers
@@ -238,7 +264,8 @@ class ManagedSandbox:
             kwargs["envs"] = envs
         if timeout is not None:
             kwargs["timeout"] = timeout
-        return await self._sandbox().run_code_async(code, **kwargs)
+        sandbox = await self._sandbox_async()
+        return await sandbox.run_code_async(code, **kwargs)
 
     def run_code_streaming(
         self,
@@ -260,7 +287,8 @@ class ManagedSandbox:
         envs: Optional[dict[str, str]] = None,
         timeout: Optional[float] = None,
     ) -> AsyncIterator[Any]:
-        async for item in self._sandbox().run_code_streaming_async(
+        sandbox = await self._sandbox_async()
+        async for item in sandbox.run_code_streaming_async(
             code, language=language, context=context, envs=envs, timeout=timeout
         ):
             yield item
@@ -391,6 +419,10 @@ class CodeSandboxManager:
         # Per-agent sandboxes: each agent can have its own isolated sandbox
         self._agent_sandboxes: dict[str, Sandbox] = {}
         self._agent_sandbox_lock = Lock()
+        # One lock per agent, held while that agent's sandbox starts: two
+        # first runs at once start one sandbox, and an agent's start never
+        # holds up another agent's.
+        self._agent_start_locks: dict[str, RLock] = {}
 
     @classmethod
     def get_instance(cls) -> CodeSandboxManager:
@@ -737,7 +769,9 @@ class CodeSandboxManager:
         """
         return ManagedSandbox(self)
 
-    def get_agent_managed_sandbox(self, agent_id: str) -> ManagedSandbox:
+    def get_agent_managed_sandbox(
+        self, agent_id: str, variant: SandboxVariant | None = None
+    ) -> ManagedSandbox:
         """
         Return a :class:`ManagedSandbox` proxy bound to *agent_id*'s sandbox.
 
@@ -746,9 +780,9 @@ class CodeSandboxManager:
         went stale the moment the agent's sandbox was switched to another
         variant or restarted, and the toolset kept executing in the old one.
         The proxy resolves the agent's current sandbox on every call, and has
-        one made when there is none.
+        one made when there is none, of *variant* (the manager's when None).
         """
-        return ManagedSandbox(self, agent_id=agent_id)
+        return ManagedSandbox(self, agent_id=agent_id, variant=variant)
 
     def _inject_env_vars(self, sandbox: Sandbox) -> None:
         """
@@ -891,12 +925,13 @@ class CodeSandboxManager:
         Raises:
             ValueError: If the agent already has a sandbox.
         """
-        with self._agent_sandbox_lock:
-            if agent_id in self._agent_sandboxes:
-                raise ValueError(
-                    f"Agent '{agent_id}' already has a sandbox.  "
-                    f"Call stop_agent_sandbox() first."
-                )
+        with self._agent_start_lock(agent_id):
+            with self._agent_sandbox_lock:
+                if agent_id in self._agent_sandboxes:
+                    raise ValueError(
+                        f"Agent '{agent_id}' already has a sandbox.  "
+                        f"Call stop_agent_sandbox() first."
+                    )
 
             logger.info(f"Creating {variant} sandbox for agent '{agent_id}'")
             sandbox = self._create_sandbox(variant=variant)
@@ -908,8 +943,41 @@ class CodeSandboxManager:
             inject_vars = dict(env_vars or {})
             self._inject_env_vars_into(sandbox, variant, inject_vars)
 
-            self._agent_sandboxes[agent_id] = sandbox
+            with self._agent_sandbox_lock:
+                self._agent_sandboxes[agent_id] = sandbox
             return sandbox
+
+    def ensure_agent_sandbox(
+        self,
+        agent_id: str,
+        variant: SandboxVariant = "eval",
+        env_vars: dict[str, str] | None = None,
+    ) -> Sandbox:
+        """
+        Return the agent's sandbox, creating and starting it when it has none.
+
+        Callers racing for the same agent's first sandbox start one: the
+        others wait for it and get it. Blocking for as long as the start
+        takes; async callers run it in a thread (``asyncio.to_thread``).
+        """
+        sandbox = self._agent_sandboxes.get(agent_id)
+        if sandbox is not None:
+            return sandbox
+        with self._agent_start_lock(agent_id):
+            sandbox = self._agent_sandboxes.get(agent_id)
+            if sandbox is not None:
+                return sandbox
+            return self.create_agent_sandbox(
+                agent_id=agent_id, variant=variant, env_vars=env_vars
+            )
+
+    def _agent_start_lock(self, agent_id: str) -> RLock:
+        """The lock held while *agent_id*'s sandbox starts or stops."""
+        with self._agent_sandbox_lock:
+            lock = self._agent_start_locks.get(agent_id)
+            if lock is None:
+                lock = self._agent_start_locks[agent_id] = RLock()
+            return lock
 
     def get_agent_sandbox(self, agent_id: str) -> Sandbox | None:
         """
@@ -933,8 +1001,9 @@ class CodeSandboxManager:
         Args:
             agent_id: Unique agent identifier.
         """
-        with self._agent_sandbox_lock:
-            sandbox = self._agent_sandboxes.pop(agent_id, None)
+        with self._agent_start_lock(agent_id):
+            with self._agent_sandbox_lock:
+                sandbox = self._agent_sandboxes.pop(agent_id, None)
             if sandbox is not None:
                 try:
                     sandbox.stop()

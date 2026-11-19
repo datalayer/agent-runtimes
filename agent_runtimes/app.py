@@ -294,7 +294,9 @@ async def _create_and_register_cli_agent(
                     variant="jupyter-server",
                     jupyter_url=jupyter_sandbox_url,
                 )
-                shared_sandbox = sandbox_manager.create_agent_sandbox(
+                # Off the event loop: a Jupyter server takes seconds to start.
+                shared_sandbox = await asyncio.to_thread(
+                    sandbox_manager.ensure_agent_sandbox,
                     agent_id=agent_id,
                     variant="jupyter-server",
                 )
