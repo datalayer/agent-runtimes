@@ -42,6 +42,17 @@ the deployment's owner, as ai-agents said it when the address was resolved
 (:func:`books_account`, asked once). Anybody else's deployment, a write
 connection or one in each user's name never is; every visitor's call is
 still held to reading (`visitors.visitor_refusal`).
+
+**A server outside the gateway with the account's own secret.** The same
+demos' optional read connections in their owner's account to a server that
+is not the gateway and is started with secrets of its own — the Traveller's
+``google-maps`` and its billed ``GOOGLE_MAPS_API_KEY`` (the user, 19 November
+2026) — take those secrets from one place alone: the account's own, read at
+IAM with the key (:func:`owners_secrets_of`), for that account's deployment
+alone. The server is started with them, never through the process's
+environment, which is no source for them on the visitors' runtime; and only a
+run of that account's demo keeps it (:func:`owners_secrets_left_out`). No
+such secret in the account: the server is left out and nothing is said of it.
 """
 
 from __future__ import annotations
@@ -49,7 +60,7 @@ from __future__ import annotations
 import logging
 import os
 import threading
-from typing import Optional
+from typing import Mapping, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +74,12 @@ __all__ = [
     "books_start_key",
     "forget_books_key",
     "is_books_server",
+    "note_started_with_owners_secrets",
+    "owners_secret_servers",
+    "owners_secret_servers_of_the_run",
+    "owners_secret_servers_shown",
+    "owners_secrets_left_out",
+    "owners_secrets_of",
     "owners_servers",
     "owners_servers_of_the_run",
     "remember_owners_servers",
@@ -80,6 +97,11 @@ _STARTED_WITH_KEY: set[str] = set()
 _OWNERS_SERVERS: dict[str, frozenset[str]] = {}
 #: The account the books key is of, once IAM said it.
 _ACCOUNT: dict[str, str] = {}
+#: agent id -> the servers outside the gateway its application connects to optionally, read
+#: only in its owner's account: started with the account's own secrets, never the environment's.
+_OWNERS_SECRET_SERVERS: dict[str, frozenset[str]] = {}
+#: The servers this process started with the account's own secrets: a run of its demo alone keeps them.
+_STARTED_WITH_OWNERS_SECRETS: set[str] = set()
 
 
 def take_books_key() -> str:
@@ -107,6 +129,8 @@ def forget_books_key() -> None:
         _STARTED_WITH_KEY.clear()
         _OWNERS_SERVERS.clear()
         _ACCOUNT.clear()
+        _OWNERS_SECRET_SERVERS.clear()
+        _STARTED_WITH_OWNERS_SECRETS.clear()
 
 
 def is_books_server(server_id: str) -> bool:
@@ -136,11 +160,46 @@ def _word(value: object, default: str) -> str:
     return str(getattr(value, "value", value) or default)
 
 
+def _said(connection: object, name: str, alias: str = "") -> object:
+    """A field of a connection, an AppConnection or its document alike."""
+    if isinstance(connection, dict):
+        return connection.get(name, connection.get(alias) if alias else None)
+    return getattr(connection, name, None)
+
+
+def owners_secret_servers(connections: object) -> frozenset[str]:
+    """The servers outside the gateway an application connects to optionally, read only in its owner's account.
+
+    Those whose secrets, on the visitors' runtime, are the account's own alone
+    (:func:`owners_secrets_of`): never the process's environment.
+    """
+    found = set()
+    for connection in connections or ():  # type: ignore[attr-defined]
+        server = _base(str(_said(connection, "server") or ""))
+        if (
+            server
+            and _said(connection, "optional") is True
+            and _word(_said(connection, "access"), "read") == "read"
+            and _word(_said(connection, "acts_as", "as"), "owner") == "owner"
+            and not _is_gateway_server(server)
+        ):
+            found.add(server)
+    return frozenset(found)
+
+
 def remember_owners_servers(agent_id: str, connections: object) -> None:
     """Keep the gateway's servers an agent's application connects to read only, in its owner's account.
 
-    ``None`` or no such connection forgets the agent.
+    And the servers outside the gateway it connects to optionally the same
+    way (:func:`owners_secret_servers`). ``None`` or no such connection
+    forgets the agent.
     """
+    outside = owners_secret_servers(connections)
+    with _LOCK:
+        if outside:
+            _OWNERS_SECRET_SERVERS[agent_id] = outside
+        else:
+            _OWNERS_SECRET_SERVERS.pop(agent_id, None)
     servers = frozenset(
         _base(str(getattr(connection, "server", "") or ""))
         for connection in (connections or ())  # type: ignore[attr-defined]
@@ -231,6 +290,116 @@ async def owners_servers_of_the_run(
     return servers if await books_account() == owner else frozenset()
 
 
+async def _of_the_books_account(instance: dict | None) -> bool:
+    """Whether a run serves a deployment of the account the key is of, on the visitors' runtime."""
+    from agent_runtimes.apps.visitors import visitors_runtime
+
+    owner = str((instance or {}).get("owner_uid") or "").strip()
+    if not owner or not visitors_runtime() or not books_key():
+        return False
+    return await books_account() == owner
+
+
+async def owners_secrets_of(
+    connections: object,
+    instance: dict | None,
+    wanted: Mapping[str, frozenset[str]],
+) -> dict[str, dict[str, str]]:
+    """By server, the account's own secrets its optional read connections are started with.
+
+    On the visitors' runtime holding the key, for a deployment whose owner is
+    the account the key is of: of the servers :func:`owners_secret_servers`
+    names, each whose every secret it is started with (``wanted``, by server:
+    `DeclaredSecrets.servers`) is among the account's secrets, read at IAM
+    with the key. Nothing otherwise, nor when IAM does not answer: the server
+    is then left out. Values are held, never logged.
+    """
+    from agent_runtimes.guardrails.credentials import hold
+
+    servers = {
+        server for server in owners_secret_servers(connections) if wanted.get(server)
+    }
+    if not servers or not await _of_the_books_account(instance):
+        return {}
+    from agent_runtimes.agentcore.secrets import SecretsRefused, read_own_secrets
+
+    try:
+        held = await read_own_secrets(books_key())
+    except SecretsRefused as refused:
+        logger.warning(
+            "  [battle-books] the demo account's secrets were not read: %s",
+            refused.sentence,
+        )
+        return {}
+    found: dict[str, dict[str, str]] = {}
+    for server in sorted(servers):
+        names = wanted[server]
+        values = {name: str(held.get(name) or "").strip() for name in names}
+        if all(values.values()):
+            for value in values.values():
+                hold(value)
+            found[server] = values
+    if found:
+        logger.info(
+            "  [battle-books] started with the demo account's own secrets: %s",
+            {server: sorted(values) for server, values in found.items()},
+        )
+    return found
+
+
+def note_started_with_owners_secrets(server_id: str) -> None:
+    """Note a server started with the account's own secrets: a run of its demo alone keeps it."""
+    with _LOCK:
+        _STARTED_WITH_OWNERS_SECRETS.add(server_id)
+
+
+async def owners_secret_servers_of_the_run(
+    agent_id: str | None, instance: dict | None
+) -> frozenset[str]:
+    """The servers started with the account's own secrets a run keeps: its demo's own, none otherwise."""
+    with _LOCK:
+        servers = _OWNERS_SECRET_SERVERS.get(agent_id or "", frozenset())
+    if not servers or not await _of_the_books_account(instance):
+        return frozenset()
+    return servers
+
+
+def owners_secret_servers_shown(
+    connections: object, instance: dict | None
+) -> tuple[frozenset[str], frozenset[str]]:
+    """Of an application's servers fenced to the account's own secrets, those hidden and those running.
+
+    For what a page lists on the visitors' runtime: a fenced server is shown,
+    as it runs, only when it was started with the account's own secrets for a
+    deployment of that account (the account as IAM already said it); hidden
+    otherwise, so that a visitor hears nothing of it. Nothing off the
+    visitors' runtime.
+    """
+    from agent_runtimes.apps.visitors import visitors_runtime
+
+    if not visitors_runtime():
+        return frozenset(), frozenset()
+    fenced = owners_secret_servers(connections)
+    owner = str((instance or {}).get("owner_uid") or "").strip()
+    with _LOCK:
+        ours = bool(owner) and _ACCOUNT.get("uid") == owner
+        running = (
+            frozenset(fenced & _STARTED_WITH_OWNERS_SECRETS) if ours else frozenset()
+        )
+    return fenced - running, running
+
+
+def owners_secrets_left_out(toolsets: list, owners: frozenset[str]) -> list:
+    """The run's toolsets without a server started with the account's own secrets that ``owners`` does not name."""
+    with _LOCK:
+        started = set(_STARTED_WITH_OWNERS_SECRETS)
+    return [
+        toolset
+        for toolset in toolsets
+        if str(getattr(toolset, "id", None) or "") not in started - set(owners)
+    ]
+
+
 def books_servers_of(battle: str) -> frozenset[str]:
     """The gateway's Odoo servers a catalogue Battle's contestants connect to; none for any other Battle."""
     from agent_runtimes.specs.apps import get_app
@@ -311,10 +480,11 @@ def books_bearer(server_id: str, owners: frozenset[str] = frozenset()) -> Option
 
 def books_left_out(toolsets: list) -> list:
     """The run's toolsets as the process holds them, without a server started
-    with the books key when the run is no Battle's on those books.
+    with the books key when the run is no Battle's on those books, nor one
+    started with the account's own secrets.
     """
     return [
         toolset
-        for toolset in toolsets
+        for toolset in owners_secrets_left_out(toolsets, frozenset())
         if books_bearer(str(getattr(toolset, "id", None) or "")) != ""
     ]

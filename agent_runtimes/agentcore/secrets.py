@@ -90,6 +90,17 @@ def use_secrets_reader(
     _reader["read"] = reader or _read_from_iam
 
 
+async def read_own_secrets(bearer: str) -> dict[str, str]:
+    """The caller's own secrets, name to value, as IAM answers them (or a test's reader).
+
+    Raises
+    ------
+    SecretsRefused
+        When IAM is not known or does not answer.
+    """
+    return await _reader["read"](bearer)
+
+
 async def give_declared(payload: Mapping[str, Any], bearer: str) -> list[str]:
     """Give this process the secrets the deployment's agent declares, read as the caller.
 
@@ -146,5 +157,6 @@ __all__ = [
     "SECRET_VALUES_PATH",
     "SecretsRefused",
     "give_declared",
+    "read_own_secrets",
     "use_secrets_reader",
 ]

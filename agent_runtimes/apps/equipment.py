@@ -203,16 +203,30 @@ def equipment_of_agent(agent_id: str) -> Optional[Dict[str, Any]]:
         resolve_agent=get_library_agent_spec,
     )
     prefix = "the skill "
-    return {
-        "agent": agent_id,
-        **equipment(
-            spec,
-            left_out=left_out_of(declared).as_names(),
-            any_of=[
-                label[len(prefix) :]
-                for label in declared.any_of
-                if label.startswith(prefix)
-            ],
-            mcp_status=get_config_mcp_toolsets_status(),
-        ),
-    }
+    left_out = left_out_of(declared).as_names()
+    # On the visitors' runtime, a server fenced to the demo account's own
+    # secrets (the Traveller's google-maps) is listed only as it runs with
+    # them, and not at all otherwise (`battle_books`).
+    from agent_runtimes.apps.battle_books import owners_secret_servers_shown
+
+    hidden, running = owners_secret_servers_shown(
+        (stored.get("app_spec") or {}).get("connections") or [],
+        stored.get("app_instance"),
+    )
+    for server_id in running:
+        left_out["mcp_servers"].pop(server_id, None)
+    found = equipment(
+        spec,
+        left_out=left_out,
+        any_of=[
+            label[len(prefix) :]
+            for label in declared.any_of
+            if label.startswith(prefix)
+        ],
+        mcp_status=get_config_mcp_toolsets_status(),
+    )
+    if hidden:
+        found["mcp_servers"] = [
+            row for row in found["mcp_servers"] if row["id"] not in hidden
+        ]
+    return {"agent": agent_id, **found}

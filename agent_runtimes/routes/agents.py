@@ -12,6 +12,7 @@ Provides REST API endpoints for:
 """
 
 import asyncio
+import dataclasses
 import importlib.metadata
 import logging
 import os
@@ -19,7 +20,7 @@ import re
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, Literal, cast
+from typing import Any, Callable, Literal, Optional, cast
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field, model_validator
@@ -202,15 +203,31 @@ def left_out_of(declared: DeclaredSecrets) -> Any:
     return _left_out(declared)
 
 
-def _left_out(declared: DeclaredSecrets) -> Any:
+def _left_out(
+    declared: DeclaredSecrets,
+    owners: Optional[dict[str, dict[str, str]]] = None,
+    fenced: frozenset[str] = frozenset(),
+) -> Any:
     """What an agent starts without here: what is not set up in this runtime's
-    environment, and a skill whose optional secrets its sandbox may not hold."""
+    environment, and a skill whose optional secrets its sandbox may not hold.
+
+    ``fenced`` names the servers whose secrets are the demo account's own
+    alone on the visitors' runtime (`battle_books.owners_secrets_of`): theirs
+    count only when ``owners`` holds them, never from the environment.
+    """
     from agent_runtimes.apps.principal import kernel_holds_owner_secrets
 
-    return declared.left_out(
-        lambda name: bool((os.environ.get(name) or "").strip()),
-        sandbox_holds=kernel_holds_owner_secrets(),
-    )
+    from_owners = {name for values in (owners or {}).values() for name in values}
+    fenced_names = {
+        name for server in fenced for name in declared.servers.get(server, ())
+    }
+
+    def available(name: str) -> bool:
+        if name in fenced_names:
+            return name in from_owners
+        return bool((os.environ.get(name) or "").strip())
+
+    return declared.left_out(available, sandbox_holds=kernel_holds_owner_secrets())
 
 
 def _kernel_refused(
@@ -2086,9 +2103,32 @@ async def create_agent(
                 Literal["local", "datalayer"], override_provider
             )
 
+        # On the visitors' runtime, an application's optional read connections
+        # in its owner's account to a server outside the gateway take their
+        # secrets from the demo account's own alone, for that account's
+        # deployment (`battle_books`): the Traveller's google-maps.
+        from agent_runtimes.apps.battle_books import (
+            owners_secret_servers,
+            owners_secrets_of,
+        )
+        from agent_runtimes.apps.visitors import visitors_runtime
+
+        app_connections = (request.app_spec or {}).get("connections") or []
+        owners_fenced = (
+            owners_secret_servers(app_connections)
+            if visitors_runtime()
+            else frozenset()
+        )
+        owners_env = (
+            await owners_secrets_of(
+                app_connections, request.app_instance, declared_by_it.servers
+            )
+            if owners_fenced
+            else {}
+        )
         # What it declares optional and is not set up for is left out, and
         # it is told which (agentspecs 0.0.188, the user, 14 November 2026).
-        left_out = _left_out(declared_by_it)
+        left_out = _left_out(declared_by_it, owners_env, owners_fenced)
         if left_out:
             request.skills = [
                 skill
@@ -2101,7 +2141,17 @@ async def create_agent(
                 for tool in request.backend_tools
                 if _ref_id_of(tool) not in left_out.tools
             ]
-            request.system_prompt = f"{request.system_prompt}\n\n{left_out.sentence()}"
+            # A fenced server left out is not said: a visitor hears nothing of it.
+            said = dataclasses.replace(
+                left_out,
+                servers={
+                    key: names
+                    for key, names in left_out.servers.items()
+                    if key not in owners_fenced
+                },
+            )
+            if said:
+                request.system_prompt = f"{request.system_prompt}\n\n{said.sentence()}"
             logger.info(
                 "Agent %s starts without %s (not set up)",
                 agent_id,
@@ -2332,9 +2382,17 @@ async def create_agent(
                             logger.info(
                                 f"Starting Catalog MCP server '{server_id}' for agent {agent_id}"
                             )
+                            # The demo account's own secrets, for a server fenced to them.
+                            owners_secrets = owners_env.get(server_id)
                             instance = await lifecycle_manager.start_server(
-                                server_id, catalog_server
+                                server_id, catalog_server, extra_env=owners_secrets
                             )
+                            if instance and owners_secrets:
+                                from agent_runtimes.apps.battle_books import (
+                                    note_started_with_owners_secrets,
+                                )
+
+                                note_started_with_owners_secrets(server_id)
                             if instance:
                                 started = True
                                 logger.info(f"Started Catalog MCP server '{server_id}'")

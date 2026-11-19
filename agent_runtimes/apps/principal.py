@@ -1232,6 +1232,16 @@ async def gateway_toolsets_of_the_run(
     from agent_runtimes.models.models import app_instance_of
 
     instance = app_instance_of(agent_id)
+    # A server started with the demo account's own secrets (the Traveller's
+    # google-maps) is kept by a run of that account's demo alone (`battle_books`).
+    from agent_runtimes.apps.battle_books import (
+        owners_secret_servers_of_the_run,
+        owners_secrets_left_out,
+    )
+
+    toolsets = owners_secrets_left_out(
+        toolsets, await owners_secret_servers_of_the_run(agent_id, instance)
+    )
     if not instance or not str(instance.get("app_uid") or "").strip():
         # As the process holds them, but the books only for a Battle's run.
         from agent_runtimes.apps.battle_books import books_left_out
