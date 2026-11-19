@@ -120,11 +120,11 @@ describe('the composer’s toolbar, read by name', () => {
       />,
     );
     expectEveryButtonNamed();
+    // By the same summary as the footer's menus: what is on, of all.
+    const mcp = screen.getByRole('button', { name: 'MCP servers — 0 of 1 on' });
+    expect(mcp.getAttribute('data-equipment-status')).toBe('starting');
     expect(
-      screen.getByRole('button', { name: 'MCP servers starting…' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Skills active (1/1 enabled)' }),
+      screen.getByRole('button', { name: 'Skills — 1 of 1 on' }),
     ).toBeInTheDocument();
   });
 
@@ -140,7 +140,12 @@ describe('the composer’s toolbar, read by name', () => {
       />,
     );
     expectEveryButtonNamed();
-    for (const name of [/^Tools — /, /^Skills — /, /^Model — /]) {
+    for (const name of [
+      /^Tools — /,
+      /^MCP servers — /,
+      /^Skills — /,
+      /^Model — /,
+    ]) {
       expect(screen.getByRole('button', { name })).toBeInTheDocument();
     }
     expect(
@@ -182,23 +187,15 @@ describe('the composer’s toolbar, read by name', () => {
     ).toBeInTheDocument();
   });
 
-  it('stands its pulsing dots still under reduced motion', () => {
-    draw(
-      <InputPrompt
-        {...APP_COMPOSER}
-        mcpStatusData={STARTING}
-        skills={[{ id: 'pdf', name: 'PDF' }] as never}
-        skillsLoading
-      />,
-    );
+  it('stands its pulsing dot still under reduced motion', () => {
+    draw(<InputPrompt {...APP_COMPOSER} mcpStatusData={STARTING} />);
     const css = styles();
-    expect(css).toMatch(/mcp-pulse/);
-    expect(css).toMatch(/skills-pulse/);
+    expect(css).toMatch(/equipment-pulse/);
     // styled-components 5 writes the prefixed property first, 6 writes it
     // alone; a Box's rule reads back from the stylesheet with spaces.
     const reduced = css.match(
       /@media \(prefers-reduced-motion: ?reduce\) ?\{[^}]*\{ ?(-webkit-animation: ?none; ?)?animation: ?none;? ?\}/g,
     );
-    expect(reduced?.length ?? 0).toBeGreaterThanOrEqual(2);
+    expect(reduced?.length ?? 0).toBeGreaterThanOrEqual(1);
   });
 });

@@ -1020,9 +1020,8 @@ export interface ChatBaseProps {
   contextSnapshot?: import('./context').ContextSnapshotData;
 
   /**
-   * External MCP toolsets status data for the MCP indicator.
-   * When provided, the data is forwarded to the McpStatusIndicator
-   * so it shows their live status; with none, it is not drawn.
+   * External MCP toolsets status data for the MCP dot and menu.
+   * When provided, their rows show its live status.
    */
   mcpStatusData?: import('./mcp').McpToolsetsStatusResponse | null;
 

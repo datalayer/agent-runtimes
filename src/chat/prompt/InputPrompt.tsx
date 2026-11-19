@@ -15,7 +15,7 @@
  */
 
 import type { ReactNode } from 'react';
-import { Suspense, lazy, useState } from 'react';
+import { Suspense, lazy, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Box } from '@datalayer/primer-addons';
 import { Text } from '@primer/react';
@@ -36,13 +36,17 @@ import {
   AgentsMenu,
   InlineAgentsMenu,
   ToolsMenu,
-  SkillsMenu,
   ModelSelector,
   SuggestionsMenu,
 } from './menus';
 import type { PromptSuggestion } from './menus/SuggestionsMenu';
-import { McpStatusIndicator } from '../indicators/McpStatusIndicator';
-import { SkillsStatusIndicator } from '../indicators/SkillsStatusIndicator';
+import {
+  EquipmentMenu,
+  EquipmentModelMenu,
+  type EquipmentSwitches,
+} from './menus/EquipmentMenus';
+import { equipmentLists } from './menus/equipmentRows';
+import type { Equipment } from '../../hooks/useEquipment';
 import type { MentionableAgent } from './plugins/AgentMentionPlugin';
 import type { PromptCommand } from './plugins/CommandPlugin';
 
@@ -240,7 +244,14 @@ export interface InputPromptProps {
 
   // ---- Selectors visibility ----
   showModelSelector: boolean;
+  /** The runtime's and the page's tools, to read. */
   showToolsMenu: boolean;
+  /**
+   * The MCP servers' menu in the footer: the same overlay as the MCP dot
+   * beside the send button. As `showToolsMenu` unless said.
+   */
+  showMcpMenu?: boolean;
+  /** The skills' menu in the footer: the same overlay as the skills dot. */
   showSkillsMenu: boolean;
   /**
    * Whether the footer offers the agent's suggestions.
@@ -255,8 +266,8 @@ export interface InputPromptProps {
   suggestions?: PromptSuggestion[];
   codemodeEnabled: boolean;
   /**
-   * Optional callback invoked when the user toggles codemode from the Tools
-   * menu. When omitted the toggle renders as read-only.
+   * Called when codemode is switched, in the MCP overlay. Without it the
+   * switch is drawn disabled, with why.
    */
   onToggleCodemode?: (enabled: boolean) => void | Promise<void>;
   isA2AProtocol: boolean;
@@ -298,7 +309,6 @@ export interface InputPromptProps {
   /** MCP servers to render (already filtered by selection) */
   mcpServers?: MCPServerConfig[];
   enabledMcpTools?: Map<string, Set<string>>;
-  enabledMcpToolCount?: number;
   onToggleMcpTool?: (serverId: string, toolName: string) => void;
   onToggleAllMcpServerTools?: (
     serverId: string,
@@ -319,19 +329,20 @@ export interface InputPromptProps {
   approvedSkills?: Set<string>;
   onToggleSkillApproval?: (skillId: string) => void;
 
-  // ---- Indicators ----
-  /** API base URL passed to MCP indicator */
-  apiBase?: string;
-  /** Auth token passed to MCP indicator */
-  authToken?: string;
-  /** Pre-fetched MCP status from WebSocket — bypasses REST polling */
+  // ---- Equipment: the MCP and skills dots and menus ----
+  /** The MCP servers' live status, from the runtime's monitoring stream. */
   mcpStatusData?: McpToolsetsStatusResponse | null;
   /**
-   * An anonymous visitor's conversation (the user, 15 November 2026): the
-   * agent's MCP servers and skills, by name, which the indicators list as
-   * disabled, in the warning colour.
+   * An application's equipment (`useEquipment`): its MCP servers and skills
+   * as its runtime says them, each with its state and why one is off, and
+   * its model, listed to read in the footer.
    */
-  anonymousDisabled?: { mcpServers: string[]; skills: string[] };
+  equipment?: Equipment;
+  /**
+   * Why the switches cannot be used here (no channel to the runtime takes
+   * them); none when they can. Every switch is then drawn disabled, with it.
+   */
+  switchesLocked?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -376,6 +387,7 @@ export function InputPrompt({
   agentUsage,
   showModelSelector,
   showToolsMenu,
+  showMcpMenu = showToolsMenu,
   showSkillsMenu,
   showSuggestionsMenu = true,
   suggestions,
@@ -393,7 +405,6 @@ export function InputPrompt({
   availableFrontendTools = [],
   mcpServers = [],
   enabledMcpTools = EMPTY_TOOL_MAP,
-  enabledMcpToolCount = 0,
   onToggleMcpTool = () => {},
   onToggleAllMcpServerTools = () => {},
   approvedMcpTools = EMPTY_TOOL_MAP,
@@ -405,10 +416,9 @@ export function InputPrompt({
   onToggleAllSkills = () => {},
   approvedSkills = EMPTY_ID_SET,
   onToggleSkillApproval = () => {},
-  apiBase,
-  authToken,
   mcpStatusData,
-  anonymousDisabled,
+  equipment,
+  switchesLocked,
 }: InputPromptProps) {
   const chatText = useChatWords();
   const isKernelBusy = kernelStatus === 'busy';
@@ -446,7 +456,55 @@ export function InputPrompt({
   const inlineAgents = agentsOffered && showInlineAgentsMenu;
   const modelsOffered = showModelSelector;
   const toolsOffered = showToolsMenu;
+  const mcpOffered = showMcpMenu;
   const skillsOffered = showSkillsMenu;
+  /*
+   * The MCP servers and the skills, as rows: one source for the two dots
+   * beside the send button and the two menus in the footer, which open the
+   * same overlay (the user, 19 November 2026). The application's equipment,
+   * the runtime's servers and their status, and what the conversation
+   * switched on.
+   */
+  const lists = useMemo(
+    () =>
+      equipmentLists({
+        equipment,
+        mcpServers,
+        mcpStatus: mcpStatusData,
+        enabledMcpTools,
+        approvedMcpTools,
+        skills,
+        enabledSkills,
+        approvedSkills,
+        locked: switchesLocked,
+      }),
+    [
+      equipment,
+      mcpServers,
+      mcpStatusData,
+      enabledMcpTools,
+      approvedMcpTools,
+      skills,
+      enabledSkills,
+      approvedSkills,
+      switchesLocked,
+    ],
+  );
+  const switches: EquipmentSwitches = {
+    onToggleMcpTool,
+    onToggleAllMcpServerTools,
+    onToggleMcpToolApproval,
+    onToggleSkill,
+    onToggleAllSkills,
+    onToggleSkillApproval,
+    // Where the chat offers codemode: an agent's chat, or a host that
+    // switches it.
+    ...(toolsOffered || onToggleCodemode
+      ? { codemode: { enabled: codemodeEnabled, onToggle: onToggleCodemode } }
+      : {}),
+  };
+  /* An application's model, to read, where the model is not chosen. */
+  const equipmentModelShown = Boolean(equipment) && !showModelSelector;
   /*
    * The suggestions control: the openers as a menu, when there are any.
    *
@@ -461,7 +519,12 @@ export function InputPrompt({
   const suggestionsOffered = showSuggestionsMenu && suggestionItems.length > 0;
   const [pickedFocus, setPickedFocus] = useState(0);
   const anyOffered =
-    agentsOffered || modelsOffered || toolsOffered || skillsOffered;
+    agentsOffered ||
+    modelsOffered ||
+    toolsOffered ||
+    mcpOffered ||
+    skillsOffered ||
+    equipmentModelShown;
   const extrasOffered = Boolean(footerExtras);
 
   /* Still coming, as opposed to never coming. Only a menu that was asked for
@@ -551,21 +614,17 @@ export function InputPrompt({
         onChange={setInput}
         footerRightContent={
           <>
-            <McpStatusIndicator
-              apiBase={apiBase}
-              authToken={authToken}
-              data={mcpStatusData}
-              {...(anonymousDisabled
-                ? { disabled: anonymousDisabled.mcpServers }
-                : {})}
+            <EquipmentMenu
+              kind="servers"
+              trigger="dot"
+              lists={lists}
+              switches={switches}
             />
-            <SkillsStatusIndicator
-              skillsCount={skills.length}
-              enabledCount={enabledSkills.size}
-              loading={skillsLoading}
-              {...(anonymousDisabled
-                ? { disabled: anonymousDisabled.skills }
-                : {})}
+            <EquipmentMenu
+              kind="skills"
+              trigger="dot"
+              lists={lists}
+              switches={switches}
             />
           </>
         }
@@ -651,33 +710,33 @@ export function InputPrompt({
                           {/* Tools Menu */}
                           {toolsOffered && (
                             <ToolsMenu
-                              codemodeEnabled={codemodeEnabled}
-                              onToggleCodemode={onToggleCodemode}
-                              mcpServers={mcpServers}
-                              enabledMcpTools={enabledMcpTools}
-                              enabledMcpToolCount={enabledMcpToolCount}
-                              onToggleMcpTool={onToggleMcpTool}
-                              onToggleAllMcpServerTools={
-                                onToggleAllMcpServerTools
-                              }
-                              approvedMcpTools={approvedMcpTools}
-                              onToggleMcpToolApproval={onToggleMcpToolApproval}
                               availableTools={availableTools}
                               availableFrontendTools={availableFrontendTools}
                             />
                           )}
 
-                          {/* Skills Menu */}
-                          {skillsOffered && (
-                            <SkillsMenu
-                              skills={skills}
-                              skillsLoading={skillsLoading}
-                              enabledSkills={enabledSkills}
-                              onToggleSkill={onToggleSkill}
-                              onToggleAllSkills={onToggleAllSkills}
-                              approvedSkills={approvedSkills}
-                              onToggleSkillApproval={onToggleSkillApproval}
+                          {/* The MCP servers and the skills: the overlays
+                              the dots beside the send button open too. */}
+                          {mcpOffered && (
+                            <EquipmentMenu
+                              kind="servers"
+                              trigger="button"
+                              lists={lists}
+                              switches={switches}
                             />
+                          )}
+                          {skillsOffered && (
+                            <EquipmentMenu
+                              kind="skills"
+                              trigger="button"
+                              lists={lists}
+                              switches={switches}
+                            />
+                          )}
+
+                          {/* An application's model, to read. */}
+                          {equipmentModelShown && equipment && (
+                            <EquipmentModelMenu equipment={equipment} />
                           )}
 
                           {/* Model Selector */}

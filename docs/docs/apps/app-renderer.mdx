@@ -426,32 +426,37 @@ call. Placed `message`, the last call that changed it draws it in the conversati
 
 ## Under its composer: what it runs with
 
-An application's composer lists what its agent runs with, in three menus beside its other
-controls: its **MCP servers**, its **skills** and its **model** (`EquipmentBar`,
-`chat/prompt/menus/EquipmentMenus`). Each lists everything the agent declares, on or off, and
-each trigger counts what is on: `1/2` servers running, `3/5` skills active, the model's name (its
-icon alone on a phone).
+An application's composer lists what its agent runs with: its **MCP servers** and its **skills**,
+each in one overlay (`EquipmentMenu`, `chat/prompt/menus/EquipmentMenus`) opened from either of
+two places — the dot beside the send button, or the menu in the footer. Both triggers show the same
+rows and say the same summary: the dot by its colour (green when some are on, red when a server
+failed, amber while one starts, grey when none is on) and its tooltip, the footer by its icon and
+a count, `2/3`. Its **model** is listed apart in the footer, to read. An agent's own chat uses the
+same two overlays.
 
-| Menu | A row says |
+| Overlay | A row says |
 |------|-----------|
-| MCP servers | **Running** (with how many tools), **Starting**, **Failed** (with the reason its start gave), **Not started**, or **Off**: an optional server whose secrets are not set up, with what it needs, such as `needs DISCORD_BOT_TOKEN, DISCORD_GUILD_ID`. |
-| Skills | **Active**, or **Not activated** with what it needs: `needs TAVILY_API_KEY`, or `needs one of PEXELS_API_KEY, UNSPLASH_ACCESS_KEY` for a skill that one key among several sets up. |
+| MCP servers | **Running** (with how many of its tools are on), **Starting**, **Failed** (with the reason its start gave), **Not started**, or **Off**: an optional server whose secrets are not set up, with what it needs, such as `needs DISCORD_BOT_TOKEN, DISCORD_GUILD_ID`. |
+| Skills | **Active** (or **Loaded**, **Enabled**, **Off** as the conversation has it), or **Not activated** with what it needs: `needs TAVILY_API_KEY`, or `needs one of PEXELS_API_KEY, UNSPLASH_ACCESS_KEY` for a skill that one key among several sets up. The Datalayer skills (`datalayer-memory-*`) are listed and counted like any other. |
 | Model | **In use**, **Available**, or **Not available** with the runtime's reason. |
 
 What is said of a secret is the *name* of its variable, never its value.
 
-**They are read, not chosen.** A person using an application chooses none of these: its builder
-did, in its spec. A row is a menu item a keyboard reaches and a screen reader reads whole (its
-name, its state, why); choosing one does nothing and leaves the menu open, and each menu says so
-at its foot. Nothing is switched from here, and no model is sent with a run. This holds for
-everybody: a visitor at a demo, somebody signed in at a deployment's page, and its builder in the
-Preview. An agent's own chat keeps its selectors, which do switch.
+**The switches.** Each overlay has the conversation's switches: a server's tools all at once
+(**Enable all**) or one by one, each tool's approval, each skill, all the skills, each skill's
+approval, and **Codemode** where the chat offers it. They are sent to the runtime over its
+monitoring stream. A switch that cannot be used is drawn disabled, with why: a server that is not
+running, or not set up (its reason), a tool list the runtime has not given yet, or a runtime that
+takes no switch from the page (the visitors' runtime and a deployment's answer the application's
+own routes alone, and open no monitoring stream). Nothing says "disabled without an account" for
+what the runtime does offer a visitor. The model is the application's, the same for everyone: it
+is read, never chosen, and no model is sent with a run.
 
 **Where it is read.** The servers and the skills come from the runtime the application runs on,
 `GET /api/v1/apps/agents/{agent}/equipment` ([the session API](./session-api.mdx)), asked with
 the caller's token and again every half minute; the models from the chat's read of them,
 `GET /api/v1/configure/models`. Both are answered wherever an application runs: the visitors'
-runtime and a deployment's included. Until the runtime answers, the menus list what the agent's
+runtime and a deployment's included. Until the runtime answers, the overlays list what the agent's
 spec declares, with no state, and say **Declared**; they stay so on a runtime that does not have
 the route, and for models when the runtime calls none of them usable (the visitors' runtime
 calls the model with each visitor's own token).

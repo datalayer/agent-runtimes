@@ -7,8 +7,9 @@
  * `runAsAnonymous` and `maxTurns` (the user, 15 November 2026): the preset
  * hands them to the chat, which closes its prompt while the temporary key
  * is checked and once the turns or the minutes are spent, draws the box on
- * top, the key's clock in its header, Anonymous in its footer, and lists
- * the agent's MCP servers and skills disabled.
+ * top, the key's clock in its header and Anonymous in its footer. Its MCP
+ * servers and skills are not said disabled: the runtime's equipment says
+ * what a visitor has (equipment-menus.test).
  */
 
 import { readFileSync } from 'node:fs';
@@ -67,15 +68,14 @@ describe('the chat, anonymous', () => {
     );
   });
 
-  it('draws the box, the clock, the footer and the disabled lists', () => {
+  it('draws the box, the clock and the footer, and no disabled lists', () => {
     expect(CHAT_VIEW).toContain(
       '<AnonymousPreviewBox state={anonymousState} />',
     );
     expect(CHAT_VIEW).toContain('<AnonymousKeyClock state={anonymousState} />');
     expect(CHAT_VIEW).toContain('<AnonymousFooterLabel />');
-    expect(CHAT_VIEW).toContain(
-      '...(anonymousConfig ? { anonymousDisabled } : {})',
-    );
+    expect(CHAT_VIEW).not.toContain('anonymousDisabled');
+    expect(CHAT_VIEW).toContain('...(equipmentShown ? { equipment } : {}),');
     expect(CHAT_VIEW).toContain(
       '<AnonymousChatProvider value={anonymousState}>',
     );

@@ -4,23 +4,12 @@
  */
 
 /**
- * McpStatusIndicator — Round status dot showing the aggregate
- * state of MCP servers, with a tooltip listing per-server details.
+ * The composer's indicators. The MCP and skills dots are triggers of the
+ * same overlay as the footer's menus (`chat/prompt/menus/EquipmentMenus`).
  *
- * Statuses:
- * - none:        No MCP servers defined (gray)
- * - not_started: Servers defined but not started (gray)
- * - starting:    Servers are starting up (amber / pulsing)
- * - failed:      At least one server failed (red)
- * - started:     All servers started & available (green)
- *
- * @module chat/indicators/McpStatusIndicator
+ * @module chat/indicators
  */
 
-export {
-  McpStatusIndicator,
-  type McpStatusIndicatorProps,
-} from './McpStatusIndicator';
 export type { McpServerStatus, McpAggregateStatus } from '../../types/mcp';
 
 export {
@@ -31,8 +20,3 @@ export type {
   SandboxAggregateStatus,
   SandboxWsStatus,
 } from '../../types/sandbox';
-
-export {
-  SkillsStatusIndicator,
-  type SkillsStatusIndicatorProps,
-} from './SkillsStatusIndicator';

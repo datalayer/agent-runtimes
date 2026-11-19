@@ -125,9 +125,6 @@ export type AnonymousChatState = AnonymousTurns & {
   headerShown: boolean;
   /** The conversation's minutes. */
   minutes: number;
-  /** The MCP servers and skills a visitor cannot use, by name. */
-  disabledMcpServers: string[];
-  disabledSkills: string[];
   /** Go to sign in, as the host said. */
   signIn: () => void;
 };
