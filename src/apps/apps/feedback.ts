@@ -52,8 +52,7 @@ export const FEEDBACK_WORDS = {
   where: (app: string): string =>
     `What you say is kept with this conversation in ${app}’s record, for its builder to read.`,
   tooLong: `A comment is at most ${FEEDBACK_COMMENT_LIMIT} characters.`,
-  noRuntime:
-    'No runtime is assigned to this conversation, so nothing can be sent.',
+  noRuntime: 'Can’t send: no runtime is assigned to this conversation.',
   noSession:
     'This conversation has no name the application knows yet: send a message first.',
 } as const;

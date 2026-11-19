@@ -160,8 +160,11 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     demoKeyExpired:
       'This demo runs on a shared key, and its time is up. Sign in to keep going.',
     keyExpired: 'Your key has expired. Sign in to keep going.',
+    // Short (the user, 19 November 2026): "Can’t send." and why.
     noRuntime: reason =>
-      `No runtime is assigned to this conversation, so nothing can be sent. ${reason}`,
+      reason
+        ? `Can’t send. ${reason}`
+        : 'Can’t send: no runtime is assigned to this conversation.',
     runtimeStarting: 'Its runtime is being assigned: you can send once it is.',
     startConversation: 'Start a conversation',
     sendToBegin: 'Send a message to begin chatting',
