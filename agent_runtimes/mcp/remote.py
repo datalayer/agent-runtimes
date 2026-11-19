@@ -17,13 +17,27 @@ carries a token that could not be attributed to a Datalayer user …"*, answered
 as a JSON-RPC error with no id at HTTP 200; a 401 or 403 carries its ``detail``
 — and the MCP client reads neither: it waits for the answer to its
 ``initialize`` until the handshake's deadline, then says *"Failed to initialize
-server session"*. :func:`refusals_client_factory` reads every answer of the
-handshake and, at the first that refuses, keeps the server's sentence on its
+server session"*. :func:`refusals_client_factory` reads the handshake's
+answers and, at the first that refuses, keeps the server's sentence on its
 :class:`Refusals` and raises :class:`McpServerRefused`, so the start fails at
 once and :attr:`MCPLifecycleManager._failed_servers` says what the gateway
 said. Once the server has answered the handshake the hook stands down
 (:meth:`Refusals.stand_down`): a tool's refusal at run time reaches the model
 the way every tool error does.
+
+Three answers refuse (:func:`refuses`): an error answering ``initialize``; a
+401 or 403 answering anything; and a JSON-RPC error with no id answering
+anything, which the client cannot match to its request and would wait on
+until the deadline. The handshake asks more than
+``initialize`` — the client probes ``server/discover`` first and falls back to
+``initialize`` on an error, may open the GET event stream, and may ask
+``logging/setLevel``, ``resources/*``, ``prompts/*`` — and working servers
+answer some of these with errors: *"Method not found"* or *"Method not
+supported"* to the probe, a 404 or 405 to the GET stream, a JSON-RPC error to
+a call they cannot serve. The client carries on without that request; so
+does the hook. The gateway's wrong key answers every request alike, the
+probe first, with a JSON-RPC error at 200 and no id: refused there, by its
+missing id.
 """
 
 from __future__ import annotations
@@ -43,6 +57,7 @@ __all__ = [
     "Refusals",
     "refusal_sentence",
     "refusals_client_factory",
+    "refuses",
     "remote_toolset",
 ]
 
@@ -142,6 +157,70 @@ def refusal_sentence(status: int, content_type: str, body: bytes) -> str | None:
     return None
 
 
+#: The statuses that refuse whatever they answer: the request's credentials.
+AUTH_REFUSED = frozenset({401, 403})
+
+
+def _methods(request: httpx2.Request) -> set[str]:
+    """The JSON-RPC methods a request asks, none for a GET or a body unread."""
+    if request.method != "POST":
+        return set()
+    try:
+        data: Any = json.loads(request.content or b"null")
+    except (ValueError, httpx2.RequestNotRead):
+        return set()
+    messages = data if isinstance(data, list) else [data]
+    return {
+        str(message["method"])
+        for message in messages
+        if isinstance(message, dict) and isinstance(message.get("method"), str)
+    }
+
+
+def _unanswerable(content_type: str, body: bytes) -> bool:
+    """Whether the body is a JSON-RPC error with no id: no request's answer."""
+    if not content_type.lower().startswith("application/json"):
+        return False
+    try:
+        data: Any = json.loads(body) if body.strip() else None
+    except ValueError:
+        return False
+    return (
+        isinstance(data, dict)
+        and data.get("jsonrpc") == "2.0"
+        and isinstance(data.get("error"), dict)
+        and data.get("id") is None
+    )
+
+
+def refuses(response: httpx2.Response, body: bytes) -> bool:
+    """
+    Whether an error in this answer refuses the handshake.
+
+    Parameters
+    ----------
+    response : httpx2.Response
+        An answer, with the request it answers.
+    body : bytes
+        Its body, read whole.
+
+    Returns
+    -------
+    bool
+        True for a 401 or 403 (the credentials refused, whatever was asked),
+        for any answer to ``initialize``, and for a JSON-RPC error with no id
+        (the client cannot match it to its request and would wait for an
+        answer until the deadline); False for the rest — the
+        ``server/discover`` probe, the GET event stream, the optional calls —
+        whose errors the client carries on without.
+    """
+    if response.status_code in AUTH_REFUSED:
+        return True
+    if "initialize" in _methods(response.request):
+        return True
+    return _unanswerable(response.headers.get("content-type", ""), body)
+
+
 def refusals_client_factory(refusals: Refusals) -> Any:
     """
     The MCP client's httpx factory, reading the handshake's answers for a refusal.
@@ -170,6 +249,8 @@ def refusals_client_factory(refusals: Refusals) -> Any:
             # A stream (text/event-stream) is read by the client, not here.
             return
         body = await response.aread()
+        if not refuses(response, body):
+            return
         sentence = refusal_sentence(response.status_code, content_type, body)
         if sentence is None:
             return
