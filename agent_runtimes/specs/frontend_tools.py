@@ -193,6 +193,49 @@ PAGE_DECK_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
     emoji="🎞️",
 )
 
+PAGE_EXCALIDRAW_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
+    id="page-excalidraw",
+    version="0.0.1",
+    name="Excalidraw in the page",
+    description="Draw diagrams on an Excalidraw canvas in the conversation — insert a drawing, read it, add, change, connect and delete its shapes, set its canvas, turn Mermaid into shapes — shown to the person as it is drawn, editable.",
+    tags=["frontend", "excalidraw", "diagrams", "page"],
+    enabled=True,
+    toolset=[
+        "datalayer_excalidrawInsertNode",
+        "datalayer_excalidrawFromMermaid",
+        "datalayer_excalidrawListDrawings",
+        "datalayer_excalidrawReadScene",
+        "datalayer_excalidrawAddElements",
+        "datalayer_excalidrawUpdateElements",
+        "datalayer_excalidrawConnectElements",
+        "datalayer_excalidrawDeleteElements",
+        "datalayer_excalidrawSetAppState",
+        "datalayer_excalidrawResize",
+        "datalayer_excalidrawClearScene",
+    ],
+    icon="@primer/octicons-react:paintbrush",
+    emoji="🖌️",
+)
+
+PAGE_MERMAID_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
+    id="page-mermaid",
+    version="0.0.1",
+    name="Mermaid in the page",
+    description="Write Mermaid diagrams in the conversation — create or replace a diagram's source, read it back, check a source with Mermaid's parser, render to SVG, list the diagram types — each drawn for the person as it is written.",
+    tags=["frontend", "mermaid", "diagrams", "page"],
+    enabled=True,
+    toolset=[
+        "datalayer_mermaidSetDiagram",
+        "datalayer_mermaidReadDiagram",
+        "datalayer_mermaidListDiagrams",
+        "datalayer_mermaidValidate",
+        "datalayer_mermaidRenderSvg",
+        "datalayer_mermaidListDiagramTypes",
+    ],
+    icon="@primer/octicons-react:workflow",
+    emoji="🧜",
+)
+
 PAGE_SHEET_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
     id="page-sheet",
     version="0.0.1",
@@ -242,6 +285,8 @@ FRONTEND_TOOL_CATALOG: Dict[str, FrontendToolSpec] = {
     "lexical-document": LEXICAL_DOCUMENT_FRONTEND_TOOL_SPEC_0_0_1,
     "notices": NOTICES_FRONTEND_TOOL_SPEC_0_0_1,
     "page-deck": PAGE_DECK_FRONTEND_TOOL_SPEC_0_0_1,
+    "page-excalidraw": PAGE_EXCALIDRAW_FRONTEND_TOOL_SPEC_0_0_1,
+    "page-mermaid": PAGE_MERMAID_FRONTEND_TOOL_SPEC_0_0_1,
     "page-sheet": PAGE_SHEET_FRONTEND_TOOL_SPEC_0_0_1,
     "side-panels": SIDE_PANELS_FRONTEND_TOOL_SPEC_0_0_1,
 }

@@ -1149,6 +1149,62 @@ export const AGENTSPECS_UI_0_0_1: UISpec = {
   components: [],
 };
 
+export const ANALYSIS_HEADER_UI_0_0_1: UISpec = {
+  id: 'analysis-header',
+  version: '0.0.1',
+  name: 'Analysis header',
+  description:
+    "The Analyst's title bar: what is being analysed, whether its diagrams parse, and a button that asks for it on the canvas.",
+  emoji: '📐',
+  octicon: 'workflow',
+  plugin: '@datalayer/loop-plugin-analysis-header',
+  folder: 'analysis-header',
+  contributions: {
+    slots: ['loop.chatHeader'],
+    points: ['loop.chat.extras'],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  placements: ['header', 'right', 'left'],
+  header: {
+    tool: 'set_analysis_header',
+    when: 'Call it once you know what is being analysed (a few words as the label of subject), and after each diagram you write to say whether the diagrams parse. Never show a diagram as valid that Mermaid refused.',
+    items: [
+      {
+        id: 'subject',
+        kind: 'indicator',
+        display: 'label',
+        label: 'Subject',
+        description: 'What is being analysed, such as "Checkout flow".',
+        octicon: 'workflow',
+      },
+      {
+        id: 'check',
+        kind: 'indicator',
+        display: 'status',
+        label: 'Diagrams',
+        description:
+          'Whether the diagrams parse, said from what Mermaid answered, such as "2 diagrams valid" (tone "success") or "Diagram refused" (tone "danger").',
+        octicon: 'check-circle',
+      },
+      {
+        id: 'canvas',
+        kind: 'action',
+        label: 'Draw on the canvas',
+        description:
+          'Asks for the subject as a drawing on the Excalidraw canvas.',
+        octicon: 'paintbrush',
+        message:
+          'Draw this on the canvas, each part a labelled shape and the arrows bound to them.',
+      },
+    ],
+  },
+  catalog: '',
+  components: [],
+};
+
 export const APP_ACTIVITY_UI_0_0_1: UISpec = {
   id: 'app-activity',
   version: '0.0.1',
@@ -2332,6 +2388,33 @@ export const PAGE_DECK_UI_0_0_1: UISpec = {
   components: [],
 };
 
+export const PAGE_EXCALIDRAW_UI_0_0_1: UISpec = {
+  id: 'page-excalidraw',
+  version: '0.0.1',
+  name: 'Excalidraw in the page',
+  description:
+    'Drawings the agent makes in the conversation on an Excalidraw canvas, with tools run in the page: shown as they are drawn, editable by the person, its shapes bound so they move together.',
+  emoji: '🖌️',
+  octicon: 'paintbrush',
+  plugin: '@datalayer/loop-plugin-page-excalidraw',
+  folder: 'page-excalidraw',
+  contributions: {
+    slots: [],
+    points: [
+      'loop.chat.extras',
+      'reactor.ui.renderer',
+      'reactor.ui.toolBinding',
+    ],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  placements: ['message', 'right', 'left'],
+  catalog: '',
+  components: [],
+};
+
 export const PAGE_LAYOUT_UI_0_0_1: UISpec = {
   id: 'page-layout',
   version: '0.0.1',
@@ -2418,6 +2501,33 @@ export const PAGE_LAYOUT_UI_0_0_1: UISpec = {
   },
   renderers: [],
   placements: [],
+  catalog: '',
+  components: [],
+};
+
+export const PAGE_MERMAID_UI_0_0_1: UISpec = {
+  id: 'page-mermaid',
+  version: '0.0.1',
+  name: 'Mermaid in the page',
+  description:
+    "Mermaid diagrams the agent writes in the conversation, with tools run in the page: each source checked by Mermaid's parser before it is shown, drawn in the page's colours, its source a click away.",
+  emoji: '🧜',
+  octicon: 'workflow',
+  plugin: '@datalayer/loop-plugin-page-mermaid',
+  folder: 'page-mermaid',
+  contributions: {
+    slots: [],
+    points: [
+      'loop.chat.extras',
+      'reactor.ui.renderer',
+      'reactor.ui.toolBinding',
+    ],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  placements: ['message', 'right', 'left'],
   catalog: '',
   components: [],
 };
@@ -3183,6 +3293,7 @@ export const UI_CATALOGUE: Record<string, UISpec> = {
   'a2ui-surface': A2UI_SURFACE_UI_0_0_1,
   'a2ui-view': A2UI_VIEW_UI_0_0_1,
   agentspecs: AGENTSPECS_UI_0_0_1,
+  'analysis-header': ANALYSIS_HEADER_UI_0_0_1,
   'app-activity': APP_ACTIVITY_UI_0_0_1,
   'app-components': APP_COMPONENTS_UI_0_0_1,
   'app-computer': APP_COMPUTER_UI_0_0_1,
@@ -3222,7 +3333,9 @@ export const UI_CATALOGUE: Record<string, UISpec> = {
   notices: NOTICES_UI_0_0_1,
   'odoo-context': ODOO_CONTEXT_UI_0_0_1,
   'page-deck': PAGE_DECK_UI_0_0_1,
+  'page-excalidraw': PAGE_EXCALIDRAW_UI_0_0_1,
   'page-layout': PAGE_LAYOUT_UI_0_0_1,
+  'page-mermaid': PAGE_MERMAID_UI_0_0_1,
   'page-sheet': PAGE_SHEET_UI_0_0_1,
   'pap-purchase': PAP_PURCHASE_UI_0_0_1,
   'pap-sign-in': PAP_SIGN_IN_UI_0_0_1,
