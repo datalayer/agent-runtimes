@@ -1262,6 +1262,12 @@ export const APP_BEHAVIOURS: Record<string, Record<string, AppBehaviour>> = {
     'earthdata.search_earth_datasets': 'do_it',
   },
   'demo-traveller': {
+    'google-maps.compute_routes': 'do_it',
+    'google-maps.lookup_weather': 'do_it',
+    'google-maps.resolve_maps_urls': 'do_it',
+    'google-maps.resolve_names': 'do_it',
+    'google-maps.search_along_route': 'do_it',
+    'google-maps.search_places': 'do_it',
     'kiwi.feedback-to-devs': 'leave_to_me',
     'kiwi.search-flight': 'do_it',
   },
