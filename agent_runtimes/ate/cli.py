@@ -63,7 +63,8 @@ def template(
     ),
     cpu_millicores: int = typer.Option(2000, help="Each actor's CPU, in millicores."),
     wakeup_timeout_seconds: int = typer.Option(
-        180, help="How long Agent Substrate waits for the first wakeup probe to answer, in seconds."
+        180,
+        help="How long Agent Substrate waits for the first wakeup probe to answer, in seconds.",
     ),
     memory_bytes: int = typer.Option(
         2 * 1024**3, help="Each actor's memory, in bytes."

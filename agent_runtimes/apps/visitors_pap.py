@@ -83,7 +83,9 @@ def companies_of(deployment_uid: str) -> Mapping[str, tuple[str, ...]]:
 def _ai_agents_url() -> str:
     from datalayer_core.utils.urls import DatalayerURLs
 
-    return str(getattr(DatalayerURLs.from_environment(), "ai_agents_url", "") or "").rstrip("/")
+    return str(
+        getattr(DatalayerURLs.from_environment(), "ai_agents_url", "") or ""
+    ).rstrip("/")
 
 
 async def _ask(deployment_uid: str, key: str) -> dict[str, Any]:
@@ -119,7 +121,11 @@ async def ensure(deployment_uid: str) -> bool:
     """Whether the deployment's principal token is held for its visitors, asked for when it is not
     or runs out. ``False`` — and nothing beyond reading — for a deployment ai-agents does not let
     further, on another runtime, or with no key."""
-    from agent_runtimes.apps.principal import PrincipalTokenMissing, _ensure_held, principal_token_refusal
+    from agent_runtimes.apps.principal import (
+        PrincipalTokenMissing,
+        _ensure_held,
+        principal_token_refusal,
+    )
     from agent_runtimes.apps.visitors import visitors_runtime
 
     if not deployment_uid or not visitors_runtime():
@@ -140,7 +146,9 @@ async def ensure(deployment_uid: str) -> bool:
         )
     except PrincipalTokenMissing:
         return False
-    return principal_token_refusal(deployment_uid) is None and bool(_COMPANIES.get(deployment_uid))
+    return principal_token_refusal(deployment_uid) is None and bool(
+        _COMPANIES.get(deployment_uid)
+    )
 
 
 def enter_run(deployment_uid: str) -> None:

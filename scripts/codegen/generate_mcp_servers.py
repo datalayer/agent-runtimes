@@ -430,7 +430,9 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                     else []
                 ),
                 *(
-                    [f"  optionalEnvVars: {json.dumps(list(spec['optional_envvars']))},"]
+                    [
+                        f"  optionalEnvVars: {json.dumps(list(spec['optional_envvars']))},"
+                    ]
                     if spec.get("optional_envvars")
                     else []
                 ),

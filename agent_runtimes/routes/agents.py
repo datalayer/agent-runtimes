@@ -1543,7 +1543,10 @@ async def _as_deployed(
         The request it is made from, and what ai-agents answered.
     """
     from agent_runtimes.apps.callers import bearer_of
-    from agent_runtimes.apps.deployments import DeployRefused, deployment_runtime_payload
+    from agent_runtimes.apps.deployments import (
+        DeployRefused,
+        deployment_runtime_payload,
+    )
     from agent_runtimes.apps.loading import AppNotRunnable
     from agent_runtimes.apps.principal import (
         DeploymentCodeUnread,

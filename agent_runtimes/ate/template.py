@@ -103,7 +103,9 @@ def _refuse(request: TemplateRequest) -> None:
     if not 0 < request.port < 65536:
         raise ValueError(f"The port is from 1 to 65535, not {request.port}.")
     if request.wakeup_timeout_seconds <= 0:
-        raise ValueError(f"The wakeup timeout is a number of seconds above zero, not {request.wakeup_timeout_seconds}.")
+        raise ValueError(
+            f"The wakeup timeout is a number of seconds above zero, not {request.wakeup_timeout_seconds}."
+        )
     if request.cpu_millicores <= 0 or request.memory_bytes <= 0:
         raise ValueError(
             "An actor is sized by both cpuMillicores and memoryBytes, above zero."

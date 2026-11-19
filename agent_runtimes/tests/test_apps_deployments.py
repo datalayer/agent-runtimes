@@ -487,9 +487,9 @@ def test_a_kept_deployment_is_made_as_its_hosted_page_would_make_it():
     }
     assert (
         "organization_uid"
-        not in deployment_runtime_payload(DIGEST, app_uid="app-1", deployment_uid="dep-1", version=4)[
-            "app_instance"
-        ]
+        not in deployment_runtime_payload(
+            DIGEST, app_uid="app-1", deployment_uid="dep-1", version=4
+        )["app_instance"]
     )
     # The deployment's spend limit travels in the instance.
     limited = deployment_runtime_payload(

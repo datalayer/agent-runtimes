@@ -1299,9 +1299,15 @@ async def send_mail(to: str, subject: str, text: str) -> Dict[str, Any] | str:
         return "A mail's subject is at most 150 characters."
     if len(text) > 20000:
         return "A mail's text is at most 20 000 characters."
-    answer = await _iam("POST", "/api/iam/v1/social/mail", json={"to": to, "subject": subject, "text": text})
+    answer = await _iam(
+        "POST",
+        "/api/iam/v1/social/mail",
+        json={"to": to, "subject": subject, "text": text},
+    )
     if isinstance(answer, str):
-        return answer.replace("nothing was posted", "nothing was sent").replace("it posts nowhere", "it sends no mail")
+        return answer.replace("nothing was posted", "nothing was sent").replace(
+            "it posts nowhere", "it sends no mail"
+        )
     if answer.status_code != 202:
         return f"The mail was not sent ({answer.status_code}): {_said(answer)}"
     return {"sent": True, "to": to}

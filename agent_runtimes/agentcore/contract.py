@@ -503,7 +503,10 @@ async def deployment_agent(server: Any, bearer: str) -> str:
         With no token to ask with (401), when ai-agents does not say what the
         deployment runs (502), or it cannot be made, in its sentence.
     """
-    from agent_runtimes.apps.deployments import DeployRefused, deployment_runtime_payload
+    from agent_runtimes.apps.deployments import (
+        DeployRefused,
+        deployment_runtime_payload,
+    )
     from agent_runtimes.apps.loading import AppNotRunnable
     from agent_runtimes.apps.principal import DeploymentCodeUnread, read_deployment
 

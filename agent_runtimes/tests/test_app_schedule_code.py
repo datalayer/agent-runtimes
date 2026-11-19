@@ -361,7 +361,10 @@ def test_no_payload_that_makes_a_deployments_agent_carries_code() -> None:
     """ai-agents' `/wake` and its keeper make a deployment's agent with its
     Appspec and its instance, never its code: the runtime reads the
     version's `app.py` from the deployment as the agent is made."""
-    from agent_runtimes.apps.deployments import deployment_runtime_payload, session_payload
+    from agent_runtimes.apps.deployments import (
+        deployment_runtime_payload,
+        session_payload,
+    )
 
     spec = tick_spec()
     woken_by = {"kind": "schedule", "position": 1}
@@ -370,7 +373,9 @@ def test_no_payload_that_makes_a_deployments_agent_carries_code() -> None:
     )
     assert "app_code" not in woken
     assert woken["app_instance"]["woken_by"] == woken_by
-    kept = deployment_runtime_payload(spec, app_uid="app-14", deployment_uid="dep-14", version=2)
+    kept = deployment_runtime_payload(
+        spec, app_uid="app-14", deployment_uid="dep-14", version=2
+    )
     assert "app_code" not in kept
     assert kept["app_instance"]["version"] == 2
     with pytest.raises(TypeError):

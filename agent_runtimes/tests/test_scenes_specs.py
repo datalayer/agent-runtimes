@@ -100,7 +100,9 @@ def test_the_pap_stages_arrive_scripted_with_their_actors_and_lines() -> None:
 def test_each_beat_says_its_cue_its_moves_and_what_it_shows() -> None:
     for scene in (scene for scene in SCENE_CATALOGUE.values() if scene.kind == "team"):
         # The home page's scenes play four beats; buying from a shop three; the coding agent two.
-        beats = 4 if scene.id in HOME_SCENES else 3 if scene.id == "buy-from-a-shop" else 2
+        beats = (
+            4 if scene.id in HOME_SCENES else 3 if scene.id == "buy-from-a-shop" else 2
+        )
         assert len(scene.script) == beats, scene.id
         for beat in scene.script:
             assert beat.cue.say and beat.moves and beat.expect and beat.shows, (

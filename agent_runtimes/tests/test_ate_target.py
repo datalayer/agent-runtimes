@@ -522,10 +522,20 @@ def test_the_template_allows_a_slow_first_wake_and_two_cpus_by_default() -> None
     from agent_runtimes.ate.template import TemplateRequest, actor_template
 
     image = "registry.example/agent-runtimes-ate@sha256:" + "0" * 64
-    template = actor_template(TemplateRequest(atespace="datalayer-runtimes", name="ai-agents-env", image=image))
+    template = actor_template(
+        TemplateRequest(
+            atespace="datalayer-runtimes", name="ai-agents-env", image=image
+        )
+    )
     assert template["containers"][0]["wakeupProbe"]["timeoutSeconds"] == 180
     assert template["resources"]["limits"]["cpuMillicores"] == "2000"
-    slow = actor_template(TemplateRequest(atespace="a", name="b", image=image, wakeup_timeout_seconds=300))
+    slow = actor_template(
+        TemplateRequest(atespace="a", name="b", image=image, wakeup_timeout_seconds=300)
+    )
     assert slow["containers"][0]["wakeupProbe"]["timeoutSeconds"] == 300
     with pytest.raises(ValueError):
-        actor_template(TemplateRequest(atespace="a", name="b", image=image, wakeup_timeout_seconds=0))
+        actor_template(
+            TemplateRequest(
+                atespace="a", name="b", image=image, wakeup_timeout_seconds=0
+            )
+        )

@@ -176,7 +176,15 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
     # since agentspecs 0.0.187 (listed: false).
     assert reports["decide"].setup == []
     # The public pages' demos run on the seven agents the catalogue enables.
-    for demo in ("marketer", "shopper", "accountant", "traveller", "terra", "aws-steward", "jupyter-data-analyst"):
+    for demo in (
+        "marketer",
+        "shopper",
+        "accountant",
+        "traveller",
+        "terra",
+        "aws-steward",
+        "jupyter-data-analyst",
+    ):
         assert reports[f"demo-{demo}"].setup == [], demo
     # Gmail's server is offered since agentspecs 0.0.128; Inbox triage's worker is out of
     # the picker since agentspecs 0.0.164 (enabled: false), so its setup names it.
