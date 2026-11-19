@@ -6,7 +6,7 @@
 /**
  * A deck's outline in one call: `deck_add_slides` (the user, 19 November
  * 2026). A deck built one slide per call took a run per slide, and the
- * runtime ends a turn after five runs of page tools; laid out in one or two
+ * runtime ends a turn after ten runs of page tools; laid out in one or two
  * calls, ten slides take one or two. Each slide is checked as
  * `deck_add_slide` checks it, and one bad slide refuses the whole batch:
  * nothing is added.

@@ -820,13 +820,21 @@ def _rounds(
     return said
 
 
-def test_the_sixth_round_of_page_tools_ends_a_visitors_turn(
+def test_a_message_takes_ten_rounds_of_page_tools() -> None:
+    assert ROUNDS_A_MESSAGE == 10
+    assert "in 10 rounds" in TOO_MANY_ROUNDS.format(rounds=ROUNDS_A_MESSAGE, tool="t")
+
+
+def test_the_eleventh_round_of_page_tools_ends_a_visitors_turn(
     runtime: Runtime, visitors_runtime: TestClient
 ) -> None:
     model = make_agent_on(runtime, LoopingModel(), {"visitor_app": "notes-assistant"})
     said = _rounds(visitors_runtime, as_visitor("tab-ada-0001"), "thread-rounds-v")
-    # The person's run, then five rounds that each ask the page again.
+    # The person's run, then ten rounds that each ask the page again: the
+    # sixth runs, the eleventh ends the turn.
+    assert asked_of_the_page(said[6]) == ["loop-7"]
     assert all(asked_of_the_page(events) for events in said[: ROUNDS_A_MESSAGE + 1])
+    assert len(said) == 12
     ended = said[ROUNDS_A_MESSAGE + 1]
     assert asked_of_the_page(ended) == []
     assert answer_of(ended) == TOO_MANY_ROUNDS.format(
@@ -836,7 +844,7 @@ def test_the_sixth_round_of_page_tools_ends_a_visitors_turn(
     assert visitors.TURNS._taken["tab-ada-0001"] == 1
 
 
-def test_the_sixth_round_of_page_tools_ends_a_signed_in_turn(
+def test_the_eleventh_round_of_page_tools_ends_a_signed_in_turn(
     runtime: Runtime, remote: TestClient
 ) -> None:
     async def token(deployment: str, bearer: str) -> Dict[str, Any]:
@@ -850,6 +858,7 @@ def test_the_sixth_round_of_page_tools_ends_a_signed_in_turn(
         {"app_uid": "app-1", "deployment_uid": "dep-1", "version": 2},
     )
     said = _rounds(remote, as_("ada"), "thread-rounds-p")
+    assert asked_of_the_page(said[6]) == ["loop-7"]
     assert asked_of_the_page(said[ROUNDS_A_MESSAGE]) == [f"loop-{ROUNDS_A_MESSAGE + 1}"]
     assert answer_of(said[ROUNDS_A_MESSAGE + 1]) == TOO_MANY_ROUNDS.format(
         rounds=ROUNDS_A_MESSAGE, tool=HEADER.name

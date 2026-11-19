@@ -24,8 +24,8 @@ turn — a message, a result for a call the run before never made, the same
 result sent twice, a conversation changed before it — so that nothing passes
 for free that a person said.
 
-**Five rounds a message.** A person's message takes five runs of the
-page's answers at most, for everybody: the sixth ends the turn in a
+**Ten rounds a message.** A person's message takes ten runs of the
+page's answers at most, for everybody: the eleventh ends the turn in a
 sentence, the agent not run again (:data:`TOO_MANY_ROUNDS`). A deck's
 outline goes in one or two calls (``deck_add_slides``), not a run a slide.
 
@@ -60,7 +60,7 @@ FAILED_TWICE = "`{tool}` failed twice in this turn, so it was not run again: {er
 
 #: The rounds of the page's tools a person's message takes at most: runs
 #: that carry what the page's tools answered. The next ends the turn.
-ROUNDS_A_MESSAGE = 5
+ROUNDS_A_MESSAGE = 10
 
 #: What ends a turn past its rounds: how many, and the tool not called again.
 TOO_MANY_ROUNDS = (

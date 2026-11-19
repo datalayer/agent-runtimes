@@ -363,6 +363,11 @@ set of frontend tools that run in the page, on a deck or a workbook kept there f
 (`apps/pageTools`). Nothing reaches the runtime: the page checks each call, changes what it keeps,
 and answers the model.
 
+Each run that carries the page's answers back is a round, and a person's message takes ten at most
+(see *Ten rounds of page tools a message* in [Session API](./session-api)): an agent makes a step's
+calls together in one response — a sheet created and written, then formatted with its panel and
+header — and a deck's outline in one `deck_add_slides` call.
+
 | UI | Tools | Drawn by |
 | --- | --- | --- |
 | `page-deck` | `deck_create`, `deck_set_title`, `deck_add_slide`, `deck_add_slides` (several slides in one call, refused whole on one bad slide), `deck_update_slide`, `deck_move_slide`, `deck_delete_slide`, `deck_set_theme`, `deck_read` | Datalayer Decks' `DeckView`: the slides, **Notes**, **Present** for the full screen. |
