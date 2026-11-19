@@ -564,7 +564,7 @@ export type AppFloatingProps = {
   /**
    * What else the host gives the application's `AppRenderer`: Datalayer's
    * own page at an application's address passes the UI plugins its
-   * organization turned off, the visitors' runtime and the one kept on.
+   * organization turned off, the visitors' runtime and the always-on one.
    */
   renderer?: Partial<
     Pick<

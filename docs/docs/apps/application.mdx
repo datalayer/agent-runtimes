@@ -110,7 +110,7 @@ and nothing is created on the runtime.
 | Field | What it is |
 | --- | --- |
 | `url` | The runtime's agent-runtimes address (`…/agent-runtimes/<pool>/<name>`). |
-| `agentId` | The agent's name on that runtime, often `default`, for a person's own agent made from its agentspec. Leave it out for a deployment kept always on: its own agent answers, made under the application's id. |
+| `agentId` | The agent's name on that runtime, often `default`, for a person's own agent made from its agentspec. Leave it out for an always-on deployment: its own agent answers, made under the application's id. |
 | `name` | The runtime's name. |
 | `thread` | The session to continue: one the runtime holds, or a paused one resumed on it (`fromRuntime: true`). |
 
@@ -135,7 +135,7 @@ it on a Datalayer runtime with the signed-in person's credentials; its
 - The six agent demos on datalayer.ai's home page: visitor mode.
 - A Personal agent's page: runtime mode, on the person's own runtime.
 - An application at its address, `/apps/<slug>`, and its run page in the
-  Studio: visitor mode signed out, runtime mode when it is kept always on,
+  Studio: visitor mode signed out, runtime mode when it is always on,
   `datalayer` otherwise; `mode: 'assistant'` when it is shipped as its avatar
   alone.
 - `<datalayer-app>`, which wraps it.

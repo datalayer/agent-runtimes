@@ -708,7 +708,7 @@ each skill its `optional_env_vars`, its `any_of_env_vars`, which are set
 **An application's runtime is launched with its Appspec.** Whoever launches
 one for an application sends its Appspec with the launch —
 `RuntimesClient.create(app_spec=…)` refuses `app_uid` without it, and so does
-the Operator (`422`); `loop apps run --cloud`, a deployment kept on its
+the Operator (`422`); `loop apps run --cloud`, an always-on deployment's
 runtime and a scheduled or event session all send it. The Operator hands it
 to the companion's start hooks, the companion declares it with the spec and
 hands it on (`launch_app_spec`) to `configure-from-spec` or

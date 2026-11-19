@@ -36,7 +36,7 @@
  *   locked in the title bar;
  * - `runtime` — an agent already running on a runtime: a person's own
  *   (its agent-runtimes address `url`, the agent by its name there
- *   `agentId`), or a deployment kept always on (no `agentId`: the
+ *   `agentId`), or an always-on deployment (no `agentId`: the
  *   application's own agent); the session to go on with (`thread`); spoken
  *   to with the signed-in person's token (core's IAM store), nothing
  *   launched;
@@ -130,7 +130,7 @@ export type ApplicationRuntime = {
   /**
    * The agent that answers, by its name on that runtime (`default`): a
    * person's own agent, made from its agentspec. Unsaid, the application's
-   * own agent, made there under its id — a deployment kept always on.
+   * own agent, made there under its id — an always-on deployment.
    */
   agentId?: string;
   /** The runtime's name. */

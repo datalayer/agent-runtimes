@@ -325,11 +325,11 @@ live in the runtime's process: a restart starts them again. The visitor's
 own model calls (Sales, in the browser) are ai-inference's to limit: its
 anonymous rate and its ceiling for the day.
 
-## At a stable address: a deployment kept always on
+## At a stable address: an always-on deployment
 
 `loop apps run --cloud --a2a` serves an application from a runtime, at that
 runtime's address. When the runtime is launched again, the address changes,
-and every caller has to be told the new one. A **deployment** kept always on
+and every caller has to be told the new one. An always-on **deployment**
 answers over A2A at an address that names its slug, not a runtime:
 
 ```text
@@ -346,7 +346,7 @@ streamed answer (`SendStreamingMessage`, SSE) is relayed as it streams.
 Callers keep the same address when the runtime is replaced, when the
 deployment moves to another version, and after a restart.
 
-It keeps answering for as long as it is kept on. Its agent acts as the
+It keeps answering for as long as it is always on. Its agent acts as the
 deployment's principal, whose token lives an hour, and a caller over A2A —
 a visitor, a key granted to the route — is no one to renew it with. So
 ai-agents renews it: every half hour it asks the runtime for a new one with
@@ -373,7 +373,7 @@ it, `--version` picks the version and `--site` the site of its address (see
 
 | Field | What it is |
 | --- | --- |
-| `a2a` | Served over A2A at its stable address. Only a hosted deployment kept always on (`always_on`, with a spend limit). |
+| `a2a` | Served over A2A at its stable address. Only a hosted always-on deployment (`always_on`, with a spend limit). |
 | `a2a_visitors` | Open there to visitors without an account too, as `--visitors` opens a runtime (above). Only with `a2a`, and only when anyone with the link may open it (`visibility` `link` or `public`). Making it private while visitors are let in is refused. |
 
 A change of either is sent to the runtime already running.
@@ -386,7 +386,7 @@ it is open to visitors. The stable address adds no access of its own.
 
 **When nothing answers**, the address says why: `404` when it is not served
 over A2A (*… its owner has not turned it on.*) or no deployment has that
-slug; `503` when it is paused, no longer kept always on, or its computer is
+slug; `503` when it is paused, no longer always on, or its computer is
 starting or waiting (the keeper's reason, such as its limit for the day);
 `502` when its runtime did not answer.
 
@@ -396,7 +396,7 @@ the deployment) over A2A. Its card names `url`. `DELETE /api/v1/apps/a2a`
 stops serving it. Both need a person's token or the machine itself. An agent
 that is not on the runtime gets 404, and one that is not an application's
 agent gets 409, and a `url` that is not http(s) 422
-(`test_apps_serve_kept_over_a2a`).
+(`test_apps_serve_always_on_over_a2a`).
 
 ## Output formats
 

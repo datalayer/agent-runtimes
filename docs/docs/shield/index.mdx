@@ -98,7 +98,7 @@ The Shield's decisive question: **can the agent reach a protected resource witho
 | An outside `curl` from the pod | a fresh pool pod on r1, 15 October 2026 | the pod's boundary: `Network unreachable` for `example.com`, `pypi.org`, `api.anthropic.com` | nothing reaches out to record; the boundary is the Operator's, per pod |
 | A write outside the workspace | the Shield's `fs/write_text_file` | the Shield, before any rule, in a sentence naming the workspace | a `decision` row |
 | A secret in a tool argument | the Shield's classes | a command naming a credential is `execute` and asked about | the row, the key `[redacted]` |
-| A runtime reached at its own port | a kept deployment's runtime on r1 | the runtime: `404` *This runtime serves a deployment: it answers only the application's own routes* | no session, so nothing to record |
+| A runtime reached at its own port | an always-on deployment's runtime on r1 | the runtime: `404` *This runtime serves a deployment: it answers only the application's own routes* | no session, so nothing to record |
 | A sub-agent's MCP write under a read-only manifest | the r1 gateway, the credential a read-only token handed in the prompt's `_meta` (16 October 2026) | the gateway: *No Space is granted to you to write in* | the gateway's record |
 | A `git push` without asking | a local runtime's Shield (16 October 2026) | the person, asked over ACP by the session's rule *git push* | a `permission` row, `deny`, by the person |
 | A read of another person's notebook | the r1 gateway, a sub-agent acting as a platform member on a private notebook of another account (16 October 2026) | the gateway: *No notebook of yours matches …*; the cells never reached the agent | ai-agents' events of the caller's agent (`tool.use_notebook`, `failed`) |
@@ -107,7 +107,7 @@ The Shield's decisive question: **can the agent reach a protected resource witho
 
 - A sub-agent that calls the gateway itself is decided and recorded **by the gateway**, not by the Shield's own audit; the Shield's rows hold the session and the turn. One thread across both is the trace.
 - A platform administrator may read any notebook — that is the platform's rule, not a way round; the notebook drill was run as a platform member for that reason.
-- On the funded side, these are the fake agent's paths, which are the ACP paths a harness takes; Claude Code and Codex have since run funded turns on r1 behind the Shield (the sessions drills of 21–22 October 2026), OpenCode and pi on 28 October 2026, each in an application kept on its computer; Gemini CLI is not offered.
+- On the funded side, these are the fake agent's paths, which are the ACP paths a harness takes; Claude Code and Codex have since run funded turns on r1 behind the Shield (the sessions drills of 21–22 October 2026), OpenCode and pi on 28 October 2026, each in an always-on application on its computer; Gemini CLI is not offered.
 
 ## Examples
 

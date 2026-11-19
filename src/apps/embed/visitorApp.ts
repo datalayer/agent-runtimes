@@ -18,8 +18,8 @@
  *   drawn from — the Appspec of the version it runs — and whether somebody
  *   signed out may talk to it (`session.opens`); the visitors' runtime
  *   answers `at:<slug>`, making the address's agent when first talked to —
- *   or, for a version with code of its own (`runs_code`), the runtime its
- *   deployment is kept on (`kept.url`), which runs that code;
+ *   or, for a version with code of its own (`runs_code`), its deployment's
+ *   always-on runtime (`always_on_runtime.url`), which runs that code;
  * - **an example of this bundle deployed at the address of its name** (the
  *   landing's demo agents, `demo-marketer`): drawn from the Appspec this
  *   bundle carries — its UI, its title bar's items, its presentation, its
@@ -27,7 +27,7 @@
  *   user, 18 November 2026: "the demo agents' specs must not be loaded from
  *   r1; they ship directly in the JavaScript code"). The deployment says
  *   only what the runtime decides: whether a visitor may talk to it, and
- *   where it runs (`runs_code`, `kept.url`, `at:<slug>`). The runtime there
+ *   where it runs (`runs_code`, `always_on_runtime.url`, `at:<slug>`). The runtime there
  *   runs the version it was deployed with, its own instructions with it, so
  *   the page may draw what that version does not set yet (a header's items
  *   stay empty, a drop-down's option is not read) until its next roll;
@@ -119,8 +119,8 @@ export const MISSING_SENTENCE = 'No application is at this address.';
 
 /**
  * Where a visitor's conversation with `app` runs: the visitors' runtime beside
- * ai-agents — or `runtime`, the one a deployment with code of its own is
- * kept on — its token from ai-inference, at `inference` when it is
+ * ai-agents — or `runtime`, the always-on runtime of a deployment with code
+ * of its own — its token from ai-inference, at `inference` when it is
  * named, else beside ai-agents.
  */
 export function visitorsAt(
@@ -291,8 +291,8 @@ export async function readVisitorApp({
 /**
  * Where somebody without an account talks to an address, as ai-agents says
  * it (decided 14 October 2026): written as a spec, on the visitors'
- * runtime (`url` unsaid); with code of its own (`runs_code`), on the runtime
- * its deployment is kept on (`kept.url`), which runs that code — never the
+ * runtime (`url` unsaid); with code of its own (`runs_code`), on its
+ * deployment's always-on runtime (`always_on_runtime.url`), which runs that code — never the
  * visitors', where its plain agent would answer in its code's place. An
  * answer that does not say, or says code with no runtime, is not run.
  */
@@ -307,11 +307,11 @@ export function signedOutRuntime(
   if (!body.runs_code) {
     return {};
   }
-  const kept = (body.kept ?? {}) as { url?: unknown };
-  const url = typeof kept.url === 'string' ? kept.url.trim() : '';
+  const alwaysOn = (body.always_on_runtime ?? {}) as { url?: unknown };
+  const url = typeof alwaysOn.url === 'string' ? alwaysOn.url.trim() : '';
   if (!url) {
     return {
-      said: 'It runs its own code on a runtime kept for it, and none is running now.',
+      said: 'It runs its own code on an always-on runtime of its own, and none is running now.',
     };
   }
   return { url };

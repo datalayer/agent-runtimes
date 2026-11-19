@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A kept deployment's agent served over A2A at its stable address.
+"""An always-on deployment's agent served over A2A at its stable address.
 
 ai-agents makes a deployment's agent on the runtime it keeps it on, then asks
 the runtime to serve it over A2A (`PUT /api/v1/apps/a2a`): the route is the
@@ -156,5 +156,5 @@ def test_loop_apps_deploy_changes_the_deployment_as_the_ship_tab_would() -> None
         "a2a": True,
         "a2a_visitors": True,
     }
-    assert deployments.kept("d-1")["a2a"]["url"] == f"{STABLE}/"
-    assert str(asked[1].url).endswith("/deployments/d-1/kept")
+    assert deployments.always_on("d-1")["a2a"]["url"] == f"{STABLE}/"
+    assert str(asked[1].url).endswith("/deployments/d-1/always-on")

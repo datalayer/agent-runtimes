@@ -1966,19 +1966,20 @@ def apps_deploy(
     if any(value is not None for value in changes.values()):
         try:
             changed = deployments.change(deployment.uid, **changes)
-            kept = deployments.kept(deployment.uid)
+            always_on = deployments.always_on(deployment.uid)
         except (DeployRefused, httpx.HTTPError) as refused:
             console.print(f"[red]✗[/red] {refused}")
             raise typer.Exit(1)
-        state = (kept.get("kept") or {}).get("state") or "off"
-        why = (kept.get("kept") or {}).get("why") or ""
+        record = always_on.get("always_on_record") or {}
+        state = record.get("state") or "off"
+        why = record.get("why") or ""
         console.print(
             f"  Open to: {changed.get('visibility', 'private')}; always on: "
-            f"{'yes' if kept.get('always_on') else 'no'} ({state}{': ' + why if why else ''}); "
-            f"limit {kept.get('limit')} credits a day.",
+            f"{'yes' if always_on.get('always_on') else 'no'} ({state}{': ' + why if why else ''}); "
+            f"limit {always_on.get('limit')} credits a day.",
             highlight=False,
         )
-        served = kept.get("a2a") or {}
+        served = always_on.get("a2a") or {}
         if served.get("url"):
             console.print(
                 f"  A2A: {served['url']}"

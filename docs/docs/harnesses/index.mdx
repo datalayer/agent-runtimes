@@ -357,7 +357,7 @@ another way. pi run locally has no such extension yet: its configuration
 directory is the person's own.
 
 A routed harness (Claude Code, Codex, OpenCode, pi) **waits for the runtime's
-ai-inference token** before it starts: a kept deployment's first keep
+ai-inference token** before it starts: an always-on deployment's first keep
 on a fresh runtime can start its harness while the platform is still giving
 the runtime its token. It waits up to 30 seconds
 (`AGENT_RUNTIMES_INFERENCE_TOKEN_WAIT`, in seconds); with still no token it is

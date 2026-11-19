@@ -54,7 +54,7 @@ export function DatalayerAgentBridge(): JSX.Element | null {
   // A conversation without an account: the agent is already on
   // the visitors' runtime, kept warm there; nothing is allocated or made.
   const visitors = agentsConfig?.datalayerVisitors;
-  // A deployment kept on a runtime of its own: its agent was made
+  // An always-on deployment, on a runtime of its own: its agent was made
   // there from the deployment record as the runtime started; nothing is
   // allocated or made either.
   const kept = agentsConfig?.datalayerKept;

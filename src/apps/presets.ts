@@ -199,7 +199,7 @@ export type LoopPresetOptions = {
   datalayerCreatePayload?: Record<string, unknown>;
   /** A conversation without an account, on the visitors' runtime. */
   datalayerVisitors?: AgentsConfig['datalayerVisitors'];
-  /** A deployment's agent, already on the runtime it is kept on. */
+  /** A deployment's agent, already on its always-on runtime. */
   datalayerKept?: AgentsConfig['datalayerKept'];
   /** An embed token: the embedded application's session, and nothing else. */
   embedToken?: string;

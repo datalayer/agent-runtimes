@@ -673,13 +673,15 @@ describe('DevelopmentCredentials', () => {
         status,
       })) as unknown as typeof fetch;
 
-  it('refuses a deployment not kept, with its own reason, as a refusal the host says', async () => {
+  it('refuses a deployment not always on, with its own reason, as a refusal the host says', async () => {
     const credentials = new DevelopmentCredentials(
       'https://r1.example',
       't',
       answering(200, {
         deployment: {
-          kept: { why: 'It has spent 20.00 of its 20.00 credits for today.' },
+          always_on_record: {
+            why: 'It has spent 20.00 of its 20.00 credits for today.',
+          },
         },
       }),
     );
@@ -694,15 +696,15 @@ describe('DevelopmentCredentials', () => {
   });
 
   it('refuses without a reason when the deployment gives none, and on a failed answer', async () => {
-    const notKept = await new DevelopmentCredentials(
+    const notAlwaysOn = await new DevelopmentCredentials(
       'https://r1.example',
       't',
       answering(200, { deployment: {} }),
     )
       .forTurn(request)
       .catch((error: unknown) => error);
-    expect((notKept as HostRefusedError).detail).toBe(
-      'The deployment is not kept always on: turn it on under Ship.',
+    expect((notAlwaysOn as HostRefusedError).detail).toBe(
+      'The deployment is not always on: turn it on under Ship.',
     );
     const missing = await new DevelopmentCredentials(
       'https://r1.example',
@@ -715,12 +717,14 @@ describe('DevelopmentCredentials', () => {
     expect((missing as HostRefusedError).status).toBe(404);
   });
 
-  it('answers the kept runtime when the deployment is kept', async () => {
+  it('answers the always-on runtime when the deployment is always on', async () => {
     const session = await new DevelopmentCredentials(
       'https://r1.example',
       't',
       answering(200, {
-        deployment: { kept: { agent_id: 'a', url: 'https://rt.example/' } },
+        deployment: {
+          always_on_record: { agent_id: 'a', url: 'https://rt.example/' },
+        },
       }),
     ).forTurn(request);
     expect(session).toMatchObject({
@@ -736,7 +740,9 @@ describe('a refused turn', () => {
     const answers = [
       new Response(
         JSON.stringify({
-          deployment: { kept: { agent_id: 'a', url: 'https://r1.example/rt' } },
+          deployment: {
+            always_on_record: { agent_id: 'a', url: 'https://r1.example/rt' },
+          },
         }),
         { status: 200 },
       ),

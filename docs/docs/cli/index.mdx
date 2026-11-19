@@ -392,12 +392,12 @@ always on, serves it over A2A at a **stable address** that names the
 deployment and no runtime:
 `/api/ai-agents/v1/apps/deployments/at/<slug>/a2a/`. The address stays the
 same when its runtime is started again or the deployment moves to another
-version; ai-agents passes each request to the runtime it is kept on now.
+version; ai-agents passes each request to its always-on runtime now.
 
 ```bash
 loop apps deploy <id> --slug desk                                   # version: the latest saved; who may open it: private
 loop apps deploy <id> --slug desk --visibility public               # anybody
-loop apps deploy <id> --slug desk --always-on --spend-limit 50 --a2a          # kept on a runtime of its own, served over A2A
+loop apps deploy <id> --slug desk --always-on --spend-limit 50 --a2a          # always on, on a runtime of its own, served over A2A
 loop apps deploy <id> --slug desk --visibility link --always-on --spend-limit 50 --a2a --visitors   # visitors may ask it too
 loop apps deploy <id> --no-a2a                                      # stop serving it over A2A
 ```
@@ -410,13 +410,13 @@ loop apps deploy <id> --no-a2a                                      # stop servi
 | `--visibility` | Who may open it: `private`, `link` or `public`, as the Ship tab says it. |
 | `--always-on` / `--not-always-on` | Keep it on a runtime of its own, paid by you, within `--spend-limit`. |
 | `--spend-limit` | The most it may spend in a day, in credits (from midnight UTC). Required with `--always-on`; a public deployment without one has 50. |
-| `--a2a` / `--no-a2a` | Kept always on, serve it over A2A at its stable address. |
+| `--a2a` / `--no-a2a` | Always on, serve it over A2A at its stable address. |
 | `--visitors` / `--no-visitors` | Served over A2A and open to anyone with the link: visitors without an account may ask it too — their runs only read, a few a day each. |
 
 It prints the address, the `A2A:` line when it is served, and the embed
 snippet for the site. Pause, resume, roll back and take down stay on the Ship
 tab and on `/studio/deployments`. See
-[A team of applications over A2A, A kept deployment at a stable address](/apps/teams-over-a2a).
+[A team of applications over A2A, An always-on deployment at a stable address](/apps/teams-over-a2a).
 
 ### Eject: an application into Python
 

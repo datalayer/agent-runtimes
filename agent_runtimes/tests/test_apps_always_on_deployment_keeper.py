@@ -5,7 +5,7 @@
 
 the release gates, round 19 (decided 14 October 2026):
 
-- ai-agents' keeper makes a kept runtime's agent with ``POST /api/v1/agents``
+- ai-agents' keeper makes an always-on runtime's agent with ``POST /api/v1/agents``
   (`deployments.create_agent`). When the answer is lost and it asks again, the
   runtime already serves the deployment and answers that route 404 to anybody
   from outside (`OwnRoutesOnly`): the agent made is read back on the
@@ -24,7 +24,7 @@ the release gates, round 19 (decided 14 October 2026):
 Launch the tests:
 
 ```
-$ pytest agent_runtimes/tests/test_apps_kept_deployment_keeper.py -v
+$ pytest agent_runtimes/tests/test_apps_always_on_deployment_keeper.py -v
 ```
 """
 
@@ -66,7 +66,7 @@ OUTSIDE = ("203.0.113.9", 50000)
 STABLE = "https://r1.example/api/ai-agents/v1/apps/deployments/at/demo-accounting/a2a"
 
 #: Tokens as IAM would verify them: the owner's own, the key IAM mints of the
-#: owner for its kept runtime (a person's, the owner's uid), another person's,
+#: owner for its always-on runtime (a person's, the owner's uid), another person's,
 #: and the deployment's principal's own token.
 PEOPLE = {
     "owner-token": Caller(kind="person", uid=OWNER),
@@ -117,8 +117,8 @@ def app() -> FastAPI:
 
 
 @pytest.fixture
-def kept(monkeypatch: Any) -> Iterator[Accounting]:
-    """A kept runtime: the deployment's agent made, its principal's token held."""
+def always_on(monkeypatch: Any) -> Iterator[Accounting]:
+    """An always-on runtime: the deployment's agent made, its principal's token held."""
 
     async def verify(token: str, app_uid: str = "") -> Caller:
         if token not in PEOPLE:
@@ -194,7 +194,7 @@ def _keepers_routes(outside: TestClient, token: str) -> List[int]:
 
 
 def test_the_owners_token_and_the_key_minted_of_them_are_answered(
-    app: FastAPI, kept: Accounting
+    app: FastAPI, always_on: Accounting
 ) -> None:
     outside = TestClient(app, client=OUTSIDE)
     assert _keepers_routes(outside, "owner-token") == [200, 200, 200, 200]
@@ -211,7 +211,7 @@ def test_the_owners_token_and_the_key_minted_of_them_are_answered(
 
 
 def test_another_person_or_the_principal_is_refused_and_nothing_changes(
-    app: FastAPI, kept: Accounting
+    app: FastAPI, always_on: Accounting
 ) -> None:
     outside = TestClient(app, client=OUTSIDE)
     outside.put(
@@ -227,14 +227,16 @@ def test_another_person_or_the_principal_is_refused_and_nothing_changes(
     assert apps_a2a.served_apps() == [AGENT]
 
 
-def test_nobody_is_asked_to_say_who_they_are(app: FastAPI, kept: Accounting) -> None:
+def test_nobody_is_asked_to_say_who_they_are(
+    app: FastAPI, always_on: Accounting
+) -> None:
     outside = TestClient(app, client=OUTSIDE)
     assert _keepers_routes(outside, "") == [401, 401, 401, 401]
     assert _keepers_routes(outside, "a-forged-token") == [401, 401, 401, 401]
 
 
 def test_a_deployment_no_principal_is_held_for_is_nobodys(
-    app: FastAPI, kept: Accounting
+    app: FastAPI, always_on: Accounting
 ) -> None:
     """Its owner is read from its principal's token, never from the caller: none held, none answered."""
     forget_principal_token(DEPLOYMENT)
@@ -243,7 +245,7 @@ def test_a_deployment_no_principal_is_held_for_is_nobodys(
 
 
 def test_a_deployment_of_another_account_is_not_the_callers(
-    app: FastAPI, kept: Accounting
+    app: FastAPI, always_on: Accounting
 ) -> None:
     give_principal_token(
         DEPLOYMENT,
@@ -280,7 +282,7 @@ def _owned_by(account_uid: str) -> None:
 
 
 def test_a_personal_deployments_owner_passes_without_asking_iam(
-    app: FastAPI, kept: Accounting
+    app: FastAPI, always_on: Accounting
 ) -> None:
     def unreachable(bearer: str) -> Any:
         raise AssertionError("IAM is not asked about the owner's own deployment")
@@ -290,14 +292,16 @@ def test_a_personal_deployments_owner_passes_without_asking_iam(
     assert _keepers_routes(outside, "owner-token") == [200, 200, 200, 200]
 
 
-def test_an_organizations_administrator_passes(app: FastAPI, kept: Accounting) -> None:
+def test_an_organizations_administrator_passes(
+    app: FastAPI, always_on: Accounting
+) -> None:
     _owned_by(ORGANIZATION)
     outside = TestClient(app, client=OUTSIDE)
     assert _keepers_routes(outside, "org-admin") == [200, 200, 200, 200]
 
 
 def test_a_member_who_does_not_administer_it_is_refused(
-    app: FastAPI, kept: Accounting
+    app: FastAPI, always_on: Accounting
 ) -> None:
     _owned_by(ORGANIZATION)
     outside = TestClient(app, client=OUTSIDE)
@@ -307,7 +311,7 @@ def test_a_member_who_does_not_administer_it_is_refused(
 
 
 def test_another_person_is_refused_an_organizations_deployment(
-    app: FastAPI, kept: Accounting
+    app: FastAPI, always_on: Accounting
 ) -> None:
     """Administering another organization, or none: refused; the principal is never asked about."""
     _owned_by(ORGANIZATION)
@@ -317,7 +321,7 @@ def test_another_person_is_refused_an_organizations_deployment(
     assert _keepers_routes(outside, "the-principal") == [403, 403, 403, 403]
 
 
-def test_iam_unreachable_is_refused(app: FastAPI, kept: Accounting) -> None:
+def test_iam_unreachable_is_refused(app: FastAPI, always_on: Accounting) -> None:
     async def unreachable(bearer: str) -> list[dict[str, Any]]:
         raise MembershipsUnread(
             "IAM could not be asked who administers the organization (ConnectError)."
@@ -334,7 +338,7 @@ def test_iam_unreachable_is_refused(app: FastAPI, kept: Accounting) -> None:
 
 
 def test_iam_answers_that_cannot_be_read_are_refused(
-    app: FastAPI, kept: Accounting
+    app: FastAPI, always_on: Accounting
 ) -> None:
     """A membership missing what IAM's model requires is not taken as an administrator's."""
 
@@ -439,7 +443,7 @@ def _create(
 
 
 def test_a_lost_answer_asked_again_finds_the_agent_it_made(
-    app: FastAPI, kept: Accounting
+    app: FastAPI, always_on: Accounting
 ) -> None:
     remember_app_instance(AGENT, None)
     made = {"app_uid": "01APP", "deployment_uid": DEPLOYMENT, "version": 3}
@@ -453,7 +457,7 @@ def test_a_lost_answer_asked_again_finds_the_agent_it_made(
 
 
 def test_a_runtime_serving_another_version_or_deployment_is_a_failure_at_once(
-    app: FastAPI, kept: Accounting
+    app: FastAPI, always_on: Accounting
 ) -> None:
     made = {"app_uid": "01APP", "deployment_uid": DEPLOYMENT, "version": 3}
     with pytest.raises(SessionNotStarted, match="not dep-7 at version 4") as other:
@@ -471,7 +475,7 @@ def test_a_runtime_serving_another_version_or_deployment_is_a_failure_at_once(
 
 
 def test_a_lost_answer_asked_again_by_somebody_else_is_not_theirs(
-    app: FastAPI, kept: Accounting
+    app: FastAPI, always_on: Accounting
 ) -> None:
     """Refused the read, it is not asked a third time: that refusal does not wait."""
     made = {"app_uid": "01APP", "deployment_uid": DEPLOYMENT, "version": 3}

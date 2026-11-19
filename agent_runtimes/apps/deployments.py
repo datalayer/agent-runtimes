@@ -213,7 +213,7 @@ class Deployments:
 
     def change(self, uid: str, **changes: Any) -> dict[str, Any]:
         """Change what a deployment is beside its version — who may open it,
-        kept always on and its spend limit, served over A2A at its stable
+        always on and its spend limit, served over A2A at its stable
         address and open there to visitors — as ai-agents
         answers it, whole.
         """
@@ -228,13 +228,13 @@ class Deployments:
         )
         return dict(body.get("deployment") or {})
 
-    def kept(self, uid: str) -> dict[str, Any]:
-        """What keeping a deployment always on says now: its computer, its
+    def always_on(self, uid: str) -> dict[str, Any]:
+        """What an always-on deployment says now: its computer, its
         limit, and where it answers over A2A (`a2a.url`).
         """
         return self._answer(
-            self.http.get(f"{self.agents}/{quote(uid, safe='')}/kept"),
-            "What keeps the deployment on could not be read",
+            self.http.get(f"{self.agents}/{quote(uid, safe='')}/always-on"),
+            "Whether the deployment is always on could not be read",
         )
 
     def delete(self, uid: str) -> None:
@@ -472,7 +472,7 @@ def deployment_runtime_payload(
     version: int,
     organization_uid: str = "",
     spend_limit: float = 0.0,
-    runs: str = "kept on its runtime",
+    runs: str = "on its always-on runtime",
 ) -> dict[str, Any]:
     """What creates an always-on deployment's agent on its own runtime:
     the payload the hosted page sends (`AppRenderer`'s

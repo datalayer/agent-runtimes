@@ -221,7 +221,7 @@ describe('a visitor’s application', () => {
       fetcher: answer(200, {
         success: true,
         runs_code: true,
-        kept: { url: 'https://r1.example/kept/demo' },
+        always_on_runtime: { url: 'https://r1.example/kept/demo' },
         session: { opens: true },
         spec: {},
       }),
@@ -304,7 +304,7 @@ describe('a visitor’s application', () => {
     expect(read.visitors.app).toBe('at:research');
   });
 
-  it('runs an address with code of its own on the runtime it is kept on, never the visitors’', async () => {
+  it('runs an address with code of its own on its always-on runtime, never the visitors’', async () => {
     const spec = {
       schema: 'loop.app/v1',
       id: 'research',
@@ -319,7 +319,9 @@ describe('a visitor’s application', () => {
         200,
         opened(spec, {
           runs_code: true,
-          kept: { url: 'https://r1.datalayer.run/jupyter/server/pool/kept-1/' },
+          always_on_runtime: {
+            url: 'https://r1.datalayer.run/jupyter/server/pool/kept-1/',
+          },
         }),
       ),
       catalogue: () => undefined,

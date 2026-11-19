@@ -156,7 +156,7 @@ export type AgentsConfig = {
   datalayerVisitors?: DatalayerVisitors;
   /**
    * An agent already on a runtime of its own, so nothing is allocated or
-   * created: a deployment kept there, its agent made from the
+   * created: an always-on deployment there, its agent made from the
    * deployment record when the runtime started, which the chat speaks to
    * with the person's own token; or the runtime a terminal session runs on,
    * handed over by `/browser`, reached through the terminal's relay, which

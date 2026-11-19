@@ -72,7 +72,7 @@ export const selfSchema = z.object({
           .object({
             uid: z.string().min(1),
             app_name: z.string().optional(),
-            kept: z.boolean().optional(),
+            always_on: z.boolean().optional(),
           })
           .loose(),
       ),

@@ -241,7 +241,7 @@ export class InstallationCredentials<P> implements HostCredentials<P> {
 }
 
 /**
- * Development only: the developer's own Datalayer key, and their own kept
+ * Development only: the developer's own Datalayer key, and their own always-on
  * deployment, read from ai-agents as its owner. Never in production.
  */
 export class DevelopmentCredentials<P> implements HostCredentials<P> {
@@ -265,27 +265,27 @@ export class DevelopmentCredentials<P> implements HostCredentials<P> {
     }
     const body = (await response.json()) as {
       deployment?: {
-        kept?: { agent_id?: string; url?: string; why?: string };
+        always_on_record?: { agent_id?: string; url?: string; why?: string };
       };
     };
-    const kept = body.deployment?.kept;
-    if (!kept?.url || !kept.agent_id) {
+    const alwaysOn = body.deployment?.always_on_record;
+    if (!alwaysOn?.url || !alwaysOn.agent_id) {
       // A refusal the host says to the person (409), with the deployment's
       // own reason when it gives one (a daily credit limit spent, paused).
       throw new HostRefusedError(
         409,
-        kept?.why
-          ? `The deployment is not answering now: ${kept.why}`
-          : 'The deployment is not kept always on: turn it on under Ship.',
+        alwaysOn?.why
+          ? `The deployment is not answering now: ${alwaysOn.why}`
+          : 'The deployment is not always on: turn it on under Ship.',
         'The deployment',
       );
     }
     return {
       accessToken: this.token,
-      agent: kept.agent_id,
+      agent: alwaysOn.agent_id,
       bindable: false,
       deploymentUid: request.applicationId,
-      sessionApiUrl: `${kept.url.replace(/\/+$/, '')}/api/v1/apps/sessions`,
+      sessionApiUrl: `${alwaysOn.url.replace(/\/+$/, '')}/api/v1/apps/sessions`,
     };
   }
 }

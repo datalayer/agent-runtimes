@@ -45,7 +45,11 @@ export type HostSelf = Readonly<{
     state: 'allow' | 'deny';
   }>;
   defaultDeployment?: string;
-  deployments: ReadonlyArray<{ appName: string; kept: boolean; uid: string }>;
+  deployments: ReadonlyArray<{
+    alwaysOn: boolean;
+    appName: string;
+    uid: string;
+  }>;
   directOnly: readonly string[];
   paused: boolean;
   /**
@@ -170,7 +174,7 @@ export class DatalayerHostClient {
 
   /**
    * The installation as Datalayer keeps it: the deployments it allows (with
-   * their application's name and whether each is kept on), the default, the
+   * their application's name and whether each is always on), the default, the
    * channel policy, whether it is paused, and its uid (a host bound
    * outside the install flow, such as a development app given its key,
    * reads it here to poll its deliveries).
@@ -192,8 +196,8 @@ export class DatalayerHostClient {
       })),
       defaultDeployment: host.default_deployment || undefined,
       deployments: host.deployments.map(one => ({
+        alwaysOn: one.always_on ?? false,
         appName: one.app_name ?? '',
-        kept: one.kept ?? false,
         uid: one.uid,
       })),
       directOnly: host.direct_only ?? [],
