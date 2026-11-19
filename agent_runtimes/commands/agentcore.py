@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""`loop agentcore deploy|status|invoke|sessions|destroy <agentspec>` (AC-11).
+"""`loop agentcore deploy|status|invoke|sessions|destroy <agentspec>`.
 
 An agentspec on your own Amazon Bedrock AgentCore, with your own AWS
 credentials (as boto3 finds them: the environment, a profile, a role), no

@@ -23,14 +23,14 @@ spawns a sub-agent — a process of its own, as a harness's Task sub-agent is �
 handed the MCP server its session was lent by that name, as a harness hands
 its sub-agents its own servers; the sub-agent calls each tool in turn over
 MCP and the agent says each answer (``subagent: <tool>: allowed|refused …``).
-Nothing else of the prompt is read (SH-33).
+Nothing else of the prompt is read.
 
 ``tool: {"server": <name>, "tool": <tool>, "arguments": {...}}`` is the agent
 calling a lent tool itself, as a harness does: a tool call named
 ``<server>_<tool>`` (kind ``other``), permission asked, and only when allowed
 the call made over MCP, its answer the call's content;
 ``tool: {"kind": "fetch", "url": <url>}`` says a fetch of that URL. Nothing
-else of the prompt is read (SH-70, SH-72).
+else of the prompt is read.
 """
 
 from __future__ import annotations
@@ -131,7 +131,7 @@ class FakeAgent(Agent):
             flush=True,
         )
         if os.environ.get("FAKE_AGENT_SESSION_META"):
-            # The vendor's own session id beside the ACP one (MH-05).
+            # The vendor's own session id beside the ACP one.
             return NewSessionResponse(
                 session_id=session_id,
                 _meta={"claudeSessionId": f"vendor-{session_id}"},
@@ -173,7 +173,7 @@ class FakeAgent(Agent):
             block.text for block in prompt if getattr(block, "type", None) == "text"
         ]
         # The command is the last text block; what comes before it is the
-        # instructions a harness reads first (VS-23), said back by their first line.
+        # instructions a harness reads first, said back by their first line.
         text = texts[-1] if texts else ""
         say = self.client.session_update
         await say(session_id=session_id, update=update_agent_thought_text("thinking"))

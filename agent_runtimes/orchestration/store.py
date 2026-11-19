@@ -1,17 +1,17 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Where executions live in Phase 0 (O0-04).
+"""Where executions live in Phase 0.
 
 An ``ExecutionStore`` holds the executions, their attempts, their events,
 their acknowledgements and their artifacts, and it is the only place any of
 those change. In Phase 0 it is a dictionary in a process; in Phase 1 it is
-Solr (O1-02). Both implement the same twelve storage primitives, and both
+Solr. Both implement the same twelve storage primitives, and both
 inherit the rules written here — so the rules are not something the Solr
 store gets a second chance to have an opinion about.
 
 The most important of those rules is that a state change goes through
-``datalayer_core.orchestration.lifecycle.transition`` (O0-02). The store
+``datalayer_core.orchestration.lifecycle.transition``. The store
 does not know which states exist, which are terminal or which moves are
 allowed; it asks. A worker reporting that it completed a cancelled
 execution therefore gets an ``invalid_transition`` recorded against it
@@ -19,7 +19,7 @@ rather than a state, which is conformance scenario 9 written down once
 instead of in every adapter.
 
 ``record`` is the second rule: it is where an adapter's ``Observation``
-(O0-05) becomes canonical. The adapter says what it saw, the lifecycle says
+becomes canonical. The adapter says what it saw, the lifecycle says
 what that means, and the store stamps the correlation — root, parent,
 execution, attempt, agent, session, protocol, traceparent — that makes the
 event placeable in a tree afterwards. An adapter filling those in itself
@@ -77,7 +77,7 @@ logger = logging.getLogger(__name__)
 #: The ``data`` key of the progress event ``record_reattach`` appends when a
 #: watcher lost sight of an attempt and asked its worker again. It holds the
 #: attempt's number, and it is what tells a disconnect apart in the settled
-#: measure of O1-14.
+#: orchestration measures.
 REATTACHED = "reattached"
 
 
@@ -207,7 +207,7 @@ class ExecutionStore(ABC):
     implemented twice is a rule that holds in one place and not the other.
 
     Atomicity belongs to the implementation. This one takes a lock per
-    process; the Solr store of O1-02 will need optimistic concurrency, since
+    process; a Solr store will need optimistic concurrency, since
     two durable workers can reach the same execution at once.
     """
 
@@ -424,8 +424,8 @@ class ExecutionStore(ABC):
         """
         The account this store's executions belong to, when it is opened for one.
 
-        The canonical execution names no owner, so the owner is the store's
-        (O1-01), and the measures of O1-14 are filed under it. A store that
+        The canonical execution names no owner, so the owner is the store's,
+        and the orchestration measures are filed under it. A store that
         is not scoped — the in-memory one, an operator's tool — answers
         ``None``, and its points are filed under whoever exports them.
 
@@ -440,7 +440,7 @@ class ExecutionStore(ABC):
 
     def _delegated(self, execution: Execution, *, duplicate: bool) -> None:
         """
-        Count one delegation (O1-14), new or already seen.
+        Count one delegation, new or already seen.
 
         Imported where it is used, as the trace is in ``_append``: the
         measures live in ``monitoring``, whose package brings pydantic-ai.
@@ -462,7 +462,7 @@ class ExecutionStore(ABC):
 
     async def _settled(self, execution: Execution) -> None:
         """
-        Count an execution that has just reached its terminal state (O1-14).
+        Count an execution that has just reached its terminal state.
 
         Read once, here, rather than tracked while the execution moved: how
         it got here — whether its worker was lost, whether its watcher had to
@@ -487,7 +487,7 @@ class ExecutionStore(ABC):
 
     async def _append(self, event: ExecutionEvent) -> ExecutionEvent:
         """
-        Append one event, and put it on the tree's trace as well (O0-11).
+        Append one event, and put it on the tree's trace as well.
 
         ``append_event`` is storage and the Solr store reimplements it; the
         trace hangs here instead, so every implementation tells the same
@@ -615,7 +615,7 @@ class ExecutionStore(ABC):
         approval_uid : str | None
             The platform approval the move waits on, or that ended the wait:
             a ``wait`` for a person and the ``resume`` their decision brought
-            name it on their events (O1-08).
+            name it on their events.
 
         Returns
         -------
@@ -701,7 +701,7 @@ class ExecutionStore(ABC):
         provenance to the one record rather than replacing it, and a record
         that is already committed is never demoted by a later registration:
         the first attempt to commit wins. Deciding which
-        of two artifacts supersedes the other is O0-10's, on the canonical
+        of two artifacts supersedes the other belongs to the canonical
         model, where the rule can be stated once for every store.
 
         Parameters
@@ -728,7 +728,7 @@ class ExecutionStore(ABC):
         ``commit_artifacts`` in ``core`` decides — the first attempt to
         commit wins, and a later one's artifacts are kept and superseded.
         This is where the decision is stored, said on the
-        event stream and counted (O1-14). Durable's commit step and the O0-13
+        event stream and counted. Durable's commit step and the orchestration
         example both call it, so a commit is written in one place rather than
         once per caller.
 
@@ -784,7 +784,7 @@ class ExecutionStore(ABC):
         picks a run up after the one watching it died, or a watch that ended
         before its attempt did, otherwise leaves nothing in the execution's
         history, and the share of executions completing after a
-        disconnect could not count it (O1-14).
+        disconnect could not count it.
 
         Parameters
         ----------
@@ -817,7 +817,7 @@ class ExecutionStore(ABC):
         Turn one adapter observation into canonical state and one event.
 
         This is the seam: adapters report, the control plane
-        decides. Until the control plane exists (O1-01) this is where the
+        decides. Until the control plane exists this is where the
         deciding happens, so both adapters and the conformance harness go
         through the same code rather than each having its own idea of what a
         worker's report means.
@@ -995,7 +995,7 @@ class ExecutionStore(ABC):
         six weeks later, when the question is which of three attempts
         produced the artifact somebody is looking at. What the attempt spent
         goes with the move that reports it, which is the only place a tree's
-        spend per execution is kept (O2-10).
+        spend per execution is kept.
 
         Parameters
         ----------
@@ -1089,7 +1089,7 @@ class ExecutionStore(ABC):
         artifact : Artifact
             The artifact as the adapter reported it.
         data : Mapping[str, Any] | None
-            What the artifact stands for until O1-10 commits it.
+            What the artifact stands for until it is committed.
 
         Returns
         -------
@@ -1227,7 +1227,7 @@ def _same_intent(existing: Execution, requested: Execution) -> bool:
 
 def refuse_moving(existing: Execution, execution: Execution) -> None:
     """
-    Refuse a write that would move an execution in its tree (O2-01).
+    Refuse a write that would move an execution in its tree.
 
     ``root_execution_id`` is set once, when the execution is created, and so
     are its parent and its depth: a tree is one query on its root, and a
@@ -1259,7 +1259,7 @@ class InMemoryExecutionStore(ExecutionStore):
 
     It is also the test double for every later phase, which is the reason it
     is written as carefully as the Solr one will be: the conformance suite
-    of O0-12 runs on it, and a store that quietly ordered events differently
+    runs on it, and a store that quietly ordered events differently
     from Solr would make that suite prove the wrong thing.
 
     Records are pydantic models and are immutable in practice: every change

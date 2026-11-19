@@ -1,13 +1,13 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The harnesses catalogue (SH-01) as agent-runtimes reads it.
+"""The harnesses catalogue as agent-runtimes reads it.
 
 An agent program driven over ACP, generated from agentspecs 0.0.100. An
 agent spec names one with `harness:` beside `pydantic-ai` and `vercel-ai`;
 what the harness cannot honour is refused at load, in a sentence; and an
-agent on a catalogue harness is served by the ACP adapter (SH-10,
-`test_acp_agent.py`), never run on pydantic-ai in its place.
+agent on a catalogue harness is served by the ACP adapter
+(`test_acp_agent.py`), never run on pydantic-ai in its place.
 """
 
 from __future__ import annotations
@@ -52,7 +52,7 @@ class TestTheHarnessCatalogue:
         assert all(isinstance(spec, HarnessSpec) for spec in list_harnesses())
 
     def test_four_are_offered_and_the_others_say_why_not(self) -> None:
-        """The restriction to four (META_HARNESS, 28 October 2026): Claude Code,
+        """The restriction to four (28 October 2026): Claude Code,
         Codex, OpenCode and pi are offered; Gemini CLI, fast-agent, goose and
         OpenHands are described, not offered, each with its reason; `custom`
         is the organization's own."""
@@ -138,7 +138,7 @@ class TestTheHarnessCatalogue:
 
 
 class TestTheCapabilitiesTable:
-    """What a session may rely on of each harness (MH-20), declared, never guessed in code."""
+    """What a session may rely on of each harness, declared, never guessed in code."""
 
     def test_the_seven_harnesses_tables(self) -> None:
         tables = {spec.id: spec.capabilities for spec in list_harnesses()}
@@ -204,7 +204,7 @@ class TestWhatAHarnessRunsUnasked:
         self,
     ) -> None:
         """`capabilities.auto_run` (agentspecs 0.0.123): the commands a harness runs
-        without asking its client, as data; the platform's W-09 reads it from the
+        without asking its client, as data; the platform reads it from the
         deployed spec so a `cat` Claude Code ran unasked is never an incident."""
         import re
 

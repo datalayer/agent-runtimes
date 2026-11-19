@@ -1,16 +1,16 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The environments client, against what the registry routes answered (E1-18).
+"""The environments client, against what the registry routes answered.
 
-``environments_registry_recorded.json`` holds what each E1-01 route of Runtimes
+``environments_registry_recorded.json`` holds what each route of Runtimes
 was sent and answered, recorded from the service's own in-memory app. A
 client whose ``_fetch`` records each request and replays those answers is held
 to the request each route takes, and its typed answers to the canonical models
 of ``code_sandboxes.environments``. The build log calls were recorded the same
-way from E1-16's routes; ``test_envs_command.py`` replays the stream itself.
+way from the build log routes; ``test_envs_command.py`` replays the stream itself.
 The trial, the promotion with its record and its refusal, and the deletion a
-running runtime refuses were recorded from E1-14's and E1-15's routes, on an
+running runtime refuses were recorded from their routes, on an
 environment of their own.
 """
 
@@ -70,7 +70,7 @@ FAILED = uid_in("retry_build", -2)
 ARCHIVED = uid_in("archive_environment", -2)
 DELETED = uid_in("delete_environment")
 
-#: E1-14's and E1-15's routes, recorded on an environment of their own: its
+#: The trial, promotion and deletion routes, recorded on an environment of their own: its
 #: version 2 tried, its version 3 partially ready and promoted.
 TRIED = uid_in("trial_version", -2)
 PARTIAL = RECORDED["get_promoted_version"]["body"]["uid"]
@@ -502,7 +502,7 @@ def test_a_promoted_version_carries_its_promotion_record() -> None:
     assert decisions["datalayer"].immutable_reference.endswith(
         "@" + datalayer["inputs"]["digest"]
     )
-    # E1-08 made no decision for the e2b artifact: the record says so.
+    # The scan made no decision for the e2b artifact: the record says so.
     assert decisions["e2b"].policy_decision is None
     assert (
         promotion.model_dump(by_alias=True, mode="json") == record["body"]["promotion"]
@@ -514,7 +514,7 @@ def test_a_version_never_promoted_has_no_promotion_record(name: str) -> None:
     client, record = replaying(name)
     version = client.get_environment_version(uid_in(name))
     assert_sent(client.calls[0], record)
-    # A null record, or none at all from a Runtimes before E1-15.
+    # A null record, or none at all from an older Runtimes.
     assert version.promotion is None and version.promoted_at is None
 
 

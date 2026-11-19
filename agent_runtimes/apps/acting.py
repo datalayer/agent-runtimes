@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A deployment's connections in the name of who uses it (I-04).
+"""A deployment's connections in the name of who uses it.
 
 An application's connection may act in the name of each person who uses it
 (`as: user`) rather than its owner's. Its principal's token never reaches such
@@ -20,7 +20,7 @@ with the principal's. When the person has not let it act in their name, those
 servers are reached with no token of theirs: the gateway refuses, in its
 sentence, and the agent says so.
 
-**A session woken for a person** (W-03): a session nobody opened,
+**A session woken for a person**: a session nobody opened,
 woken by an event of one person's own source — a message in their mailbox
 — runs on the owner's temporary key, with which IAM would list what the
 *owner* let applications do, never the person's. The scheduler, which wakes
@@ -109,7 +109,7 @@ def person_woken_for(woken_by: Optional[Mapping[str, Any]]) -> tuple[str, str]:
 
     An event's details are ids (`deployments.event_details`); a mail watch
     names the ``person`` whose mailbox the message arrived in and the
-    ``grant`` they gave the application (W-03). Read only of what
+    ``grant`` they gave the application. Read only of what
     `routes.apps._woken_by` let by, and what it names grants nothing here: the
     token that comes with it does, which the scheduler mints only for a wake
     its own watch sealed, and which :func:`given` holds to this deployment.
@@ -148,7 +148,7 @@ def given(
     grant: str = "",
 ) -> None:
     """A person's token naming the application, given with the request of a
-    session woken for their own source (W-03): held where the
+    session woken for their own source: held where the
     session's runs find it, as a person's own session's is.
 
     Parameters
@@ -283,7 +283,7 @@ async def acting_token(deployment_uid: str, bearer: Optional[str]) -> str:
     key = (hashlib.sha256(bearer.encode()).hexdigest(), deployment_uid)
     held = _HELD.get(key)
     if held is not None and held.get("given"):
-        # Given with the session's request (W-03): the only token this
+        # Given with the session's request: the only token this
         # session acts with. Ended, nothing is asked in its place — the
         # request's bearer is the owner's key, whose grants are not the person's.
         if held["expires_at"] > time.time():

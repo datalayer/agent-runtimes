@@ -5,8 +5,7 @@
 
 /**
  * The browser A2A adapter negotiates the Datalayer orchestration extension
- * against a reference worker, and degrades cleanly when it is absent
- * (O3-03).
+ * against a reference worker, and degrades cleanly when it is absent.
  *
  * The claim under test is the negotiation rule the extension's own
  * specification states: "an orchestrator sends extension fields only to a

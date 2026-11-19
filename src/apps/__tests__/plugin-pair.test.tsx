@@ -4,7 +4,7 @@
  */
 
 /**
- * An application's two plugins, named once (F-15, F-16): the page's
+ * An application's two plugins, named once: the page's
  * plugin is `loop-app-<id>`, as its runtime's is, and requires it; the page's
  * plugins are delivered as one extension of that name; the page follows what
  * its runtime holds, and a run in the browser alone is never blank. Written
@@ -65,7 +65,7 @@ afterEach(() => {
   document.body.replaceChildren();
 });
 
-describe('the pair, named once (F-15)', () => {
+describe('the pair, named once', () => {
   it('is the application’s name on both tiers, each declaring the other', () => {
     expect(appPluginName('web-research')).toBe(NAME);
     expect(appPluginPair('web-research')).toEqual({
@@ -121,7 +121,7 @@ describe('the pair, named once (F-15)', () => {
   });
 });
 
-describe('the runtime a page follows (F-15)', () => {
+describe('the runtime a page follows', () => {
   const running = { state: 'running' as const };
 
   it('is none in the browser alone, nor while one starts', () => {
@@ -176,7 +176,7 @@ describe('the runtime a page follows (F-15)', () => {
   });
 });
 
-describe('a host telling the page what its runtime holds (F-15)', () => {
+describe('a host telling the page what its runtime holds', () => {
   /** A workspace with a sandbox where the test says, and the application. */
   async function mounted(target: 'browser' | 'local') {
     const sandbox = {
@@ -247,7 +247,7 @@ describe('a host telling the page what its runtime holds (F-15)', () => {
   });
 });
 
-describe('the editors give the same pair (F-16)', () => {
+describe('the editors give the same pair', () => {
   it('a spec, and the spec the Canvas writes back after an edit, are one pair', () => {
     for (const app of Object.values(APP_CATALOGUE)) {
       if (!app.agent) {

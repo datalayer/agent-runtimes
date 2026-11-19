@@ -38,7 +38,7 @@
       "resolution": "single",
       "tenant": null,
       "extension": false,
-      "note": "IAM custody on Datalayer (PI-11)."
+      "note": "IAM custody on Datalayer."
     },
     {
       "id": "pact.receiptStore",
@@ -55,7 +55,7 @@
       "resolution": "single",
       "tenant": null,
       "extension": false,
-      "note": "The application's record on Datalayer (R-07)."
+      "note": "The application's record on Datalayer."
     },
     {
       "id": "pact.extension.delegated",

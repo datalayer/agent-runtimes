@@ -22,6 +22,7 @@
  */
 
 import type { JSX } from 'react';
+import { NO_SURFACE, surfaceChoice } from './surfaceChoice';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
@@ -56,6 +57,7 @@ import {
   offeredModels as offeredModelsFor,
   readServerCatalogue,
   readServerDecisions,
+  visitorsModels,
   type Decisions,
 } from '../../../chat/base/modelChoice';
 import { SUGGESTION_CHIP_WIDTH } from '../../../chat/display/EmptyState';
@@ -104,12 +106,29 @@ import {
 } from '../../../stores';
 import { useIAMStore } from '../../../state';
 import { useVisitorToken } from '../../apps/visitorToken';
+import { useEquipment } from '../../../hooks/useEquipment';
+import { EquipmentBar } from '../../../chat/prompt/menus/EquipmentMenus';
+import {
+  ANONYMOUS_MINUTES,
+  ANONYMOUS_WORDS,
+  type ChatAnonymous,
+} from '../../../chat/anonymous/anonymousMode';
+import {
+  AnonymousChatProvider,
+  AnonymousFooterLabel,
+  AnonymousKeyClock,
+  AnonymousPreviewBox,
+  useAnonymousSignIn,
+  useAnonymousTurns,
+  type AnonymousChatState,
+} from '../../../chat/anonymous/AnonymousChat';
 import {
   AGENTS_PLUGIN_NAME,
   type AgentsConfig,
   type AgentsOutput,
 } from '../agents/plugin';
 import type { SandboxService } from '../agents/service';
+import { visitorForOf } from '../agents/visitorFor';
 import {
   BROWSER_CODE_TOOL,
   dataUrlBase64,
@@ -143,6 +162,7 @@ import {
   type SessionFacts,
   LoopFrontendTool,
   LoopRunProps,
+  mergeChatExtras,
   LoopSlots,
   agentServerOf,
   noRuntimeSaid,
@@ -213,18 +233,17 @@ type ChatControls = {
   newChat: () => void;
   /** The conversation the next message goes to (AG-UI's thread). */
   thread: () => string;
-  /** Stops the agent's voice: the chat's own speaker (VO-10). */
+  /** Stops the agent's voice: the chat's own speaker. */
   stopSpeaking?: () => void;
-  /** Spoken over: the run ends, an application's session stays open (VO-46). */
+  /** Spoken over: the run ends, an application's session stays open. */
   interrupt?: () => void;
-  /** How loud that speaker plays now, 0 to 1: hands-free's barge-in is gated on it (VO-13). */
+  /** How loud that speaker plays now, 0 to 1: hands-free's barge-in is gated on it. */
   voiceLevel?: () => number;
-  /** Marks the answer spoken over *interrupted* (VO-13). */
+  /** Marks the answer spoken over *interrupted*. */
   markInterrupted: () => void;
 };
 
 /** No editor: the conversation on its own. */
-const NO_SURFACE = '';
 
 /**
  * How fast the full-screen control breathes once it starts asking.
@@ -236,9 +255,12 @@ const FULLSCREEN_HINT_PERIOD_MS = 1400;
 
 /**
  * An application's face in the empty state: the page's size of the three a
- * face is drawn at (T-19, `--loop-face-large`, 72px).
+ * face is drawn at (`--loop-face-large`, 72px).
  */
 const FACE_LARGE = parseInt(loopShapeVars['--loop-face-large'], 10);
+
+/** No anonymous visitor: one object, so that the sign-in hook never reads a change. */
+const NO_ANONYMOUS: ChatAnonymous = {};
 
 export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const chatText = useChatWords();
@@ -247,13 +269,13 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
      default palette instead of throwing. */
   const palette = useColorPalette();
   const controlsRef = useRef<ChatControls | null>(null);
-  /** The token the thread's menu calls the session API with (MH-F08). */
+  /** The token the thread's menu calls the session API with. */
   const iamTokenRef = useRef<string | undefined>(undefined);
   const { setViewControls } = workspace;
   /*
    * Say the thread a message goes on to the workspace: an application's
    * thread is its session on the runtime, which the Rules card's *This
-   * session* reads (SH-54). Through a ref, as the senders below are built once.
+   * session* reads. Through a ref, as the senders below are built once.
    */
   const setThreadRef = useRef(workspace.setThread);
   setThreadRef.current = workspace.setThread;
@@ -312,6 +334,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * The effect below opens it the moment it can actually be opened.
    */
   const [surfaceId, setSurfaceId] = useState<string>(NO_SURFACE);
+  const [suspendedId, setSuspendedId] = useState<string | null>(null);
 
   /**
    * Whether the reader has chosen a surface themselves.
@@ -355,7 +378,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const agentNameRef = useRef<string>('');
   const extrasEntries = useContributions(LoopChatExtras);
   /*
-   * Every contribution, merged, a later one winning a key both set.
+   * Every contribution, merged, a later one winning a key both set — but
+   * the frontend tools, which add up (`mergeChatExtras`).
    *
    * Only the first used to be read, which made the extras the property of
    * whichever plugin registered first: the loop's own surface plugin
@@ -366,7 +390,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     () =>
       computed<LoopChatExtrasValue>(() =>
         extrasEntries.reduce<LoopChatExtrasValue>(
-          (merged, entry) => ({ ...merged, ...entry.value.extras.value }),
+          (merged, entry) => mergeChatExtras(merged, entry.value.extras.value),
           {},
         ),
       ),
@@ -408,7 +432,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    */
   const [busy, setBusy] = useState(false);
   const [sendReady, setSendReady] = useState(false);
-  // The agent's voice speaks (VO-10): the composer's *Stop speaking*.
+  // The agent's voice speaks: the composer's *Stop speaking*.
   const [speaking, setSpeaking] = useState(false);
   const [presenceTool, setPresenceTool] = useState<PresenceTool>({
     open: false,
@@ -421,13 +445,13 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   );
   const onPresence = config?.presence?.onPresence;
   // A host drawing the face in a frame of its own is told as it changes, and
-  // so is whoever reads the turn: the floating assistant acts it out (T-22).
+  // so is whoever reads the turn: the floating assistant acts it out.
   useEffect(() => {
     onPresence?.(presenceNow);
     turnFeedRef.current?.setPresence(presenceNow);
   }, [onPresence, presenceNow]);
   // What it last said, for a host that says it outside the conversation —
-  // the embed's floating chrome (R-01): its balloon and its blink.
+  // the embed's floating chrome: its balloon and its blink.
   // Through a ref: the handler below is made once.
   const onSayingRef = useRef(config?.presence?.onSaying);
   onSayingRef.current = config?.presence?.onSaying;
@@ -450,7 +474,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    */
   const handleDisplayItemsChange = useCallback(
     (items: Array<ChatMessage | ToolCallMessage>) => {
-      // The newest tool call, for an application's line of status (T-08).
+      // The newest tool call, for an application's line of status.
       const { open, pendingApproval } = presenceToolOf(items);
       setPresenceTool(previous =>
         previous.open === open && previous.pendingApproval === pendingApproval
@@ -591,7 +615,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const inPageRef = useRef(false);
   /**
    * The page's sandbox, when the agent turned in the page runs its code
-   * there (`execute_code`, E-11): what a file given on the page is
+   * there (`execute_code`): what a file given on the page is
    * put in. Read by `sendNow`, set below.
    */
   const pageSandboxRef = useRef<SandboxService | undefined>(undefined);
@@ -601,8 +625,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * stopped deployment, a visitor's turns all taken. Set below.
    */
   const hostClosedRef = useRef<string | undefined>(undefined);
-  /** What goes with every run (an application's modes, P-19), read when it is sent. */
-  // How the words in the composer were heard, when they were said (VO-27).
+  /** What goes with every run (an application's modes), read when it is sent. */
+  // How the words in the composer were heard, when they were said.
   const spokenRef = useRef<SpokenMetadata | undefined>(undefined);
   const runProps = useContributions(LoopRunProps);
   const runPropsRef = useRef(runProps);
@@ -614,12 +638,12 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * begins its turn, and a page reading the turn sees it asked and answered.
    *
    * What the page did besides the message goes with it as AG-UI's
-   * `forwardedProps` (`loop`, R-04): the application's session takes a
+   * `forwardedProps` (`loop`): the application's session takes a
    * file there. An agent turned in this page has no session: one that runs
    * its code in the page's sandbox has the files put there, and the message
-   * names them (E-11); to any other no file is handed — said, rather
+   * names them; to any other no file is handed — said, rather
    * than dropped. What the workspace's plugins send with every run
-   * (`LoopRunProps`: the modes the person is in, P-19) goes under it —
+   * (`LoopRunProps`: the modes the person is in) goes under it —
    * and an agent turned in this page applies the modes itself (`modeEffect`,
    * `BrowserAgentAdapter`).
    */
@@ -629,14 +653,14 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         return hostClosedRef.current;
       }
       // Said into the composer, then sent: how it was heard rides on the
-      // run, and the chat marks the message spoken (VO-27).
+      // run, and the chat marks the message spoken.
       const spoken = spokenRef.current;
       spokenRef.current = undefined;
       const forwardedProps = runForwardedProps(
         runPropsRef.current.map(entry => entry.value),
         spoken ? { ...(given ?? {}), voice: spoken } : given,
       );
-      // The page's files, or those attached in the composer (P-21).
+      // The page's files, or those attached in the composer.
       const loop = forwardedProps?.loop as { files?: unknown[] } | undefined;
       if (inPageRef.current && loop?.files && loop.files.length > 0) {
         const sandbox = pageSandboxRef.current;
@@ -754,8 +778,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
        */
       setTransient(null);
       /*
-       * Words that go elsewhere than the agent (`sendInstead`,
-       * P-08): a Direct Conversation with a company, the person's own words
+       * Words that go elsewhere than the agent (`sendInstead`):
+       * a Direct Conversation with a company, the person's own words
        * sent as theirs. Neither a command nor a turn, and never the model's;
        * refused, the words stay where they were typed and the reason is said.
        */
@@ -818,7 +842,11 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    */
   const chooseSurface = useCallback((next: string) => {
     surfaceChosen.current = true;
-    setSurfaceId(next);
+    // A choice of the reader's own: an editor waiting to come back is no
+    // longer wanted, or it keeps the column and "Show the chat" shows nothing.
+    const chosen = surfaceChoice(next);
+    setSuspendedId(chosen.suspendedId);
+    setSurfaceId(chosen.surfaceId);
   }, []);
 
   /*
@@ -887,7 +915,6 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    */
   /* State, not a ref: the layout below keeps this surface's column while it
      is away, and a ref changing re-renders nothing. */
-  const [suspendedId, setSuspendedId] = useState<string | null>(null);
 
   /*
    * Full screen: the whole view, on the whole screen.
@@ -1076,7 +1103,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   /*
    * An agent of the catalogue or a Cog's, as a runtime resolves it: an
    * application on a Cog looked up among the agentspecs alone was turned in
-   * the page with no instructions at all (H-01).
+   * the page with no instructions at all.
    */
   const spec =
     resolveAgentspec(member?.specId ?? agentId) ??
@@ -1130,8 +1157,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     const hidden = new Set(hiddenOpeners ?? []);
     const offered = <T extends { text: string }>(items: T[]): T[] =>
       hidden.size === 0 ? items : items.filter(item => !hidden.has(item.text));
-    // What a plugin offers live (an application's profile's starters,
-    // P-20) wins over what was contributed when the reactor was built.
+    // What a plugin offers live (an application's profile's starters)
+    // wins over what was contributed when the reactor was built.
     if (liveOpeners) {
       return offered(liveOpeners);
     }
@@ -1329,8 +1356,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   }, [notebookTools, commandTools]);
   /*
    * The page's own tools for an agent on a server: a host example's, and
-   * the tools of the `AgentTools` bundles its extras name (RU-7:
-   * the host page's functions, `host_<name>`, each running its command on
+   * the tools of the `AgentTools` bundles its extras name
+   * (the host page's functions, `host_<name>`, each running its command on
    * this reactor). An in-page agent has every bundle already (above).
    */
   const bundles = useAgentToolBundles();
@@ -1387,7 +1414,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    */
   /*
    * The commands the composer lists while `/` is typed: those contributed for
-   * it, an application's (P-19). Picking one writes `/<name> `, and the
+   * it, an application's. Picking one writes `/<name> `, and the
    * workspace runs it when the message is sent.
    */
   const commands = useContributions(LoopCommand);
@@ -1447,9 +1474,13 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * Told whether an in-page agent is going to ask at all: a workspace on a
    * server-backed agent authenticates itself, and minting a visitor's one
    * trial key for it would start a clock against a conversation that never
-   * spends it.
+   * spends it. A visitor's key names what it is for (`visitorForOf`): the
+   * models it is served are that application's, team's or scene's.
    */
-  const { inference, anonymous } = useBrowserInference(inPage);
+  const visitorFor = visitorForOf(
+    reactor.getConfig<AgentsConfig>(AGENTS_PLUGIN_NAME),
+  );
+  const { inference, anonymous } = useBrowserInference(inPage, visitorFor);
   /* Read from the store rather than passed in: the sign-in form inside the
      expiry panel writes here, so the same render that gains a member gains
      the wording that goes with one. */
@@ -1471,7 +1502,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   /*
    * What its host said of whether there is anything to talk to
    * (`ChatAvailabilityProvider`): an application whose model is not offered
-   * or not served (R-27) is switched off with the reason, by the
+   * or not served is switched off with the reason, by the
    * Studio's Preview and the hosted page, rather than left unanswered.
    */
   const ambient = useChatAvailability();
@@ -1479,28 +1510,67 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     ? ambient.disableReason || 'This conversation is closed here.'
     : undefined;
   /*
-   * No agent to talk to: a Datalayer runtime not assigned (P-24,
-   * round 9). Said in a sentence — why, when its launch was refused — and
+   * No agent to talk to: a Datalayer runtime not assigned
+   * (round 9). Said in a sentence — why, when its launch was refused — and
    * nothing is sent; the header does not say *Ready*.
    */
   const noRuntime =
     agentServerUrl === undefined
       ? noRuntimeSaid(workspace.sandbox, chatText)
       : undefined;
+  /*
+   * Without an account the application runs on the visitors'
+   * runtime, which answers a visitor's token for it and nobody signed in.
+   */
+  const visitors =
+    reactor.getConfig<AgentsConfig>(AGENTS_PLUGIN_NAME)?.datalayerVisitors;
+  const visitor = useVisitorToken(visitors);
+  /*
+   * Run as an anonymous visitor (the user, 15 November 2026): the prompt
+   * closed while the temporary key is asked for and checked — minted, and
+   * the application's agent made on the visitors' runtime — then open until
+   * the turns the host counts or the conversation's minutes are spent.
+   */
+  const anonymousConfig = config?.anonymous;
+  const anonymousTurns = useAnonymousTurns(anonymousConfig?.maxTurns);
+  const anonymousValidating = Boolean(
+    anonymousConfig &&
+    visitors &&
+    !visitor.error &&
+    workspace.sandbox.state !== 'error' &&
+    (!visitor.token || agentServerUrl === undefined),
+  );
+  const anonymousRefused = anonymousConfig ? anonymousTurns.refused : '';
+  // A turn taken each time the agent sets to work on a question.
+  const anonymousWasBusy = useRef(false);
+  const takeAnonymousTurn = anonymousTurns.take;
+  useEffect(() => {
+    if (anonymousConfig && busy && !anonymousWasBusy.current) {
+      takeAnonymousTurn();
+    }
+    anonymousWasBusy.current = busy;
+  }, [anonymousConfig, busy, takeAnonymousTurn]);
+  const signInAnonymous = useAnonymousSignIn(anonymousConfig ?? NO_ANONYMOUS);
   const chatDisabled =
+    anonymousValidating ||
+    Boolean(anonymousRefused) ||
     gateBlocked ||
     keyExpired ||
     Boolean(inPageRefusal) ||
     Boolean(noRuntime) ||
     ambient.disabled;
-  const disabledReason = keyExpired
-    ? expiredKeyIsTemporary
-      ? chatText.demoKeyExpired
-      : chatText.keyExpired
-    : (inPageRefusal ??
-      noRuntime ??
-      gateReason ??
-      (ambient.disabled ? ambient.disableReason : undefined));
+  const disabledReason = anonymousValidating
+    ? ANONYMOUS_WORDS.validating
+    : anonymousRefused
+      ? anonymousRefused
+      : keyExpired
+        ? expiredKeyIsTemporary
+          ? chatText.demoKeyExpired
+          : chatText.keyExpired
+        : (inPageRefusal ??
+          noRuntime ??
+          gateReason ??
+          (ambient.disabled ? ambient.disableReason : undefined));
 
   /*
    * The prompt's text, held here rather than inside `InputPrompt`.
@@ -1513,17 +1583,17 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    */
   const [draft, setDraft] = useState('');
   /*
-   * Its voice (VO-10, VO-11, VO-49): the microphone in the
+   * Its voice: the microphone in the
    * workspace's composer, which this view holds — the words written in it as
    * they are heard. The chat speaks its answers itself (`voice` below).
    */
-  // The person's own settings, followed as the voice menu changes them (VO-30).
+  // The person's own settings, followed as the voice menu changes them.
   const [personVoice] = useVoiceSettings();
   const voice = useMemo(
     () => (config?.voice ? settledVoice(config.voice, personVoice) : undefined),
     [config?.voice, personVoice],
   );
-  // The words in the box are still being heard: greyed until final (VO-11).
+  // The words in the box are still being heard: greyed until final.
   const [voiceInterim, setVoiceInterim] = useState(false);
 
   /*
@@ -1606,6 +1676,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const promptActions = useSlotComponents(LoopSlots.promptAction);
   // Same question for the chat's own title bar, which plugins may add to.
   const chatHeaderItems = useSlotComponents(LoopSlots.chatHeader);
+  // And for the band above the conversation (an agent's `banner` UI).
+  const chatBannerItems = useSlotComponents(LoopSlots.chatBanner);
 
   const footerAgents = useMemo<FooterAgent[]>(
     () =>
@@ -1649,15 +1721,15 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   }, [suggestion]);
 
   /*
-   * An application's session checks who is calling (R-32, R-04): its
+   * An application's session checks who is calling: its
    * chat says so with the person's token. The embed hands its own.
    */
   /*
    * Whether its host runs an application here, said by the host — not by
    * whether the application's plugin is up: while its runtime does not hold
-   * it, its page plugin stands down (F-15), and its chat is then never sent
+   * it, its page plugin stands down, and its chat is then never sent
    * to the runtime's bare agent route — on the visitors' runtime one that is
-   * not published (D-15). It speaks to the application's session API,
+   * not published. It speaks to the application's session API,
    * whose refusal says why.
    */
   const hostCreatePayload =
@@ -1669,21 +1741,19 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const deploymentUid = deploymentOfPayload(hostCreatePayload);
   const memberToken = useIAMStore(state => state.token);
   /*
-   * Without an account (R-30) the application runs on the visitors'
+   * Without an account the application runs on the visitors'
    * runtime, which answers a visitor's token for it and nobody signed in.
    */
-  const visitors =
-    reactor.getConfig<AgentsConfig>(AGENTS_PLUGIN_NAME)?.datalayerVisitors;
-  const visitor = useVisitorToken(visitors);
+  // `visitors` and `visitor` are read above, with the anonymous visitor's state.
   // An embedded application's own token, for a visitor the platform does
-  // not know (R-20): it runs a session of its deployment, and no more.
+  // not know: it runs a session of its deployment, and no more.
   const embedToken =
     reactor.getConfig<AgentsConfig>(AGENTS_PLUGIN_NAME)?.embedToken;
   const iamToken = visitors ? visitor.token : embedToken || memberToken;
   iamTokenRef.current = iamToken || undefined;
   /*
-   * Its voice asked of the speech service as this chat speaks to its runtime
-   * (VO-37, VO-19): the host's token, else this one — a visitor's,
+   * Its voice asked of the speech service as this chat speaks to its runtime:
+   * the host's token, else this one — a visitor's,
    * an embed's or the person's; an embed's names its deployment.
    */
   const askedVoice = useMemo(
@@ -1697,13 +1767,30 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * socket, no runtime-wide model switch. A Preview runs on the Maker's.
    */
   const ownRoutesOnly = Boolean(deploymentUid || visitors);
+  /*
+   * What an application runs with, for its composer to list: its agent's
+   * MCP servers, skills and models, each with its state, read from its
+   * runtime (`/api/v1/apps/agents/{agent}/equipment`, the models' own read),
+   * its spec until the runtime answers. To read only: nothing is switched
+   * from it, and no model is sent with a run.
+   */
+  const equipmentShown = Boolean(presence) && runsApp && !inPage;
+  const equipment = useEquipment({
+    agentServerUrl,
+    agentId,
+    token: iamToken || undefined,
+    specId: appAgentOf(
+      blueprintTurn?.createPayload?.app_spec ?? hostCreatePayload?.app_spec,
+    ),
+    enabled: equipmentShown,
+  });
   if (ownRoutesOnly && !runsApp) {
     throw new Error(
       'A deployment’s page runs its application: its host gave no app_spec.',
     );
   }
   /*
-   * A thread opened from the person's history (P-24): its conversation
+   * A thread opened from the person's history: its conversation
    * read from the runtime once it answers — held there, else resumed from
    * its record — then drawn and gone on with on the same thread. One that
    * cannot be opened is said, and a new one starts.
@@ -1714,9 +1801,9 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    */
   const [visitThreadId] = useState(generateSessionUid);
   /*
-   * The web's deep link (MH-27): `?session=<uid>` on the chat's URL opens
+   * The web's deep link: `?session=<uid>` on the chat's URL opens
    * that session as the thread when the host gave none — a malformed one is
-   * said, not sent. And the thread an action opened (MH-10, MH-27): a
+   * said, not sent. And the thread an action opened: a
    * clone's, an import's, a resumed one's — drawn in place of the given.
    */
   const [deepLinked, deepLinkRefused] = useMemo((): [string, string] => {
@@ -1821,7 +1908,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       : undefined
     : givenThread;
   /*
-   * The session the thread is, as the runtime describes it (MH-27): read
+   * The session the thread is, as the runtime describes it: read
    * once the thread is known and again after each turn and each action, so
    * that the header's state words, the lineage line and the menu's entries
    * say the session as it stands. A thread the runtime holds no session of
@@ -1830,8 +1917,22 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const threadUid = workspace.thread || chatThread?.id || '';
   const [facts, setFacts] = useState<SessionFacts | undefined>(undefined);
   const [factsTick, setFactsTick] = useState(0);
+  // The thread a turn was sent on here: the runtime holds its session from
+  // then on. Before it — a visit before its first message — the runtime
+  // holds none, and asking answered an error (a 502 on the visitors'
+  // runtime, 14 November 2026).
+  const sentOn = useRef('');
   useEffect(() => {
-    if (!runsApp || !agentServerUrl || !threadUid || busy) {
+    if (busy && threadUid) {
+      sentOn.current = threadUid;
+    }
+  }, [busy, threadUid]);
+  const held =
+    Boolean(givenThread?.fromRuntime) ||
+    Boolean(workspace.thread && workspace.thread === threadUid) ||
+    sentOn.current === threadUid;
+  useEffect(() => {
+    if (!runsApp || !agentServerUrl || !threadUid || busy || !held) {
       return undefined;
     }
     let current = true;
@@ -1842,7 +1943,15 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     return () => {
       current = false;
     };
-  }, [runsApp, agentServerUrl, threadUid, busy, factsTick, sessionsClient]);
+  }, [
+    runsApp,
+    agentServerUrl,
+    threadUid,
+    busy,
+    held,
+    factsTick,
+    sessionsClient,
+  ]);
   /* What an action said — a swap's sentence, a refusal as the runtime said
      it — shown above the conversation until dismissed; and the picker and
      the file an action asks with (`choose`, `pickFile`). */
@@ -1927,7 +2036,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             // composer's pulse draw an in-page delegation like any other.
             onSubagentEvent: event =>
               agentRuntimeStore.getState().appendSubagentEvent(event),
-            // An application's modes (P-19): the options sent with a
+            // An application's modes: the options sent with a
             // run tell it their instructions, on the model one names, as
             // its session API does on a runtime.
             modeEffect: blueprintTurn?.modeEffect,
@@ -1935,8 +2044,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         : agentServerUrl !== undefined
           ? {
               type: 'ag-ui',
-              // An application's agent is spoken to through its session API
-              // (R-04): each thread a session, recorded under its uid,
+              // An application's agent is spoken to through its session API:
+              // each thread a session, recorded under its uid,
               // run in the name the application runs in, and taking what the
               // page did besides the message — the same AG-UI events back.
               endpoint: runsApp
@@ -1948,7 +2057,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
               ...(runsApp
                 ? {
                     uiSocket: `${agentServerUrl.replace(/^http/, 'ws')}/api/v1/apps/ui`,
-                    // Its files, uploaded before what names them (RU-6).
+                    // Its files, uploaded before what names them.
                     uiFiles: `${agentServerUrl}/api/v1/apps/agents/${encodeURIComponent(agentId)}/files`,
                     // Each thread a session: Stop is its session's.
                     appSessions: `${agentServerUrl}/api/v1/apps/sessions`,
@@ -1991,8 +2100,12 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * need one, and a browser agent has none — hence the menus below being
    * gated on the data rather than switched on unconditionally.
    */
+  // Only once there is a server to ask (an AG-UI endpoint): while its
+  // address is pending — a visitor's token being minted — `useConfig` with
+  // no endpoint asked a Jupyter server's `configure`, a developer's
+  // localhost on a public page (connection refused, 14 November 2026).
   const configQuery = useConfig(
-    !inPage,
+    !inPage && protocol?.type === 'ag-ui',
     protocol?.type === 'ag-ui' ? protocol.configEndpoint : undefined,
     undefined,
     agentId,
@@ -2064,17 +2177,22 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    */
   const offeredModels = useMemo<ModelConfig[]>(
     () =>
-      offeredModelsFor(catalogModels, () =>
-        Object.values(AI_MODEL_CATALOGUE)
-          // A typed-decision model answers typed questions, not a chat.
-          .filter(model => model.available && isChatModel(model))
-          .map(model => ({
-            id: model.id,
-            name: model.name,
-            provider: model.provider,
-          })),
+      // A visitor without an account is not offered the models kept for
+      // people signed in (`visitorsModels`).
+      visitorsModels(
+        offeredModelsFor(catalogModels, () =>
+          Object.values(AI_MODEL_CATALOGUE)
+            // A typed-decision model answers typed questions, not a chat.
+            .filter(model => model.available && isChatModel(model))
+            .map(model => ({
+              id: model.id,
+              name: model.name,
+              provider: model.provider,
+            })),
+        ),
+        Boolean(signedInUser),
       ),
-    [catalogModels],
+    [catalogModels, signedInUser],
   );
 
   /*
@@ -2176,6 +2294,36 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * The surface is the plugin's: no contribution, no composer, which is the
    * honest outcome for a workspace mounted without one.
    */
+  const HeaderComponent = headerEntries[0]?.value.Component;
+  const headerShown = !config?.hideHeader && !!HeaderComponent;
+  /*
+   * What the agent has that a visitor cannot use (the user, 15 November
+   * 2026): its MCP servers and skills, as its spec declares them — the
+   * visitors' runtime starts none of them, allowing no connection.
+   */
+  const anonymousDisabled = useMemo(
+    () => ({
+      mcpServers: (spec?.mcpServers ?? []).map(
+        server => server.name || server.id,
+      ),
+      skills: (spec?.skills ?? []).map(skill => skill.name || skill.id),
+    }),
+    [spec],
+  );
+  const anonymousState: AnonymousChatState | null = anonymousConfig
+    ? {
+        ...anonymousTurns,
+        refused: anonymousRefused,
+        config: anonymousConfig,
+        name: presence?.name ?? member?.name ?? spec?.name ?? '',
+        validating: anonymousValidating,
+        headerShown,
+        minutes: ANONYMOUS_MINUTES,
+        disabledMcpServers: anonymousDisabled.mcpServers,
+        disabledSkills: anonymousDisabled.skills,
+        signIn: signInAnonymous,
+      }
+    : null;
   const composerProps: InputPromptProps = {
     onSend: () => void handleSend(draft),
     input: draft,
@@ -2201,7 +2349,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     isLoading: busy,
     onStop: () => workspace.viewControls.stop?.(),
     // The reason where the typing would go, read before the person types;
-    // where it goes when it goes elsewhere than the agent (P-08).
+    // where it goes when it goes elsewhere than the agent.
     placeholder: disabledReason ?? chatExtras.sendInstead?.says ?? placeholder,
     typingSuggestions: suggestions.map(item => item.text),
     // The same openers behind the composer's suggestions control.
@@ -2232,8 +2380,16 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         <ReactorSlot slot={LoopSlots.inpromptMenu} props={{ workspace }} />
       ) : undefined,
     footerExtras:
-      promptActions.length > 0 || (voice && voice.input !== 'off') ? (
+      anonymousConfig ||
+      equipmentShown ||
+      promptActions.length > 0 ||
+      (voice && voice.input !== 'off') ? (
         <>
+          {/* Who is talking: nobody signed in (the user, 15 November 2026). */}
+          {anonymousConfig ? <AnonymousFooterLabel /> : null}
+          {/* What an application runs with, to read: its MCP servers, its
+              skills and its model, each with its state (18 November 2026). */}
+          {equipmentShown ? <EquipmentBar equipment={equipment} /> : null}
           {promptActions.length > 0 ? (
             <ReactorSlot slot={LoopSlots.promptAction} props={{ workspace }} />
           ) : null}
@@ -2247,12 +2403,12 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
               // opening stops it, and *Stop speaking* while it speaks.
               speaking={speaking}
               onStopSpeaking={() => controlsRef.current?.stopSpeaking?.()}
-              // Barge-in gated on how loud that speaker plays (VO-13).
+              // Barge-in gated on how loud that speaker plays.
               playbackLevel={() => controlsRef.current?.voiceLevel?.() ?? 0}
-              // Hands-free (VO-12, VO-13): the run in progress, stopped when
+              // Hands-free: the run in progress, stopped when
               // the person speaks over it, and the answer marked interrupted.
               running={busy}
-              // Spoken over, the application's session stays open (VO-46).
+              // Spoken over, the application's session stays open.
               onStopRun={() =>
                 (
                   controlsRef.current?.interrupt ?? controlsRef.current?.stop
@@ -2261,7 +2417,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
               onInterrupted={() => controlsRef.current?.markInterrupted()}
               onInterimChange={setVoiceInterim}
               // The menu offers when answers are heard where the
-              // application lets them be (VO-21, VO-30).
+              // application lets them be.
               answers={Boolean(
                 config?.voice?.output &&
                 config.voice.output !== 'off' &&
@@ -2281,9 +2437,10 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     /*
       An application's conversation keeps none of the session's controls
       under its composer — the agents, the model, the tools and their servers,
-      the skills (T-17, T-18): a person using an application is not
+      the skills: a person using an application is not
       choosing them, and its builder chose them in its spec. An agent's chat
-      keeps them.
+      keeps them. An application shows them to read instead (`EquipmentBar`,
+      in `footerExtras`): every server, skill and model, with its state.
     */
     showAgentsMenu: !presence,
     showInlineAgentsMenu: false,
@@ -2327,10 +2484,10 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     isA2AProtocol: false,
     hasConfigData: !!configQuery.data,
     hasSkillsData: !!skillsQuery.data,
+    // What a visitor cannot use, listed disabled in the warning colour.
+    ...(anonymousConfig ? { anonymousDisabled } : {}),
   };
   const ComposerComponent = composerEntries[0]?.value.Component;
-  const HeaderComponent = headerEntries[0]?.value.Component;
-  const headerShown = !config?.hideHeader && !!HeaderComponent;
   const prompt = ComposerComponent ? (
     <ComposerComponent workspace={workspace} composer={composerProps} />
   ) : null;
@@ -2493,7 +2650,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             {openedThread.said}
           </Text>
         ) : null}
-        {/* What a session action said (MH-27): a swap's sentence, a clone's
+        {/* What a session action said: a swap's sentence, a clone's
             new thread, a refusal as the runtime said it — until dismissed. */}
         {actionSaid ? (
           <Box
@@ -2554,11 +2711,11 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
               themeVariant={config?.themeVariant}
               themeOverrides={config?.themeOverrides}
               colorMode={config?.colorMode}
-              // The session an embed goes on with after a reload (D-13),
-              // or one opened from the person's history (P-24).
+              // The session an embed goes on with after a reload,
+              // or one opened from the person's history.
               key={chatThread?.id}
               thread={chatThread}
-              // Its voice, when its host gives one (an application's `interface.voice`, VO-49):
+              // Its voice, when its host gives one (an application's `interface.voice`):
               // the microphone in the
               // composer, its answers heard.
               voice={askedVoice}
@@ -2569,7 +2726,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
               disableReason={disabledReason}
               protocol={protocol}
               /*
-                The page's own tools — a host page's functions (D-10), an
+                The page's own tools — a host page's functions, an
                 example's client tool — run by this chat when the agent is on a
                 server: sent with each run and executed here when it calls
                 one. An in-page agent is handed them in its protocol instead
@@ -2620,17 +2777,31 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                   <BrandIcon size={20} />
                 )
               }
+              // What the workspace leads the title bar with: its left
+              // panel's toggle, on the side the panel opens from.
+              headerLeading={workspace.chatHeaderLeading}
               // An application says what it is doing, in plain words, beside
-              // its name (T-08); an agent's chat keeps its header as it is.
+              // its name; an agent's chat keeps its header as it is.
               headerContent={
                 // Not *Ready* with no runtime: the header says why instead.
-                presence && !noRuntime ? (
-                  <PresenceLine state={presenceNow} />
+                // Then the agent's `banner` UI, above the conversation.
+                (presence && !noRuntime) || chatBannerItems.length > 0 ? (
+                  <>
+                    {presence && !noRuntime ? (
+                      <PresenceLine state={presenceNow} />
+                    ) : null}
+                    {chatBannerItems.length > 0 ? (
+                      <ReactorSlot
+                        slot={LoopSlots.chatBanner}
+                        props={{ workspace }}
+                      />
+                    ) : null}
+                  </>
                 ) : undefined
               }
               emptyState={{
-                // An application's own face, at the page's size of the three
-                // (T-08, T-19): the thing a person's eye lands on first.
+                // An application's own face, at the page's size of the three:
+                // the thing a person's eye lands on first.
                 icon: presence?.face ? (
                   <span
                     aria-hidden
@@ -2737,55 +2908,112 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                 See `toggleFullScreen` for why it is the browser's API rather
                 than a big box.
               */
-              headerActions={
-                <Box display="inline-flex" alignItems="center" gap={2}>
-                  {/* The host's own additions first, then the plugins', then
-                      the chat's — so what belongs to the page reads as part of
-                      the page and the chat's controls stay together at the
-                      trailing edge, where a reader looks for them.
-
-                      The slot is asked whether anyone filled it before it is
-                      drawn: an empty `ReactorSlot` is still an element, and
-                      three of them would space a header out around nothing. */}
-                  {workspace.chatHeaderActions}
-                  {/* The thread's menu (MH-F08): what the `loop.session.action`
-                      registry holds and applies to this session, read when
-                      it opens — nothing for a thread that is no session. */}
-                  {runsApp && agentServerUrl ? (
-                    <>
-                      {/* The session's state words and where it comes from
-                          (MH-27, MH-10). */}
-                      <SessionStateLine facts={facts} />
-                      <SessionActionsMenu
-                        uid={threadUid || undefined}
-                        describe={uid => sessionsClient.described(uid)}
-                        context={sessionContext}
-                      />
-                    </>
-                  ) : null}
-                  {chatHeaderItems.length > 0 ? (
-                    <ReactorSlot
-                      slot={LoopSlots.chatHeader}
-                      props={{ workspace }}
-                    />
-                  ) : null}
-                  <IconButton
-                    icon={fullScreen ? ScreenNormalIcon : ScreenFullIcon}
-                    aria-label={
-                      fullScreen ? 'Exit full screen' : 'Enter full screen'
-                    }
-                    variant="invisible"
-                    size="small"
-                    onClick={() => {
-                      // Whether or not it takes, the hint has been answered:
-                      // they found the control, which is all it was for.
-                      setHintFullScreen(false);
-                      toggleFullScreen();
-                    }}
-                    sx={
-                      hintFullScreen
-                        ? {
-                            /*
+              headerItems={[
+                /* The title bar is a primer-addons `Toolbar`: one item each,
+                   so a narrow chat moves them into its "…" menu one by one.
+                   The host's own additions first, then the plugins', then the
+                   chat's — so what belongs to the page reads as part of the
+                   page and the chat's controls stay together at the trailing
+                   edge, where a reader looks for them. The host's additions,
+                   the session menu and full screen stay on the bar
+                   (`pinned`); the plugins' leave first (`priority: -1`). */
+                ...(workspace.chatHeaderActions
+                  ? [
+                      {
+                        key: 'workspace-actions',
+                        type: 'custom' as const,
+                        pinned: true,
+                        render: () => workspace.chatHeaderActions,
+                      },
+                    ]
+                  : []),
+                // The temporary key's clock (the user, 15 November 2026).
+                ...(anonymousState &&
+                !anonymousState.validating &&
+                !anonymousState.refused
+                  ? [
+                      {
+                        key: 'anonymous-key-clock',
+                        type: 'custom' as const,
+                        render: () => (
+                          <AnonymousKeyClock state={anonymousState} />
+                        ),
+                      },
+                    ]
+                  : []),
+                /* The thread's menu: what the `loop.session.action`
+                   registry holds and applies to this session, read when it
+                   opens — nothing for a thread that is no session; with the
+                   session's state words and where it comes from.
+                   */
+                ...(runsApp && agentServerUrl
+                  ? [
+                      {
+                        key: 'session-state',
+                        type: 'custom' as const,
+                        render: () => <SessionStateLine facts={facts} />,
+                      },
+                      {
+                        key: 'session-actions',
+                        type: 'custom' as const,
+                        pinned: true,
+                        render: () => (
+                          <SessionActionsMenu
+                            uid={threadUid || undefined}
+                            describe={uid => sessionsClient.described(uid)}
+                            context={sessionContext}
+                          />
+                        ),
+                      },
+                    ]
+                  : []),
+                /* What plugins put in the title bar (`LoopSlots.chatHeader`),
+                   each contribution its own item — the slot's own list, so a
+                   contribution that draws nothing takes no room. */
+                ...chatHeaderItems.map(entry => {
+                  const Contributed = entry.Component;
+                  return {
+                    key: `slot-${entry.slot}:${entry.id}`,
+                    type: 'custom' as const,
+                    priority: -1,
+                    render: () => <Contributed workspace={workspace} />,
+                  };
+                }),
+                /* The right panel's toggle, trailing the bar on the side
+                   its panel opens from (`chatHeaderTrailing`): pinned, as
+                   the left one leads it. */
+                ...(workspace.chatHeaderTrailing
+                  ? [
+                      {
+                        key: 'right-panel-toggle',
+                        type: 'custom' as const,
+                        pinned: true,
+                        render: () => workspace.chatHeaderTrailing,
+                      },
+                    ]
+                  : []),
+                {
+                  key: 'full-screen',
+                  type: 'custom' as const,
+                  pinned: true,
+                  render: () => (
+                    <IconButton
+                      icon={fullScreen ? ScreenNormalIcon : ScreenFullIcon}
+                      aria-label={
+                        fullScreen ? 'Exit full screen' : 'Enter full screen'
+                      }
+                      variant="invisible"
+                      size="small"
+                      onClick={() => {
+                        // Whether or not it takes, the hint has been answered:
+                        // they found the control, which is all it was for.
+                        setHintFullScreen(false);
+                        toggleFullScreen();
+                      }}
+                      sx={
+                        hintFullScreen
+                          ? {
+                              /*
                               Colour and opacity, never geometry.
 
                               The colour is the theme's own `primary` — the
@@ -2802,11 +3030,11 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                               controls beside it stay where a reader last saw
                               them.
                             */
-                            '@keyframes dla-fullscreen-hint': {
-                              '0%, 100%': { opacity: 1 },
-                              '50%': { opacity: 0.4 },
-                            },
-                            /* `&&` doubles the specificity, because Primer
+                              '@keyframes dla-fullscreen-hint': {
+                                '0%, 100%': { opacity: 1 },
+                                '50%': { opacity: 0.4 },
+                              },
+                              /* `&&` doubles the specificity, because Primer
                                ships Button as a CSS module and
                                `prc-Button-*` outranks a single generated
                                class — without it the keyframes register and
@@ -2820,8 +3048,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                                which is exactly how the first version of this
                                silently did nothing. It ends when the reader
                                takes the offer, or arrives without it. */
-                            '&&': {
-                              /*
+                              '&&': {
+                                /*
                                 The brand on the box, not on the glyph.
 
                                 Painting the icon `palette.primary` was the
@@ -2842,23 +3070,24 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                                 rule that works for one fails for another. The
                                 glyph keeps the colour it can be read in.
                               */
-                              bg: `color-mix(in srgb, ${palette.primary} 16%, transparent)`,
-                              boxShadow: `inset 0 0 0 1.5px ${palette.primary}`,
-                              animation: `dla-fullscreen-hint ${FULLSCREEN_HINT_PERIOD_MS}ms ease-in-out infinite`,
-                            },
-                            // A reader who asked the machine to hold still
-                            // keeps the colour and loses the knocking: the
-                            // control is still the findable one, it just
-                            // holds still.
-                            '@media (prefers-reduced-motion: reduce)': {
-                              '&&': { animation: 'none' },
-                            },
-                          }
-                        : undefined
-                    }
-                  />
-                </Box>
-              }
+                                bg: `color-mix(in srgb, ${palette.primary} 16%, transparent)`,
+                                boxShadow: `inset 0 0 0 1.5px ${palette.primary}`,
+                                animation: `dla-fullscreen-hint ${FULLSCREEN_HINT_PERIOD_MS}ms ease-in-out infinite`,
+                              },
+                              // A reader who asked the machine to hold still
+                              // keeps the colour and loses the knocking: the
+                              // control is still the findable one, it just
+                              // holds still.
+                              '@media (prefers-reduced-motion: reduce)': {
+                                '&&': { animation: 'none' },
+                              },
+                            }
+                          : undefined
+                      }
+                    />
+                  ),
+                },
+              ]}
               // This view owns the prompt, below, so the chat does not draw a
               // second one: two input boxes on one screen is one too many.
               showInput={false}
@@ -2877,8 +3106,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
               }
               onContextSnapshot={handleContextSnapshot}
               onLoadingChange={handleLoadingChange}
-              /* Each turn's row offers what the registry places on a turn
-                 (MH-10): *Clone from here*, naming the turn — under the
+              /* Each turn's row offers what the registry places on a turn:
+                 *Clone from here*, naming the turn — under the
                  person's message, for an application's session only. */
               renderMessageFooter={
                 runsApp && agentServerUrl
@@ -2985,88 +3214,95 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   ) : null;
 
   return (
-    <Box
-      ref={viewRef}
-      sx={{
-        height: '100%',
-        minHeight: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        // The positioned root the expiry panel below covers.
-        position: 'relative',
-        /*
+    <AnonymousChatProvider value={anonymousState}>
+      <Box
+        ref={viewRef}
+        sx={{
+          height: '100%',
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          // The positioned root the expiry panel below covers.
+          position: 'relative',
+          /*
           A background of its own once it is full screen, in both modes.
 
           The element is promoted out of whatever was painting behind it — the
           browser's top layer, or the page — and a workspace that inherited its
           canvas from an ancestor would arrive transparent over black.
         */
-        ...(fullScreen ? { bg: 'canvas.default' } : null),
-        // The fallback, for a host where the API was refused, or where
-        // `fullScreenTopOffset` asked for the overlay outright. Covers as
-        // much as the nearest transformed ancestor allows; see the note
-        // above. `top` leaves room for a host's own fixed header rather than
-        // `inset: 0`'s full viewport — 0 (no offset given) is the same rect
-        // either way.
-        ...(fullScreen && !usingFullscreenApi.current
-          ? {
-              position: 'fixed',
-              top: fullScreenTopOffsetPx,
-              right: 0,
-              bottom: 0,
-              left: 0,
-              // Over the `height: '100%'` above, which would otherwise win
-              // over `top`/`bottom` and push the bottom off the window.
-              height: 'auto',
-              zIndex: 1000,
-            }
-          : null),
-      }}
-    >
-      {layout ? (
-        <layout.Component
-          workspace={workspace}
-          editors={editorsEl}
-          hasEditor={!!active}
-          transcript={transcriptEl}
-          prompt={promptHidden ? null : prompt}
-          chips={promptHidden ? null : chipsEl}
-          picker={pickerEl}
-          transient={transientEl}
-        />
-      ) : (
-        <>
-          {/*
+          ...(fullScreen ? { bg: 'canvas.default' } : null),
+          // The fallback, for a host where the API was refused, or where
+          // `fullScreenTopOffset` asked for the overlay outright. Covers as
+          // much as the nearest transformed ancestor allows; see the note
+          // above. `top` leaves room for a host's own fixed header rather than
+          // `inset: 0`'s full viewport — 0 (no offset given) is the same rect
+          // either way.
+          ...(fullScreen && !usingFullscreenApi.current
+            ? {
+                position: 'fixed',
+                top: fullScreenTopOffsetPx,
+                right: 0,
+                bottom: 0,
+                left: 0,
+                // Over the `height: '100%'` above, which would otherwise win
+                // over `top`/`bottom` and push the bottom off the window.
+                height: 'auto',
+                zIndex: 1000,
+              }
+            : null),
+        }}
+      >
+        {/* The limited preview, on top (the user, 15 November 2026). */}
+        {anonymousState ? (
+          <Box flex="0 0 auto">
+            <AnonymousPreviewBox state={anonymousState} />
+          </Box>
+        ) : null}
+        {layout ? (
+          <layout.Component
+            workspace={workspace}
+            editors={editorsEl}
+            hasEditor={!!active}
+            transcript={transcriptEl}
+            prompt={promptHidden ? null : prompt}
+            chips={promptHidden ? null : chipsEl}
+            picker={pickerEl}
+            transient={transientEl}
+          />
+        ) : (
+          <>
+            {/*
             The prompt on top, when the host asked for it: the same composer
             the bottom placement renders, first in the column so it spans the
             workspace above the editors, with the openers as chips under it.
           */}
-          {topPrompt && !promptHidden ? (
+            {topPrompt && !promptHidden ? (
+              <Box
+                flex="0 0 auto"
+                borderBottom="1px solid"
+                borderColor="border.default"
+              >
+                {prompt}
+                {chipsEl}
+              </Box>
+            ) : null}
+            {pickerEl}
             <Box
-              flex="0 0 auto"
-              borderBottom="1px solid"
-              borderColor="border.default"
+              flex="1 1 auto"
+              minHeight={0}
+              display="flex"
+              // The hidden editors position themselves against this row.
+              position="relative"
             >
-              {prompt}
-              {chipsEl}
+              {editorsEl}
+              {transcriptEl}
             </Box>
-          ) : null}
-          {pickerEl}
-          <Box
-            flex="1 1 auto"
-            minHeight={0}
-            display="flex"
-            // The hidden editors position themselves against this row.
-            position="relative"
-          >
-            {editorsEl}
-            {transcriptEl}
-          </Box>
-          {transientEl}
-          {besideChat || promptHidden || topPrompt ? null : prompt}
-        </>
-      )}
-      {/*
+            {transientEl}
+            {besideChat || promptHidden || topPrompt ? null : prompt}
+          </>
+        )}
+        {/*
         Over the whole workspace, not over the conversation alone.
 
         The panel used to sit inside the transcript, which was where the
@@ -3082,30 +3318,31 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         back exactly as they left them, rather than a fresh workspace that
         has forgotten the question they just asked.
       */}
-      {keyExpired ? (
-        <Box
-          position="absolute"
-          inset={0}
-          zIndex={5}
-          bg="canvas.default"
-          display="flex"
-          flexDirection="column"
-          minHeight={0}
-        >
-          <AnonymousKeyExpired
-            agentName={member?.name ?? spec?.name}
-            // On the browser target the kernel is in this page and owes the
-            // inference service nothing, so the notebook is genuinely
-            // unaffected and the panel may say so.
-            sandboxStillRuns={inPage}
-            temporary={expiredKeyIsTemporary}
-            // The trial key is spent once somebody signs in, and a session
-            // left `expired` would keep this panel over a working chat.
-            onSignedIn={() => useAnonymousSessionStore.getState().clear()}
-          />
-        </Box>
-      ) : null}
-    </Box>
+        {keyExpired ? (
+          <Box
+            position="absolute"
+            inset={0}
+            zIndex={5}
+            bg="canvas.default"
+            display="flex"
+            flexDirection="column"
+            minHeight={0}
+          >
+            <AnonymousKeyExpired
+              agentName={member?.name ?? spec?.name}
+              // On the browser target the kernel is in this page and owes the
+              // inference service nothing, so the notebook is genuinely
+              // unaffected and the panel may say so.
+              sandboxStillRuns={inPage}
+              temporary={expiredKeyIsTemporary}
+              // The trial key is spent once somebody signs in, and a session
+              // left `expired` would keep this panel over a working chat.
+              onSignedIn={() => useAnonymousSessionStore.getState().clear()}
+            />
+          </Box>
+        ) : null}
+      </Box>
+    </AnonymousChatProvider>
   );
 }
 
@@ -3115,6 +3352,12 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
  * Rendered only when a plugin contributed one — a chat on its own has nothing
  * to pick between, and a control with a single option is noise.
  */
+/** The agent an application's spec names (`worker-shopper:0.0.1`), if it names one. */
+function appAgentOf(appSpec: unknown): string | undefined {
+  const agent = (appSpec as { agent?: unknown } | null | undefined)?.agent;
+  return typeof agent === 'string' && agent ? agent : undefined;
+}
+
 function SurfacePicker({
   surfaces,
   active,

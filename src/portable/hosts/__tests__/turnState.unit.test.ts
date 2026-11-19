@@ -5,7 +5,7 @@
  * @vitest-environment node
  */
 
-/** A turn's state from its semantic events (DC-004). */
+/** A turn's state from its semantic events. */
 
 import { describe, expect, it } from 'vitest';
 import type { SemanticEvent } from '../../semantic';

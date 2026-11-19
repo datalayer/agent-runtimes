@@ -6,7 +6,7 @@
 One engine renders the Markdown and CSV the CLI prints, the GitHub Action
 uploads and the AI Agents service serves, and its deep links live in
 customers' pull requests for months. This freezes what it produces for the
-reference benchmark (B0-05 and B0-13): a change to a section,
+reference benchmark: a change to a section,
 a column or a link is a deliberate edit to the golden files here, never a
 surprise in a CI artifact.
 
@@ -120,7 +120,7 @@ def _run(
     return {
         "id": f"run-{experiment_index}-{run_index}",
         "experiment_id": f"experiment-{experiment_index}",
-        # Every run belongs to a launch, and its link goes through it (B4-08).
+        # Every run belongs to a launch, and its link goes through it.
         "launch_id": f"launch-12{run_index}",
         "owner_uid": "user-1",
         "status": "completed",
@@ -237,7 +237,7 @@ def test_the_latest_run_is_the_newest_one_and_drift_points_the_right_way():
 @pytest.fixture
 def frozen_report(monkeypatch, tmp_path):
     monkeypatch.setattr(report_module, "_now_iso", lambda: FROZEN_NOW)
-    # The links point at Datalayer's own app unless a deployment is named (B4-08).
+    # The links point at Datalayer's own app unless a deployment is named.
     monkeypatch.delenv("DATALAYER_UI_URL", raising=False)
     report = build_eval_report(FakeStoreClient(), EVALSET_ID, run_limit=10)
     markdown = render_eval_report_markdown(report, run_limit=10)
@@ -274,8 +274,8 @@ def test_the_markdown_is_the_golden_markdown(frozen_report):
 
 
 def test_the_decisions_are_the_last_section_of_the_markdown(frozen_report):
-    """What was decided follows the result, in the order it was decided
-    (B4-03); a report nobody decided anything about has no such section."""
+    """What was decided follows the result, in the order it was decided;
+    a report nobody decided anything about has no such section."""
     report, markdown, _ = frozen_report
     assert "## Decisions" not in markdown
     decisions = [
@@ -325,14 +325,14 @@ def test_the_report_reads_the_fixture(frozen_report):
     assert "## Comparison Combinations" in markdown
     assert csv_text.splitlines()[0].startswith("row_type")
     # The links point at the benchmark's page on Datalayer's own app when no
-    # deployment is named, and at no host written into the code (B4-08).
+    # deployment is named, and at no host written into the code.
     from agent_runtimes.evals.links import DEFAULT_UI_URL
 
     assert f"{DEFAULT_UI_URL}/benchmarks/{EVALSET_ID}" in markdown
     assert "datalayer.ai/evals" not in markdown and "datalayer.ai/evals" not in csv_text
 
 
-# --- The report as a Lexical document (B3-03) --------------------------------
+# --- The report as a Lexical document --------------------------------
 
 
 LAUNCH = {
@@ -387,7 +387,7 @@ def test_every_block_carries_its_provenance(lexical_document):
 
     blocks = lexical_document["root"]["children"]
     # In the node state, which Lexical keeps: a key beside `type` is dropped
-    # the first time the document is opened (B4-04).
+    # the first time the document is opened.
     assert not any("provenance" in block for block in blocks)
     evidence = [block["$"]["evidence"] for block in blocks]
     assert all(
@@ -404,7 +404,7 @@ def test_every_block_carries_its_provenance(lexical_document):
         }
         for mark in evidence
     )
-    # Each block has its own anchor, in document order (B4-07).
+    # Each block has its own anchor, in document order.
     assert [mark["block"] for mark in evidence] == [
         f"block-{index}" for index in range(1, len(blocks) + 1)
     ]
@@ -468,7 +468,7 @@ def test_a_run_document_narrows_to_its_experiment_and_reads_its_tasks(frozen_rep
 def test_the_comparisons_are_components_with_the_direction_written_down(frozen_report):
     """Heatmaps and pairwise deltas render as components, and A - B is fixed.
 
-    The benchmark design fixes the direction and B3-10 asks for these
+    The benchmark design fixes the direction and asks for these
     two kinds: **A is the candidate, B is the baseline, delta is `A - B`**. Two
     readers who disagree about the sign of a delta disagree about whether a
     change helped, so the convention travels in the payload rather than in

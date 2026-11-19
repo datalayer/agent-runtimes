@@ -23,7 +23,7 @@ export interface EnvironmentData {
   description: string;
   /**
    * Docker image used for this environment. A platform entry names one; a user
-   * environment runs an artifact the platform resolves at launch (E1-11).
+   * environment runs an artifact the platform resolves at launch.
    */
   dockerImage?: string;
   /** Example usage or description */
@@ -43,11 +43,11 @@ export interface EnvironmentData {
   resourcesRanges?: any; // Simplified - ResourceRanges type removed
   /**
    * Credits consumed per second when running. A user environment's is the rate
-   * of the size class its promoted version names (D-4); absent means unknown,
-   * not free (E1-19).
+   * of the size class its promoted version names; absent means unknown,
+   * not free.
    */
   burning_rate?: number;
-  /** The size class that prices a user environment (D-4). */
+  /** The size class that prices a user environment. */
   sizeClass?: string;
   /** Simple resource specification */
   resources?: any; // Simplified - ResourceConfig type removed
@@ -141,13 +141,13 @@ export class EnvironmentDTO {
    * Zero when the listing carries no rate, which for a user environment means
    * its size class is unpriced rather than that it is free: `sizeClass` beside
    * this tells the two apart, and the callers that reserve credits refuse the
-   * launch rather than reserving nothing (E1-19).
+   * launch rather than reserving nothing.
    */
   get burningRate(): number {
     return this._data.burning_rate ?? 0;
   }
 
-  /** The size class that prices a user environment (D-4); absent on a platform entry. */
+  /** The size class that prices a user environment; absent on a platform entry. */
   get sizeClass(): string | undefined {
     return this._data.sizeClass || undefined;
   }

@@ -4,8 +4,8 @@
  */
 
 /**
- * Datalayer's own characters for the floating assistant, contributed
- * (T-24, T-25): the orb (the design library's, in two tones), the paper
+ * Datalayer's own characters for the floating assistant, contributed:
+ * the orb (the design library's, in two tones), the paper
  * clip, the wizard, the cat and the L👀P eyes; and, in a plugin of their
  * own, the characters clippy.js publishes — Microsoft's, fetched from
  * jsDelivr when one is drawn. Disabled, they leave the catalogue; another
@@ -106,7 +106,7 @@ export const ASSISTANT_CHARACTER_PLUGINS = [
 ];
 
 /**
- * A plugin contributing one character (T-24, T-26): a character a
+ * A plugin contributing one character: a character a
  * person brought — a `.acs` or a clippy.js character read in their page —
  * offered beside the contributed ones under the id it is chosen by. The
  * character stays in the page: the plugin only says it is there.
@@ -137,7 +137,7 @@ export function assistantCharactersOf(
 
 /**
  * What these plugins contribute, enabled on their own: for a host with no
- * workspace to read them from — the embed's floating assistant (D-07) —
+ * workspace to read them from — the embed's floating assistant —
  * which enables Datalayer's characters and whatever plugins it is given.
  */
 export function assistantCharactersFrom(
@@ -170,7 +170,7 @@ export function assistantCharacterNamed(
   return found.character;
 }
 
-/** Whose choice the character drawn is (T-24). */
+/** Whose choice the character drawn is. */
 export type AssistantCharacterSaidBy = 'app' | 'person' | 'default';
 
 /** The avatar drawn, or why none can be: a drawing, a Microsoft Agent character, or a 3D model. */
@@ -183,7 +183,7 @@ export type AssistantCharacterChosen =
   | { problem: string; saidBy: AssistantCharacterSaidBy };
 
 /**
- * The avatar the floating assistant draws on a page (T-24): the one the
+ * The avatar the floating assistant draws on a page: the one the
  * application's Appspec names (`interface.avatar`), which wins — a 3D model
  * drawn as it says, an id looked up — else the one the person chose in
  * their settings; else the paper clip — each id looked up in what the

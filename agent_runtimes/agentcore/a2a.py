@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A2A on port 9000 at ``/``: a team seat in AgentCore Runtime (AC-05).
+"""A2A on port 9000 at ``/``: a team seat in AgentCore Runtime.
 
 AgentCore's A2A protocol contract calls a container on port 9000, JSON-RPC
 2.0 at ``/``, its agent card at ``/.well-known/agent-card.json``. The agent
@@ -17,7 +17,7 @@ server here.
   Its URL is ``AGENTCORE_RUNTIME_URL`` when set (the address callers reach
   the runtime at), else the listener's own.
 - **The token.** Behind Datalayer IAM's authorizer, the token AgentCore
-  validated is exchanged as an invocation's is (AC-06): the A2A application
+  validated is exchanged as an invocation's is: the A2A application
   is given the caller's platform token as its bearer. A refused exchange
   answers 401 in IAM's sentence.
 - **Busy.** ``/ping`` answers on this port too, and a request in flight

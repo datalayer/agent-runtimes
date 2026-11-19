@@ -13,7 +13,7 @@ import sys
 import threading
 import time
 from enum import Enum
-from typing import TYPE_CHECKING, Any, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple
 
 import typer
 from pydantic_ai import Agent
@@ -23,18 +23,6 @@ if TYPE_CHECKING:
 
 
 DEFAULT_RUNTIME_AGENT_NAME = "chat"
-
-# Narrow interactive selection to the gallery context set by default. This keeps
-# the picker focused while preserving the existing valid/env/sort logic.
-DEFAULT_AGENTSPEC_CONTEXT_IDS: tuple[str, ...] = (
-    "example-simple",
-    "worker-accountant",
-    "example-analyze-excel-spreadsheet",
-    "example-agent-critic-loop-for-analysis",
-    "example-ai-explains-notebook-output",
-    "example-replace-excel-pivot-work",
-    "worker-marketer",
-)
 
 
 # Global reference to subprocess for cleanup
@@ -92,20 +80,29 @@ def _cleanup_subprocess_with_spinner(app: bool = False) -> None:
 
 
 def _signal_handler(signum: int, frame: Any) -> None:
-    """Handle signals by cleaning up subprocess and exiting."""
+    """Handle SIGTERM by cleaning up subprocess and exiting."""
     _cleanup_subprocess()
     # Re-raise with default handler for proper exit
     signal.signal(signum, signal.SIG_DFL)
     os.kill(os.getpid(), signum)
 
 
+def _leave_handler(signum: int, frame: Any) -> None:
+    """Ctrl-C and Ctrl-Z leave `loop` the way /exit does, with its goodbye.
+
+    Raised as a KeyboardInterrupt, the press reaches the paths that stop the
+    server and say goodbye; killed by the default handler, the process died
+    silent (Ctrl-C), or stopped its server and suspended itself (Ctrl-Z).
+    """
+    raise KeyboardInterrupt
+
+
 # Register cleanup handlers
 atexit.register(_cleanup_subprocess)
-signal.signal(signal.SIGINT, _signal_handler)
+signal.signal(signal.SIGINT, _leave_handler)
 signal.signal(signal.SIGTERM, _signal_handler)
-# SIGTSTP (Ctrl+Z) - we need to handle specially
 try:
-    signal.signal(signal.SIGTSTP, _signal_handler)
+    signal.signal(signal.SIGTSTP, _leave_handler)
 except (AttributeError, OSError):
     pass  # SIGTSTP not available on Windows
 
@@ -641,6 +638,17 @@ def _spec_has_valid_env(spec: Any, available_model_ids: set[str] | None = None) 
     return True
 
 
+def offered_agentspec_ids() -> list[str]:
+    """The ids of the agents the catalogue offers, sorted: the ones loop offers.
+
+    Enabled and listed: an enabled agent kept out of the pickers (``listed:
+    false``, agentspecs 0.0.187), as ``example-simple``, runs by id only.
+    """
+    from agent_runtimes.specs.agents import list_agentspecs
+
+    return sorted(spec.id for spec in list_agentspecs() if spec.offered)
+
+
 def _parse_agentspec_context_ids() -> list[str]:
     """Return agent spec IDs to expose in interactive selection.
 
@@ -648,13 +656,14 @@ def _parse_agentspec_context_ids() -> list[str]:
     - ``LOOP_AGENTSPEC_CONTEXT_IDS``
     - ``DATALAYER_LOOP_AGENTSPEC_CONTEXT_IDS``
 
-    If no override is provided, defaults to ``DEFAULT_AGENTSPEC_CONTEXT_IDS``.
+    Without an override, the agents the catalogue enables and lists: what the
+    agentspecs say is offered is the whole of the list, with no second one here.
     """
     raw = os.environ.get("LOOP_AGENTSPEC_CONTEXT_IDS") or os.environ.get(
         "DATALAYER_LOOP_AGENTSPEC_CONTEXT_IDS"
     )
     if raw is None:
-        return list(DEFAULT_AGENTSPEC_CONTEXT_IDS)
+        return offered_agentspec_ids()
     return [part.strip() for part in raw.split(",") if part.strip()]
 
 
@@ -731,14 +740,8 @@ def _pick_agentspec_interactive() -> str:
             print(f"{GRAY}Enable a spec and/or set the env vars of its model.{RESET}")
             raise typer.Exit(1)
 
-        # Default preference: example-simple when valid, otherwise first valid spec.
-        default_idx: Optional[int] = None
-        for i, spec in enumerate(ordered):
-            if i >= invalid_count and spec.id == "example-simple":
-                default_idx = i
-                break
-        if default_idx is None:
-            default_idx = invalid_count
+        # The first valid spec is proposed.
+        default_idx: Optional[int] = invalid_count
 
         print(f"\n{GREEN_LIGHT}Selected Agentspecs:{RESET}\n")
         for i, spec in enumerate(ordered, 1):
@@ -756,17 +759,25 @@ def _pick_agentspec_interactive() -> str:
                 if len(desc_line) > 70:
                     desc_line = desc_line[:67] + "..."
                 print(f"       {GRAY}{desc_line}{RESET}")
-            # Show required env vars with availability status
+            # Show required env vars with availability status; those of the
+            # servers it starts without (`optional`) are said so, never red.
+            optional_servers = set(spec.optional.mcp_servers if spec.optional else [])
             env_vars: set[str] = set()
+            optional_vars: set[str] = set()
             for mcp in spec.mcp_servers:
-                env_vars.update(mcp.required_env_vars)
-            if env_vars:
+                (optional_vars if mcp.id in optional_servers else env_vars).update(
+                    mcp.required_env_vars
+                )
+            if env_vars or optional_vars:
                 env_parts: list[str] = []
                 for var in sorted({_env_var_name(v) for v in env_vars}):
                     if os.environ.get(var):
                         env_parts.append(f"{GREEN_LIGHT}{var}{RESET}")
                     else:
                         env_parts.append(f"{RED}{var}{RESET}")
+                for var in sorted({_env_var_name(v) for v in optional_vars}):
+                    color = GREEN_LIGHT if os.environ.get(var) else GRAY
+                    env_parts.append(f"{color}{var} (optional){RESET}")
                 print(f"       {' '.join(env_parts)}")
 
             model_ref = str(getattr(spec, "model", "") or "")
@@ -851,24 +862,61 @@ def _pick_agentspec_interactive() -> str:
             raise typer.Exit(0)
 
 
-def _offer_paused() -> Any:
-    """The paused session the person goes on with as `loop` starts, or
-    ``None``: nobody at the terminal, none paused, or a new one chosen.
+def _offer_paused(*, local: bool = False, cloud: bool = False) -> Tuple[Any, str]:
+    """What the person starts with as `loop` starts: ``(session, "")`` for
+    a session to go on with, ``(None, where)`` for a new one — `LOCAL` or
+    `CLOUD` when the start's launch rows asked where it runs, ``""`` when
+    the usual questions still follow.
 
-    Those on this machine and, signed in, those on Datalayer; the
-    platform's list failing is said in a line and the start goes on.
+    The screen is `loop sessions`' (`run_picker`), its launch rows above
+    the sessions; nobody at the terminal, or no session listed, it is not
+    drawn. Esc or Ctrl-C leaves `loop` (KeyboardInterrupt).
     """
-    from agent_runtimes.loop.launch import interactive, make_client
-    from agent_runtimes.loop.paused import choose_paused, paused_sessions
+    from agent_runtimes.commands.sessions import _token, run_picker
+    from agent_runtimes.loop.launch import (
+        NEW_SESSION,
+        interactive,
+        remember_where,
+        start_choices,
+    )
 
     if not interactive():
-        return None
+        return None, ""
+    launch, highlighted = start_choices(
+        local=local, cloud=cloud, cloud_offered=local or cloud or bool(_token())
+    )
+    chosen = run_picker(launch=launch, highlighted=highlighted)
+    if chosen is None:
+        raise KeyboardInterrupt
+    picked, session = chosen
+    if session is not None:
+        return session, ""
+    if picked == NEW_SESSION:
+        return None, ""
+    remember_where(picked)
+    return None, picked
+
+
+def _joined_runtime(row: Any) -> str:
+    """The runtime an open session is joined on (`joined_runtime`), or
+    ``""`` to resume it as a paused one. What a terminal cannot join, and
+    the runtimes that cannot be listed, are said in a sentence and the exit.
+    """
+    from agent_runtimes.loop.launch import running_runtimes
+    from agent_runtimes.loop.paused import RunsElsewhere, joined_runtime
+
     try:
-        _, token = make_client()
-    except Exception:  # noqa: BLE001 - not signed in: the local ones only
-        token = ""
-    rows = paused_sessions(token=token, say=lambda line: print(f"{GRAY}{line}{RESET}"))
-    return choose_paused(rows)
+        return joined_runtime(row, running_runtimes)
+    except RunsElsewhere as elsewhere:
+        print(f"{GREEN_DARK}[ERROR]{RESET} {elsewhere}", file=sys.stderr)
+        raise typer.Exit(1)
+    except Exception as refused:  # noqa: BLE001 - said, and nothing launched
+        print(
+            f"{GREEN_DARK}[ERROR]{RESET} Session {row.uid} is open, and your runtimes on "
+            f"Datalayer could not be listed to join it ({str(refused)[:160]}): nothing was launched.",
+            file=sys.stderr,
+        )
+        raise typer.Exit(1)
 
 
 def _session_named(
@@ -983,7 +1031,7 @@ def _prompt_session(
 
 
 def _choose_where_at_start(*, local: bool, cloud: bool) -> str:
-    """Here or on Datalayer, asked before the agentspec (L-01).
+    """Here or on Datalayer, asked before the agentspec.
 
     Datalayer is offered only to somebody signed in; nobody else is asked,
     and is told in one line how to be offered it.
@@ -1053,7 +1101,7 @@ def _launch_on_datalayer(
 
             if questionary.confirm(
                 "Run it on this machine instead?", default=True
-            ).ask():
+            ).unsafe_ask():
                 return None
         raise typer.Exit(1)
     except CloudRefused as refused:
@@ -1315,7 +1363,26 @@ def run_prompts(
                 signal.signal(sig, handler)
 
 
+def _goodbye_on_interrupt(command: Any) -> Any:
+    """Ctrl-C or Ctrl-Z anywhere in ``loop`` — a picker before the session
+    starts included — stops the server and leaves with the goodbye; click
+    would otherwise swallow the interrupt as "Aborted"."""
+    import functools
+
+    @functools.wraps(command)
+    def leave_kindly(*args: Any, **kwargs: Any) -> Any:
+        try:
+            return command(*args, **kwargs)
+        except KeyboardInterrupt:
+            _cleanup_subprocess()
+            print_goodbye()
+            raise typer.Exit(0)
+
+    return leave_kindly
+
+
 @app.callback(invoke_without_command=True)
+@_goodbye_on_interrupt
 def main_callback(
     ctx: typer.Context,
     query: Optional[List[str]] = typer.Argument(
@@ -1479,7 +1546,7 @@ def main_callback(
 
         loop -a crawler "Search for AI trends"  # Single query with specific agent
 
-        loop --cloud -a crawler     # On Datalayer: a cloud runtime, billed by the minute
+        loop --cloud -a crawler     # On Datalayer: a cloud runtime, billed by the second
 
         loop --runtime <name>       # Back to an agent runtime running on Datalayer
 
@@ -1592,12 +1659,12 @@ def main_callback(
         )
         preview_tux.show_welcome()
 
-    # Where it runs (L-01), asked first: what the flags say, else what
+    # Where it runs, asked first: what the flags say, else what
     # the person answers — on this machine, or on Datalayer. Here the
     # agentspec is picked from the list this machine's keys allow; on
     # Datalayer the environment is picked instead, and no agentspec list is
     # shown.
-    from agent_runtimes.loop.launch import CLOUD, CLOUD_AGENT_NAME
+    from agent_runtimes.loop.launch import CLOUD, CLOUD_AGENT_NAME, LOCAL
 
     # The paused sessions that can be gone on with, offered first when
     # nothing on the command line says what to run: one picked is resumed
@@ -1620,14 +1687,20 @@ def main_callback(
         )
     elif agent_id is None and not query and not runtime:
         try:
-            paused = _offer_paused()
+            paused, where_picked = _offer_paused(local=local, cloud=cloud)
         except (KeyboardInterrupt, EOFError):
             print()
             raise typer.Exit(0)
+        # A launch row that said where it runs answers the question.
+        if where_picked:
+            local, cloud = where_picked == LOCAL, where_picked == CLOUD
+    joined = ""
     if paused is not None:
         from agent_runtimes.loop.paused import resume_plan
 
         plan = resume_plan(paused)
+        # Open on a runtime that still runs it: joined there, nothing launched.
+        joined = _joined_runtime(paused)
         if plan.team_run:
             # A seat of a team run: its run is let go on, and each
             # seat's session with it; nothing is started here.
@@ -1661,6 +1734,7 @@ def main_callback(
                     environment=environment,
                     minutes=minutes,
                     keep=keep,
+                    runtime=joined,
                 )
             except ResumeRefused as refused:
                 print(f"{GREEN_DARK}[ERROR]{RESET} {refused}", file=sys.stderr)
@@ -1668,6 +1742,9 @@ def main_callback(
             raise typer.Exit(0)
         resume_uid, agent_id = plan.uid, plan.agent
         cloud, local = plan.cloud, not plan.cloud
+        if joined:
+            # Its runtime's agent is left as it is: no agentspec is set on it.
+            runtime, agent_id = joined, None
 
     where = _choose_where_at_start(local=local, cloud=cloud)
     cloud_launch = None
@@ -1678,6 +1755,8 @@ def main_callback(
         if cloud_launch is None:
             where = "local"
         else:
+            # Joined for the open session it runs: left running at the end.
+            cloud_launch.joined = bool(joined)
             # A runtime gone back to may not say its agentspec: its agent is `default`.
             agent_id = cloud_launch.agent_spec_id or agent_id or CLOUD_AGENT_NAME
     if cloud_launch is None and agent_id is None:
@@ -2302,7 +2381,7 @@ def _prepare_harness(harness_id: str) -> None:
         from agentspecs.harnesses import listed_refusal
 
         offered = sorted(h for h, s in HARNESS_CATALOGUE.items() if s.enabled)
-        # The long tail is registered and not offered until drilled (SH-57).
+        # The long tail is registered and not offered until drilled.
         raise ValueError(
             listed_refusal(harness_id)
             or f"There is no harness named {harness_id!r}: one of "

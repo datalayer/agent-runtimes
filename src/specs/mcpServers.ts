@@ -105,6 +105,7 @@ export const BLUESKY_MCP_SERVER_0_0_1: MCPServer = {
     'BLUESKY_APP_PASSWORD:0.0.1',
     'BLUESKY_SERVICE_URL:0.0.1',
   ],
+  ui: [{ plugin: 'bluesky-post-preview', renderer: 'a2ui' }],
   tags: ['social', 'bluesky', 'atproto', 'publishing'],
   env: {
     BLUESKY_IDENTIFIER: '${BLUESKY_IDENTIFIER}',
@@ -145,6 +146,46 @@ export const BLUESKY_MCP_SERVER_0_0_1: MCPServer = {
     },
     checked: '2026-11-07',
     note: "Read off the server's README: the gets and searches read Bluesky and change nothing; like-post and follow-user write to the account; create-post publishes under its name.",
+  },
+};
+
+export const BOOKING_COM_MCP_SERVER_0_0_1: MCPServer = {
+  id: 'booking-com',
+  version: '0.0.1',
+  name: 'Booking.com',
+  description:
+    'Stays from Booking.com — hotels and apartments compared by location, price, amenities and cancellation terms — for Booking.com partners, with their affiliate id and Demand API key',
+  icon: '@primer/octicons-react:home',
+  emoji: '🏨',
+  url: 'https://demandapi-mcp.booking.com/v1/sp/mcp/',
+  args: [],
+  headers: {
+    'x-booking-affiliate-id': '${BOOKING_AFFILIATE_ID}',
+    'x-booking-authorization': '${BOOKING_DEMAND_API_KEY}',
+  },
+  transport: 'streamable-http',
+  enabled: true,
+  isAvailable: false,
+  tools: [],
+  requiredEnvVars: [
+    'BOOKING_AFFILIATE_ID:0.0.1',
+    'BOOKING_DEMAND_API_KEY:0.0.1',
+  ],
+  ui: [{ plugin: 'trip-options', renderer: 'a2ui' }, { plugin: 'trip-budget' }],
+  tags: ['travel', 'accommodation', 'hotels', 'booking'],
+  documentationUrl: 'https://developers.booking.com/mcp-server/docs/about',
+  signupUrl: 'https://www.booking.com/affiliate-program/v2/index.html',
+  apiKeyUrl: 'https://developers.booking.com/mcp-server/docs/get-started',
+  setup:
+    "For Booking.com partners only: once your partner onboarding is done, Booking.com issues an affiliate id and a Demand API key. Paste them into `BOOKING_AFFILIATE_ID` and `BOOKING_DEMAND_API_KEY`; the runtime reaches [Booking.com's MCP server](https://developers.booking.com/mcp-server/docs/get-started) with them. Your Account Manager says which tools your account has. Without partner access, leave it: the Traveller finds stays with Google Maps instead.",
+  install: {
+    type: 'remote',
+    command: '',
+    note: "Nothing to install: Booking.com's hosted MCP server, reached at its URL with your affiliate id and Demand API key.",
+  },
+  actions: {
+    tools: {},
+    note: "Not read off the running server: listing its tools needs partner access, which Datalayer does not hold. Booking.com's documentation names one tool, accommodations_search, a search. A tool not classed here is unknown, and unknown is the most restricted: run it with partner credentials, list its tools, and class each one here.",
   },
 };
 
@@ -219,10 +260,18 @@ export const DATALAYER_MCP_SERVER_0_0_1: MCPServer = {
   args: [],
   headers: { Authorization: 'Bearer ${DATALAYER_API_KEY}' },
   transport: 'streamable-http',
-  enabled: false,
+  enabled: true,
   isAvailable: false,
   tools: [],
   requiredEnvVars: ['DATALAYER_API_KEY:0.0.1'],
+  ui: [
+    { plugin: 'pap-sign-in' },
+    { plugin: 'earth-scenes', renderer: 'a2ui' },
+    { plugin: 'earth-index', renderer: 'a2ui' },
+    { plugin: 'bank-reconciliation', renderer: 'a2ui' },
+    { plugin: 'trial-balance' },
+    { plugin: 'vat-summary' },
+  ],
   tags: ['notebooks', 'jupyter', 'datalayer', 'sandboxes', 'data'],
   documentationUrl: 'https://github.com/datalayer/datalayer-mcp-server',
   signupUrl: 'https://datalayer.ai/signin',
@@ -254,6 +303,9 @@ export const DATALAYER_MCP_SERVER_0_0_1: MCPServer = {
       search_earth_datasets: 'read',
       search_earth_datagranules: 'read',
       download_earth_data_granules: 'read',
+      overture_search_places: 'read',
+      overture_place_details: 'read',
+      overture_place_categories: 'read',
       odoo_get_context: 'read',
       odoo_get_account: 'read',
       odoo_get_settings: 'read',
@@ -406,7 +458,7 @@ export const DATALAYER_MCP_SERVER_0_0_1: MCPServer = {
       mount_local_folder: 'read',
     },
     checked: '2026-10-05',
-    note: "Read off the gateway's own table of what it serves (datalayer-mcp-server's tool_policy), every toolset included: the base surface and those a URL turns on (contents, library, odoo, earthdata, marimo). Running code is a write: what it changes is what it is given. Launching a sandbox spends credits; a snapshot of one is storage that is billed. An application's connection to this server is what the gateway grants it, tool by tool, by these classes: reading reaches only the tools that only read.",
+    note: "Read off the gateway's own table of what it serves (datalayer-mcp-server's tool_policy), every toolset included: the base surface and those a URL turns on (contents, library, odoo, earthdata, overture, marimo). Running code is a write: what it changes is what it is given. Launching a sandbox spends credits; a snapshot of one is storage that is billed. An application's connection to this server is what the gateway grants it, tool by tool, by these classes: reading reaches only the tools that only read.",
   },
 };
 
@@ -554,6 +606,11 @@ export const EARTHDATA_MCP_SERVER_0_0_1: MCPServer = {
   isAvailable: false,
   tools: [],
   requiredEnvVars: ['DATALAYER_API_KEY:0.0.1'],
+  ui: [
+    { plugin: 'earth-scenes', renderer: 'a2ui' },
+    { plugin: 'earth-index', renderer: 'a2ui' },
+    { plugin: 'earth-area' },
+  ],
   tags: ['geospatial', 'earth-observation', 'datasets'],
   sandboxEnvVars: ['EARTHDATA_USERNAME:0.0.1', 'EARTHDATA_PASSWORD:0.0.1'],
   documentationUrl: 'https://github.com/datalayer/earthdata-mcp-server',
@@ -690,6 +747,48 @@ export const GITHUB_MCP_SERVER_0_0_1: MCPServer = {
   actions: {
     tools: {},
     note: 'Not read off the running server yet: its tools are unknown, and unknown is the most restricted. Run the server, list its tools, and class each one here.',
+  },
+};
+
+export const GOOGLE_MAPS_MCP_SERVER_0_0_1: MCPServer = {
+  id: 'google-maps',
+  version: '0.0.1',
+  name: 'Google Maps',
+  description:
+    "Google Maps — places, restaurants and sights, routes with their travel times, stops along a route and the weather — through Google's Maps Experience agent tools",
+  icon: '@primer/octicons-react:location',
+  emoji: '🗺️',
+  url: 'https://mapstools.googleapis.com/mcp',
+  args: [],
+  headers: { 'X-Goog-Api-Key': '${GOOGLE_MAPS_API_KEY}' },
+  transport: 'streamable-http',
+  enabled: true,
+  isAvailable: false,
+  tools: [],
+  requiredEnvVars: ['GOOGLE_MAPS_API_KEY:0.0.1'],
+  ui: [{ plugin: 'trip-itinerary' }],
+  tags: ['travel', 'maps', 'places', 'routes', 'weather', 'google'],
+  documentationUrl: 'https://developers.google.com/maps/ai/grounding-lite',
+  signupUrl: 'https://console.cloud.google.com/google/maps-apis/start',
+  apiKeyUrl: 'https://console.cloud.google.com/google/maps-apis/credentials',
+  setup:
+    'In a Google Cloud project with billing on, enable the **Maps Experience agent tools API** (`mapstools.googleapis.com`), create an API key restricted to it in [Keys & Credentials](https://console.cloud.google.com/google/maps-apis/credentials) and paste it into `GOOGLE_MAPS_API_KEY`. Google bills your project: 10,000 requests a month are free, then USD 7 per 1,000 ([pricing](https://developers.google.com/maps/ai/grounding-lite)).',
+  install: {
+    type: 'remote',
+    command: '',
+    note: "Nothing to install: Google's hosted Maps Experience agent tools, reached at their URL with your GOOGLE_MAPS_API_KEY.",
+  },
+  actions: {
+    tools: {
+      search_places: 'read',
+      search_along_route: 'read',
+      compute_routes: 'read',
+      lookup_weather: 'read',
+      resolve_names: 'read',
+      resolve_maps_urls: 'read',
+    },
+    checked: '2026-11-15',
+    note: "Read off the running server's tools/list: six reads of Google Maps — places, places along a route, routes, weather, and names or Maps links resolved to place ids. Nothing here changes anything.",
   },
 };
 
@@ -945,6 +1044,40 @@ export const KAGGLE_MCP_SERVER_0_0_1: MCPServer = {
   },
 };
 
+export const KIWI_MCP_SERVER_0_0_1: MCPServer = {
+  id: 'kiwi',
+  version: '0.0.1',
+  name: 'Kiwi.com',
+  description:
+    'Flights from Kiwi.com — routes, fares, baggage and connections compared for your dates and travellers, each with its booking link at Kiwi.com',
+  icon: '@primer/octicons-react:paper-airplane',
+  emoji: '✈️',
+  url: 'https://mcp.kiwi.com',
+  args: [],
+  transport: 'streamable-http',
+  enabled: true,
+  isAvailable: false,
+  tools: [],
+  requiredEnvVars: [],
+  ui: [{ plugin: 'trip-options', renderer: 'a2ui' }, { plugin: 'trip-budget' }],
+  tags: ['travel', 'flights', 'kiwi'],
+  documentationUrl: 'https://www.kiwi.com/ag/pages/mcp/',
+  signupUrl: 'https://www.kiwi.com/ag/pages/mcp/',
+  apiKeyUrl: 'https://www.kiwi.com/ag/pages/mcp/',
+  setup:
+    "Nothing to set: the runtime reaches [Kiwi.com's flight search](https://www.kiwi.com/ag/pages/mcp/) at https://mcp.kiwi.com anonymously. It searches and compares flights and returns each one's booking link at Kiwi.com, where you book and pay; it books nothing.",
+  install: {
+    type: 'remote',
+    command: '',
+    note: "Nothing to install: Kiwi.com's hosted flight search, reached at its URL over Streamable HTTP.",
+  },
+  actions: {
+    tools: { 'search-flight': 'read', 'feedback-to-devs': 'send' },
+    checked: '2026-11-15',
+    note: "Read off the running server's tools/list (kiwicom-flight-search): one search that reads fares and returns booking links, and a feedback form that sends a text to Kiwi.com's developers. Nothing here books or pays.",
+  },
+};
+
 export const LINKEDIN_MCP_SERVER_0_0_1: MCPServer = {
   id: 'linkedin',
   version: '0.0.1',
@@ -961,18 +1094,20 @@ export const LINKEDIN_MCP_SERVER_0_0_1: MCPServer = {
   isAvailable: false,
   tools: [],
   requiredEnvVars: [],
+  ui: [{ plugin: 'browser-session' }],
   tags: ['social', 'linkedin', 'jobs', 'messaging'],
-  env: { UV_HTTP_TIMEOUT: '300' },
+  env: { UV_HTTP_TIMEOUT: '300', HEADLESS: 'true' },
+  optionalEnvVars: ['LINKEDIN_LI_AT:0.0.1'],
   documentationUrl: 'https://github.com/stickerdaniel/linkedin-mcp-server',
   signupUrl: 'https://www.linkedin.com/signup',
   apiKeyUrl:
     'https://github.com/stickerdaniel/linkedin-mcp-server#installation',
   setup:
-    'No key: the server uses a signed-in browser session. On your own machine, run `uvx mcp-server-linkedin --login` once (or `--import-from-browser`) and it keeps the session under `~/.linkedin-mcp`; a runtime needs that directory mounted — see [its README](https://github.com/stickerdaniel/linkedin-mcp-server#installation). LinkedIn restricts automated access: use an account you can afford to see restricted.',
+    "No key: the server uses your signed-in LinkedIn session. Paste it once in Settings › LinkedIn (the `li_at` cookie of a browser where you are signed in to LinkedIn, kept in your Vault secrets as LINKEDIN_LI_AT): each new runtime of yours starts the server signed in with it. Or, in the chat, press Sign in to LinkedIn: LinkedIn's login opens in your runtime's own browser, you sign in there, and the server reads and acts through that session, kept on that runtime alone and gone when it ends. On your own machine, `uvx mcp-server-linkedin --login` does the same. LinkedIn restricts automated access: use an account you can afford to see restricted.",
   install: {
     type: 'python',
     command: 'uv tool install --python 3.12 mcp-server-linkedin',
-    note: 'Needs uv (`pip install uv`); the runtime image installs it the same way. It reads a signed-in browser session mounted at ~/.linkedin-mcp.',
+    note: "Needs uv (`pip install uv`) and a glibc Linux, macOS or Windows (its browser driver, patchright, publishes no musl build). It reads the browser session the chat's Sign in to LinkedIn writes under ~/.linkedin-mcp.",
   },
   actions: {
     tools: {
@@ -1023,6 +1158,12 @@ export const ODOO_ACCOUNTING_MCP_SERVER_0_0_1: MCPServer = {
   isAvailable: false,
   tools: [],
   requiredEnvVars: ['DATALAYER_API_KEY:0.0.1'],
+  ui: [
+    { plugin: 'bank-reconciliation', renderer: 'a2ui' },
+    { plugin: 'trial-balance' },
+    { plugin: 'vat-summary' },
+    { plugin: 'odoo-context' },
+  ],
   tags: ['erp', 'accounting', 'finance', 'odoo', 'datalayer'],
   documentationUrl: 'https://datalayer.ai/docs/accountant',
   signupUrl: 'https://datalayer.ai/signin',
@@ -1131,6 +1272,12 @@ export const ODOO_MCP_SERVER_0_0_1: MCPServer = {
   isAvailable: false,
   tools: [],
   requiredEnvVars: ['DATALAYER_API_KEY:0.0.1'],
+  ui: [
+    { plugin: 'bank-reconciliation', renderer: 'a2ui' },
+    { plugin: 'trial-balance' },
+    { plugin: 'vat-summary' },
+    { plugin: 'odoo-context' },
+  ],
   tags: ['erp', 'odoo', 'datalayer'],
   documentationUrl: 'https://datalayer.ai/docs/mcp-toolsets',
   signupUrl: 'https://datalayer.ai/signin',
@@ -1160,6 +1307,45 @@ export const ODOO_MCP_SERVER_0_0_1: MCPServer = {
     },
     checked: '2026-11-08',
     note: "Exactly the tools the gateway's odoo toolset registers, read off its code (datalayer-mcp-server's extensions/odoo, odoo.py's base_tools; datalayer-mcp-server 0.0.104), each classed as the datalayer server classes it (its tool_policy). The comment over each tool is the gateway's own description of it. The odoo and odoo-accounting toolsets share no tool.",
+  },
+};
+
+export const OVERTURE_MCP_SERVER_0_0_1: MCPServer = {
+  id: 'overture',
+  version: '0.0.1',
+  name: 'Overture Maps',
+  description:
+    'Open places from Overture Maps — restaurants, cafés, hotels, museums, sights and shops with their addresses, phones, websites and sources — around a point or in a box, through the Datalayer MCP server, with no key',
+  icon: '@primer/octicons-react:location',
+  emoji: '📍',
+  url: 'https://mcp.datalayer.run/mcp?only=overture',
+  args: [],
+  headers: { Authorization: 'Bearer ${DATALAYER_API_KEY}' },
+  transport: 'streamable-http',
+  enabled: true,
+  isAvailable: false,
+  tools: [],
+  requiredEnvVars: ['DATALAYER_API_KEY:0.0.1'],
+  ui: [{ plugin: 'trip-map' }],
+  tags: ['travel', 'maps', 'places', 'open-data', 'overture'],
+  documentationUrl: 'https://datalayer.ai/docs/mcp/toolsets',
+  signupUrl: 'https://overturemaps.org/',
+  apiKeyUrl: 'https://datalayer.ai/settings/api-keys',
+  setup:
+    "Nothing to set beyond your [Datalayer API key](https://datalayer.ai/settings/api-keys) in `DATALAYER_API_KEY`: Datalayer's gateway reads [Overture Maps](https://overturemaps.org/)' open release itself, with no key. Show the places with their attribution: © OpenStreetMap contributors, Overture Maps Foundation, and each place's sources.",
+  install: {
+    type: 'remote',
+    command: '',
+    note: "Nothing to install: Datalayer's MCP gateway with its overture toolset, reached at its URL.",
+  },
+  actions: {
+    tools: {
+      overture_search_places: 'read',
+      overture_place_details: 'read',
+      overture_place_categories: 'read',
+    },
+    checked: '2026-11-19',
+    note: "Read off the gateway's own code (datalayer-mcp-server's extensions/overture, its tool_policy): three reads of Overture's public release on S3 — places in an area, one place at its point, the categories of an area. Nothing here writes or sends.",
   },
 };
 
@@ -1200,6 +1386,47 @@ export const SALESFORCE_MCP_SERVER_0_0_1: MCPServer = {
   actions: {
     tools: {},
     note: 'Not read off the running server yet: its tools are unknown, and unknown is the most restricted. Run the server, list its tools, and class each one here.',
+  },
+};
+
+export const SHOPIFY_MCP_SERVER_0_0_1: MCPServer = {
+  id: 'shopify',
+  version: '0.0.1',
+  name: 'Shopify',
+  description:
+    "Products from every Shopify store — search, compare variants and prices, read a product and its seller's checkout link — through Shopify's Global Catalog",
+  icon: '@primer/octicons-react:package',
+  emoji: '🛒',
+  url: 'https://catalog.shopify.com/api/ucp/mcp',
+  args: [],
+  transport: 'streamable-http',
+  enabled: true,
+  isAvailable: false,
+  tools: [],
+  requiredEnvVars: [],
+  ui: [
+    { plugin: 'product-comparison', renderer: 'a2ui' },
+    { plugin: 'shopping-basket', renderer: 'a2ui' },
+  ],
+  tags: ['commerce', 'shopping', 'shopify', 'ucp'],
+  documentationUrl: 'https://shopify.dev/docs/agents/catalog/global-catalog',
+  signupUrl: 'https://shopify.dev/docs/agents',
+  apiKeyUrl: 'https://shopify.dev/docs/agents/profiles/auth-and-rate-limiting',
+  setup:
+    "Nothing to set: the runtime reaches Shopify's [Global Catalog](https://shopify.dev/docs/agents/catalog/global-catalog) at https://catalog.shopify.com/api/ucp/mcp anonymously, limited per address. It finds and compares products and returns each seller's checkout link; it buys nothing.",
+  install: {
+    type: 'remote',
+    command: '',
+    note: "Nothing to install: Shopify's hosted Global Catalog, reached at its URL over Streamable HTTP.",
+  },
+  actions: {
+    tools: {
+      search_catalog: 'read',
+      lookup_catalog: 'read',
+      get_product: 'read',
+    },
+    checked: '2026-11-14',
+    note: "Read off the running server's tools/list (universal-ucp-mcp 0.1.0, UCP 2026-08-25): three catalogue reads. Nothing here creates a cart, a checkout or an order.",
   },
 };
 
@@ -1251,6 +1478,56 @@ export const SLACK_MCP_SERVER_0_0_1: MCPServer = {
     },
     checked: '2026-10-02',
     note: "Posting, replying and reacting put something in front of other people. A post and a reply say the argument holding their words (`signs`): an application's runtime closes it with its byline.",
+  },
+};
+
+export const STRIPE_MCP_SERVER_0_0_1: MCPServer = {
+  id: 'stripe',
+  version: '0.0.1',
+  name: 'Stripe (test mode)',
+  description:
+    "Stripe, in test mode — products, prices and Checkout Sessions created through Stripe's own MCP server with a sandbox key; the person pays on Stripe's Checkout page with a test card, and no real charge is ever made",
+  icon: '@primer/octicons-react:credit-card',
+  emoji: '💳',
+  url: 'https://mcp.stripe.com',
+  args: [],
+  headers: { Authorization: 'Bearer ${STRIPE_TEST_AGENT_API_KEY}' },
+  transport: 'streamable-http',
+  enabled: true,
+  isAvailable: false,
+  tools: [],
+  requiredEnvVars: ['STRIPE_TEST_AGENT_API_KEY:0.0.1'],
+  ui: [{ plugin: 'stripe-checkout', renderer: 'a2ui' }],
+  tags: ['payments', 'checkout', 'stripe', 'test-mode'],
+  documentationUrl: 'https://docs.stripe.com/mcp',
+  signupUrl: 'https://dashboard.stripe.com/register',
+  apiKeyUrl: 'https://docs.stripe.com/keys#agent-keys',
+  setup:
+    "Test mode only. In a Stripe sandbox, create an [agent API key](https://docs.stripe.com/keys#agent-keys) with Checkout Sessions write and Products and Prices read, and paste it into `STRIPE_TEST_AGENT_API_KEY`. Never paste a live key: the checkout card refuses a live session. Pay with Stripe's test card 4242 4242 4242 4242, any future date and any CVC.",
+  install: {
+    type: 'remote',
+    command: '',
+    note: "Nothing to install: Stripe's hosted MCP server, reached at its URL with a sandbox agent API key.",
+  },
+  actions: {
+    tools: {
+      stripe_api_search: 'read',
+      stripe_api_details: 'read',
+      stripe_api_read: 'read',
+      stripe_api_write: 'write',
+      get_stripe_account_info: 'read',
+      stripe_analytics: 'read',
+      get_balance_summary: 'read',
+      search_stripe_documentation: 'read',
+      stripe_implementation_planner: 'read',
+      send_stripe_feedback: 'send',
+      convert_currency: 'buy',
+      send_money: 'buy',
+      transfer_money: 'buy',
+      setup_recipient: 'write',
+    },
+    checked: '2026-11-15',
+    note: "Read off Stripe's documentation (https://docs.stripe.com/mcp), not off a running server: Datalayer holds no Stripe key yet. stripe_api_write reaches every POST, PATCH, PUT and DELETE of the API, a Checkout Session among them, so it is asked first; Stripe asks a human confirmation of its own for a refund. The Treasury tools move money and are classed buy.",
   },
 };
 
@@ -1335,6 +1612,7 @@ export const MCP_SERVER_LIBRARY: Record<string, MCPServer> = {
   'agentcore-gateway-example': AGENTCORE_GATEWAY_EXAMPLE_MCP_SERVER_0_0_1,
   alphavantage: ALPHAVANTAGE_MCP_SERVER_0_0_1,
   bluesky: BLUESKY_MCP_SERVER_0_0_1,
+  'booking-com': BOOKING_COM_MCP_SERVER_0_0_1,
   chart: CHART_MCP_SERVER_0_0_1,
   datalayer: DATALAYER_MCP_SERVER_0_0_1,
   discord: DISCORD_MCP_SERVER_0_0_1,
@@ -1342,14 +1620,19 @@ export const MCP_SERVER_LIBRARY: Record<string, MCPServer> = {
   eurus: EURUS_MCP_SERVER_0_0_1,
   filesystem: FILESYSTEM_MCP_SERVER_0_0_1,
   github: GITHUB_MCP_SERVER_0_0_1,
+  'google-maps': GOOGLE_MAPS_MCP_SERVER_0_0_1,
   'google-workspace': GOOGLE_WORKSPACE_MCP_SERVER_0_0_1,
   huggingface: HUGGINGFACE_MCP_SERVER_0_0_1,
   kaggle: KAGGLE_MCP_SERVER_0_0_1,
+  kiwi: KIWI_MCP_SERVER_0_0_1,
   linkedin: LINKEDIN_MCP_SERVER_0_0_1,
   'odoo-accounting': ODOO_ACCOUNTING_MCP_SERVER_0_0_1,
   odoo: ODOO_MCP_SERVER_0_0_1,
+  overture: OVERTURE_MCP_SERVER_0_0_1,
   salesforce: SALESFORCE_MCP_SERVER_0_0_1,
+  shopify: SHOPIFY_MCP_SERVER_0_0_1,
   slack: SLACK_MCP_SERVER_0_0_1,
+  stripe: STRIPE_MCP_SERVER_0_0_1,
   tavily: TAVILY_MCP_SERVER_0_0_1,
   x: X_MCP_SERVER_0_0_1,
 };

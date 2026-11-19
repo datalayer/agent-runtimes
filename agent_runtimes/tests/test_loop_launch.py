@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Where ``loop`` runs its agent: here, or on Datalayer (L-01 to L-06)."""
+"""Where ``loop`` runs its agent: here, or on Datalayer."""
 
 from __future__ import annotations
 
@@ -394,7 +394,7 @@ def test_a_running_agent_runtime_is_offered_before_a_new_one(
         back.relay.stop()
 
 
-# --- a runtime set up for the account before anything is configured on it (A-08)
+# --- a runtime set up for the account before anything is configured on it
 
 
 def test_the_record_datalayer_sets_a_runtime_up_with_is_told_from_the_pools() -> None:
@@ -494,14 +494,14 @@ def test_a_stop_says_where_and_what_it_stops() -> None:
         "Stop the cloud agent runtime runtime-1? It is billed until you do."
     ]
     assert said == ["Stopped cloud agent runtime runtime-1."]
-    # An application's, not billed: both are said.
+    # An application's, unmetered: billed until its reservation ends.
     launch = _launched(FakeClient())
     launch.app, launch.unmetered = True, True
     asked.clear()
     said.clear()
     finish_cloud(launch, can_ask=True, ask=ask, say=said.append)
     assert asked == [
-        "Stop the cloud app runtime runtime-1? It is not billed: it runs until its reservation ends."
+        "Stop the cloud app runtime runtime-1? It is billed and runs until its reservation ends."
     ]
     assert said == ["Stopped cloud app runtime runtime-1."]
     # Kept, and given back after a pause: the same words.

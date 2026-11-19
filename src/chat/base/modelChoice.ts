@@ -57,6 +57,25 @@ export function offeredModels(
   return usableModels(fromRuntime ?? fallback());
 }
 
+/** The models a chat does not offer somebody who has not signed in. */
+export const NOT_FOR_VISITORS: readonly string[] = [
+  'openrouter:anthropic/claude-opus-5.5',
+];
+
+/**
+ * The models offered, as somebody signed in or not may choose among them:
+ * everything for a person signed in; for a visitor without an account, all
+ * but {@link NOT_FOR_VISITORS}.
+ */
+export function visitorsModels(
+  models: ModelConfig[],
+  signedIn: boolean,
+): ModelConfig[] {
+  return signedIn
+    ? models
+    : models.filter(model => !NOT_FOR_VISITORS.includes(model.id));
+}
+
 /** Whether `id` is on offer and usable — the selection may stand. */
 export const isOffered = (offered: ModelConfig[], id?: string): boolean =>
   Boolean(id) && offered.some(m => m.id === id && isUsable(m));

@@ -4,7 +4,7 @@
  */
 
 /**
- * The agent's toolbox as a contribution point (C-20): the parts are
+ * The agent's toolbox as a contribution point: the parts are
  * what the enabled plugins contribute, a source turned off takes its parts
  * off, and every part arrives with an example the Appspec takes as it is.
  */
@@ -138,8 +138,8 @@ describe('the toolbox is what the enabled plugins contribute', () => {
         'track',
       ]),
     );
-    // Every protocol of the catalogue, a planned one offered but not enabled
-    // (PS-04), and every UI plugin (R8) — never a renderer.
+    // Every protocol of the catalogue, a planned one offered but not enabled,
+    // and every UI plugin (R8) — never a renderer.
     for (const protocol of listProtocolSpecs()) {
       expect(
         parts.find(part => part.id === `protocol:${protocol.id}`)?.enabled,
@@ -156,7 +156,7 @@ describe('the toolbox is what the enabled plugins contribute', () => {
     expect(parts.find(part => part.id === 'avatar:model3d')?.example).toEqual({
       kind: 'model3d',
     });
-    // The catalogue's harnesses as the agent (SH-43): each by the
+    // The catalogue's harnesses as the agent: each by the
     // catalogue agent that runs on it — Claude Code, Codex, pi, Gemini CLI,
     // goose, OpenCode, OpenHands and fast-agent alike.
     const claude = parts.find(part => part.id === 'agent:claude-code');
@@ -230,7 +230,7 @@ describe('every part arrives with an example the Appspec takes as it is', () => 
     );
     // Nothing new refused: an event even answers a worker's want of one. A
     // part not enabled today is refused in its one sentence while offered —
-    // a harness the catalogue describes and does not offer (MH-47) included.
+    // a harness the catalogue describes and does not offer included.
     expect(
       added.filter(
         problem =>

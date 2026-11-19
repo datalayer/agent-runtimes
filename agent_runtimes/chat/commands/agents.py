@@ -41,7 +41,7 @@ ARGS = (
 
 
 async def _use(tux: "CliTux", agent_id: str) -> None:
-    """Swap this session's agent in place, through the session route (MH-07)."""
+    """Swap this session's agent in place, through the session route."""
     from agent_runtimes.loop.session import LoopRefused
 
     from ..tux import STYLE_MUTED, STYLE_PRIMARY

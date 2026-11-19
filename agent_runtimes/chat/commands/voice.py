@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Slash command: /voice — listen with the microphone, Ctrl+T to start and to stop (VO-15)."""
+"""Slash command: /voice — listen with the microphone, Ctrl+T to start and to stop."""
 
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ async def execute(tux: "CliTux") -> Optional[str]:
     if not session.listening:
         problem = session.problem()
         if problem:
-            # No microphone, no voice: a sentence, never a traceback (VO-17).
+            # No microphone, no voice: a sentence, never a traceback.
             tux._failed(problem)
             return None
         try:
@@ -44,7 +44,7 @@ async def execute(tux: "CliTux") -> Optional[str]:
         return None
     tux.console.print("● Hearing what you said…", style=STYLE_MUTED)
     # An application whose code hears the sound itself (`@app.audio`) is
-    # given the turn's sound, not the prompt line (VO-46).
+    # given the turn's sound, not the prompt line.
     hands_over = getattr(tux, "audio_turn", None)
     if callable(hands_over) and tux.hears_audio():
         await hands_over(session.listener.stop())

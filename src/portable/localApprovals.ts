@@ -4,7 +4,7 @@
  */
 
 /**
- * A local session's approvals (VSCODE VS-07, DESKTOP DK-13, the local
+ * A local session's approvals (the local
  * place): a local runtime decides an *ask me first* request over its
  * websocket (`/api/v1/tool-approvals/ws`) — it sends `agent.snapshot`
  * messages listing the approvals as they stand, and takes

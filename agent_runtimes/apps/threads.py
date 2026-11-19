@@ -1,8 +1,8 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A person's threads and what was said of their answers, read from ai-agents
-(P-24): what `loop apps threads` and `loop apps feedback` print.
+"""A person's threads and what was said of their answers, read from ai-agents:
+what `loop apps threads` and `loop apps feedback` print.
 
 A thread is a conversation a person had with an application, as their
 history lists it — ai-agents' ``/apps/conversations/mine/threads``, newest

@@ -1,0 +1,25 @@
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+#
+# The Datalayer plane, reachable from the actor with the Datalayer API key put
+# in the Authorization header by kagent's egress gateway: the key never enters
+# the actor. The same Secret, header and prefix as the datalayer-ai-inference
+# ModelConfig, so the two bindings of the origin are identical and merge.
+#
+# The origin is the plane of DATALAYER_RUN_URL. When your runtimes are served
+# under another host than the plane (their ingress), add that origin too,
+# with the same authentication: the bridge calls the runtime's A2A endpoint
+# there.
+apiVersion: api.kagent.dev/v1alpha3
+kind: EgressPolicy
+metadata:
+  name: datalayer-plane
+spec:
+  destinations:
+    - origin: https://datalayer.example.com
+      authentication:
+        header: Authorization
+        prefix: "Bearer "
+        secretKeyRef:
+          name: datalayer-api-key
+          key: api-key

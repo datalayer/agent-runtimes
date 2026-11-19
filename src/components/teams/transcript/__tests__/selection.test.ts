@@ -4,7 +4,7 @@
  */
 
 /**
- * The selection the views and the stage share (SCENES S3-02): a line is
+ * The selection the views and the stage share: a line is
  * on the graph's edge between its members — an answer on the ask's edge,
  * a call on the caller's edge to the connection — or on none; and the
  * latest line on an edge is what a click on the edge selects.

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Who is calling an application's routes (R-32).
+"""Who is calling an application's routes.
 
 A runtime's routes carried no authentication of their own: access rested on
 the address. An application's route now verifies the caller before anything
@@ -18,7 +18,7 @@ conversation costs one call and a revoked token stops within minutes.
 A visitor without an account holds a token ai-inference minted for them,
 naming the visitor and the one application it is for: it is what
 ai-inference's ``/anonymous/whoami`` accepts, and only the visitors' runtime
-answers it (R-30, `agent_runtimes.apps.visitors`), which in turn
+answers it (`agent_runtimes.apps.visitors`), which in turn
 answers nobody signed in.
 
 A host — Datalayer's Slack app, an editor, a desktop app — holds no person's
@@ -28,8 +28,8 @@ what ai-agents' ``/apps/hosts/whoami`` accepts, which checks that the
 installation, the link and the deployment's allowance still stand; it is
 remembered for a minute at most, so that a revocation stops it within one.
 A host token ai-agents answers ``visitor: true`` is a person who never linked,
-answered because the installation's owner opened it to visitors (WHATSAPP
-WA-03): a ``visitor`` caller, named by its pseudonymous id, for its one
+answered because the installation's owner opened it to visitors:
+a ``visitor`` caller, named by its pseudonymous id, for its one
 deployment (see :func:`is_host_visitor`).
 
 A call from the machine itself — a developer's ``localhost``, the companion
@@ -53,7 +53,7 @@ import jwt
 #: The audience of an app embed token (`datalayer_common.authn.app_embed`).
 APP_EMBED_AUDIENCE = "datalayer:app:embed"
 
-#: What an embed token names when it runs a session of its application (R-20).
+#: What an embed token names when it runs a session of its application.
 SESSION_SCOPE = "session"
 
 #: The audience of a host token (`datalayer_common.authn.app_host`).
@@ -78,7 +78,7 @@ class Caller:
     """Who called: a person, an embed of one application, a visitor, or the machine itself.
 
     A visitor's ``app_uid`` is what their token is for: an example's id, or
-    ``at:<slug>`` for an application at its address (R-30).
+    ``at:<slug>`` for an application at its address.
     """
 
     kind: str  # "person" | "principal" | "embed" | "visitor" | "host" | "local"
@@ -86,19 +86,19 @@ class Caller:
     app_uid: str = ""
     #: For an embed: the visit its token was issued for — the host's, kept
     #: across the tokens it renews, else the token's own id — so that one
-    #: visitor of the host's page never reaches another's session (R-20).
+    #: visitor of the host's page never reaches another's session.
     visit: str = ""
     #: For an embed: what its token names it may do — `read`, `decide`,
-    #: `session` — and nothing else (R-20).
+    #: `session` — and nothing else.
     scopes: Tuple[str, ...] = ()
     #: For a host: the one deployment its token was issued for; its
     #: installation is its ``visit``.
     deployment_uid: str = ""
     #: For a person: their name, as their verified token's profile says it
-    #: (`person_name`); ``""`` when it says none — never their uid (I-10).
+    #: (`person_name`); ``""`` when it says none — never their uid.
     name: str = ""
     #: For a visitor: the catalogue Battle their token is played for, as
-    #: ai-inference says it (B4-01); ``""`` for none.
+    #: ai-inference says it; ``""`` for none.
     battle: str = ""
 
 
@@ -106,7 +106,7 @@ LOCAL = Caller(kind="local")
 
 
 def is_host_visitor(caller: Any) -> bool:
-    """Whether a caller is a host's visitor (WHATSAPP WA-03): a ``visitor``
+    """Whether a caller is a host's visitor: a ``visitor``
     whose host token names one deployment. Unlike a visitor of the visitors'
     runtime, whose own token calls the models, the deployment's principal
     acts for them; like one, their turn only reads and asks nobody.
@@ -199,7 +199,7 @@ def person_name(claims: Dict[str, Any]) -> str:
     ``firstName``, ``lastName``); ``""`` when it says none.
 
     Read once IAM accepted the token: its claims are then IAM's own. What
-    signs for a person (I-10) names them by this, or not at all.
+    signs for a person names them by this, or not at all.
     """
     user = claims.get("user")
     if not isinstance(user, dict):
@@ -279,7 +279,7 @@ class CallerVerifier:
             raise CallerRefused(403, ONLY_VISITORS)
         # A visitor is answered by the visitors' runtime, and by the runtime a
         # deployment with code of its own is kept on, which runs it for them
-        # (R-30, decided 14 October 2026): nowhere else.
+        # (decided 14 October 2026): nowhere else.
         if visitor and not (visitors_runtime() or a_deployment_is_served()):
             raise CallerRefused(403, NOT_HERE)
         if visitor:
@@ -339,7 +339,7 @@ class CallerVerifier:
             agent = str(claims.get("agent_uid") or "")
             if agent and agent == str(claims.get("sub") or ""):
                 # A principal's own token — an application's, as a deployment
-                # acts (I-03) — is nobody's: never let through as a person.
+                # acts — is nobody's: never let through as a person.
                 caller = Caller(
                     kind="principal",
                     uid=agent,
@@ -430,7 +430,7 @@ class CallerVerifier:
             )
         said = response.json()
         caller = Caller(
-            # A person who never linked, answered as a visitor (WA-03).
+            # A person who never linked, answered as a visitor.
             kind="visitor" if said.get("visitor") is True else "host",
             uid=str(said.get("sub") or ""),
             app_uid=str(said.get("app_uid") or ""),
@@ -445,7 +445,7 @@ class CallerVerifier:
         return caller
 
     async def _visitor(self, token: str) -> Caller:
-        """A visitor's token, asked of ai-inference, which minted it (R-30).
+        """A visitor's token, asked of ai-inference, which minted it.
 
         Remembered as long as ai-inference says it lives, at most
         :data:`CACHE_SECONDS`: a token is worth a few minutes.

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What a runtime says it speaks: the route and `loop apps protocols` (PR-50, EX-08)."""
+"""What a runtime says it speaks: the route and `loop apps protocols`."""
 
 from __future__ import annotations
 
@@ -68,7 +68,7 @@ def test_the_command_says_pap_with_its_plugin(tmp_path: Path):
     )
     result = CliRunner().invoke(apps_cli, ["protocols", str(spec)])
     assert result.exit_code == 0, result.output
-    assert "Personal Agent Protocol (pap) 0.4" in result.output
+    assert "Personal Agent Protocol (pap) 1.0" in result.output
     assert "works with manzanita.example" in result.output
     assert "its own SDK's plugins" not in result.output
 

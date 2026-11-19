@@ -7,7 +7,7 @@
  * The picker a session action asks with (`SessionActionContext.choose`):
  * one of several — the agent a session is switched to — and, under the
  * pick, what it does: the sentence the new agent will be told, shown
- * before it is sent (MH-27). Declined, nothing is sent.
+ * before it is sent. Declined, nothing is sent.
  *
  * @module apps/plugins/chat/SessionChooseDialog
  */

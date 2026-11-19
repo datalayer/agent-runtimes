@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A scene and its stage, written in Python (P-30).
+"""A scene and its stage, written in Python.
 
 Beside ``loop.app(...)``, an application, a developer writes the rest of the
 lifecycle in code::
@@ -24,7 +24,7 @@ What it writes is the scene spec — ``loop.scene/v1``, agentspecs'
 `SceneSpec` — and nothing of its own: a stage is not a spec apart, it is the
 parts of the scene that say where it plays (``stage``, ``audience``,
 ``deployment``, each player's ``runs_in``), as the Studio's spec editor
-and its Canvas write them (S-09). So the scene is read, checked and refused
+and its Canvas write them. So the scene is read, checked and refused
 by agentspecs itself, in agentspecs' sentences (`parse_scene`,
 `scene_problems`); ``loop scenes rehearse scene.py`` plays it,
 ``loop scenes build scene.py`` writes its YAML, and ``loop scenes push
@@ -414,7 +414,7 @@ def scene(
     tags: Sequence[str] = (),
     icon: str = "",
 ) -> Scene:
-    """A scene, written in Python (P-30); see `Scene`."""
+    """A scene, written in Python; see `Scene`."""
     return Scene(
         id,
         name,
@@ -445,7 +445,7 @@ def stage(
     page: str = "",
     addresses: Optional[Mapping[str, str]] = None,
 ) -> Scene:
-    """Where a scene plays, written into it (P-30, S-09): its stage.
+    """Where a scene plays, written into it: its stage.
 
     A stage is not a spec of its own: it is the parts of the scene that say
     where each player runs (``runs_in``: ``browser`` or ``runtime``), where

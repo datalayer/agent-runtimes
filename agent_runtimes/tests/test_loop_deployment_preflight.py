@@ -206,13 +206,13 @@ def _rows(deployments: Dict[str, Dict[str, Any]], **session: Any) -> Any:
     return row
 
 
-def test_a_session_of_ones_own_paused_deployment_is_listed_and_marked() -> None:
+def test_a_session_of_ones_own_paused_deployment_is_listed_as_paused() -> None:
     mine = {"dep-1": {"uid": "dep-1", "app_name": "mh49-pi", "state": "paused"}}
     row = _rows(mine)
     assert row.deployment_paused and is_listed(row) and why_not("resume", row) == ""
-    assert (
-        row.state == "paused" and cells_of_row(row, 1)[2] == "paused, deployment paused"
-    )
+    # Its State says the session's state alone: the deployment is asked
+    # about when the session is resumed.
+    assert row.state == "paused" and cells_of_row(row, 1)[2] == "paused"
     live = _rows({"dep-1": {"uid": "dep-1", "app_name": "mh49-pi", "state": "live"}})
     assert not live.deployment_paused and cells_of_row(live, 1)[2] == "paused"
     # Somebody else's, paused or not: not the caller's to resume, not listed.

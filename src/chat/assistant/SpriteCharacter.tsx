@@ -4,10 +4,10 @@
  */
 
 /**
- * A character one brings, played (T-26): the frames of a character file
+ * A character one brings, played: the frames of a character file
  * read by `formats` — clippy.js or Microsoft Agent — drawn from its sprite
  * sheet and stepped as the character authored them, its branches included,
- * the animation chosen by the state the stage acts (T-22). Nothing plays for
+ * the animation chosen by the state the stage acts. Nothing plays for
  * a reader who asks for reduced motion: the first frame of the state stands.
  *
  * While it speaks, a frame that has mouths (Microsoft Agent's overlays) is

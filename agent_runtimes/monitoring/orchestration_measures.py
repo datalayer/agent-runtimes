@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What orchestration is judged by, counted (O1-14).
+"""What orchestration is judged by, counted.
 
 The measures are named; the first six are taken here: the share of
 executions that complete after the control plane lost sight of their worker,
@@ -13,7 +13,7 @@ each binding passes.
 **The store takes them, so every process that holds executions does.**
 ``ExecutionStore`` calls into this module from its rules — ``create``, a
 milestone, the move into a terminal state, the artifact commit — and the
-control plane in ai-agents, ``OrchestrationWorkflow`` in durable and the O0-13
+control plane in ai-agents, ``OrchestrationWorkflow`` in durable and the orchestration
 example all go through those rules. A measure taken in one of them only would
 be a number for one deployment shape.
 
@@ -580,7 +580,7 @@ class RecordedMeasures:
 
     What the OTEL service's orchestration dashboard reads from exported points,
     read instead from the points recording instruments kept: for a run whose
-    points never leave the process, such as the O0-13 example. Each share is
+    points never leave the process, such as the orchestration example. Each share is
     ``(part, of)``.
     """
 

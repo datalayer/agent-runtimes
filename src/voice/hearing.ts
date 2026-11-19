@@ -4,7 +4,7 @@
  */
 
 /**
- * Hearing on the device (VO-10, VO-14): what was said
+ * Hearing on the device: what was said
  * in one press, kept to its speech by Silero VAD and transcribed by the
  * catalogue's model for the language — Moonshine for English, Whisper for
  * French — in the page, with transformers.js. The audio never leaves the
@@ -35,13 +35,13 @@ export class NotHeardHere extends Error {}
  * folder, each build of onnxruntime-web names the file it needs there —
  * transformers.js's (the WebGPU build, `ort-wasm-simd-threaded.asyncify`)
  * and vad-web's (the default build, `ort-wasm-simd-threaded.jsep`) differ,
- * and each is a version of its own (VO-49).
+ * and each is a version of its own.
  */
 export function runtimeFiles(modelsUrl: string, version: string): string {
   return `${modelsUrl.replace(/\/+$/, '')}/onnxruntime-web/${version}/`;
 }
 
-/** What was heard so far while the microphone stays open (VO-11). */
+/** What was heard so far while the microphone stays open. */
 export interface HeardSoFar {
   /** The words heard so far; empty while nothing was said. */
   text: string;
@@ -60,18 +60,18 @@ export interface Hearing {
   readonly where: 'device' | 'server';
   /** Load what hears a language, saying how far it has come. */
   ready(language: string, progress?: HearingProgress): Promise<void>;
-  /** What was said so far while the microphone stays open (VO-11). */
+  /** What was said so far while the microphone stays open. */
   hearSoFar(audio: Float32Array, language: string): Promise<HeardSoFar>;
   /** What was said in a press, or `undefined` when nothing was. */
   hear(audio: Float32Array, language: string): Promise<Transcript | undefined>;
   /**
    * Whether there is speech in some sound, found by the VAD alone — nothing
-   * transcribed, nothing sent (VO-52): hands-free's quick look for barge-in.
+   * transcribed, nothing sent: hands-free's quick look for barge-in.
    */
   spokeSoFar?(audio: Float32Array, shortestSeconds?: number): Promise<boolean>;
   /**
    * Whether there is speech in some sound and how long it has been quiet
-   * since, by the VAD alone — no words (VO-52): hands-free's quick look for
+   * since, by the VAD alone — no words: hands-free's quick look for
    * the end of a turn once the person has spoken.
    */
   quietSoFar?(audio: Float32Array): Promise<HeardSoFar>;
@@ -262,9 +262,9 @@ export class DeviceHearing implements Hearing {
   }
 
   /**
-   * What was said so far, while the microphone stays open (VO-11): the
+   * What was said so far, while the microphone stays open: the
    * words, for the composer as they come, and how long it has been silent
-   * since the speech ended — what stops a click to talk (VO-10).
+   * since the speech ended — what stops a click to talk.
    */
   async spokeSoFar(
     audio: Float32Array,

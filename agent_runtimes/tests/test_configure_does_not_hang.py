@@ -199,7 +199,7 @@ def test_the_cloud_sequence_answers_with_an_error_and_logs_no_secret(
     client: Any, caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     caplog.set_level(logging.DEBUG)
-    # What cog-crawler's skills and the application's connection declare (R-19),
+    # What cog-crawler's skills and the application's connection declare,
     # given here and not read from the machine running the test.
     for name in ("TAVILY_API_KEY", "GITHUB_TOKEN"):
         monkeypatch.setenv(name, "declared-for-this-test")
@@ -230,7 +230,7 @@ def test_the_cloud_sequence_answers_with_an_error_and_logs_no_secret(
     # Deleting the agent it replaces never stops the runtime.
     assert client.deletes
     assert all(d == {"stop_runtime": False, "runtime_id": None} for d in client.deletes)
-    # Not declared by the spec, never set (R-19).
+    # Not declared by the spec, never set.
     assert "DEMO_SECRET_FOR_THIS_TEST" not in os.environ
     # The secret's name is said; no part of its value, anywhere.
     logged = "\n".join(record.getMessage() for record in caplog.records)

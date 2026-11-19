@@ -5,7 +5,7 @@
 
 /**
  * `@datalayer/loop-plugin-app-activity` — what an application did, as a
- * plugin (R-01b, R-15): its activity feed in the workspace's sidebar
+ * plugin: its activity feed in the workspace's sidebar
  * (`LoopSlots.sidebar`), read from its record.
  *
  * @module apps/plugins/app-activity
@@ -45,7 +45,7 @@ export function defineAppActivityPlugin(
           slot: LoopSlots.sidebar,
           order: 20,
           Component: Feed,
-          // Its line icon on the workspace's rail (T-07).
+          // Its line icon on the workspace's rail.
           rail: { label: 'Activity', icon: PulseIcon },
         },
       ],

@@ -6,6 +6,7 @@
 /**
  * A tool provided by an MCP server.
  */
+import type { UiChoice } from './agentspecs';
 import type { InstallSpec } from './skills';
 export interface MCPServerTool {
   /** Tool name/identifier */
@@ -19,7 +20,7 @@ export interface MCPServerTool {
 }
 
 /**
- * How a remote MCP server's bearer is minted for the run (AC-20).
+ * How a remote MCP server's bearer is minted for the run.
  */
 export interface MCPServerAuth {
   /** Who mints it: an Amazon Bedrock AgentCore Gateway's inbound authorizer trusts the identity */
@@ -32,6 +33,11 @@ export interface MCPServerAuth {
  * Configuration for an MCP server.
  */
 export interface MCPServer {
+  /**
+   * The UI plugins it brings to the chat that uses it (agentspecs 0.0.196):
+   * injected after the agent's own while it is in use (`apps/agentUiPlugins`).
+   */
+  ui?: UiChoice[];
   /** Unique server identifier */
   id: string;
   /** Version */
@@ -52,7 +58,7 @@ export interface MCPServer {
   args: string[];
   /** The headers a remote server is sent with every request, `${VAR}` expanded as it starts: the bearer among them */
   headers?: Record<string, string>;
-  /** A bearer minted for the run instead of one in `headers`: an AgentCore Gateway trusting the identity named (AC-20) */
+  /** A bearer minted for the run instead of one in `headers`: an AgentCore Gateway trusting the identity named */
   auth?: MCPServerAuth;
   /** Whether the server is available (based on tool discovery) */
   isAvailable: boolean;
@@ -70,6 +76,8 @@ export interface MCPServer {
   env?: Record<string, string>;
   /** The variables the code its tools write reads in the code sandbox, never the server (a download's script) */
   sandboxEnvVars?: string[];
+  /** The variables the runtime is given when the account has them, never required (LinkedIn's `LINKEDIN_LI_AT`, the person's session pasted in Settings › LinkedIn) */
+  optionalEnvVars?: string[];
   /** Where to read about it (the user, 7 November 2026) */
   documentationUrl?: string;
   /** Where to sign up for the service behind it */

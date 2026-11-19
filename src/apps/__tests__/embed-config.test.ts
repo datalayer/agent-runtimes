@@ -4,8 +4,8 @@
  */
 
 /**
- * `<datalayer-app>`'s attributes, read without a DOM (D-07, D-08,
- * D-11, T-13): the four modes and the chat each floats in, what the host may
+ * `<datalayer-app>`'s attributes, read without a DOM:
+ * the four modes and the chat each floats in, what the host may
  * override and in what order, the snippet the *Ship* tab copies, and the
  * theme the element carries inside.
  */
@@ -104,7 +104,7 @@ describe('what the host overrides', () => {
     ).toMatchObject({ accent: 'violet', colorMode: 'light', font: 'Inter' });
   });
 
-  it('is the theme the application names (T-30), its mode below the host’s', () => {
+  it('is the theme the application names, its mode below the host’s', () => {
     const themed = {
       ...app,
       interface: {
@@ -175,7 +175,7 @@ describe('what the host overrides', () => {
     );
   });
 
-  it('takes the visitor’s language as BCP 47 tags it, and refuses another (P-26)', () => {
+  it('takes the visitor’s language as BCP 47 tags it, and refuses another', () => {
     expect(languageOf(null)).toBeUndefined();
     expect(languageOf(' ')).toBeUndefined();
     expect(languageOf('fr')).toBe('fr');
@@ -214,7 +214,7 @@ describe('the snippet', () => {
   });
 });
 
-describe('an application that listens, embedded (VO-18)', () => {
+describe('an application that listens, embedded', () => {
   it('says in its snippet that the page must allow the microphone', () => {
     const snippet = embedSnippetOf({
       origin: 'https://datalayer.app',
@@ -251,7 +251,7 @@ describe('the theme inside the element', () => {
     expect(styles.css).toBe(loopThemeStyles.css);
   });
 
-  it('is the theme the application names, with its accent over it (T-30; every theme since 2026-10-07)', () => {
+  it('is the theme the application names, with its accent over it (every theme since 2026-10-07)', () => {
     const styles = embedThemeStyles({ accent: 'violet', variant: 'earth' }) as {
       light: Record<string, string>;
       css?: string;
@@ -297,7 +297,7 @@ describe('the theme inside the element', () => {
   });
 });
 
-describe('properties a page sets before the element is defined (D-10)', () => {
+describe('properties a page sets before the element is defined', () => {
   it('hands them to the class setters, which an own property shadowed', () => {
     const offered: Record<string, unknown> = {};
     let passed: unknown = undefined;

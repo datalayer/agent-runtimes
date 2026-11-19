@@ -28,12 +28,12 @@ import { HealthCheck } from '@datalayer/core/lib/models/HealthCheck';
 export interface CreateRuntimeOptions {
   /**
    * A platform environment by its name, or an environment somebody built,
-   * named `<account-handle>/<name>` or by its uid (D-2).
+   * named `<account-handle>/<name>` or by its uid.
    */
   environmentName: string;
   /**
    * Which version of a user environment to launch: its number, or a version
-   * uid. Absent means the version its owner promoted (E1-19).
+   * uid. Absent means the version its owner promoted.
    */
   environmentVersion?: number | string;
   /** Type of runtime */
@@ -109,7 +109,7 @@ export function RuntimesMixin<TBase extends Constructor>(Base: TBase) {
      * Create a new computational runtime.
      *
      * Asked either with an options object — which is the only way to pin a
-     * version of a user environment (E1-19) — or with the positional arguments
+     * version of a user environment — or with the positional arguments
      * every caller used before there were versions.
      *
      * @param environmentNameOrOptions - The environment's name, or the options
@@ -155,7 +155,7 @@ export function RuntimesMixin<TBase extends Constructor>(Base: TBase) {
           /*
            * What a second costs is READ FROM THE LISTING, never written here:
            * a platform entry carries its pool's rate, a user environment the
-           * rate of the size class its promoted version names (D-4, E1-19). A
+           * rate of the size class its promoted version names. A
            * class nothing prices is refused rather than reserved at zero,
            * which would ask for a runtime the platform will not start.
            */
@@ -175,7 +175,7 @@ export function RuntimesMixin<TBase extends Constructor>(Base: TBase) {
               name: environmentName,
               // Additive: without it this is the request runtimes have always
               // been created with, and the platform resolves the promoted
-              // version itself (E1-11).
+              // version itself.
               ...(environmentVersion !== undefined && environmentVersion !== ''
                 ? { version: environmentVersion }
                 : {}),
@@ -283,7 +283,7 @@ export function RuntimesMixin<TBase extends Constructor>(Base: TBase) {
     }
 
     /**
-     * Correct one of the caller's own memories in place (R-34): its
+     * Correct one of the caller's own memories in place: its
      * words become `text`, kept with who corrected it and when.
      */
     async correctRuntimeMemory(
@@ -322,7 +322,7 @@ export function RuntimesMixin<TBase extends Constructor>(Base: TBase) {
 
     /**
      * The caller's allowances to share what an application remembers of
-     * them with another (R-35), by `source` or by `reader`.
+     * them with another, by `source` or by `reader`.
      */
     async listRuntimeMemoryShares(filter: {
       source?: string;

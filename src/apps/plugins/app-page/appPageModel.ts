@@ -5,8 +5,7 @@
 
 /**
  * An application's page, as data: what it publishes to its surface by path,
- * what it takes from it, and what a button on it does (R-01, R-01b,
- * C-04).
+ * what it takes from it, and what a button on it does.
  *
  * A chat, a widget or a worker runs as its conversation. Its page is its
  * A2UI surface (`interface.surface`) drawn beside that conversation, fed from
@@ -17,12 +16,12 @@
  * answer stopped, the conversation started over. Nothing here is a server
  * API: what a button did besides its message — the block's action, the files
  * given, the settings — goes with the chat's own run to the application's
- * session (R-04, `forwardedProps.loop`), which puts a file where the
+ * session (`forwardedProps.loop`), which puts a file where the
  * application reads it; a setting also reaches a written application in the
  * words of its message.
  *
  * A decision is not here: its page is drawn by the Studio's run page, with
- * its own paths (`INTERFACE_PATHS`), until it moves onto the workspace (R-02).
+ * its own paths (`INTERFACE_PATHS`), until it moves onto the workspace.
  *
  * Pure: the plugin (`./index`) and its view (`./AppPage`) do the drawing.
  *
@@ -244,7 +243,7 @@ export const isAppPageKind = (kind: string): kind is AppPageKind =>
 export const inputPath = (id: string): string => `/inputs/${id}`;
 
 /**
- * The fields of an application's settings (C-16), by name, in the order its
+ * The fields of an application's settings, by name, in the order its
  * form says them; none when it has no settings.
  */
 export function settingFields(
@@ -295,7 +294,7 @@ export function appKindPaths(
     meaning: `The setting “${settingTitle(id, field)}”.`,
     words: settingTitle(id, field),
   }));
-  // A widget's page written in its code (P-05): its inputs taken, its
+  // A widget's page written in its code: its inputs taken, its
   // outputs published, and the action that runs it.
   const page = pageOf(app);
   if (!page) {
@@ -326,16 +325,16 @@ export function appKindPaths(
   };
 }
 
-/** The page its code writes (P-05): a widget's, or none. */
+/** The page its code writes: a widget's, or none. */
 export const pageOf = (
   app: Pick<AppSpec, 'kind' | 'interface'>,
 ): AppPageSpec | undefined =>
   app.kind === 'widget' ? app.interface.page : undefined;
 
-/** The path an output of its page is shown at (P-05). */
+/** The path an output of its page is shown at. */
 export const outputPath = (name: string): string => `/outputs/${name}`;
 
-/** The action that runs a widget's page written in its code (P-05). */
+/** The action that runs a widget's page written in its code. */
 export const PAGE_ACTION = 'page';
 
 const PAGE: AppPageAction = {
@@ -528,7 +527,7 @@ export type GivenFile = {
  * cannot go: what was given is not files as File upload gives them, or one
  * is larger than a session takes. What becomes of each — put in the
  * application's sandbox, or its text in the message — is the session's to
- * decide (R-04).
+ * decide.
  */
 export function givenFiles(
   files: unknown,
@@ -565,7 +564,7 @@ export function givenFiles(
 
 /**
  * The application's settings as the page holds them, as the session API
- * takes them, each as its field's type says (C-16): a number as a number, a
+ * takes them, each as its field's type says: a number as a number, a
  * boolean as on or off, a word as the option chosen — a ChoicePicker holds a
  * list of them — each setting the page has a value for. The runtime checks
  * them against the settings' form.
@@ -578,7 +577,7 @@ export function settingsOf(
 }
 
 /**
- * The inputs of a widget's page written in its code (P-05), as the page
+ * The inputs of a widget's page written in its code, as the page
  * holds them, typed as its form says, for the session's `page` action: the
  * runtime checks them against the same form.
  */
@@ -635,9 +634,9 @@ function formValuesOf(
  * What the page did besides its message, for the session API: the files
  * given with it, the settings it holds. Sent with the chat's own run (AG-UI's
  * `forwardedProps.loop`), so that what it answers streams in the
- * conversation (R-04). A block sends a message, never an action of its
+ * conversation. A block sends a message, never an action of its
  * own: an action of the application's code is pressed with the token its
- * session offered, up the ui socket (RU-5).
+ * session offered, up the ui socket.
  */
 export type AppPageLoop = {
   files?: GivenFile[];
@@ -664,7 +663,7 @@ export type AppPageOutcome =
     }
   | { stop: true }
   | { newChat: true }
-  /** A widget's page, to run on these inputs (P-05): no message is sent. */
+  /** A widget's page, to run on these inputs: no message is sent. */
   | { runPage: Record<string, unknown> }
   | { refused: string };
 
@@ -772,7 +771,7 @@ const button = (
 ];
 
 /**
- * The settings as one Form block (C-16): their form drawn with
+ * The settings as one Form block: their form drawn with
  * `@datalayer/primer-rjsf`, the values written at `/inputs` as they are
  * filled — no action, no button: they go with the next run.
  */
@@ -787,7 +786,7 @@ function settingsForm(app: Pick<AppSpec, 'kind' | 'interface'>): Component[] {
           id: 'settings',
           component: 'Form',
           schema: app.interface.settings,
-          // Drawn with the inputs its uiSchema names (P-20).
+          // Drawn with the inputs its uiSchema names.
           ...(app.interface.settingsUi ? { ui: app.interface.settingsUi } : {}),
           values: { path: '/inputs' },
         },
@@ -796,7 +795,7 @@ function settingsForm(app: Pick<AppSpec, 'kind' | 'interface'>): Component[] {
 }
 
 /**
- * A widget's page written in its code (P-05): one Form of its settings and
+ * A widget's page written in its code: one Form of its settings and
  * its inputs, written at `/inputs` as they are filled — the page runs its
  * code on them as they change — then each output, under its title, drawn
  * with its component from `/outputs/<name>`; a Run button when it is not
@@ -869,7 +868,7 @@ export function defaultAppSurface(
       break;
     case 'widget':
       if (pageOf(app)) {
-        // Its page is its code's (P-05): the inputs, and what it shows for them.
+        // Its page is its code's: the inputs, and what it shows for them.
         body.push(...inputs);
         break;
       }

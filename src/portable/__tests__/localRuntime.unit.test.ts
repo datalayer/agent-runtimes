@@ -4,8 +4,8 @@
  */
 
 /**
- * The local runtime and the harness on the machine (VSCODE VS-02, VS-03;
- * DESKTOP DK-05, DK-06, DK-25): where `loop` is looked for, the version
+ * The local runtime and the harness on the machine:
+ * where `loop` is looked for, the version
  * read, the refusals (absent, too old, unanswered) each naming the install
  * line in the host's words, the port parsed from `loop serve`'s lines, the
  * loopback origins a policy admits, the environment handed (the trimmed
@@ -255,7 +255,7 @@ describe('the environment handed', () => {
     expect(environment.DATALAYER_API_KEY).toBe('jwt');
     expect(environment.DATALAYER_IAM_URL).toBe('https://prod1.datalayer.run');
     expect(environment.AGENT_RUNTIMES_SESSIONS_PATH).toBe('/tmp/sessions');
-    // META_HARNESS decision K: signed in, the runtime would pick the record.
+    // Signed in, the runtime would pick the record.
     expect(environment.AGENT_RUNTIMES_SESSION_STORE).toBe('file');
   });
 });

@@ -38,7 +38,7 @@ agents:
 
 A *scene* — agents arranged with their roles, their shared context and
 their interactions, as Datalayer's Studio shows them — is a team and
-nothing else (A-04, agentspecs 0.0.60). What the team model says of a
+nothing else (agentspecs 0.0.60). What the team model says of a
 scene:
 
 - **One member is allowed; none is not.** An agent working alone with its
@@ -71,7 +71,7 @@ download writes), `odoo-accounting` is not.
 
 ## The transcript
 
-What happens in a scene, as lines, in the order it happened (A-06):
+What happens in a scene, as lines, in the order it happened:
 
 ```
 12:00:00  You → Sales: Give me the aged receivables as of today, by customer.
@@ -141,7 +141,7 @@ scripted scene gives the expected lines (`sceneTranscript.test.tsx`).
 
 ## Rehearsal
 
-A scene spec's `rehearsal` (agentspecs `scenes/`, A-14) says, per
+A scene spec's `rehearsal` (agentspecs `scenes/`) says, per
 beat, the shape the transcript must take — in the grammar above, `You →
 Sales`, `Sales → Accounting`, `Accounting → Odoo: odoo_accounting_*`,
 `Accounting: a table`, `Sales: words` — the words the answer must and must
@@ -157,7 +157,7 @@ plays each beat's cue through the scene and judges it:
   tool of its own that reads. The ask is an A2A request: to the member in
   this process (a session of its own) or, with `--cloud`, to the member served
   over A2A on a cloud runtime of its own — launched for its application, so
-  that the runtime is given the secrets its connections declare (R-19) — as
+  that the runtime is given the secrets its connections declare — as
   `serve_accounting.py` serves Accounting, or at an address it is already
   served at (`--address <member>=<url>`, or the variable the scene's
   `deployment.addresses` names: a deployment's stable address, a runtime kept
@@ -264,7 +264,7 @@ gateway with some of its toolsets, such as `odoo-accounting`, which keeps its
 ## Open to visitors
 
 A signed-out visitor holds no key of the owner's. An application served over
-A2A can also answer visitors, the way LOOP's visitors' runtime (R-30) answers
+A2A can also answer visitors, the way LOOP's visitors' runtime answers
 an `at:<slug>` address. Its owner says so when it is configured, as
 `agent-teams demo deploy` does:
 
@@ -325,18 +325,18 @@ live in the runtime's process: a restart starts them again. The visitor's
 own model calls (Sales, in the browser) are ai-inference's to limit: its
 anonymous rate and its ceiling for the day.
 
-## At a stable address: a deployment kept always on
+## At a stable address: an always-on deployment
 
 `loop apps run --cloud --a2a` serves an application from a runtime, at that
 runtime's address. When the runtime is launched again, the address changes,
-and every caller has to be told the new one. A **deployment** kept always on
+and every caller has to be told the new one. An always-on **deployment**
 answers over A2A at an address that names its slug, not a runtime:
 
 ```text
 https://r1.datalayer.run/api/ai-agents/v1/apps/deployments/at/<slug>/a2a/
 ```
 
-ai-agents keeps the deployment on a runtime of its own (R-33). Each
+ai-agents keeps the deployment on a runtime of its own. Each
 time it launches that runtime, it makes the deployment's agent there and
 then asks the runtime to serve it over A2A, with a card that names the
 stable address (`PUT /api/v1/apps/a2a`, below). What is asked at the stable
@@ -346,7 +346,7 @@ streamed answer (`SendStreamingMessage`, SSE) is relayed as it streams.
 Callers keep the same address when the runtime is replaced, when the
 deployment moves to another version, and after a restart.
 
-It keeps answering for as long as it is kept on. Its agent acts as the
+It keeps answering for as long as it is always on. Its agent acts as the
 deployment's principal, whose token lives an hour, and a caller over A2A —
 a visitor, a key granted to the route — is no one to renew it with. So
 ai-agents renews it: every half hour it asks the runtime for a new one with
@@ -373,7 +373,7 @@ it, `--version` picks the version and `--site` the site of its address (see
 
 | Field | What it is |
 | --- | --- |
-| `a2a` | Served over A2A at its stable address. Only a hosted deployment kept always on (`always_on`, with a spend limit). |
+| `a2a` | Served over A2A at its stable address. Only a hosted always-on deployment (`always_on`, with a spend limit). |
 | `a2a_visitors` | Open there to visitors without an account too, as `--visitors` opens a runtime (above). Only with `a2a`, and only when anyone with the link may open it (`visibility` `link` or `public`). Making it private while visitors are let in is refused. |
 
 A change of either is sent to the runtime already running.
@@ -386,7 +386,7 @@ it is open to visitors. The stable address adds no access of its own.
 
 **When nothing answers**, the address says why: `404` when it is not served
 over A2A (*… its owner has not turned it on.*) or no deployment has that
-slug; `503` when it is paused, no longer kept always on, or its computer is
+slug; `503` when it is paused, no longer always on, or its computer is
 starting or waiting (the keeper's reason, such as its limit for the day);
 `502` when its runtime did not answer.
 
@@ -396,7 +396,7 @@ the deployment) over A2A. Its card names `url`. `DELETE /api/v1/apps/a2a`
 stops serving it. Both need a person's token or the machine itself. An agent
 that is not on the runtime gets 404, and one that is not an application's
 agent gets 409, and a `url` that is not http(s) 422
-(`test_apps_serve_kept_over_a2a`).
+(`test_apps_serve_always_on_over_a2a`).
 
 ## Output formats
 
@@ -492,7 +492,7 @@ const notebookArea = useRef<HTMLDivElement>(null);
 
 ### Components in answers
 
-The other format is components of the catalog (H-02):
+The other format is components of the catalog:
 `application/json+a2ui`, A2UI's media type. The scenes' members on a runtime
 name it after Markdown and the notebook (agentspecs 0.0.64):
 
@@ -608,7 +608,7 @@ the peer calls), then `answered` (with what it gave besides words) or
 ## The team as a graph
 
 `components/teams` draws a team and runs it in a page — a team of two, or a
-team of N (A-08). It is not in the components barrel, because it brings
+team of N. It is not in the components barrel, because it brings
 React Flow:
 
 ```tsx
@@ -885,7 +885,7 @@ asked, said and did), *Stop the turn*, *About*, and *Send away*.
 
 `ScenesExample` (the Apps group) puts the catalogue's scenes in tabs
 (`listSceneSpecs`), each its face and its name. The tab chosen is drawn from
-its scene spec (`sceneStageOf`, A-15): its `assumes` line under the
+its scene spec (`sceneStageOf`): its `assumes` line under the
 tabs; its graph and its transcript behind *Graph · Transcript*
 (`SceneView`); its members standing where its stage directions put them
 (`positions`), the balloon of `opens_first` open; the script's cues as the

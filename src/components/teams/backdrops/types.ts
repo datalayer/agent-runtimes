@@ -76,7 +76,7 @@ export type A2ATeamGraphMember = {
   /** The MCP servers it reaches, drawn to its right (`teamConnectionsOf`). */
   connections?: A2ATeamConnection[];
   /**
-   * How its balloon shows what it says (T-23): only what it says or
+   * How its balloon shows what it says: only what it says or
    * does now (`current`, a team's default) — the words, the tool it calls,
    * a notebook it was given — or a peek (`history`).
    */
@@ -146,6 +146,8 @@ export type MemberData = {
   side: 'left' | 'right';
   /** Its figure's size, in pixels at full scale. */
   size: number;
+  /** Its balloon's width, fixed (`BALLOON_WIDTH` unless given). */
+  balloonWidth?: number;
 };
 
 /** What a connection's node is given. */
@@ -162,7 +164,7 @@ export type LinkData = {
   connected: boolean;
   /** What it says: `A2A`, and the flow's words while it carries a message. */
   label: string;
-  /** The exchange selected in the transcript is on it: drawn with a halo (S3-02). */
+  /** The exchange selected in the transcript is on it: drawn with a halo. */
   selected: boolean;
   /** The colour of the member it reaches, as the theme draws it; the backdrop's own, unsaid. */
   color?: string;
@@ -176,7 +178,7 @@ export type CallData = {
   calling: string;
   /** What it says: `MCP`, and what it carries while it carries something. */
   label: string;
-  /** The call selected in the transcript is on it: drawn with a halo (S3-02). */
+  /** The call selected in the transcript is on it: drawn with a halo. */
   selected: boolean;
   /** The colour of the member that calls, as the theme draws it; the backdrop's own, unsaid. */
   color?: string;

@@ -25,17 +25,24 @@ from personal_agent_protocol import (
     ApprovalRequest,
     SqlitePairwiseUserIdStore,
 )
+from personal_agent_protocol.company import build_company, company_app
 from personal_agent_protocol.demo.kit import (
     AgentIdentity,
+    ClockPlugin,
     InProcessNetwork,
     MutableClock,
     PersonalAgentHost,
     personal_agent_reactor,
 )
-from personal_agent_protocol.demo.manzanita import CONFIG, manzanita
+from personal_agent_protocol.demo.manzanita import CONFIG, ManzanitaPlugin, manzanita
 from reactor import PluginManifest
 
-from agent_runtimes.pap import PapCapabilityError, PapPersonalAgentCapability
+from agent_runtimes.pap import (
+    PapCapabilityError,
+    PapPersonalAgentCapability,
+    company_domain,
+)
+from agent_runtimes.protocols.pap import pap_protocol_version
 
 DOMAIN = "manzanita.example"
 
@@ -85,7 +92,7 @@ def _capability(
     network = InProcessNetwork()
     atlas = AgentIdentity(domain="atlas.example", name="Atlas")
     network.add(atlas.domain, atlas.website())
-    shop, _ = manzanita(network, clock, config=config)
+    shop, _ = manzanita(network, clock, config=CONFIG if config is None else config)
     host = PersonalAgentHost(atlas, clock)
     http = network.client()
     reactor = personal_agent_reactor(
@@ -214,6 +221,104 @@ async def test_other_terms_come_back_to_the_person(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
+async def test_a_declined_approval_says_so_and_is_not_sent_again(
+    tmp_path: Path,
+) -> None:
+    """A company may decline an approval that passes its checks (Operations 6): nothing is
+    done, the person is told why in the company's words, and the approval is gone."""
+    from personal_agent_protocol.company import Decline
+
+    surface = Surface(True)
+    config = replace(
+        CONFIG, decline=lambda request: Decline(reason="Not from this account.")
+    )
+    capability, operation, shop, _ = await _journey(surface, tmp_path, config)
+    declined = await capability.confirm(
+        DOMAIN, operation.operation_ref, operation.revision, user_id="ada"
+    )
+    assert declined.status == "declined"
+    assert declined.result == "Not from this account."
+    assert declined.operation.operation_ref == operation.operation_ref
+    record = await shop.operation_record(operation.operation_ref)
+    assert (record.status, record.approval) == ("open", None)
+    # The same approval is never sent again: the operation is no longer held.
+    with pytest.raises(PapCapabilityError) as raised:
+        await capability.confirm(
+            DOMAIN, operation.operation_ref, operation.revision, user_id="ada"
+        )
+    assert raised.value.code == "unknown_operation"
+    assert len(surface.asked) == 1
+
+
+@pytest.mark.asyncio
+async def test_the_approval_says_the_person_approved(tmp_path: Path) -> None:
+    """Every approval names its approver (Operations 6): the person, asked on the host's
+    own surface."""
+    surface = Surface(True)
+    capability, operation, shop, _ = await _journey(surface, tmp_path)
+    confirmed = await capability.confirm(
+        DOMAIN, operation.operation_ref, operation.revision, user_id="ada"
+    )
+    assert confirmed.status == "confirmed"
+    record = await shop.operation_record(operation.operation_ref)
+    assert record.approval is not None and record.approval["approver"] == "user"
+
+
+@pytest.mark.asyncio
+async def test_a_standing_permission_approves_as_the_agent(tmp_path: Path) -> None:
+    """A standing permission the person gave, with terms its check covers, approves
+    without asking: `approver: agent`, with a new random `reference` (Operations 5)."""
+    from personal_agent_protocol import AgentInstruction
+
+    surface = Surface(True)
+    capability, operation, shop, _ = await _journey(surface, tmp_path)
+    instruction = AgentInstruction(
+        text="Go ahead with any exchange at Manzanita.", covers=lambda revision: True
+    )
+    confirmed = await capability.confirm(
+        DOMAIN,
+        operation.operation_ref,
+        operation.revision,
+        user_id="ada",
+        instruction=instruction,
+    )
+    assert confirmed.status == "confirmed"
+    assert confirmed.approver == "agent"
+    assert confirmed.reference and confirmed.reference.startswith("apr_")
+    assert surface.asked == []
+    record = await shop.operation_record(operation.operation_ref)
+    assert record.approval is not None
+    assert record.approval["approver"] == "agent"
+    assert record.approval["reference"] == confirmed.reference
+
+
+@pytest.mark.asyncio
+async def test_a_permission_that_does_not_cover_the_terms_asks_the_person(
+    tmp_path: Path,
+) -> None:
+    """Any doubt goes to the person: a check that says anything but `True` asks, and the
+    approval is the person's, with its own `reference`."""
+    from personal_agent_protocol import AgentInstruction
+
+    surface = Surface(True)
+    capability, operation, shop, _ = await _journey(surface, tmp_path)
+    instruction = AgentInstruction(
+        text="Only exchanges under 1 EUR.", covers=lambda revision: None
+    )
+    confirmed = await capability.confirm(
+        DOMAIN,
+        operation.operation_ref,
+        operation.revision,
+        user_id="ada",
+        instruction=instruction,
+    )
+    assert confirmed.status == "confirmed"
+    assert confirmed.approver == "user"
+    assert confirmed.reference and confirmed.reference.startswith("apr_")
+    assert len(surface.asked) == 1
+
+
+@pytest.mark.asyncio
 async def test_an_expired_revision_is_not_asked(tmp_path: Path) -> None:
     surface = Surface(True)
     capability, operation, _, _ = await _journey(surface, tmp_path)
@@ -280,7 +385,7 @@ async def test_scopes_beyond_the_offer_are_not_asked(tmp_path: Path) -> None:
     network = InProcessNetwork()
     atlas = AgentIdentity(domain="atlas.example", name="Atlas")
     network.add(atlas.domain, atlas.website())
-    manzanita(network, clock)
+    manzanita(network, clock, config=CONFIG)
     http = network.client()
     reactor = personal_agent_reactor(
         PersonalAgentHost(atlas, clock),
@@ -379,3 +484,94 @@ async def test_what_it_says_is_sent_as_the_agents_words(
         for reply in answer.replies
     ]
     assert replies and {reply.author for reply in replies} == {"agent"}
+
+
+@pytest.mark.asyncio
+async def test_it_speaks_the_newest_version_alone(tmp_path: Path) -> None:
+    """The 1.0 draft, the newest the SDK has: its Session says it; a company on 0.4 alone is
+    refused at discovery, naming the version spoken, and nothing is sent."""
+    assert pap_protocol_version() == "1.0"
+    capability, _, _ = _capability(None, tmp_path)
+    summary = await capability.discover_company(DOMAIN)
+    assert summary.protocol_version == "1.0"
+    assert summary.label == f"Manzanita Outfitters ({DOMAIN})"
+    answer = await capability.ask(DOMAIN, "Do you sell jackets?", user_id="ada")
+    assert answer.company == summary.label
+    session = capability._links[("ada", DOMAIN)].session
+    assert session is not None and session.protocol_version == "1.0"
+
+    older, _, _ = _capability(
+        None, tmp_path / "older", replace(CONFIG, protocol_versions=("0.4",))
+    )
+    with pytest.raises(PapCapabilityError) as refused:
+        await older.discover_company(DOMAIN)
+    assert refused.value.code == "unsupported_protocol_version"
+    assert "PAP 1.0" in str(refused.value)
+
+
+def test_a_datalayer_agent_is_discovered_at_its_agent_host(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A name is the agent's host under the configured domain; its HTTPS origin is that
+    host; any other domain is itself."""
+    monkeypatch.delenv("DATALAYER_COMPANY_HOSTS_DOMAIN", raising=False)
+    assert company_domain("shop") == "shop.agent.datalayer.ai"
+    assert (
+        company_domain("https://shop.agent.datalayer.ai/") == "shop.agent.datalayer.ai"
+    )
+    assert company_domain("Manzanita.Example.") == DOMAIN
+    monkeypatch.setenv("DATALAYER_COMPANY_HOSTS_DOMAIN", "example.test")
+    assert (
+        company_domain("marketer-01hxk3v9q8m2c4r7t5w6y8z0ab")
+        == "marketer-01hxk3v9q8m2c4r7t5w6y8z0ab.agent.example.test"
+    )
+    for refused in (
+        "http://shop.agent.datalayer.ai",
+        "https://shop.agent.datalayer.ai/poppy",
+        "https://shop.agent.datalayer.ai/?q=1",
+        "not_a_label",
+        "",
+    ):
+        with pytest.raises(ValueError):
+            company_domain(refused)
+
+
+@pytest.mark.asyncio
+async def test_a_company_named_by_its_agent_name_is_one_company(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``shop``, its address and its host reach the same company, with one Session."""
+    monkeypatch.delenv("DATALAYER_COMPANY_HOSTS_DOMAIN", raising=False)
+    host = "shop.agent.datalayer.ai"
+    clock = MutableClock()
+    network = InProcessNetwork()
+    atlas = AgentIdentity(domain="atlas.example", name="Atlas")
+    network.add(atlas.domain, atlas.website())
+    shop = build_company(
+        replace(CONFIG, domain=host),
+        http_client=network.client(),
+        address_resolver=network.resolve,
+        plugins=[
+            (PluginManifest(name="manzanita", version="1"), ManzanitaPlugin()),
+            (PluginManifest(name="clock", version="1"), ClockPlugin(clock)),
+        ],
+    )
+    network.add(host, company_app(shop))
+    http = network.client()
+    reactor = personal_agent_reactor(
+        PersonalAgentHost(atlas, clock),
+        network=network,
+        http_client=http,
+        plugins=_host_plugins(tmp_path),
+    )
+    capability = PapPersonalAgentCapability(
+        reactor=reactor, http_client=http, client_id=atlas.client_id, tenant_id="t1"
+    )
+    summary = await capability.discover_company("shop")
+    assert summary.domain == host and summary.protocol_version == "1.0"
+    await capability.ask("shop", "Do you sell jackets?", user_id="ada")
+    await capability.ask(f"https://{host}", "And gloves?", user_id="ada")
+    assert list(capability._links) == [("ada", host)]
+    assert capability.session_of("shop", user_id="ada") == capability.session_of(
+        host, user_id="ada"
+    )

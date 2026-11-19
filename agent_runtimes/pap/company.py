@@ -34,6 +34,7 @@ import secrets
 import time
 import uuid
 from collections.abc import Awaitable, Callable, Iterable, Sequence
+from datetime import timedelta
 from typing import Any
 
 import httpx
@@ -41,9 +42,12 @@ from personal_agent_protocol.company import (
     CLIENT_POLICIES,
     COMPANY_ACCOUNTS,
     COMPANY_AGENTS,
+    COMPANY_APIS,
     OPERATION_EXECUTORS,
     AccountDirectory,
     ActionResult,
+    ApiCall,
+    ApiResult,
     CompanyConfig,
     CompanyService,
     OperationFailed,
@@ -59,10 +63,14 @@ from personal_agent_protocol.reactor import resolve_addresses
 from reactor import PluginManifest
 
 from agent_runtimes.apps.pap_company import PAP_META_KEY, summary_of
-from agent_runtimes.protocols.pap import OPERATION_TICKETS
+from agent_runtimes.protocols.pap import OPERATION_TICKETS, pap_protocol_version
 
 #: How long a perform turn's ticket can be redeemed.
 TICKET_LIFETIME_SECONDS = 300.0
+
+#: How long another MCP client stays signed in once a person allowed it: its refresh
+#: tokens rotate at every use, and after this long the person allows it again.
+MCP_CLIENT_SIGN_IN_LIFETIME = timedelta(days=30)
 
 
 def a2a_parts(result: Any) -> list[dict[str, Any]]:
@@ -166,7 +174,9 @@ def _scope_hints(company: Any) -> dict[str, tuple[str, bool]]:
 
 
 def _excluded_tasks(company: Any) -> tuple[dict[str, Any], ...]:
-    """The tasks it does not offer through the protocol, as ``excluded-tasks.json`` lists them."""
+    """The tasks it does not offer through the protocol, as the tasks response lists them
+    for each Session (PAP 1.0 §9).
+    """
     return tuple(
         task.model_dump(mode="json", exclude_none=True, exclude_defaults=True)
         for task in company.excluded_tasks
@@ -303,7 +313,7 @@ class ApplicationOperationExecutor:
             {
                 "action": self.action,
                 "tool": self.tool,
-                "terms": dict(operation.terms or {}),
+                "terms": dict(operation.terms),
             }
         )
         try:
@@ -332,16 +342,158 @@ class ApplicationOperationExecutor:
         return ActionResult(summary=said or "Done.")
 
 
-class RegisteredAgents:
-    """``pap.company.clientPolicy``: only the personal agents the Appspec registers."""
+class OpenApiOperationExecutor:
+    """``pap.company.operationExecutor`` for an action of the Appspec's ``openapi``: once
+    the person approved its exact terms, the operation is answered by the application's
+    agent through the call contract (``agent_runtimes.addresses.call_operation``), the
+    terms its inputs — the same answer its MCP and API servers give.
 
-    def __init__(self, client_ids: Iterable[str]) -> None:
+    Its answer is the result's ``data`` (under ``result`` when it is not an object);
+    inputs that are not the operation's fail with nothing changed; anything else leaves
+    the operation in progress rather than claim it either way.
+    """
+
+    def __init__(self, declared: Any, operation_id: str, operations: Any) -> None:
+        """Perform ``operation_id`` of ``operations`` (an ``AddressedAgent``) for ``declared``."""
+        self.action = str(declared.action)
+        self.operation_id = operation_id
+        self.operations = operations
+
+    async def perform(
+        self, operation: Operation, account_id: str | None
+    ) -> ActionResult:
+        """Answer the operation with its approved terms."""
+        from agent_runtimes.addresses.access import Caller
+        from agent_runtimes.addresses.operations import OperationError
+
+        caller = Caller(kind="token", uid=account_id or "")
+        try:
+            answer = await self.operations.call(
+                self.operation_id,
+                dict(operation.terms),
+                interface="agent",
+                caller=caller,
+            )
+        except OperationError as error:
+            if error.status == 400:
+                raise OperationFailed(
+                    ActionResult(summary=f"Nothing was done: {error.detail}")
+                ) from error
+            raise OperationOutcomeUnknown(error.detail) from error
+        data = answer if isinstance(answer, dict) else {"result": answer}
+        return ActionResult(summary=f"{self.action}: done.", data=data)
+
+
+class ApprovedOperationsApi:
+    """``pap.company.api`` for the operations of the Appspec's ``openapi`` a person
+    approves (those carrying ``x-pap``): what its API address hands the SDK when a
+    personal agent calls one in its Session (``addresses.api``).
+
+    It performs nothing. A call is answered with the operation to approve — its
+    ``x-pap`` action, the request's inputs as its terms, the Maker's summary — and the
+    SDK does the rest as the Operations extension says: ``403 approval_required``
+    with the operation, the approval verified on the same request sent again, the
+    action performed once through its executor (:class:`OpenApiOperationExecutor`),
+    and a repeat answered with what it came to. Every other operation of the
+    ``openapi`` is the API address's own to answer, and is not found here.
+    """
+
+    description = "The operations a person approves"
+
+    def __init__(self, operations: Any) -> None:
+        """Answer for the ``x-pap`` operations of ``operations`` (an ``AddressedAgent``)."""
+        self.operations = operations
+
+    def openapi(self) -> dict[str, Any]:
+        """The application's own document, as its API address publishes it."""
+        return dict(self.operations.published_document())
+
+    def _found(self, call: ApiCall) -> tuple[Any, dict[str, Any]] | None:
+        """The ``x-pap`` operation at the call's method and path, and its path values."""
+        import re
+
+        for found in getattr(self.operations, "operations", ()) or ():
+            if not found.pap or found.method.upper() != call.method.upper():
+                continue
+            pattern = "".join(
+                f"(?P<{part[1:-1]}>[^/]+)"
+                if part.startswith("{") and part.endswith("}")
+                else re.escape(part)
+                for part in re.split(r"(\{[^/{}]+\})", found.path)
+            )
+            matched = re.fullmatch(pattern, call.path)
+            if matched is not None:
+                return found, matched.groupdict()
+        return None
+
+    async def handle(self, call: ApiCall) -> ApiResult:
+        """The operation to approve for ``call``; never its effect."""
+        from agent_runtimes.addresses.api import coerced
+        from agent_runtimes.addresses.operations import input_problems
+
+        found = self._found(call)
+        if found is None:
+            return ApiResult.not_found()
+        operation, in_path = found
+        # Who may call, as the deployment says now: never a copy kept from before.
+        policy = await self.operations.access.current_policy()
+        if not policy.admits(call.account_id or ""):
+            # Who may call a private company is its owner's to say, here as at every address.
+            return ApiResult(403, {"error": "access_denied"})
+        scope = str(operation.pap.get("scope") or "")
+        if scope and (call.account_id is None or scope not in call.scopes):
+            return ApiResult.insufficient_scope(scope)
+        inputs: dict[str, Any] = dict(call.body) if isinstance(call.body, dict) else {}
+        properties = operation.input_schema.get("properties") or {}
+        for name, location in operation.parameters:
+            value = in_path.get(name) if location == "path" else call.query.get(name)
+            if value is not None:
+                inputs[name] = coerced(str(value), properties.get(name) or {})
+        problems = input_problems(operation, inputs)
+        if problems:
+            # Nothing is proposed that could not be performed as asked.
+            return ApiResult(400, {"error": "invalid_request", "errors": problems})
+        template = str(operation.pap.get("summary") or operation.summary or "")
+        return ApiResult(
+            operation=ProposedOperation(
+                action=str(operation.pap.get("action") or operation.operation_id),
+                terms=inputs,
+                summary=summary_of(template, inputs) if template else None,
+                scopes=(scope,) if scope else (),
+            )
+        )
+
+
+def openapi_operation_of(operations: Any, action: str) -> str | None:
+    """The ``operationId`` whose ``x-pap`` says ``action``, or ``None``."""
+    for found in getattr(operations, "operations", ()) or ():
+        if str((found.pap or {}).get("action") or "") == action:
+            return str(found.operation_id)
+    return None
+
+
+class RegisteredAgents:
+    """``pap.company.clientPolicy``: only the personal agents the Appspec registers.
+
+    ``public_clients``: whether the company lets other MCP clients sign in. They are
+    no personal agents and are on no list: the policy answers for them apart
+    (``allows_public``), all of them or none.
+    """
+
+    def __init__(
+        self, client_ids: Iterable[str], *, public_clients: bool = False
+    ) -> None:
         """Accept the given client ids."""
         self.client_ids = frozenset(client_ids)
+        self.public_clients = public_clients
 
     async def allows(self, client_id: str) -> bool:
         """Tell whether ``client_id`` is registered."""
         return client_id in self.client_ids
+
+    async def allows_public(self, client_id: str) -> bool:
+        """Tell whether a client that is no personal agent may sign in at all."""
+        return self.public_clients
 
 
 class _CompanyPlugin:
@@ -368,14 +520,40 @@ class _CompanyPlugin:
         ):
             contribute(
                 CLIENT_POLICIES,
-                RegisteredAgents(company.registered_agents),
+                RegisteredAgents(
+                    company.registered_agents,
+                    public_clients=capability.config.public_clients,
+                ),
                 contribution_id="registered",
                 order=10,
             )
+        if capability.rate_limit is not None:
+            from personal_agent_protocol.company import COMPANY_RATE_LIMITS
+
+            contribute(
+                COMPANY_RATE_LIMITS, capability.rate_limit, contribution_id="host"
+            )
+        if capability.operations is not None and any(
+            found.pap for found in getattr(capability.operations, "operations", ())
+        ):
+            # Its API address hands the calls of what a person approves to the SDK
+            # (``addresses.api``): proposed here, approved and performed there.
+            contribute(
+                COMPANY_APIS,
+                ApprovedOperationsApi(capability.operations),
+                contribution_id="approved-operations",
+            )
         for declared in company.operations:
+            operation_id = (
+                openapi_operation_of(capability.operations, str(declared.action))
+                if capability.operations is not None
+                else None
+            )
             contribute(
                 OPERATION_EXECUTORS,
-                ApplicationOperationExecutor(
+                OpenApiOperationExecutor(declared, operation_id, capability.operations)
+                if operation_id
+                else ApplicationOperationExecutor(
                     declared, capability.application, capability.tickets
                 ),
                 contribution_id=f"operation-{declared.action}",
@@ -394,6 +572,94 @@ class _TicketsPlugin:
         contributions.contribute(
             OPERATION_TICKETS, self.tickets, contribution_id="local-company", order=50
         )
+
+
+def agent_description(name: str, description: str = "") -> str:
+    """What an agent can help with, as its ``poppy.json`` says it (PAP 1.0 §3.1)."""
+    said = description.strip()
+    return said or f"Anything about {name}"
+
+
+def company_config(
+    name: str,
+    domain: str,
+    company: Any,
+    *,
+    device_page: str | None = None,
+    web: bool = False,
+    description: str = "",
+    resource_servers: Sequence[str] = (),
+    mcp_clients: bool = False,
+    consent_page: str | None = None,
+) -> CompanyConfig:
+    """What a company publishes at ``domain``, from its Appspec's ``pap.company``:
+    what :class:`PapCompanyCapability` serves and the ``poppy.json`` of an agent
+    that is a company (``agent_runtimes.addresses.poppy``).
+
+    ``description``: what its agent can help with, the Appspec's ``description``
+    (PAP 1.0 §3.1, §8.1: each ``agent.protocols`` entry says it); an application
+    that says nothing is said to help with anything about it.
+
+    ``resource_servers``: its services at URLs of their own that take its access
+    tokens — its MCP server, at its MCP address (PAP 1.0 §4.5, §7): its issuer lists
+    each in ``protected_resources`` and issues tokens for it.
+
+    ``mcp_clients``: its owner lets other MCP clients sign in ("Let other MCP clients
+    sign in", a private deployment's switch). Clients that are no personal agents (the
+    SDK's public clients) then sign in with MCP's own OAuth flow, an authorization
+    code with PKCE, after the person allowed them on ``consent_page`` (Datalayer's,
+    with ``{request_id}``): by their client ID metadata document, or registered at
+    ``/oauth/register``. They get tokens for ``resource_servers`` alone, with the
+    company's own scopes, for 30 days, and nothing of the protocol: no Session, no
+    default token. Off, nothing of this is offered.
+    """
+    if mcp_clients and not (consent_page and resource_servers):
+        raise ValueError(
+            "Other MCP clients sign in on a consent page, for its MCP address: "
+            "give both, or leave them out"
+        )
+    if not company.enabled:
+        raise ValueError("The Appspec does not enable pap.company")
+    if not company.scopes:
+        raise ValueError(
+            "A company offers at least one scope of its own: the Appspec's pap.company.scopes is empty"
+        )
+    scopes = _scopes(company)
+    return CompanyConfig(
+        name=name,
+        domain=domain,
+        agent_description=agent_description(name, description),
+        # The one PAP version a runtime speaks (the newest its SDK implements): poppy.json
+        # is its document and nothing else is served; a request in another is refused.
+        protocol_versions=(pap_protocol_version(),),
+        scopes=scopes,
+        # What each allows, published as auth.scopes, and the Maker's hints (§4.4).
+        scope_descriptions={
+            str(scope.name): str(scope.description) for scope in company.scopes
+        },
+        scope_hints=_scope_hints(company),
+        excluded_tasks=_excluded_tasks(company),
+        write_scopes=tuple(scope for scope in scopes if scope.endswith(":write")),
+        device=True,
+        # Direct Sign-In's authorization endpoint is what other MCP clients sign in at.
+        direct=mcp_clients,
+        public_clients=mcp_clients,
+        client_registration=mcp_clients,
+        # The company's own scopes, never `poppy:browser-sign-in` (a personal agent's).
+        public_client_scopes=scopes if mcp_clients else None,
+        public_client_refresh_lifetime=MCP_CLIENT_SIGN_IN_LIFETIME,
+        consent_page=consent_page if mcp_clients else None,
+        # `auth.disabled` (PAP 0.3 as published §3.2): it offers personal agents no sign-in.
+        sign_in_disabled=bool(company.sign_in_disabled),
+        # Its website (§6): a browser joins the person's Session there when it offers `web`.
+        web=web,
+        web_unscoped=bool(company.web_unscoped) and web,
+        # `web.disabled` (PAP draft 0.4 §6): agents are asked to use its agent and APIs.
+        web_disabled=bool(company.web_disabled),
+        operations="operations" in company.extensions,
+        device_page=device_page,
+        resource_servers=tuple(resource_servers),
+    )
 
 
 class PapCompanyCapability:
@@ -417,45 +683,53 @@ class PapCompanyCapability:
         device_page: str | None = None,
         plugins: Iterable[tuple[PluginManifest, object]] = (),
         address_resolver: Any = resolve_addresses,
+        hosted: bool = False,
+        operations: Any = None,
+        description: str = "",
+        resource_servers: Sequence[str] = (),
+        mcp_clients: bool = False,
+        consent_page: str | None = None,
+        rate_limit: Any = None,
     ) -> None:
-        """Configure the company's name, domain and application."""
-        if not company.enabled:
-            raise ValueError("The Appspec does not enable pap.company")
+        """Configure the company's name, domain and application.
+
+        ``mcp_clients``, ``consent_page``: other MCP clients sign in
+        (:func:`company_config`). ``rate_limit``: the host's ``pap.company.rateLimit``,
+        which the SDK asks before it registers a client or reads one's document.
+
+        ``resource_servers``: its services at URLs of their own (its MCP server at
+        its MCP address), which its issuer lists and issues tokens for (§4.5, §7).
+
+        ``hosted``: the company at its agent's address (``{name}.agent.<domain>``),
+        whose MCP, API and web servers answer beside it: every interface the
+        Appspec lists is offered, its website among them.
+
+        ``operations``: the agent at its addresses (``AddressedAgent``), whose
+        ``openapi`` operations perform the PAP operations they carry (``x-pap``)
+        through the call contract (:class:`OpenApiOperationExecutor`).
+        """
         interfaces = {str(getattr(i, "value", i)) for i in company.interfaces}
-        if interfaces != {"agent"}:
+        if not hosted and interfaces != {"agent"}:
             raise ValueError(
                 "A local company offers the agent interface only (its A2A route); "
                 f"the Appspec asks for {', '.join(sorted(interfaces))}"
             )
-        if not company.scopes:
-            raise ValueError(
-                "A company offers at least one scope of its own: the Appspec's pap.company.scopes is empty"
-            )
         self.company = company
         self.application = application
         self.accounts = accounts
+        self.operations = operations
+        self.rate_limit = rate_limit
         self.tickets = MemoryOperationTickets()
-        scopes = _scopes(company)
-        self.config = CompanyConfig(
-            name=name,
-            domain=domain,
-            scopes=scopes,
-            # What each allows, published as auth.scopes, and the Maker's hints (§4.4).
-            scope_descriptions={
-                str(scope.name): str(scope.description) for scope in company.scopes
-            },
-            scope_hints=_scope_hints(company),
-            excluded_tasks=_excluded_tasks(company),
-            write_scopes=tuple(scope for scope in scopes if scope.endswith(":write")),
-            device=True,
-            direct=False,
-            # `auth.disabled` (PAP 0.3 as published §3.2, D4-08): it offers personal agents no sign-in.
-            sign_in_disabled=bool(company.sign_in_disabled),
-            # `web.disabled` (PAP draft 0.4 §6, D5-09): agents are asked to use its agent and APIs. It serves
-            # no website, so `web.unscoped` says nothing here.
-            web_disabled=bool(company.web_disabled),
-            operations="operations" in company.extensions,
+        self.config = company_config(
+            name,
+            domain,
+            company,
             device_page=device_page,
+            web=hosted and "web" in interfaces,
+            description=description,
+            resource_servers=resource_servers,
+            mcp_clients=mcp_clients,
+            consent_page=consent_page,
         )
         self.service: CompanyService = build_company(
             self.config,
@@ -473,6 +747,66 @@ class PapCompanyCapability:
     def asgi(self) -> Any:
         """The company's ASGI application, answering at ``https://<domain>``."""
         return company_app(self.service)
+
+    async def api_call(
+        self,
+        method: str,
+        url: str,
+        path: str,
+        headers: Any,
+        body: bytes,
+        client_address: str | None = None,
+    ) -> Any:
+        """Answer a personal agent's call of the company's API made at an address of
+        the API's own (``{name}.api.<domain>``), as the SDK answers one at its issuer.
+
+        The SDK serves a company's API under its issuer (``/api/…``) and has no public
+        entry for one served elsewhere, while a Session JWT is signed for the request's
+        own method and URL (PAP §5.3). So the request is handed over as it came, its
+        ``url`` the one the agent called, to the SDK's own handler of an API call
+        (``CompanyService._api_call``: the Session, the access token, the approval, the
+        idempotency key), and its refusals are answered as its dispatcher answers them.
+        These are the SDK's internals, held to its ``0.37`` line by the dependency's
+        bounds and by the test that drives a personal agent through an approval.
+
+        Returns
+        -------
+        CompanyResponse
+            The SDK's answer: a status, a JSON body and its headers.
+        """
+        from personal_agent_protocol.company import CompanyRequest
+        from personal_agent_protocol.company import service as sdk
+        from pydantic import ValidationError
+
+        service = self.service
+        request = CompanyRequest(
+            method=method,
+            url=url,
+            headers=headers,
+            body=body,
+            client_address=client_address,
+        )
+        try:
+            return await service._api_call(request, method.upper(), f"/api{path}")
+        except sdk._RateLimitedError as limited:
+            return service._rate_limited(limited.retry_after)
+        except sdk._RefusedError as refused:
+            return sdk._json_error(
+                refused.status,
+                refused.error,
+                refused.headers,
+                schemes=service.config.token_schemes,
+                **refused.extra,
+            )
+        except (sdk.SessionError, sdk.ProofError) as error:
+            if error.code in {"invalid_session", "session_ended"}:
+                return sdk._json_error(400, error.code)
+            return sdk._json_error(
+                error.status_code or (401 if error.code == "invalid_client" else 400),
+                error.code,
+            )
+        except (sdk.ProtocolValidationError, ValidationError):
+            return sdk._json_error(400, "invalid_request")
 
     def runtime_plugin(self) -> tuple[PluginManifest, object]:
         """For the runtime's platform: its perform turns redeem this company's tickets."""
@@ -494,10 +828,14 @@ __all__ = [
     "A2AApplication",
     "ApplicationCompanyAgent",
     "ApplicationOperationExecutor",
+    "ApprovedOperationsApi",
     "MemoryOperationTickets",
+    "OpenApiOperationExecutor",
     "PapCompanyCapability",
     "RegisteredAgents",
     "a2a_data",
     "a2a_parts",
     "a2a_texts",
+    "agent_description",
+    "company_config",
 ]

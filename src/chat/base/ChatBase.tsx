@@ -38,7 +38,8 @@ import {
 } from '@datalayer/reactor/ui';
 import { UiSocket } from '@datalayer/reactor/ui/ws';
 import { SkeletonText } from '@primer/react/experimental';
-import { SidebarExpandIcon } from '@primer/octicons-react';
+import { GrabberIcon, SidebarExpandIcon } from '@primer/octicons-react';
+import { useViewportDrag } from '../useViewportDrag';
 import type { KernelMessage } from '@jupyterlab/services';
 import type { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
 import type { INotebookContent } from '@jupyterlab/nbformat';
@@ -61,7 +62,15 @@ import { useConversationStore } from '../../stores/conversationStore';
 import type { ChatMessage } from '../../types/messages';
 import { askedOf } from '../../portable/records';
 import { extractChatMessagesFromFullContext } from './fullContextMessages';
-import { generateMessageId, createUserMessage } from '../../types/messages';
+import {
+  ToolCardSendContext,
+  type ToolCardSend,
+} from '../../apps/toolCards/kit';
+import {
+  generateMessageId,
+  generateSessionUid,
+  createUserMessage,
+} from '../../types/messages';
 import type { ProtocolConfig, ProtocolEvent } from '../../types/protocol';
 import type { BaseProtocolAdapter } from '../../protocols';
 import type {
@@ -87,6 +96,7 @@ import type {
   ToolStreamEvent,
 } from '../../types/tools';
 import { ToolEventTurns } from '../../tools/toolEventTurns';
+import { runPageTool } from './pageTool';
 import {
   internalQueryClient,
   isToolCallMessage,
@@ -193,7 +203,7 @@ const EphemeralDocument = React.lazy(() =>
 // The agent's details (its context charts draw with ECharts) and the
 // companion notebook (JupyterLab's notebook) are opened by a click, not drawn
 // with the conversation: each is its own chunk, fetched when first shown, so
-// a chat — and an embedded application (D-08) — loads without them.
+// a chat — and an embedded application — loads without them.
 // A chunk that cannot load says so where the view would be.
 const loadAgentDetails = () =>
   import('../../agents/AgentDetails').then(m => ({ default: m.AgentDetails }));
@@ -378,7 +388,7 @@ function ThemedChatBoundary({
     ...(resolvedMode === 'dark'
       ? themeConfig.themeStyles.dark
       : themeConfig.themeStyles.light),
-    // What the host lays over the theme: an application's accent (T-05).
+    // What the host lays over the theme: an application's accent.
     ...themeOverrides?.[resolvedMode],
   };
   const themeBackground =
@@ -797,6 +807,7 @@ function ChatBaseInner({
   className,
   loadingState,
   headerActions,
+  headerItems,
   kernelIndicatorState,
   kernelIndicatorPlacement = 'left',
   kernelIndicatorPosition = 's',
@@ -831,6 +842,7 @@ function ChatBaseInner({
   renderMessageFooter,
   notebookToolSurfacesId,
   footerContent,
+  toolbarExtras,
   welcome,
   trailingContent,
   voice,
@@ -842,6 +854,7 @@ function ChatBaseInner({
   showInformation = false,
   onInformationClick,
   headerContent,
+  headerLeading,
   children,
   borderRadius,
   backgroundColor,
@@ -1116,6 +1129,33 @@ function ChatBaseInner({
   // The two smaller floating modes share the compact card over a surface.
   const compactFloating =
     chatViewMode === 'floating-small' || chatViewMode === 'floating-draggable';
+  // "Floating draggable" over a surface: the card moves about the viewport by
+  // its handle, at the size it had when taken (the user, 14 November 2026: the
+  // handle had gone from the agent page's floating chat).
+  const draggableFloating =
+    surfaceChatFloating && chatViewMode === 'floating-draggable';
+  const floatingChatRef = useRef<HTMLDivElement>(null);
+  const floatingDrag = useViewportDrag(floatingChatRef);
+  const resetFloatingDrag = floatingDrag.reset;
+  const floatingSize = useRef<{ width: number; height: number } | null>(null);
+  const onFloatingHandlePointerDown = useCallback(
+    (event: React.PointerEvent<HTMLElement>) => {
+      const box = floatingChatRef.current;
+      if (box) {
+        floatingSize.current = {
+          width: box.offsetWidth,
+          height: box.offsetHeight,
+        };
+      }
+      floatingDrag.onHandlePointerDown(event);
+    },
+    [floatingDrag],
+  );
+  useEffect(() => {
+    if (!draggableFloating) {
+      resetFloatingDrag();
+    }
+  }, [draggableFloating, resetFloatingDrag]);
 
   // Notebook frontend tools are always created (hooks must be unconditional)
   // but only merged into the tools sent to the agent while the notebook is
@@ -1559,6 +1599,12 @@ function ChatBaseInner({
     if (!aiAgentsAuthToken) {
       return;
     }
+    // A deployment's runtime and the visitors' answer only the application's
+    // own routes (OwnRoutesOnly): their token — a visitor's, an embed's — is
+    // not one ai-agents takes, and the socket was refused (403).
+    if (protocolConfig?.ownRoutesOnly) {
+      return;
+    }
 
     const wsUrl = toWsUrl(
       aiAgentsBaseUrl,
@@ -1720,6 +1766,7 @@ function ChatBaseInner({
     pendingApprovalsProp,
     aiAgentsBaseUrl,
     aiAgentsAuthToken,
+    protocolConfig?.ownRoutesOnly,
     activeAgentId,
     isSuppressedPending,
     reconcileResolvedApprovalInStore,
@@ -1743,7 +1790,7 @@ function ChatBaseInner({
 
   // ---- Component state ----
   /*
-   * The conversation (M-030): `reduceConversation`'s, as on the phone,
+   * The conversation: `reduceConversation`'s, as on the phone,
    * whatever protocol the agent speaks — its adapter's events normalised by
    * `conversationEventsOf`. Kept in a ref as each change lands, so the events
    * of one network chunk each read the last, and drawn on the next render
@@ -1753,7 +1800,7 @@ function ChatBaseInner({
     emptyConversation(BROWSER_LIMITS),
   );
   const conversationRef = useRef(conversation);
-  // The grants the turn's tools wait for (ID-10), until it ends.
+  // The grants the turn's tools wait for, until it ends.
   const [identityAuthorizations, setIdentityAuthorizations] = useState<
     IdentityAuthorization[]
   >([]);
@@ -1868,8 +1915,8 @@ function ChatBaseInner({
      it is a detour from the conversation, not a place the chat lives. */
   const [showDetails, setShowDetails] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  // Streaming tools' events as turns the model did not ask for (AGENT_BATTLE
-  // B1-00): sent at once when the model is idle, held while a turn is in
+  // Streaming tools' events as turns the model did not ask for:
+  // sent at once when the model is idle, held while a turn is in
   // flight and sent as one turn — the latest per source — when it ends.
   const loadingRef = useRef(false);
   const sendRef = useRef<(text: string) => void>(() => undefined);
@@ -1921,7 +1968,7 @@ function ChatBaseInner({
   const [historyRefreshTick, setHistoryRefreshTick] = useState(0);
   const historyRetryAttemptsRef = useRef<Map<string, number>>(new Map());
   // The steps of an application's code shown so far, as displays (patched
-  // as they stream), and the elements it showed (RU-3).
+  // as they stream), and the elements it showed.
   const uiStepsRef = useRef<UiModel>(emptyUiModel());
   const uiElementsRef = useRef<Set<string>>(new Set());
   // Adapter-ready flag — flipped to true once the protocol adapter is initialised
@@ -2364,9 +2411,10 @@ function ChatBaseInner({
   const suppressAssistantTextForToolOnlyRef = useRef(false);
   const hideMessagesAfterToolUIRef = useRef(hideMessagesAfterToolUI);
   hideMessagesAfterToolUIRef.current = hideMessagesAfterToolUI;
-  const threadIdRef = useRef<string>(thread?.id || generateMessageId());
+  // A thread is its session: named by a session uid, never a message id.
+  const threadIdRef = useRef<string>(thread?.id || generateSessionUid());
   /*
-   * The thread a host gave, kept as it was given at mount (D-13), and
+   * The thread a host gave, kept as it was given at mount, and
    * told when a message is first sent on a thread: the host keeps it.
    */
   const threadGivenRef = useRef(thread);
@@ -2397,7 +2445,7 @@ function ChatBaseInner({
   const uiSocketTokenRef = useRef(protocol?.authToken);
   uiSocketTokenRef.current = protocol?.authToken;
   /*
-   * Its files (RU-6): uploaded to its runtime before the run or
+   * Its files: uploaded to its runtime before the run or
    * the press that names them, the conversation's thread their scope; the
    * run carries the ref, never the bytes.
    */
@@ -2497,10 +2545,10 @@ function ChatBaseInner({
       uiStepsRef.current = next.steps;
       const routed = next.routed;
       if (routed.to === 'window') {
-        // For the page it sits in, outside the conversation (P-25).
+        // For the page it sits in, outside the conversation.
         tellLoopWindow(routed.data);
       } else if (routed.to === 'step') {
-        // A step of its code, drawn as it runs (P-16).
+        // A step of its code, drawn as it runs.
         const step = routed.step;
         changeLayer(kept => {
           const anchors = new Map(
@@ -2522,7 +2570,7 @@ function ChatBaseInner({
           };
         });
       } else if (routed.to === 'element') {
-        // In a side panel or on a page of its own (P-18).
+        // In a side panel or on a page of its own.
         uiElementsRef.current.add(routed.change.id);
         applyLoopElement(routed.change);
       } else if (!placeable(messageStubs(), routed.op)) {
@@ -2652,7 +2700,7 @@ function ChatBaseInner({
     recorderRef.current = null;
   }
   const inspectAnswerRef = useRef('');
-  // A line the agent says aloud, from a run's `voice.say` (VO-35).
+  // A line the agent says aloud, from a run's `voice.say`.
   const voiceSayRef = useRef<((activity: VoiceActivity) => void) | undefined>(
     undefined,
   );
@@ -3341,7 +3389,7 @@ function ChatBaseInner({
     if (!historyScopeId) return;
 
     /*
-     * A thread the host gave (D-13): its session's conversation, drawn
+     * A thread the host gave: its session's conversation, drawn
      * once, and never replaced by the runtime's snapshot, which is its
      * agent's — every session's — not this one's.
      */
@@ -3640,7 +3688,12 @@ function ChatBaseInner({
 
     unsubscribeRef.current = adapter.subscribe((event: ProtocolEvent) => {
       // The run's session is there once it answers: its ui socket opens.
-      ensureUiSocketRef.current();
+      // Not on the adapter's own connection events: it says `connected` as
+      // it is made, before any run, and the runtime then refused the socket
+      // ("No session … is held here", 14 November 2026).
+      if (event.type !== 'connected' && event.type !== 'disconnected') {
+        ensureUiSocketRef.current();
+      }
       /*
        * Nothing more from a turn the reader has stopped.
        *
@@ -3892,7 +3945,7 @@ function ChatBaseInner({
             }
           }
           read();
-          // A running row said again with its display (VS-24): the host
+          // A running row said again with its display: the host
           // drawing it elsewhere follows it as it streams.
           if (
             event.activity?.type === HARNESS_TOOL_CALL &&
@@ -4024,32 +4077,40 @@ function ChatBaseInner({
         return;
       }
       try {
-        const result = await toolHandler(toolCallMsg.args);
-        if (adapterRef.current) {
-          await adapterRef.current.sendToolResult(toolCallId, {
-            toolCallId,
-            success: true,
-            result,
-          });
+        // Always answered: what it returned, or why it failed — a call left
+        // without a result stopped the run, and the runtime could not count
+        // the failure (it ends a turn whose page tool failed twice).
+        const answered = await runPageTool(
+          toolCallMsg.toolName,
+          toolHandler,
+          toolCallMsg.args,
+          toolCallId,
+        );
+        if (!answered.success) {
+          console.error(
+            '[ChatBase] Frontend tool execution error:',
+            answered.error,
+          );
         }
-        recorderRef.current?.recorder.toolEnded(toolCallId, { result });
+        if (adapterRef.current) {
+          await adapterRef.current.sendToolResult(toolCallId, answered);
+        }
+        recorderRef.current?.recorder.toolEnded(
+          toolCallId,
+          answered.success
+            ? { result: answered.result }
+            : { error: answered.error },
+        );
         reduce({
           type: 'TOOL_CALL_DONE',
           toolCallId,
-          success: true,
-          result,
+          success: answered.success,
+          ...(answered.success
+            ? { result: answered.result }
+            : { error: answered.error }),
         });
       } catch (err) {
-        console.error('[ChatBase] Frontend tool execution error:', err);
-        recorderRef.current?.recorder.toolEnded(toolCallId, {
-          error: (err as Error).message,
-        });
-        reduce({
-          type: 'TOOL_CALL_DONE',
-          toolCallId,
-          success: false,
-          error: (err as Error).message,
-        });
+        console.error('[ChatBase] Frontend tool result not sent:', err);
       } finally {
         pendingToolExecutionsRef.current--;
         if (pendingToolExecutionsRef.current < 0) {
@@ -4082,16 +4143,16 @@ function ChatBaseInner({
   // Voice (V1): what was said and put in the composer, until sent.
   const spokenRef = useRef<SpokenMetadata | undefined>(undefined);
   // Its voice with what it leaves unsaid filled in: Datalayer's models and packages.
-  // The person's own settings, followed as the voice menu changes them (VO-30).
+  // The person's own settings, followed as the voice menu changes them.
   const [personVoice] = useVoiceSettings();
   const settled = useMemo(
     () => (voice ? settledVoice(voice, personVoice) : undefined),
     [voice, personVoice],
   );
-  // The words in the box are still being heard: greyed until final (VO-11).
+  // The words in the box are still being heard: greyed until final.
   const [voiceInterim, setVoiceInterim] = useState(false);
   /*
-   * Its answers heard (VO-20, VO-21), by Datalayer's speech service: the
+   * Its answers heard, by Datalayer's speech service: the
    * host's speaker when it gives one (`ChatFloating`, whose assistant's mouth
    * moves with it), else the chat's own — a chat given a `voice` speaks
    * wherever it is drawn.
@@ -4105,18 +4166,18 @@ function ChatBaseInner({
     ownVoice.speaker,
   );
   const speakingNow = voiceSpeaking || ownVoice.state.speaking;
-  // The sentence being said, marked in the conversation (VO-65).
+  // The sentence being said, marked in the conversation.
   const sentenceSaid = hostSpeaks ? voiceSentence : ownVoice.state.sentence;
   const saidConversationRef = useRef<HTMLDivElement>(null);
   useSaidSentence(saidConversationRef, sentenceSaid, displayItems);
   /*
-   * A line the agent wants heard, not written (VO-35): a caption while the
+   * A line the agent wants heard, not written: a caption while the
    * run goes on, said by the speaker where answers are said by themselves.
    */
   const [voiceSaid, setVoiceSaid] = useState('');
   voiceSayRef.current = activity => {
     if (isVoiceInterrupted(activity)) {
-      // Spoken over, the runtime says (VO-46): its voice stops.
+      // Spoken over, the runtime says: its voice stops.
       if (onStopSpeaking) {
         onStopSpeaking();
       } else if (ownVoice.speaker) {
@@ -4142,7 +4203,7 @@ function ChatBaseInner({
       setVoiceSaid('');
     }
   }, [isLoading]);
-  // Answers spoken over, hands-free (VO-13): marked *interrupted*.
+  // Answers spoken over, hands-free: marked *interrupted*.
   const [interruptedIds, setInterruptedIds] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
@@ -4160,7 +4221,7 @@ function ChatBaseInner({
   }, []);
   const stopSpeaking =
     onStopSpeaking ?? (ownVoice.speaker ? ownVoice.stop : undefined);
-  // How loud the answer plays: the host's speaker's, or the chat's own (VO-13).
+  // How loud the answer plays: the host's speaker's, or the chat's own.
   const playbackLevel = hostSpeaks ? voiceLevel : ownVoice.level;
   const readAnswerAloud =
     onReadAloud ?? (ownVoice.speaker ? ownVoice.read : undefined);
@@ -4168,15 +4229,15 @@ function ChatBaseInner({
     async (
       messageOverride?: string,
       // AG-UI's: what goes with the run besides the conversation — an
-      // application's page says there what it did (R-04).
+      // application's page says there what it did.
       forwardedPropsGiven?: Record<string, unknown>,
-      // How the message was heard, when it was said (VO-27).
+      // How the message was heard, when it was said.
       spokenGiven?: SpokenMetadata,
     ) => {
       const messageContent = (messageOverride ?? input).trim();
       if (!messageContent || isLoading) return;
       if (!adapterRef.current && !onSendMessage) return;
-      // Its files are uploaded first: the run names their refs (RU-6).
+      // Its files are uploaded first: the run names their refs.
       if (forwardedPropsGiven && namesFiles(forwardedPropsGiven)) {
         try {
           forwardedPropsGiven = await withUploadedFiles(
@@ -4237,8 +4298,8 @@ function ChatBaseInner({
         ? { ...(forwardedPropsGiven ?? {}), voice: spoken }
         : forwardedPropsGiven;
 
-      // The message says how it was heard; its sound, sent to be kept
-      // (VO-63), rides on the run only, never on the conversation.
+      // The message says how it was heard; its sound, sent to be kept,
+      // rides on the run only, never on the conversation.
       let heardAs: SpokenMetadata | undefined;
       if (spoken) {
         const { sound: _sound, ...rest } = spoken;
@@ -4341,7 +4402,7 @@ function ChatBaseInner({
           const enabledMcpToolNames = getEnabledMcpToolNames();
           const enabledSkillIds = getEnabledSkillIds();
 
-          // The thread is opened by this run: its host keeps it (D-13).
+          // The thread is opened by this run: its host keeps it.
           noteThreadStarted();
           await adapterRef.current.sendMessage(userMessage, {
             threadId: threadIdRef.current,
@@ -4441,7 +4502,7 @@ function ChatBaseInner({
   ]);
 
   // ---- handleStop ----
-  // Spoken over (VO-46, VO-13), an application's session is told so and
+  // Spoken over, an application's session is told so and
   // stays open; Stop leaves it to be resumed.
   const stopTurn = useCallback(
     (spokenOver: boolean) => {
@@ -4524,8 +4585,8 @@ function ChatBaseInner({
   const handleSpokenOver = useCallback(() => stopTurn(true), [stopTurn]);
 
   /*
-   * How a message's display presses what it offered (RU-4,
-   * RU-W): with the token of the offer, as the run's press — which
+   * How a message's display presses what it offered
+   * (RU-W): with the token of the offer, as the run's press — which
    * `handleSend` sends up the ui socket before the run, the run naming it
    * only. An answer is the person's words in the conversation; any other
    * press, the action's name.
@@ -4561,12 +4622,22 @@ function ChatBaseInner({
     [handleSend],
   );
 
+  // What an agent's own UI plugin's card sends as the person's next turn
+  // (*Choose this trip*, *Approve these matches*): `apps/toolCards`.
+  const sendFromCard = useCallback<ToolCardSend>(
+    message => {
+      void handleSend(message);
+      return true;
+    },
+    [handleSend],
+  );
+
   // ---- handleNewChat ----
   const handleNewChat = useCallback(() => {
     resetConversation();
     pendingToolExecutionsRef.current = 0;
     setInput('');
-    threadIdRef.current = generateMessageId();
+    threadIdRef.current = generateSessionUid();
     if (useStoreMode) clearStoreMessages();
     if (historyScopeId)
       useConversationStore.getState().clearMessages(historyScopeId);
@@ -4598,13 +4669,13 @@ function ChatBaseInner({
       // live outside this component — the LOOP prompt's + reaches it here.
       newChat: handleNewChat,
       thread: () => threadIdRef.current,
-      // Its speaker, for a host whose composer holds the microphone (VO-10).
+      // Its speaker, for a host whose composer holds the microphone.
       stopSpeaking,
-      // How loud it plays, for a host's hands-free barge-in (VO-13).
+      // How loud it plays, for a host's hands-free barge-in.
       voiceLevel: playbackLevel,
-      // The answer spoken over, marked for a host's own composer (VO-13).
+      // The answer spoken over, marked for a host's own composer.
       markInterrupted,
-      // Spoken over: the run ends, the application's session stays open (VO-46).
+      // Spoken over: the run ends, the application's session stays open.
       interrupt: handleSpokenOver,
     });
     return () => {
@@ -4628,7 +4699,7 @@ function ChatBaseInner({
     onLoadingChange?.(isLoading);
   }, [onLoadingChange, isLoading]);
 
-  // Whether its voice speaks, for a host that draws the composer (VO-10).
+  // Whether its voice speaks, for a host that draws the composer.
   useEffect(() => {
     onSpeakingChange?.(speakingNow);
   }, [onSpeakingChange, speakingNow]);
@@ -5082,7 +5153,7 @@ function ChatBaseInner({
   shownItemsRef.current = welcomedItems;
   const saidId = saidMessageId(welcomedItems, sentenceSaid);
   /*
-   * *Read aloud* under each answer the agent has finished (VO-21),
+   * *Read aloud* under each answer the agent has finished,
    * when the host reads answers aloud on request.
    */
   const writingId =
@@ -5147,48 +5218,50 @@ function ChatBaseInner({
       mx="auto"
       bg="canvas.default"
     >
-      <ChatMessageList
-        displayItems={welcomedItems}
-        actOn={protocol?.uiSocket ? actOnDisplay : undefined}
-        upload={protocol?.uiFiles ? uploadToConversation : undefined}
-        isLoading={isLoading}
-        isStreaming={isStreaming}
-        showLoadingIndicator={showLoadingIndicator}
-        hideMessagesAfterToolUI={hideMessagesAfterToolUI}
-        avatarConfig={defaultAvatarConfig}
-        padding={padding}
-        // Tool calls are drawn by the page's Reactor plugins; a named
-        // notebook's cell surfaces stand in for the default row of its tools,
-        // so every chat with a headless notebook gets the same transcript.
-        notebookToolSurfacesId={notebookToolSurfacesId}
-        approvalConfig={approvalConfig}
-        messagesEndRef={messagesEndRef as React.RefObject<HTMLDivElement>}
-        onRespond={handleRespond}
-        showTurnFooters={showTurnFooter}
-        renderMessageFooter={readAloudFooter}
-        saidMessageId={saidId}
-        agentUsage={agentUsage}
-        onRemoveItems={handleRemoveItems}
-        mcpServers={filteredMcpServers}
-        emptyContent={
-          launching ? null : (
-            <ChatEmptyState
-              emptyState={emptyState}
-              brandIcon={brandIcon}
-              description={resolvedDescription}
-              suggestions={resolvedSuggestions}
-              submitOnSuggestionClick={submitOnSuggestionClick}
-              onSuggestionSubmit={handleSuggestionSubmit}
-              onSuggestionFill={handleSuggestionFill}
-            />
-          )
-        }
-      />
+      <ToolCardSendContext.Provider value={sendFromCard}>
+        <ChatMessageList
+          displayItems={welcomedItems}
+          actOn={protocol?.uiSocket ? actOnDisplay : undefined}
+          upload={protocol?.uiFiles ? uploadToConversation : undefined}
+          isLoading={isLoading}
+          isStreaming={isStreaming}
+          showLoadingIndicator={showLoadingIndicator}
+          hideMessagesAfterToolUI={hideMessagesAfterToolUI}
+          avatarConfig={defaultAvatarConfig}
+          padding={padding}
+          // Tool calls are drawn by the page's Reactor plugins; a named
+          // notebook's cell surfaces stand in for the default row of its tools,
+          // so every chat with a headless notebook gets the same transcript.
+          notebookToolSurfacesId={notebookToolSurfacesId}
+          approvalConfig={approvalConfig}
+          messagesEndRef={messagesEndRef as React.RefObject<HTMLDivElement>}
+          onRespond={handleRespond}
+          showTurnFooters={showTurnFooter}
+          renderMessageFooter={readAloudFooter}
+          saidMessageId={saidId}
+          agentUsage={agentUsage}
+          onRemoveItems={handleRemoveItems}
+          mcpServers={filteredMcpServers}
+          emptyContent={
+            launching ? null : (
+              <ChatEmptyState
+                emptyState={emptyState}
+                brandIcon={brandIcon}
+                description={resolvedDescription}
+                suggestions={resolvedSuggestions}
+                submitOnSuggestionClick={submitOnSuggestionClick}
+                onSuggestionSubmit={handleSuggestionSubmit}
+                onSuggestionFill={handleSuggestionFill}
+              />
+            )
+          }
+        />
+      </ToolCardSendContext.Provider>
       {trailingContent}
     </Box>
   );
 
-  // The microphone, in the composer's footer (VO-10, VO-11).
+  // The microphone, in the composer's footer.
   const voiceControl =
     settled && settled.input !== 'off' ? (
       <ComposerVoice
@@ -5198,18 +5271,18 @@ function ChatBaseInner({
         disabled={disabled || launching}
         speaking={speakingNow}
         onStopSpeaking={stopSpeaking}
-        // Barge-in gated on how loud the answer plays (VO-13): the host's
+        // Barge-in gated on how loud the answer plays: the host's
         // speaker, or the chat's own.
         playbackLevel={playbackLevel}
-        // Hands-free (VO-12, VO-13): the run in progress, stopped when the
+        // Hands-free: the run in progress, stopped when the
         // person speaks over it, and the answer marked interrupted.
         running={isLoading}
-        // Spoken over, the application's session stays open (VO-46).
+        // Spoken over, the application's session stays open.
         onStopRun={handleSpokenOver}
         onInterrupted={markInterrupted}
         onInterimChange={setVoiceInterim}
         // The menu offers when answers are heard where the application
-        // lets them be (VO-21, VO-30).
+        // lets them be.
         answers={Boolean(
           voice?.output && voice.output !== 'off' && voice.speechUrl,
         )}
@@ -5231,7 +5304,7 @@ function ChatBaseInner({
       </Text>
     ) : null;
 
-  // The line said aloud, written as it is said: captions always (VO-65).
+  // The line said aloud, written as it is said: captions always.
   const voiceSayCaption = voiceSaid ? (
     <Text
       aria-live="polite"
@@ -5254,8 +5327,9 @@ function ChatBaseInner({
   const inputToolbar = showInput ? (
     <InputPrompt
       footerExtras={
-        voiceRefused || voiceSayCaption ? (
+        voiceRefused || voiceSayCaption || toolbarExtras ? (
           <>
+            {toolbarExtras}
             {voiceSayCaption}
             {voiceRefused}
             {voiceControl}
@@ -5366,7 +5440,9 @@ function ChatBaseInner({
     disableReason: disabled ? disableReason : undefined,
     brandIcon,
     headerContent,
+    headerLeading,
     headerActions,
+    headerItems,
     showInformation,
     /*
       A default, so the button does something.
@@ -5506,7 +5582,7 @@ function ChatBaseInner({
           />
         )}
 
-      {/* A third party's grant a tool waits for (ID-10) */}
+      {/* A third party's grant a tool waits for */}
       <IdentityAuthorizationPanel
         authorizations={identityAuthorizations}
         agentName={title || activeAgentId}
@@ -5611,6 +5687,7 @@ function ChatBaseInner({
               depending on the selected chat view mode. */}
           {!surfaceCollapsed && (
             <Box
+              ref={floatingChatRef}
               sx={
                 surfaceChatFloating
                   ? {
@@ -5621,6 +5698,20 @@ function ChatBaseInner({
                       ...(compactFloating
                         ? { bottom: 16, height: '62%' }
                         : { top: 16, bottom: 16 }),
+                      // Where it was put down, in the viewport.
+                      ...(draggableFloating && floatingDrag.position
+                        ? {
+                            position: 'fixed',
+                            left: floatingDrag.position.left,
+                            top: floatingDrag.position.top,
+                            right: 'auto',
+                            bottom: 'auto',
+                            maxWidth: 'none',
+                            width: floatingSize.current?.width ?? 360,
+                            height: floatingSize.current?.height ?? '62vh',
+                            zIndex: 1000,
+                          }
+                        : {}),
                       display: 'flex',
                       flexDirection: 'column',
                       minHeight: 0,
@@ -5645,6 +5736,30 @@ function ChatBaseInner({
                     }
               }
             >
+              {/* The handle "Floating draggable" is moved by. */}
+              {draggableFloating && (
+                <Box
+                  onPointerDown={onFloatingHandlePointerDown}
+                  aria-label="Move the chat"
+                  data-chat-drag-handle=""
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                  flexShrink={0}
+                  height={18}
+                  sx={{
+                    cursor: 'grab',
+                    color: 'fg.subtle',
+                    bg: 'canvas.subtle',
+                    borderBottom: '1px solid',
+                    borderColor: 'border.muted',
+                    touchAction: 'none',
+                    '&:active': { cursor: 'grabbing' },
+                  }}
+                >
+                  <GrabberIcon size={16} />
+                </Box>
+              )}
               {/* Header lives inside the chat column when a companion surface
                   is shown so it follows the chat body across all view modes. */}
               {chatHeaderElement}

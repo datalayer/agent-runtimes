@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An application in the terminal: its code run here, its agent on the runtime (P-08).
+"""An application in the terminal: its code run here, its agent on the runtime.
 
 ``loop apps run`` serves an application on a runtime configured with its
 Appspec and talks to it over AG-UI in the terminal's renderer (`CliTux`).
@@ -93,10 +93,10 @@ class TerminalChannel:
     """The application's name: a message by anybody else says its author."""
     _streaming: Dict[str, bool] = field(default_factory=dict)
     _steps_streaming: Set[str] = field(default_factory=set)
-    """The steps whose output is being written, piece by piece (P-31)."""
+    """The steps whose output is being written, piece by piece."""
     _shown: Set[str] = field(default_factory=set)
     _elements: Dict[str, str] = field(default_factory=dict)
-    """The panels and pages open, by id: their titles (P-18)."""
+    """The panels and pages open, by id: their titles."""
 
     def _bullet(self, author: str) -> None:
         self.console.print("[green]●[/green] ", end="")
@@ -127,7 +127,7 @@ class TerminalChannel:
             self._name_components(event.components)
             self._shown.add(event.id)
         elif isinstance(event, Shown):
-            # A panel or a page the terminal cannot open: said, its parts named (P-18).
+            # A panel or a page the terminal cannot open: said, its parts named.
             where = "the side panel" if event.where == "panel" else "a page of its own"
             verb = "changed in" if event.id in self._elements else "shown in"
             self.console.print(
@@ -140,13 +140,13 @@ class TerminalChannel:
             if title:
                 self.console.print(f"[dim]▹ {title}, closed.[/dim]", highlight=False)
         elif isinstance(event, Said):
-            # A line said aloud (VO-46): captioned here.
+            # A line said aloud: captioned here.
             self.console.print("[dim]said aloud:[/dim] ", end="")
             self.console.print(event.text, markup=False, highlight=False)
         elif isinstance(event, Interrupted):
             self.console.print("[dim]▹ interrupted.[/dim]", highlight=False)
         elif isinstance(event, WindowMessage):
-            # A page the terminal does not have: what it would be told, said (P-25).
+            # A page the terminal does not have: what it would be told, said.
             self.console.print("[dim]⇢ to the page:[/dim] ", end="")
             self.console.print(
                 json.dumps(event.data, ensure_ascii=False),
@@ -154,7 +154,7 @@ class TerminalChannel:
                 highlight=False,
             )
         elif isinstance(event, PageShown):
-            # A page the terminal does not draw: its outputs, said (P-05).
+            # A page the terminal does not draw: its outputs, said.
             for name, value in event.outputs.items():
                 said = (
                     value
@@ -169,8 +169,8 @@ class TerminalChannel:
             if event.message_id in self._shown:
                 self.console.print("[dim]✗ a message was removed.[/dim]")
         elif isinstance(event, StepDelta):
-            # A step's output as it comes, under its line (P-31), any
-            # credential in a piece withheld (R-19).
+            # A step's output as it comes, under its line, any
+            # credential in a piece withheld.
             from agent_runtimes.guardrails.credentials import redact
 
             if event.step_id not in self._steps_streaming:
@@ -342,8 +342,8 @@ class AppTux(CliTux):
 
     async def handle_command(self, user_input: str) -> Optional[str]:
         """``/action <name> [json]`` presses one of the application's buttons,
-        ``/page [json]`` runs its page on the inputs given (P-05);
-        ``/<command> words`` runs one of its commands (P-19): the code
+        ``/page [json]`` runs its page on the inputs given;
+        ``/<command> words`` runs one of its commands: the code
         answers it when it has the command, else its prompt is sent.
         """
         called = command_called(self.application.spec, user_input)
@@ -356,7 +356,7 @@ class AppTux(CliTux):
             return command_prompt(command, words)
         name, _, rest = user_input.partition(" ")
         if name == "/page" and self.application.handler("page") is not None:
-            # Its page, run on the inputs given; the rest at their defaults (P-05).
+            # Its page, run on the inputs given; the rest at their defaults.
             try:
                 inputs = json.loads(rest) if rest.strip() else {}
             except json.JSONDecodeError as error:
@@ -394,7 +394,7 @@ class AppTux(CliTux):
 
     async def send_message(self, message: str) -> None:
         """The code's ``message`` answers, if it has one, or the agent of its
-        code (P-23); else the runtime's agent.
+        code; else the runtime's agent.
         """
         answers = (
             self.application.handler("message") is not None
@@ -410,14 +410,14 @@ class AppTux(CliTux):
         self.console.print()
 
     def hears_audio(self) -> bool:
-        """Whether its code hears the person's sound itself (``@app.audio``, VO-46)."""
+        """Whether its code hears the person's sound itself (``@app.audio``)."""
         return (
             self.application.handler("audio") is not None
             and self.app_session is not None
         )
 
     async def audio_turn(self, pcm16: bytes) -> None:
-        """What ``/voice`` heard, given to its code's ``@app.audio`` (VO-46):
+        """What ``/voice`` heard, given to its code's ``@app.audio``:
         heard where ``loop --voice`` hears — this machine, else Datalayer's
         speech service — and the turn run; what cannot be heard is said.
         """
@@ -450,7 +450,7 @@ class AppTux(CliTux):
         self.console.print()
 
     async def end_session(self) -> None:
-        """The person leaves: the conversation is closed, the code's ``end`` runs (P-14)."""
+        """The person leaves: the conversation is closed, the code's ``end`` runs."""
         if self.app_session is not None:
             session = self.app_session
             await self._turn(lambda: self.host.end(session))

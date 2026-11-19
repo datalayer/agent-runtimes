@@ -4,7 +4,7 @@
  */
 
 /**
- * Tool calls are drawn by the plugins that claim them (Reactor UI RU-1).
+ * Tool calls are drawn by the plugins that claim them.
  *
  * The chat kept one tool-result renderer and the later plugin won, so the
  * A2UI surface plugin had to draw the PAP sign-in card too, and a plugin that

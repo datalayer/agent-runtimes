@@ -4,7 +4,7 @@
  */
 
 /**
- * What a line's span says (SCENES S3-01): the words sent and the words
+ * What a line's span says: the words sent and the words
  * answered, a tool's name, arguments and result when the span recorded
  * them, when it started and ended, its status and an error's message, the
  * span and trace ids; for a coding harness's step, the Shield's decision on

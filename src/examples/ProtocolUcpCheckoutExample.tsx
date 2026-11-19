@@ -4,7 +4,7 @@
  */
 
 /**
- * A UCP checkout approved as a card (EX-10, after EX-04):
+ * A UCP checkout approved as a card:
  * the UCP client buys from *Example Store*, the local test merchant running
  * in the page. The exact purchase is proposed; completing it asks the
  * approver — the card below — once; approving buys once, and the same

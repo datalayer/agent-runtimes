@@ -5,7 +5,7 @@
 """
 Generate Python and TypeScript code from YAML scene specifications.
 
-A scene (agentspecs >= 0.0.61, A-11) stages a team: the team says who
+A scene (agentspecs >= 0.0.61) stages a team: the team says who
 is on stage, the scene says what happens there — the setting, the script,
 the stage directions, the audience, the rehearsal and where it plays. One
 YAML per scene under ``agentspecs/scenes``.
@@ -19,7 +19,7 @@ Empty optional lists are dropped, as ``generate_apps.py`` drops them.
 The scene spec's JSON Schema is written beside the TypeScript catalogue as
 ``sceneSchema.ts`` (``agentspecs.scenes.json_schema``), the way
 ``generate_apps.py`` writes ``appspecSchema.ts``: what an editor of the text
-completes and explains is what the spec accepts (S-01, A-03).
+completes and explains is what the spec accepts.
 
 A scene's recording — the transcript of a passing rehearsal, kept beside
 the specs as ``<id>/recording.json`` and named by ``rehearsal.recording`` —
@@ -94,7 +94,7 @@ def load_specs(specs_dir: Path) -> list[dict[str, Any]]:
     for identity in sorted(scenes):
         scene = scenes[identity]
         spec = scene.model_dump(mode="json", by_alias=True)
-        # A scripted scene stages no team (X-02): no entry, no cast.
+        # A scripted scene stages no team: no entry, no cast.
         scripted = spec.get("kind") == "scripted"
         spec["entry"] = "" if scripted else scene.entry_of()
         spec["cast"] = (
@@ -367,7 +367,7 @@ def generate_recordings_typescript_code(recordings: dict[str, dict[str, Any]]) -
 
 
 def generate_schema_typescript_code(specs_dir: Path) -> str:
-    """The scene spec's JSON Schema, for the editor of its text (S-01, A-03).
+    """The scene spec's JSON Schema, for the editor of its text.
 
     Taken from the agentspecs the catalogue is generated from, so that what
     the editor completes and explains is what the spec accepts. The

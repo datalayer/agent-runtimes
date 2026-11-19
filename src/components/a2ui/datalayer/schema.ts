@@ -4,8 +4,8 @@
  */
 
 /**
- * The A2UI schema of a component of Datalayer's own, read from the catalog
- * (C-13, C-18): each property its JSON Schema declares, typed as it
+ * The A2UI schema of a component of Datalayer's own, read from the catalog:
+ * each property its JSON Schema declares, typed as it
  * says; each thing it shows or sends a binding into the data model — a path
  * the application publishes, or a value given in place; its `action`, what
  * it dispatches when a person acts on it, written as A2UI writes a Button's.
@@ -109,7 +109,7 @@ export function ownComponentSchema(id: string) {
 /**
  * The A2UI schema of a component of Datalayer's own kind, from its entry in
  * the catalog — one of Datalayer's own, or one an application's developer
- * wrote (P-17), listed as the catalog lists a component.
+ * wrote, listed as the catalog lists a component.
  */
 export function componentSchemaOf(component: ComponentSpec) {
   const id = component.id;

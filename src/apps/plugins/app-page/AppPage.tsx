@@ -8,16 +8,16 @@
  * the workspace's own renderer (`InlineSurface`), fed by the chat's current
  * turn and its conversation, its buttons — and a Chat block's message, a File
  * upload's files — answered through the chat's controls, what the page did
- * going with the chat's run to the application's session (R-04).
+ * going with the chat's run to the application's session.
  *
  * It draws the blocks the workspace's plugins contribute to the Canvas's
- * palette (`loop.canvas.block`, R-01b) and nothing else, so that what the
+ * palette (`loop.canvas.block`) and nothing else, so that what the
  * Canvas can place and what the page can draw are one list: a page that
  * uses a block no enabled plugin contributes says so, in place of the page.
- * The components its developer wrote (P-17) are among them, contributed
+ * The components its developer wrote are among them, contributed
  * by its own plugin (`app-components`) with their renderers.
  *
- * A widget's page written in its code (P-05) runs in a session of its
+ * A widget's page written in its code runs in a session of its
  * own, beside the conversation: as an input changes, the page sends them all
  * to the session's `page` action and shows what its code answered at
  * `/outputs/<name>`, in place — no message is sent (`./pageRun`).
@@ -64,7 +64,7 @@ import {
   type PageRunContext,
 } from './pageRun';
 
-/** How long the page waits after an input changed before it runs (P-05). */
+/** How long the page waits after an input changed before it runs. */
 export const PAGE_RUN_DELAY_MS = 300;
 
 /** No chat in the workspace: the page reads a turn that never starts. */
@@ -122,7 +122,7 @@ export function AppPage({ app, workspace }: AppPageProps): JSX.Element {
   const blocks = useContributions(LoopCanvasBlock);
   const contributed = [...new Set(blocks.map(entry => entry.value.id))].sort();
   const drawnWith = contributed.join(',');
-  // The renderers of the components its developer wrote (P-17).
+  // The renderers of the components its developer wrote.
   const own = useOwnComponents();
   const drawing = useMemo(():
     { catalog: ReturnType<typeof catalogOfBlocks> } | { problem: string } => {
@@ -140,7 +140,7 @@ export function AppPage({ app, workspace }: AppPageProps): JSX.Element {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, drawnWith, own]);
   const [refusal, setRefusal] = useState<string | null>(null);
-  // A widget's page written in its code (P-05): its outputs, as last answered.
+  // A widget's page written in its code: its outputs, as last answered.
   const page = pageOf(app);
   const [outputs, setOutputs] = useState<Record<string, unknown>>({});
   const data = useMemo(
@@ -284,8 +284,8 @@ export function AppPage({ app, workspace }: AppPageProps): JSX.Element {
         controls.newChat?.();
       } else {
         // The chat's own send, with what the page did besides — the block's
-        // action, its files, the settings — for the application's session
-        // (R-04); the prompt channel when the chat has not reported itself
+        // action, its files, the settings — for the application's session;
+        // the prompt channel when the chat has not reported itself
         // yet, which carries words only.
         if (controls.send) {
           const refused = controls.send(outcome.send, { loop: outcome.loop });

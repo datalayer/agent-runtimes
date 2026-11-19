@@ -8,7 +8,7 @@ spec, or an ``app.py`` driven in-process — builds its agent's capabilities
 here and nowhere else (`app_capabilities`): its rules decide every tool call,
 its checks look at what the rules let through, its record keeps what
 happened, and its tools — documents, saving, learning — are the same on a
-cloud runtime as in a terminal (R-25).
+cloud runtime as in a terminal.
 
 `AppAgent` is what a session's code calls (``session.agent``): one agent, one
 conversation, its history kept from turn to turn.
@@ -54,7 +54,7 @@ AgentFactory = Callable[[AppSpec], Agent]
 
 def unattended_when_woken(rules: AppRulesCapability, recorder: AppRecorder) -> None:
     """A session nobody opened — woken by a schedule — has nobody present: it
-    only reads, unless a rule says otherwise (R-16).
+    only reads, unless a rule says otherwise.
 
     Said on the rules of every agent of an application: the one made in
     process (`app_capabilities`) and the one a runtime makes for it.
@@ -65,7 +65,7 @@ def unattended_when_woken(rules: AppRulesCapability, recorder: AppRecorder) -> N
 
 
 def signed_as_recorded(rules: AppRulesCapability, recorder: AppRecorder) -> None:
-    """What it sends through a connection is signed with its byline (I-10): the application, and the person it acts for in the current
+    """What it sends through a connection is signed with its byline: the application, and the person it acts for in the current
     session, by name — or *on its own* in a session nobody opened.
     """
     from agent_runtimes.apps.record import current_session
@@ -99,7 +99,7 @@ def app_capabilities(
     The one builder for every agent of an application: the one made in
     process (the terminal, a framework's), and the one a runtime's create
     route makes for a Preview or a deployment — so a cloud runtime's agent
-    has exactly what the terminal's has, saving included (R-24, R-25).
+    has exactly what the terminal's has, saving included.
 
     Parameters
     ----------
@@ -121,7 +121,7 @@ def app_capabilities(
         the application's own tools.
     organization : OrganizationFrames, optional
         The contexts of the organization it belongs to, which the Required
-        Frame Guard reads at a session's start (R-06); none known when unsaid.
+        Frame Guard reads at a session's start; none known when unsaid.
 
     Returns
     -------
@@ -130,13 +130,13 @@ def app_capabilities(
         checked, and a Guard reads what the rules decided — then its record,
         what was ``given``, the tool that searches its documents when it
         names some, the tool that saves a result when a Space is granted to
-        write, and what it learns when it is saved on Datalayer (R-26).
+        write, and what it learns when it is saved on Datalayer.
     """
     from agent_runtimes.apps.notifications import AppNotifier
 
     rules = rules_for(app, agent_id=agent_id, platform=platform)
     rules.record = recorder.decided
-    # What the person answered when asked is an entry of its own (R-07).
+    # What the person answered when asked is an entry of its own.
     rules.answered = recorder.answered
     rules.app_uid = recorder.app_uid
     unattended_when_woken(rules, recorder)
@@ -144,7 +144,7 @@ def app_capabilities(
     if ask_rule is not None:
         rules.ask = ask_rule
     # Who is asked before it acts is told through the channels it names,
-    # as its principal on a deployment (R-37).
+    # as its principal on a deployment.
     notifier = AppNotifier(
         app=app,
         recorder=recorder,
@@ -153,7 +153,7 @@ def app_capabilities(
     )
     rules.notify = notifier.approval_asked
     # *Do it if I asked* decided from what the person approved in advance,
-    # read from IAM as it acts (U-25); an application the platform does
+    # read from IAM as it acts; an application the platform does
     # not know has none.
     if recorder.app_uid:
         from agent_runtimes.apps.grants import StandingApprovals
@@ -184,7 +184,7 @@ def app_capabilities(
         record=recorder.checked,
         notify=notifier.approval_asked,
         answered=recorder.answered,
-        # What the Required Frame Guard reads at a session's start (R-06).
+        # What the Required Frame Guard reads at a session's start.
         organization=organization,
         subject=lambda: shield_authorizer.runtime_subject(
             credential(), recorder.deployment_uid
@@ -192,7 +192,7 @@ def app_capabilities(
         authorize=hook_for(authorizer) if authorizer is not None else None,
     )
     # The model budget and the spend limit of the policies in force, soft then
-    # hard, on every model request (SH-32): the organization's from
+    # hard, on every model request: the organization's from
     # IAM, the application's Rules, the session's; read at every request.
     from types import SimpleNamespace
 
@@ -208,7 +208,7 @@ def app_capabilities(
 
     # The deployment's spend limit, as ai-agents' keeper handed it in the
     # instance it launched the agent with: held for each session here, and
-    # said apart from the keeper's day (SH-32). Read at every request, as the
+    # said apart from the keeper's day. Read at every request, as the
     # instance is remembered once the agent is made.
     def spend_limit() -> float:
         return deployment_spend_limit(app_instance_of(agent_id))
@@ -220,7 +220,7 @@ def app_capabilities(
         said=lambda decision, context, tokens, cost: deployment_said(
             decision, context, tokens=tokens, cost=cost, spend_limit=spend_limit()
         ),
-        # A threshold crossed is a decision of the record (R-07), in the
+        # A threshold crossed is a decision of the record, in the
         # shape every other decision is written in.
         record=lambda said: recorder.decided(
             SimpleNamespace(
@@ -241,13 +241,13 @@ def app_capabilities(
         AppRecordCapability(recorder=recorder),
         *(given or []),
     ]
-    # Answers that may be heard are written for the ear too (VO-44).
+    # Answers that may be heard are written for the ear too.
     from agent_runtimes.voice import voice_capability
 
     voicing = voice_capability(app)
     if voicing is not None:
         capabilities.append(voicing)
-    # What it knows: the tool that searches its documents (R-29). Run
+    # What it knows: the tool that searches its documents. Run
     # from a file, nothing was read for it on Datalayer, and the tool says so.
     if knows_documents(app):
         capabilities.append(
@@ -257,7 +257,7 @@ def app_capabilities(
                 deployment_uid=recorder.deployment_uid,
             )
         )
-    # Approve and save (R-24): the tool that saves a result as a page of
+    # Approve and save: the tool that saves a result as a page of
     # a Space it is granted to write, once a person approved it.
     from agent_runtimes.apps.saving import AppSavingCapability, saves
 
@@ -267,16 +267,16 @@ def app_capabilities(
                 app=app,
                 app_uid=recorder.app_uid,
                 deployment_uid=recorder.deployment_uid,
-                # Who it acts for: who opened the session, or nobody (I-10).
+                # Who it acts for: who opened the session, or nobody.
                 person=recorder.opener,
                 woken=recorder.woken,
-                # The user the host's server signed, embedded (D-21).
+                # The user the host's server signed, embedded.
                 user=recorder.signed_user,
-                # Who its byline names: that user, or who opened it, by name (I-10).
+                # Who its byline names: that user, or who opened it, by name.
                 named=recorder.acts_for,
             )
         )
-    # What it learns (R-26): skills proposed for its owner to review,
+    # What it learns: skills proposed for its owner to review,
     # and those approved, used — an application saved on Datalayer only.
     if recorder.app_uid:
         from agent_runtimes.apps.learning import AppLearningCapability
@@ -288,7 +288,7 @@ def app_capabilities(
                 deployment_uid=recorder.deployment_uid,
             )
         )
-    # Credentials are never shown to the model (R-19), last of all.
+    # Credentials are never shown to the model, last of all.
     from agent_runtimes.guardrails.credentials import credentials_withheld
 
     return credentials_withheld(capabilities)
@@ -312,8 +312,8 @@ def local_agent(
     """The agent of an application, built in this process from its spec.
 
     Its model is the application's, else its agent's; its instructions are its
-    agent's prompt, the contexts it works under as its organization reads them
-    (U-31), then the application's own, as on a runtime. What
+    agent's prompt, the contexts it works under as its organization reads them,
+    then the application's own, as on a runtime. What
     only a runtime brings — connections to MCP servers, skills, tools, a team —
     is refused rather than left out: an application that would run without
     what it names is not that application.
@@ -343,7 +343,7 @@ def local_agent(
 def browser_agent(
     app: AppSpec, organization: Optional[OrganizationFrames] = None
 ) -> Agent:
-    """The agent of an application as a visitor's browser plays it (A-13, A-14).
+    """The agent of an application as a visitor's browser plays it.
 
     A scene's member *in the browser* — Sales, the entry of Sales & Accounting —
     is played by the page with its model (the application's, else its
@@ -451,27 +451,27 @@ class AppAgent:
 
     toolsets: List[Any] = field(default_factory=list)
     """What every run reaches besides the agent's own tools: on a runtime,
-    the MCP servers and sandbox its agent was made with (R-04)."""
+    the MCP servers and sandbox its agent was made with."""
 
     mode: ModeEffect = field(default_factory=ModeEffect)
     """What the modes the person chose tell every run, and the model it runs
-    on (P-19); set by the session."""
+    on; set by the session."""
 
     inference_provider: Optional[str] = None
-    """Where a model the person's modes choose is called (P-19): on a
+    """Where a model the person's modes choose is called: on a
     runtime, through the provider its agent was made with — ``datalayer``,
     ai-inference — never around it."""
 
     app_instance: Optional[dict[str, Any]] = None
     """The application instance it serves on a runtime: a model its modes
     choose names its application and deployment on every call, as the
-    agent's own model does, so it is metered on them (R-09)."""
+    agent's own model does, so it is metered on them."""
 
     def _run_kwargs(
         self, context: dict[str, Any], model_settings: Optional[ModelSettings] = None
     ) -> dict[str, Any]:
         """What a run is given: its turn's context and modes, the session's
-        history, and the model's settings for this call (P-27).
+        history, and the model's settings for this call.
         """
         from agent_runtimes.models.models import resolve_model_for_inference_provider
 
@@ -511,7 +511,7 @@ class AppAgent:
         model_settings : ModelSettings, optional
             How the model answers this call — ``{"temperature": 0,
             "max_tokens": 500, "stop_sequences": ["```"]}`` — over the
-            agent's own (P-27).
+            agent's own.
         **context : Any
             What the agent is told for this turn, by name (``goal="…"``).
 
@@ -540,7 +540,7 @@ class AppAgent:
         prompt : str
             What the agent is asked.
         model_settings : ModelSettings, optional
-            How the model answers this call, over the agent's own (P-27).
+            How the model answers this call, over the agent's own.
         **context : Any
             What the agent is told for this turn, by name.
 

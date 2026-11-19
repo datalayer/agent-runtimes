@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An application whose page side is a file of its folder (P-29).
+"""An application whose page side is a file of its folder.
 
 Its dial is ``components/dial.js``, beside this file. ``loop apps package
 app.py`` puts it in the application's wheel; installed beside the server that

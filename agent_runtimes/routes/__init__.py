@@ -54,6 +54,7 @@ from .agui import (
 )
 from .app_plugins import router as app_plugins_router
 from .apps import router as apps_router
+from .browser_sessions import router as browser_sessions_router
 from .checkpoints import router as checkpoints_router
 from .configure import router as configure_router
 from .harnesses import router as harnesses_router
@@ -71,6 +72,7 @@ from .mcp_ui import router as mcp_ui_router
 from .notifications import router as notifications_router
 from .protocols import router as protocols_router
 from .sandbox import router as sandbox_router
+from .spaces import router as spaces_router
 from .tool_approvals import legacy_router as tool_approvals_legacy_router
 from .tool_approvals import router as tool_approvals_router
 from .tool_approvals import ws_router as tool_approvals_ws_router
@@ -95,6 +97,7 @@ __all__ = [
     "agui_router",
     "cancel_agui_thread",
     "cancel_agui_threads",
+    "browser_sessions_router",
     "checkpoints_router",
     "notifications_router",
     "configure_router",
@@ -125,6 +128,7 @@ __all__ = [
     "register_vercel_agent",
     "sandbox_router",
     "set_a2a_app",
+    "spaces_router",
     "start_a2a_task_managers",
     "stop_a2a_task_managers",
     "tool_approvals_legacy_router",

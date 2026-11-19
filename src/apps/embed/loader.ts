@@ -4,7 +4,7 @@
  */
 
 /**
- * The one script a host writes (D-08):
+ * The one script a host writes:
  *
  *   <script src="https://datalayer.app/embed/datalayer-app.js" async></script>
  *
@@ -37,25 +37,79 @@
   // ReferenceError unless the global exists, and the module's own body runs
   // after everything it imports, so it is declared here, before the import —
   // without it no application loads (`… did not load (__webpack_public_path__
-  // is not defined)`, seen with `loop apps run --web`, P-08).
+  // is not defined)`, seen with `loop apps run --web`).
   const globals = window as unknown as Record<string, unknown>;
   if (globals['__webpack_public_path__'] === undefined) {
     globals['__webpack_public_path__'] = '';
   }
-  const main = new URL(MODULE_FILE, script.src).href;
-  import(/* @vite-ignore */ main).catch((error: unknown) => {
-    const reason = error instanceof Error ? error.message : String(error);
-    const sentence = `The application could not be loaded: ${main} did not load (${reason}).`;
-    console.error(`datalayer-app: ${sentence}`);
-    document.querySelectorAll('datalayer-app').forEach(element => {
-      if (element.shadowRoot) {
-        return;
-      }
-      const said = document.createElement('p');
-      said.textContent = sentence;
-      element.attachShadow({ mode: 'open' }).appendChild(said);
-    });
+  // A skeleton in each element at once, before the module is even fetched
+  // (the user, 15 November 2026: never a loading sentence). Light DOM, so the
+  // element's shadow root hides it the moment the module defines it; the
+  // element then removes it. Inline only: a floating mode draws nothing in
+  // the page until it opens.
+  const SKELETON = 'data-datalayer-skeleton';
+  const style = document.createElement('style');
+  style.textContent =
+    '@keyframes datalayer-app-pulse{0%,100%{opacity:1}50%{opacity:.45}}' +
+    `[${SKELETON}]>span{display:block;height:14px;border-radius:6px;background:#eaeef2;animation:datalayer-app-pulse 1.4s ease-in-out infinite}` +
+    `@media (prefers-reduced-motion:reduce){[${SKELETON}]>span{animation:none}}`;
+  document.head.appendChild(style);
+  const placeholder = (element: Element): void => {
+    const mode = element.getAttribute('mode');
+    if (
+      element.shadowRoot ||
+      (mode && mode !== 'inline') ||
+      element.querySelector(`:scope > [${SKELETON}]`)
+    ) {
+      return;
+    }
+    const height = Number.parseInt(element.getAttribute('height') ?? '', 10);
+    const box = document.createElement('div');
+    box.setAttribute(SKELETON, '');
+    box.setAttribute('role', 'status');
+    box.setAttribute('aria-busy', 'true');
+    box.setAttribute('aria-label', 'Loading the application');
+    box.style.cssText =
+      'display:flex;flex-direction:column;gap:12px;padding:16px;border:1px solid #d0d7de;border-radius:12px;background:#fff;' +
+      `min-height:${Number.isFinite(height) && height > 0 ? height : 480}px;box-sizing:border-box`;
+    for (const width of ['40%', '72%', '58%', '64%']) {
+      const bar = document.createElement('span');
+      bar.style.width = width;
+      box.appendChild(bar);
+    }
+    element.appendChild(box);
+  };
+  document.querySelectorAll('datalayer-app').forEach(placeholder);
+  // Elements a page adds while the module is on its way get one too.
+  const watch = new MutationObserver(records => {
+    for (const record of records) {
+      record.addedNodes.forEach(node => {
+        if (node instanceof Element) {
+          if (node.localName === 'datalayer-app') {
+            placeholder(node);
+          }
+          node.querySelectorAll?.('datalayer-app').forEach(placeholder);
+        }
+      });
+    }
   });
+  watch.observe(document.documentElement, { childList: true, subtree: true });
+  const main = new URL(MODULE_FILE, script.src).href;
+  import(/* @vite-ignore */ main)
+    .finally(() => watch.disconnect())
+    .catch((error: unknown) => {
+      const reason = error instanceof Error ? error.message : String(error);
+      const sentence = `The application could not be loaded: ${main} did not load (${reason}).`;
+      console.error(`datalayer-app: ${sentence}`);
+      document.querySelectorAll('datalayer-app').forEach(element => {
+        if (element.shadowRoot) {
+          return;
+        }
+        const said = document.createElement('p');
+        said.textContent = sentence;
+        element.attachShadow({ mode: 'open' }).appendChild(said);
+      });
+    });
 })();
 
 // A module to the type checker; written out as a classic script, without it.

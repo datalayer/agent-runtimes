@@ -5,13 +5,13 @@
 Environment commands for Datalayer CLI.
 
 ``datalayer envs ls`` lists the environments a caller may launch. The other
-commands drive the registry of user environments (E1-20):
+commands drive the registry of user environments:
 create one from a spec file, read it and its versions, edit, validate,
 resolve, compare two versions' locks, build and follow the log, try, promote,
 roll back, deprecate, archive and delete. Every command takes ``--output
 table|json|yaml``.
 
-An environment is named by its uid or by ``<account>/<name>`` (D-2); a version
+An environment is named by its uid or by ``<account>/<name>``; a version
 by its uid or by ``<environment>@<number>``. A conditional write sends as
 ``If-Match`` the ETag of the record the command has just read, so nobody types
 one. A refusal prints its error code and message on stderr, and the
@@ -147,7 +147,7 @@ def _refusals(function: _Command) -> _Command:
 
 
 def _environment_uid(client: AgentClient, reference: str) -> str:
-    """The uid of the environment a reference names: its uid, or ``<account>/<name>`` (D-2)."""
+    """The uid of the environment a reference names: its uid, or ``<account>/<name>``."""
     reference = reference.strip()
     if not reference:
         raise EnvironmentsCommandError(
@@ -238,12 +238,12 @@ def _read_spec(path: Path) -> Environment:
 
 
 def _environment_key(name: str, organization: Optional[str]) -> str:
-    """Asking again for the same owner's environment of that name answers the first (E1-01)."""
+    """Asking again for the same owner's environment of that name answers the first."""
     return f"envs-create:{organization or 'self'}:{name}"
 
 
 def _version_key(environment_uid: str, spec: Environment, label: Optional[str]) -> str:
-    """Asking again for a version of the same spec and label answers the first (E1-01)."""
+    """Asking again for a version of the same spec and label answers the first."""
     return f"envs-version:{environment_uid}:{spec_digest(spec)}:{label or ''}"
 
 

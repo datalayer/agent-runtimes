@@ -185,6 +185,16 @@ def load_specs(specs_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
             mode="json", by_alias=True
         ):
             spec.pop("pap")
+        else:
+            # Its PAP operations, derived from its `openapi` (never written in a spec),
+            # carried in the catalogue for its readers.
+            spec["pap"]["company"]["operations"] = [
+                operation.model_dump(mode="json")
+                for operation in app.pap.company.operations
+            ]
+        # `openapi` only when it has one.
+        if spec.get("openapi") is None:
+            spec.pop("openapi", None)
         # PACT, commerce, signed fetch and A2A's extensions the same way.
         for block in ("pact", "commerce", "signed_fetch", "a2a"):
             if block in spec and spec[block] == type(getattr(app, block))().model_dump(

@@ -11,6 +11,7 @@
  */
 
 import type { AgentRuntimeData } from './agents';
+import type { RuntimeEngine } from './agentspecs';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Runtime API Request / Response
@@ -29,6 +30,12 @@ export type CreateAgentRuntimeRequest = {
   agentSpecId?: string;
   /** Full agent spec payload to propagate to backend services */
   agentSpec?: Record<string, any>;
+  /**
+   * What runs and hosts the agent, as the person chose it ("Where it
+   * runs"): it overrides the spec's `runtimeEngine`, and none means the
+   * spec's. `agentcore` is launched in the organization's AWS account.
+   */
+  runtimeEngine?: RuntimeEngine;
   /** Account UID (user or organization) charged for runtime costs */
   billingEntityUid?: string;
   /** User account handle used for user home mount path. */

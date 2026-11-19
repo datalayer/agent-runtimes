@@ -4,7 +4,7 @@
  */
 
 /**
- * Scenes: the catalogue generated from agentspecs 0.0.61 (A-12).
+ * Scenes: the catalogue generated from agentspecs 0.0.61.
  *
  * A scene stages a team. The generated catalogue carries its cast resolved,
  * its entry said, what each beat shows, and what it needs set up; the empty
@@ -23,7 +23,7 @@ import { SCENE_RECORDINGS, getSceneRecording } from '../sceneRecordings';
 import { stageBackdropOf } from '../../components/teams/backdrops/catalogue';
 import * as specs from '..';
 
-/** The four scenes of the home page (A-08): the entry, the members on a runtime. */
+/** The four scenes of the home page: the entry, the members on a runtime. */
 const HOME_SCENES: Record<string, [string, string[]]> = {
   'sales-and-accounting': ['sales', ['accounting']],
   'month-end-close': ['month-end-close', ['month-end-close']],
@@ -34,11 +34,16 @@ const HOME_SCENES: Record<string, [string, string[]]> = {
   ],
 };
 
-/** The demo stages: the home page's four, and a coding agent behind the Shield. */
+/** The demo stages: the home page's four, a coding agent behind the Shield, and a Shopper buying from a shop. */
 const DEMO_SCENES = [
   ...Object.keys(HOME_SCENES),
   'coding-agent-behind-the-shield',
+  'buy-from-a-shop',
 ];
+
+/** The beats each demo stage plays: four on the home page's, three at the shop, two for the coding agent. */
+const beatsOf = (id: string): number =>
+  id in HOME_SCENES ? 4 : id === 'buy-from-a-shop' ? 3 : 2;
 
 describe('the scene catalogue', () => {
   it('holds the four scenes of the home page, each with a face of its own', () => {
@@ -104,8 +109,7 @@ describe('the scene catalogue', () => {
 
   it('says each beat’s cue, its moves and what it shows', () => {
     for (const scene of listSceneSpecs().filter(s => s.kind === 'team')) {
-      // The home page's scenes play four beats; the coding agent two.
-      expect(scene.script).toHaveLength(scene.id in HOME_SCENES ? 4 : 2);
+      expect(scene.script).toHaveLength(beatsOf(scene.id));
       for (const beat of scene.script) {
         expect(beat.cue.say).toBeTruthy();
         expect(beat.moves.length).toBeGreaterThan(0);

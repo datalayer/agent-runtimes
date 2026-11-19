@@ -33,6 +33,7 @@ an `AppHost`.
 from __future__ import annotations
 
 import asyncio
+import copy
 import inspect
 import sys
 import types
@@ -133,6 +134,14 @@ from agent_runtimes.types import (
 
 #: A handler: a plain function, sync or async, given the session first.
 Handler = Callable[..., Any]
+
+
+#: What a company operation answers when called, unless it says otherwise: what was proposed.
+_PROPOSED: Dict[str, Any] = {
+    "type": "object",
+    "properties": {"proposed": {"type": "boolean"}, "message": {"type": "string"}},
+    "required": ["proposed", "message"],
+}
 
 
 class NoPayload(BaseModel):
@@ -1074,7 +1083,6 @@ class Application:
         from agentspecs.apps import AppPapCompany
 
         pap = self._pap()
-        declared = list((pap.get("company") or {}).get("operations") or [])
         company = AppPapCompany.model_validate(
             {
                 "enabled": True,
@@ -1089,7 +1097,6 @@ class Application:
                 "extensions": list(extensions),
                 "personal_agents": personal_agents,
                 "registered_agents": list(registered_agents),
-                "operations": declared,
             }
         )
         pap["company"] = company.model_dump(
@@ -1100,15 +1107,71 @@ class Application:
         self._pap_mark("pap company-role", "as_company")
         return company
 
+    def _openapi_operation(
+        self,
+        operation_id: str,
+        *,
+        summary: str,
+        inputs: Mapping[str, Any],
+        answer: Mapping[str, Any],
+        x_pap: Optional[Mapping[str, Any]] = None,
+    ) -> None:
+        """Add ``POST /<operation_id>`` to the application's ``openapi``, made on first use."""
+        document = self._document.setdefault(
+            "openapi",
+            {
+                "openapi": "3.1.0",
+                "info": {
+                    "title": str(self._document.get("name") or self.id),
+                    "version": str(self._document.get("version") or "0.0.1"),
+                },
+                "paths": {},
+            },
+        )
+        path = f"/{operation_id}"
+        if path in document["paths"]:
+            raise ValueError(f"{self.id} already answers {path}.")
+        operation: Dict[str, Any] = {
+            "operationId": operation_id,
+            "summary": summary,
+            "requestBody": {
+                "required": True,
+                "content": {
+                    "application/json": {
+                        "schema": {"type": "object", **copy.deepcopy(dict(inputs))}
+                    }
+                },
+            },
+            "responses": {
+                "200": {
+                    "description": "Its answer",
+                    "content": {
+                        "application/json": {"schema": copy.deepcopy(dict(answer))}
+                    },
+                }
+            },
+        }
+        if x_pap is not None:
+            operation["x-pap"] = dict(x_pap)
+        document["paths"][path] = {"post": operation}
+        self._spec = None
+
     def company_operation(
         self,
         action: str,
         *,
         summary: str,
+        scope: Optional[str] = None,
+        answer: Optional[Mapping[str, Any]] = None,
     ) -> Callable[[Handler], Handler]:
         """Declare what a personal agent may ask the company to do for the person,
         done by one of the application's own tools once the person approves its
-        exact terms (``pap.company.operations``, the ``operations`` extension).
+        exact terms (the ``operations`` extension).
+
+        It is an operation of the application's ``openapi``, the one source of
+        what it answers when called: ``POST /<tool>``, named by the tool, its
+        inputs the tool's parameters, carrying ``x-pap`` — from which
+        ``pap.company.operations`` is derived.
 
         For example::
 
@@ -1131,6 +1194,11 @@ class Application:
             The action's name at this company: ``orders.exchange``.
         summary : str
             What the person is shown, ``{term}`` for each term; never the model's.
+        scope : str, optional
+            The scope it needs, one the company offers: ``orders:write``.
+        answer : mapping, optional
+            The JSON schema of what it answers when called; by default what was
+            proposed, ``{proposed, message}``.
 
         Returns
         -------
@@ -1160,8 +1228,22 @@ class Application:
                     "summary": summary,
                 }
             )
-            self._pap()["company"].setdefault("operations", []).append(
-                operation.model_dump(mode="json", by_alias=True, exclude_defaults=True)
+            tool = next(
+                item
+                for item in self._document.get("tools") or []
+                if item.get("name") == name
+            )
+            x_pap = operation.model_dump(
+                mode="json", by_alias=True, exclude_defaults=True
+            )
+            if scope is not None:
+                x_pap["scope"] = scope
+            self._openapi_operation(
+                name,
+                summary=str(tool.get("description") or summary),
+                inputs=tool.get("parameters") or {"type": "object"},
+                answer=answer or _PROPOSED,
+                x_pap=x_pap,
             )
             # Decided by its tool, where the tool is.
             self._pap_marks.append(

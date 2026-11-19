@@ -4,8 +4,8 @@
  */
 
 /**
- * What an application is doing, in plain words (T-08): kept in
- * `portable/presence`, which Datalayer Mobile reads too (M-030).
+ * What an application is doing, in plain words: kept in
+ * `portable/presence`, which Datalayer Mobile reads too.
  *
  * @module chat/presence/presenceStatus
  */

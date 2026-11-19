@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A2A as a Reactor plugin (PR-02).
+"""A2A as a Reactor plugin.
 
 A2A's extension mechanism (A2A 1.0, *Extensions*) names each extension by a
 URI on the Agent Card's ``capabilities.extensions``. Each extension this
@@ -69,7 +69,7 @@ class A2AExtension(Protocol):
 
 @dataclass(frozen=True)
 class OrchestrationExtension:
-    """Pause at a checkpoint and resume from it; steer a task while it works (O2-05)."""
+    """Pause at a checkpoint and resume from it; steer a task while it works."""
 
     description: str = (
         "Pause at a checkpoint and resume from it; steer a task while it works."

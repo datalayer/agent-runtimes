@@ -373,6 +373,29 @@ def create_codemode_toolset(
                     else:
                         server_env[env_key] = env_value
 
+            # A server the pod's Jupyter container runs (linkedin on the Alpine
+            # image, agent_runtimes.mcp.jupyter_host) is reached where it
+            # listens: its command cannot run here.
+            from agent_runtimes.mcp.jupyter_host import hosted_url
+
+            hosted = hosted_url(mcp_server.id)
+            if hosted:
+                registry.add_server(
+                    MCPServerConfig(
+                        name=normalized_name,
+                        url=hosted,
+                        command="",
+                        args=[],
+                        env={},
+                        enabled=mcp_server.enabled,
+                    )
+                )
+                logger.info(
+                    f"Added MCP server to codemode registry: {normalized_name} "
+                    "(in the Jupyter container)"
+                )
+                continue
+
             registry.add_server(
                 MCPServerConfig(
                     name=normalized_name,
@@ -750,7 +773,14 @@ def wire_skills_into_codemode(
 
     # --- 1. Generate skill bindings -------------------------------------------
     codegen = getattr(executor, "_codegen", None)
-    discovered = getattr(skills_toolset, "_discovered_skills", {})
+    # The skills offered now: one without the environment it needs is kept out
+    # of the toolset (agent-skills 1.5.0), and gets no binding either.
+    active_skills = getattr(skills_toolset, "get_active_skills", None)
+    discovered = (
+        active_skills()
+        if callable(active_skills)
+        else getattr(skills_toolset, "_discovered_skills", {})
+    )
     skills_metadata: list[dict[str, Any]] = []
 
     if codegen is not None and discovered:

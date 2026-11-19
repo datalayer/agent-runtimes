@@ -14,7 +14,7 @@
  * 2. Store mode: When `useStore` is true
  * 3. Any protocol supported by ChatBase (AG-UI, A2A, ACP, Vercel AI)
  * 4. A conversation its host draws (`conversation`): the LOOP workspace,
- *    which the embed's bubble, panel and assistant hold (R-01) — the
+ *    which the embed's bubble, panel and assistant hold — the
  *    floating chrome around it, told by the host what it is doing and what
  *    it last said
  *
@@ -128,7 +128,7 @@ import { useChatWords } from './ChatLanguage';
 
 /**
  * A conversation the host draws in the floating window, in place of the
- * chat: the LOOP workspace (R-01). The window keeps its chrome — the
+ * chat: the LOOP workspace. The window keeps its chrome — the
  * button, its blink and its balloon, the panel, the assistant, dragging and
  * dismissing — and is told by the host what the conversation is doing and
  * what it last said, which it would otherwise read from its own chat.
@@ -171,7 +171,7 @@ export interface ChatFloatingProps extends ChatCommonProps {
 
   /**
    * Properties laid over the theme the conversation wears, by mode — an
-   * application's accent (T-05): the chat sets its theme again inside
+   * application's accent: the chat sets its theme again inside
    * it, so the accent the page around it set does not reach its bubbles.
    */
   themeOverrides?: ThemeOverrides;
@@ -231,7 +231,7 @@ export interface ChatFloatingProps extends ChatCommonProps {
    * - 'floating': Full-height floating panel (pinned to right edge with offset)
    * - 'floating-small': Standard floating popup
    * - 'floating-draggable': The popup with a handle, movable about the viewport
-   * - 'assistant': A character on the page that speaks in a balloon (T-21)
+   * - 'assistant': A character on the page that speaks in a balloon
    * - 'panel': Full-height side panel (right edge, no floating offset)
    * @default 'floating'
    */
@@ -246,15 +246,15 @@ export interface ChatFloatingProps extends ChatCommonProps {
    * The character of the floating assistant: one this package draws, by id
    * (`SHIPPED_ASSISTANT_CHARACTERS`: the orb, `orb`, acting out each of
    * the assistant's states; the clippy.js characters, `clippy-js-merlin`,
-   * fetched from jsDelivr; Datalayer's drawings, T-25), or one a person loaded from a file
-   * they hold the rights to (`readClippyCharacter`, `readAcsCharacter`, T-26).
+   * fetched from jsDelivr; Datalayer's drawings), or one a person loaded from a file
+   * they hold the rights to (`readClippyCharacter`, `readAcsCharacter`).
    * @default 'paperclip'
    */
   assistantCharacter?:
     string | AssistantCharacter | AssistantCharacterData | AssistantModel3D;
 
   /**
-   * How the floating assistant's balloon shows the conversation (T-23; an Appspec's `interface.balloon`):
+   * How the floating assistant's balloon shows the conversation (an Appspec's `interface.balloon`):
    * - 'history': every message, scrolled, under a header that counts them,
    *   the composer last; closed, the balloon lists the messages too.
    * - 'current': only what it says or does now — the answer being written,
@@ -310,7 +310,7 @@ export interface ChatFloatingProps extends ChatCommonProps {
 
   /**
    * A conversation the host draws in the window instead of the chat — the
-   * LOOP workspace, as the embed's floating modes do (R-01). The chat's
+   * LOOP workspace, as the embed's floating modes do. The chat's
    * own props (`protocol`, `suggestions`, …) are then not read.
    */
   conversation?: FloatingConversation;
@@ -550,7 +550,7 @@ export function ChatFloating({
   }, [viewMode, resetDrag]);
 
   /*
-   * The floating assistant (T-21, T-22, T-27): a character that acts out
+   * The floating assistant: a character that acts out
    * the presence of what answers — read here from the chat's own loading and
    * items — greets when it arrives, says goodbye when sent away, and is
    * dragged about by itself, the conversation following it.
@@ -563,7 +563,7 @@ export function ChatFloating({
     pendingApproval: false,
   });
   const [ownAnswering, setAnswering] = useState(false);
-  // The tool it calls now, and how many messages the history holds (T-23).
+  // The tool it calls now, and how many messages the history holds.
   const [ownTool, setOwnTool] = useState<BalloonToolLine | undefined>();
   const [messageCount, setMessageCount] = useState(0);
   // The conversation's messages, listed in the closed `history` balloon.
@@ -572,10 +572,10 @@ export function ChatFloating({
   const [ownHistory, setOwnHistory] = useState<readonly DisplayItem[]>([]);
   /*
    * Its voice (V1): the answers said by the speech service, as
-   * they are written (VO-20), the state following the sound (VO-22).
+   * they are written, the state following the sound.
    */
   const [voiceItems, setVoiceItems] = useState<readonly unknown[]>([]);
-  // The person's own settings, followed as the voice menu changes them (VO-30).
+  // The person's own settings, followed as the voice menu changes them.
   const [personVoice] = useVoiceSettings();
   const settledVoiceOf = useMemo(
     () => (voice ? settledVoice(voice, personVoice) : undefined),
@@ -589,7 +589,7 @@ export function ChatFloating({
     level: mouthLevel,
   } = useVoiceSpeaker(settledVoiceOf);
   // `always`: each answer heard as it is written; `on_request`: a *Read
-  // aloud* under each (VO-21).
+  // aloud* under each.
   useSpokenAnswers(
     voiceItems,
     chatBusy,
@@ -605,7 +605,7 @@ export function ChatFloating({
     setAssistantAway('none');
   }, []);
   /*
-   * The agent's newest words, said in the balloon until heard (T-23): the
+   * The agent's newest words, said in the balloon until heard: the
    * chat's own, or what the host's conversation says it said.
    */
   const [ownSaying, setSaying] = useState<AssistantSaying | undefined>();
@@ -649,7 +649,7 @@ export function ChatFloating({
   );
   const unheard = !!saying && saying.id !== heardId;
   /*
-   * The approval it waits on, answered in the balloon (T-23) by the chat's
+   * The approval it waits on, answered in the balloon by the chat's
    * own answers to its approvals — those its tool-approval banner sends.
    */
   const [deciding, setDeciding] = useState(false);
@@ -690,7 +690,7 @@ export function ChatFloating({
     assistantState === 'thinking' ||
     assistantState === 'working' ||
     assistantState === 'speaking';
-  // The tool line, while its call runs or its turn goes on (T-23).
+  // The tool line, while its call runs or its turn goes on.
   const toolSaid =
     toolLine && (toolLine.phase === 'running' || atWork) ? toolLine : undefined;
   // Current: what is said now — thinking until the answer's words arrive.
@@ -719,7 +719,7 @@ export function ChatFloating({
     assistantState === 'paused'
       ? { text: chatText.paused }
       : speakerState.sentence
-        ? // Heard: the sentence being said is the one in the balloon (VO-26).
+        ? // Heard: the sentence being said is the one in the balloon.
           { text: speakerState.sentence }
         : speakerState.refused
           ? { text: speakerState.refused }
@@ -859,7 +859,7 @@ export function ChatFloating({
         setFocusTrigger(prev => prev + 1);
       } else {
         // The floating modes stay within ChatFloating; picking the assistant
-        // calls it back, however long it was sent away for (T-27).
+        // calls it back, however long it was sent away for.
         if (mode === 'assistant') {
           callAssistantBack();
         }
@@ -1094,7 +1094,7 @@ export function ChatFloating({
   }, [isOpen, setIsOpen, onOpen, onClose, animationDuration]);
 
   /*
-   * The assistant sent away (T-27): goodbye first, then the popup's round
+   * The assistant sent away: goodbye first, then the popup's round
    * button in its place — which calls it back when it went for the page, and
    * opens the chat when it went for the session or for good.
    */
@@ -1362,7 +1362,7 @@ export function ChatFloating({
   // Responsive dimensions
   const conversationBalloon = assistantShown ? balloonGeometry() : undefined;
 
-  // The assistant's conversation is a balloon of its own size (T-23).
+  // The assistant's conversation is a balloon of its own size.
   const popupWidth = isMobile
     ? '100%'
     : conversationBalloon
@@ -1402,7 +1402,7 @@ export function ChatFloating({
   );
 
   /*
-   * The chat as the assistant's balloon holds it (T-23): the history and the
+   * The chat as the assistant's balloon holds it: the history and the
    * composer, its Lexical variant, and nothing else — no header, no footer,
    * none of the session's controls; the welcome as the first message, an
    * approval as a message with Approve and Deny, and *Ask a decision* beside
@@ -1456,7 +1456,7 @@ export function ChatFloating({
       className={className}
       sx={{
         // Its own conversation stands beside the character, never under it:
-        // its prompt's controls keep their own padding (T-27).
+        // its prompt's controls keep their own padding.
         ...(assistantShown ? { [ASSISTANT_CLEARANCE_VAR]: 'initial' } : {}),
         position:
           viewMode === 'panel' && !isMobile && (panelInFlow || dockedInMount)
@@ -1605,7 +1605,7 @@ export function ChatFloating({
       {conversationBalloon ? (
         <ConversationBalloonClose onClose={handleToggle} />
       ) : null}
-      {/* History: what it holds, and how many messages (T-23). */}
+      {/* History: what it holds, and how many messages. */}
       {conversationBalloon && !currentOpen ? (
         <ConversationBalloonHeader count={messageCount} />
       ) : null}
@@ -1829,7 +1829,7 @@ export function ChatFloating({
 
   return (
     <>
-      {/* The floating assistant: the character, open or closed (T-21). */}
+      {/* The floating assistant: the character, open or closed. */}
       {assistantShown && (
         <AssistantStage
           character={assistantCharacter}
@@ -1906,7 +1906,7 @@ export function ChatFloating({
             {buttonGlow && <ButtonGlow color={brandColor} />}
             {/*
               Hovered with something said: the agent's newest words in a
-              balloon, as the floating assistant says them (T-23); otherwise
+              balloon, as the floating assistant says them; otherwise
               the tooltip.
             */}
             {isHovered && saying ? (
@@ -1970,7 +1970,7 @@ export function ChatFloating({
                 animation="pulse 2s infinite"
                 pointerEvents="none"
                 // Still, as a ring held around the button, for a reader
-                // who asks the system for reduced motion (T-28).
+                // who asks the system for reduced motion.
                 reducedMotion={{
                   animation: 'none',
                   transform: 'scale(1.15)',

@@ -94,6 +94,17 @@ export class AGUIAdapter extends BaseProtocolAdapter {
     }
   > = new Map();
 
+  // The calls of the server's tools the run under way made, in order, with
+  // what each answered as the run streamed it: carried in the continuation a
+  // page tool's result starts, so the model sees what it already did (it
+  // priced a basket again, run after run, when it could not see its quote).
+  private runServerCalls: Array<{
+    toolCallId: string;
+    toolName: string;
+    argsJson: string;
+    content: string;
+  }> = [];
+
   // Store conversation history for tool result continuation
   private messageHistory: ChatMessage[] = [];
   private lastAssistantContent: string = '';
@@ -195,7 +206,7 @@ export class AGUIAdapter extends BaseProtocolAdapter {
   }
 
   /**
-   * The person spoke over the agent (VO-46, VO-13): an application's
+   * The person spoke over the agent: an application's
    * session is told (`POST {sessions}/{uid}/interrupt`) — what runs is
    * cancelled, its code's `@app.interrupted` runs, and it stays open for
    * what is said next, where Stop would leave it waiting to be resumed.
@@ -292,6 +303,9 @@ export class AGUIAdapter extends BaseProtocolAdapter {
 
     // Store message history and tools for potential tool result continuation
     this.messageHistory = [...allMessages];
+    // A new run: the server's calls kept are the previous run's, carried in
+    // `allMessages` already when this is its continuation.
+    this.runServerCalls = [];
     this.lastTools = options?.tools || [];
     // Only clear assistant content for fresh user messages, not continuations.
     // For continuations, lastTurnContent is used in sendToolResult to build
@@ -311,6 +325,7 @@ export class AGUIAdapter extends BaseProtocolAdapter {
         role: string;
         content: string | ContentPart[] | null;
         tool_call_id?: string;
+        error?: string;
         tool_calls?: Array<{
           id: string;
           type: string;
@@ -328,6 +343,15 @@ export class AGUIAdapter extends BaseProtocolAdapter {
       // For tool messages, add the tool_call_id (snake_case for AG-UI/OpenAI format)
       if (msg.role === 'tool' && msg.metadata?.toolCallId) {
         baseMessage.tool_call_id = msg.metadata.toolCallId as string;
+      }
+      // A failed tool's result: AG-UI's `error` on its tool message.
+      if (msg.role === 'tool' && msg.metadata?.isError) {
+        baseMessage.error =
+          typeof msg.metadata.error === 'string' && msg.metadata.error
+            ? msg.metadata.error
+            : typeof msg.content === 'string'
+              ? msg.content
+              : 'The tool failed.';
       }
 
       // For assistant messages with tool calls, convert to AG-UI format
@@ -399,7 +423,7 @@ export class AGUIAdapter extends BaseProtocolAdapter {
       });
 
       if (!response.ok) {
-        // Why, in the page's own words (F-15): a 404 at an agent's AG-UI
+        // Why, in the page's own words: a 404 at an agent's AG-UI
         // address means the agent is not on this runtime, which the status
         // alone never said.
         throw new Error(
@@ -512,16 +536,34 @@ export class AGUIAdapter extends BaseProtocolAdapter {
 
     // ── All tool results collected — build ONE combined continuation ──
 
-    // 5. Build a single assistant message containing ALL tool calls
-    const toolCalls = Array.from(this.collectedToolResults.values()).map(
-      tr => ({
+    // 5. Build a single assistant message containing ALL tool calls: the
+    //    server's of this run first, with their results below, then the
+    //    page's — so the model sees what it already did.
+    const serverCalls = this.runServerCalls;
+    const argsOf = (json: string): Record<string, unknown> => {
+      try {
+        const parsed = json ? JSON.parse(json) : {};
+        return parsed && typeof parsed === 'object' ? parsed : {};
+      } catch {
+        return {};
+      }
+    };
+    const toolCalls = [
+      ...serverCalls.map(call => ({
+        type: 'tool-call' as const,
+        toolCallId: call.toolCallId,
+        toolName: call.toolName,
+        args: argsOf(call.argsJson),
+        status: 'completed' as const,
+      })),
+      ...Array.from(this.collectedToolResults.values()).map(tr => ({
         type: 'tool-call' as const,
         toolCallId: tr.toolCallId,
         toolName: tr.toolName,
         args: tr.parsedArgs,
         status: 'completed' as const,
-      }),
-    );
+      })),
+    ];
 
     const assistantMessageWithToolCalls: ChatMessage = {
       id: generateMessageId(),
@@ -534,14 +576,27 @@ export class AGUIAdapter extends BaseProtocolAdapter {
       toolCalls,
     };
 
-    // 6. Build individual tool-result messages (one per tool call)
-    const toolResultMessages: ChatMessage[] = Array.from(
+    // 6. Build individual tool-result messages (one per tool call): the
+    //    server's as the run streamed them, word for word (the runtime
+    //    checks them), then the page's.
+    const serverResults: ChatMessage[] = serverCalls.map(call => ({
+      id: generateMessageId(),
+      role: 'tool' as const,
+      content: call.content,
+      createdAt: new Date(),
+      metadata: { toolCallId: call.toolCallId, toolName: call.toolName },
+    }));
+    const pageResults: ChatMessage[] = Array.from(
       this.collectedToolResults.values(),
     ).map(tr => ({
       id: generateMessageId(),
       role: 'tool' as const,
-      content:
-        typeof tr.result.result === 'string'
+      // A failed page tool answers why, as its content and as AG-UI's
+      // `error` (below): the runtime counts it, and ends a turn whose
+      // page tool failed twice.
+      content: !tr.result.success
+        ? tr.result.error || `${tr.toolName} failed`
+        : typeof tr.result.result === 'string'
           ? tr.result.result
           : JSON.stringify(tr.result.result),
       createdAt: new Date(),
@@ -549,8 +604,13 @@ export class AGUIAdapter extends BaseProtocolAdapter {
         toolCallId: tr.toolCallId,
         toolName: tr.toolName,
         isError: !tr.result.success,
+        ...(!tr.result.success
+          ? { error: tr.result.error || `${tr.toolName} failed` }
+          : {}),
       },
     }));
+
+    const toolResultMessages = [...serverResults, ...pageResults];
 
     // 7. Assemble full continuation history
     const continuationMessages = [
@@ -905,6 +965,20 @@ export class AGUIAdapter extends BaseProtocolAdapter {
           // Read as every client reads it (portable/agui): JSON when it is,
           // failed when the execution result says so.
           const said = toolResultOf(event.content);
+          // A call of the server's tools: kept, with what it answered as
+          // the run streamed it, for the continuation.
+          const call = this.pendingToolCalls.get(toolCallId);
+          if (call) {
+            this.runServerCalls.push({
+              toolCallId,
+              toolName: call.toolName,
+              argsJson: call.argsJson,
+              content:
+                typeof event.content === 'string'
+                  ? event.content
+                  : JSON.stringify(event.content ?? null),
+            });
+          }
           this.emit({
             type: 'tool-result',
             toolResult: {

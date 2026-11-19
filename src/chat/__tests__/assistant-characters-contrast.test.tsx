@@ -4,15 +4,15 @@
  */
 
 /**
- * Datalayer's characters, tested for contrast on the page (T-25), as
- * the `loop` theme's faces are (T-15, primer-addons'
+ * Datalayer's characters, tested for contrast on the page, as
+ * the `loop` theme's faces are (primer-addons'
  * `theme/__tests__/loopContrast.test.ts`): the same WCAG measure, applied to
  * each character's key parts in each mode — its edge against the page, its
  * eyes against what they sit on — on the light page and on the dark one.
  *
  * The threshold is **3 to 1**, WCAG 2.x's for graphics and the parts of an
  * interface one must see to understand them (SC 1.4.11, non-text contrast),
- * and not T-15's 4.5 to 1, which is for body text. The page is the theme's
+ * and not 4.5 to 1, which is for body text. The page is the theme's
  * canvas (`loopColors.white`, `loopColors.black`) and every accent's stage,
  * the background an application's page lays behind its chat.
  */
@@ -33,7 +33,7 @@ import {
 } from '../assistant/characters';
 import { AssistantStage } from '../assistant/AssistantStage';
 
-/** The relative luminance of an sRGB colour, as WCAG 2.x defines it (T-15). */
+/** The relative luminance of an sRGB colour, as WCAG 2.x defines it. */
 function luminance(hex: string): number {
   const value = hex.replace('#', '');
   const channels = [0, 2, 4].map(

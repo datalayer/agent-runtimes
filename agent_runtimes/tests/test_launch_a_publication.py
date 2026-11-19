@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A stranger launches somebody else's publication by its version uid (D-12, E2-15).
+"""A stranger launches somebody else's publication by its version uid.
 
 It is in nobody's listing but its owner's, so `create_runtime` finds it
 through the publication, which carries the rate a launch reserves by.

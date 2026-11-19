@@ -8,8 +8,8 @@ Provides data structures for environment management in Datalayer environments:
 the entries of the environments listing, and the records of the registry of
 user environments. A version's specification, its
 states and its capability reports are the canonical models of
-``code_sandboxes.environments`` (D-14). A trial answers the runtime it
-launched, snake_case as ``POST /runtimes`` answers one (E1-14).
+``code_sandboxes.environments``. A trial answers the runtime it
+launched, snake_case as ``POST /runtimes`` answers one.
 """
 
 from typing import Any, Dict, Generic, List, Optional, TypeVar, Union
@@ -121,18 +121,18 @@ class EnvironmentRecord(_RegistryRecord):
 
 
 class EnvironmentPromotionPolicyDecision(_RegistryRecord):
-    """One artifact a promotion put in service, with the policy decision it carried (E1-08, E1-15)."""
+    """One artifact a promotion put in service, with the policy decision it carried."""
 
     artifact_uid: str
     variant: str
     region: str = ""
     immutable_reference: str = ""
-    #: The artifact's scan summary, as E1-08 decides it; None when no decision was made.
+    #: The artifact's scan summary, as the scan decides it; None when no decision was made.
     policy_decision: Optional[Dict[str, Any]] = None
 
 
 class EnvironmentPromotionRecord(_RegistryRecord):
-    """The promotion that last made a version its environment's promoted one (E1-15, D-11)."""
+    """The promotion that last made a version its environment's promoted one."""
 
     promoted_at: str
     #: The uid of who promoted it.
@@ -141,7 +141,7 @@ class EnvironmentPromotionRecord(_RegistryRecord):
     unavailable_variants: List[str] = Field(default_factory=list)
     #: What the promotion acknowledged: exactly ``unavailable_variants``.
     acknowledged_unavailable_variants: List[str] = Field(default_factory=list)
-    #: Whether any artifact carried a policy decision; False until E1-08 makes them.
+    #: Whether any artifact carried a policy decision; False until the scan makes them.
     policy_decision_made: bool = False
     policy_decisions: List[EnvironmentPromotionPolicyDecision] = Field(
         default_factory=list
@@ -149,7 +149,7 @@ class EnvironmentPromotionRecord(_RegistryRecord):
 
 
 class EnvironmentLiveRuntime(_RegistryRecord):
-    """A runtime still running one of an environment's artifacts, as a refused deletion names it (E1-15)."""
+    """A runtime still running one of an environment's artifacts, as a refused deletion names it."""
 
     runtime_uid: str
     version_uid: str = ""
@@ -187,7 +187,7 @@ class EnvironmentVersionRecord(_RegistryRecord):
     deprecated_at: Optional[str] = None
     #: The promotion that last made this version the promoted one, kept after a
     #: later one is promoted; None for a version never promoted, and from a
-    #: Runtimes before E1-15.
+    #: an older Runtimes.
     promotion: Optional[EnvironmentPromotionRecord] = None
     #: What a conditional write names in ``if_match``.
     etag: str = ""
@@ -204,7 +204,7 @@ class EnvironmentBuildRecord(_RegistryRecord):
     region: str
     attempt: int = 1
     #: What this build is for: ``build``, or ``resolve`` — a build that stops
-    #: once the version has its lock (E1-26). A build recorded
+    #: once the version has its lock. A build recorded
     #: before the term existed has none, and every one of them is a build.
     kind: str = "build"
     idempotency_key: str = ""
@@ -264,7 +264,7 @@ class EnvironmentArtifactRecord(_RegistryRecord):
 
 
 class EnvironmentBuildLogChunk(_RegistryRecord):
-    """One chunk of a build's log, redacted before it was written (D-15)."""
+    """One chunk of a build's log, redacted before it was written."""
 
     #: Dense from 0.
     sequence: int
@@ -301,7 +301,7 @@ class EnvironmentPublicationLock(_RegistryRecord):
 
 
 class EnvironmentPublicationSnapshot(_RegistryRecord):
-    """What a publication freezes (D-12, E2-15).
+    """What a publication freezes.
 
     Everything a public page shows, taken once from a version that is itself
     immutable and never re-read: the spec, the lock, the SBOM and scan
@@ -326,7 +326,7 @@ class EnvironmentPublicationSnapshot(_RegistryRecord):
 
 
 class EnvironmentPublicationRecord(_RegistryRecord):
-    """A version's publication in the public Library (D-12, E2-15).
+    """A version's publication in the public Library.
 
     A withdrawn version keeps its snapshot — ``status`` becomes
     ``unpublished`` rather than the record being gone — so a re-publish
@@ -353,7 +353,7 @@ class EnvironmentPublicationRecord(_RegistryRecord):
 
 
 class EnvironmentFork(_RegistryRecord):
-    """What forking a published version answers (D-12, E2-15).
+    """What forking a published version answers.
 
     The caller's own private environment the fork made, its version, and the
     Datalayer artifacts reused — the same immutable references, built once —
@@ -387,7 +387,7 @@ class EnvironmentValidationReport(_RegistryRecord):
         ]
 
 
-# -- A trial's runtime (E1-14) ---------------------------------------------------------
+# -- A trial's runtime ---------------------------------------------------------
 
 
 class _RuntimeAnswer(BaseModel):
@@ -397,7 +397,7 @@ class _RuntimeAnswer(BaseModel):
 
 
 class LaunchedEnvironmentArtifact(_RuntimeAnswer):
-    """The artifact a runtime was started from, as its answer names it (E1-11)."""
+    """The artifact a runtime was started from, as its answer names it."""
 
     uid: str = ""
     variant: str = ""
@@ -410,7 +410,7 @@ class LaunchedEnvironmentArtifact(_RuntimeAnswer):
 
 
 class LaunchedEnvironment(_RuntimeAnswer):
-    """A runtime's environment: its name, and for a user environment the version and artifact launched (E1-11)."""
+    """A runtime's environment: its name, and for a user environment the version and artifact launched."""
 
     name: str = ""
     title: str = ""
@@ -437,7 +437,7 @@ class LaunchedRuntime(_RuntimeAnswer):
 
 class EnvironmentTrial(_RuntimeAnswer):
     """
-    What trying a version answers (E1-14): ``POST /runtimes``' answer, for the version pinned.
+    What trying a version answers: ``POST /runtimes``' answer, for the version pinned.
 
     The runtime's environment names the version tried and the artifact it
     started from. ``success`` is False, and the runtime carries a ``reason``,

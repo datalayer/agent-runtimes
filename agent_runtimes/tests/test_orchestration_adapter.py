@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Tests for the adapter port (O0-05).
+"""Tests for the adapter port.
 
 The port's job is to make two mistakes impossible: an adapter that answers
 as though it had done something it cannot do, and an adapter whose reduced

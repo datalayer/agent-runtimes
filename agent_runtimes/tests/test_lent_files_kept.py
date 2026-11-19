@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The folder's own instructions file is kept (VSCODE VS-23, SHIELD SH-21).
+"""The folder's own instructions file is kept.
 
 A person's ``CLAUDE.md`` — one Datalayer did not write — is never written
 over: the application's instructions go beside it (``.datalayer/CLAUDE.md``,

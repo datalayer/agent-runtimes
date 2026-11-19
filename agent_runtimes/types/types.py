@@ -93,6 +93,14 @@ class SkillSpec(BaseModel):
     enabled: bool = Field(
         default=False, description="Whether the platform offers this skill today"
     )
+    ui: List["UiChoiceSpec"] = Field(
+        default_factory=list,
+        description=(
+            "The UI plugins it brings to the chat that uses it (agentspecs "
+            "0.0.196): each ``{plugin, renderer}`` of agentspecs ``ui/``, "
+            "injected after the agent's own while it is in use"
+        ),
+    )
     # Variant 1: module-based discovery
     module: Optional[str] = Field(
         default=None, description="Python module path for name-based discovery"
@@ -130,6 +138,22 @@ class SkillSpec(BaseModel):
     envvars: List[str] = Field(
         default_factory=list,
         description="Environment variable IDs required by this skill",
+    )
+    optional_env_vars: List[str] = Field(
+        default_factory=list,
+        description=(
+            "Environment variable IDs the skill reads when they are set: given "
+            "to the runtime and its sandbox when the account has them, never "
+            "required"
+        ),
+    )
+    any_of_env_vars: List[str] = Field(
+        default_factory=list,
+        description=(
+            "Its activation rule (agentspecs 0.0.218): one at least of these, "
+            "each among optional_env_vars, must be set, or the skill is not "
+            "activated and the agent starts without it"
+        ),
     )
     dependencies: List[str] = Field(
         default_factory=list, description="Python package dependencies"
@@ -180,6 +204,14 @@ class BackendToolSpec(BaseModel):
     description: str = Field(default="", description="Tool description")
     tags: List[str] = Field(default_factory=list, description="Tags for categorization")
     enabled: bool = Field(default=True, description="Whether the tool is enabled")
+    ui: List["UiChoiceSpec"] = Field(
+        default_factory=list,
+        description=(
+            "The UI plugins it brings to the chat that uses it (agentspecs "
+            "0.0.196): each ``{plugin, renderer}`` of agentspecs ``ui/``, "
+            "injected after the agent's own while it is in use"
+        ),
+    )
     approval: str = Field(
         default="auto",
         description="Approval policy for the tool ('auto' or 'manual')",
@@ -191,6 +223,14 @@ class BackendToolSpec(BaseModel):
     runtime: BackendToolRuntimeSpec = Field(
         ...,
         description="Runtime binding metadata",
+    )
+    linked_accounts: List[str] = Field(
+        default_factory=list,
+        description=(
+            "The accounts the person links in Settings that set it up, one of "
+            "them enough (``x``, ``bluesky``; agentspecs 0.0.189): no secret is "
+            "pasted for it"
+        ),
     )
     icon: Optional[str] = Field(
         default=None,
@@ -369,6 +409,25 @@ class UISpec(BaseModel):
         default_factory=list,
         description="The UI renderers it may be exposed through, ids of `agentspecs/ui-renderers`",
     )
+    placements: List[str] = Field(
+        default_factory=list,
+        description=(
+            "Where in the chat it may go, its default first: header, toolbar, footer, "
+            "banner, the side panels left and right, or message (agentspecs 0.0.197)"
+        ),
+    )
+    header: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description=(
+            "What it puts in the chat's title bar — its buttons, drop-downs and "
+            "indicators (`items`) — and the frontend tool that sets them (`tool`, "
+            "`when`), as its agentspecs UI spec declares them"
+        ),
+    )
+    supersedes: List[str] = Field(
+        default_factory=list,
+        description="The UI plugins it stands in for: a chat that has it leaves them out",
+    )
     catalog: str = Field(
         default="", description="The catalog its components are written in"
     )
@@ -404,6 +463,10 @@ class UiChoiceSpec(BaseModel):
     renderer: Optional[str] = Field(
         default=None,
         description="The UI renderer of `agentspecs/ui-renderers` it is exposed through, by id",
+    )
+    placement: Optional[str] = Field(
+        default=None,
+        description="Where in the chat it goes, one of its spec's placements; its default unsaid",
     )
 
     @model_validator(mode="before")
@@ -1571,7 +1634,7 @@ class AgentSuggestion(BaseModel):
 
 
 class MCPServerAuth(BaseModel):
-    """How a remote MCP server's bearer is minted for the run (AC-20)."""
+    """How a remote MCP server's bearer is minted for the run."""
 
     kind: Literal["agentcore-gateway"] = Field(
         ...,
@@ -1605,6 +1668,14 @@ class MCPServer(BaseModel):
     emoji: Optional[str] = Field(
         default=None,
         description="Unicode emoji for UI display",
+    )
+    ui: List[UiChoiceSpec] = Field(
+        default_factory=list,
+        description=(
+            "The UI plugins it brings to the chat that uses it (agentspecs "
+            "0.0.196): each ``{plugin, renderer}`` of agentspecs ``ui/``, "
+            "injected after the agent's own while it is in use"
+        ),
     )
     url: str = Field(
         default="",
@@ -1657,6 +1728,15 @@ class MCPServer(BaseModel):
             "account has them, never to the server, never required"
         ),
         alias="sandboxEnvVars",
+    )
+    optional_env_vars: List[str] = Field(
+        default_factory=list,
+        description=(
+            "Environment variables the runtime is given when the account has "
+            "them, never required: LinkedIn's LINKEDIN_LI_AT, the person's "
+            "session pasted in Settings, written as the server's session"
+        ),
+        alias="optionalEnvVars",
     )
     is_available: bool = Field(
         default=False,
@@ -2061,6 +2141,27 @@ class AppVoiceSpec(BaseModel):
         return self.enabled and self.output != "off"
 
 
+#: What runs and hosts an agent (``runtime_engine``), the default first.
+RUNTIME_ENGINES: tuple[str, ...] = ("datalayer", "kagent", "agentcore")
+
+
+class AgentspecOptional(BaseModel):
+    """What an agent starts without (agentspecs 0.0.188, the user, 14 November 2026).
+
+    MCP servers and skills of the agent's own, by id without version: one
+    whose secrets are not set up is left out, and the agent told which,
+    instead of holding the start back. ``at_least_one`` lists groups of these
+    of which one at least must be set up.
+    """
+
+    mcp_servers: List[str] = Field(default_factory=list)
+    skills: List[str] = Field(default_factory=list)
+    #: Backend tools set up by an account the person linked (``linked_accounts``,
+    #: agentspecs 0.0.189): the posting tools, left out while it is not linked.
+    backend_tools: List[str] = Field(default_factory=list)
+    at_least_one: List[List[str]] = Field(default_factory=list)
+
+
 class Agentspec(BaseModel):
     """
     Specification for an AI agent.
@@ -2082,6 +2183,21 @@ class Agentspec(BaseModel):
         validation_alias=AliasChoices("domain", "vertical"),
     )
     enabled: bool = Field(default=True, description="Whether the agent is enabled")
+    listed: bool = Field(
+        default=True,
+        description=(
+            "Whether the pickers offer the agent (the new agent page, the chats, "
+            "the assign menu, loop's pickers): an enabled agent that is not "
+            "listed runs by id and as a default, without being offered"
+        ),
+    )
+    optional: Optional[AgentspecOptional] = Field(
+        default=None,
+        description=(
+            "The MCP servers and skills the agent starts without when their "
+            "secrets are not set up, and groups of which one must be"
+        ),
+    )
     model: Optional[str] = Field(
         default=None,
         description="AI model identifier to use for this agent (e.g., 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0')",
@@ -2147,6 +2263,11 @@ class Agentspec(BaseModel):
         if value is None or value == "":
             return "local"
         return value
+
+    @property
+    def offered(self) -> bool:
+        """Whether the pickers offer it: the catalogue enables it and lists it."""
+        return self.enabled and self.listed
 
     @model_validator(mode="after")
     def _decisions_bring_decide(self) -> "Agentspec":
@@ -2229,6 +2350,17 @@ class Agentspec(BaseModel):
         default=None,
         description="Theme color for the agent (hex code)",
     )
+    tagline: Optional[str] = Field(
+        default=None,
+        description="What it does on its own, in one line: under its name in a list of agents",
+    )
+    presentation: Optional[str] = Field(
+        default=None,
+        description=(
+            "What it is, as one Markdown document, for a page that presents it: "
+            "a paragraph, a bullet list of what it does, links for where to read more"
+        ),
+    )
     suggestions: List[AgentSuggestion] = Field(
         default_factory=list,
         description="Chat suggestions to show users what this agent can do",
@@ -2260,6 +2392,26 @@ class Agentspec(BaseModel):
             "name the same word and mean different things."
         ),
         alias="harness",
+    )
+    runtime_engine: Literal["datalayer", "kagent", "agentcore"] = Field(
+        default="datalayer",
+        description=(
+            "What runs and hosts this agent. 'datalayer' (default): a Datalayer "
+            "agent runtime, from the platform's pools or on your own machine. "
+            "'kagent': kagent, a Kubernetes control plane for agents — a kagent "
+            "Agent (an AgentTemplate and a Harness running "
+            "`agent-runtimes serve --target kagent`), reached through kagent's "
+            "A2A gateway at /agents/{namespace}/{name}, each conversation a "
+            "session actor of Agent Substrate, suspended when idle and resumed "
+            "on the next message. 'agentcore': Amazon Bedrock AgentCore Runtime "
+            "in the AWS account of the organization that launches it, the "
+            "agent-runtimes image serving the spec "
+            "(`agent-runtimes serve --target agentcore`). The spec's engine is "
+            "the default a launch may override. Distinct from `harness`, which "
+            "says which agent program turns the loop; 'kagent' and 'agentcore' "
+            "run 'pydantic-ai' only."
+        ),
+        alias="runtimeEngine",
     )
 
     sandbox_variant: Optional[str] = Field(
@@ -2977,19 +3129,25 @@ class AppPapCompanySpec(BaseModel):
     enabled: bool = Field(default=False)
     signed_out: bool = Field(default=True)
     #: Whether it offers personal agents no sign-in (PAP `auth.disabled`, 0.3 as published): they ask
-    #: only what anybody may ask, in nobody's account (D4-08).
+    #: only what anybody may ask, in nobody's account.
     sign_in_disabled: bool = Field(default=False)
     #: Whether it publishes the application's public skills to personal agents as a `skill_index`
-    #: (PAP 0.3 §9.4, D4-06).
+    #: (PAP 0.3 §9.4).
     publish_skills: bool = Field(default=False)
-    #: Its website's two flags at PAP draft 0.4 (§6, D5-09): a signed-in browser has the account's full
+    #: Its website's two flags at PAP draft 0.4 (§6): a signed-in browser has the account's full
     #: access (`web.unscoped`), or personal agents are asked to use its agent and APIs (`web.disabled`).
     web_unscoped: bool = Field(default=False)
     web_disabled: bool = Field(default=False)
+    #: How personal agents reach it: `agent`, `openapi`, `mcp`, `web` (PAP §3.1).
+    interfaces: List[str] = Field(default_factory=lambda: ["agent"])
     scopes: List[AppPapCompanyScopeSpec] = Field(default_factory=list)
     excluded_tasks: List[AppPapExcludedTaskSpec] = Field(default_factory=list)
     extensions: List[str] = Field(default_factory=list)
-    operations: List[AppPapOperationSpec] = Field(default_factory=list)
+    #: `any`, or `registered` personal agents only, each by its `client_id` URL.
+    personal_agents: str = Field(default="any")
+    registered_agents: List[str] = Field(default_factory=list)
+    #: Derived from the application's `openapi` (its operations carrying `x-pap`), never written.
+    operations: List[AppPapOperationSpec] = Field(default_factory=list, exclude=True)
 
     def scope_names(self) -> List[str]:
         """The names of the scopes it offers, in order."""
@@ -3408,6 +3566,10 @@ class AppInterfaceSpec(BaseModel):
 
     layout: str = Field(default="chat", description="`chat`, `page` or `split`")
     accent: str = Field(default="green", description="The application's one colour")
+    theme: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Its theme, `{variant, mode}` (primer-addons' themes), when it names one",
+    )
     welcome: str = Field(default="")
     starters: List[AppStarterSpec] = Field(default_factory=list)
     commands: List[AppCommandSpec] = Field(
@@ -3784,6 +3946,13 @@ class AppSpec(BaseModel):
         default_factory=list,
         description="Tools of its own, written in its code",
     )
+    openapi: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description=(
+            "What it answers when called, as an OpenAPI 3.1 document, as agentspecs "
+            "checks it: its MCP tools, REST endpoints and PAP operations (`x-pap`)"
+        ),
+    )
     context: List[str] = Field(
         default_factory=list, description="The Frames it works under"
     )
@@ -3847,6 +4016,18 @@ class AppSpec(BaseModel):
         default="",
         description="Its banner, by name, from the set people choose theirs from; the one its id seeds when unsaid",
     )
+
+    @model_validator(mode="after")
+    def _pap_operations_of_its_openapi(self) -> "AppSpec":
+        """`pap.company.operations`, from its `openapi` (agentspecs `pap_operations`)."""
+        if self.openapi:
+            from agentspecs.apps import pap_operations
+
+            self.pap.company.operations = [
+                AppPapOperationSpec.model_validate(operation.model_dump(mode="json"))
+                for operation in pap_operations(self.openapi)
+            ]
+        return self
 
     def tool(self, name: str) -> Optional[AppToolSpec]:
         """Find its own tool of that name, or None."""

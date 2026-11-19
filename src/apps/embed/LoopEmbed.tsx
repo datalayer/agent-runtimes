@@ -62,7 +62,7 @@ export type LoopEmbedProps = LoopPresetOptions & {
    */
   frameHeight?: number | string;
   /**
-   * The sidebar as a rail of line icons, one panel shown at a time (T-07). See `LoopWorkspaceProps.sidebarRail`.
+   * The sidebar as a rail of line icons, one panel shown at a time. See `LoopWorkspaceProps.sidebarRail`.
    */
   sidebarRail?: boolean;
   /**
@@ -72,7 +72,7 @@ export type LoopEmbedProps = LoopPresetOptions & {
    * window's title bar, a panel of its own, a command. Without this a host
    * would have to rebuild the plugin list to add one thing to it, which is the
    * assembly this component exists to save. An extension groups some of
-   * them, as an application's own plugins are (`AppRenderer`, F-15).
+   * them, as an application's own plugins are (`AppRenderer`).
    */
   plugins?: PlatformInput[];
 };
@@ -105,6 +105,15 @@ export function LoopEmbed({
    */
   const firstPromptHookRef = useRef(preset.firstPromptHook);
   firstPromptHookRef.current = preset.firstPromptHook;
+  // *Sign in* for an anonymous visitor, through a ref for the same reason.
+  const onSignInRef = useRef(preset.onSignIn);
+  onSignInRef.current = preset.onSignIn;
+  const hasOnSignIn = Boolean(preset.onSignIn);
+  // The box's call to action: its words by content, its action through a ref.
+  const callToActionRef = useRef(preset.callToAction);
+  callToActionRef.current = preset.callToAction;
+  const callToActionSays = preset.callToAction?.says;
+  const callToActionLabel = preset.callToAction?.label;
 
   // Built once: rebuilding would restart every plugin on each render.
   const reactor = useMemo(
@@ -116,6 +125,15 @@ export function LoopEmbed({
           // asked for a frame should not also have to remember the plugin.
           windowFrame: preset.windowFrame || frameTitle !== undefined,
           firstPromptHook: () => firstPromptHookRef.current?.(),
+          onSignIn: hasOnSignIn ? () => onSignInRef.current?.() : undefined,
+          callToAction:
+            callToActionSays !== undefined && callToActionLabel !== undefined
+              ? {
+                  says: callToActionSays,
+                  label: callToActionLabel,
+                  onAction: () => callToActionRef.current?.onAction(),
+                }
+              : undefined,
         }),
         ...plugins,
       ]),
@@ -135,6 +153,12 @@ export function LoopEmbed({
       preset.presence?.welcome,
       preset.presence?.paused,
       preset.showTokenUsage,
+      preset.runAsAnonymous,
+      preset.maxTurns,
+      preset.signInUrl,
+      hasOnSignIn,
+      callToActionSays,
+      callToActionLabel,
       // Its voice by its content, the packages that hear aside (functions),
       // and its token aside: a renewed sign-in must not restart the workspace.
       JSON.stringify({
@@ -142,12 +166,14 @@ export function LoopEmbed({
         engines: undefined,
         token: undefined,
       }),
-      // The thread a reloaded embed goes on with, by its id (D-13).
+      // The thread a reloaded embed goes on with, by its id.
       preset.thread?.id,
       // By its content: an application's spec written inline is a new object each render.
       JSON.stringify(preset.datalayerCreatePayload ?? null),
       JSON.stringify(preset.datalayerVisitors ?? null),
       preset.datalayerKept?.url,
+      // The agent's own UI plugins, by their ids.
+      JSON.stringify(preset.uiPlugins ?? []),
       preset.embedToken,
       preset.defaultEditor,
       preset.showViewSelector,
@@ -160,6 +186,7 @@ export function LoopEmbed({
       preset.showAgentVariants,
       preset.agentSummary,
       preset.teamId,
+      preset.visitorFor,
       preset.teamPicker,
       preset.pageLayout,
       preset.pageLayoutTurnPanel,

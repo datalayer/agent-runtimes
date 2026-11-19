@@ -4,8 +4,7 @@
  */
 
 /**
- * An application, rendered: the LOOP workspace configured from an Appspec
- * (R-01).
+ * An application, rendered: the LOOP workspace configured from an Appspec.
  *
  * One renderer for every place an application appears — the Studio's
  * Preview, its hosted page, an embed, the home page — so that what a builder
@@ -16,8 +15,8 @@
  *   created with the application in its payload — so the runtime reaches only
  *   what the application connects to and enforces its rules before every tool
  *   call — and the application's starters as the openers of the empty chat;
- * - its **layout**, as `interface.layout` says (`appLayoutOptions`, LOOP
- *   T-07), on the workspace's own `page-layout` plugin: `chat` is the
+ * - its **layout**, as `interface.layout` says (`appLayoutOptions`),
+ * on the workspace's own `page-layout` plugin: `chat` is the
  *   conversation alone, with the A2UI surfaces its answers draw; `page` is
  *   the page on a sheet with the composer over it and the conversation in a
  *   panel the composer's display modes open; `split` is the conversation and
@@ -27,20 +26,20 @@
  *   `app-page` plugin, in place of the notebook and the document, fed from
  *   the conversation and answered through it (`APP_KIND_PATHS`), with the
  *   Canvas's block plugins (`CANVAS_BLOCK_PLUGINS`), whose blocks are what
- *   the page draws (R-01b);
+ *   the page draws;
  * - a **decision**: a workspace without a conversation whose one view is the
- *   page its host draws (`page`, R-02) — the Studio's run page, at its
+ *   page its host draws (`page`) — the Studio's run page, at its
  *   address and embedded;
  * - its **frame**, when the host asks (`frame`): the `window-frame` plugin's
  *   window, its title the application's face and name;
- * - its **language** (P-26): what a person reads of it — its name,
+ * - its **language**: what a person reads of it — its name,
  *   welcome, starters, settings, commands, modes and profiles — in the first
  *   language they prefer that its Appspec is translated into (`language`,
  *   else the browser's), its own words otherwise (`translatedAppspec`);
  *   what it does is the same in every language;
- * - its **sidebar**, when the host asks (`sidebar`, R-01b): its rules and
+ * - its **sidebar**, when the host asks (`sidebar`): its rules and
  *   the approvals waiting for the person (`app-rules`), what it did
- *   (`app-activity`), and its computer, live (`app-computer`, R-23), beside
+ *   (`app-activity`), and its computer, live (`app-computer`), beside
  *   its page — what its builder reads in the Studio's Preview.
  *
  * Which plugins a kind needs, and how its workspace is laid out, is one
@@ -52,7 +51,9 @@
 
 import { useMemo, type ComponentType } from 'react';
 import {
+  contribution,
   defineExtension,
+  definePlugin,
   type PlatformInput,
   type PluginRef,
   type ReactorExtension,
@@ -73,8 +74,14 @@ import {
   CANVAS_BLOCK_PLUGINS,
   canvasBlocksPluginName,
 } from '../plugins/canvas-blocks';
+import { LoopApplication } from '../core';
 import { LoopEmbed, type LoopEmbedProps } from '../embed/LoopEmbed';
 import type { LoopPresetOptions } from '../presets';
+import {
+  agentUiChoicesOf,
+  agentUiPluginsFor,
+  lockedUiPluginsFor,
+} from '../agentUiPlugins';
 import { dumpAppspec } from './appspec';
 import { defineAppActivityPlugin } from '../plugins/app-activity';
 import { AppElementsPlugin } from '../plugins/app-elements';
@@ -119,7 +126,7 @@ export const agentIdOf = (app: Pick<AppSpec, 'agent' | 'team'>): string => {
 /**
  * The plugin that makes a LOOP workspace run an application.
  *
- * Its page plugin of the pair (F-15): named `loop-app-<id>`, as its
+ * Its page plugin of the pair: named `loop-app-<id>`, as its
  * runtime's plugin is, and requiring it — so that it stands down while its
  * runtime does not hold the application, and comes back when it does
  * (`AppRuntimePlugins` follows the runtime).
@@ -136,6 +143,17 @@ export const agentIdOf = (app: Pick<AppSpec, 'agent' | 'team'>): string => {
 export function defineAppPlugin(
   app: AppSpec,
   shown: AppSpec = app,
+  {
+    agentOnRuntime = false,
+  }: {
+    /**
+     * Its agent is one already on a runtime, made there from its agentspec
+     * and not from the application (a person's own agent, `Application`'s
+     * runtime mode): the runtime holds no plugin of the application, so the
+     * page's requires none.
+     */
+    agentOnRuntime?: boolean;
+  } = {},
 ): ReactorPlugin<Record<string, never>, unknown, unknown> {
   if (!app.agent) {
     throw new Error(
@@ -146,8 +164,10 @@ export function defineAppPlugin(
   return defineAgentCapacityPlugin({
     key: `app-${app.id}`,
     name: pair.page.name,
-    requiredBackendPlugins: pair.page.requiredBackendPlugins,
-    // What a person reads is in their language (P-26); what it is created
+    ...(agentOnRuntime
+      ? {}
+      : { requiredBackendPlugins: pair.page.requiredBackendPlugins }),
+    // What a person reads is in their language; what it is created
     // with is its own Appspec.
     displayName: shown.name,
     description: shown.description || `The ${shown.name} application`,
@@ -156,24 +176,24 @@ export function defineAppPlugin(
     createPayload: {
       name: app.id,
       app_spec: dumpAppspec(app),
-      // Its shell is its code: Codemode's `execute_code`, only when it is on
-      // (R-23), as on Datalayer (`appDatalayerCreatePayload`).
+      // Its shell is its code: Codemode's `execute_code`, only when it is on,
+      // as on Datalayer (`appDatalayerCreatePayload`).
       enable_codemode: Boolean(app.permissions?.computer?.shell),
       ...(app.model ? { model: app.model } : {}),
     },
-    // Its starters, each under its category (P-20); with profiles, the
+    // Its starters, each under its category; with profiles, the
     // composer offers the profile's in their place.
     suggestions: startersAsOpeners(shown.interface.starters),
     // In the page, the agent is told what a runtime tells it: its own
     // spec's prompt, then the application's instructions; on the
     // application's model when it names one (`apps/apps/agent`). An agent
     // that computes in code is told where its code runs there, and where its
-    // documents are (E-11, `browserSandbox`).
+    // documents are (`browserSandbox`).
     instructions: runsCodeInSandbox(app)
       ? [app.instructions, browserSandboxNote(app)].filter(Boolean).join('\n\n')
       : app.instructions,
     model: app.model,
-    // Its modes and its profiles (P-19, P-20), as the session API
+    // Its modes and its profiles, as the session API
     // applies them: the profile's instructions and those of the options
     // chosen, and the model one names, for the run they are sent with.
     ...((app.interface.modes ?? []).length > 0 ||
@@ -190,7 +210,7 @@ export function defineAppPlugin(
  * The application on the page: its plugins delivered as one extension named
  * as its plugin pair is, `loop-app-<id>` — the extension its runtime's plugin
  * says too, so that Reactor's manager ("Delivered by") and graph show the
- * page's plugins and the runtime's as one application (F-15).
+ * page's plugins and the runtime's as one application.
  */
 export function appExtension(
   app: AppSpec,
@@ -203,11 +223,30 @@ export function appExtension(
     description: shown.description || `The ${shown.name} application`,
     emoji: app.emoji,
     version: app.version,
-    plugins,
+    plugins: [applicationPlugin(app, shown), ...plugins],
   });
 }
 
-/** Which instance of an application runs, as the platform knows it (R-07). */
+/**
+ * The application itself, said to the workspace (`LoopApplication`): what a
+ * host's plugin reads of the application it was added to — the left panel's
+ * presentation reads its `presentation`, its name and its face — in the
+ * words the person reads.
+ */
+export function applicationPlugin(app: AppSpec, shown: AppSpec): PluginRef {
+  return definePlugin({
+    name: `loop-app-${app.id}-application`,
+    displayName: `${shown.name}: the application`,
+    description: `The Appspec of ${shown.name}, for the plugins its host adds to it.`,
+    octicon: 'apps',
+    emoji: app.emoji,
+    contributes: [
+      contribution(LoopApplication, { app: shown }, { id: 'application' }),
+    ],
+  }) as PluginRef;
+}
+
+/** Which instance of an application runs, as the platform knows it. */
 export type AppInstance = {
   /** Its `app` item. */
   appUid?: string;
@@ -217,10 +256,16 @@ export type AppInstance = {
   version?: number;
   /**
    * The organization it belongs to: its agent keeps to that organization's
-   * contexts, read by the runtime from IAM (U-31); unsaid for an
+   * contexts, read by the runtime from IAM; unsaid for an
    * application of nobody's organization.
    */
   organizationUid?: string;
+  /**
+   * What runs and hosts its agent, as its deployment says (`runtime_engine`):
+   * a kagent deployment's runtime is launched on kagent. Unsaid, its agent
+   * spec's engine applies.
+   */
+  runtimeEngine?: 'datalayer' | 'kagent';
 };
 
 export type AppRendererProps = Omit<LoopEmbedProps, 'agentId'> & {
@@ -230,31 +275,31 @@ export type AppRendererProps = Omit<LoopEmbedProps, 'agentId'> & {
   instance?: AppInstance;
   /**
    * Told what the application is doing — idle, thinking, working, waiting for
-   * you — for a host that draws its face in a frame of its own (T-08). A
+   * you — for a host that draws its face in a frame of its own. A
    * stable function, such as a state setter.
    */
   onPresence?: (state: PresenceState) => void;
   /**
-   * Its deployment is paused (R-17), as its host knows it: its chat
-   * says *Paused* beside its face and its assistant dozes (T-08, T-22).
+   * Its deployment is paused, as its host knows it: its chat
+   * says *Paused* beside its face and its assistant dozes.
    */
   paused?: boolean;
   /**
    * Told what the application last said, and whether its newest words are
    * an answer — for a host that says them outside the conversation: the
-   * embed's floating chrome, its balloon and its blink (R-01). A stable
+   * embed's floating chrome, its balloon and its blink. A stable
    * function, such as a state setter.
    */
   onSaying?: (said: ChatSaid) => void;
   /**
    * Draw its rules and the approvals waiting for the person, and its
-   * activity, beside its page (R-01b): what its builder reads in the
+   * activity, beside its page: what its builder reads in the
    * Studio's Preview. The activity is read from its record, kept under
    * `instance.appUid`.
    */
   sidebar?: boolean;
   /**
-   * Draw its computer alone beside its page (R-23): what a deployment's
+   * Draw its computer alone beside its page: what a deployment's
    * owner and the editors of its application see of it at its address — its
    * runtime shows it to them only (decided 2026-10-06). Implied by `sidebar`.
    */
@@ -266,7 +311,7 @@ export type AppRendererProps = Omit<LoopEmbedProps, 'agentId'> & {
   frame?: boolean;
   /**
    * The page a host draws for a kind the workspace has no page for: a
-   * decision's (R-02). The workspace's one view. A component defined once,
+   * decision's. The workspace's one view. A component defined once,
    * outside the host's render: a new one would be a new plugin, and restart
    * the workspace.
    */
@@ -280,17 +325,25 @@ export type AppRendererProps = Omit<LoopEmbedProps, 'agentId'> & {
   /**
    * The language the person reads it in, as BCP 47 tags it (`fr`, `pt-BR`):
    * the platform's setting when the host knows it. The browser's languages
-   * when unsaid (P-26).
+   * when unsaid.
    */
   language?: string;
   /**
-   * Where its voice runs, as its host knows it (VO-49): the speech
+   * Where its voice runs, as its host knows it: the speech
    * service's origin and the token it is asked with, and the browser's
    * models (Datalayer's CDN when unsaid). Given, an application whose
    * `interface.voice` is on has the microphone in its composer and its
    * answers heard; a host that gives none draws it without a voice.
    */
   speech?: Omit<ChatVoicePlace, 'consentKey' | 'language'>;
+  /**
+   * The agent that answers, by its name on the runtime it already runs on
+   * (`datalayerKept`): a person's own agent, launched from its agentspec
+   * (`Application`'s runtime mode). Its page plugin then requires nothing of
+   * that runtime, which holds no plugin of the application. Unsaid, the
+   * application's own agent, made under its id.
+   */
+  agentId?: string;
 };
 
 /** What `interface.layout` sets on the workspace. */
@@ -307,7 +360,7 @@ export type AppLayoutOptions = Pick<
 >;
 
 /**
- * The workspace an application's layout asks for (T-07).
+ * The workspace an application's layout asks for.
  *
  * - `chat`: the conversation alone — no editor, no page, no strip.
  * - `page`: the page layout — its page (or, without one, the editors) on the
@@ -348,24 +401,24 @@ export type AppPreset = {
 
 /**
  * The plugins an application's kind needs, and how its workspace is laid
- * out (R-01): the preset per kind, as `loopPlugins` is for the examples.
+ * out: the preset per kind, as `loopPlugins` is for the examples.
  *
  * - a **chat**, a **widget**, a **worker**: its agent (`defineAppPlugin`);
  *   its page (`app-page`) when it has one, with the Canvas's block plugins
  *   but those of the UI plugins its organization turned off (`pluginsOff`),
- *   whose contributions are the blocks it may draw (R-01b); a thumb and a
- *   comment on each answer when its record keeps feedback (V-18); its
- *   commands in the composer's `/` menu and its modes beside it (P-19); the
- *   side panel and the pages its code opens (`app-elements`, P-18); the
- *   components its developer wrote (`app-components`, P-17); what it
+ *   whose contributions are the blocks it may draw; a thumb and a
+ *   comment on each answer when its record keeps feedback; its
+ *   commands in the composer's `/` menu and its modes beside it; the
+ *   side panel and the pages its code opens (`app-elements`); the
+ *   components its developer wrote (`app-components`); what it
  *   keeps and for how long, under its prompt before the first message, when
- *   `kept` says it (R-31); with
+ *   `kept` says it; with
  *   `sidebar`, its rules and approvals card, its activity feed and its
- *   computer (R-01b, R-23); with `computer`, its computer alone — at its
+ *   computer; with `computer`, its computer alone — at its
  *   address, for its owner and the editors of its application;
  *   laid out as `interface.layout` says;
  * - a **decision**: the page its host draws (`page`), as the one view of a
- *   workspace without a conversation (R-02).
+ *   workspace without a conversation.
  *
  * An application that cannot be drawn is refused with a sentence: a
  * decision without its host's page, an application run by a team.
@@ -377,21 +430,33 @@ export function appPreset(
     pluginsOff?: readonly string[];
     /** Its rules and approvals, its activity and its computer, beside its page. */
     sidebar?: boolean;
-    /** Its computer alone beside its page (R-23): for its owner and editors at its address. */
+    /** Its computer alone beside its page: for its owner and editors at its address. */
     computer?: boolean;
     /** What its record is kept under: its activity's. */
     appUid?: string;
     /**
-     * The application as the person reads it (P-26): its words in their
+     * The application as the person reads it: its words in their
      * language. Its own when unsaid.
      */
     shown?: AppSpec;
     /**
-     * Say what it keeps before the first message (R-31): at its address and
+     * Say what it keeps before the first message: at its address and
      * embedded, not in its builder's Preview — to a `visitor` not signed
-     * in, that nothing is kept (R-30).
+     * in, that nothing is kept.
      */
     kept?: { visitor: boolean };
+    /**
+     * Run for an anonymous visitor (`datalayerVisitors`), deployed or not:
+     * its UI that needs no connection, and what needs one locked in the
+     * title bar. Unsaid, `kept.visitor`.
+     */
+    visitor?: boolean;
+    /**
+     * Its agent is already on a runtime, made from its agentspec (a
+     * person's own agent): its page plugin requires nothing of that runtime,
+     * which holds no plugin of the application, and nothing follows it.
+     */
+    agentOnRuntime?: boolean;
   } = {},
 ): AppPreset {
   if (app.kind === 'decision') {
@@ -414,45 +479,66 @@ export function appPreset(
   // The blocks its Canvas offers: those of the UI plugins not turned off.
   const off = new Set((options.pluginsOff ?? []).map(canvasBlocksPluginName));
   const blocks = CANVAS_BLOCK_PLUGINS.filter(plugin => !off.has(plugin.name));
+  const visitor = options.visitor ?? options.kept?.visitor ?? false;
   return {
     plugins: [
-      defineAppPlugin(app, shown),
-      // What its runtime holds, told to the page (F-15), and its packaged
+      defineAppPlugin(app, shown, { agentOnRuntime: options.agentOnRuntime }),
+      // What its runtime holds, told to the page, and its packaged
       // page side read from it when its components are files of its folder
-      // (P-29).
-      defineAppRuntimePlugin(app.id, { pageSide: hasFolderModules(app) }),
+      // — not for an agent that is not the application's own.
+      ...(options.agentOnRuntime
+        ? []
+        : [
+            defineAppRuntimePlugin(app.id, { pageSide: hasFolderModules(app) }),
+          ]),
       // Its code in the browser's sandbox, when it turns in the page and
-      // computes in code (E-11): `execute_code`, its documents there.
+      // computes in code: `execute_code`, its documents there.
       ...(runsCodeInSandbox(app) ? [defineAppBrowserSandboxPlugin(app)] : []),
       ...(withPage ? [defineAppPagePlugin(shown), ...blocks] : []),
-      // The components its developer wrote (P-17): blocks of its page
+      // The components its developer wrote: blocks of its page
       // and renderers of its page, its elements and its answers — its own.
       ...(hasCustomComponents(app) ? [defineAppComponentsPlugin(app)] : []),
       // Its commands in the composer's `/` menu, its modes and its profiles
-      // beside the composer (P-19, P-20) and what a person may attach
-      // there (P-21): only for an application that has some.
+      // beside the composer and what a person may attach
+      // there: only for an application that has some.
       ...(needsAppComposer(app) ? [defineAppComposerPlugin(shown)] : []),
-      // A thumb and a comment on each answer, kept in its record (V-18): only for an application whose record keeps feedback.
+      // A thumb and a comment on each answer, kept in its record: only for an application whose record keeps feedback.
       ...(keepsFeedback(app) ? [defineAppFeedbackPlugin(app)] : []),
-      // What it keeps, and for how long, before anything is said (R-31).
+      // What it keeps, and for how long, before anything is said.
       ...(options.kept
         ? [defineAppKeptPlugin(app, keptBeforeFirstMessage(app, options.kept))]
         : []),
-      // What its builder reads beside its page (R-01b): its rules and the
+      // What its builder reads beside its page: its rules and the
       // approvals waiting, and what it did.
       ...(options.sidebar
         ? [
             defineAppRulesPlugin(app),
             defineAppActivityPlugin(app, options.appUid),
-            // Its computer, live (R-23).
+            // Its computer, live.
             defineAppComputerPlugin(app),
           ]
         : options.computer
           ? [defineAppComputerPlugin(app)]
           : []),
-      // What its code opens beside the conversation (P-18): a side
+      // What its code opens beside the conversation: a side
       // panel, a page of its own; nothing drawn while nothing is open.
       AppElementsPlugin,
+      // Its agent's own UI plugins, as its `ui` names them (the Marketer's
+      // post previews, the Shopper's basket…): to a visitor, only those
+      // that need no connection of theirs.
+      ...agentUiPluginsFor(app.ui, { anonymous: visitor }),
+      // To a visitor, what its agent would bring that needs their own
+      // connection — its spec's `ui` and every MCP server's and skill's,
+      // optional ones too, whatever it runs — locked in the title bar, each
+      // signing them in (the user, 15 November 2026: the Marketer's
+      // *Sign in to LinkedIn*). The workspace allocates a bootstrap spec,
+      // not this one: the application's agent is named here.
+      ...(visitor
+        ? lockedUiPluginsFor([
+            ...(app.ui ?? []),
+            ...(app.agent ? agentUiChoicesOf(agentIdOf(app)) : []),
+          ])
+        : []),
     ],
     workspace: appLayoutOptions(app),
   };
@@ -461,8 +547,8 @@ export function appPreset(
 /**
  * What an application's agent is created with on a Datalayer runtime: under
  * the application's id, over AG-UI, with the application's own document —
- * so that the runtime registers it and decides every tool call by its rules
- * (R-03, R-05), as `loop apps run --cloud` does. One payload for every
+ * so that the runtime registers it and decides every tool call by its rules,
+ * as `loop apps run --cloud` does. One payload for every
  * place it runs, all of them the workspace (`AppRenderer`): the Studio's
  * Preview, the hosted page, and the embed inline and floating.
  */
@@ -490,6 +576,9 @@ export function appDatalayerCreatePayload(
             ...(instance.organizationUid
               ? { organization_uid: instance.organizationUid }
               : {}),
+            ...(instance.runtimeEngine
+              ? { runtime_engine: instance.runtimeEngine }
+              : {}),
           },
         }
       : {}),
@@ -510,10 +599,10 @@ const NO_PLUGINS: PluginRef[] = [];
 
 /**
  * The application's accent over the theme its conversation wears, in both
- * modes (T-05): its bubbles and its one button in its own colour, and
+ * modes: its bubbles and its one button in its own colour, and
  * not in the theme's default — the chat sets its theme again inside it, so
  * what the page around it set does not reach in. The accents are the theme
- * system's: laid over whatever theme it wears (T-30; decided 2026-10-07).
+ * system's: laid over whatever theme it wears (decided 2026-10-07).
  * Naming none, it wears the theme's own colours: nothing is laid.
  */
 export function appThemeOverrides(app: AppSpec): ThemeOverrides | undefined {
@@ -527,7 +616,7 @@ export function appThemeOverrides(app: AppSpec): ThemeOverrides | undefined {
 }
 
 /**
- * The agent an application's chat speaks to (D-15): its own, made
+ * The agent an application's chat speaks to: its own, made
  * under its id — or, for a visitor without an account, the one of the
  * visitors' runtime their token reaches (`visitorAgentOf`): an example's by
  * its id, an application at its address by `at-<slug>`. A token for another
@@ -567,6 +656,7 @@ export function AppRenderer({
   pluginsOff,
   language,
   speech,
+  agentId,
   ...embed
 }: AppRendererProps): React.JSX.Element {
   /*
@@ -578,7 +668,7 @@ export function AppRenderer({
   const source = JSON.stringify(dumpAppspec(app));
   const off = [...(pluginsOff ?? [])].sort().join(',');
   /*
-   * What the person reads, in their language (P-26): the host's, else the
+   * What the person reads, in their language: the host's, else the
    * browser's. Read once per language: a new one is a new workspace.
    */
   const preferred = (language ? [language] : preferredLanguages()).join(',');
@@ -588,16 +678,20 @@ export function AppRenderer({
     [source, preferred],
   );
   /*
-   * What it keeps, said before the first message (R-31): run as a
+   * What it keeps, said before the first message: run as a
    * deployment — at its address, embedded — and not in its builder's
-   * Preview; to a visitor not signed in, that nothing is kept (R-30).
+   * Preview; to a visitor not signed in, that nothing is kept.
    */
   const deployed = Boolean(instance?.deploymentUid);
   const visitor = Boolean(embed.datalayerVisitors);
+  // A person's own agent on its runtime: not the application's, nor a visitor's.
+  const agentOnRuntime = Boolean(agentId && embed.datalayerKept && !visitor);
   const preset = useMemo(
     (): AppPreset | { problem: string } => {
       try {
         return appPreset(app, {
+          visitor,
+          agentOnRuntime,
           page,
           pluginsOff,
           sidebar,
@@ -623,6 +717,7 @@ export function AppRenderer({
       instance?.appUid,
       deployed,
       visitor,
+      agentOnRuntime,
     ],
   );
   const allPlugins = useMemo(
@@ -636,7 +731,7 @@ export function AppRenderer({
   /*
    * On Datalayer, the application runs on a runtime: allocated with a plain
    * agentspec, its agent created there with the application's spec — so that
-   * the runtime registers it and decides every tool call by its rules (R-03, R-05), as `loop apps run --cloud` does.
+   * the runtime registers it and decides every tool call by its rules, as `loop apps run --cloud` does.
    */
   const conversation =
     !('problem' in preset) && preset.workspace.conversation !== false;
@@ -652,7 +747,7 @@ export function AppRenderer({
     ],
   );
   /*
-   * The theme it runs in (T-30): the one its host says, else the one its
+   * The theme it runs in: the one its host says, else the one its
    * Appspec names, else the page's — the person's own. Its mode likewise;
    * `auto` is the device's. Its accent is laid over whichever it is.
    */
@@ -670,9 +765,11 @@ export function AppRenderer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [accent],
   );
-  const agent = appAgentOf(app, embed.datalayerVisitors?.app);
+  const agent = agentOnRuntime
+    ? { agentId: agentId as string }
+    : appAgentOf(app, embed.datalayerVisitors?.app);
   /*
-   * Its voice, as its Appspec says (VO-41, VO-49), where its host says the
+   * Its voice, as its Appspec says, where its host says the
    * speech runs: remembered consent is the application's own.
    */
   const voice = useMemo(():
@@ -689,7 +786,7 @@ export function AppRenderer({
             consentKey: app.id,
             language,
           },
-          // What is said kept as sound, as its record says (VO-63): only for
+          // What is said kept as sound, as its record says: only for
           // a person signed in (the host gave their token), never a visitor
           // nor an embed's.
           visitor || !speech.token ? undefined : keptAudioDays(app.record),
@@ -711,15 +808,32 @@ export function AppRenderer({
     speech?.token,
     speech?.modelsUrl,
   ]);
+  /*
+   * Run as an anonymous visitor (the user, 15 November 2026): on the
+   * visitors' runtime, where the chat mints the temporary key itself — a host
+   * that says anonymous and names no visitors' runtime is told, not run.
+   */
+  const anonymousProblem =
+    embed.runAsAnonymous && !embed.datalayerVisitors
+      ? 'Run as an anonymous visitor, an application runs on the visitors’ runtime: its host names none (datalayerVisitors).'
+      : agentId && !agentOnRuntime
+        ? 'An agent named on its runtime (agentId) answers there: its host names no runtime of a person’s (datalayerKept).'
+        : undefined;
   const problem =
-    'problem' in preset
+    anonymousProblem ??
+    ('problem' in preset
       ? preset.problem
       : 'problem' in agent
         ? agent.problem
         : 'problem' in voice
           ? voice.problem
-          : undefined;
-  if ('problem' in preset || 'problem' in agent || 'problem' in voice) {
+          : undefined);
+  if (
+    anonymousProblem ||
+    'problem' in preset ||
+    'problem' in agent ||
+    'problem' in voice
+  ) {
     return (
       <div role="status" style={{ padding: 16 }}>
         {problem}
@@ -727,13 +841,13 @@ export function AppRenderer({
     );
   }
   return (
-    // The chat's own words in the person's language too (P-26): the host's,
+    // The chat's own words in the person's language too: the host's,
     // else the browser's.
     <ChatLanguage language={language}>
       <LoopEmbed
         // The application's own agent: created under its id, so that its
         // spec is applied to an agent of its own, never to the one it extends
-        // — or, for a visitor, the one their token reaches (D-15).
+        // — or, for a visitor, the one their token reaches.
         agentId={agent.agentId}
         // Drawn as its kind and its layout say: the conversation alone, the
         // page with the conversation over it, the two side by side, or — a
@@ -744,7 +858,7 @@ export function AppRenderer({
               frameTitle: [app.emoji, shown.name].filter(Boolean).join(' '),
             }
           : {})}
-        // Its rules, activity and computer on a rail, one at a time (T-07).
+        // Its rules, activity and computer on a rail, one at a time.
         sidebarRail={sidebar || computer}
         teamPicker={false}
         showAgentVariants={false}
@@ -753,12 +867,12 @@ export function AppRenderer({
         // Where an application runs is decided by its host — the Studio's
         // Preview, the hosted page — not offered to its user.
         targetFixed
-        // The theme its Appspec names (T-30), else the page's, the person's
+        // The theme its Appspec names, else the page's, the person's
         // own; a host may say otherwise.
         {...(named ? { themeVariant: named.variant } : {})}
         {...(namedMode ? { colorMode: namedMode } : {})}
         themeOverrides={themeOverrides}
-        // Its own face, name and welcome in the chat (T-08); no counters: a
+        // Its own face, name and welcome in the chat; no counters: a
         // person using an application is not asking about tokens.
         presence={{
           name: shown.name,

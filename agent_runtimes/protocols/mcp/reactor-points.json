@@ -5,5 +5,5 @@
     "typescript": "@datalayer/agent-runtimes/protocols/mcp"
   },
   "points": [],
-  "note": "No point yet: MCP's optional capabilities and extensions become mcp.extension.<name> when agent_runtimes.mcp reads them from contributions (PR-01)."
+  "note": "No point yet: MCP's optional capabilities and extensions become mcp.extension.<name> when agent_runtimes.mcp reads them from contributions."
 }

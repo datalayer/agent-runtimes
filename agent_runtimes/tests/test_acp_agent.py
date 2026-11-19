@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""``ACPAgent``: a harness as a Datalayer agent (SH-10 to SH-13, SH-18).
+"""``ACPAgent``: a harness as a Datalayer agent.
 
 Every drill runs against the ACP SDK's own fake agent
 (``fixtures/acp_fake_agent.py``, agent-shield's): the only Anthropic key at
@@ -353,7 +353,7 @@ class TestEveryUpdateKind:
     async def test_a_write_outside_the_workspace_is_refused_in_a_sentence(
         self, workspace: Path, tmp_path: Path
     ) -> None:
-        """SH-37's drill: a write outside the workspace through the Shield's ``fs/write_text_file``."""
+        """A drill: a write outside the workspace through the Shield's ``fs/write_text_file``."""
         elsewhere = tmp_path.parent / f"{tmp_path.name}-elsewhere"
         elsewhere.mkdir()
         agent = an_agent(workspace)
@@ -475,7 +475,7 @@ class TestEveryUpdateKind:
 
 
 class TestTheDisplays:
-    """SH-16: a diff and a terminal beside the result, as the page reads every display."""
+    """A diff and a terminal beside the result, as the page reads every display."""
 
     @pytest.mark.asyncio
     async def test_an_edit_carries_its_diff_for_the_page_and_the_record(
@@ -588,7 +588,7 @@ class TestTheDisplays:
 class TestPermissionsAreRules:
     pytestmark = pytest.mark.asyncio
 
-    """SH-12: do it, ask me first, leave it to me; allow_always a session rule."""
+    """Do it, ask me first, leave it to me; allow_always a session rule."""
 
     async def test_a_flagged_command_asks_and_the_persons_yes_is_handed_back(
         self, workspace: Path
@@ -907,7 +907,7 @@ class TestCommandsByTheRules:
 
 
 class TestKindsAreClasses:
-    """SH-11: ACP kinds → F-10 classes, the package's table read both ways."""
+    """ACP kinds → action classes, the package's table read both ways."""
 
     TABLE = {
         "read": ("read", "search", "fetch"),
@@ -987,7 +987,7 @@ class TestKindsAreClasses:
 class TestSessionsAndTheRecord:
     pytestmark = pytest.mark.asyncio
 
-    """SH-18: the session kept, loaded when advertised, a start-over said."""
+    """The session kept, loaded when advertised, a start-over said."""
 
     async def test_one_runtime_session_is_one_harness_session(
         self, workspace: Path
@@ -1100,7 +1100,7 @@ def connecting(*servers: str) -> SimpleNamespace:
 
 
 class TestMcpLentThroughTheGateway:
-    """SH-14: ``session/new.mcpServers`` is how a harness gets tools, never a credential."""
+    """``session/new.mcpServers`` is how a harness gets tools, never a credential."""
 
     GATEWAY = "https://mcp.datalayer.run/mcp"
 
@@ -1320,7 +1320,7 @@ def an_app(**overrides: Any) -> SimpleNamespace:
 
 
 class TestSkillsLentInTheHarnessFormat:
-    """SH-21: the catalogue's enabled skills as SKILL.md folders, the Appspec as the instructions file."""
+    """The catalogue's enabled skills as SKILL.md folders, the Appspec as the instructions file."""
 
     def test_the_skills_are_written_in_the_harness_format_read_only(
         self, tmp_path: Path
@@ -1339,7 +1339,7 @@ class TestSkillsLentInTheHarnessFormat:
         assert "run_skill_script" in text and "fetch_page" in text
         assert lent.instructions == tmp_path / "CLAUDE.md"
         instructions = lent.instructions.read_text()
-        # Marked as Datalayer's on its first line (VS-23), then the application.
+        # Marked as Datalayer's on its first line, then the application.
         assert instructions.startswith(LENT_MARK + "\n# Coder\n\nWrites the code")
         assert "Be brief. Never touch the tests." in instructions
         assert "- delete anything (delete): leave it to the person." in instructions
@@ -1433,7 +1433,7 @@ class TestSkillsLentInTheHarnessFormat:
     def test_harness_agent_writes_them_before_the_start(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # A harness is resolved through the `harness` point (MH-F02): the fake
+        # A harness is resolved through the `harness` point: the fake
         # one is contributed, as a package's would be.
         from reactor import PluginManifest, PluginPlatform, hookimpl
 
@@ -2241,7 +2241,7 @@ class TestResolvingACatalogueHarness:
 @pytest.mark.live
 @pytest.mark.asyncio
 async def test_claude_code_live(tmp_path: Path) -> None:
-    """The spike's harness, live: Claude Code through its pinned adapter (SH-03, SH-10).
+    """The spike's harness, live: Claude Code through its pinned adapter.
 
     Runs when a funded ``ANTHROPIC_API_KEY`` is set and the adapter is installed
     (``agent-shield setup --harness claude-code``, or the image's install).
@@ -2267,7 +2267,7 @@ async def test_claude_code_live(tmp_path: Path) -> None:
     assert (tmp_path / "hello.txt").exists()
 
 
-# -- the sidecar bridge (SH-40) -------------------------------------------------
+# -- the sidecar bridge -------------------------------------------------
 
 
 def test_the_sidecar_url_is_read_from_the_environment_and_must_be_a_websocket_one():
@@ -2305,7 +2305,7 @@ def test_an_agent_on_the_sidecar_connects_instead_of_launching(tmp_path):
 
 
 class TestPapThroughTheShield:
-    """SH-70, SH-72: the companies an application works with are lent
+    """The companies an application works with are lent
     as the gateway's ``pap`` toolset; their tools classed by agentspecs' table and
     naming the company; the run's subject and IAM's authorizer on the Shield.
     """
@@ -2429,7 +2429,7 @@ class TestPapThroughTheShield:
     ) -> None:
         """A harness the keeper relaunched starts under the owner's minted key
         (fifteen minutes): bound at creation, every decision after its life
-        answered 401 (SH-12, r1). The authorizer now asks IAM with the
+        answered 401 (r1). The authorizer now asks IAM with the
         deployment's principal token the runtime holds *now*, renewed by the
         keeper, and the subject is the deployment served."""
         import time
@@ -2507,8 +2507,8 @@ class TestPapThroughTheShield:
     def test_a_runtime_pods_workspace_needs_the_authorizer_too(
         self, monkeypatch
     ) -> None:
-        """In a managed runtime pod the operator wrote the launch's relationship
-        (SH-75): reading, writing and running a command there are authorized."""
+        """In a managed runtime pod the operator wrote the launch's relationship:
+        reading, writing and running a command there are authorized."""
         from agent_runtimes.guardrails.shield_policy import datalayer_default
 
         monkeypatch.setenv(
@@ -2574,7 +2574,7 @@ class TestPapThroughTheShield:
 
 @pytest.mark.asyncio
 async def test_a_refused_turn_is_kept_as_a_turn(workspace: Path) -> None:
-    """A session whose only turn was refused has its turn in the record (MH-42)."""
+    """A session whose only turn was refused has its turn in the record."""
     recorder = Recorder()
     agent = an_agent(workspace, recorder=recorder)
     try:

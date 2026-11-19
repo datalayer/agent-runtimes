@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A runtime serving one slow agent over A2A and ACP, for the restart tests (O1-11).
+"""A runtime serving one slow agent over A2A and ACP, for the restart tests.
 
 Run by uvicorn in a process of its own, so a test can kill it in the middle of
 a run and start another over the same protocol state file. The agent answers

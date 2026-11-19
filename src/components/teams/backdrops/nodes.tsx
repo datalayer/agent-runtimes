@@ -281,7 +281,7 @@ export function MemberNodeBase({
   data,
   look,
 }: NodeProps<Node<MemberData>> & { look: MemberLook }): JSX.Element | null {
-  const { id, side, size } = data;
+  const { id, side, size, balloonWidth } = data;
   const member = useContext(Members)[id];
   const moving = useContext(Moving);
   const offset = moving.offsetOf(id);
@@ -436,6 +436,7 @@ export function MemberNodeBase({
           </Button>
         ) : (
           <AssistantStage
+            balloonWidth={balloonWidth}
             character={look.figure(member)}
             state={persona.state}
             size={size}

@@ -1,0 +1,37 @@
+<!--
+  ~ Copyright (c) 2025-2026 Datalayer, Inc.
+  ~ Distributed under the terms of the Modified BSD License.
+-->
+
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Datalayer ☰ Agent at its address</title>
+
+    <!--
+      Webpack public-path shim. Some Jupyter deps (@jupyter-widgets) assign to
+      the free variable `__webpack_public_path__` at module scope. In the
+      strict-mode ESM bundles Vite produces, that bare assignment throws
+      `ReferenceError: __webpack_public_path__ is not defined` unless the global
+      already exists. This classic (non-module) script runs before any deferred
+      module script, guaranteeing the global is present first.
+    -->
+    <script>
+      window.__webpack_public_path__ = window.__webpack_public_path__ || '';
+    </script>
+
+    <!-- Favicon -->
+    <link
+      rel="shortcut icon"
+      href="data:image/x-icon;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAN1wAADdcBQiibeAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAC7SURBVFiF7ZU9CgIxEIXfTHbPopfYc+pJ9AALtmJnZSOIoJWFoCTzLHazxh/Ebpt5EPIxM8XXTCKTxYyMCYwJFhOYCo4JFiMuu317PZwaqEBUIar4YMmskL73DytGjgu4gAt4PDJdzkkzMBloBhqBgcu69XW+1I+rNSQESNDuaMEhdP/Fj/7oW+ACLuACHk/3F5BAfuMLBjm8/ZnxNvNtHmY4b7Ztut0bqStoVSHfWj9Z6mr8LXABF3CBB3nvkDfEVN6PAAAAAElFTkSuQmCC"
+      type="image/x-icon"
+    />
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/agent-web-main.tsx"></script>
+  </body>
+</html>

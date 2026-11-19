@@ -4,15 +4,15 @@
  */
 
 /**
- * A person's own voice settings (VO-30), and what a chat's voice is
- * once they are taken into account (VO-14, VO-25).
+ * A person's own voice settings, and what a chat's voice is
+ * once they are taken into account.
  *
  * An application says what voice it wants — `interface.voice` in its spec,
  * reaching the chat as `ChatVoice`. A person says what *they* want: the
  * language they speak, the voice they would rather hear, how fast and how
  * loud it is, whether what they say is sent at once, and whether anything
  * may leave the device at all. Those are kept where the assistant's away
- * choice is kept (T-24): the browser's storage, which may be refused, in
+ * choice is kept: the browser's storage, which may be refused, in
  * which case the choice holds for the page.
  *
  * **Whose choice wins.** The person's, where they have made one — a menu
@@ -34,8 +34,8 @@ export const VOICE_SETTINGS_KEY = 'datalayer-voice-settings';
 export const RATE_RANGE = { min: 0.5, max: 2, default: 1 } as const;
 export const VOLUME_RANGE = { min: 0, max: 1, default: 1 } as const;
 /**
- * How much longer than usual the person pauses before they are done
- * (VO-69): the silence that stops a microphone clicked on, and the
+ * How much longer than usual the person pauses before they are done:
+ * the silence that stops a microphone clicked on, and the
  * one that ends a hands-free turn, times this.
  */
 export const PAUSE_RANGE = { min: 1, max: 4, default: 1 } as const;
@@ -65,11 +65,11 @@ export interface VoiceSettings {
    */
   onDeviceOnly?: boolean;
   /**
-   * Let Whisper find the language they speak (VO-14): what they say is
+   * Let Whisper find the language they speak: what they say is
    * heard on Datalayer's servers, which detect it, rather than in the browser.
    */
   detectLanguage?: boolean;
-  /** How much longer they pause before they are done (VO-69): 1 is usual. */
+  /** How much longer they pause before they are done: 1 is usual. */
   pause?: number;
 }
 
@@ -141,10 +141,10 @@ export function keptVoiceSettings(): VoiceSettings {
  */
 let held: VoiceSettings | undefined;
 
-/** Who is told when the person's settings change: every chat on the page (VO-30). */
+/** Who is told when the person's settings change: every chat on the page. */
 const listeners = new Set<(settings: VoiceSettings) => void>();
 
-/** The person's settings as the page holds them (VO-30). */
+/** The person's settings as the page holds them. */
 export function heldVoiceSettings(): VoiceSettings {
   if (held === undefined) {
     held = keptVoiceSettings();
@@ -182,7 +182,7 @@ if (typeof window !== 'undefined') {
 
 /**
  * Keep what the person chose; an empty choice forgets it. Every chat on the
- * page is told, so the menu's choice is heard at once (VO-30).
+ * page is told, so the menu's choice is heard at once.
  */
 export function keepVoiceSettings(settings: VoiceSettings): VoiceSettings {
   const sane = saneVoiceSettings(settings);
@@ -200,7 +200,7 @@ export function keepVoiceSettings(settings: VoiceSettings): VoiceSettings {
 }
 
 /**
- * The settings with one choice changed (VO-30): `undefined` forgets that
+ * The settings with one choice changed: `undefined` forgets that
  * choice, giving it back to the application. A new language drops a voice
  * the person chose that does not speak it, for the language's own.
  */
@@ -239,7 +239,7 @@ export function browserLanguage(): string | undefined {
 }
 
 /**
- * The chat's voice as the person wants it (VO-14, VO-25, VO-30).
+ * The chat's voice as the person wants it.
  *
  * The language is theirs if they chose one, else the application's, else the
  * browser's. The voice, the rate, the volume and *Send what I say* are

@@ -4,7 +4,7 @@
  */
 
 /**
- * The transcript as a mermaid sequence diagram (SCENES S2-02): one
+ * The transcript as a mermaid sequence diagram: one
  * participant per member and system in the cast's order (the person first,
  * as an actor, when they speak), `->>` for an ask or a call, `-->>` for
  * the answer, `activate`/`deactivate` around an exchange that is open or

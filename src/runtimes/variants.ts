@@ -97,9 +97,9 @@ export const CUSTOM_HARNESS = 'custom';
  * Why no variant runs an agent on this harness, in a sentence, or undefined
  * when one does.
  *
- * A harness the catalogue offers (`agentspecs/harnesses`, SH-01) — Claude
+ * A harness the catalogue offers (`agentspecs/harnesses`) — Claude
  * Code, Codex, OpenCode, pi — is served by the Datalayer runtime
- * through its ACP adapter (`ACPAgent`, SH-10): the runtime launches the
+ * through its ACP adapter (`ACPAgent`): the runtime launches the
  * harness as its subprocess, so the runtime's locations run it and the
  * browser, which has no process to launch, does not. Three are refused:
  * `custom`, which names no command in the shared catalogue (an
@@ -259,7 +259,7 @@ export function variantForLocation(
  *
  * A harness of the catalogue (Claude Code, Codex, …) is a program, not a
  * framework: the Datalayer runtime launches it as its subprocess and serves it
- * through its ACP adapter (SH-10), so the runtime's locations run it
+ * through its ACP adapter, so the runtime's locations run it
  * and the browser does not — the page has no process to launch, and nothing
  * is run in the harness's place.
  */
@@ -332,7 +332,7 @@ export function legacyTargetOf(
 export function specHarnessOf(spec: Pick<Agentspec, 'id' | 'harness'>): string {
   const problem = unservedHarnessProblem(spec);
   if (problem) {
-    // Never pydantic-ai in its place: said, and refused (SH-01).
+    // Never pydantic-ai in its place: said, and refused.
     throw new Error(problem);
   }
   const harness = spec.harness ?? '';

@@ -6,8 +6,8 @@
 Inbox triage reaches mail through Gmail's tools, as the catalogue's Google
 Workspace server serves them (`google-workspace__search_gmail_messages`…).
 On Datalayer that server reaches the Gmail of the person an application acts
-for, connected in Google's consent screen through IAM (W-02); outside
-Datalayer's own domain it waits for Google's review (W-10). So that the
+for, connected in Google's consent screen through IAM; outside
+Datalayer's own domain it waits for Google's review. So that the
 worker runs end to end with no real mailbox — in tests, in a demonstration —
 this module is the **mail source** it runs against:
 
@@ -22,7 +22,7 @@ this module is the **mail source** it runs against:
   forward outside the organization is told from the call);
 - `MailWatch` and `post_mail_event` — what arrived since it last looked, as
   `email_received` events, told to ai-agents, which wakes the deployments
-  whose Appspec says *when a message arrives* (R-14, W-03).
+  whose Appspec says *when a message arrives*.
 
 An event carries the ids of what arrived and nothing written by its sender:
 the session reads the message with its tools, under its rules.

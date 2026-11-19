@@ -5,7 +5,7 @@
 
 /**
  * The floating assistant's avatars, every one in every pose, small, for
- * a quick visual check (T-16, T-22, T-24 to T-27): Datalayer's five (its
+ * a quick visual check: Datalayer's five (its
  * four drawings and its orb) and the owl as the enabled plugins contribute them to
  * `loop.assistant.character`, a test sprite read through the clippy.js
  * reader, and the 3D robot. Each cell is the real `AssistantStage`, set in
@@ -163,7 +163,7 @@ export function Still({
 }
 
 /**
- * What the assistant steps aside from (T-27): a composer laid over it. The
+ * What the assistant steps aside from: a composer laid over it. The
  * stage's own `useKeepClear` finds it and steps aside.
  */
 export function GalleryObstacle({
@@ -443,7 +443,7 @@ function BalloonCell({
 }
 
 /**
- * The balloon's displays (T-23), one character: the history, every message listed, the
+ * The balloon's displays, one character: the history, every message listed, the
  * current balloon with a tool line, and with a notebook given — the same
  * read-only jupyter-react notebook as in the stage, loaded when drawn.
  */

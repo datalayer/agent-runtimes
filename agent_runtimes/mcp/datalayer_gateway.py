@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The Datalayer MCP gateway, as one run reaches it (O1-17).
+"""The Datalayer MCP gateway, as one run reaches it.
 
 An agent that selected the Datalayer MCP server reaches the gateway through a
 process started once, with the runtime's own key. A run that carries an
@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import logging
 import os
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 from agent_runtimes.mcp.displays import DisplayMCPToolset
@@ -93,6 +94,15 @@ def _left_out(server_id: str) -> None:
     )
 
 
+def _only(names: frozenset[str]) -> Any:
+    """A toolset's filter that offers the tools named, and no other."""
+
+    def offered(_ctx: Any, tool: Any) -> bool:
+        return str(getattr(tool, "name", "")) in names
+
+    return offered
+
+
 def toolsets_for_the_run(
     toolsets: list[Any],
     token: str,
@@ -100,6 +110,9 @@ def toolsets_for_the_run(
     in_users_name: frozenset[str] = frozenset(),
     users_token: str = "",
     companies: tuple[tuple[str, str], ...] = (),
+    company_tools: frozenset[str] | None = None,
+    renew: Callable[[str], Awaitable[str]] | None = None,
+    owners_books: frozenset[str] = frozenset(),
 ) -> list[Any]:
     """
     A run's toolsets, with the Datalayer gateway reached as the run.
@@ -112,7 +125,7 @@ def toolsets_for_the_run(
         The run's own token.
     in_users_name : frozenset[str]
         The gateway's servers an application reaches in the name of each
-        person who uses it (I-04): reached with `users_token`, never
+        person who uses it: reached with `users_token`, never
         with the run's.
     users_token : str
         The token of the person talking to it, naming the application;
@@ -124,6 +137,22 @@ def toolsets_for_the_run(
         (ADR-1), as `(server id, in whose name)`: each the
         gateway's `pap` toolset for that company, its tools named with the
         server id, reached in the person's name unless it says `owner`.
+    company_tools : frozenset[str] | None
+        The only tools of a company's toolset the run is offered, by the
+        gateway's own names (`pap_read`); every tool when unsaid. A visitor's
+        run is offered three (`visitors_pap.VISITOR_COMPANY_TOOLS`): the model
+        never sees the others, so it cannot reach a company's operation
+        around the approval the gateway records.
+    renew : Callable[[str], Awaitable[str]] | None
+        How `token` is renewed when the gateway refuses a call because the
+        execution it was issued for has ended (a deployment's principal token,
+        after the deployment moved to a new spec version): given the stale
+        token, the new one, or `""` for none. Given to the toolsets reached
+        with `token`, never to those reached with `users_token` or the books.
+    owners_books : frozenset[str]
+        The gateway's servers a visitor's run of a public demo of the account
+        that keeps the demo books reaches with that account's own key
+        (`battle_books.owners_servers_of_the_run`); none elsewhere.
 
     Returns
     -------
@@ -148,12 +177,13 @@ def toolsets_for_the_run(
         reaches = True
         bearer = users_token if server_id in in_users_name else token
         # A catalogue Battle's run on the books reaches them with the books
-        # key; a server started with it is left out of any other run (B4-01).
+        # key; a server started with it is left out of any other run.
         from agent_runtimes.apps.battle_books import books_bearer
 
-        books = books_bearer(server_id)
+        books = books_bearer(server_id, owners_books)
         if books is not None:
             bearer = books
+        renews = renew if books is None and server_id not in in_users_name else None
         if not bearer:
             # Nobody to reach it in the name of: left out of this run, which goes on
             # without it — an empty Bearer is no header, and broke the whole run.
@@ -166,6 +196,7 @@ def toolsets_for_the_run(
                 http_client=tracing_client(
                     headers={"Authorization": f"Bearer {bearer}"}
                 ),
+                renew_token=renews,
             )
         )
     from agent_runtimes.apps.pap_connections import (
@@ -184,18 +215,19 @@ def toolsets_for_the_run(
         if not bearer:
             # A company reached in each person's name, and nobody signed in to Datalayer is
             # talking to it — a company's turn for a personal agent, run as the deployment's
-            # principal (B-04): left out, the turn answered without it.
+            # principal: left out, the turn answered without it.
             _left_out(sid)
             continue
-        swapped.append(
-            DisplayMCPToolset(
-                f"{gateway_url()}?{query}",
-                id=sid,
-                http_client=tracing_client(
-                    headers={"Authorization": f"Bearer {bearer}"}
-                ),
-            ).prefixed(tool_prefix(sid))
+        company: Any = DisplayMCPToolset(
+            f"{gateway_url()}?{query}",
+            id=sid,
+            http_client=tracing_client(headers={"Authorization": f"Bearer {bearer}"}),
+            renew_token=renew if acting == "owner" else None,
         )
+        if company_tools is not None:
+            # By the gateway's own names, before the company's prefix.
+            company = company.filtered(_only(company_tools))
+        swapped.append(company.prefixed(tool_prefix(sid)))
     if not reaches:
         # An agent not given the gateway is not given it by a delegation.
         return toolsets

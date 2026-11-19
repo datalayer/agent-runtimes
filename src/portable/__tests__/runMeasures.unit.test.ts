@@ -4,7 +4,7 @@
  */
 
 /**
- * A streamed turn measured without its words (M-036).
+ * A streamed turn measured without its words.
  *
  * @module portable/__tests__/runMeasures
  */
@@ -18,7 +18,7 @@ import {
   RuntimeRefusal,
 } from '..';
 
-describe('a turn measured (M-036)', () => {
+describe('a turn measured', () => {
   it('times the first token and the answer, and says a failure by its category only', () => {
     let now = 1000;
     const meter = new RunMeter('application', () => now);

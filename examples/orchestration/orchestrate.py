@@ -3,7 +3,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """
-One objective, two protocols, one code path (O0-13).
+One objective, two protocols, one code path.
 
 A parent asks for a notebook to be analysed and delegates it twice: once to a
 worker that speaks A2A and once to a worker that speaks ACP. Everything below
@@ -247,7 +247,7 @@ class Run:
 
         The artifact keeps a summary and a hash of the answer rather than the
         answer itself: registering it is the artifact model's typed reference with
-        provenance, and putting the body somewhere durable is O1-10's.
+        provenance, and putting the body somewhere durable comes later.
 
         Returns
         -------
@@ -486,7 +486,7 @@ def _print_comparison(runs: Sequence[Run]) -> None:
 
     print(
         "\n  The answer each worker gave, as the artifact's summary "
-        "(the artifact keeps a hash, not the body — O1-10 commits the body):"
+        "(the artifact keeps a hash, not the body):"
     )
     for run in runs:
         print(f"\n  --- {run.descriptor.agent_id} ---")

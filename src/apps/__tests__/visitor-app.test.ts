@@ -4,8 +4,8 @@
  */
 
 /**
- * A public application in the element, for a visitor without an account
- * (D-07, R-30): an example kept warm or an address open to visitors
+ * A public application in the element, for a visitor without an account:
+ * an example kept warm or an address open to visitors
  * run on the visitors' runtime with a visitor's token for it; a decision
  * framed; a private address, one that reaches its owner's connections, or
  * an example not kept, said in one sentence naming the embed token.
@@ -16,15 +16,18 @@ import {
   CONTROL_PLANE_URL,
   RUNTIMES_PLANE_URL,
 } from '@datalayer/core/lib/config/planes';
+import { getApp } from '../../specs/apps';
 import { emptyAppspec } from '../apps/appspec';
 import {
   AT_PREFIX,
   DEFAULT_API,
   DEFAULT_INFERENCE,
+  MISSING_SENTENCE,
   TOKEN_HINT,
   VISITORS_PATH,
   VISITOR_EXAMPLES,
   isAppUid,
+  notBundledSentence,
   readVisitorApp,
   visitorsAt,
 } from '../embed/visitorApp';
@@ -114,20 +117,141 @@ describe('a visitor’s application', () => {
     });
   });
 
-  it('says an example the visitors’ runtime does not keep, naming the ones it does', async () => {
+  it('runs an example the visitors’ runtime does not keep at the address of its name, drawn from the bundle’s Appspec, never the deployment’s copy (the landing’s demo-marketer)', async () => {
+    // The deployment's copy: an older version, without the title bar's items.
+    const deployed = {
+      schema: 'loop.app/v1',
+      id: 'demo-marketer',
+      version: '0.0.3',
+      name: 'Marketer (deployed copy)',
+      kind: 'chat',
+      agent: 'marketer',
+      ui: [{ plugin: 'chat' }],
+      presentation: 'The deployed words.',
+    };
+    const bundled = emptyAppspec('chat');
+    bundled.id = 'demo-marketer';
+    bundled.name = 'Marketer';
+    bundled.version = '0.0.5';
+    bundled.agent = 'worker-marketer:0.0.1';
+    bundled.ui = [{ plugin: 'chat' }, { plugin: 'social-header' }];
+    bundled.presentation = 'The bundled words.';
+    const fetcher = answer(200, opened(deployed));
+    const read = await readVisitorApp({
+      app: 'demo-marketer',
+      fetcher,
+      catalogue: id => (id === 'demo-marketer' ? bundled : undefined),
+    });
+    // Asked only where it runs and whether a visitor may talk to it.
+    expect(calledWith(fetcher)).toBe(
+      `${DEFAULT_API}/api/ai-agents/v1/apps/deployments/at/demo-marketer`,
+    );
+    expect(read.kind).toBe('visitors');
+    if (read.kind !== 'visitors') return;
+    expect(read.visitors.app).toBe('at:demo-marketer');
+    expect(read.app.version).toBe('0.0.5');
+    expect(read.app.name).toBe('Marketer');
+    expect(read.app.presentation).toBe('The bundled words.');
+    expect(read.app.ui.map(choice => choice.plugin)).toContain('social-header');
+  });
+
+  it('draws each demo agent of the landing from this bundle’s catalogue, whatever its deployment says', async () => {
+    const demos = [
+      'demo-marketer',
+      'demo-shopper',
+      'demo-accountant',
+      'demo-traveller',
+      'demo-terra',
+      'demo-aws-steward',
+      'demo-jupyter-data-analyst',
+    ];
+    for (const id of demos) {
+      const bundled = getApp(id);
+      expect(bundled, `${id} is not in the bundle`).toBeDefined();
+      const read = await readVisitorApp({
+        app: id,
+        fetcher: answer(
+          200,
+          opened({
+            schema: 'loop.app/v1',
+            id,
+            name: 'Old',
+            kind: 'chat',
+            ui: [],
+          }),
+        ),
+      });
+      expect(read.kind, id).toBe('visitors');
+      if (read.kind !== 'visitors') continue;
+      expect(read.app.version, id).toBe(bundled!.version);
+      expect(read.app.ui, id).toEqual(bundled!.ui);
+    }
+  });
+
+  it('refuses a demo this bundle does not carry, asking nothing (fail fast)', async () => {
+    const fetcher = vi.fn();
+    const read = await readVisitorApp({
+      app: 'demo-gone',
+      bundled: true,
+      fetcher: fetcher as unknown as typeof fetch,
+    });
+    expect(read).toEqual({
+      kind: 'said',
+      text: notBundledSentence('demo-gone'),
+    });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it('still refuses a bundled example its deployment does not open to visitors, or runs elsewhere', async () => {
+    const closed = await readVisitorApp({
+      app: 'demo-marketer',
+      fetcher: answer(200, {
+        success: true,
+        runs_code: false,
+        session: {
+          opens: false,
+          reason: 'It acts through its owner’s connections.',
+        },
+        spec: {},
+      }),
+    });
+    expect(closed.kind).toBe('said');
+    const kept = await readVisitorApp({
+      app: 'demo-marketer',
+      fetcher: answer(200, {
+        success: true,
+        runs_code: true,
+        always_on_runtime: { url: 'https://r1.example/kept/demo' },
+        session: { opens: true },
+        spec: {},
+      }),
+    });
+    expect(kept.kind).toBe('visitors');
+    if (kept.kind !== 'visitors') return;
+    expect(kept.visitors.url).toBe('https://r1.example/kept/demo');
+    expect(kept.app.id).toBe('demo-marketer');
+  });
+
+  it('finds nothing for an example the visitors’ runtime does not keep when no address of its name is deployed, naming the ones it keeps to the developer', async () => {
     const read = await readVisitorApp({
       app: 'accounting',
+      fetcher: answer(404, {
+        success: false,
+        detail: 'No application is at "accounting".',
+      }),
       catalogue: id => (id === 'accounting' ? emptyAppspec('chat') : undefined),
     });
-    expect(read.kind).toBe('said');
-    if (read.kind !== 'said') return;
-    expect(read.text).toContain(
+    expect(read.kind).toBe('missing');
+    if (read.kind !== 'missing') return;
+    // The detail is the developer's, in the console; the person reads MISSING_SENTENCE.
+    expect(read.detail).toContain(
       '"accounting" is an example Datalayer does not keep ready for visitors',
     );
     for (const kept of VISITOR_EXAMPLES) {
-      expect(read.text).toContain(kept);
+      expect(read.detail).toContain(kept);
     }
-    expect(read.text).toContain(TOKEN_HINT);
+    expect(read.detail).toContain(TOKEN_HINT);
+    expect(MISSING_SENTENCE).toBe('No application is at this address.');
   });
 
   it('frames a decision, named by its id or as an example', async () => {
@@ -180,7 +304,7 @@ describe('a visitor’s application', () => {
     expect(read.visitors.app).toBe('at:research');
   });
 
-  it('runs an address with code of its own on the runtime it is kept on, never the visitors’ (R-30)', async () => {
+  it('runs an address with code of its own on its always-on runtime, never the visitors’', async () => {
     const spec = {
       schema: 'loop.app/v1',
       id: 'research',
@@ -195,7 +319,9 @@ describe('a visitor’s application', () => {
         200,
         opened(spec, {
           runs_code: true,
-          kept: { url: 'https://r1.datalayer.run/jupyter/server/pool/kept-1/' },
+          always_on_runtime: {
+            url: 'https://r1.datalayer.run/jupyter/server/pool/kept-1/',
+          },
         }),
       ),
       catalogue: () => undefined,
@@ -256,15 +382,15 @@ describe('a visitor’s application', () => {
     });
   });
 
-  it('says a private address as ai-agents refuses it: nothing is there without a token (fail fast)', async () => {
+  it('finds nothing at a private address as ai-agents refuses it, the token named to the developer (fail fast)', async () => {
     const read = await readVisitorApp({
       app: 'private-desk',
       fetcher: answer(404, { detail: 'No application is at this address.' }),
       catalogue: () => undefined,
     });
     expect(read).toEqual({
-      kind: 'said',
-      text: `datalayer-app: No application is at this address. ${TOKEN_HINT}`,
+      kind: 'missing',
+      detail: `datalayer-app: No application is at this address. ${TOKEN_HINT}`,
     });
   });
 

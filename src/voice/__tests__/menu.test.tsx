@@ -4,9 +4,9 @@
  */
 
 /**
- * The person's voice menu (VO-14, VO-21, VO-25, VO-30): what it
+ * The person's voice menu: what it
  * offers from the catalogue, the choice kept and heard at once by every chat
- * on the page, and the words in the box greyed until final (VO-11).
+ * on the page, and the words in the box greyed until final.
  */
 
 import React, { act } from 'react';
@@ -50,7 +50,7 @@ afterEach(() => {
   window.localStorage.clear();
 });
 
-describe('what a person may choose (VO-30)', () => {
+describe('what a person may choose', () => {
   it('offers the languages a voice speaks and the device hears', () => {
     const languages = voiceLanguages().map(language => language.value);
     expect(languages).toEqual(['en-US', 'en-GB', 'fr-FR']);
@@ -104,7 +104,7 @@ describe('what a person may choose (VO-30)', () => {
   });
 });
 
-describe('the composer’s voice menu (VO-14, VO-21, VO-25, VO-30)', () => {
+describe('the composer’s voice menu', () => {
   let container: HTMLDivElement;
   let root: Root;
 
@@ -227,7 +227,7 @@ describe('the composer’s voice menu (VO-14, VO-21, VO-25, VO-30)', () => {
     expect(settledVoice(SPEAKS).speechUrl).toBeUndefined();
   });
 
-  it('offers detection where the server hears, and the chat then hears there (VO-14)', async () => {
+  it('offers detection where the server hears, and the chat then hears there', async () => {
     draw(SPEAKS, true);
     await open();
     await pick('[data-voice-detect]');
@@ -252,7 +252,7 @@ describe('the composer’s voice menu (VO-14, VO-21, VO-25, VO-30)', () => {
   });
 });
 
-describe('the words in the box, greyed until final (VO-11)', () => {
+describe('the words in the box, greyed until final', () => {
   let container: HTMLDivElement;
   let root: Root;
 

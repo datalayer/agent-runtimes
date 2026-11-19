@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The record of an application, written for every session (R-07).
+"""The record of an application, written for every session.
 
 What the runtime saw the application do — a session starting, each tool
 call, the rule that decided it, each check that did not let it pass, the
@@ -14,14 +14,14 @@ the instance names its `purpose`, `test`, and the launch that ran it, and
 both are sent with its entries, so that ai-agents reads tests apart from
 real use. A session that names no purpose is real use. A test's session
 keeps every entry, whatever `record.include` says: the engine grades the
-test on it (V-08).
+test on it.
 
-A session nobody opened says what woke it (R-14): the instance, or the
+A session nobody opened says what woke it: the instance, or the
 host that ran it, names `woken_by` — ``{"kind": "schedule", ...}`` with the
 schedule's details — and it is sent with the entries and written on the
 session's first one. A session a person opened names nothing.
 
-Who opened a session is sent with its entries (``opened_by``, R-31):
+Who opened a session is sent with its entries (``opened_by``):
 the uid of the person the runtime verified, its owner or anybody it is shown
 to — what they export and delete their own conversations by. A session
 nobody opened, or opened by somebody nobody knows (an embed's visitor, a
@@ -32,13 +32,13 @@ record is sent after each run, with the token the run was made with; a
 record that cannot be sent is logged, and never fails the run.
 
 What a person says of a conversation — a thumb up or down, and a comment
-(V-18) — is written to the same record, as a ``feedback`` entry of that
+— is written to the same record, as a ``feedback`` entry of that
 session, by the recorder that recorded it (`recorder_of`); only when the
 application's ``record.include`` names ``feedback``. Unlike the rest, it is
 sent at once and a failure to send it is said: the person is waiting for it.
 
 What its code names a conversation — its title, tags and metadata
-(``session.title``, ``session.tags``, ``session.metadata``, P-24) — is
+(``session.title``, ``session.tags``, ``session.metadata``) — is
 a ``thread`` entry of that session, always kept, sent as it changes: the
 person's history lists their threads under it, their own word over its.
 
@@ -46,7 +46,7 @@ What was said — each turn of a conversation, what the person asked and what
 it answered — is kept as a ``turn`` entry, under ``conversations``, the
 item of ``record.include`` that names it. Each turn says whether the
 application let its conversations be used to suggest tests when it was had
-(``record.suggest_tests``, V-16): only a turn kept while it was on may
+(``record.suggest_tests``): only a turn kept while it was on may
 be sampled into a suggested test, and ai-agents samples no other.
 """
 
@@ -103,21 +103,21 @@ INCLUDED_BY = {
     "output": "outputs",
     "feedback": "feedback",
     "turn": "conversations",
-    # What the application did, step by step: with its actions (P-16).
+    # What the application did, step by step: with its actions.
     "step": "actions",
-    # A harness's edits whole, and its terminals' output (SH-34):
+    # A harness's edits whole, and its terminals' output:
     # each is a hash and a size, or a command and an exit, unless named.
     "diff": "diffs",
     "terminal": "terminals",
-    # What the person said, as sound, with their consent (VO-63): kept by
+    # What the person said, as sound, with their consent: kept by
     # ai-agents in its object store, the record pointing at it.
     "audio": "audio",
-    # A file given to the conversation or produced by it (MH-01): its name,
+    # A file given to the conversation or produced by it: its name,
     # size, digest and place in the sandbox — never its bytes.
     "file": "conversations",
 }
 
-#: The session's own entries (MH-01): its state as the record says it —
+#: The session's own entries: its state as the record says it —
 #: `session` (opened, or opened again on a resume: `open`), `paused`, `ended`
 #: — and what was done to it as a session: `swapped`, `cloned`, `imported`,
 #: `exported`, `titled`. Kept whatever `record.include` says: the record is
@@ -133,7 +133,7 @@ SESSION_KINDS = (
     "titled",
 )
 
-#: A session's state, as the record says it (decision 14): `open` (held by a
+#: A session's state, as the record says it: `open` (held by a
 #: runtime, a turn may run), `paused` (nothing runs; held or not), `ended`.
 #: `stopped` is not one: it is refused wherever a state is read or written.
 SESSION_STATES = ("open", "paused", "ended")
@@ -157,9 +157,9 @@ def session_kind(app_uid: Any) -> str:
 
 
 #: Kept whatever `record.include` says: a session's start, a run's start
-#: (what Activity reads as in progress, R-15), what its channels were
-#: sent (R-37), and that it asked the person and waits (`asked`, what
-#: ai-agents tells them of, M-023).
+#: (what Activity reads as in progress), what its channels were
+#: sent, and that it asked the person and waits (`asked`, what
+#: ai-agents tells them of).
 ALWAYS_KEPT = frozenset(
     {"session", "run", "notification", "thread", "asked", "rule", *SESSION_KINDS}
 )
@@ -169,14 +169,14 @@ ALWAYS_KEPT = frozenset(
 #: before the answer.
 RUN_ENDS = ("answered", "stopped", "gone")
 
-#: What a person's answer is said as, in an approval entry (R-07).
+#: What a person's answer is said as, in an approval entry.
 ANSWERS = {
     "approved": "approved",
     "declined": "declined",
     "unanswered": "not answered in time",
 }
 
-#: What a decision is said as when its call is refused with nobody asked (R-25).
+#: What a decision is said as when its call is refused with nobody asked.
 REFUSED = "refused"
 
 #: Why such a call was refused, in the entry's summary.
@@ -193,11 +193,11 @@ Send = Callable[[Dict[str, Any]], Awaitable[None]]
 _RECORDERS: Dict[str, "AppRecorder"] = {}
 
 #: The recorder of each application's agent on this runtime, by agent id: the
-#: one the session API writes a session's start to (R-04).
+#: one the session API writes a session's start to.
 _AGENT_RECORDERS: Dict[str, "AppRecorder"] = {}
 
 #: The sends begun as a run starts, held until done: a task nothing refers to may be collected.
-#: The sends in flight, by session (R-14): a stream of the session ends
+#: The sends in flight, by session: a stream of the session ends
 #: only once they are done (`AppRecorder.settled`), so a scheduler that stops
 #: the runtime as the stream ends finds the turn on the record.
 _SENDING: Dict[str, Set[Any]] = {}
@@ -322,7 +322,7 @@ def agent_recorder(agent_id: str) -> Optional["AppRecorder"]:
 
 def kept_of(app: AppSpec) -> Any:
     """What the record keeps and for how long: as `record` says, or as the
-    Track the application names under `checks` says (R-07).
+    Track the application names under `checks` says.
 
     Read from agentspecs (`kept_record`), not from the generated
     `retention_days`, which is a plain field there and says a year whatever
@@ -344,7 +344,7 @@ def keep_days_of(app: AppSpec) -> int:
 
 def _trace_id() -> str:
     """The current run's trace ID, the correlation ID its calls carry to the
-    gateway (A-05); ``""`` without a trace, never one made up.
+    gateway; ``""`` without a trace, never one made up.
     """
     from agent_runtimes.mcp.tracing import trace_headers
     from agent_runtimes.orchestration.adapter import trace_id_of
@@ -364,7 +364,7 @@ class RecordNotSent(RuntimeError):
 def token_for(deployment_uid: str) -> Tuple[Optional[str], str]:
     """The token an application's runtime writes to ai-agents with, or why there is none.
 
-    A deployment's is its application's principal's (I-03), and nobody
+    A deployment's is its application's principal's, and nobody
     else's; anything else — a Preview, a test — writes as the person whose
     request it is, else as the runtime's own token.
     """
@@ -390,7 +390,7 @@ def token_for(deployment_uid: str) -> Tuple[Optional[str], str]:
 
 
 #: The person's own token during a Preview's run, whose request token is
-#: theirs narrowed to the Spaces its application is granted (R-25).
+#: theirs narrowed to the Spaces its application is granted.
 _PERSONS_OWN: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
     "loop_preview_persons_own_token", default=None
 )
@@ -409,7 +409,7 @@ def persons_own_token(token: Optional[str]) -> Iterator[None]:
 def own_token_for(deployment_uid: str) -> Tuple[Optional[str], str]:
     """The token for what the runtime does for a person that reaches no Space
     — an application's documents: `token_for`, but in a Preview's run the
-    person's own, not the one narrowed to its Space grants (R-25).
+    person's own, not the one narrowed to its Space grants.
     """
     own = _PERSONS_OWN.get()
     if own and not deployment_uid.strip():
@@ -463,7 +463,7 @@ async def send_to_ai_agents(body: Dict[str, Any]) -> None:
 async def keep_sound_in_ai_agents(
     sound: bytes, *, content_type: str, params: Dict[str, Any]
 ) -> None:
-    """Send a turn's sound to ai-agents to keep (VO-63): its object store
+    """Send a turn's sound to ai-agents to keep: its object store
     keeps it, the session's record points at it. With the token of the run,
     as the record is sent.
 
@@ -501,7 +501,7 @@ async def keep_sound_in_ai_agents(
 
 
 async def send_to_store(body: Dict[str, Any]) -> None:
-    """Send a session's entries through the active session store (MH-F03):
+    """Send a session's entries through the active session store:
     ai-agents for the record store, a file for the file store.
 
     Raises
@@ -531,7 +531,7 @@ KeepSound = Callable[..., Awaitable[None]]
 
 
 def runtime_runs_on() -> Dict[str, Any]:
-    """Where a session of this runtime runs (MH-01): ``{kind: runtime, uid}``,
+    """Where a session of this runtime runs: ``{kind: runtime, uid}``,
     the runtime's uid as the platform names it (``DATALAYER_RUNTIME_ID``),
     ``local`` for a runtime started by hand; on Amazon Bedrock AgentCore,
     ``{kind: agentcore, arn}``, the agent runtime it was told it is
@@ -568,7 +568,7 @@ def no_lineage() -> Dict[str, Any]:
 
 
 def session_facts(facts: Optional[Mapping[str, Any]]) -> Dict[str, Any]:
-    """The session's shape on its ``session`` entry (MH-01), every key said:
+    """The session's shape on its ``session`` entry, every key said:
     ``agent``, ``harness``, ``runs_on``, ``title``, ``archived``, ``lineage``.
     """
     given = dict(facts or {})
@@ -585,7 +585,7 @@ def session_facts(facts: Optional[Mapping[str, Any]]) -> Dict[str, Any]:
 def session_from_entries(
     uid: str, entries: List[Dict[str, Any]]
 ) -> Optional[Dict[str, Any]]:
-    """A session as the record says it (MH-01, §2), from its entries in order
+    """A session as the record says it (§2), from its entries in order
     — the shape ``GET /sessions`` lists and ``GET /sessions/{uid}`` answers
     for a session no runtime holds: ``None`` when the entries hold no
     ``session`` entry (a session that cannot be listed, never a default).
@@ -686,7 +686,7 @@ def session_from_entries(
 
 
 def session_state_of(entries: List[Dict[str, Any]]) -> str:
-    """A session's state from its record (MH-01): the last of its ``session``,
+    """A session's state from its record: the last of its ``session``,
     ``paused`` and ``ended`` entries says it; ``open`` when none does.
 
     Raises
@@ -723,7 +723,7 @@ class AppRecorder:
     #: What woke its sessions, when nobody opened them: ``{"kind": "schedule", ...}``.
     woken_by: Dict[str, Any] = field(default_factory=dict)
     #: The agent only visitors without an account talk to, on the runtime its
-    #: deployment is kept on (R-30): nothing of it is kept, as on theirs.
+    #: deployment is kept on: nothing of it is kept, as on theirs.
     visitors: bool = False
     send: Send = send_to_store
     keep_sound: KeepSound = keep_sound_in_ai_agents
@@ -740,7 +740,7 @@ class AppRecorder:
 
     @classmethod
     def in_memory(cls, app: AppSpec, **facts: Any) -> "AppRecorder":
-        """A recorder that keeps the record in this process (P-11): what an
+        """A recorder that keeps the record in this process: what an
         `AppHost` records when given none — a script's, a test's. ``sent``
         holds each body as it would have been sent; `entries` reads them.
 
@@ -778,18 +778,18 @@ class AppRecorder:
         return kept
 
     def kept(self, kind: str) -> bool:
-        # Nothing is kept of a conversation without an account (R-30).
+        # Nothing is kept of a conversation without an account.
         from agent_runtimes.apps.visitors import visitors_runtime
 
         if visitors_runtime() or self.visitors:
             return False
         # What a channel was sent, or why it was not, is always kept: a
-        # notification that reached nobody is never silent (R-37).
+        # notification that reached nobody is never silent.
         if kind in ALWAYS_KEPT:
             return True
         # A test's session keeps everything: its record is what the test is
         # graded on — the tools it called, its rules' decisions, its checks
-        # (V-08) — and it is nobody's conversation, read apart.
+        # — and it is nobody's conversation, read apart.
         if self.purpose == "test":
             return True
         return INCLUDED_BY.get(kind) in kept_of(self.app).include
@@ -807,7 +807,7 @@ class AppRecorder:
         session = _SESSION.get()
         if not session:
             return
-        # Nothing kept holds a credential, whoever wrote the entry (R-19).
+        # Nothing kept holds a credential, whoever wrote the entry.
         self._pending.setdefault(session, []).append(
             {
                 "kind": kind,
@@ -817,8 +817,8 @@ class AppRecorder:
         )
 
     def opened(self, session: str, person_uid: str, name: str = "") -> None:
-        """Say which person opened ``session`` (R-31), and their name when
-        it is known (I-10); ``""`` for nobody known.
+        """Say which person opened ``session``, and their name when
+        it is known; ``""`` for nobody known.
         """
         if person_uid:
             self._opened[session] = person_uid
@@ -834,7 +834,7 @@ class AppRecorder:
         return self._opened.get(session, "")
 
     def signed(self, session: str, user: Optional[Dict[str, Any]]) -> None:
-        """Say which user the host's server signed for ``session`` (D-21); ``None`` for none."""
+        """Say which user the host's server signed for ``session``; ``None`` for none."""
         if user:
             self._signed[session] = dict(user)
         else:
@@ -845,7 +845,7 @@ class AppRecorder:
         return dict(self._signed.get(session) or {})
 
     def acts_for(self, session: str) -> str:
-        """The name of the person it acts for in ``session`` (I-10): the
+        """The name of the person it acts for in ``session``: the
         user the host's server signed, else who opened it; ``""`` when no name
         is known — never a uid.
         """
@@ -861,7 +861,7 @@ class AppRecorder:
         language: str = "",
         seconds: float = 0.0,
     ) -> str:
-        """Keep what the person said in ``session`` as sound (VO-63), when
+        """Keep what the person said in ``session`` as sound, when
         the application's record keeps ``audio`` and a person known opened
         it: ai-agents keeps the sound, the record points at it. Why it was
         not kept, in a sentence, or ``""``.
@@ -903,10 +903,10 @@ class AppRecorder:
     ) -> None:
         """Make ``session`` the one entries are added to, and say it started.
 
-        A session resumed from its record (R-04) says it resumed, in an
+        A session resumed from its record says it resumed, in an
         entry of the same session: its record goes on where it stopped.
 
-        ``facts`` is the session's shape (MH-01, §2 of the session model):
+        ``facts`` is the session's shape (§2 of the session model):
         ``agent``, ``harness``, ``runs_on``, ``title``, ``archived`` and
         ``lineage`` — written on the ``session`` entry with ``state: open``,
         so the record says what the session is without the runtime.
@@ -921,7 +921,7 @@ class AppRecorder:
                 and session in earlier._started
             ):
                 # Started on this runtime by another recorder — the session's
-                # agent was swapped (MH-06) and the new agent's recorder goes
+                # agent was swapped and the new agent's recorder goes
                 # on with the same session: no second opening, which said an
                 # agent of "" and had the record refuse every later entry of
                 # the session (found on r1, 21 October 2026).
@@ -974,11 +974,11 @@ class AppRecorder:
 
     def forget_started(self, session: str) -> None:
         """Let ``start`` say ``session`` started again: a resume on this
-        runtime writes its own ``session`` entry (MH-01), as a first open does.
+        runtime writes its own ``session`` entry, as a first open does.
         """
         self._started.discard(session)
 
-    # --- the session's own entries (MH-01) ---------------------------------------
+    # --- the session's own entries ---------------------------------------
 
     def _session_entry(
         self, session: str, kind: str, summary: str, payload: Dict[str, Any]
@@ -1045,7 +1045,7 @@ class AppRecorder:
         carried: Dict[str, Any],
         dropped: Dict[str, Any],
     ) -> None:
-        """The session's agent was swapped in place (MH-06): the new agent on
+        """The session's agent was swapped in place: the new agent on
         the entry, as the ``session`` entry names the first.
         """
         self._session_entry(
@@ -1069,7 +1069,7 @@ class AppRecorder:
     def cloned(
         self, session: str, *, source: str = "", target: str = "", at_turn: int
     ) -> None:
-        """A clone (MH-09): on the source, ``to`` the clone; on the clone,
+        """A clone: on the source, ``to`` the clone; on the clone,
         ``from`` the source — both at the turn it was cut at.
         """
         if bool(source) == bool(target):
@@ -1087,7 +1087,7 @@ class AppRecorder:
         )
 
     def refused(self, session: str, *, operation: str, by: str, sentence: str) -> None:
-        """An operation of the session API the budget refused (R-22 (5)):
+        """An operation of the session API the budget refused:
         a ``decision`` entry said refused, whatever ``record.include``
         keeps — a refusal is never silent, as a notification that reached
         nobody is not.
@@ -1114,7 +1114,7 @@ class AppRecorder:
     def exported(
         self, session: str, *, by: str, entries: int, redactions: int, digest: str
     ) -> None:
-        """The session was exported (MH-13): who, how many entries, how many
+        """The session was exported: who, how many entries, how many
         values redacted, the file's digest.
         """
         self._session_entry(
@@ -1136,8 +1136,8 @@ class AppRecorder:
         current_version: int,
         source_uid: str,
     ) -> None:
-        """The session was imported from a file (MH-14): its lineage, said
-        with the application versions when they differ (decision P).
+        """The session was imported from a file: its lineage, said
+        with the application versions when they differ.
         """
         self._session_entry(
             session,
@@ -1162,7 +1162,7 @@ class AppRecorder:
     def ruled(
         self, session: str, *, rule: Optional[Dict[str, Any]] = None, removed: str = ""
     ) -> None:
-        """A rule the person added to the session, or took back (MH-03): kept
+        """A rule the person added to the session, or took back: kept
         always, so a session resumed from its record has its Rules again.
         """
         self._session_entry(
@@ -1184,7 +1184,7 @@ class AppRecorder:
         digest: str,
         path: str,
     ) -> None:
-        """A file given to the conversation (MH-01): its name, type, size,
+        """A file given to the conversation: its name, type, size,
         digest and place in the sandbox — never its bytes.
         """
         _SESSION.set(session)
@@ -1201,7 +1201,7 @@ class AppRecorder:
         )
 
     def titled(self, session: str, *, title: str, archived: bool) -> None:
-        """The session's title and archive flag (MH-43), as they stand now."""
+        """The session's title and archive flag, as they stand now."""
         self._session_entry(
             session,
             "titled",
@@ -1226,8 +1226,8 @@ class AppRecorder:
 
     async def settled(self, session: str) -> None:
         """Wait until every send of ``session``'s record in flight is done,
-        then send what is still pending: what a stream's end waits for
-        (R-14), so nothing of the turn is lost to a runtime stopped as
+        then send what is still pending: what a stream's end waits for,
+        so nothing of the turn is lost to a runtime stopped as
         the stream ends. Never fails: a record is never worth a run.
         """
         while _SENDING.get(session):
@@ -1262,7 +1262,7 @@ class AppRecorder:
         metadata: Dict[str, Any],
     ) -> None:
         """What its code names a conversation now — its title, tags and
-        metadata (P-24) — as a ``thread`` entry of ``session``, sent in
+        metadata — as a ``thread`` entry of ``session``, sent in
         a task of its own when a loop runs, else with the session's next
         send. The latest one stands.
         """
@@ -1352,7 +1352,7 @@ class AppRecorder:
         Kept under ``conversations``; it says whether the application let its
         conversations suggest tests then (``record.suggest_tests``). A turn
         the person said aloud is kept as its transcript, marked ``spoken``
-        with how it was heard — never the sound (VO-29).
+        with how it was heard — never the sound.
         """
         asked = redact(asked.strip())[:TURN_LIMIT]
         if not asked:
@@ -1375,7 +1375,7 @@ class AppRecorder:
         """How many turns of ``session`` this recorder kept.
 
         What a Python application's code turn reads to tell whether the
-        agent its code ran kept the turn already (P-24).
+        agent its code ran kept the turn already.
 
         Parameters
         ----------
@@ -1390,7 +1390,7 @@ class AppRecorder:
         return self._turns.get(session, 0)
 
     def stepped(self, step: Any) -> None:
-        """Keep a step that ended, as the chain of thought shows it (P-16).
+        """Keep a step that ended, as the chain of thought shows it.
 
         Kept under ``actions``: its name and kind, the step it is nested in,
         what it started from and what it gave, or why it failed, each cut
@@ -1420,7 +1420,7 @@ class AppRecorder:
         nodes: Any,
         data: Optional[Mapping[str, Any]] = None,
     ) -> None:
-        """Keep what an answer showed under its message (P-04).
+        """Keep what an answer showed under its message.
 
         Kept under ``outputs``, as the answer is: the message it came with,
         who said it, each component of the catalog by its kind and id and
@@ -1467,7 +1467,7 @@ class AppRecorder:
 
     def decided(self, enforced: Any) -> None:
         decision = getattr(enforced, "decision", enforced)
-        # A call refused with nobody asked — a Space it is not granted (R-25) — is said refused: the behaviour that lets its tool run only
+        # A call refused with nobody asked — a Space it is not granted — is said refused: the behaviour that lets its tool run only
         # to refuse it is not what was decided.
         refused = str(getattr(enforced, "refused", "") or "")
         behaviour = REFUSED if refused else getattr(decision, "behaviour", "")
@@ -1475,22 +1475,22 @@ class AppRecorder:
             "tool": getattr(decision, "tool", ""),
             "behaviour": behaviour,
             "because": getattr(decision, "because", ""),
-            # What the call does: a send is counted against its approval (W-08).
+            # What the call does: a send is counted against its approval.
             "classes": list(getattr(decision, "classes", ()) or ()),
         }
         if refused:
             detail["refused"] = refused
-        # What a company's tool was decided on (R-01).
+        # What a company's tool was decided on.
         inputs = getattr(enforced, "inputs", None)
         if inputs:
             detail["inputs"] = dict(inputs)
             detail["rule"] = getattr(decision, "rule", "")
-            # The correlation ID its call carries to the gateway (A-05), so the Activity shows the
+            # The correlation ID its call carries to the gateway, so the Activity shows the
             # gateway's rows of it beside this decision; none without a trace, never one made up.
             trace_id = _trace_id()
             if trace_id:
                 detail["trace_id"] = trace_id
-        # Done without asking because the person approved it in advance (U-25).
+        # Done without asking because the person approved it in advance.
         approved = getattr(enforced, "approved", None)
         if approved is not None:
             detail["approved_in_advance"] = approved.uid
@@ -1504,7 +1504,7 @@ class AppRecorder:
         )
 
     def answered(self, tool: str, under: str, outcome: str, note: str = "") -> None:
-        """What a person answered when they were asked (R-07): an entry of its own.
+        """What a person answered when they were asked: an entry of its own.
 
         ``outcome`` is ``approved``, ``declined`` or ``unanswered``; ``under``
         the rule or Gate it was asked under, in its sentence.
@@ -1517,7 +1517,7 @@ class AppRecorder:
         )
 
     def ran(self, session: str) -> None:
-        """Say that a run of ``session`` began, and send it now (R-15).
+        """Say that a run of ``session`` began, and send it now.
 
         What Activity reads as *in progress*: a run that began and has not
         answered yet. Sent at once, with the session's start when it is its
@@ -1530,7 +1530,7 @@ class AppRecorder:
     def asked(self, session: str, kind: str) -> None:
         """Say that the application asked the person and waits for the answer
         (`loop.ask`), and send it now: ai-agents tells whoever opened the
-        session — on their phone too (M-023). Its kind only, never the
+        session — on their phone too. Its kind only, never the
         question's words, which the conversation keeps.
         """
         _SESSION.set(session)
@@ -1549,7 +1549,7 @@ class AppRecorder:
     def ended(
         self, status: str, summary: str, payload: Optional[Dict[str, Any]] = None
     ) -> None:
-        """Say that the current run ended (R-15; R-01).
+        """Say that the current run ended.
 
         An ``output`` entry, kept whatever ``record.include`` says: a session
         whose latest run has no end reads *in progress* in Activity, and never
@@ -1572,7 +1572,7 @@ class AppRecorder:
         if self.kept("output"):
             self._append("output", summary, {**(payload or {}), **end})
         elif self.kept("run"):
-            # As a run's start is kept: never of a visitor's conversation (R-30).
+            # As a run's start is kept: never of a visitor's conversation.
             self._append("output", "", end)
 
     def approvals_unread(self, why: str) -> None:
@@ -1583,7 +1583,7 @@ class AppRecorder:
         """A check's verdict: the stage, what it did, the Gate that decided
         and the Guard that checked (``built-in`` for the built-in check),
         and whether it passed — at a session's start every Guard's verdict is
-        kept, passed or failed (R-06); later, those that stop a step.
+        kept, passed or failed; later, those that stop a step.
         """
         guard = getattr(verdict, "guard", "")
         passed = getattr(verdict, "passed", None)
@@ -1642,7 +1642,7 @@ class AppRecordCapability(AbstractCapability[Any]):
         session = str(ctx.conversation_id or ctx.run_id or "run")
         logger.info("Recording %s, session %s.", self.recorder.app.id, session)
         self._sessions[self._key(ctx)] = session
-        # Said rather than typed: how its words were heard (VO-29).
+        # Said rather than typed: how its words were heard.
         from agent_runtimes.voice import heard
 
         spoken = heard()
@@ -1712,7 +1712,7 @@ class AppRecordCapability(AbstractCapability[Any]):
         # A response that also calls a tool is not the last: words and a call
         # in one response ("let me check…", then the search) carry the run on,
         # and closing the turn at its words lost the call and every answer
-        # after it from the record (E-01, 2026-10-10).
+        # after it from the record (2026-10-10).
         called = False
         try:
             async for event in stream:
@@ -1780,7 +1780,7 @@ class AppRecordCapability(AbstractCapability[Any]):
     async def on_run_error(self, ctx: RunContext[Any], *, error: BaseException) -> Any:
         # A run a rule or a check stopped is recorded too: that is when it
         # matters — its turn with it, so a session whose only turn was
-        # refused has a turn to list and resume from (MH-42).
+        # refused has a turn to list and resume from.
         await self._close(
             ctx,
             "stopped",

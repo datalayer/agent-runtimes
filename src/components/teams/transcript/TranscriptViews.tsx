@@ -4,15 +4,14 @@
  */
 
 /**
- * The three views of a transcript under one switch (SCENES S2-03): Lines
+ * The three views of a transcript under one switch: Lines
  * (`SceneTranscript`), Table (`TranscriptTable`) and Sequence
  * (`SequenceDiagram`), with the filter they share (members, kinds, *failed
  * only*, failed first), the selection they share (a line, a row, an arrow:
  * the same {@link TranscriptSelection}, handed to the page for the stage),
  * the drill-down beside the view on a wide stage and under it on a narrow
- * one (`TranscriptDetail`, S3-01), *Copy* of the view (the lines as text,
- * the table as Markdown, the diagram as its source) and *Export JSON*
- * (S3-03).
+ * one (`TranscriptDetail`), *Copy* of the view (the lines as text,
+ * the table as Markdown, the diagram as its source) and *Export JSON*.
  *
  * @module components/teams/transcript/TranscriptViews
  */

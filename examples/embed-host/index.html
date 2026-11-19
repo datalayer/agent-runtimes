@@ -3,8 +3,8 @@
   Copyright (c) 2025-2026 Datalayer, Inc.
   Distributed under the terms of the Modified BSD License.
 
-  A host page on another origin, embedding a Datalayer application
-  (D-07, D-08, D-10): one script tag and one element, the page
+  A host page on another origin, embedding a Datalayer application:
+  one script tag and one element, the page
   passing its context and offering one function, and logging what the
   application tells it. Serve it from this folder on a port of its own:
 
@@ -24,7 +24,7 @@
       &token=…                                              an embed token, for a private application
       &server=…                                             an agent-runtimes server of the host's own
       &spec=…                                               an Appspec's address (YAML or JSON), run instead of app
-      &user-token=…                                         a user token the host's server signed (D-21)
+      &user-token=…                                         a user token the host's server signed
 
   Without a token, a public application runs for the visitor as it does on
   Datalayer's own pages: the element reads what it is, mints a visitor's
@@ -175,13 +175,13 @@
           }
         });
 
-        // What the page passes (D-10): read by the application's agent with
+        // What the page passes: read by the application's agent with
         // `host_context`, for the names its Appspec lists.
         app.context = {
           user: { name: 'Ada', plan: 'team' },
           page: { url: location.href, title: document.title },
         };
-        // One function the page offers (D-10): called by the agent as
+        // One function the page offers: called by the agent as
         // `host_open_ticket`, as the rule naming it decides.
         app.functions = {
           open_ticket: function (args) {

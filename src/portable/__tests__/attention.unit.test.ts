@@ -4,8 +4,8 @@
  */
 
 /**
- * What a host says outside the chat (VSCODE VS-07, VS-10; DESKTOP DK-14,
- * DK-25): the approval notification's words per class (never the
+ * What a host says outside the chat:
+ * the approval notification's words per class (never the
  * arguments), which approvals are notified, the decision's rules (shown
  * first, read again, 409 said, 404 revealing nothing), the count a badge
  * and a status bar show, the tray's menu, and the transitions that notify
@@ -73,7 +73,7 @@ describe('the class of an approval', () => {
 });
 
 describe('the approval notification', () => {
-  it('names the application, the action and the class, never the arguments (D-8)', () => {
+  it('names the application, the action and the class, never the arguments', () => {
     const said = approvalNotification(
       'Support Desk',
       approval('run_command', { command: 'git push origin main' }),

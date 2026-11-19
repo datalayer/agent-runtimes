@@ -77,9 +77,15 @@ from personal_agent_protocol.demo.kit import (
     PersonalAgentHost,
     ScriptedApprovals,
     ScriptedInput,
+    one_origin,
     personal_agent_reactor,
 )
-from personal_agent_protocol.demo.ledgerly import ledgerly
+from personal_agent_protocol.demo.ledgerly import CONFIG as LEDGERLY_CONFIG
+from personal_agent_protocol.demo.ledgerly import DOMAIN as LEDGERLY
+from personal_agent_protocol.demo.ledgerly import (
+    LedgerlyAsPersonalAgent,
+    LedgerlyPlugin,
+)
 from personal_agent_protocol.demo.manzanita import (
     ADA,
     ADA_CODE,
@@ -89,6 +95,38 @@ from personal_agent_protocol.demo.manzanita import (
 from personal_agent_protocol.demo.northwind import ACCOUNT, northwind
 from personal_agent_protocol.mediated import MediatedSignInClient
 from reactor import PluginManifest
+
+
+def ledgerly_at(
+    network: Any, clock: MutableClock
+) -> tuple[Any, LedgerlyAsPersonalAgent]:
+    """Ledgerly as a company at the one PAP version Agent Runtimes speaks; its own personal
+    agent at Northwind is the SDK's, on the SDK's default version.
+    """
+
+    at_northwind = LedgerlyAsPersonalAgent(network, clock)
+    service = build_company(
+        LEDGERLY_CONFIG,
+        http_client=network.client(),
+        address_resolver=network.resolve,
+        plugins=[
+            (
+                PluginManifest(name="ledgerly", version="1"),
+                LedgerlyPlugin(at_northwind),
+            ),
+            (PluginManifest(name="ledgerly-clock", version="1"), ClockPlugin(clock)),
+        ],
+    )
+    network.add(
+        LEDGERLY,
+        one_origin(
+            at_northwind.identity.website(),
+            company_app(service),
+            (at_northwind.identity.path, "/jwks.json"),
+        ),
+    )
+    return service, at_northwind
+
 
 ROOT = Path(__file__).parents[3]
 OUTPUT = ROOT / "src" / "examples" / "pap" / "traces"
@@ -396,7 +434,7 @@ def approval(speaker: str, operation: Operation, status: str) -> dict[str, Any]:
         "speaker": speaker,
         "kind": "approval",
         "title": f"Revision {operation.revision} · {status}",
-        "text": operation.summary,
+        "text": operation.shown,
     }
 
 
@@ -593,7 +631,6 @@ class World:
             scopes=("orders:read", "orders:write"),
             tenant_id=TENANT,
             organization=self.company.document.organization,
-            protected_resources=self.metadata.protected_resources,
         )
         self.trace.secret(started.user_code, "‹user code›")
         self.clock.advance(started.poll_interval)
@@ -795,7 +832,7 @@ async def user_with_a_company() -> Trace:
     outcome = await world.send_approval(page_.conversation_id, given)
     trace.step(
         "Ada approves this exact revision",
-        "Operations version 2",
+        "Operations version 3",
         "Atlas asks Ada in its own interface, and sends her approval of that revision as a "
         "message in the conversation. Manzanita performs the exchange once and says how it "
         "went, which Atlas shows as written.",
@@ -1162,8 +1199,8 @@ async def operations() -> Trace:
     first = said(page_).operation
     trace.step(
         "An operation",
-        "Operations version 2",
-        f"The company lists operations version 2 and the Session declares it in Poppy-Extensions (negotiated: {world.negotiated}). Signed in, "
+        "Operations version 3",
+        f"The company lists operations version 3 and the Session declares it in Poppy-Extensions (negotiated: {world.negotiated}). Signed in, "
         "Manzanita returns the exchange as an operation in its message: nothing is done, and "
         "only Ada can approve it.",
         chat=[
@@ -1194,8 +1231,8 @@ async def operations() -> Trace:
     approval_of_first = await world.ask_ada(first)
     await world.shop.revise(
         first.operation_id,
-        summary=f"{first.summary} Return the original by 2026-10-25.",
-        terms={**(first.terms or {}), "return_by": "2026-10-25"},
+        summary=f"{first.shown} Return the original by 2026-10-25.",
+        terms={**first.terms, "return_by": "2026-10-25"},
     )
     answered = await world.send_approval(conversation, approval_of_first)
     second = said(answered).operation
@@ -1252,7 +1289,7 @@ async def two_companies() -> Trace:
     network.caller = "northwind"
     bank, bank_plugin = northwind(network, clock)
     network.caller = "ledgerly"
-    firm, at_northwind = ledgerly(network, clock)
+    firm, at_northwind = ledgerly_at(network, clock)
     network.caller = "atlas"
     http = network.client()
     host = PersonalAgentHost(atlas, clock, approvals=ScriptedApprovals(always=True))
@@ -1332,7 +1369,6 @@ async def two_companies() -> Trace:
         scopes=("books:read", "payments:write"),
         tenant_id=TENANT,
         organization=company.document.organization,
-        protected_resources=metadata.protected_resources,
     )
     trace.secret(started.user_code, "‹Ledgerly user code›")
     trace.action(

@@ -38,6 +38,8 @@ from code_sandboxes.lifecycle import (
 )
 from datalayer_core.utils.defaults import get_default_credits_limit
 
+from agent_runtimes.types.types import RUNTIME_ENGINES
+
 logger = logging.getLogger(__name__)
 
 #: Every verb except `execute`, which needs the kernel protocol rather than REST.
@@ -168,8 +170,13 @@ class RuntimesClient:
         environment_version: Optional[Union[int, str]] = None,
         app_uid: Optional[str] = None,
         deployment_uid: Optional[str] = None,
+        deployment_slug: Optional[str] = None,
+        deployment_preview_version: Optional[int] = None,
         app_spec: Optional[dict[str, Any]] = None,
         agent_setup: Optional[dict[str, Any]] = None,
+        client_id: Optional[str] = None,
+        agent_uid: Optional[str] = None,
+        runtime_engine: Optional[str] = None,
     ) -> dict[str, Any]:
         """Create a runtime — ``POST /runtimes``.
 
@@ -178,7 +185,7 @@ class RuntimesClient:
         environment_name : str
             Name of the environment to use. A platform environment by its
             name, a user environment as ``<account-handle>/<name>`` or by its
-            uid (D-2).
+            uid.
         environment_version : Optional[Union[int, str]]
             The version of a user environment to launch: its number, or a
             version uid. Without one the promoted version launches, which is
@@ -198,11 +205,11 @@ class RuntimesClient:
             runtime: a Home Folder attachment mounts the caller's home
             folders, a Volume attachment mounts its Volume.
         parent_reservation_uid : Optional[str]
-            The execution tree the runtime is metered against
-            (O1-07): IAM grants its reservation no more than
+            The execution tree the runtime is metered against:
+            IAM grants its reservation no more than
             the tree has left, and refuses it once the tree has nothing.
         app_uid : Optional[str]
-            The LOOP application the runtime runs for (R-09).
+            The LOOP application the runtime runs for.
         deployment_uid : Optional[str]
             The deployment of that application it runs for — a scheduled
             tick's or an event's session. The Operator writes both on the
@@ -210,8 +217,17 @@ class RuntimesClient:
             application and per deployment; they never change who pays. A
             deployment is always of an application: one named without
             ``app_uid`` is refused (`ValueError`).
+        deployment_slug : Optional[str]
+            That deployment's public address, ``/apps/<slug>``: the Operator
+            puts it on the runtime and answers it, so anybody's agent page
+            sends the runtime's visitor there. Only with ``deployment_uid``
+            (`ValueError` otherwise).
+        deployment_preview_version : Optional[int]
+            For a preview deployment, the version previewed: its address is
+            ``/apps/<slug>/preview/<version>``. Only with ``deployment_slug``
+            (`ValueError` otherwise).
         app_spec : Optional[dict[str, Any]]
-            The Appspec of the application the runtime is launched for (R-19). The Operator passes it to the runtime's companion, which
+            The Appspec of the application the runtime is launched for. The Operator passes it to the runtime's companion, which
             gives the runtime the secrets its connections declare before its
             agent is made. An application's launch carries it: ``app_uid``
             without it is refused (`ValueError`).
@@ -220,6 +236,18 @@ class RuntimesClient:
             ``without_mcp_servers`` (bool) and ``without_skills`` (ids) leave
             the spec's MCP servers or those skills out, their secrets not
             asked for.
+        client_id : Optional[str]
+            What asked for the runtime (``kagent`` for a kagent Agent's
+            bridge). With ``agent_uid`` it reaches the runtime's reservation
+            as its agent dimensions; neither changes who pays.
+        agent_uid : Optional[str]
+            The agent the runtime runs for, in the client's own naming
+            (``<namespace>/<agent>`` for a kagent Agent).
+        runtime_engine : Optional[str]
+            What runs and hosts the agent: ``datalayer``, ``kagent`` or
+            ``agentcore``. It overrides the spec's ``runtime_engine``; none
+            means the spec's. Another value is refused here (`ValueError`),
+            and Runtimes refuses an engine the agent's harness cannot run.
 
         Returns
         -------
@@ -230,6 +258,19 @@ class RuntimesClient:
             raise ValueError(
                 f"Deployment {deployment_uid} is named without its application: give app_uid."
             )
+        if runtime_engine is not None and runtime_engine not in RUNTIME_ENGINES:
+            raise ValueError(
+                f"A runtime runs on one of {', '.join(RUNTIME_ENGINES)} "
+                f"(runtime_engine); not on {runtime_engine!r}."
+            )
+        if deployment_slug and not deployment_uid:
+            raise ValueError(
+                f"The address {deployment_slug} is named without its deployment: give deployment_uid."
+            )
+        if deployment_preview_version and not deployment_slug:
+            raise ValueError(
+                "A preview version is named without its deployment's slug: give deployment_slug."
+            )
         if app_uid and not app_spec:
             raise ValueError(
                 f"Application {app_uid} is launched without its Appspec: give app_spec, "
@@ -237,7 +278,7 @@ class RuntimesClient:
             )
         # The launch contract is `environment: {name, version}`, and the
         # version is additive: absent, this is byte for byte the request every
-        # platform environment has always been launched with (E1-11).
+        # platform environment has always been launched with.
         environment: dict[str, Any] = {"name": environment_name}
         if environment_version is not None and str(environment_version).strip() != "":
             environment["version"] = environment_version
@@ -306,6 +347,8 @@ class RuntimesClient:
                 body["agent_spec_id"] = agent_spec_id
             if agent_spec:
                 body["agent_spec"] = agent_spec
+            if runtime_engine:
+                body["runtime_engine"] = runtime_engine
 
             if resolved_billing_entity_uid:
                 body["billing_entity_uid"] = resolved_billing_entity_uid
@@ -318,10 +361,18 @@ class RuntimesClient:
                 body["app_uid"] = app_uid
             if deployment_uid:
                 body["deployment_uid"] = deployment_uid
+            if deployment_slug:
+                body["deployment_slug"] = deployment_slug
+                if deployment_preview_version:
+                    body["deployment_preview_version"] = int(deployment_preview_version)
             if app_spec:
                 body["app_spec"] = dict(app_spec)
             if agent_setup:
                 body["agent_setup"] = dict(agent_setup)
+            if client_id:
+                body["client_id"] = client_id
+            if agent_uid:
+                body["agent_uid"] = agent_uid
 
             if runtime_name:
                 body["runtime_name"] = runtime_name

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Our A2A worker pauses at a checkpoint, resumes from it, and is steered while it works (O2-05).
+"""Our A2A worker pauses at a checkpoint, resumes from it, and is steered while it works.
 
 The worker, its durable storage and the routes of the Datalayer orchestration
 extension, with a scripted agent in place of a model. Checkpoints go to the
@@ -176,7 +176,7 @@ async def test_a_delegation_naming_the_checkpoint_resumes_from_it(state: Any) ->
 
 @pytest.mark.asyncio
 async def test_a_finished_task_says_what_it_spent(state: Any) -> None:
-    # O2-10: on the status that ends the task, where the control plane reads it.
+    # On the status that ends the task, where the control plane reads it.
     async def script(prompt: str, context: Any) -> AsyncIterator[StreamEvent]:
         yield StreamEvent(type="output", data="Done")
         yield StreamEvent(

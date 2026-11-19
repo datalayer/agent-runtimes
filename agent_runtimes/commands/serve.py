@@ -58,6 +58,8 @@ class Target(str, Enum):
     """
 
     agentcore = "agentcore"
+    kagent = "kagent"
+    ate = "ate"
 
 
 def is_port_free(host: str, port: int) -> bool:
@@ -383,10 +385,18 @@ def serve_server(
                            each turn to this agent: an agentspec ID, or an A2A
                            (http) or ACP (ws) endpoint. Unset, none is registered.
         target: ``agentcore`` answers Amazon Bedrock AgentCore Runtime's
-                contract (AC-01): on ``0.0.0.0``, port 8080 (``AGENTCORE_PORT``
+                contract: on ``0.0.0.0``, port 8080 (``AGENTCORE_PORT``
                 to change it), ``/invocations``, ``/ping`` and ``/ws`` at the
                 root, the agentspec named by ``AGENT_SPEC_ID`` configured at
-                start; it refuses to start without one.
+                start; it refuses to start without one. ``kagent`` serves
+                the agentspec of ``AGENT_SPEC_ID`` over A2A on loopback
+                (``AGENT_RUNTIMES_KAGENT_PORT``, 8765), for the kagent bridge
+                beside it, with the model and MCP servers of kagent's
+                configuration (``/config/config.json``).
+                ``ate`` answers Agent Substrate's actor contract: on
+                ``0.0.0.0``, port 80 (``ATE_PORT``), the wakeup probe at
+                ``/ate/wakeup`` and the actor's identity at ``/ate/identity``,
+                the agentspec of ``AGENT_SPEC_ID`` when set.
 
     Returns:
         The actual port the server is running on
@@ -418,6 +428,72 @@ def serve_server(
         protocol = Protocol.ag_ui
         os.environ[TARGET_VARIABLE] = target.value
         logger.info(f"AgentCore target: agentspec {settings.spec_id} on {host}:{port}")
+
+    if target == Target.kagent:
+        from agent_runtimes.kagent.settings import TARGET_VARIABLE as KAGENT_TARGET
+        from agent_runtimes.kagent.settings import kagent_settings
+
+        try:
+            kagent = kagent_settings()
+        except ValueError as refused:
+            raise ServeError(str(refused)) from None
+        if agent_id:
+            raise ServeError(
+                "--target kagent serves the agentspec of AGENT_SPEC_ID, not --agent-id."
+            )
+        from agent_runtimes.specs.agents import get_agent_spec
+
+        if not get_agent_spec(kagent.spec_id):
+            raise ServeError(
+                f"AGENT_SPEC_ID names {kagent.spec_id!r}, which the library does not have."
+            )
+        if kagent.model is not None:
+            # The Agent's ModelConfig names the endpoint (Datalayer's
+            # ai-inference or the user's provider) and its key stays in
+            # kagent's egress gateway: the call is made to that endpoint.
+            os.environ["AGENT_RUNTIMES_MODEL"] = kagent.model.model_id
+            os.environ["AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE"] = "local"
+            os.environ.update(kagent.model.env)
+        agent_id = kagent.spec_id
+        host, port, find_free_port_flag = kagent.host, kagent.port, False
+        protocol = Protocol.a2a
+        os.environ[KAGENT_TARGET] = target.value
+        logger.info(
+            f"kagent target: agentspec {kagent.spec_id} on {host}:{port}, "
+            f"model {kagent.model.model_id if kagent.model else 'of the agentspec'}, "
+            f"{len(kagent.mcp_servers)} kagent MCP server(s)"
+        )
+
+    if target == Target.ate:
+        from agent_runtimes.ate.settings import TARGET_VARIABLE as ATE_TARGET
+        from agent_runtimes.ate.settings import ate_settings
+
+        try:
+            ate = ate_settings()
+        except ValueError as refused:
+            raise ServeError(str(refused)) from None
+        if agent_id and ate.spec_id and agent_id != ate.spec_id:
+            raise ServeError(
+                f"--target ate serves the agentspec of AGENT_SPEC_ID ({ate.spec_id!r}), "
+                f"not --agent-id {agent_id!r}."
+            )
+        agent_id = agent_id or ate.spec_id or None
+        if agent_id:
+            from agent_runtimes.specs.agents import get_agent_spec
+
+            if not get_agent_spec(agent_id):
+                raise ServeError(
+                    f"AGENT_SPEC_ID names {agent_id!r}, which the library does not have."
+                )
+        # Agent Substrate routes an actor's traffic to port 80 of its private
+        # interface; identity and runtime id are bound at each wake, never here
+        # (the golden snapshot is every actor's start).
+        host, port, find_free_port_flag = ate.host, ate.port, False
+        os.environ[ATE_TARGET] = target.value
+        logger.info(
+            f"ate target: {f'agentspec {agent_id}' if agent_id else 'no agent at start'} "
+            f"on {host}:{port}, actor metadata in {ate.system_info_dir}"
+        )
 
     # Resolve the effective port:
     # - port == 0  → pick a random free port (default behaviour)
@@ -469,7 +545,7 @@ def serve_server(
             f"(registered as '{effective_name}')"
         )
 
-    # Validate the agent the orchestrator delegates to, if one is named (O2-08)
+    # Validate the agent the orchestrator delegates to, if one is named
     if orchestrator_root:
         from agent_runtimes.orchestration.orchestrator import root_binding
 

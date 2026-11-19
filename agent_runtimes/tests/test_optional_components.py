@@ -1,0 +1,253 @@
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+
+"""What an agent starts without (agentspecs 0.0.188, the user, 14 November 2026).
+
+An agent's spec names the MCP servers and skills it can do without (``optional``) and
+groups of which one at least must be set up (``optional.at_least_one``). One whose
+secrets are not set up is never refused: it is left out, and the agent is told which in
+its instructions, so it says what it cannot do. A required one still refuses the start,
+and a group none of whose members is set up refuses it too.
+"""
+
+from __future__ import annotations
+
+from typing import Iterable
+
+import pytest
+
+from agent_runtimes.guardrails.declared_secrets import LeftOut, declared_secrets
+from agent_runtimes.routes.agents import CreateAgentRequest, create_agent
+from agent_runtimes.specs.agents import get_agent_spec
+from agent_runtimes.tests.test_agents_create_integration import (  # noqa: F401
+    _DummyRequest,
+    creation_spy,
+)
+
+NETWORKS = {
+    "discord": ["DISCORD_BOT_TOKEN", "DISCORD_GUILD_ID"],
+}
+
+
+def _having(names: Iterable[str]):
+    given = set(names)
+    return lambda name: name in given
+
+
+def test_the_catalogue_says_what_the_marketer_and_the_shopper_start_without():
+    marketer = get_agent_spec("worker-marketer")
+    assert marketer is not None and marketer.optional is not None
+    # The linkedin server, on a browser session signed in from the chat (agentspecs 0.0.191).
+    # No bluesky server (agentspecs 0.0.192) nor x server (0.0.194): Bluesky and X
+    # are read and acted on with the linked account.
+    assert marketer.optional.mcp_servers == ["discord", "linkedin"]
+    assert marketer.optional.skills == [
+        "crawl",
+        "github",
+        "datalayer-email",
+        "image-stock",
+    ]
+    # Its posting tools, set up by a linked account (agentspecs 0.0.189), count for a network.
+    assert marketer.optional.backend_tools == [
+        "social-post-x",
+        "social-read-x",
+        "social-reply-x",
+        "social-like-x",
+        "social-repost-x",
+        "social-post-bluesky",
+        "social-read-bluesky",
+        "social-reply-bluesky",
+        "social-like-bluesky",
+        "social-repost-bluesky",
+        "social-follow-bluesky",
+        "social-post-linkedin",
+        "social-comment-linkedin",
+    ]
+    assert marketer.optional.at_least_one == [
+        [
+            "discord",
+            "linkedin",
+            "social-post-x",
+            "social-post-bluesky",
+            "social-post-linkedin",
+        ]
+    ]
+    # LinkedIn through IAM (agentspecs 0.0.190), and the linkedin server on a browser session
+    # signed in from the chat (0.0.191): without it, it reads nothing back.
+    assert "linkedin" in [server.id for server in marketer.mcp_servers]
+    assert "read nothing back" in " ".join((marketer.system_prompt or "").split())
+    shopper = get_agent_spec("worker-shopper")
+    assert shopper is not None and shopper.optional is not None
+    assert shopper.optional.skills == ["crawl"]
+    assert get_agent_spec("worker-terra").optional is None
+
+
+@pytest.fixture(autouse=True)
+def nothing_linked(monkeypatch):
+    """No X or Bluesky account linked: the networks are their secrets alone here."""
+    from agent_runtimes.tools import social
+
+    monkeypatch.setattr(social, "_state", {**social._state, "accounts": {}})
+
+
+def test_an_optional_one_is_never_refused_and_the_group_wants_one_network():
+    declared = declared_secrets(get_agent_spec("worker-marketer"))
+    nothing = declared.missing(_having([]), who="Marketer")
+    for name in (
+        "X_BEARER_TOKEN",
+        "DISCORD_BOT_TOKEN",
+        "TAVILY_API_KEY",
+        "GITHUB_TOKEN",
+    ):
+        assert not any(f"needs {name}," in sentence for sentence in nothing), name
+    group = [sentence for sentence in nothing if "one at least of" in sentence]
+    assert group == [
+        "Marketer is not set up: it needs one at least of "
+        "the MCP server discord, the MCP server linkedin, "
+        "the backend tool social-post-bluesky, the backend tool social-post-linkedin, "
+        "the backend tool social-post-x, and none was given its secrets: add those of "
+        "one to the account's secrets or link its account in Settings, or save your "
+        "LinkedIn session in Settings › LinkedIn or sign in to LinkedIn from its chat, "
+        "then configure it again."
+    ]
+    for server, names in NETWORKS.items():
+        one = declared.missing(_having(names), who="Marketer")
+        assert not any("one at least of" in sentence for sentence in one), server
+    # Bluesky's app password and X's bearer token no longer count: the linked account does.
+    pasted = declared.missing(
+        _having(["BLUESKY_IDENTIFIER", "BLUESKY_APP_PASSWORD", "BLUESKY_SERVICE_URL"]),
+        who="Marketer",
+    )
+    assert any("one at least of" in sentence for sentence in pasted)
+    assert any(
+        "one at least of" in sentence
+        for sentence in declared.missing(_having(["X_BEARER_TOKEN"]), who="Marketer")
+    )
+
+
+def test_linkedin_counts_for_the_group_once_its_browser_session_is_held(
+    tmp_path, monkeypatch
+):
+    """The linkedin server needs no secret: it counts once signed in, and is never left out."""
+    from agent_runtimes.mcp import browser_session
+
+    monkeypatch.setenv("USER_DATA_DIR", str(tmp_path / ".linkedin-mcp" / "profile"))
+    declared = declared_secrets(get_agent_spec("worker-marketer"))
+    assert "linkedin" not in declared.left_out(_having([])).servers
+    assert any("one at least of" in s for s in declared.missing(_having([]), who="M"))
+    browser_session.write_linkedin_session(
+        [{"name": "li_at", "value": "v", "domain": ".www.linkedin.com", "path": "/"}]
+    )
+    assert not any(
+        "one at least of" in s for s in declared.missing(_having([]), who="M")
+    )
+
+
+def test_linkedin_counts_for_the_group_with_its_session_from_settings(
+    tmp_path, monkeypatch
+):
+    """LINKEDIN_LI_AT (15 November 2026): given, never required, and the Marketer's one network."""
+    monkeypatch.setenv("USER_DATA_DIR", str(tmp_path / ".linkedin-mcp" / "profile"))
+    declared = declared_secrets(get_agent_spec("worker-marketer"))
+    assert "LINKEDIN_LI_AT" in declared.runtime
+    assert "LINKEDIN_LI_AT" not in declared.kernel
+    assert "linkedin" not in declared.left_out(_having([])).servers
+    assert not any(
+        "one at least of" in s
+        for s in declared.missing(_having(["LINKEDIN_LI_AT"]), who="M")
+    )
+
+
+def test_what_is_not_set_up_is_left_out_and_said():
+    declared = declared_secrets(get_agent_spec("worker-marketer"))
+    left = declared.left_out(_having(["GITHUB_TOKEN"]))
+    assert left.servers == {"discord": NETWORKS["discord"]}
+    # image-stock requires nothing and has none of its provider keys (agentspecs 0.0.218).
+    assert left.skills == {"crawl": ["TAVILY_API_KEY"], "image-stock": []}
+    assert left.tools == {
+        "social-post-bluesky": ["a linked Bluesky account"],
+        "social-read-bluesky": ["a linked Bluesky account"],
+        "social-reply-bluesky": ["a linked Bluesky account"],
+        "social-like-bluesky": ["a linked Bluesky account"],
+        "social-repost-bluesky": ["a linked Bluesky account"],
+        "social-follow-bluesky": ["a linked Bluesky account"],
+        "social-post-x": ["a linked X account"],
+        "social-read-x": ["a linked X account"],
+        "social-reply-x": ["a linked X account"],
+        "social-like-x": ["a linked X account"],
+        "social-repost-x": ["a linked X account"],
+        "social-post-linkedin": ["a linked LinkedIn account"],
+        "social-comment-linkedin": ["a linked LinkedIn account"],
+    }
+    sentence = left.sentence()
+    assert "the MCP server discord (no DISCORD_BOT_TOKEN" in sentence
+    assert "the skill crawl (no TAVILY_API_KEY)" in sentence
+    assert "say that you cannot" in sentence
+    everything = sum(NETWORKS.values(), []) + ["GITHUB_TOKEN", "TAVILY_API_KEY"]
+    assert not declared.left_out(_having(everything)).servers
+    assert declared.left_out(_having(everything)).skills == {"image-stock": []}
+    assert not declared.left_out(_having([*everything, "PEXELS_API_KEY"])).skills
+
+
+def test_a_required_one_still_refuses_the_start():
+    declared = declared_secrets(get_agent_spec("worker-terra"))
+    assert declared.optional == frozenset()
+    assert any(
+        "needs DATALAYER_API_KEY" in sentence
+        for sentence in declared.missing(_having([]), who="Terra")
+    )
+    assert LeftOut() == declared.left_out(_having([]))
+
+
+def test_a_group_naming_what_is_not_optional_is_refused():
+    spec = {
+        "id": "a",
+        "mcpServers": [{"id": "x", "origin": "catalog"}],
+        "optional": {"mcpServers": ["x"], "atLeastOne": [["x", "github"]]},
+    }
+    with pytest.raises(ValueError, match="names github"):
+        declared_secrets(forwarded_spec=spec)
+
+
+@pytest.mark.asyncio
+async def test_the_agent_starts_without_them_and_is_told(
+    monkeypatch: pytest.MonkeyPatch,
+    creation_spy: dict[str, object],  # noqa: F811
+) -> None:
+    for name in ("X_BEARER_TOKEN", "TAVILY_API_KEY"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("GITHUB_TOKEN", "a-token")
+    seen: dict[str, object] = {}
+    from agent_runtimes.routes import agents as agents_route
+
+    monkeypatch.setattr(
+        agents_route,
+        "create_skills_toolset",
+        lambda **kwargs: seen.setdefault("skills", kwargs.get("skills")) and None,
+    )
+    request = CreateAgentRequest(
+        name="Optional Agent",
+        agent_spec={
+            "systemPrompt": "You market.",
+            "mcpServers": [
+                {"id": "x", "origin": "catalog"},
+                {"id": "github", "origin": "catalog"},
+            ],
+            "skills": ["crawl:0.0.1", "github:0.0.1"],
+            "optional": {"mcpServers": ["x"], "skills": ["crawl", "github"]},
+        },
+        enable_skills=True,
+    )
+    await create_agent(request, _DummyRequest())
+    adapter_kwargs = creation_spy["adapter_kwargs"]
+    assert isinstance(adapter_kwargs, dict)
+    assert [s.id for s in adapter_kwargs["selected_mcp_servers"]] == ["github"]
+    assert seen["skills"] == ["github:0.0.1"]
+    pydantic_kwargs = creation_spy["pydantic_kwargs"]
+    assert isinstance(pydantic_kwargs, dict)
+    instructions = " ".join(str(part) for part in pydantic_kwargs["instructions"])
+    assert "You market." in instructions
+    assert (
+        "Started without what the person has not set up: the MCP server x "
+        "(no X_BEARER_TOKEN); the skill crawl (no TAVILY_API_KEY)." in instructions
+    )

@@ -5,10 +5,10 @@
 """
 Generate Python and TypeScript code from the YAML harness specifications.
 
-One YAML per harness under ``agentspecs/harnesses`` (SH-01):
+One YAML per harness under ``agentspecs/harnesses``:
 an agent program driven over the Agent Client Protocol, how it is launched,
 what it needs, what it honours of an agent spec, and the terms it is served
-under. ``register.yaml`` beside them is the register (SH-04): a harness
+under. ``register.yaml`` beside them is the register: a harness
 without an entry is refused here as it is in agentspecs.
 
 Usage:
@@ -81,7 +81,7 @@ def load_harness_specs(specs_dir: Path) -> list[dict[str, Any]]:
         skills = spec.get("skills") or {}
         if skills.get("format") not in SKILLS_FORMATS:
             raise ValueError(f"{yaml_file.name}: skills.format one of {SKILLS_FORMATS}")
-        # The capabilities table (MH-20): required, its words known, agreeing with acp.
+        # The capabilities table: required, its words known, agreeing with acp.
         caps = spec.get("capabilities")
         if not isinstance(caps, dict):
             raise ValueError(
@@ -149,7 +149,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         '"""',
         "Harness Catalog.",
         "",
-        "An agent program driven over the Agent Client Protocol (SH-01).",
+        "An agent program driven over the Agent Client Protocol.",
         "",
         "This file is AUTO-GENERATED from YAML specifications.",
         "DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",
@@ -269,7 +269,7 @@ def _t(value: Any) -> str:
 
 
 def load_listed(specs_dir: Path) -> list[dict[str, Any]]:
-    """The register's listed tier (SH-57): known to speak ACP, not drilled, offered by nothing."""
+    """The register's listed tier: known to speak ACP, not drilled, offered by nothing."""
     register = yaml.safe_load((specs_dir / REGISTER).read_text()) or {}
     return sorted(
         (
@@ -293,7 +293,7 @@ def generate_typescript_code(
         "/**",
         " * Harness Catalog.",
         " *",
-        " * An agent program driven over the Agent Client Protocol (SH-01).",
+        " * An agent program driven over the Agent Client Protocol.",
         " *",
         " * This file is AUTO-GENERATED from YAML specifications.",
         " * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",
@@ -395,7 +395,7 @@ def generate_typescript_code(
         "}",
         "",
         "/**",
-        " * The register's listed tier (SH-57): agents known to speak ACP, registered",
+        " * The register's listed tier: agents known to speak ACP, registered",
         " * with their documented command and their terms, not drilled — offered by",
         " * nothing until moved to the catalogue.",
         " */",

@@ -3,8 +3,8 @@
 
 """Following an execution the control plane runs, from outside it.
 
-What a worker asking for a child does (O2-06), and what the orchestrator
-answering an ACP turn does with the root it delegated (O2-08): read the
+What a worker asking for a child does, and what the orchestrator
+answering an ACP turn does with the root it delegated: read the
 execution's events as they happen, stop it when the caller stops, and answer
 with what its completing attempt produced. Core's orchestration client
 subscribes with a blocking iterator, so the events are read in a thread and
@@ -31,8 +31,8 @@ def orchestration_client(token: str) -> Any:
     """
     Build core's orchestration client, asking as whoever holds ``token``.
 
-    A worker's execution token, when a run asks for a child (O2-06); the
-    person's, when the orchestrator delegates a turn (O2-08).
+    A worker's execution token, when a run asks for a child; the
+    person's, when the orchestrator delegates a turn.
 
     Parameters
     ----------

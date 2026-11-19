@@ -1,16 +1,15 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What agent-runtimes contributes to the session's points (MH-F01).
+"""What agent-runtimes contributes to the session's points.
 
 One function, :func:`contribute_builtins`, called by the built-in plugin's
-``provide_contributions``: the harness catalogue to ``harness`` (MH-F02),
-the stores to ``session.store`` (MH-F03), ``datalayer-session/1`` to
-``session.format`` (MH-F04), the default policy to ``session.carry``
-(MH-F05), the audit rows and the OTEL spans to ``session.hook`` (MH-F06),
-the ``agentcore`` target to ``runtime.target`` (AC-10), and the
-``datalayer`` and ``agentcore`` providers to ``identity.provider`` (ID-20,
-ID-21).
+``provide_contributions``: the harness catalogue to ``harness``,
+the stores to ``session.store``, ``datalayer-session/1`` to
+``session.format``, the default policy to ``session.carry``,
+the audit rows and the OTEL spans to ``session.hook``,
+the ``agentcore`` target to ``runtime.target``, and the
+``datalayer`` and ``agentcore`` providers to ``identity.provider``.
 Each lands here as its box does; nothing is contributed twice.
 """
 

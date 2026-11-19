@@ -830,7 +830,7 @@ describe('the plain edge', () => {
   });
 });
 
-describe('the selected exchange on the stage (S3-02)', () => {
+describe('the selected exchange on the stage', () => {
   it('is on the edge by its id, or by its ends either way: an answer travels the ask’s edge back', () => {
     const on = {
       id: 'sales->accounting',

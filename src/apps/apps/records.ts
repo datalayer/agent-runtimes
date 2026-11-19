@@ -4,9 +4,9 @@
  */
 
 /**
- * The record of an application (R-07), as ai-agents keeps it: what it
+ * The record of an application, as ai-agents keeps it: what it
  * did, session by session, written by the runtime it ran on — read here for
- * its activity feed (R-01b, R-15): the sessions, newest first, and what each
+ * its activity feed: the sessions, newest first, and what each
  * one did, step by step.
  *
  * Pure but for `fetch`: no React.
@@ -35,9 +35,9 @@ export type RecordKind =
   | 'feedback'
   /** A turn of a conversation: what was asked, what it answered. */
   | 'turn'
-  /** A run began: what Activity reads as in progress until it answers (R-15). */
+  /** A run began: what Activity reads as in progress until it answers. */
   | 'run'
-  /** What one of its channels was sent, or why not (R-37). */
+  /** What one of its channels was sent, or why not. */
   | 'notification';
 
 /** One entry of an application's record. */
@@ -155,7 +155,7 @@ async function read(
 /**
  * The sessions of an application, newest first, each as the record lists
  * it (`sessionRowOf`: state, agent, title, lineage, turns). Real use only —
- * the sessions its tests ran are read apart (R-07) — unless `tests` says
+ * the sessions its tests ran are read apart — unless `tests` says
  * otherwise: `true` for the tests only, `null` for both. The first page;
  * `hasMore` says whether there is a next.
  */
@@ -175,7 +175,7 @@ export async function listSessions(
   return sessionPageOf(body);
 }
 
-/** What one session did, in order: a run's start is a mark, not a step (R-15). */
+/** What one session did, in order: a run's start is a mark, not a step. */
 export async function readSession(
   context: RecordsContext,
   sessionUid: string,

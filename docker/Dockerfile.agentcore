@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-# The image Amazon Bedrock AgentCore Runtime runs (AC-04): one image for
+# The image Amazon Bedrock AgentCore Runtime runs: one image for
 # every agentspec, started with the agentspec id in AGENT_SPEC_ID.
 #
 # It answers AgentCore's runtime contract (`agent-runtimes serve --target

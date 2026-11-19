@@ -4,7 +4,7 @@
  */
 
 /**
- * Threads (P-24): a thread opened from a person's history is read from
+ * Threads: a thread opened from a person's history is read from
  * the runtime — held there, else resumed from its record — and feedback
  * names the answer it is about.
  */

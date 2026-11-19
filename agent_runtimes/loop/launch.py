@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Where ``loop`` runs its agent: on this machine, or on Datalayer (L-01 to L-06).
+"""Where ``loop`` runs its agent: on this machine, or on Datalayer.
 
 Launching ``loop`` asks one question more than it used to — *where?* — and,
 for Datalayer, the few a cloud runtime needs: the environment, how long to
@@ -107,62 +107,143 @@ def choose_where(
         return LOCAL
     if not (interactive() if can_ask is None else can_ask):
         return LOCAL
-    last = _read_preferences(preferences).get("where")
-    default = last if last in (LOCAL, CLOUD) else LOCAL
     answer = (ask or _select)(
         "Where should the agent run?",
-        [
-            ("On this machine — a local server, with your own model keys", LOCAL),
-            (
-                "On Datalayer — a cloud runtime with Datalayer's models, billed by the minute",
-                CLOUD,
-            ),
-        ],
-        default,
+        [(f"{PLACES[place]} — {WHERE_SAID[place]}", place) for place in (LOCAL, CLOUD)],
+        last_where(preferences),
     )
     if answer is None:
         raise KeyboardInterrupt
-    _write_preferences({"where": answer}, preferences)
+    remember_where(answer, preferences)
     return answer
 
 
-def _select(question: str, choices: list[tuple], default: str) -> Optional[str]:
-    """Ask for one of ``choices``: ``(title, value)``, or ``(title, value, why_not)``.
+#: The two places, as the question and the start's launch rows name them.
+PLACES = {LOCAL: "On this machine", CLOUD: "On Datalayer"}
 
-    A choice with a reason why not is shown, greyed with that reason, and
-    cannot be picked.
+#: What each place is, in a few words.
+WHERE_SAID = {
+    LOCAL: "a local server, with your own model keys",
+    CLOUD: "a cloud runtime with Datalayer's models, billed by the second",
+}
+
+#: The launch row that starts a new session with where it runs already said
+#: (by a flag) or not to be asked (signed out): the questions follow as ever.
+NEW_SESSION = "new"
+
+
+def last_where(preferences: Path = PREFERENCES) -> str:
+    """The last answer to *where?*, offered first: on this machine when none."""
+    last = _read_preferences(preferences).get("where")
+    return last if last in (LOCAL, CLOUD) else LOCAL
+
+
+def remember_where(where: str, preferences: Path = PREFERENCES) -> None:
+    """Keep the answer to *where?*, to offer it first next time."""
+    _write_preferences({"where": where}, preferences)
+
+
+def start_choices(
+    *,
+    local: bool = False,
+    cloud: bool = False,
+    cloud_offered: bool = True,
+    preferences: Path = PREFERENCES,
+) -> tuple[list[tuple[str, str]], str]:
+    """The launch rows `loop` draws above the sessions as it starts, as
+    ``(id, label)``, and the one highlighted.
+
+    Where it runs still to be asked — no flag says it, and Datalayer is
+    offered — the question is the rows: *Start a new session on this
+    machine* and *on Datalayer*, the last answer highlighted, and their ids
+    are `LOCAL` and `CLOUD`. Otherwise one row, *Start a new session*
+    (`NEW_SESSION`), and what the flags say, or this machine, follows.
+    """
+    if local or cloud or not cloud_offered:
+        return [(NEW_SESSION, "Start a new session")], NEW_SESSION
+    return [
+        (
+            place,
+            f"Start a new session {PLACES[place][0].lower()}{PLACES[place][1:]} — {WHERE_SAID[place]}",
+        )
+        for place in (LOCAL, CLOUD)
+    ], last_where(preferences)
+
+
+#: What cannot be picked — a group's title, a choice with a reason why not — is drawn grey.
+UNPICKABLE_STYLE = [("separator", "fg:#808080")]
+
+
+def select_choices(choices: list[tuple]) -> list[Any]:
+    """The questionary rows of ``choices``: ``(title, value)``, or ``(title, value, why_not)``.
+
+    A choice with a reason why not is drawn grey with that reason, and
+    cannot be picked: a separator row, since questionary prefixes its
+    disabled choices with ``- `` (the user, 13 November 2026: grey, no ``-``).
     """
     import questionary
 
     from agent_runtimes.loop.paused import SEPARATOR
 
-    return questionary.select(
-        question,
-        choices=[
+    rows: list[Any] = []
+    for choice in choices:
+        why_not = choice[2] if len(choice) > 2 and choice[2] else ""
+        if choice[1] == SEPARATOR:
             # A group's title: drawn, never picked.
-            questionary.Separator(f"  {choice[0]}")
-            if choice[1] == SEPARATOR
-            else questionary.Choice(
-                title=choice[0],
-                value=choice[1],
-                disabled=choice[2] if len(choice) > 2 and choice[2] else None,
-            )
-            for choice in choices
-        ],
-        default=default,
-    ).ask()
+            rows.append(questionary.Separator(f"  {choice[0]}"))
+        elif why_not:
+            rows.append(questionary.Separator(f"{choice[0]} ({why_not})"))
+        else:
+            rows.append(questionary.Choice(title=choice[0], value=choice[1]))
+    return rows
+
+
+def _asked(question: Any) -> Any:
+    """The answer to a questionary ``question``; Ctrl-C and Ctrl-Z leave ``loop``.
+
+    Both raise a KeyboardInterrupt, which ``loop`` answers with its goodbye:
+    ``unsafe_ask`` does not swallow Ctrl-C as "Cancelled by user", and in the
+    prompt's raw mode Ctrl-Z is a key, bound here, not SIGTSTP.
+    """
+    from prompt_toolkit.key_binding import KeyBindings, merge_key_bindings
+
+    leave = KeyBindings()
+
+    @leave.add("c-z", eager=True)
+    def _(event: Any) -> None:
+        event.app.exit(exception=KeyboardInterrupt())
+
+    application = question.application
+    application.key_bindings = merge_key_bindings(
+        [application.key_bindings or KeyBindings(), leave]
+    )
+    return question.unsafe_ask()
+
+
+def _select(question: str, choices: list[tuple], default: str) -> Optional[str]:
+    """Ask for one of ``choices`` (`select_choices`); what cannot be picked is grey."""
+    import questionary
+
+    return _asked(
+        questionary.select(
+            question,
+            choices=select_choices(choices),
+            default=default,
+            style=questionary.Style(UNPICKABLE_STYLE),
+        )
+    )
 
 
 def _text(question: str, default: str, validate: Callable[[str], Any]) -> Optional[str]:
     import questionary
 
-    return questionary.text(question, default=default, validate=validate).ask()
+    return _asked(questionary.text(question, default=default, validate=validate))
 
 
 def _confirm(question: str, default: bool) -> Optional[bool]:
     import questionary
 
-    return questionary.confirm(question, default=default).ask()
+    return _asked(questionary.confirm(question, default=default))
 
 
 def minutes_problem(text: str) -> Optional[str]:
@@ -363,6 +444,9 @@ class CloudLaunch:
     app: bool = False
     #: Whether it is not billed: an unmetered launch.
     unmetered: bool = False
+    #: Whether it was joined to go on with an open session it runs: left
+    #: running as it was found when the prompt ends, nobody asked.
+    joined: bool = False
 
     @property
     def said(self) -> str:
@@ -543,10 +627,7 @@ def offer_lines(offer: CloudOffer) -> list[str]:
             )
     else:
         lines.append("Running agent runtimes: none.")
-    lines.append(
-        "Models: the runtime's own, through Datalayer — not this machine's keys; "
-        "/models lists them once connected."
-    )
+    lines.append("Models: /models lists them once connected.")
     return lines
 
 
@@ -658,6 +739,66 @@ def choose_environment(
     return by_name[answer]
 
 
+#: The question of the agent a new runtime is configured from.
+AGENTSPEC_QUESTION = (
+    "Which agent? (its agentspec configures the runtime; -a <agentspec> to name one)"
+)
+
+
+def _offered(spec: Any) -> bool:
+    """Whether the pickers offer an agentspec: enabled, and not kept out (``listed``)."""
+    return (
+        bool(getattr(spec, "enabled", False))
+        and getattr(spec, "listed", True) is not False
+    )
+
+
+def agentspec_choices(specs: list[Any]) -> list[tuple[str, str]]:
+    """The agentspecs offered on Datalayer, by id, each with its description.
+
+    Those the catalogue enables and lists: an enabled agent kept out of the
+    pickers (``listed: false``, agentspecs 0.0.187), as ``example-simple``,
+    runs by id without being offered. The runtime reaches the models through
+    Datalayer: none is held back for this machine's keys, as the local picker
+    does.
+    """
+    choices = []
+    for spec in sorted((s for s in specs if _offered(s)), key=lambda s: s.id):
+        about = " ".join(str(getattr(spec, "description", "") or "").split())
+        about = about if len(about) <= 50 else about[:47].rstrip() + "..."
+        engine = str(getattr(spec, "runtime_engine", "") or "datalayer")
+        on = "" if engine == "datalayer" else f" (runs on {engine})"
+        choices.append(
+            (f"{spec.id} — {about}{on}" if about else f"{spec.id}{on}", spec.id)
+        )
+    return choices
+
+
+def choose_agentspec(
+    specs: list[Any],
+    *,
+    can_ask: bool,
+    ask: Optional[Callable[..., Optional[str]]] = None,
+) -> str:
+    """The agentspec of a new cloud runtime: the person's pick among the offered ones.
+
+    The catalogue's enabled and listed agents are offered (the home page's
+    five), ``example-simple`` proposed when it is one of them, the first
+    otherwise. Without somebody to ask, or with no agentspec to offer, it is
+    ``example-simple``, the neutral default: enabled, not listed (agentspecs
+    0.0.187), so it runs though it is not offered.
+    """
+    choices = agentspec_choices(specs)
+    if not can_ask or not choices:
+        return DEFAULT_CLOUD_AGENTSPEC
+    ids = [value for _, value in choices]
+    default = DEFAULT_CLOUD_AGENTSPEC if DEFAULT_CLOUD_AGENTSPEC in ids else ids[0]
+    answer = (ask or _select)(AGENTSPEC_QUESTION, choices, default)
+    if answer is None:
+        raise KeyboardInterrupt
+    return answer
+
+
 def credits_for(environment: Any, minutes: int) -> float:
     """The most a reservation can cost, in credits."""
     return float(getattr(environment, "burning_rate", 0.0) or 0.0) * 60.0 * minutes
@@ -726,7 +867,7 @@ def wait_until_set_up(relay_url: str, timeout: float = 180.0) -> bool:
     Its agent answers from the moment the pod starts, before the runtime is
     set up for the account: an application configured on it then finds none
     of the account's secrets (an owner's connection does not start), and is
-    replaced by the platform's own configuration when it comes (A-08).
+    replaced by the platform's own configuration when it comes.
     """
     import httpx
 
@@ -739,7 +880,7 @@ def wait_until_set_up(relay_url: str, timeout: float = 180.0) -> bool:
             )
             answered = response.json() if response.status_code == 200 else None
             if isinstance(answered, dict) and answered.get("set_up_refused"):
-                # A secret its specs declare was not given (R-19): said now.
+                # A secret its specs declare was not given: said now.
                 raise CloudRefused(str(answered["set_up_refused"]))
             if set_up_by_datalayer(answered):
                 return True
@@ -774,7 +915,7 @@ def choose_running(
     can_ask: bool,
     ask: Optional[Callable[..., Optional[str]]] = None,
 ) -> Optional[Any]:
-    """A running agent runtime to go back to, or None to launch a new one (L-06)."""
+    """A running agent runtime to go back to, or None to launch a new one."""
     agents = [r for r in runtimes if is_agent_runtime(r)]
     if not agents or not can_ask:
         return None
@@ -987,7 +1128,7 @@ def _attach(
 
 def attached_refusal(runtime_name: str, app_name: str) -> str:
     """Why an application refused on a runtime it was attached to cannot be
-    set up there, and what to do (R-19).
+    set up there, and what to do.
 
     Secrets reach a runtime once, from its companion, when it is launched:
     a runtime launched for something else was given that one's, and nothing
@@ -1018,7 +1159,7 @@ def launch_cloud(
     """Launch a cloud runtime for an agent, or go back to one, and the relay that reaches it.
 
     ``runtime`` names a running runtime to attach to, and nothing is launched.
-    Otherwise a running agent runtime is offered first (L-06), then a new one
+    Otherwise a running agent runtime is offered first, then a new one
     is reserved in an environment that can launch an agent, chosen from the
     SDK's list and priced against the credits left. No agentspec is asked
     for: the runtime's agent is ``agent_id``, else `DEFAULT_CLOUD_AGENTSPEC`,
@@ -1027,7 +1168,7 @@ def launch_cloud(
     ``app_spec`` is the Appspec of the application the runtime is launched
     for (`loop apps run --cloud`): sent with the launch, so the runtime is
     given the secrets its connections declare and a missing one is said
-    before the application is configured (R-19). A running runtime is
+    before the application is configured. A running runtime is
     not offered for it: one not launched for the application was not given
     its secrets. ``runtime`` still attaches to the one the person names; its
     configure then declares the application's secrets and refuses, in a
@@ -1074,11 +1215,18 @@ def launch_cloud(
         offer.environments, environment=environment, can_ask=asking
     )
     if not agent_id:
-        agent_id = DEFAULT_CLOUD_AGENTSPEC
-        note(
-            f"The runtime's agent is {agent_id}, the agent loop starts with: "
-            "a runtime is configured from an agentspec. -a <agentspec> for another."
-        )
+        if asking:
+            # The person picks the agent its runtime is configured from (the
+            # user, 13 November 2026), among the agents the catalogue enables.
+            from agent_runtimes.specs.agents import list_agentspecs
+
+            agent_id = choose_agentspec(list_agentspecs(), can_ask=True)
+        else:
+            agent_id = DEFAULT_CLOUD_AGENTSPEC
+            note(
+                f"The runtime's agent is {agent_id}, the agent loop starts with: "
+                "a runtime is configured from an agentspec. -a <agentspec> for another."
+            )
     unmetered = unmetered_launch()
     if unmetered:
         # DATALAYER_MAGIC_API_KEY is set: the runtime is sent it, consumes no
@@ -1087,8 +1235,8 @@ def launch_cloud(
         # platform ignores it for an unmetered runtime.
         reserved = choose_minutes(chosen, minutes=minutes, can_ask=False)
         status(
-            f"Launching {label or agent_id} on Datalayer ({chosen.name}, unmetered: "
-            "no credits, never expires)…"
+            f"Launching {label or agent_id} on Datalayer ({chosen.name}, billed: "
+            "it runs until its reservation ends)…"
         )
     else:
         reserved = choose_minutes(chosen, minutes=minutes, can_ask=asking)
@@ -1178,6 +1326,14 @@ def finish_cloud(
     A runtime whose session was paused from the prompt (`give_back`) is
     stopped without asking: the session is in the record.
     """
+    if launch.joined and launch.runtime_name not in _GIVEN_BACK:
+        # Joined for a session it was running: not this prompt's to stop.
+        launch.relay.stop()
+        say(
+            f"Left {launch.runtime_name}: it keeps running its session, as it was "
+            "before you joined."
+        )
+        return
     if launch.runtime_name in _GIVEN_BACK:
         _GIVEN_BACK.discard(launch.runtime_name)
         if launch.stop():
@@ -1203,7 +1359,7 @@ def finish_cloud(
         answer = (ask or _confirm)(
             f"Stop the {launch.said} {launch.runtime_name}? "
             + (
-                "It is not billed: it runs until its reservation ends."
+                "It is billed and runs until its reservation ends."
                 if launch.unmetered
                 else "It is billed until you do."
             ),
@@ -1222,6 +1378,34 @@ def finish_cloud(
         say(
             f"Could not stop {launch.said} {launch.runtime_name}: stop it with `loop agents terminate {launch.runtime_name}`."
         )
+
+
+def running_runtimes(client: Any = None) -> list[str]:
+    """The names and uids of the person's running runtimes on Datalayer."""
+    client = client or make_client()[0]
+    return [
+        str(getattr(runtime, attr, "") or "")
+        for runtime in read_offer(client).running
+        for attr in ("runtime_name", "uid", "name")
+        if getattr(runtime, attr, "")
+    ]
+
+
+def join_runtime(
+    runtime: str, *, status: Callable[[str], None] = lambda message: None
+) -> CloudLaunch:
+    """Reach the running runtime an open session runs on, to go on with it
+    there: attached as ``--runtime`` attaches (`launch_cloud`), its agent
+    left as it is, nothing launched, and left running when the prompt ends.
+
+    Raises
+    ------
+    CloudRefused
+        It is no longer running, or does not answer.
+    """
+    joined = launch_cloud(None, runtime=runtime, status=status)
+    joined.joined = True
+    return joined
 
 
 def build_url(launch: CloudLaunch) -> str:

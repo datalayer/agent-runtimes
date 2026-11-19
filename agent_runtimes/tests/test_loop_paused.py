@@ -1,12 +1,12 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The paused sessions `loop` offers to resume as it starts.
+"""The paused sessions `loop` lists, and how each is resumed.
 
 The rows from a store of files on this machine and a stubbed answer of the
-platform's record; the choice, resumed where the session lives; Enter
-leading to the usual questions; nothing asked when none is paused; the
-platform's list failing said in a line and not fatal.
+platform's record; each resumed where the session lives; nothing drawn when
+nobody is at the terminal; the platform's list failing said in a line and
+not fatal. The screen itself: test_loop_start_screen.
 """
 
 from __future__ import annotations
@@ -21,9 +21,7 @@ import pytest
 from agent_runtimes.apps.session_store import FileSessionStore
 from agent_runtimes.loop import paused
 from agent_runtimes.loop.paused import (
-    NEW_SESSION,
     Paused,
-    choose_paused,
     paused_line,
     paused_sessions,
     resume_plan,
@@ -173,6 +171,8 @@ def test_the_rows_from_this_machine_and_from_datalayer(files: FileSessionStore) 
         started_at=by_uid["local-paused-1"].started_at,
         turns=1,
         app_uid="agent:example-simple",
+        runs_on="runtime",
+        runs_on_id="local",
     )
     assert (by_uid["cloud-agent-1"].where, by_uid["cloud-agent-1"].store) == (
         "cloud",
@@ -276,93 +276,28 @@ def test_datalayer_failing_is_said_in_a_line_and_not_fatal(
     ]
 
 
-def test_none_paused_asks_nobody(tmp_path: Path) -> None:
-    def never(*args: Any) -> str:
-        raise AssertionError("With no paused session nothing is asked.")
-
-    rows = paused_sessions(
-        token="", store=FileSessionStore(root=tmp_path / "none"), say=lambda _: None
-    )
-    assert rows == []
-    assert choose_paused(rows, ask=never) is None
-
-
-def test_the_choice_and_enter(files: FileSessionStore) -> None:
+def test_each_session_is_resumed_where_it_lives(files: FileSessionStore) -> None:
     rows = paused_sessions(
         token="the-token", store=files, asker=_cloud, say=lambda _: None, names=NAMES
     )
-    asked: List[Any] = []
+    by_uid = {row.uid: row for row in rows}
 
-    def pick(uid: str) -> Any:
-        def ask(question: str, choices: List[tuple], default: str) -> str:
-            asked.append((question, choices, default))
-            return uid
-
-        return ask
-
-    # Enter: the first choice, a new session, and the usual questions follow.
-    assert choose_paused(rows, ask=pick(""), now=NOW) is None
-    question, choices, default = asked[0]
-    # The two places apart, counted: on this machine first, then on Datalayer.
-    assert (
-        question
-        == "You have 7 paused sessions (1 on this machine, 6 on Datalayer). Go on with one, or start a new one?"
-    )
-    assert choices[0] == (NEW_SESSION, "") and default == ""
-    assert choices[1] == ("On this machine (1)", paused.SEPARATOR)
-    assert choices[2][1] == "local-paused-1"
-    assert choices[3] == ("On Datalayer (6)", paused.SEPARATOR)
-    # In a place: what is resumed here first, newest first; then what is opened elsewhere.
-    on_datalayer_rows = [row for row in rows if row.where == "cloud"]
-    assert [choice[1] for choice in choices[4:]] == [
-        *[row.uid for row in on_datalayer_rows if row.resumable][:5],
-        *[row.uid for row in on_datalayer_rows if not row.resumable],
-    ]
-    picked = {choice[1]: choice for choice in choices[1:]}
-    # Each line says the session's uid, the same wherever it lives.
-    assert picked["preview-1"][0].startswith(
-        "Resume: Application session · Decide · “Reply with one word.” · preview-1"
-    )
-    assert len(picked["preview-1"]) == 2 and len(picked["cloud-agent-1"]) == 2
-    assert picked["cloud-app-1"][0].startswith(
-        "Resume: Application session · Exchange Desk"
-    )
-    # One not resumed from a terminal is drawn, not to be picked, with why:
-    # never only counted.
-    assert picked["others-app-1"][0].startswith("Application session · ")
-    assert picked["others-app-1"][2].startswith(
-        "a session of somebody else's deployment"
-    )
-    # A seat of a team run is picked: its run is what is resumed.
-    fewer = [row for row in rows if row.uid != "cloud-agent-1"]
-    seat = choose_paused(fewer, ask=pick("seat-1"), now=NOW)
-    assert seat is not None
-    seat_choice = next(choice for choice in asked[-1][1] if choice[1] == "seat-1")
-    assert len(seat_choice) == 2
-    assert seat_choice[0].startswith(
-        "Resume its team run exec_400b: Application session · "
-    )
-    plan = resume_plan(seat)
+    # A seat of a team run: its run is what is resumed.
+    plan = resume_plan(by_uid["seat-1"])
     assert (plan.team_run, plan.application, plan.uid) == ("exec_400b", "", "seat-1")
 
     # A deployment's session is resumed on a runtime launched for it.
-    own = choose_paused(rows, ask=pick("cloud-app-1"))
-    assert own is not None
-    plan = resume_plan(own)
+    plan = resume_plan(by_uid["cloud-app-1"])
     assert (plan.application, plan.deployment, plan.cloud) == ("app-1", "dep-1", True)
 
     # An application's Preview is resumed by starting its application.
-    preview = choose_paused(rows, ask=pick("preview-1"))
-    assert preview is not None
-    plan = resume_plan(preview)
+    plan = resume_plan(by_uid["preview-1"])
     assert (plan.uid, plan.application, plan.cloud) == ("preview-1", "decide", True)
     assert plan.deployment == ""
 
     # A cloud one is resumed on Datalayer, a local one on this machine,
     # each with its agent, nobody asked where.
-    on_datalayer = choose_paused(rows, ask=pick("cloud-agent-1"))
-    assert on_datalayer is not None
-    plan = resume_plan(on_datalayer)
+    plan = resume_plan(by_uid["cloud-agent-1"])
     assert (plan.uid, plan.agent, plan.cloud, plan.session_store) == (
         "cloud-agent-1",
         "worker-marketer",
@@ -370,78 +305,29 @@ def test_the_choice_and_enter(files: FileSessionStore) -> None:
         "",
     )
     assert plan.application == ""
-    here = choose_paused(rows, ask=pick("local-paused-1"))
-    assert here is not None
-    plan = resume_plan(here)
+    plan = resume_plan(by_uid["local-paused-1"])
     # Kept in files: its server reads the files, signed in or not.
     assert (plan.agent, plan.cloud, plan.session_store) == (
         "example-simple",
         False,
         "file",
     )
-    kept_on_datalayer = choose_paused(rows, ask=pick("own-machine-1"))
-    assert kept_on_datalayer is not None
-    assert resume_plan(kept_on_datalayer).cloud is True
-    assert resume_plan(kept_on_datalayer).session_store == ""
-
-    with pytest.raises(KeyboardInterrupt):
-        choose_paused(rows, ask=lambda *args: None)
-
-
-def test_five_are_offered_three_opened_elsewhere_drawn_and_the_rest_counted() -> None:
-    rows = [
-        Paused(
-            f"u{n}", "agent", "a", f"T{n}", "local", "file", f"2026-11-0{n}T00:00:00Z"
-        )
-        for n in range(1, 8)
-    ] + [
-        Paused(
-            f"d{n}",
-            "application",
-            "x",
-            "Hi",
-            "cloud",
-            "record",
-            "",
-            app_uid="app-1",
-            why_not=paused.DEPLOYMENT_WHY_NOT,
-        )
-        for n in range(1, 6)
-    ]
-    seen: List[Any] = []
-
-    def ask(question: str, choices: List[tuple], default: str) -> str:
-        seen.append((question, choices))
-        return ""
-
-    choose_paused(rows, ask=ask)
-    question, choices = seen[0]
-    assert question == (
-        "You have 12 paused sessions (7 on this machine, 5 on Datalayer). "
-        "Go on with one, or start a new one?"
-    )
-    # A new one; this machine's title and its five most recent; Datalayer's
-    # title and three of what is opened elsewhere: the rest counted in the titles.
-    assert [len(choice) for choice in choices] == [2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3]
-    assert choices[1] == (
-        "On this machine (7; 2 more: loop sessions)",
-        paused.SEPARATOR,
-    )
-    assert choices[7] == ("On Datalayer (5; 2 more: loop sessions)", paused.SEPARATOR)
-    assert len(choices) == 3 + paused.OFFERED + paused.NOT_RESUMED_SHOWN
+    kept_on_datalayer = resume_plan(by_uid["own-machine-1"])
+    assert (kept_on_datalayer.cloud, kept_on_datalayer.session_store) == (True, "")
 
 
 def test_a_run_nobody_is_at_asks_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
     from agent_runtimes.chat import cli
+    from agent_runtimes.commands import sessions
     from agent_runtimes.loop import launch
 
     monkeypatch.setattr(launch, "interactive", lambda: False)
     monkeypatch.setattr(
-        paused,
-        "paused_sessions",
-        lambda **kwargs: (_ for _ in ()).throw(AssertionError("not listed")),
+        sessions,
+        "run_picker",
+        lambda **kwargs: (_ for _ in ()).throw(AssertionError("not drawn")),
     )
-    assert cli._offer_paused() is None
+    assert cli._offer_paused() == (None, "")
 
 
 def test_a_picked_session_is_resumed_before_the_first_prompt() -> None:
@@ -457,38 +343,9 @@ def test_a_picked_session_is_resumed_before_the_first_prompt() -> None:
     assert "resume=resume_uid," in wiring
     assert "elif agent_id is None and not query and not runtime:" in wiring
     # Offered before where the agent runs is asked.
-    assert wiring.index("paused = _offer_paused()") < wiring.index(
-        "where = _choose_where_at_start(local=local, cloud=cloud)"
-    )
-
-
-def test_only_sessions_opened_elsewhere_are_still_drawn() -> None:
-    seen: List[Any] = []
-
-    def ask(question: str, choices: List[tuple], default: str) -> str:
-        seen.append(choices)
-        return ""
-
-    rows = [
-        Paused(
-            "u1",
-            "application",
-            "cog-crawler",
-            "Hi",
-            "cloud",
-            "record",
-            "",
-            app_uid="app-1",
-            app_name="Exchange Desk",
-            why_not=paused.DEPLOYMENT_WHY_NOT,
-        )
-    ]
-    assert choose_paused(rows, ask=ask) is None
-    assert [choice[0] for choice in seen[0]] == [
-        NEW_SESSION,
-        "On Datalayer (1)",
-        "Application session · Exchange Desk · “Hi” · u1",
-    ]
+    assert wiring.index(
+        "paused, where_picked = _offer_paused(local=local, cloud=cloud)"
+    ) < wiring.index("where = _choose_where_at_start(local=local, cloud=cloud)")
 
 
 def test_the_application_of_a_session_is_read_to_start_it_again() -> None:

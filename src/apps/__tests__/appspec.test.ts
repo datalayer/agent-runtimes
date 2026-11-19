@@ -103,7 +103,14 @@ describe('reading an Appspec', () => {
     expect(app.kind).toBe('chat');
     expect(app.rules).toEqual([]);
     expect(app.connections).toEqual([
-      { server: 'tavily', access: 'read', as: 'owner', only: [] },
+      // Not optional unless it says so, as agentspecs reads it.
+      {
+        server: 'tavily',
+        access: 'read',
+        as: 'owner',
+        only: [],
+        optional: false,
+      },
     ]);
     expect(parseAppspec('not an application').problems).toEqual([
       'The document is not an application.',
@@ -355,7 +362,7 @@ describe('writing an Appspec', () => {
     ).toBeUndefined();
   });
 
-  it('reads and writes a company that offers personal agents no sign-in, off unless said (D4-08)', () => {
+  it('reads and writes a company that offers personal agents no sign-in, off unless said', () => {
     const company = {
       enabled: true,
       scopes: [{ name: 'orders:read', description: 'Read your orders' }],
@@ -380,7 +387,7 @@ describe('writing an Appspec', () => {
       enabled: true,
       sign_in_disabled: true,
     });
-    // Its public skills published to personal agents (D4-06): off unless said, written as publish_skills.
+    // Its public skills published to personal agents: off unless said, written as publish_skills.
     const publishing = parseAppspec({
       kind: 'chat',
       skills: ['accounting'],
@@ -394,7 +401,7 @@ describe('writing an Appspec', () => {
     expect(dumpAppspec(publishing).pap?.company).toMatchObject({
       publish_skills: true,
     });
-    // Its website's flags at PAP draft 0.4 (D5-09): off unless said, written as web_unscoped / web_disabled.
+    // Its website's flags at PAP draft 0.4: off unless said, written as web_unscoped / web_disabled.
     expect(open.pap?.company.webUnscoped).toBe(false);
     expect(open.pap?.company.webDisabled).toBe(false);
     const unscoped = parseAppspec({
@@ -868,26 +875,46 @@ describe('writing an Appspec', () => {
       'One of a pair is its business or its personal_agent, not "company".',
     ]);
   });
-  it('reads and writes what a company does once the person confirms', () => {
-    const operations = [
-      {
-        action: 'orders.exchange',
-        tool: 'exchange_order',
-        summary: 'Exchange order {order_id} for size {size}',
+  it('reads what a company does once the person confirms from its openapi', () => {
+    const operation = (id: string, xPap: Record<string, string>) => ({
+      post: {
+        operationId: id,
+        summary: id,
+        'x-pap': xPap,
+        responses: {
+          '200': {
+            description: 'Done',
+            content: { 'application/json': { schema: { type: 'object' } } },
+          },
+        },
       },
-      {
-        action: 'orders.cancel',
-        tool: 'cancel_order',
-        summary: 'Cancel order {order_id}',
+    });
+    const openapi = {
+      openapi: '3.1.0',
+      info: { title: 'Orders', version: '1' },
+      paths: {
+        '/exchange': operation('exchange_order', {
+          action: 'orders.exchange',
+          tool: 'exchange_order',
+          summary: 'Exchange order {order_id} for size {size}',
+          scope: 'orders:write',
+        }),
+        '/cancel': operation('cancel_order', {
+          action: 'orders.cancel',
+          tool: 'cancel_order',
+          summary: 'Cancel order {order_id}',
+        }),
+        '/ask': { get: { ...operation('ask', {}).post, 'x-pap': undefined } },
       },
-    ];
+    };
     const source = {
       kind: 'chat',
       protocols: ['pap'],
       pap: {
         profile: 'draft-01',
-        company: { enabled: true, extensions: ['operations'], operations },
+        company: { enabled: true, extensions: ['operations'] },
       },
+      openapi,
     };
     const { app, problems } = parseAppspec(source);
     expect(problems).toEqual([]);
@@ -903,7 +930,25 @@ describe('writing an Appspec', () => {
         summary: 'Cancel order {order_id}',
       },
     ]);
+    // Derived, never written back: openapi is the one source.
     expect(dumpAppspec(app).pap).toEqual(source.pap);
+    expect(dumpAppspec(app).openapi).toEqual(openapi);
     expect(parseAppspec(dumpAppspec(app)).app.pap).toEqual(app.pap);
+    // Written by hand, refused.
+    expect(
+      parseAppspec({
+        ...source,
+        pap: {
+          profile: 'draft-01',
+          company: {
+            enabled: true,
+            extensions: ['operations'],
+            operations: [],
+          },
+        },
+      }).problems,
+    ).toEqual([
+      '`pap.company.operations` are not written: they come from `openapi`, each operation that a person approves carrying `x-pap`.',
+    ]);
   });
 });

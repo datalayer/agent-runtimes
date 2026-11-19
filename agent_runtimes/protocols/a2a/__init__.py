@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A2A as a Reactor plugin: its extensions read, published and negotiated (PR-02)."""
+"""A2A as a Reactor plugin: its extensions read, published and negotiated."""
 
 from .extensions import (
     CardExtension,

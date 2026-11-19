@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """``loop`` on Datalayer: what the cloud offers, attaching, refusals, and the
-slash commands reading the cloud runtime (L-01, L-02, L-04, L-06, L-07).
+slash commands reading the cloud runtime.
 
 The Datalayer API is a fake client; the cloud runtime is a small Starlette
 application behind the real relay, so every request a slash command makes
@@ -141,7 +141,7 @@ def test_datalayer_is_not_offered_to_somebody_not_signed_in(tmp_path: Any) -> No
         choose_where(can_ask=True, ask=ask, cloud_offered=False, preferences=prefs)
         == LOCAL
     )
-    # The flag still says so, and is refused later in a sentence (L-04).
+    # The flag still says so, and is refused later in a sentence.
     assert choose_where(cloud=True, cloud_offered=False, preferences=prefs) == CLOUD
 
 
@@ -173,8 +173,8 @@ def test_only_environments_that_hold_an_agent_are_offered(
     # The environments are offered in the picker, not here.
     assert not any("ai-agents-env —" in line for line in lines)
     assert any(line.startswith("  ● runtime-9 — ai-agents-env, 1") for line in lines)
-    # The cloud's models are the runtime's, never this machine's keys.
-    assert "not this machine's keys" in lines[-1]
+    # The cloud's models are listed once connected.
+    assert lines[-1] == "Models: /models lists them once connected."
 
     datalayer.credits = None
     assert read_offer(datalayer).credits is None
@@ -269,7 +269,7 @@ def test_attaching_launches_nothing_and_makes_the_agent_the_chosen_one(
         launch.launch_cloud("crawler", runtime="runtime-0", can_ask=False)
 
 
-def test_a_new_runtime_asks_for_an_environment_never_an_agentspec(
+def test_a_new_runtime_asks_for_an_environment_then_an_agentspec(
     datalayer: FakeDatalayer, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     asked: List[str] = []
@@ -286,16 +286,18 @@ def test_a_new_runtime_asks_for_an_environment_never_an_agentspec(
     )
     try:
         assert asked == [
-            "In which environment? (only those that can launch an agent can be picked)"
+            "In which environment? (only those that can launch an agent can be picked)",
+            launch.AGENTSPEC_QUESTION,
         ]
         assert datalayer.created == {
             "environment": "ai-agents-env",
             "time_reservation": 10,
-            "agent_spec_id": "example-simple",
+            "agent_spec_id": "jupyter-data-analyst",
         }
-        # The default agent, said once, with how to choose another.
-        assert len(notes) == 1 and "example-simple" in notes[0] and "-a" in notes[0]
-        assert started.agent_spec_id == "example-simple"
+        # The catalogue's offered agents (agentspecs 0.0.215: the seven seed agents),
+        # by id, the first proposed. Picked, so not said as a default.
+        assert not any("jupyter-data-analyst" in line for line in notes)
+        assert started.agent_spec_id == "jupyter-data-analyst"
         assert started.credits == pytest.approx(0.0008 * 60 * 10)
     finally:
         started.relay.stop()
@@ -317,7 +319,7 @@ def test_an_application_s_launch_carries_its_appspec(datalayer: FakeDatalayer) -
         "example-simple", reconnect=False, can_ask=False, minutes=5, app_spec=app
     )
     try:
-        # Its connections' secrets given at launch (R-19).
+        # Its connections' secrets given at launch.
         assert datalayer.created["app_spec"] == app
     finally:
         started.relay.stop()
@@ -331,7 +333,7 @@ def test_an_application_s_launch_carries_its_appspec(datalayer: FakeDatalayer) -
 def test_an_application_is_never_offered_a_running_runtime(
     datalayer: FakeDatalayer, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """One not launched for the application was not given its secrets (R-19)."""
+    """One not launched for the application was not given its secrets."""
     datalayer.running = [Running("runtime-9", "ai-agents-env")]
     offered: List[Any] = []
     monkeypatch.setattr(
@@ -348,7 +350,7 @@ def test_an_application_is_never_offered_a_running_runtime(
         assert datalayer.created["app_spec"] == app
     finally:
         started.relay.stop()
-    # An agent alone is still offered the running one first (L-06).
+    # An agent alone is still offered the running one first.
     started = launch.launch_cloud("crawler", can_ask=False, minutes=5)
     try:
         assert len(offered) == 1
@@ -816,3 +818,74 @@ def test_the_cli_says_the_setup_from_its_options() -> None:
         "without_mcp_servers": True,
         "without_skills": ["github", "crawl"],
     }
+
+
+def test_the_agentspecs_offered_on_datalayer_are_the_enabled_ones() -> None:
+    from types import SimpleNamespace as Spec
+
+    specs = [
+        Spec(
+            id="worker-crawler",
+            enabled=True,
+            description="Crawls.",
+            runtime_engine="datalayer",
+        ),
+        Spec(
+            id="example-simple",
+            enabled=True,
+            description="Simple.",
+            runtime_engine="datalayer",
+        ),
+        Spec(
+            id="example-kagent", enabled=True, description="", runtime_engine="kagent"
+        ),
+        Spec(id="off", enabled=False, description="Off.", runtime_engine="datalayer"),
+        Spec(
+            id="unlisted",
+            enabled=True,
+            listed=False,
+            description="Runs by id.",
+            runtime_engine="datalayer",
+        ),
+    ]
+    assert launch.agentspec_choices(specs) == [
+        ("example-kagent (runs on kagent)", "example-kagent"),
+        ("example-simple — Simple.", "example-simple"),
+        ("worker-crawler — Crawls.", "worker-crawler"),
+    ]
+    seen: List[str] = []
+
+    def ask(question: str, choices: list, default: str) -> str:
+        seen.append(default)
+        return "worker-crawler"
+
+    assert launch.choose_agentspec(specs, can_ask=True, ask=ask) == "worker-crawler"
+    assert seen == ["example-simple"]
+    assert launch.choose_agentspec(specs, can_ask=False) == "example-simple"
+    with pytest.raises(KeyboardInterrupt):
+        launch.choose_agentspec(specs, can_ask=True, ask=lambda *a: None)
+
+
+def test_loop_offers_the_seven_agents_the_catalogue_enables() -> None:
+    """agentspecs 0.0.187 (the user, 14 November 2026): the cloud picker and the
+    local one offer the agents the catalogue enables and lists, the seven seed
+    agents (the Traveller since 15 November 2026, the Jupyter Data Analyst since
+    18 November 2026); example-simple, enabled and not listed, stays the neutral
+    default."""
+    from agent_runtimes.chat import cli
+    from agent_runtimes.specs.agents import get_agent_spec, list_agentspecs
+
+    seven = [
+        "jupyter-data-analyst",
+        "worker-accountant",
+        "worker-marketer",
+        "worker-shopper",
+        "worker-steward-aws",
+        "worker-terra",
+        "worker-traveller",
+    ]
+    assert [value for _, value in launch.agentspec_choices(list_agentspecs())] == seven
+    assert cli.offered_agentspec_ids() == seven
+    simple = get_agent_spec("example-simple")
+    assert simple is not None and simple.enabled and not simple.listed
+    assert launch.choose_agentspec(list_agentspecs(), can_ask=False) == "example-simple"

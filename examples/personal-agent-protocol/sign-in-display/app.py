@@ -21,7 +21,7 @@ from personal_agent_protocol.demo.kit import (
     PersonalAgentHost,
     personal_agent_reactor,
 )
-from personal_agent_protocol.demo.manzanita import manzanita
+from personal_agent_protocol.demo.manzanita import CONFIG, manzanita
 from personal_agent_protocol.ui import WAITING_FOR_THE_PERSON, PapSignIn
 from pydantic_ai import Agent
 from pydantic_ai.messages import ModelMessage, ModelRequest, ToolReturnPart
@@ -65,7 +65,11 @@ async def _device_sign_in() -> dict[str, Any]:
     network = InProcessNetwork()
     atlas = AgentIdentity(domain="atlas.example", name="Atlas")
     network.add(atlas.domain, atlas.website())
-    manzanita(network, clock)
+    manzanita(
+        network,
+        clock,
+        config=CONFIG,
+    )
     async with network.client() as http:
         reactor = personal_agent_reactor(
             PersonalAgentHost(atlas, clock), network=network, http_client=http
@@ -83,7 +87,6 @@ async def _device_sign_in() -> dict[str, Any]:
             scopes=("orders:read",),
             tenant_id=TENANT,
             organization=company.document.organization,
-            protected_resources=metadata.protected_resources,
         )
     return {
         "status": WAITING_FOR_THE_PERSON,

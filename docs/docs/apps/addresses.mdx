@@ -1,0 +1,342 @@
+---
+sidebar_position: 3.5
+title: An agent at its addresses
+---
+
+# An agent at its addresses
+
+Every agent — a company's application, a published application, a person's own
+agent — is reached at four addresses under one name, and offers the same things
+at each of them:
+
+| Address | Port | What answers |
+| --- | --- | --- |
+| `https://{name}.agent.<domain>` | 8765 (the main server) | A2A and its Agent Card (`/.well-known/agent-card.json`, A2A at `/a2a/`), its `poppy.json`, the chat at `/`; for a company, PAP sign-in, Sessions and operations |
+| `https://{name}.mcp.<domain>/mcp` | 8766 | Its MCP server: one tool per operation |
+| `https://{name}.api.<domain>` | 8767 | Its REST API: one route per operation, `/openapi.json`, `/docs` |
+| `https://{name}.web.<domain>` | 8768 | Its page, and `/.well-known/poppy.json` |
+
+`<domain>` is `DATALAYER_COMPANY_HOSTS_DOMAIN` (`datalayer.ai` unless set).
+
+## What it answers: its `openapi`
+
+What an agent answers when called is written once, in its Appspec's top-level
+`openapi` (see the Appspec reference in agentspecs): an OpenAPI 3.1 document. Each
+operation is
+
+- **an instruction to the agent** — its `summary` and `description`;
+- **its inputs** — its JSON request body and its path and query parameters, as one
+  JSON object;
+- **its answer** — the JSON schema of its `200` response.
+
+An agent that declares no `openapi` answers one operation, `ask`: a `question` in,
+its `answer` out.
+
+Every call goes through one function, `agent_runtimes.addresses.call_operation`:
+the inputs are checked against the operation's schema (`400` otherwise), the
+agent is told the instruction, the inputs as JSON and the JSON it must answer, and
+runs with **structured output** bound to the operation's `200` schema
+(pydantic-ai's `StructuredDict`). Its answer is checked against that schema; when it
+does not fit, the agent is asked once more with what was wrong, then the call is
+refused (`422`). A spend limit reached is `402`, a caller past its rate cap `429`.
+
+### A gallery on its page
+
+An application with a catalogue shows it first on its page: the operation that
+carries `x-datalayer-gallery` (a `get` that needs no input and answers `products`,
+items each with a `title` and an `image`) is called with no input, and its answer
+drawn as the product cards its chat draws — photo, title, price, rating and stock —
+with skeletons while it loads, in the application's theme. The page reads it at
+its own `/api/gallery`, behind the page's access check (anybody for a public
+agent, the people allowed for a private one), each read counted under the
+caller's rate cap. The answer is kept ten minutes: a page seen often calls the
+agent once in that time, recorded as a call by its `web` address. The Demo Shop's
+`listProducts` carries it:
+
+```yaml
+paths:
+  /products:
+    get:
+      operationId: listProducts
+      summary: List the shop's products, all of them or one category's.
+      x-datalayer-gallery:
+        title: The shop's products
+```
+
+## An operation a person approves
+
+An operation of the `openapi` that carries `x-pap` (its `action`, `tool`, `summary`
+and, when it names one, `scope`) is one a person approves before it is done: placing
+an order, changing a booking. **It is never done by a call alone, at any address, for
+anybody** — a signed-out caller, a Datalayer token, an API key, its owner's included.
+One rule, since 1.6.90:
+
+| Address | A call without the person's approval | With it |
+|---|---|---|
+| API (`{name}.api.<domain>`) | `403` `{"error": "approval_required"}`; to a personal agent in its Session, with the `operation` to approve | The same request sent again with the approval (`Poppy-Approval`) is performed, once |
+| MCP (`{name}.mcp.<domain>`) | The tool is listed; calling it is an error, `403: …` with the same sentence | Not here: the personal agent approves through the API or the conversation |
+| Agent (`{name}.agent.<domain>`) | In a conversation the company's agent proposes the operation; its tool does not run | Performed, once, on the approved revision |
+| Web (`{name}.web.<domain>`) | The page lists it and never calls it | — |
+
+Before 1.6.90 the API and the MCP server answered such an operation as any other,
+at once, for whoever might call them; only the conversation asked first. A caller
+that relied on that gets `403 approval_required` now.
+
+At the API the answer is the PAP SDK's own, as the Operations extension says it
+(Poppy 1.0, Operations 4 and 6). A personal agent calls in its Session
+(`Poppy-Session`) with the account's access token; the company answers
+`403 approval_required` with the operation — its id, its revision, its terms (the
+request's inputs), its summary and when it expires — and nothing is done. The agent
+shows the person the exact terms, and sends **the same request** again with their
+approval of that revision. The company verifies it, performs the action once, and
+answers `200` with `{"summary": …, "data": …}`, `data` being the operation's own
+answer. The same request sent again is answered with that original response; the
+action is not done twice. A caller with no Session has nobody to ask: it is answered
+`403` `{"error": "approval_required", "detail": …}` and no operation.
+
+```bash
+# Anybody, or a key: refused, nothing done.
+curl -s -X POST https://demo-shop.api.datalayer.ai/orders \
+  -H 'Content-Type: application/json' -d '{"items": [{"product_id": "tennis-ball"}]}'
+# 403 {"error": "approval_required", "detail": "This is done only once the person approved it. …"}
+```
+
+An operation that carries no `x-pap` is answered as before, at every address.
+
+## Who may call it
+
+The same rule at its four addresses, from its "Who may open it":
+
+- **public** — anyone, anonymous, under its spend limit and a rate cap per caller
+  (by address, or by account when the caller says who they are);
+- **private** — the owner and the people they allowed, with a Datalayer API key
+  (`X-API-Key`) or a token (`Authorization: Bearer …`).
+
+- **a person signed in with their personal agent** calls a company's addresses
+  with the PAP access token its company issued them. At its API, web and
+  agent addresses that is its default token, issued for no resource: a token
+  issued for its MCP server is accepted at the MCP server alone (Poppy 1.0 §4.5;
+  since 1.6.90 the other addresses refuse it).
+
+`poppy.json`, the Agent Card and the page's script bundle answer anybody.
+
+### A change takes effect at once
+
+On a runtime launched for a deployment, who may call is what the deployment says
+now, not what it said when the runtime started. Its record (ai-agents'
+`GET /api/ai-agents/v1/apps/internal/addresses/{slug}`, asked with the runtime's
+proof) is read again when a request comes and the last read is 10 seconds old or
+more (`access.POLICY_READ_SECONDS`), one read at a time: the requests that come
+meanwhile are answered with what it reads (`access.DeploymentPolicy`). Every way
+in asks it, at all four addresses: an API key, a Datalayer token, a personal
+agent's PAP token, another MCP client's token and the signed-in browser's cookie.
+
+- **Somebody removed from "People I invite"** is refused (`403`) on their first
+  request after that window. Their sign-ins at a company end once: each agent's
+  they signed in with, their personal agent's and any other MCP client's, as its
+  Disconnect does (its refresh and access tokens revoked, its Sessions go on
+  signed out); and the SDK is told their sign-ins are over
+  (`AccountSignOuts.signed_out_before`), so a token left anywhere is refused and
+  revoked when it is next presented. A conversation they are streaming at the
+  agent address (A2A), or any answer streamed to them by its page or by the MCP
+  server of an application that is no company, ends before its next event.
+- **Somebody added** is admitted on their first request after the window.
+- **A public deployment turned private** refuses anybody who does not say who
+  they are, and ends the sign-ins of anybody it does not admit, the same way.
+- **"Let other MCP clients sign in"** follows the same read: there is one reader
+  of the record.
+
+**When ai-agents does not answer**, a public deployment goes on answering
+anybody: there is nobody to keep out. A private one goes on answering from its
+last record read for 30 seconds after it (`access.POLICY_GRACE_SECONDS`), then
+admits **its owner alone** until a read succeeds again. It fails closed, since
+somebody removed meanwhile must not go on calling; and the owner stays in, since
+they own the application whatever "People I invite" says, and an outage should
+not lock them out of it. An outage ends no sign-in: only a record read that no
+longer admits somebody does.
+
+A runtime served locally (`agent-runtimes serve --mode`) keeps the
+configuration's policy, below, for as long as it runs.
+
+### A company's MCP server: OAuth
+
+An application that is a company (`pap.company` enabled) has an issuer, its
+agent host, and its MCP server is an OAuth protected resource as the Personal
+Agent Protocol asks of a company's MCP server (1.0 §4.5, §7). It is served on
+Reactor's OAuth plugin (`reactor_mcp_server.oauth`, `addresses/mcp.py`
+`company_oauth`):
+
+| | |
+|---|---|
+| `GET https://{name}.mcp.<domain>/.well-known/oauth-protected-resource/mcp` | Its protected resource metadata (RFC 9728), open to anybody: `resource` is its `url` as `poppy.json` lists it (`https://{name}.mcp.<domain>/mcp`), `authorization_servers` the company's issuer (`https://{name}.agent.<domain>`), `scopes_supported` the company's scopes. Also at `/.well-known/oauth-protected-resource` |
+| The issuer's `/.well-known/oauth-authorization-server` | Lists the MCP server's `url` in `protected_resources`, after `https://{name}.agent.<domain>` (§3.2), and issues tokens for it: the company is configured with it as a resource server (`personal-agent-protocol` ≥ 0.37.3) |
+| A request it does not admit | `401`, `WWW-Authenticate: Bearer resource_metadata="…"` naming the document, with `scope` when the call needs scopes |
+| A token that is expired, or was not issued for this server | `401`, `error="invalid_token"`, with `resource_metadata` |
+| A company token without a scope the operation needs | `403`, `error="insufficient_scope"`, `scope="…"` |
+| Somebody known whom the owner did not allow | `403`, `access_denied` |
+
+Which tokens it takes:
+
+- **the company's access token issued for this server** — a personal agent
+  asks the issuer for it with `resource` set to the server's `url`, at the
+  request that completes its sign-in or at refresh (§4.5), and it is held to
+  its scopes;
+- **a Datalayer token or API key** of the owner or of somebody allowed, which
+  is their own authority here and no delegation.
+
+**A company token issued for another resource is refused here**, the default
+token — the one that works at its agent host and its API — among them: a
+token is accepted only at the service it was issued for (§4.5). Until this
+the MCP server took any token the company had issued; a personal agent
+that follows §7 already asks for the server's own.
+
+An operation names the scopes it requires with OpenAPI's `security` (one
+requirement, whose scopes the company offers); an operation that names none
+requires none at the door, and its agent decides what the caller's scopes
+allow:
+
+```yaml
+paths:
+  /orders:
+    get:
+      operationId: listOrders
+      security:
+        - company: ["orders:read"]
+```
+
+Who may call is unchanged. A public company's server answers anybody, for
+every operation; a private one takes an API key (`X-API-Key`) or a bearer of
+somebody allowed. A request that presents a bearer which is not valid is
+refused for it, whatever else it carries.
+
+The company offers personal agents Device Sign-In. An MCP client that is not
+a personal agent reads the same document and finds the issuer, which offers
+no sign-in for it unless the application's owner said so (below): it calls a
+private application with an API key.
+
+#### Other MCP clients: "Let other MCP clients sign in"
+
+A **private** company's owner may let MCP clients that are no personal agents
+sign in at its MCP address: a desktop assistant, an IDE, any client that
+speaks MCP's own OAuth flow. It is a switch of the deployment, off by
+default; a public one has no such switch, since its MCP server answers
+anybody already. On (`AddressedAgent.mcp_clients`, read from the deployment's
+record, `servers.mcp_clients_of`), the company is configured with the SDK's
+public clients (`personal-agent-protocol` ≥ 0.37.5, `pap.company.company_config`
+`mcp_clients`):
+
+| | |
+|---|---|
+| The issuer's `/.well-known/oauth-authorization-server` | Adds `authorization_endpoint` (`/oauth/authorize`, PKCE `S256`), `registration_endpoint` (`/oauth/register`), and `none` in `token_endpoint_auth_methods_supported` |
+| How a client is known | By its client ID metadata document (its `client_id` is that URL: verified by its domain), or registered at `/oauth/register` (RFC 7591: unverified). Every client that registers is registered as a public client and answered `"token_endpoint_auth_method": "none"`, whether it left the method out or asked for `none`, `client_secret_post` or `client_secret_basic`; one that names a key or a secret of its own, or another method, is refused, and a secret sent afterwards is `invalid_client` |
+| Where the person allows it | Datalayer's consent page (`https://datalayer.ai/pap/consent?slug={name}&request=…`), signed in to Datalayer. Only somebody who may open the application can allow, and only a client of this kind is allowed there: for personal agents the switch changes nothing |
+| What it gets | A Bearer token for this MCP server alone (`resource` its `url`, named in the authorization request and at every token request), with the company's own scopes it asked for, and a refresh token that rotates at every use; 30 days after the person allowed it, they allow it again |
+| What it never gets | The default token, a Session, a conversation with the company's agent: every address but this one refuses its token (`servers.pap_token_checker`) |
+
+At the MCP server such a client calls the tools its scopes allow, as the person
+who allowed it, who must still be somebody the owner lets in (`403` otherwise).
+**An operation a person approves (`x-pap`) is refused to it**, with a sentence
+saying a personal agent is needed: nothing at this address asks a person to
+approve, and only their personal agent does. Its calls are recorded as that
+person's, as a token's are.
+
+Turned off, the company stops offering it within 10 seconds (the deployment's
+record is read again when a request comes and the last read is 10 seconds old,
+the same read as who may call, `servers.CompanyAsDeployed`), and Datalayer ends
+the sign-ins it gave at once. A client registering itself, or asking for tokens without a client
+assertion, is capped by address (`servers.UnsignedRequestsCap`, the deployment's
+calls a minute).
+
+An application that is no company has no issuer to name: its MCP server keeps
+the access check in front, and publishes no protected resource metadata.
+
+### In a browser
+
+A browser carries no API key. A private agent's page (`{name}.web`) and its chat
+(`{name}.agent`) send a person who is not signed in to Datalayer's sign-in (OpenID
+Connect, authorization code with PKCE, scope `openid`), as a client identified by
+its own metadata document at `https://<host>/.datalayer/client.json`. Back at
+`/.datalayer/callback`, the access token is kept in an HttpOnly cookie of that host
+alone; `/.datalayer/sign-out` forgets it. The agent's own rule still decides: its
+owner and the people they allowed. A program asking without a credential is
+answered `401`, as before.
+
+### What is recorded
+
+On a runtime launched for a deployment, every call its addresses answer is
+recorded on the deployment, a batch at a time: by which address, which operation,
+whether anonymous, with an API key or a token (and the person's account when they
+said who they are), its status, how long it took and the tokens its agent spent.
+Never what was said, a key or a token.
+
+## `poppy.json`
+
+Every agent publishes one, built with the Personal Agent Protocol SDK and checked
+by it:
+
+- **a company** (its application's `pap.company` enabled) publishes the SDK's
+  company document: its sign-in, its scopes, its operations (from the operations of
+  its `openapi` carrying `x-pap`), its conversations on its agent address; its
+  `apis` are its API's `openapi.json` and its MCP server;
+- **any other agent** publishes its A2A address, its API and its MCP server, and,
+  under the `datalayer.ai/agent` extension, what it is: `role` (`personal` or
+  `app`), whom it acts for (`acts_for`), what it accepts (`a2a`, `mcp`, `openapi`),
+  who may call it and how a caller signs in.
+
+Two agents of any kind find and reach each other the same way.
+
+## Three start modes
+
+One of the three servers can be started on its own for an application, in the
+process that runs its agent:
+
+```bash
+# Its MCP server, at http://127.0.0.1:8766/mcp
+agent-runtimes serve --mode mcp --app ./shop.yaml
+
+# Its REST API, at http://127.0.0.1:8767 (/openapi.json, /docs)
+agent-runtimes serve --mode api --app ./shop.yaml --name shop
+
+# Its page, at http://127.0.0.1:8768, and its poppy.json
+agent-runtimes serve --mode web --app exchange-desk --name exchange-desk
+```
+
+`--app` is a path to an Appspec (its `openapi` may be a file beside it) or a
+catalogue id; `--name` is its name in its four addresses, which its `poppy.json`
+and its API's `servers` say. `--port` overrides the mode's port. The agent is made
+in this process from the spec, so an application that needs a runtime's MCP
+servers or skills runs on a runtime.
+
+Who may call a local server is `AGENT_RUNTIMES_ADDRESS_VISIBILITY` (`private` unless
+`public`), `AGENT_RUNTIMES_ADDRESS_OWNER` and `AGENT_RUNTIMES_ADDRESS_ALLOWED`
+(uids, comma separated); `AGENT_RUNTIMES_ADDRESS_RATE_PER_MINUTE` its rate cap.
+
+## In a runtime
+
+With `AGENT_RUNTIMES_ADDRESSES=1` (the runtime image sets it), the three servers
+start beside the main one, in the same process, and answer `503` until the
+runtime's agent is made; then they answer for it, and the main server answers its
+agent address. What the runtime is told:
+
+| Variable | What it says |
+| --- | --- |
+| `AGENT_RUNTIMES_ADDRESS_NAME` | Its name in its four addresses |
+| `AGENT_RUNTIMES_ADDRESS_AGENT_ID` | Which agent answers, when the runtime makes several |
+| `AGENT_RUNTIMES_ADDRESS_ACTS_FOR` | For a person's own agent, the account (ULID) it acts for |
+| `AGENT_RUNTIMES_ADDRESS_OWNER` | For a person's own agent, the account that alone may call it unless they allow others |
+
+On Datalayer the platform says them: a person's own agent is named
+`{agent}-{account}`, its agent and its person's account ULID in lower case
+(`marketer-01hxk3v9q8m2c4r7t5w6y8z0ab`), never a handle, told to the runtime as it is assigned; a
+deployment's name is its address, said by Datalayer with what it runs, once its
+owner turned its addresses on. A runtime launched for a deployment reads who may
+call it from Datalayer, with its proof, and again while it runs (a change takes
+effect at once, above); the others from the variables above.
+
+A company on a runtime launched for a deployment keeps its sign-ins, Sessions,
+device codes and operations where Datalayer keeps that deployment's, through
+Datalayer's own services: a restart or a relaunch forgets none, and a person who
+approves their personal agent's sign-in on Datalayer is signed in at the runtime.
+Its device link (`/pap/device` on its agent address) sends the person to that
+page. A PAP operation that its `openapi` carries (`x-pap`) is performed, once
+approved, through the same call contract as its MCP and API.

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The `session.carry` point and its default policy (MH-F05).
+"""The `session.carry` point and its default policy.
 
 What a swap carries and drops, with the sentence whose last clause follows
 the old harness's `resume` capability; what a clone carries, its mode reset

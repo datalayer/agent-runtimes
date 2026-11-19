@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A third party's authorization asked during an AG-UI turn, on its stream (ID-10).
+"""A third party's authorization asked during an AG-UI turn, on its stream.
 
 A tool that needs a person's grant (``identity.oauth_token``,
 ``@requires_oauth``) hands the authorization URL to the run's sink and waits;

@@ -61,8 +61,16 @@ export type BrowserInference = {
  *   inference. False for a workspace on a server-backed agent, which
  *   authenticates itself: minting a visitor's one trial key for an agent that
  *   will never spend it starts a clock nobody is watching.
+ * @param visitorFor What a visitor's key is for (18 November 2026): `team:<id>`,
+ *   `scene:<id>`, an application (an example's id, `at:<slug>`,
+ *   `library:<uid>`) or `battle:<id>`. ai-inference serves the key the models
+ *   of what it names and mints none for nothing: left empty, a visitor gets no
+ *   key and the agent is refused for want of a sign-in.
  */
-export function useBrowserInference(enabled = true): BrowserInference {
+export function useBrowserInference(
+  enabled = true,
+  visitorFor = '',
+): BrowserInference {
   const { configuration } = useCoreStore();
   const memberToken = useIAMStore(state => state.token);
   const inferenceUrl = configuration?.aiInferenceUrl || DEFAULT_INFERENCE_URL;
@@ -81,6 +89,7 @@ export function useBrowserInference(enabled = true): BrowserInference {
   const anonymous = useAnonymousInferenceSession(
     inferenceUrl,
     enabled && !memberToken,
+    visitorFor,
   );
   const token = memberToken || anonymous.token;
 

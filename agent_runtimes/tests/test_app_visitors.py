@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Signed-out sessions, on the visitors' runtime (R-30).
+"""Signed-out sessions, on the visitors' runtime.
 
 Through the real routes, in process, on agents made as the create route makes
 them: one visitor never reads, drives or lists another's session on the same
@@ -411,7 +411,12 @@ class Address:
             return 404, {"detail": "No application is at this address."}
         return 200, {
             "visitor": True,
-            "deployment": {"uid": "dep-1", "app_uid": "app-1", "version": self.version},
+            "deployment": {
+                "uid": "dep-1",
+                "app_uid": "app-1",
+                "version": self.version,
+                "account_uid": "u-owner",
+            },
             "spec": ASSISTANT,
             "session": {
                 "opens": self.opens,
@@ -461,6 +466,8 @@ def test_an_address_is_made_here_once_and_again_when_its_version_moves(
         "deployment_uid": "dep-1",
         "version": 2,
         "visitor_app": "at:notes",
+        # Whose deployment it is (a demo of the books' account reaches them).
+        "owner_uid": "u-owner",
     }
     address.version = 3
     asyncio.run(ensure_address_agent("at:notes"))
@@ -506,7 +513,7 @@ def test_a_visitor_is_let_in_to_a_deployment_as_nobody() -> None:
     assert asked == [("dep-1", "")]
 
 
-# --- a visitor's page, before it follows the application (D-15) ------------------
+# --- a visitor's page, before it follows the application ------------------
 
 
 @pytest.fixture()
@@ -608,7 +615,7 @@ def test_no_runtime_but_the_visitors_makes_a_visitors_agent(remote: TestClient) 
     assert refused.status_code == 404 and refused.json()["detail"] == NOT_HERE
 
 
-# --- a Python application, on the runtime it is kept on (R-30, decided 14 October 2026) ---
+# --- a Python application, on the runtime it is kept on (decided 14 October 2026) ---
 
 
 def test_the_visitors_runtime_never_runs_an_address_with_code_of_its_own(
@@ -697,6 +704,7 @@ def test_the_kept_runtime_talks_to_a_visitor_of_its_own_address(
         "deployment_uid": "dep-1",
         "version": 2,
         "visitor_app": "at:notes",
+        "owner_uid": "u-owner",
     }
     answered = client.post(
         "/api/v1/apps/agents/at-notes/ag-ui/", headers=visitor, json=agui("thread-k1")

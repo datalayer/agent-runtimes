@@ -4,7 +4,7 @@
  */
 
 /**
- * An approval as every card says it (M-016): a message whole, anything
+ * An approval as every card says it: a message whole, anything
  * else every argument, why it asked apart.
  *
  * @module portable/__tests__/approvalCard
@@ -18,7 +18,7 @@ import {
   seatOfApproval,
 } from '..';
 
-describe('an approval card (M-016)', () => {
+describe('an approval card', () => {
   it('shows a message whole, its row by recipients and subject, never its body', () => {
     const card = approvalCardOf({
       tool_name: 'send_email',
@@ -59,7 +59,7 @@ describe('an approval card (M-016)', () => {
     });
   });
 
-  it('names the team seat that asked, on the card and its row (MH-42)', () => {
+  it('names the team seat that asked, on the card and its row', () => {
     const card = approvalCardOf({
       agent_id: 'team:coding-agents/coder',
       tool_name: 'python3 hello.py',

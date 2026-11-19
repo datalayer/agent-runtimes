@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A team seat's work happens inside an apps session (MH-38, decision T).
+"""A team seat's work happens inside an apps session.
 
 On the platform a seat is a child execution worked by this runtime's A2A
 worker — an agent made from the seat's registration, a harness behind the
@@ -76,7 +76,7 @@ async def _drained(stream: Any) -> None:
 async def _resumed(live: Any) -> None:
     """A seat's session opened again on this worker: the record's and the hooks' part of
     ``LiveSession.resume`` — a ``session`` entry with ``state: open`` and ``runs_on``
-    rewritten (MH-01) — without its replay on a socket a seat does not have.
+    rewritten — without its replay on a socket a seat does not have.
     """
     from ..apps.sessions import run_hooks
 
@@ -161,7 +161,7 @@ class SeatRun:
 
         recorder = self.live.recorder
         # The task's turn is kept though it stopped: a seat session whose
-        # only turn was refused is still a session of one turn (MH-42).
+        # only turn was refused is still a session of one turn.
         recorder.turned(self.asked, f"Stopped: {reason}")
         recorder.ended(
             "stopped", f"Stopped: {_short(reason, 300)}", {"error": _short(reason, 300)}
@@ -179,7 +179,7 @@ def _caller_of(credential: Optional[str]) -> Any:
     execution's token names, else the machine itself.
 
     The token is the execution's own: the control plane exchanged it for the
-    run (O1-17) and the route that carried the task authenticated the request
+    run and the route that carried the task authenticated the request
     it came on; the worker already acts with it. Its claims say whose name the
     session is in; the platform is not asked a second time (a pool pod's
     worker has no IAM to ask in every setting).

@@ -180,7 +180,7 @@ describe('the conversation', () => {
     expect(feed.conversation.value).toEqual([]);
   });
 
-  it('keeps what the application is doing, for whoever acts it out (T-22)', () => {
+  it('keeps what the application is doing, for whoever acts it out', () => {
     const feed = createTurnFeed();
     expect(feed.presence.value).toBe('idle');
     feed.setPresence('paused');

@@ -4,13 +4,13 @@
  */
 
 /**
- * The thread's menu entries as contributions (MH-F08): the
+ * The thread's menu entries as contributions: the
  * `loop.session.action` point, the chat's five entries in the preset, and
  * the menu drawn from the registry — what applies to the session as it
  * stands, by each entry's `when`; no *Resume* on an open thread. On a
- * turn's row, *Clone from here* names the turn (MH-10); the header says the
+ * turn's row, *Clone from here* names the turn; the header says the
  * state words and where the session comes from, the picker shows the
- * sentence before a swap is sent, `?session=` opens a session (MH-27).
+ * sentence before a swap is sent, `?session=` opens a session.
  */
 
 import React, { act } from 'react';
@@ -106,7 +106,7 @@ describe('the loop.session.action point', () => {
     ]);
   });
 
-  it('shows the session’s Rules card over the thread, on any open session (SH-54)', () => {
+  it('shows the session’s Rules card over the thread, on any open session', () => {
     const shown: { title: string; render: () => unknown }[] = [];
     const said: string[] = [];
     const client = {
@@ -161,7 +161,7 @@ describe('the loop.session.action point', () => {
       'export',
       'import',
     ]);
-    // A rule is added while a turn runs too: that is when it matters (SH-54).
+    // A rule is added while a turn runs too: that is when it matters.
     expect(ids({ ...SESSION, turn: 'running' })).toEqual([
       'clone-from-here',
       'session-rules',
@@ -185,7 +185,7 @@ describe('the loop.session.action point', () => {
       'import',
     ]);
     expect(ids(undefined)).toEqual([]);
-    // On a turn's row, Clone from here alone (MH-10).
+    // On a turn's row, Clone from here alone.
     expect(
       sessionActionsFor(entries, SESSION, 'turn').map(entry => entry.id),
     ).toEqual(['clone-from-here']);
@@ -380,7 +380,7 @@ describe('the loop.session.action point', () => {
     expect(picks).toEqual(['b']);
   });
 
-  it('shows an entry’s panel in a dialog of its own when the host gives none (SH-54)', async () => {
+  it('shows an entry’s panel in a dialog of its own when the host gives none', async () => {
     const panelled: SessionActionContribution = {
       id: 'a-panel',
       label: 'A panel',

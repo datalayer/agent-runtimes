@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What an artifact becomes on the platform (O1-10).
+"""What an artifact becomes on the platform.
 
 A worker's artifact is registered with a summary and a content hash; its body
 is what the adapter saw — a turn's text, an A2A artifact's parts. Writing it
@@ -237,7 +237,7 @@ def markdown_document(title: str, body: str) -> dict[str, Any]:
     """
     A document of a title and a text in markdown, its blocks unmarked — an
     editable page, anybody's to change: what an application saves once a
-    person approved it (R-24).
+    person approved it.
 
     Parameters
     ----------

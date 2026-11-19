@@ -35,6 +35,25 @@ export const ACCOUNTING_STAGE_0_0_1: StageSpec = {
   emoji: '🧾',
 };
 
+export const BUY_FROM_A_SHOP_STAGE_0_0_1: StageSpec = {
+  id: 'buy-from-a-shop',
+  version: '0.0.1',
+  name: 'Buy from a shop',
+  description:
+    "A person's Shopper asks a shop for tennis gear, gets the basket quoted and places a test order; the shop answers from its own catalogue, with photos, and charges nothing.",
+  scene: 'buy-from-a-shop:0.0.1',
+  app: '',
+  battle: '',
+  deployments: {
+    'demo-shop': 'demo-shop',
+  },
+  public: true,
+  enabled: true,
+  tags: ['example', 'demo', 'scene'],
+  icon: 'gift',
+  emoji: '🛒',
+};
+
 export const CODING_AGENT_BEHIND_THE_SHIELD_STAGE_0_0_1: StageSpec = {
   id: 'coding-agent-behind-the-shield',
   version: '0.0.1',
@@ -252,6 +271,7 @@ export const UCP_A_PURCHASE_APPROVED_STAGE_0_0_1: StageSpec = {
 
 export const STAGE_CATALOGUE: Record<string, StageSpec> = {
   accounting: ACCOUNTING_STAGE_0_0_1,
+  'buy-from-a-shop': BUY_FROM_A_SHOP_STAGE_0_0_1,
   'coding-agent-behind-the-shield': CODING_AGENT_BEHIND_THE_SHIELD_STAGE_0_0_1,
   'crop-monitoring': CROP_MONITORING_STAGE_0_0_1,
   'disaster-assessment': DISASTER_ASSESSMENT_STAGE_0_0_1,

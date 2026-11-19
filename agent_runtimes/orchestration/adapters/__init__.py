@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The protocol bindings (O0-06, O0-07).
+"""The protocol bindings.
 
 One module per protocol, each an implementation of the ``WorkerAdapter``
 port and nothing more: no policy, no canonical state, no second client for a

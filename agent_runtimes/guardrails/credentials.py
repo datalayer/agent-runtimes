@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Credentials are never shown to the model (R-19).
+"""Credentials are never shown to the model.
 
 A connection uses a stored secret through the tool: the runtime holds the
 secret (an environment variable, a value a configure gave it, the header an
@@ -19,7 +19,7 @@ Two things are withheld, each as :data:`WITHHELD`:
   user secret;
 - **what looks like a credential**, by its shape (:data:`CREDENTIALS`): a
   private key, an AWS key, a GitHub or Slack token, an API key, a signed
-  token — the built-in check of every application (R-06).
+  token — the built-in check of every application.
 
 :class:`CredentialsWithheldCapability` is given to every agent the runtime
 makes; :func:`redact` is what everything else said or kept goes through.
@@ -136,6 +136,10 @@ _NOT_THE_SECRET = frozenset(
     }
 )
 
+#: Secrets whose names no word above gives away: LinkedIn's session cookie,
+#: pasted in Settings › LinkedIn (15 November 2026), is named after the cookie.
+_SECRET_NAMES = frozenset({"LINKEDIN_LI_AT"})
+
 #: A value shorter than this is never withheld by its value: ``true``, a port,
 #: a name — withholding them would withhold every word that matches.
 MIN_SECRET_LENGTH = 8
@@ -148,6 +152,8 @@ _compiled: tuple[tuple[str, ...], re.Pattern[str] | None] = ((), None)
 @lru_cache(maxsize=4096)
 def is_secret_name(name: str) -> bool:
     """Whether an environment variable's name says its value is a secret."""
+    if name.upper() in _SECRET_NAMES:
+        return True
     words = [word for word in re.split(r"[^A-Za-z0-9]+", name.upper()) if word]
     if not words or words[-1] in _NOT_THE_SECRET:
         return False
@@ -340,7 +346,7 @@ def _redacted_tool(tool: ToolDefinition) -> ToolDefinition:
 
 
 class CredentialsWithheldCapability(AbstractCapability[Any]):
-    """Nothing the model reads holds a credential (R-19).
+    """Nothing the model reads holds a credential.
 
     - **a tool's result and its error** are redacted as the tool returns,
       before anything else reads them — the other capabilities, the record,

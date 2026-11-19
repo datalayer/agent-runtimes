@@ -4,21 +4,21 @@
  */
 
 /**
- * The floating assistant in the LOOP workspace (T-24): the character a
+ * The floating assistant in the LOOP workspace: the character a
  * page draws over its workspace, chosen from what the enabled plugins
  * contribute to `loop.assistant.character` — the application's own
  * (`interface.avatar`) when its Appspec names one, else the person's
  * choice from their settings, else the paper clip. It acts out what the
  * application is doing as its chat says it — paused too, when its deployment
- * is — and the turn (T-22), says the agent's newest words in its balloon
+ * is — and the turn, says the agent's newest words in its balloon
  * while the conversation is out of sight, holds there the approval it waits
  * on, answered with *Approve* or *Deny* on the path every approval of it is
- * answered on (T-23, U-19), opens the conversation when clicked, and is
- * dragged about and sent away as the chat's own assistant is (T-27). Given
+ * answered on, opens the conversation when clicked, and is
+ * dragged about and sent away as the chat's own assistant is. Given
  * the runtime to ask (`decisions`), its balloon offers *Ask a decision*: a
  * typed decision asked of Jev through the runtime, answered there.
  *
- * Its balloon shows the conversation as `balloon` says (T-23; the
+ * Its balloon shows the conversation as `balloon` says (the
  * Appspec's `interface.balloon`): a peek of the newest words (`history`, the
  * default), or the one thing being said or done now (`current`). Either way
  * what the agent is doing while a tool runs — the turn's `activity` — is said
@@ -32,7 +32,7 @@
  */
 
 import type { AppAvatar } from '../../../types/agentspecs';
-import type { JSX } from 'react';
+import type { JSX, RefObject } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { definePlugin, signal } from '@datalayer/reactor';
 import { useContributions, useSignalValue } from '@datalayer/reactor/react';
@@ -90,6 +90,7 @@ import type {
   BalloonToolLine,
 } from '../../../chat/assistant/toolLine';
 import { useChatWords } from '../../../chat/ChatLanguage';
+import { useChatAvailability } from '../../../chat/base/ChatAvailability';
 
 export const LOOP_ASSISTANT_PLUGIN_NAME = '@datalayer/loop-plugin-assistant';
 
@@ -100,7 +101,7 @@ export type LoopAssistantConfig = {
   person?: string;
   /**
    * The application's id: the approvals it waits on are read and answered
-   * in the balloon (T-23), as its rules card reads them (U-19). Without it,
+   * in the balloon, as its rules card reads them. Without it,
    * the balloon says an approval waits and the conversation answers it.
    */
   appId?: string;
@@ -114,7 +115,7 @@ export type LoopAssistantConfig = {
    */
   decisions?: DecisionsTarget;
   /**
-   * How the balloon shows the conversation (T-23): a peek of the newest
+   * How the balloon shows the conversation: a peek of the newest
    * words (`history`, the default), or only what is said or done now
    * (`current`). The Appspec's `interface.balloon`.
    */
@@ -156,7 +157,7 @@ export function balloonHistoryOf(
 const NO_PRESENCE = signal<PresenceState>('idle');
 
 /**
- * What the character acts out (T-22), from what the application is doing as
+ * What the character acts out, from what the application is doing as
  * its chat says it — idle, thinking, working, waiting for the person, paused
  * — and the turn: it speaks while the answer is written.
  */
@@ -175,7 +176,7 @@ const PENDING = { status: 'pending' as const };
 
 /**
  * The approvals an application waits on, read and answered as its rules
- * card does (U-19): over the ai-agents `/ws`, where every decision is
+ * card does: over the ai-agents `/ws`, where every decision is
  * broadcast, so one answered here leaves every list. The first is offered
  * to the balloon; none, once all are answered.
  */
@@ -216,12 +217,170 @@ function WaitingApprovals({
   return null;
 }
 
-/** Take the person to the workspace's composer. */
-function focusComposer(): void {
-  const composer = document.querySelector<HTMLElement>(
-    '[data-chat-composer] textarea, [data-chat-composer] [contenteditable="true"]',
-  );
-  composer?.focus();
+/** What a click on the character found of its workspace's composer. */
+export type ComposerReach = 'focused' | 'not-ready' | 'none';
+
+/** The composer's editable part: a textarea, or Lexical's editable root. */
+const COMPOSER_EDITABLE =
+  '[data-chat-composer] textarea, [data-chat-composer] [contenteditable]';
+
+/**
+ * Its own workspace's composer: the nearest one around the character's place
+ * in the page, never another chat's on the same page (the landing's own, a
+ * panel kept mounted out of sight). The first ancestor of `from` that holds
+ * one; the page's first when `from` is not given.
+ */
+export function ownComposer(from?: HTMLElement | null): HTMLElement | null {
+  for (let node = from?.parentElement; node; node = node.parentElement) {
+    const found = node.querySelector<HTMLElement>(COMPOSER_EDITABLE);
+    if (found) {
+      return found;
+    }
+  }
+  return from ? null : document.querySelector<HTMLElement>(COMPOSER_EDITABLE);
+}
+
+/** Whether a person sees the element: on screen and not covered there. */
+function seen(element: HTMLElement): boolean {
+  // No boxes at all: a page without layout (a test's DOM); an element that
+  // is not displayed takes no focus, which the caller has already checked.
+  if (element.getClientRects().length === 0) {
+    return true;
+  }
+  const box = element.getBoundingClientRect();
+  if (box.width <= 0 || box.height <= 0) {
+    return false;
+  }
+  const x = box.left + Math.min(box.width / 2, 24);
+  const y = box.top + box.height / 2;
+  if (x < 0 || y < 0 || x > window.innerWidth || y > window.innerHeight) {
+    return false;
+  }
+  // Without layout (a test's DOM) nothing is said to cover it.
+  const top = document.elementFromPoint?.(x, y);
+  return !top || element.contains(top) || top.contains(element);
+}
+
+/**
+ * Take the person to its workspace's composer: the caret in it, scrolled into
+ * view, when one is seen there (`focused`); `not-ready` while it cannot be
+ * typed in yet (its runtime is still being assigned); `none` when there is
+ * none it can reach — none on the page, or one out of sight in a frame or a
+ * closed panel. Used when there is no workspace to send to: with one, a click
+ * opens the balloon's own prompt.
+ */
+export function focusComposer(from?: HTMLElement | null): ComposerReach {
+  const editable = ownComposer(from);
+  if (!editable) {
+    return 'none';
+  }
+  const disabled =
+    (editable instanceof HTMLTextAreaElement && editable.disabled) ||
+    editable.getAttribute('contenteditable') === 'false';
+  if (disabled) {
+    return 'not-ready';
+  }
+  editable.scrollIntoView?.({ block: 'nearest' });
+  editable.focus();
+  return document.activeElement === editable && seen(editable)
+    ? 'focused'
+    : 'none';
+}
+
+/** The room the character keeps from the window's edges, in pixels. */
+const CORNER = 24;
+/** The gap between the character and a composer it stands above. */
+const ABOVE_COMPOSER_GAP = 8;
+
+/**
+ * How far from the window's bottom the character stands in its corner: at
+ * `CORNER`, or just above its own conversation's composer when that composer
+ * reaches the corner. Without this it stood over the composer, and stepped
+ * aside for it for as long as the composer stayed there — after the
+ * first message, for good, as the composer moved down into its corner.
+ */
+export function cornerBottomAbove(
+  composers: readonly Pick<DOMRect, 'left' | 'right' | 'top' | 'bottom'>[],
+  view: { width: number; height: number },
+  size: number,
+): number {
+  const left = view.width - CORNER - size;
+  const right = view.width - CORNER;
+  let bottom = CORNER;
+  for (const box of composers) {
+    const meets =
+      box.right > left &&
+      box.left < right &&
+      box.bottom > view.height - CORNER - size &&
+      box.top < view.height - CORNER;
+    if (meets) {
+      bottom = Math.max(bottom, view.height - box.top + ABOVE_COMPOSER_GAP);
+    }
+  }
+  return Math.round(bottom);
+}
+
+/** How often the composer's place is read: it grows as words are typed. */
+const COMPOSER_CHECK_MS = 400;
+
+/** `cornerBottomAbove`, read from the page while `enabled`. */
+function useCornerBottom(enabled: boolean, size: number): number {
+  const [bottom, setBottom] = useState(CORNER);
+  useEffect(() => {
+    if (!enabled) {
+      setBottom(CORNER);
+      return;
+    }
+    const check = () => {
+      const boxes = Array.from(
+        document.querySelectorAll<HTMLElement>('[data-chat-composer]'),
+      )
+        .map(element => element.getBoundingClientRect())
+        .filter(box => box.width > 0 && box.height > 0);
+      setBottom(
+        cornerBottomAbove(
+          boxes,
+          { width: window.innerWidth, height: window.innerHeight },
+          size,
+        ),
+      );
+    };
+    check();
+    const timer = window.setInterval(check, COMPOSER_CHECK_MS);
+    window.addEventListener('resize', check);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('resize', check);
+    };
+  }, [enabled, size]);
+  return bottom;
+}
+
+/** How often its composer is read for whether it takes words yet. */
+const READY_CHECK_MS = 500;
+
+/**
+ * Whether its workspace's composer is there and cannot be typed in yet (its
+ * runtime still being assigned): the balloon's prompt is then disabled, said
+ * so. No composer at all is not that: the prompt sends through the
+ * workspace, which holds a message until the chat is ready.
+ */
+function useComposerNotReady(stageRef: RefObject<HTMLElement | null>): boolean {
+  const [notReady, setNotReady] = useState(false);
+  useEffect(() => {
+    const check = () => {
+      const editable = ownComposer(stageRef.current);
+      setNotReady(
+        !!editable &&
+          ((editable instanceof HTMLTextAreaElement && editable.disabled) ||
+            editable.getAttribute('contenteditable') === 'false'),
+      );
+    };
+    check();
+    const timer = window.setInterval(check, READY_CHECK_MS);
+    return () => window.clearInterval(timer);
+  }, [stageRef]);
+  return notReady;
 }
 
 export function LoopAssistant({
@@ -270,7 +429,7 @@ export function LoopAssistant({
     return () => clearTimeout(timer);
   }, []);
 
-  /* The agent's newest words, said in the balloon until heard (T-23). */
+  /* The agent's newest words, said in the balloon until heard. */
   const saying = turn.assistant
     ? latestSaying([
         { id: String(turn.id), role: 'assistant', content: turn.assistant },
@@ -351,6 +510,14 @@ export function LoopAssistant({
 
   const stageRef = useRef<HTMLDivElement>(null);
   const drag = useViewportDrag(stageRef, { whole: true });
+  // In its corner, above its own conversation's composer when that reaches
+  // the corner (the conversation on the page, not in a panel).
+  const cornerBottom = useCornerBottom(!onPageLayout && !drag.position, SIZE);
+  // Its composer cannot take words yet: the balloon's prompt says so.
+  const notReady = useComposerNotReady(stageRef);
+  // Its host switched its conversation off (an application paused, a model
+  // not served): the balloon's prompt is off too, with the host's reason.
+  const availability = useChatAvailability();
   // Offered only when the agent decides: the runtime says it.
   const decide = useDecisionAsker(
     decisions?.serverUrl
@@ -390,7 +557,7 @@ export function LoopAssistant({
 
   const state = assistantStateOfTurn(turn, presence, { arriving, leaving });
   const unheard = !!saying && saying.id !== heardId;
-  // What the agent does while a tool runs, in its own words (T-23).
+  // What the agent does while a tool runs, in its own words.
   const tool: BalloonToolLine | undefined = turn.activity
     ? {
         id: `${turn.id}:${turn.activity}`,
@@ -437,7 +604,15 @@ export function LoopAssistant({
                       setFresh(false);
                     },
                   })
-                : withHistory({ text: 'Click me to open the conversation.' });
+                : withHistory({
+                    // A click opens its balloon with the caret in its
+                    // prompt; without a workspace to send to, it opens the
+                    // conversation (its panel on a page layout).
+                    text:
+                      workspace?.submit || !onPageLayout
+                        ? chatText.clickToWrite
+                        : chatText.clickToOpen,
+                  });
   const insist =
     state === 'greeting' ||
     presence === 'waiting' ||
@@ -448,10 +623,33 @@ export function LoopAssistant({
   const onToggle = () => {
     if (onPageLayout) {
       togglePagePanel();
-    } else {
-      focusComposer();
+      return;
     }
+    // Its words heard once the caret is in the composer.
+    if (saying) {
+      setHeardId(saying.id);
+    }
+    focusComposer(stageRef.current);
   };
+  // Its balloon's own prompt, sent as its composer sends (13 November 2026).
+  const submit = workspace?.submit;
+  const prompt = submit
+    ? {
+        label: chatText.writeToMe,
+        send: chatText.send,
+        notReady: availability.disabled
+          ? (availability.disableReason ?? chatText.notReadyToWrite)
+          : notReady
+            ? chatText.notReadyToWrite
+            : undefined,
+        onSend: (message: string) => {
+          if (saying) {
+            setHeardId(saying.id);
+          }
+          void submit(message);
+        },
+      }
+    : undefined;
   const onDismiss = (next: AssistantAway) => {
     keepAway(next);
     setLeaving(true);
@@ -472,7 +670,7 @@ export function LoopAssistant({
         place={
           drag.position
             ? { left: `${drag.position.left}px`, top: `${drag.position.top}px` }
-            : { right: '24px', bottom: '24px' }
+            : { right: `${CORNER}px`, bottom: `${cornerBottom}px` }
         }
         stageRef={stageRef}
         onDragStart={drag.onHandlePointerDown}
@@ -482,6 +680,10 @@ export function LoopAssistant({
         balloonDisplay={display}
         insist={insist}
         onDismiss={onDismiss}
+        // Its × hides the balloon; sending it away is in its menu, so the
+        // way back to the conversation is never taken by a click on the ×.
+        dismissHidesBalloon
+        prompt={prompt}
         decide={decide}
         onResetPosition={drag.position ? drag.reset : undefined}
         onBalloonDisplayChange={setChosenDisplay}

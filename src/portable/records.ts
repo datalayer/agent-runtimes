@@ -14,7 +14,7 @@
 
 /**
  * How a run ended, in the `output` entry every run ends with, kept whatever
- * the application's `record.include` says (R-01): its words
+ * the application's `record.include` says: its words
  * only when it keeps `outputs`.
  */
 export const RUN_END_WORDS: Record<string, string> = {

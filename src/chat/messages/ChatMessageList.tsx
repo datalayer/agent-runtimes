@@ -23,8 +23,14 @@ import {
   useMemo,
   useRef,
   useSyncExternalStore,
+  useContext,
 } from 'react';
 import { useOptionalReactorPlatform } from '@datalayer/reactor/react';
+import {
+  AgentUiPlatformContext,
+  PlatformDisplay,
+} from '../../apps/toolCards/kit';
+import { ToolResultsContext } from '../../apps/toolCards/toolResults';
 import {
   resolveToolResult,
   type Display,
@@ -47,6 +53,7 @@ import { Box } from '@datalayer/primer-addons';
 import { streamdownCodeBlockStyles } from '../styles/streamdownStyles';
 import { ChatMarkdown, type ChatDensity } from './ChatMarkdown';
 import { ToolCallDisplay } from '../tools/ToolCallDisplay';
+import { AnonymousToolSignIn } from '../anonymous/AnonymousChat';
 import { marksOfToolCall, skillIdOfCall, type MarkedMcpServer } from '../marks';
 import { TypingDots } from '../indicators/TypingDots';
 import { TurnFooter } from './TurnFooter';
@@ -101,13 +108,13 @@ export interface ChatMessageListProps {
   /** All display items (messages + tool calls) */
   displayItems: DisplayItem[];
   /**
-   * How a message's display presses what it offered (RU-4, RU-W):
+   * How a message's display presses what it offered (RU-W):
    * the chat sends it up the conversation's ui socket. Absent, its
    * displays offer nothing to press.
    */
   actOn?: (display: Display) => UiAct;
   /**
-   * How a message's display uploads a file the person chose (RU-6): its ref, to press with. Absent, nothing is uploaded.
+   * How a message's display uploads a file the person chose: its ref, to press with. Absent, nothing is uploaded.
    */
   upload?: UiUpload;
   /** Whether the agent is loading */
@@ -177,7 +184,7 @@ export interface ChatMessageListProps {
     at: { turn: number },
   ) => ReactNode;
   /**
-   * The answer a sentence is being said from (VO-65): its row is
+   * The answer a sentence is being said from: its row is
    * marked `aria-current` and `data-voice-saying`, with a bar beside it —
    * the sentence itself is underlined by `useSaidSentence`.
    */
@@ -759,6 +766,9 @@ function DefaultToolCallRenderer({
         summary={item.summary}
         density={density}
       />
+      {/* Refused for want of an account, in an anonymous conversation:
+       *Sign in to use* it, at this turn. */}
+      <AnonymousToolSignIn call={item} />
       {isSubagentDelegation && (
         <SubagentChatPanel
           toolCallId={item.toolCallId}
@@ -803,7 +813,28 @@ export function ChatMessageList({
    * and a tool nobody claims keeps the chat's own row. Subscribed to the
    * platform's revision, so a plugin enabled later redraws the transcript.
    */
-  const platform = useOptionalReactorPlatform();
+  // A `Chat` given its agent's own UI plugins draws from their platform
+  // (`apps/agentUiPlugins`); every other chat from the page's reactor.
+  const agentUiPlatform = useContext(AgentUiPlatformContext);
+  // The calls answered, for the agent's UI in the chat's chrome to read
+  // (`apps/toolCards/toolResults`): the header chips say only what came back.
+  const toolResults = useContext(ToolResultsContext);
+  // A conversation started over (it held messages, it holds none): what its
+  // calls said is forgotten, so the title bar starts over with it.
+  const heldItems = useRef(false);
+  useEffect(() => {
+    if (displayItems.length === 0) {
+      if (heldItems.current) {
+        toolResults.clear();
+      }
+      heldItems.current = false;
+      return;
+    }
+    heldItems.current = true;
+    toolResults.record(displayItems as never);
+  }, [toolResults, displayItems]);
+  const pagePlatform = useOptionalReactorPlatform();
+  const platform = agentUiPlatform ?? pagePlatform;
   useSyncExternalStore(
     platform?.subscribe ?? NO_SUBSCRIPTION,
     () => platform?.getRevision() ?? 0,
@@ -965,11 +996,20 @@ export function ChatMessageList({
           })
         : undefined;
       const toolUI = display ? (
-        <ReactorDisplay
-          display={display}
-          context={{ ...context, defaultUI }}
-          fallback={defaultUI}
-        />
+        agentUiPlatform ? (
+          <PlatformDisplay
+            platform={agentUiPlatform}
+            display={display}
+            context={{ ...context, defaultUI }}
+            fallback={defaultUI}
+          />
+        ) : (
+          <ReactorDisplay
+            display={display}
+            context={{ ...context, defaultUI }}
+            fallback={defaultUI}
+          />
+        )
       ) : (
         defaultUI
       );
@@ -1108,7 +1148,7 @@ export function ChatMessageList({
     const messageFooter = renderMessageFooter?.(message, {
       turn: turnOfItem(message),
     });
-    // The answer being said (VO-65): marked by a bar and for assistive tech.
+    // The answer being said: marked by a bar and for assistive tech.
     const said = saidMessageId !== undefined && message.id === saidMessageId;
 
     return (
@@ -1247,9 +1287,9 @@ export function ChatMessageList({
               p={compact ? 1 : 2}
               px={compact ? 2 : 2}
               overflowX="auto"
-              // The theme's bubble (T-03, T-06): today's 6px elsewhere.
+              // The theme's bubble: today's 6px elsewhere.
               borderRadius="bubble"
-              // A message arriving, at the theme's pace (T-10): no
+              // A message arriving, at the theme's pace: no
               // motion in a theme that sets none, nor when motion is reduced.
               animation="chatMessageArrive var(--theme-motion-message) var(--theme-motion-easing) both"
               reducedMotion={{ animation: 'none' }}
@@ -1318,7 +1358,7 @@ export function ChatMessageList({
                         wordBreak: 'break-word',
                       }}
                     >
-                      {/* Said aloud: a small microphone, and its name (VO-27). */}
+                      {/* Said aloud: a small microphone, and its name. */}
                       {message.metadata?.input === 'voice' ? (
                         <Box
                           as="span"
@@ -1346,7 +1386,7 @@ export function ChatMessageList({
                 />
               )}
             </Box>
-            {/* What it shows besides its words (RU-2): each
+            {/* What it shows besides its words: each
                 display drawn by its type's renderer, else its text. */}
             {message.displays?.length ? (
               <Box

@@ -21,6 +21,7 @@
  */
 
 import type { JSX } from 'react';
+import { useReactorPlatform } from '@datalayer/reactor/react';
 import { Box } from '@datalayer/primer-addons';
 import { Text } from '@primer/react';
 
@@ -35,6 +36,9 @@ import {
 } from '../../../runtimes/browser/anonymousToken';
 import type { LoopWorkspaceContext } from '../../core';
 import { targetRunsAgentInPage, type SandboxTarget } from './switchable';
+import type { AgentsConfig } from './plugin';
+import { AGENTS_PLUGIN_NAME } from './pluginName';
+import { visitorForOf } from './visitorFor';
 
 /**
  * The same badge, dressed for the workspace header's trailing cluster.
@@ -63,7 +67,11 @@ export function AnonymousKeyBadge({
 }: {
   workspace: LoopWorkspaceContext;
 }): JSX.Element | null {
-  const session = useAnonymousSession();
+  // The key of what this workspace runs (`visitorForOf`), as its chat asks it.
+  const visitorFor = visitorForOf(
+    useReactorPlatform().getConfig<AgentsConfig>(AGENTS_PLUGIN_NAME),
+  );
+  const session = useAnonymousSession(visitorFor);
   const target = (workspace.sandbox.target as SandboxTarget) ?? 'local';
 
   // Not this agent's business. A runtime authenticates itself, and whether
@@ -104,7 +112,7 @@ export function AnonymousKeyBadge({
       // has passed even where the store's own timer was throttled — a
       // backgrounded tab, a laptop that slept. Whichever gets there first
       // wins; the second call is a no-op.
-      onExpire={() => useAnonymousSessionStore.getState().expire()}
+      onExpire={() => useAnonymousSessionStore.getState().expire(visitorFor)}
     />
   );
 }

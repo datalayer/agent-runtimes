@@ -2,14 +2,14 @@
 # Distributed under the terms of the Modified BSD License.
 
 """
-Every route of the environments API is reachable from both SDKs and the CLI (E4-07).
+Every route of the environments API is reachable from both SDKs and the CLI.
 
-The TypeScript SDK has held itself to an exact match against the environments API since
-E1-01. The Python SDK and the CLI never did, and the cost of that showed:
-E2-15 shipped `publish`, `unpublish` and `publication` as routes, the
+The TypeScript SDK has held itself to an exact match against the environments API from
+the start. The Python SDK and the CLI never did, and the cost of that showed:
+A release shipped `publish`, `unpublish` and `publication` as routes, the
 TypeScript client gained calls for them, and for a day there was no way to
 publish an environment from Python or from a terminal at all — the make target
-E2-16 asks for could not even be written.
+asked for could not even be written.
 
 So the route table is read from the TypeScript test rather than copied: one
 list, three clients, and a route added to any one of them fails the other two
@@ -141,10 +141,10 @@ def test_every_sdk_call_reaches_a_route_of_section_9() -> None:
 
 
 def test_the_python_sdk_has_a_call_for_every_route_of_section_9() -> None:
-    """The parity E4-07 asks for, in the direction that bites.
+    """The parity asked for, in the direction that bites.
 
     A route with no client is a route nobody outside the browser can reach —
-    which is what happened to `publish` between E2-15 and E2-16.
+    which is what happened to `publish` for a day.
     """
     covered = {_route_of(call) for _, call in SDK_CALLS}
     missing = sorted(set(section_9_routes()) - covered)

@@ -4,11 +4,11 @@
  */
 
 /**
- * The floating assistant on the page (T-21 to T-23, T-27): the
+ * The floating assistant on the page: the
  * character acts its state, its balloon says the agent's words while the
  * conversation is closed, a click opens it, a drag does not, and it can be
  * sent away; it steps aside for a dialog, another chat's composer and the
- * pointer at work (T-27).
+ * pointer at work.
  */
 
 import React, { act, createRef } from 'react';
@@ -61,7 +61,7 @@ const balloon = (container: HTMLElement) =>
   container.querySelector('[data-speech-balloon]');
 
 describe('the floating assistant', () => {
-  it('says what it covers in a bottom corner, for a line written there (Q-08)', async () => {
+  it('says what it covers in a bottom corner, for a line written there', async () => {
     const root = document.documentElement;
     await render({ place: { right: '24px', bottom: '24px' }, size: 88 });
     expect(root.style.getPropertyValue(ASSISTANT_CLEARANCE_VAR)).toBe('112px');
@@ -174,7 +174,7 @@ describe('the floating assistant', () => {
     expect(balloon(container)?.textContent).toContain(ASSISTANT_WORDS.paused);
   });
 
-  it('holds an approval in its balloon, answered there with Approve or Deny (T-23)', async () => {
+  it('holds an approval in its balloon, answered there with Approve or Deny', async () => {
     const onApprove = vi.fn();
     const onDeny = vi.fn();
     const { container, onToggle } = await render({
@@ -297,7 +297,7 @@ describe('the floating assistant', () => {
   });
 });
 
-describe('where the balloon goes (T-23)', () => {
+describe('where the balloon goes', () => {
   const viewport = { width: 1200, height: 800 };
   it('stays inside the window wherever the character stands', () => {
     expect(balloonSide({ left: 1000, top: 600 }, viewport)).toEqual({
@@ -387,7 +387,7 @@ function addToPage(html: string, box: Parameters<typeof placeAt>[1]) {
   return element;
 }
 
-describe('keeping clear (T-27)', () => {
+describe('keeping clear', () => {
   afterEach(() => {
     vi.useRealTimers();
   });

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Who may hold a session of a deployment (D-02).
+"""Who may hold a session of a deployment.
 
 A hosted deployment says who may open it — only its owner, the people they
 invite, their organization, anyone with the link, everyone — and ai-agents
@@ -13,13 +13,13 @@ for the deployment is no reason to let anybody else talk to it.
 
 An answer is remembered for a minute, per deployment and caller, so a
 conversation costs one call and a level narrowed reaches a session within a
-minute. A visitor without an account (R-30, on the visitors' runtime) is
+minute. A visitor without an account (on the visitors' runtime) is
 asked about with no token: ai-agents lets them talk to an application anyone
 with the link or everyone may open when it needs nothing a visitor nobody
 knows may not be given, and says why not otherwise. An embed token is asked
 about with itself: ai-agents lets it into a live embedded deployment of the
-one application it names, of the owner who was issued it (R-20), and
-only for a page of a site its owner allows it on (D-12): the runtime says
+one application it names, of the owner who was issued it, and
+only for a page of a site its owner allows it on: the runtime says
 the page's origin, as the visitor's browser sent it (`PAGE_ORIGIN`). A
 caller with no token who is not a visitor holds no session. The machine
 itself is not asked about.
@@ -44,7 +44,7 @@ __all__ = [
 ]
 
 #: The origin of the page an embed's visitor is on, for this request: what
-#: the visitor's browser sent, said to ai-agents (D-12).
+#: the visitor's browser sent, said to ai-agents.
 PAGE_ORIGIN: ContextVar[str] = ContextVar("loop_embed_page_origin", default="")
 
 #: The header ai-agents reads it in.
@@ -153,7 +153,7 @@ async def ensure_may_open(deployment_uid: str, caller: Any, bearer: str) -> None
     if kind == "local":
         return
     if kind == "visitor":
-        # Every visitor nobody knows is let in, or not, alike (R-30).
+        # Every visitor nobody knows is let in, or not, alike.
         bearer = ""
     elif not bearer:
         raise NotLetIn(401, SIGNED_OUT)
@@ -162,7 +162,7 @@ async def ensure_may_open(deployment_uid: str, caller: Any, bearer: str) -> None
         ""
         if kind == "visitor"
         # An embed's visit on the page it is on, apart from its owner's own
-        # answer (R-20, D-12).
+        # answer.
         else f"embed:{getattr(caller, 'visit', '')}@{PAGE_ORIGIN.get()}"
         if kind == "embed"
         else str(getattr(caller, "uid", "") or bearer),
@@ -186,7 +186,7 @@ async def ensure_may_open(deployment_uid: str, caller: Any, bearer: str) -> None
 
 
 # ---------------------------------------------------------------------------
-# Who sees a deployment's computer (R-23, decided 2026-10-06)
+# Who sees a deployment's computer (decided 2026-10-06)
 # ---------------------------------------------------------------------------
 
 #: (deployment uid, caller uid) -> (refusal or None, until).

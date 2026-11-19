@@ -8,8 +8,7 @@ import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 /**
  * Secrets at rest: AES-256-GCM, each value bound to
  * what it belongs to (its associated data, an installation's key), with the
- * key's version kept beside it. Moved from the Slack service
- * (DC-004).
+ * key's version kept beside it. Moved from the Slack service.
  *
  * @module portable/hosts/secretCipher
  */

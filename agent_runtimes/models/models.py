@@ -173,7 +173,7 @@ def _normalize_ai_inference_base_url(raw_url: str | None) -> str:
 
 
 #: The headers datalayer-ai-inference reads the application and deployment
-#: of a call from, and stamps on its usage record (R-09). Spelled as
+#: of a call from, and stamps on its usage record. Spelled as
 #: ``datalayer_common.usage_dimensions`` spells them.
 APP_UID_HEADER = "X-Datalayer-App-Uid"
 DEPLOYMENT_UID_HEADER = "X-Datalayer-Deployment-Uid"
@@ -223,6 +223,42 @@ def app_usage_headers(app_instance: Mapping[str, Any] | None) -> dict[str, str]:
     if deployment_uid:
         headers[DEPLOYMENT_UID_HEADER] = deployment_uid
     return headers
+
+
+#: The header datalayer-ai-inference reads the engine of a call from, and
+#: stamps on its usage record as ``runtime_engine``. Spelled as
+#: ``datalayer_common.usage_dimensions.RUNTIME_ENGINE_HEADER`` spells it.
+RUNTIME_ENGINE_HEADER = "X-Datalayer-Runtime-Engine"
+
+
+def runtime_engine_headers(environ: Mapping[str, str] | None = None) -> dict[str, str]:
+    """The header naming the engine this runtime runs on, for its model calls.
+
+    Sent by a runtime on AWS AgentCore (``serve --target agentcore``, which
+    writes ``AGENT_RUNTIMES_TARGET=agentcore``): no Datalayer reservation
+    carries it, so each call ai-inference records is the usage of its
+    engine, and the platform's usage reads it as ``runtime_engine:
+    agentcore``. A runtime of Datalayer's or kagent's sends none: its
+    reservation, opened by the Operator, says its engine.
+    """
+    from agent_runtimes.agentcore.settings import TARGET, TARGET_VARIABLE
+
+    env = os.environ if environ is None else environ
+    if (env.get(TARGET_VARIABLE) or "").strip() == TARGET:
+        return {RUNTIME_ENGINE_HEADER: TARGET}
+    return {}
+
+
+def inference_usage_headers(
+    app_instance: Mapping[str, Any] | None,
+    environ: Mapping[str, str] | None = None,
+) -> dict[str, str]:
+    """Every header a model call through ai-inference is metered with.
+
+    The application and deployment it serves (:func:`app_usage_headers`) and
+    the engine it runs on (:func:`runtime_engine_headers`).
+    """
+    return {**app_usage_headers(app_instance), **runtime_engine_headers(environ)}
 
 
 def _create_inference_http_client(
@@ -553,7 +589,7 @@ def resolve_model_for_inference_provider(
     # its agent before it is assigned and given its token, and a call without
     # one is refused in a sentence (``InferenceTokenMissing``), never made
     # with another key. A deployment's agent calls with its application's
-    # principal's token, and only with it (I-03).
+    # principal's token, and only with it.
     from agent_runtimes.apps.principal import api_key_for, deployment_of
     from agent_runtimes.apps.visitors import (
         or_visitors_key,
@@ -563,7 +599,7 @@ def resolve_model_for_inference_provider(
 
     deployment = deployment_of(app_instance)
     # On the visitors' runtime, every call is a visitor's, with their token
-    # and nothing else (R-30); on a deployment's runtime, a visitor's
+    # and nothing else; on a deployment's runtime, a visitor's
     # turn calls with their token too, so that they are held to the limits
     # they would be on the visitors' runtime and nobody's account pays, and
     # every other turn with its principal's.
@@ -581,7 +617,7 @@ def resolve_model_for_inference_provider(
             http_client=_create_inference_http_client(
                 http_timeout,
                 source="datalayer-ai-inference",
-                headers=app_usage_headers(app_instance),
+                headers=inference_usage_headers(app_instance),
             ),
         )
     )
@@ -623,7 +659,7 @@ def model_of_request(agent_id: str | None, model: str) -> Any:
 
     Through the provider the agent was made with (`agent_inference_provider`):
     on a Datalayer runtime, ai-inference, naming the application instance it
-    serves (R-09) — never a direct call around it. A direct Bedrock call
+    serves — never a direct call around it. A direct Bedrock call
     with no region to call is refused here, in a sentence, rather than at the
     model with boto3's.
 

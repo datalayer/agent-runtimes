@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A worker's children are requested, not taken (O2-06).
+"""A worker's children are requested, not taken.
 
 A run the control plane dispatched carries its execution. Its ``delegate_task``
 asks the control plane for a subagent reached over A2A, as a child of that
@@ -69,7 +69,7 @@ RESEARCHER_BINDING = AgentBinding(
     capability="researcher",
     protocol=AgentProtocol.A2A,
 )
-#: The control plane's rule for a slot (O2-01).
+#: The control plane's rule for a slot.
 SLOT = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,63}")
 
 

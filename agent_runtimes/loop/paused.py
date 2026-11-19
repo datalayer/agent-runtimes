@@ -16,13 +16,13 @@ A session lives in one of two places, and is listed under it:
 A session has one uid for its whole life, wherever it lives; `transfer`
 moves it from one place to the other under the same uid.
 
-Before asking where a new agent should run, `loop` lists the person's paused
-sessions that can be gone on with, in those two groups, *On this machine*
-first — each with its kind (an agent's, an application's), its agent, its
-title and when it started, newest first, the five most recent of each. One
-picked is resumed where it lives, its conversation loaded; *Start a new
-session* goes on to the usual questions. With none paused nothing is
-printed.
+As it starts, `loop` draws the screen `loop sessions` draws (its picker,
+`agent_runtimes.loop.picker`), its launch rows first — *Start a new
+session*, on this machine or on Datalayer when where it runs is still to be
+asked, highlighted — and under them the same sessions in the same two
+groups, *On this machine* first. One picked is resumed where it lives, its
+conversation loaded, as `loop --resume <uid>` resumes it. With no session
+listed nothing is drawn and the usual questions follow.
 
 What `loop` resumes from a terminal:
 
@@ -60,13 +60,6 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from agent_runtimes.apps.record import session_kind
 
-#: How many paused sessions are offered at the start.
-OFFERED = 5
-
-#: How many of those `loop` does not resume are drawn beside them, with why
-#: and where they are opened.
-NOT_RESUMED_SHOWN = 3
-
 #: How many are read to say how many more there are.
 READ = 50
 
@@ -77,8 +70,6 @@ ON_DATALAYER = "cloud"
 #: The store a session on this machine is kept in.
 FILE = "file"
 RECORD = "record"
-
-NEW_SESSION = "Start a new session"
 
 
 @dataclass(frozen=True)
@@ -112,16 +103,12 @@ class Paused:
     """For a seat of a team run, its run (the root execution): resumed with it."""
     deployment_paused: bool = False
     """Whether it is a session of one of the person's own deployments that is
-    paused: resuming it asks first to resume the deployment."""
-
-    @property
-    def state_said(self) -> str:
-        """The state as a listing says it: the state, marked when its
-        deployment is paused (as an archived one is marked).
-        """
-        if self.deployment_paused and self.state != "ended":
-            return f"{self.state}, deployment paused"
-        return self.state
+    paused: resuming it asks first to resume the deployment. Not shown in a
+    listing, whose State says the session's state alone."""
+    runs_on: str = ""
+    """What its record says it runs on: ``runtime``, ``agentcore``, ``team_run``, or ``""``."""
+    runs_on_id: str = ""
+    """The runtime's uid (``local`` for one started by hand), or AgentCore's ARN."""
 
     @property
     def resumable(self) -> bool:
@@ -370,8 +357,10 @@ def paused_of(
                 address=address,
                 state=str(session.get("state") or ""),
                 team_run=team_run,
+                runs_on=str(runs_on.get("kind") or ""),
+                runs_on_id=str(runs_on.get("uid") or runs_on.get("arn") or ""),
                 # One of the person's own, paused: its owner resumes it, so
-                # the session stays listed, marked.
+                # the session stays listed, and resuming it asks first.
                 deployment_paused=bool(deployment)
                 and str(deployment.get("state") or "live") == "paused",
             )
@@ -524,8 +513,55 @@ def is_listed(row: Paused) -> bool:
 
 
 def listed(rows: Sequence[Paused]) -> List[Paused]:
-    """The sessions among some that are listed by default (`is_listed`)."""
-    return [row for row in rows if is_listed(row)]
+    """The sessions among some that are listed by default (`is_listed`),
+    each once in its place: a record that answers a session twice lists it
+    once (a transferred session is listed in each place, ended in one).
+    """
+    seen: set[tuple[str, str]] = set()
+    kept: List[Paused] = []
+    for row in rows:
+        if is_listed(row) and (row.uid, row.where) not in seen:
+            seen.add((row.uid, row.where))
+            kept.append(row)
+    return kept
+
+
+class RunsElsewhere(Exception):
+    """An open session that a terminal cannot join where it runs: said in a sentence."""
+
+
+def joined_runtime(row: Paused, running: Callable[[], Sequence[str]]) -> str:
+    """The runtime an open session runs on, to be joined rather than resumed:
+    its uid, when it runs on a runtime on Datalayer that ``running`` (the
+    names and uids of the person's running runtimes) still lists. ``""``
+    for a session that is resumed as a paused one is — not open, kept on
+    this machine, or open on a runtime that is gone (the record's rule: an
+    open session whose runtime no longer exists is paused).
+
+    Raises
+    ------
+    RunsElsewhere
+        An open session that runs where a terminal cannot join it: a seat of
+        a running team run, or a run in AgentCore.
+    """
+    if row.state != "open" or row.where != ON_DATALAYER:
+        return ""
+    if row.team_run:
+        raise RunsElsewhere(
+            f"Session {row.uid} is a seat of team run {row.team_run}, which is running: "
+            f"follow it with `agent-teams sessions show {row.team_run}` or at {row.address}; "
+            f"once it is paused, `{team_resume_command(row.team_run)}` goes on with it."
+        )
+    if row.runs_on == "agentcore":
+        where = f": open it at {row.address}" if row.address else ""
+        raise RunsElsewhere(
+            f"Session {row.uid} is running now in AgentCore, where a terminal cannot "
+            f"join a run{where}. Once its run ends it is paused, and resumed from here."
+        )
+    if row.runs_on == "runtime" and row.runs_on_id not in ("", "local"):
+        if row.runs_on_id in set(running()):
+            return row.runs_on_id
+    return ""
 
 
 def clone_command(row: Paused) -> str:
@@ -583,77 +619,10 @@ def paused_line(row: Paused, now: Optional[datetime] = None) -> str:
     )
 
 
-def choose_paused(
-    rows: List[Paused],
-    *,
-    ask: Optional[Callable[..., Optional[str]]] = None,
-    now: Optional[datetime] = None,
-) -> Optional[Paused]:
-    """The paused session the person goes on with, or ``None`` for a new one.
-
-    With none paused, nobody is asked. The five most recent are offered,
-    those `loop` resumes first, *Start a new session* before them and
-    chosen by Enter. One it does not resume from a terminal is drawn too,
-    not to be picked, with why and where it is opened instead. The rest are
-    counted, with where they are listed.
-    """
-    if not rows:
-        return None
-    from agent_runtimes.loop.launch import _select
-
-    # The two places apart, *On this machine* first: in each, what can be
-    # gone on with here, then the most recent of what is opened elsewhere:
-    # never only counted.
-    choices: List[Tuple[Any, ...]] = [(NEW_SESSION, "")]
-    offered: List[Paused] = []
-    counts: List[str] = []
-    for place, of_place in grouped(rows):
-        if not of_place:
-            continue
-        shown = [row for row in of_place if row.resumable][:OFFERED] + [
-            row for row in of_place if not row.resumable
-        ][:NOT_RESUMED_SHOWN]
-        more = len(of_place) - len(shown)
-        counts.append(
-            f"{len(of_place)} on {'this machine' if place == ON_THIS_MACHINE else 'Datalayer'}"
-        )
-        choices.append(
-            (
-                f"{PLACE_TITLES[place]} ({len(of_place)}"
-                + (f"; {more} more: loop sessions" if more else "")
-                + ")",
-                SEPARATOR,
-            )
-        )
-        for row in shown:
-            line = paused_line(row, now)
-            if row.team_run and row.resumable:
-                # A seat goes on with its run: the run is what is resumed.
-                choices.append((f"Resume its team run {row.team_run}: {line}", row.uid))
-            elif row.resumable:
-                choices.append((f"Resume: {line}", row.uid))
-            else:
-                where = f": open {row.address}" if row.address else ""
-                choices.append((line, row.uid, f"{row.why_not}{where}"))
-        offered += shown
-    count = len(rows)
-    question = (
-        f"You have {count} paused session{'s' if count != 1 else ''} ({', '.join(counts)})"
-        ". Go on with one, or start a new one?"
-    )
-    answer = (ask or _select)(question, choices, "")
-    if answer is None:
-        raise KeyboardInterrupt
-    return next((row for row in offered if row.uid == answer), None)
-
-
 __all__ = [
-    "NEW_SESSION",
-    "OFFERED",
     "ON_DATALAYER",
     "ON_THIS_MACHINE",
     "Paused",
-    "choose_paused",
     "local_paused",
     "paused_line",
     "paused_of",
@@ -670,6 +639,8 @@ __all__ = [
     "STATES",
     "TEAM_WHY_NOT",
     "clone_command",
+    "joined_runtime",
+    "RunsElsewhere",
     "is_listed",
     "listed",
     "grouped",

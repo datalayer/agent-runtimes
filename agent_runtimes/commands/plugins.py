@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""`loop plugins [<name>]`: what extends this runtime, and what was refused (MH-F01).
+"""`loop plugins [<name>]`: what extends this runtime, and what was refused.
 
 Every reactor extension the runtime holds — its own, the protocols', and
 whatever is installed beside it under ``datalayer.reactor.extensions`` —

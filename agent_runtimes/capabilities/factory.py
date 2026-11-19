@@ -12,6 +12,7 @@ from pydantic_ai import UsageLimits
 
 from ..guardrails import (
     DEFAULT_TOOL_PERMISSION_MAP,
+    ApiBudgetCapability,
     AsyncGuardrailCapability,
     BlockedKeywordsCapability,
     ContentSafetyCapability,
@@ -212,6 +213,38 @@ def build_capabilities_from_agent_spec(
                 )
             )
 
+        # What a paid API costs Datalayer, held to budgets per person and for
+        # the platform (the user, 15 November 2026: the X budget of the
+        # Marketer, "an agent guardrail, not a iam cap").
+        api_budget = entry.get("api_budget") or {}
+        if isinstance(api_budget, dict) and api_budget:
+            budgets = api_budget.get("budgets") or {}
+            capabilities.append(
+                ApiBudgetCapability(
+                    budget_id=str(
+                        api_budget.get("id") or entry.get("name") or "api-budget"
+                    ),
+                    provider=str(api_budget.get("provider") or "the API"),
+                    currency=str(api_budget.get("currency") or "USD"),
+                    prices={
+                        str(unit): float(price)
+                        for unit, price in (api_budget.get("prices") or {}).items()
+                    },
+                    tools=dict(api_budget.get("tools") or {}),
+                    per_person_daily=_parse_money(budgets.get("per_person_daily")),
+                    per_person_monthly=_parse_money(budgets.get("per_person_monthly")),
+                    platform_monthly=_parse_money(budgets.get("platform_monthly")),
+                    results=dict(api_budget.get("results") or {}),
+                    counted_by=str(api_budget.get("counted_by") or "resources"),
+                    alert_at=tuple(
+                        float(share)
+                        for share in (
+                            (api_budget.get("alerts") or {}).get("at") or (0.8, 1.0)
+                        )
+                    ),
+                )
+            )
+
         permissions = entry.get("permissions") or {}
         if isinstance(permissions, dict) and permissions:
             capabilities.append(
@@ -408,8 +441,7 @@ def build_capabilities_from_agent_spec(
             datalayer_overrides = memory_config.get("datalayer")
             if isinstance(datalayer_overrides, dict):
                 override = datalayer_overrides.get("memory_agent_id")
-                # An application's memory: per person, shared as they allow
-                # (R-18, R-35, R-36).
+                # An application's memory: per person, shared as they allow.
                 if datalayer_overrides.get("app_memory"):
                     app_memory_key = str(override or "").strip()
                     if not app_memory_key:
@@ -519,7 +551,7 @@ def build_capabilities_from_agent_spec(
         capabilities.append(PromptHistoryCapability(agent_id=agent_id))
 
     # The skill a `load_skill` call loaded, on its tool span, as AgentCore's
-    # skill evaluators read it (AC-15).
+    # skill evaluators read it.
     from ..otel.skill_spans import SkillSpanCapability
 
     capabilities.append(SkillSpanCapability())
@@ -534,7 +566,7 @@ def build_capabilities_from_agent_spec(
         )
 
     # Answers that may be heard are written for the ear too: an agent spec's
-    # own voice (VO-41, VO-44); an application's is joined by
+    # own voice; an application's is joined by
     # app_capabilities.
     from ..voice import agent_voice_capability
 
@@ -559,7 +591,63 @@ def build_capabilities_from_agent_spec(
         if compaction_capability is not None:
             capabilities.append(compaction_capability)
 
-    return capabilities
+    return order_before_approvals(capabilities)
+
+
+def order_before_approvals(capabilities: list[Any]) -> list[Any]:
+    """
+    The capabilities with each pre-call check ahead of the tool approvals.
+
+    A capability whose class says ``CHECKS_BEFORE_APPROVAL`` (the API budget
+    guardrail) refuses a call before the person is asked to approve it, so a
+    call is never approved and then refused (15 November 2026). Its
+    ``before_tool_execute`` must then run before the approval guardrail's:
+    pydantic-ai runs them in the capabilities' order. Every other capability
+    keeps its place.
+
+    Parameters
+    ----------
+    capabilities : list
+        The capabilities, in the order built.
+
+    Returns
+    -------
+    list
+        The same capabilities, each pre-call check moved just before the first
+        tool approval guardrail when it came after it.
+    """
+    from agent_runtimes.guardrails.tool_approvals import (  # noqa: PLC0415
+        ToolsGuardrailCapability,
+    )
+
+    first = next(
+        (
+            index
+            for index, capability in enumerate(capabilities)
+            if isinstance(capability, ToolsGuardrailCapability)
+        ),
+        None,
+    )
+    if first is None:
+        return capabilities
+    early = [
+        capability
+        for capability in capabilities[first:]
+        if getattr(type(capability), "CHECKS_BEFORE_APPROVAL", False)
+    ]
+    if not early:
+        return capabilities
+    rest = [
+        capability
+        for capability in capabilities
+        if all(capability is not moved for moved in early)
+    ]
+    insert_at = next(
+        index
+        for index, capability in enumerate(rest)
+        if capability is capabilities[first]
+    )
+    return rest[:insert_at] + early + rest[insert_at:]
 
 
 def build_default_choice_guardrails(agent_id: str | None = None) -> list[Any]:

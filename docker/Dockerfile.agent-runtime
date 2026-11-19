@@ -69,6 +69,10 @@ RUN pip install -e ".[memory]" "datalayer-skills[skills]>=0.3.0" \
     && python -m playwright install --with-deps chromium \
     && rm -rf /var/lib/apt/lists/*
 
-EXPOSE 8765
+# Its agent at its addresses: the main server on 8765, its MCP, API and web
+# servers on 8766, 8767 and 8768, in one process.
+ENV AGENT_RUNTIMES_ADDRESSES="1"
+
+EXPOSE 8765 8766 8767 8768
 
 CMD ["python", "-m", "agent_runtimes", "serve", "--host", "0.0.0.0", "--port", "8765"]

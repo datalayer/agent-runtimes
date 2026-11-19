@@ -6,7 +6,7 @@
 ``AgentContext.conversation_history`` is the previous messages, in the
 transports' ``{"role", "content"}`` shape. The adapter hands pydantic-ai its
 own messages, in order, then the prompt once. An A2A task's context and the
-checkpoint a resumed run starts from (O2-05) reach the model this way; handed
+checkpoint a resumed run starts from reach the model this way; handed
 over as they were, pydantic-ai refused them and the run failed.
 """
 

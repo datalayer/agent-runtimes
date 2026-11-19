@@ -51,10 +51,10 @@ export type ICodeSandboxEnvironmentOption = {
   group?: string;
   /**
    * The version this choice launches, written as it reads — `v3`. Only an
-   * environment somebody built has one (E1-19).
+   * environment somebody built has one.
    */
   version?: string;
-  /** The size class it runs on, which is what prices it (D-4). */
+  /** The size class it runs on, which is what prices it. */
   sizeClass?: string;
   /**
    * Whether the choice cannot be launched: a version whose Datalayer artifact
@@ -250,7 +250,7 @@ export function CodeSandboxEnvironmentSelect(
   /*
    * Within a group when there are groups. A grouped list has already been put
    * in the order its headings should read — what is yours, your organizations',
-   * then the platform's (E1-19) — and partitioning across the whole list would
+   * then the platform's — and partitioning across the whole list would
    * undo that: one unpriced environment of your own, which is exactly what an
    * environment awaiting its first build is, would move your heading below the
    * platform's.
@@ -277,7 +277,7 @@ export function CodeSandboxEnvironmentSelect(
         <OptionRow option={option} />
         {option.disabled && option.buildHref ? (
           // What to do about it, where it is noticed: the version's page is
-          // where a build for this variant is started (E1-21).
+          // where a build for this variant is started.
           <ActionList.Description variant="block">
             <Link
               href={option.buildHref}

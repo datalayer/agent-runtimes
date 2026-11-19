@@ -4,7 +4,7 @@
  */
 
 /**
- * The conversation's component contract (M-030, M-032): presence read
+ * The conversation's component contract: presence read
  * from a conversation, and what each row and the message box say, over the
  * fixture every renderer is tested against.
  *
@@ -38,7 +38,7 @@ const of = <K extends ConversationItem['kind']>(kind: K) =>
       item.kind === kind,
   );
 
-describe('presence (M-030)', () => {
+describe('presence', () => {
   it('is one with the web chat', () => {
     expect(webPresenceState).toBe(presenceState);
     expect(presenceLine({ state: 'waiting' })).toBe(WEB_LINES.waiting);
@@ -82,7 +82,7 @@ describe('presence (M-030)', () => {
   });
 });
 
-describe('rows (M-032)', () => {
+describe('rows', () => {
   it('say each row the same way on every renderer', () => {
     expect(of('message').map(messageLabel)).toEqual([
       'You: Where is order 7?',

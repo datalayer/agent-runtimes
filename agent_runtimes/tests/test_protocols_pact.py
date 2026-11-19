@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""PACT 1.0 at a local Provider: both profiles (PR-11 to PR-13, PR-53)."""
+"""PACT 1.0 at a local Provider: both profiles."""
 
 from __future__ import annotations
 
@@ -163,7 +163,7 @@ async def test_scopes_not_on_the_card_are_not_asked():
 
 @pytest.mark.asyncio
 async def test_no_token_reaches_what_an_agent_sees():
-    """PR-53: the delegation token and the device code stay with the host."""
+    """The delegation token and the device code stay with the host."""
     provider, _, platform, agent = _setup()
     sign_in = await agent.request_sign_in(USER, ["bookings:read"])
     provider.approve(sign_in.user_code, "jane-4471", ["bookings:read"])
@@ -179,7 +179,7 @@ async def test_no_token_reaches_what_an_agent_sees():
 
 
 def test_the_card_fixture_both_languages_read():
-    """PR-51: the TypeScript reader is held to the same card and the same reading."""
+    """The TypeScript reader is held to the same card and the same reading."""
     from pathlib import Path
 
     fixture = json.loads(
@@ -207,7 +207,7 @@ async def test_polling_once_says_pending_then_granted():
         await agent.poll_sign_in(USER, sign_in)
 
 
-# --- a Brand a host answers for (PR-13: an application as a PACT business) ---------------
+# --- a Brand a host answers for (an application as a PACT business) ---------------
 
 
 class _Says:

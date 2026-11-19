@@ -4,8 +4,8 @@
  */
 
 /**
- * The events of streaming frontend tools, as turns the model did not ask for
- * (AGENT_BATTLE B1-00). An event that arrives while the model is idle is sent
+ * The events of streaming frontend tools, as turns the model did not ask for.
+ * An event that arrives while the model is idle is sent
  * at once; one that arrives while a turn is in flight waits, and when the
  * turn ends every source's latest event is sent as one turn, with how many
  * it stands for — so the model is told, never flooded, and acts on the

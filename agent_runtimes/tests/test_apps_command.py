@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""`loop apps validate` (S-05): the instant checks of an Appspec, in a terminal and in CI."""
+"""`loop apps validate`: the instant checks of an Appspec, in a terminal and in CI."""
 
 import json
 from pathlib import Path
@@ -110,7 +110,7 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
     }
     assert set(reports) == {
         "accounting",
-        # The scenes' members (agentspecs 0.0.60, A-04).
+        # The scenes' members (agentspecs 0.0.60).
         "change-detection",
         "crop-monitoring",
         "customer-interview",
@@ -120,7 +120,7 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
         "deck-maker",
         "disaster-assessment",
         "event-response",
-        # The two Personal Agent Protocol examples (agentspecs 881a752, E-01, E-02).
+        # The two Personal Agent Protocol examples (agentspecs 881a752).
         "exchange-desk",
         "inbox-triage",
         "marketer",
@@ -139,27 +139,53 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
         "supplier-comparison",
         "support-desk",
         "web-research",
-        # A personal agent at an airline over PACT, shopping at test merchants (EX-13, EX-12).
+        # A personal agent at an airline over PACT, shopping at test merchants.
         "travel-desk",
         "shopping-desk",
-        # A PACT business and the personal agent that asks it, a pair (PR-13).
+        # A PACT business and the personal agent that asks it, a pair.
         "guest-desk",
         "errand-runner",
-        # Reading a page at a site that checks its signature (EX-11).
+        # Reading a page at a site that checks its signature.
         "signed-reader",
-        # The Personal Agent Protocol's recorded journeys as applications (PR-05).
+        # The Personal Agent Protocol's recorded journeys as applications.
         "order-tracker",
         "shop-concierge",
+        # A person's Shopper asking the Demo Shop over A2A (the Buy from a shop Stage).
+        "shopper",
         "live-shop-chat",
         "sign-in-desk",
         "returns-desk",
         "bookkeeping-desk",
         # A coding agent behind the Shield, lent one repository to read (agentspecs 0.0.137).
         "code-explainer",
+        # The home page's live demos, moved from the landing (agentspecs 0.0.186).
+        "demo-marketer",
+        "demo-shopper",
+        "demo-terra",
+        "demo-traveller",
+        "demo-accountant",
+        "demo-aws-steward",
+        # The seventh seed agent's demo (agentspecs 0.0.215).
+        "demo-jupyter-data-analyst",
+        # The Demo Shop, a company of DummyJSON's products (agentspecs 0.0.204).
+        "demo-shop",
     }
     assert all(report.verdict != NOT_READY for report in reports.values())
     assert reports["web-research"].setup == []
+    # Its agent, example-simple, the neutral default: enabled, out of the pickers
+    # since agentspecs 0.0.187 (listed: false).
     assert reports["decide"].setup == []
+    # The public pages' demos run on the seven agents the catalogue enables.
+    for demo in (
+        "marketer",
+        "shopper",
+        "accountant",
+        "traveller",
+        "terra",
+        "aws-steward",
+        "jupyter-data-analyst",
+    ):
+        assert reports[f"demo-{demo}"].setup == [], demo
     # Gmail's server is offered since agentspecs 0.0.128; Inbox triage's worker is out of
     # the picker since agentspecs 0.0.164 (enabled: false), so its setup names it.
     assert reports["inbox-triage"].setup == [

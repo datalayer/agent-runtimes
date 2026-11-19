@@ -4,7 +4,7 @@
  */
 
 /**
- * mermaid never rides with the graph (SCENES S2-02): no module of the
+ * mermaid never rides with the graph: no module of the
  * teams component imports it statically; `SequenceDiagram` alone loads it,
  * with `import('mermaid')`, when the view opens.
  */

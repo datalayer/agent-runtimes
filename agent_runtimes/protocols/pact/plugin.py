@@ -1,16 +1,16 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""PACT 1.0 as a Reactor plugin (PR-10 to PR-13).
+"""PACT 1.0 as a Reactor plugin.
 
 Points it declares:
 
 - ``pact.signer`` — signs the personal-agent JWT (ES256). No default: the
   key is the host's (Vault transit on Datalayer), as Web Bot Auth's is.
 - ``pact.delegationStore`` — holds delegation tokens by (Brand, user);
-  default ``memory``. On Datalayer, IAM custody (PI-11).
+  default ``memory``. On Datalayer, IAM custody.
 - ``pact.receiptStore`` — keeps the receipts a Brand signs; default
-  ``memory``. On Datalayer, the application's record (R-07).
+  ``memory``. On Datalayer, the application's record.
 - ``pact.extension.delegated`` — the *Delegated* profile, PACT's one
   optional part: default ``device-code``, RFC 8628 as §5.3 says. Without a
   contribution here, a personal agent speaks the *Identity* profile alone

@@ -137,7 +137,11 @@ async def explain_browser_session() -> dict[str, Any]:
     atlas = AgentIdentity(domain="atlas.example", name="Atlas")
     network.add(atlas.domain, atlas.website())
     # Manzanita with its website on: poppy.json lists `web.browser_session_endpoint`.
-    manzanita(network, clock, config=replace(CONFIG, web=True))
+    manzanita(
+        network,
+        clock,
+        config=replace(CONFIG, web=True),
+    )
     http = network.client()
     host = PersonalAgentHost(atlas, clock)
     browser = AgentBrowser(network.client())  # its own client: its own cookie jar

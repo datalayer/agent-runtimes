@@ -15,6 +15,266 @@
 
 import type { SceneSpec } from '../types/scenes';
 
+export const BUY_FROM_A_SHOP_SCENE_0_0_1: SceneSpec = {
+  schema: 'loop.scene/v1',
+  id: 'buy-from-a-shop',
+  version: '0.0.1',
+  name: 'Buy from a shop',
+  description:
+    "A person's Shopper asks a shop for tennis gear, gets the basket quoted and places a test order; the shop answers from its own catalogue, with photos, and charges nothing.",
+  tags: ['example', 'scene', 'shopping', 'commerce', 'a2a'],
+  icon: 'gift',
+  emoji: '🛒',
+  kind: 'team',
+  team: 'buy-from-a-shop:0.0.1',
+  entry: 'shopper',
+  cast: [
+    {
+      member: 'shopper',
+      app: 'shopper:0.0.2',
+      ref: '',
+      server: '',
+      role: 'initiator',
+      runsIn: 'browser',
+      talksTo: [
+        {
+          member: 'demo-shop',
+          over: 'a2a',
+        },
+      ],
+      persona: {
+        name: 'Shopper',
+        face: '🧺',
+        line: 'I shop for you, and bring back what the shop says.',
+      },
+      brief:
+        'Ask the Demo Shop for every product, quote and order, one request each time, and report what it answers without adding to it. Do not question the audience first: a cue is the whole of what it says, and nobody is standing there to answer you back. A cue that says what to place an order for is the go-ahead: ask the shop to place that test order.',
+      overrides: {},
+    },
+    {
+      member: 'demo-shop',
+      app: 'demo-shop:0.0.1',
+      ref: '',
+      server: '',
+      role: 'contributor',
+      runsIn: 'runtime',
+      persona: {
+        name: 'Demo Shop',
+        face: '🛍️',
+        line: 'I answer from my own catalogue; my orders are test orders.',
+      },
+      brief:
+        'Answer only from your tools: find the products with find_products, quote a basket with quote_basket and place an order with place_test_order when asked to, saying each time that nothing is charged and nothing ships.',
+      overrides: {},
+    },
+  ],
+  setting: {
+    systems: [],
+    period: 'today',
+    language: 'en',
+    assumes:
+      "Two agents over A2A — your Shopper in your browser, the Demo Shop on Datalayer — on the shop's own catalogue of 24 products. Its orders are test orders: nothing is charged and nothing ships.",
+  },
+  script: [
+    {
+      id: 'find',
+      cue: {
+        say: 'Find me what the shop has for tennis, and say which you would pick.',
+        schedule: '',
+        event: '',
+      },
+      narration: 'The Shopper asks the shop, which looks in its catalogue.',
+      moves: [
+        {
+          who: 'shopper',
+          asks: 'demo-shop',
+          over: 'a2a',
+          what: "the shop's products for tennis",
+          tool: '',
+        },
+        {
+          who: 'demo-shop',
+          asks: '',
+          what: 'its tennis racket and tennis ball, each with its price, rating and stock',
+          tool: '',
+          answers: 'words',
+        },
+        {
+          who: 'shopper',
+          asks: '',
+          what: 'what the shop has, and which it would pick',
+          tool: '',
+          answers: 'words',
+        },
+      ],
+      expect:
+        "The shop's tennis racket (49.99 USD) and tennis ball (6.99 USD) from its catalogue, with their stock; the Shopper picks one from those figures.",
+      shows: ['words'],
+      pace: 'steady',
+    },
+    {
+      id: 'quote',
+      cue: {
+        say: 'Quote two tennis balls and the tennis racket.',
+        schedule: '',
+        event: '',
+      },
+      narration:
+        'The shop prices the basket; the Shopper adds nothing up itself.',
+      moves: [
+        {
+          who: 'shopper',
+          asks: 'demo-shop',
+          over: 'a2a',
+          what: 'a quote for two tennis balls and one tennis racket',
+          tool: '',
+        },
+        {
+          who: 'demo-shop',
+          asks: '',
+          what: 'each line and the total, summed by the shop',
+          tool: '',
+          answers: 'words',
+        },
+        {
+          who: 'shopper',
+          asks: '',
+          what: 'the basket and its total, as the shop quoted it',
+          tool: '',
+          answers: 'words',
+        },
+      ],
+      expect:
+        "Each line and a total of 63.97 USD, the shop's own; nothing is ordered yet.",
+      shows: ['words'],
+    },
+    {
+      id: 'order',
+      cue: {
+        say: 'Place a test order of two tennis balls and the tennis racket.',
+        schedule: '',
+        event: '',
+      },
+      narration:
+        'An order, said to be a test — nothing is charged, nothing ships.',
+      moves: [
+        {
+          who: 'shopper',
+          asks: 'demo-shop',
+          over: 'a2a',
+          what: 'a test order of two tennis balls and one tennis racket',
+          tool: '',
+        },
+        {
+          who: 'demo-shop',
+          asks: '',
+          what: "the test order's number, and that nothing is charged and nothing ships",
+          tool: '',
+          answers: 'words',
+        },
+        {
+          who: 'shopper',
+          asks: '',
+          what: 'the order placed, a test, with its number',
+          tool: '',
+          answers: 'words',
+        },
+      ],
+      expect:
+        'A test order number (TEST-…) and the total, with the shop saying nothing is charged and nothing ships; the Shopper says the same.',
+      shows: ['words'],
+      pace: 'slow',
+    },
+  ],
+  stage: {
+    positions: {
+      shopper: {
+        x: 0.25,
+        y: 0.5,
+      },
+      'demo-shop': {
+        x: 0.75,
+        y: 0.5,
+      },
+    },
+    opensFirst: 'shopper',
+    transcript: {
+      tools: true,
+      narration: true,
+      withhold: ['ids'],
+    },
+    inspectors: ['agent', 'a2a', 'tools'],
+    restsAfter: '10m',
+    pace: 'steady',
+    backdrop: 'hero',
+  },
+  audience: {
+    who: 'visitors',
+    ceilingPerAsk: 0.05,
+    asksADay: 5,
+  },
+  rehearsal: {
+    beats: [
+      {
+        beat: 'find',
+        lines: [
+          'You → Shopper',
+          'Shopper → Demo Shop',
+          'Demo Shop: words',
+          'Shopper: words',
+        ],
+        mustSay: ['racket'],
+        mustNotSay: ['I cannot', 'error'],
+        within: '120s',
+      },
+      {
+        beat: 'quote',
+        lines: [
+          'You → Shopper',
+          'Shopper → Demo Shop',
+          'Demo Shop: words',
+          'Shopper: words',
+        ],
+        mustSay: ['63.97'],
+        within: '120s',
+      },
+      {
+        beat: 'order',
+        lines: [
+          'You → Shopper',
+          'Shopper → Demo Shop',
+          'Demo Shop: words',
+          'Shopper: words',
+        ],
+        mustSay: ['TEST-'],
+        mustNotSay: ['charged to your'],
+        within: '120s',
+      },
+    ],
+    within: '10m',
+    verified: {
+      live: [],
+      recorded: [
+        "The shop's tools are tested in process against its bundled catalogue: the tennis products, a quote of 63.97 USD summed by the tool, a test order charging nothing.",
+      ],
+      unverified: [
+        'Not played yet: the Demo Shop must be kept always on under the demo account (demo-shop) for the Shopper to reach it.',
+      ],
+    },
+  },
+  deployment: {
+    account: 'demo',
+    page: '/',
+    addresses: {
+      'demo-shop': 'DATALAYER_DEMO_SCENE_BUY_FROM_A_SHOP_DEMO_SHOP_A2A_URL',
+    },
+  },
+  actors: [],
+  lines: [],
+  live: '',
+  setup: [],
+};
+
 export const CODING_AGENT_BEHIND_THE_SHIELD_SCENE_0_0_1: SceneSpec = {
   schema: 'loop.scene/v1',
   id: 'coding-agent-behind-the-shield',
@@ -1596,7 +1856,7 @@ export const PAP_A_PERSON_AND_A_COMPANY_SCENE_0_0_1: SceneSpec = {
       says: 'Asks Ada to sign in at Manzanita, on Manzanita’s own page.',
       card: {
         kind: 'sign-in',
-        title: 'Sign in at Manzanita Outfitters',
+        title: 'Sign in at Manzanita Outfitters (manzanita.example)',
         rows: [],
         lines: [
           'Your agent asks to see your orders.',
@@ -1747,7 +2007,7 @@ export const PAP_APPROVE_ONCE_SCENE_0_0_1: SceneSpec = {
       says: 'Every operation is Ada’s to approve: it waits for her.',
       card: {
         kind: 'approval',
-        title: 'Manzanita Outfitters asks you to confirm',
+        title: 'Manzanita Outfitters (manzanita.example) asks you to confirm',
         rows: [
           ['Order', 'ord_7Hk2'],
           ['Price difference', 'USD 70.00'],
@@ -1918,7 +2178,7 @@ export const PAP_TWO_COMPANIES_SCENE_0_0_1: SceneSpec = {
       says: 'Passes the bank’s proposal on, quoting it as written.',
       card: {
         kind: 'approval',
-        title: 'Ledgerly asks you to confirm',
+        title: 'Ledgerly (ledgerly.example) asks you to confirm',
         rows: [
           ['Amount', 'EUR 1250.00'],
           ['To', 'Acme GmbH'],
@@ -2068,7 +2328,7 @@ export const PAP_YOUR_APPLICATION_A_COMPANY_SCENE_0_0_1: SceneSpec = {
         title: 'What becomes public at Ship',
         rows: [],
         lines: [
-          'Its own domain, exchange-desk.apps.datalayer.ai, with the page personal agents read first.',
+          'Its own domain, exchange-desk.agent.datalayer.ai, with the page personal agents read first.',
           'How personal agents reach it: its agent, its API and its server for agents.',
           'What changes something is proposed to the person and done only with their approval.',
         ],
@@ -2093,7 +2353,7 @@ export const PAP_YOUR_APPLICATION_A_COMPANY_SCENE_0_0_1: SceneSpec = {
       says: 'Asks Sam to sign in at Exchange desk, with his Datalayer account.',
       card: {
         kind: 'sign-in',
-        title: 'Sign in at Exchange desk',
+        title: 'Sign in at Exchange desk (exchange-desk.agent.datalayer.ai)',
         rows: [],
         lines: [
           'With your Datalayer account, on Datalayer’s page: the agent never sees your password.',
@@ -2112,7 +2372,8 @@ export const PAP_YOUR_APPLICATION_A_COMPANY_SCENE_0_0_1: SceneSpec = {
       says: 'Proposes the exchange in the Maker’s own words: “Exchange order ord_7Hk2 for size L.”',
       card: {
         kind: 'approval',
-        title: 'Exchange desk asks you to confirm',
+        title:
+          'Exchange desk (exchange-desk.agent.datalayer.ai) asks you to confirm',
         rows: [
           ['Order', 'ord_7Hk2'],
           ['Size', 'L'],
@@ -2509,7 +2770,6 @@ export const SALES_AND_ACCOUNTING_SCENE_0_0_1: SceneSpec = {
   live: '',
   setup: [
     "The agent 'worker-sales-pipeline-board-report:0.0.1' is not enabled.",
-    "The agent 'worker-accountant:0.0.1' is not enabled.",
   ],
   played: {
     at: '2026-10-29T14:00:28+00:00',
@@ -2719,6 +2979,7 @@ export const UCP_A_PURCHASE_APPROVED_SCENE_0_0_1: SceneSpec = {
 };
 
 export const SCENE_CATALOGUE: Record<string, SceneSpec> = {
+  'buy-from-a-shop': BUY_FROM_A_SHOP_SCENE_0_0_1,
   'coding-agent-behind-the-shield': CODING_AGENT_BEHIND_THE_SHIELD_SCENE_0_0_1,
   'crop-monitoring': CROP_MONITORING_SCENE_0_0_1,
   'disaster-assessment': DISASTER_ASSESSMENT_SCENE_0_0_1,

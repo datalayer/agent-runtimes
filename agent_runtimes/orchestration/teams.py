@@ -1,13 +1,13 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A catalogued team, as the control plane runs it (O2-09).
+"""A catalogued team, as the control plane runs it.
 
 A team's run is a tree of executions. Its root is the supervisor's, and each
 member runs as a child of it. Every one of them is bound by an agent id naming
 its seat in the team, `team:<team>/supervisor` or `team:<team>/<member>`, over
-A2A with no endpoint, so its worker is brought up for it as for any agentspec
-(O2-06). The worker is registered from the agentspec the seat references, or
+A2A with no endpoint, so its worker is brought up for it as for any agentspec.
+The worker is registered from the agentspec the seat references, or
 from one built out of the seat's own fields when it references none, as most
 catalogued members do.
 
@@ -15,9 +15,9 @@ For a `sequential` or `parallel` team the control plane places the members in
 the order `depends_on` gives, and the supervisor answers after them, briefed
 with what they produced. A `supervisor` team's supervisor routes the work
 itself: it is registered with the members as its subagents, each a seat it
-asks the control plane for (O2-06), and told the team's routing instructions.
+asks the control plane for, and told the team's routing instructions.
 
-A member that is a **harness** (SH-45: Claude Code, Codex, an
+A member that is a **harness** (Claude Code, Codex, an
 organization's own) is registered by its harness id, so its worker is that
 agent program over ACP behind the Shield — no model, no tools of the team's:
 its own, its MCP lent. It is bound over ACP when a member of the team talks
@@ -315,7 +315,7 @@ def registration(seat: TeamSeat) -> dict[str, Any]:
     """
     team, member = seat.team, seat.member
     if member is not None and member.harness:
-        # A harness (SH-45): the agent program itself, over ACP behind the
+        # A harness: the agent program itself, over ACP behind the
         # Shield; its goal in this team is what each delegation's objective
         # says, never a system prompt it would not read.
         return {
@@ -346,7 +346,7 @@ def registration(seat: TeamSeat) -> dict[str, Any]:
         fields["model"] = model
     if member is None and team.execution_mode == SUPERVISOR_MODE:
         # The supervisor routes the work: the members are its subagents, each
-        # a seat it asks the control plane for (O2-06), and how to route is
+        # a seat it asks the control plane for, and how to route is
         # part of what it is told.
         fields["subagents"] = {
             "subagents": [
@@ -395,7 +395,7 @@ TEAM_RECORD_INCLUDE = (
 
 def team_app(team: TeamSpec) -> dict[str, Any]:
     """
-    The application a team's seats' sessions are of (MH-38).
+    The application a team's seats' sessions are of.
 
     A seat's task is a turn of an apps session; a session is of an
     application, and a team's is the team itself: a ``loop.app/v1`` document

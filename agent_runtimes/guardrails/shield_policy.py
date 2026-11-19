@@ -13,12 +13,12 @@ the platform's default policy beneath them:
   me* on read, write, send, buy, delete — become a ``team``-scope policy, one
   rule per class, so they decide before the platform's default; a Rule on a
   named tool (``server.tool``) is for the lent MCP tools and the gateway
-  decides it there (SH-14), never here;
+  decides it there, never here;
 - ``if_asked`` (*do it if you asked*) is read as **ask me first**: the harness
   acts on its own plan within a turn, and nothing here can tell whether the
-  person asked for that one action, so it fails closed (R-05);
+  person asked for that one action, so it fails closed;
 - the gateway toolsets the Appspec connects are the ``team`` policy's
-  ``mcp.allow`` list (SH-14): the package's ``mcpServers`` rewriting lends
+  ``mcp.allow`` list: the package's ``mcpServers`` rewriting lends
   those and cuts every other server from ``session/new``;
 - the ``session`` scope holds the platform's default: read and
   edit inside the workspace done, delete and execute and anything outside
@@ -28,9 +28,9 @@ the platform's default policy beneath them:
   ai-agents' keeper holds across the day) is a ``team`` document of its own
   with ``limits.spend``, soft at the keeper's warning share and hard at the
   limit: the Shield holds it for each session, the keeper for the day, and
-  the sentence says which (:func:`deployment_said`, SH-32);
+  the sentence says which (:func:`deployment_said`);
 - above them all, on a managed runtime, the **organization's and the teams'
-  documents from IAM** (``guardrails.managed_policies``, SH-50): pulled for
+  documents from IAM** (``guardrails.managed_policies``): pulled for
   the account, kept until they expire, refreshed while the runtime runs;
   with none readable and no unexpired copy, nothing is decided.
 
@@ -77,7 +77,7 @@ BEHAVIOUR_VERDICT: Dict[str, str] = {
     LEAVE_TO_ME: "deny",
 }
 
-#: The Shield's verdict, as the record's behaviour word (R-07).
+#: The Shield's verdict, as the record's behaviour word.
 VERDICT_BEHAVIOUR: Dict[str, str] = {
     "allow": DO_IT,
     "ask": ASK_FIRST,
@@ -238,7 +238,7 @@ def deployment_spend_limit(app_instance: Optional[Mapping[str, Any]]) -> float:
     """The spend limit, in credits a day, of the deployment an agent serves; 0 for none.
 
     ai-agents' keeper hands it in the ``app_instance`` it launches the
-    deployment's agent with (``kept_payload``'s ``spend_limit``): its owner's,
+    deployment's agent with (``deployment_runtime_payload``'s ``spend_limit``): its owner's,
     or the default of a public application whose owner set none. A Preview, a
     test or an agent no deployment runs has none.
     """
@@ -312,7 +312,7 @@ def datalayer_default() -> Policy:
 
     The classes the platform writes relationships for need the authorizer's
     allow beside the Rules: ``send`` and ``buy``, and in a managed runtime pod
-    ``read``, ``write`` and ``execute`` on its workspace (SH-75).
+    ``read``, ``write`` and ``execute`` on its workspace.
     """
     from agent_runtimes.guardrails.shield_authorizer import (
         datalayer_authorize,  # noqa: PLC0415

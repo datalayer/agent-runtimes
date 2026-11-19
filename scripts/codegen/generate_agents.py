@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 import yaml
+from agentspecs_clone import import_from_clone  # noqa: E402
 from compose import resolve_spec  # noqa: E402  (sibling module, same folder)
 from generate_decisions import apply_agent_decisions
 from versioning import (
@@ -237,7 +238,7 @@ def load_fragments(specs_dir: Path) -> List[Dict[str, Any]]:
 
 def refuse_tools_field(spec: Dict[str, Any], path: Path) -> None:
     """Refuse an agent spec that still says `tools` (it is `backend_tools` now) or
-    `ui_plugin` (it is `ui` now, PS-03).
+    `ui_plugin` (it is `ui` now).
     """
     if "ui_plugin" in spec:
         raise SystemExit(
@@ -306,6 +307,7 @@ def load_yaml_specs(specs_dir: Path) -> List[tuple[str, Dict[str, Any]]]:
     check_model_additionals(resolved, load_model_ids(specs_dir))
     check_protocols(resolved, load_protocol_ids(specs_dir))
     check_harnesses(resolved, load_harnesses(specs_dir))
+    check_runtime_engines(resolved, specs_dir)
     check_voices(resolved)
     check_identities(resolved, load_identity_ids(specs_dir))
     # Decisions: an agent decides only when its spec names one; it brings `decide`.
@@ -314,7 +316,7 @@ def load_yaml_specs(specs_dir: Path) -> List[tuple[str, Dict[str, Any]]]:
 
 
 def check_voices(specs: List[tuple[str, Dict[str, Any]]]) -> None:
-    """Refuse an agent whose `voice` is not an `interface.voice` block of the voice catalogue (VO-41)."""
+    """Refuse an agent whose `voice` is not an `interface.voice` block of the voice catalogue."""
     from agentspecs.apps import agent_voice_problems
 
     problems = [
@@ -337,7 +339,7 @@ def voice_of(spec: Dict[str, Any]) -> Dict[str, Any] | None:
 
 
 def load_protocol_ids(specs_dir: Path) -> set[str]:
-    """Every id of the protocols catalogue (`agentspecs/protocols`, PS-01)."""
+    """Every id of the protocols catalogue (`agentspecs/protocols`)."""
     ids: set[str] = set()
     for yaml_file in sorted((specs_dir.parent / "protocols").glob("*.yaml")):
         protocol = yaml.safe_load(yaml_file.read_text()) or {}
@@ -382,7 +384,7 @@ def check_identities(
 def check_protocols(
     specs: List[tuple[str, Dict[str, Any]]], protocol_ids: set[str]
 ) -> None:
-    """Refuse an agent whose `protocols` is not a list of the catalogue's ids, each once (PS-02)."""
+    """Refuse an agent whose `protocols` is not a list of the catalogue's ids, each once."""
     problems = []
     for _, spec in specs:
         said = spec.get("protocols")
@@ -406,7 +408,7 @@ BUILTIN_HARNESSES = ("pydantic-ai", "vercel-ai")
 
 
 def load_harnesses(specs_dir: Path) -> dict[str, dict[str, Any]]:
-    """Every harness of the catalogue (`agentspecs/harnesses`, SH-01), by id."""
+    """Every harness of the catalogue (`agentspecs/harnesses`), by id."""
     harnesses: dict[str, dict[str, Any]] = {}
     for yaml_file in sorted((specs_dir.parent / "harnesses").glob("*.yaml")):
         if yaml_file.name == "register.yaml":
@@ -420,7 +422,7 @@ def load_harnesses(specs_dir: Path) -> dict[str, dict[str, Any]]:
 def check_harnesses(
     specs: List[tuple[str, Dict[str, Any]]], harnesses: dict[str, dict[str, Any]]
 ) -> None:
-    """Refuse an agent naming a harness the catalogue does not know, or asking what it cannot honour (SH-01)."""
+    """Refuse an agent naming a harness the catalogue does not know, or asking what it cannot honour."""
     problems = []
     for _, spec in specs:
         harness_id = str(spec.get("harness") or BUILTIN_HARNESSES[0])
@@ -456,6 +458,28 @@ def check_harnesses(
         raise SystemExit("\n".join(problems))
 
 
+def check_runtime_engines(
+    specs: List[tuple[str, Dict[str, Any]]], specs_dir: Path
+) -> None:
+    """Refuse an agent that names no runtime engine, an unknown one, or one that cannot run its harness."""
+    engines = import_from_clone(specs_dir, "runtime_engines")
+    problems = [
+        problem
+        for _, spec in specs
+        for problem in engines.agent_runtime_engine_problems(spec)
+    ]
+    if problems:
+        raise SystemExit("\n".join(problems))
+
+
+def runtime_engine_of(spec: Dict[str, Any]) -> str:
+    """The spec's `runtime_engine`: every spec states it (`check_runtime_engines`)."""
+    engine = spec.get("runtime_engine")
+    if not engine:
+        raise SystemExit(f"{spec.get('id')}: names no runtime_engine")
+    return str(engine)
+
+
 def load_model_ids(specs_dir: Path) -> set[str]:
     """Every id the models catalogue answers to: its ids and their aliases."""
     ids: set[str] = set()
@@ -488,6 +512,47 @@ def check_model_additionals(
             )
     if problems:
         raise SystemExit("\n".join(problems))
+
+
+def optional_of(spec: Dict[str, Any]) -> Dict[str, Any] | None:
+    """What an agent starts without (agentspecs 0.0.188), by id without version.
+
+    Refuses an entry that is not among the agent's own MCP servers, skills or
+    backend tools (a backend tool set up by a linked account, 0.0.189), and a
+    group naming what is not optional: the catalogue says it once. The backend
+    tools are said only when there are some, so the other agents read as before.
+    """
+    optional = spec.get("optional")
+    if optional is None:
+        return None
+    base = lambda ref: str(ref).split(":")[0]  # noqa: E731
+    servers = [base(ref) for ref in optional.get("mcp_servers") or []]
+    skills = [base(ref) for ref in optional.get("skills") or []]
+    tools = [base(ref) for ref in optional.get("backend_tools") or []]
+    own_servers = {base(ref) for ref in spec.get("mcp_servers") or []}
+    own_skills = {base(ref) for ref in spec.get("skills") or []}
+    own_tools = {base(ref) for ref in spec.get("backend_tools") or []}
+    agent = spec.get("id")
+    for kind, named, own in (
+        ("MCP server", servers, own_servers),
+        ("skill", skills, own_skills),
+        ("backend tool", tools, own_tools),
+    ):
+        for ref in named:
+            if ref not in own:
+                raise SystemExit(f"{agent}: optional {kind} {ref} is not its own")
+    groups = [
+        [base(ref) for ref in group] for group in optional.get("at_least_one") or []
+    ]
+    for group in groups:
+        for ref in group:
+            if ref not in servers and ref not in skills and ref not in tools:
+                raise SystemExit(f"{agent}: {ref} in at_least_one is not optional")
+    said: Dict[str, Any] = {"mcp_servers": servers, "skills": skills}
+    if tools:
+        said["backend_tools"] = tools
+    said["at_least_one"] = groups
+    return said
 
 
 def generate_python_code(specs: List[tuple[str, Dict[str, Any]]]) -> str:
@@ -589,6 +654,14 @@ from agent_runtimes.types import (
                 else ""
             )
 
+            # How it presents itself: its tagline and its Markdown document,
+            # written only for an agent that says them.
+            presentation_py_lines = "".join(
+                f"    {key}={_fmt_py_literal(str(spec[key]).strip())},\n"
+                for key in ("tagline", "presentation")
+                if spec.get(key)
+            )
+
             # Format optional fields
             icon = f'"{spec.get("icon")}"' if spec.get("icon") else "None"
             emoji = f'"{spec.get("emoji")}"' if spec.get("emoji") else "None"
@@ -641,6 +714,10 @@ from agent_runtimes.types import (
                 if model_additionals
                 else ""
             )
+            optional = optional_of(spec)
+            optional_py_line = (
+                f"    optional={_fmt_py_literal(optional)},\n" if optional else ""
+            )
             voice = voice_of(spec)
             voice_py_line = (
                 f"    voice={_fmt_py_literal(voice)},\n" if voice is not None else ""
@@ -667,6 +744,7 @@ from agent_runtimes.types import (
             # and a spec that says nothing is run by the server-side harness
             # that has always run it.
             harness = spec.get("harness") or "pydantic-ai"
+            runtime_engine = runtime_engine_of(spec)
 
             # New flow-level fields
             goal_raw = spec.get("goal")
@@ -771,7 +849,8 @@ from agent_runtimes.types import (
     tags={_fmt_list(spec.get("tags", []))},
     domain={f'"{domain_value}"' if domain_value else "None"},
     enabled={spec.get("enabled", True)},
-    model={model_str},
+    listed={spec.get("listed", True)},
+{optional_py_line}    model={model_str},
 {model_additionals_py_line}    inference_provider={inference_provider_str},
     mcp_servers=[{mcp_servers_str}],
     skills={_fmt_list(skill_refs)},
@@ -781,12 +860,13 @@ from agent_runtimes.types import (
     icon={icon},
     emoji={emoji},
     color={color},
-    suggestions={suggestions_str},
+{presentation_py_lines}    suggestions={suggestions_str},
     welcome_message="{welcome}",
     welcome_notebook={f'"{welcome_notebook}"' if welcome_notebook else "None"},
     welcome_document={f'"{welcome_document}"' if welcome_document else "None"},
     sandbox_variant={sandbox_variant_str},
     harness="{harness}",
+    runtime_engine="{runtime_engine}",
     system_prompt={system_prompt_str},
     system_prompt_codemode_addons={system_prompt_codemode_addons_str},
     goal={goal_str},
@@ -1039,6 +1119,9 @@ def generate_typescript_code(
 import type { Agentspec } from '"""
     code += types_import_path
     code += """';
+import { isAgentspecComponentOptional } from '"""
+    code += types_import_path
+    code += """/agentspecs';
 """
 
     # Only add MCP server imports if needed
@@ -1248,6 +1331,13 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             suggestions = spec.get("suggestions", [])
             suggestions_str = _fmt_ts_suggestions(suggestions)
 
+            # How it presents itself, written only for an agent that says it.
+            presentation_ts_lines = "".join(
+                f"    {key}: {_fmt_ts_literal(str(spec[key]).strip())},\n"
+                for key in ("tagline", "presentation")
+                if spec.get(key)
+            )
+
             # Format optional fields
             icon = f"'{spec.get('icon')}'" if spec.get("icon") else "undefined"
             emoji = f"'{spec.get('emoji')}'" if spec.get("emoji") else "undefined"
@@ -1282,6 +1372,25 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
                 if model_additionals
                 else ""
             )
+            optional = optional_of(spec)
+            optional_ts_line = (
+                "    optional: "
+                + _fmt_ts_literal(
+                    {
+                        "mcpServers": optional["mcp_servers"],
+                        "skills": optional["skills"],
+                        **(
+                            {"backendTools": optional["backend_tools"]}
+                            if optional.get("backend_tools")
+                            else {}
+                        ),
+                        "atLeastOne": optional["at_least_one"],
+                    }
+                )
+                + ",\n"
+                if optional
+                else ""
+            )
             voice = voice_of(spec)
             voice_ts_line = (
                 f"    voice: {_fmt_ts_literal(voice)},\n" if voice is not None else ""
@@ -1309,6 +1418,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
                 f"'{sandbox_variant}'" if sandbox_variant else "undefined"
             )
             harness = spec.get("harness") or "pydantic-ai"
+            runtime_engine = runtime_engine_of(spec)
 
             # New flow-level fields
             goal_raw = spec.get("goal")
@@ -1361,7 +1471,8 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
     tags: {tags_str},
     domain: {domain_ts},
     enabled: {str(spec.get("enabled", True)).lower()},
-    model: {model_ts},
+    listed: {str(spec.get("listed", True)).lower()},
+{optional_ts_line}    model: {model_ts},
 {model_additionals_ts_line}{inference_provider_line}    mcpServers: [{mcp_servers_str}],
     skills: [{skills_str}].filter(Boolean) as SkillSpec[],
     backendTools: [{tools_str}],
@@ -1370,12 +1481,13 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
     icon: {icon},
     emoji: {emoji},
     color: {color},
-    suggestions: {suggestions_str},
+{presentation_ts_lines}    suggestions: {suggestions_str},
     welcomeMessage: {_fmt_ts_literal(welcome_message)},
     welcomeNotebook: {_fmt_ts_literal(welcome_notebook)},
     welcomeDocument: {_fmt_ts_literal(welcome_document)},
     sandboxVariant: {sandbox_variant_ts},
     harness: '{harness}',
+    runtimeEngine: '{runtime_engine}',
     systemPrompt: {f"`{system_prompt}`" if system_prompt else "undefined"},
     systemPromptCodemodeAddons: {f"`{system_prompt_codemode_addons}`" if system_prompt_codemode_addons else "undefined"},
     goal: {goal_ts},
@@ -1457,17 +1569,20 @@ export function listAgentspecs(prefix?: string): Agentspec[] {
  * Collect all required environment variables for an agent spec.
  *
  * Iterates over the spec's MCP servers and skills and returns the
- * deduplicated union of their `requiredEnvVars` arrays.
+ * deduplicated union of their `requiredEnvVars` arrays, without those of
+ * the servers and skills it starts without (`optional`, agentspecs 0.0.188).
  */
 export function getAgentspecRequiredEnvVars(spec: Agentspec): string[] {
   const vars = new Set<string>();
     const baseEnvVar = (v: string): string => v.split(':')[0] ?? v;
   for (const server of spec.mcpServers) {
+    if (isAgentspecComponentOptional(spec, 'mcpServer', server.id)) continue;
     for (const v of server.requiredEnvVars ?? []) {
             vars.add(baseEnvVar(v));
     }
   }
   for (const skill of spec.skills) {
+    if (isAgentspecComponentOptional(spec, 'skill', skill.id)) continue;
     for (const v of skill.requiredEnvVars ?? []) {
             vars.add(baseEnvVar(v));
     }
@@ -1712,6 +1827,7 @@ __all__ = ["AGENTSPECS", "get_agent_spec", "list_agentspecs"]
  */
 
 import type { Agentspec } from '../../types';
+import { isAgentspecComponentOptional } from '../../types/agentspecs';
 
 """
 
@@ -1769,16 +1885,19 @@ export function listAgentspecs(prefix?: string): Agentspec[] {
 }
 
 /**
- * Collect all required environment variables for an agent spec.
+ * Collect all required environment variables for an agent spec, without
+ * those of the servers and skills it starts without (`optional`).
  */
 export function getAgentspecRequiredEnvVars(spec: Agentspec): string[] {
   const vars = new Set<string>();
   for (const server of spec.mcpServers) {
+    if (isAgentspecComponentOptional(spec, 'mcpServer', server.id)) continue;
     for (const v of server.requiredEnvVars ?? []) {
       vars.add(v);
     }
   }
   for (const skill of spec.skills) {
+    if (isAgentspecComponentOptional(spec, 'skill', skill.id)) continue;
     for (const v of skill.requiredEnvVars ?? []) {
       vars.add(v);
     }
@@ -1791,6 +1910,77 @@ export function getAgentspecRequiredEnvVars(spec: Agentspec): string[] {
         f.write(typescript_index_content)
 
     print(f"✓ Generated {len(specs_by_folder)} subfolder(s)")
+
+
+def generate_presentations_typescript_code(
+    specs: List[tuple[str, Dict[str, Any]]],
+) -> str:
+    """The agents that present themselves, without the catalogue.
+
+    A page that only names an agent (a tab, a card, a slide) reads its name,
+    its emoji, its tagline and its presentation here: a module of a few
+    kilobytes, where the catalogue of every agent is several hundred.
+    """
+    entries = []
+    for _folder, spec in sorted(specs, key=lambda item: item[1]["id"]):
+        if not spec.get("presentation") and not spec.get("tagline"):
+            continue
+        entry = {
+            "id": spec["id"],
+            "version": spec.get("version", "0.0.1"),
+            "name": spec.get("title", spec["name"]),
+            "emoji": spec.get("emoji") or "",
+            "description": " ".join(str(spec.get("description", "")).split()),
+            "tagline": str(spec.get("tagline") or "").strip(),
+            "presentation": str(spec.get("presentation") or "").strip(),
+        }
+        entries.append(
+            f"  {json.dumps(spec['id'])}: "
+            + json.dumps(entry, ensure_ascii=False, indent=2).replace("\n", "\n  ")
+            + ","
+        )
+    body = "\n".join(entries)
+    return f"""/*
+ * Copyright (c) 2025-2026 Datalayer, Inc.
+ * Distributed under the terms of the Modified BSD License.
+ */
+
+/**
+ * The agents that present themselves: each one's name, emoji, description,
+ * one-line tagline and presentation (a Markdown document), by its id —
+ * without the catalogue of every agent, for a page that only names them.
+ *
+ * This file is AUTO-GENERATED from YAML specifications.
+ * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
+ *
+ * @module specs/agentPresentations
+ */
+
+/** How an agent presents itself. */
+export type AgentPresentation = {{
+  /** Its id in the catalogue. */
+  id: string;
+  version: string;
+  name: string;
+  emoji: string;
+  description: string;
+  /** What it does on its own, in one line. */
+  tagline: string;
+  /** What it is, as one Markdown document. */
+  presentation: string;
+}};
+
+export const AGENT_PRESENTATIONS: Record<string, AgentPresentation> = {{
+{body}
+}};
+
+/** An agent's presentation, by `id` or `id:version`; none for one that says none. */
+export function getAgentPresentation(
+  agentId: string,
+): AgentPresentation | undefined {{
+  return AGENT_PRESENTATIONS[agentId.split(':')[0]];
+}}
+"""
 
 
 def ensure_specs_barrel(specs_dir: Path) -> None:
@@ -1894,6 +2084,11 @@ def main():
         # Generate separate files per subfolder
         generate_subfolder_structure(specs, args)
         ensure_specs_barrel(args.typescript_output.parent)
+        # The agents that present themselves, beside the catalogue and out of
+        # the barrel: read alone, by a page that does not load the catalogue.
+        presentations_path = args.typescript_output.parent / "agentPresentations.ts"
+        print(f"Generating agent presentations to {presentations_path}...")
+        presentations_path.write_text(generate_presentations_typescript_code(specs))
     else:
         # Generate Python code (single file)
         print(f"Generating Python code to {args.python_output}...")

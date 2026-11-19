@@ -159,6 +159,73 @@ LEXICAL_DOCUMENT_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
     emoji="📄",
 )
 
+NOTICES_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
+    id="notices",
+    version="0.0.1",
+    name="Notices",
+    description="Slide a short notice in from an edge of the chat — info, success, warning or error, a title and a line — for a few seconds or until closed; run in the page.",
+    tags=["frontend", "page", "notices"],
+    enabled=True,
+    toolset=["show_notice"],
+    icon="@primer/octicons-react:bell",
+    emoji="🔔",
+)
+
+PAGE_DECK_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
+    id="page-deck",
+    version="0.0.1",
+    name="Deck in the page",
+    description="Build a slide deck in the conversation — create it, lay its slides out in one call, add, replace, move and delete slides with speaker notes and pictures, set its look, read it back — shown to the person as it is built.",
+    tags=["frontend", "decks", "presentations", "page"],
+    enabled=True,
+    toolset=[
+        "deck_create",
+        "deck_set_title",
+        "deck_add_slide",
+        "deck_add_slides",
+        "deck_update_slide",
+        "deck_move_slide",
+        "deck_delete_slide",
+        "deck_set_theme",
+        "deck_read",
+    ],
+    icon="@primer/octicons-react:project",
+    emoji="🎞️",
+)
+
+PAGE_SHEET_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
+    id="page-sheet",
+    version="0.0.1",
+    name="Sheet in the page",
+    description="Fill a spreadsheet in the conversation — a sheet with named columns, rows and ranges, formulas, number and currency formats, a frozen header, tabs, a chart — shown to the person as it is built, editable and exported as CSV.",
+    tags=["frontend", "cells", "spreadsheets", "page"],
+    enabled=True,
+    toolset=[
+        "sheet_create",
+        "sheet_write_range",
+        "sheet_read_range",
+        "sheet_format_range",
+        "sheet_freeze",
+        "sheet_add_tab",
+        "sheet_show_tab",
+        "sheet_insert_chart",
+    ],
+    icon="@primer/octicons-react:table",
+    emoji="📑",
+)
+
+SIDE_PANELS_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
+    id="side-panels",
+    version="0.0.1",
+    name="Side panels",
+    description="Open and close the chat's left and right panels, where the UI placed there shows — run in the page, changing nothing else.",
+    tags=["frontend", "page", "panels"],
+    enabled=True,
+    toolset=["open_side_panel", "close_side_panel"],
+    icon="@primer/octicons-react:sidebar-expand",
+    emoji="🗂️",
+)
+
 # ============================================================================
 # Frontend Tool Catalog
 # ============================================================================
@@ -173,6 +240,10 @@ FRONTEND_TOOL_CATALOG: Dict[str, FrontendToolSpec] = {
     "jupyter-notebook-read": JUPYTER_NOTEBOOK_READ_FRONTEND_TOOL_SPEC_0_0_1,
     "jupyter-notebook": JUPYTER_NOTEBOOK_FRONTEND_TOOL_SPEC_0_0_1,
     "lexical-document": LEXICAL_DOCUMENT_FRONTEND_TOOL_SPEC_0_0_1,
+    "notices": NOTICES_FRONTEND_TOOL_SPEC_0_0_1,
+    "page-deck": PAGE_DECK_FRONTEND_TOOL_SPEC_0_0_1,
+    "page-sheet": PAGE_SHEET_FRONTEND_TOOL_SPEC_0_0_1,
+    "side-panels": SIDE_PANELS_FRONTEND_TOOL_SPEC_0_0_1,
 }
 
 

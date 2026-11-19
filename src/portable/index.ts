@@ -25,7 +25,7 @@ export {
   type SeatSource,
 } from './approvals';
 
-// An approval as every card says it (M-016).
+// An approval as every card says it.
 export {
   actionOf,
   APPROVAL_CARD_WORDS,
@@ -50,7 +50,7 @@ export {
   type AgUiEvent,
   type ToolResultSaid,
 } from './agui';
-// A run's stream reduced to what a chat host shows (DC-005, S-205).
+// A run's stream reduced to what a chat host shows.
 export {
   answerParts,
   isTerminal,
@@ -111,7 +111,7 @@ export {
   type TurnEnd,
 } from './conversation';
 
-// What every protocol adapter says, as the conversation reads it (M-030).
+// What every protocol adapter says, as the conversation reads it.
 export {
   conversationEventsOf,
   sanitizeAssistantContent,
@@ -120,7 +120,7 @@ export {
   type SaidMessage,
 } from './adapterEvents';
 
-// What an application is doing, in the words beside its face (T-08).
+// What an application is doing, in the words beside its face.
 export {
   PRESENCE_LINES,
   presenceOfConversation,
@@ -163,7 +163,7 @@ export {
 } from './views';
 export { activityFixture, conversationFixture } from './fixtures';
 
-// The protocol displays a run's tool results carry (M-037).
+// The protocol displays a run's tool results carry.
 export {
   DISPLAY_META_KEY,
   displayLine,
@@ -176,7 +176,7 @@ export {
   replyAuthor,
   type ActionClass,
   type ProtocolDisplay,
-  // A coding agent's diff and terminal (SH-16).
+  // A coding agent's diff and terminal.
   DIFF_LINES_LIMIT,
   SHIELD_DIFF_TYPE,
   SHIELD_TERMINAL_TYPE,
@@ -194,7 +194,7 @@ export {
   type PapSignInWaiting,
 } from './signIn';
 
-// A Direct Conversation the person types in themselves (P-08, M-038).
+// A Direct Conversation the person types in themselves.
 export {
   DIRECT_MAX,
   DIRECT_WORDS,
@@ -212,7 +212,7 @@ export {
   type DirectTarget,
 } from './direct';
 
-// How a sign-in under way stands, asked by the person's own client (M-039).
+// How a sign-in under way stands, asked by the person's own client.
 export {
   SIGN_IN_POLL_MS,
   SIGN_IN_STATUS_PATH,
@@ -221,7 +221,7 @@ export {
   type SignInStands,
 } from './signInStatus';
 
-// What a company asks the person to type in a mediated sign-in, sent with its one-use ticket (M-039).
+// What a company asks the person to type in a mediated sign-in, sent with its one-use ticket.
 export {
   emptyFields,
   fieldProblems,
@@ -239,7 +239,7 @@ export {
   type ProtectedRequest,
 } from './protectedInput';
 
-// How a streamed turn went, measured without its words (M-036).
+// How a streamed turn went, measured without its words.
 export {
   failureOf,
   otlpMetricsOf,
@@ -249,7 +249,7 @@ export {
 } from './runMeasures';
 
 // What an application is doing, its record's entries, and its sessions as
-// the record lists them (R-15, M-015b).
+// the record lists them.
 export {
   ACTIVITY_WORDS,
   activityOf,
@@ -281,7 +281,7 @@ export {
   type SessionTurn,
 } from './activity';
 
-// A deployment's pause, resume and reset, and its recorded events (R-17, M-041b).
+// A deployment's pause, resume and reset, and its recorded events.
 export {
   deploymentEventLine,
   deploymentEventOf,
@@ -299,7 +299,7 @@ export {
   type StoppedWork,
 } from './lifecycle';
 
-// A person's agent runtimes, and an agent's summary (M-014b).
+// A person's agent runtimes, and an agent's summary.
 export {
   agentRuntimesOf,
   agentSummaryOfRuntime,

@@ -29,7 +29,7 @@ from personal_agent_protocol.demo.kit import (
     PersonalAgentHost,
     personal_agent_reactor,
 )
-from personal_agent_protocol.demo.manzanita import manzanita
+from personal_agent_protocol.demo.manzanita import CONFIG, manzanita
 
 from agent_runtimes.apps import Application
 
@@ -90,7 +90,11 @@ async def explain_conversation_streaming() -> dict[str, Any]:
     network = InProcessNetwork()
     atlas = AgentIdentity(domain="atlas.example", name="Atlas")
     network.add(atlas.domain, atlas.website())
-    manzanita(network, clock)
+    manzanita(
+        network,
+        clock,
+        config=CONFIG,
+    )
     wire = DroppedConnection(network.client())
     http = httpx.AsyncClient(transport=wire)
     reactor = personal_agent_reactor(

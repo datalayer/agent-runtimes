@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A host's turn is answered once, across a restart of the runtime (DC-205, S-207).
+"""A host's turn is answered once, across a restart of the runtime.
 
 The turn an external event id or an ``Idempotency-Key`` names is kept in the
 runtime's protocol state store, not only in the process: a retry that reaches

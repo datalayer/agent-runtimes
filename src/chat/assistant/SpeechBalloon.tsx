@@ -7,7 +7,7 @@
  * A speech balloon over something that stands for the agent — the floating
  * assistant's character, or the floating popup's button while the chat is
  * closed: a peek, one short line — the agent's newest words, as the Office
- * Assistant said them (T-23), cut to their first words, or a
+ * Assistant said them, cut to their first words, or a
  * notification — that opens the conversation when clicked, and can be
  * dismissed; an approval it waits on, answered there with *Approve* or
  * *Deny*, and how many more wait; and, where the runtime can be asked and
@@ -21,7 +21,7 @@
  * Given suggestions while the agent waits for a question, it offers them as
  * chips under its words: one clicked is sent as the person's prompt.
  *
- * Shown `current` (T-23), it is the one thing being said or done now:
+ * Shown `current`, it is the one thing being said or done now:
  * *Now*, then the words as they are written, or the tool being called
  * ("Using **list_invoices**…"), cut to a few lines, and what goes with them
  * (a notebook given, read-only). Either way a tool line stands in for the
@@ -34,7 +34,7 @@
 
 import type { JSX, KeyboardEvent, MouseEvent, ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { Button, IconButton, Text } from '@primer/react';
+import { Button, IconButton, Text, TextInput } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { CheckIcon, CopyIcon, XIcon } from '@primer/octicons-react';
 import type { BalloonApproval } from './state';
@@ -97,7 +97,94 @@ export function BalloonSuggestions({
   );
 }
 
+/**
+ * The balloon's own prompt (13 November 2026): a line to type in, *Send*
+ * beside it, Enter sends and Escape closes, whatever the page around it.
+ * Disabled with `notReady` as its words while the conversation cannot take
+ * a message yet.
+ */
+export type BalloonPromptConfig = {
+  /** Its words while empty, and its accessible name. */
+  label: string;
+  /** The button's word. */
+  send: string;
+  /** Said in it, disabled, while it cannot take a message yet. */
+  notReady?: string;
+  onSend: (message: string) => void;
+  onClose: () => void;
+  /** Changed to put the caret in it: each click on the character. */
+  focusKey?: number;
+};
+
+/** The balloon's own prompt line. */
+export function BalloonPrompt({
+  label,
+  send,
+  notReady,
+  onSend,
+  onClose,
+  focusKey = 0,
+}: BalloonPromptConfig): JSX.Element {
+  const [text, setText] = useState('');
+  const ref = useRef<HTMLInputElement>(null);
+  const disabled = Boolean(notReady);
+  useEffect(() => {
+    if (focusKey > 0 && !disabled) {
+      ref.current?.focus();
+    }
+  }, [focusKey, disabled]);
+  const message = text.trim();
+  const sendIt = () => {
+    if (message && !disabled) {
+      onSend(message);
+      setText('');
+    }
+  };
+  return (
+    <Box
+      as="form"
+      data-balloon-prompt=""
+      display="flex"
+      gap={1}
+      mt={2}
+      onSubmit={(event: { preventDefault: () => void }) => {
+        event.preventDefault();
+        sendIt();
+      }}
+      onClick={(event: MouseEvent<HTMLElement>) => event.stopPropagation()}
+    >
+      <TextInput
+        ref={ref}
+        size="small"
+        block
+        aria-label={notReady ?? label}
+        placeholder={notReady ?? label}
+        disabled={disabled}
+        value={text}
+        onChange={event => setText(event.target.value)}
+        onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
+          if (event.key === 'Escape') {
+            event.stopPropagation();
+            onClose();
+          }
+        }}
+        sx={{ flex: 1, minWidth: 0 }}
+      />
+      <Button
+        type="submit"
+        size="small"
+        variant="primary"
+        disabled={disabled || !message}
+      >
+        {send}
+      </Button>
+    </Box>
+  );
+}
+
 export interface SpeechBalloonProps {
+  /** Its own prompt line, under everything else. */
+  prompt?: BalloonPromptConfig;
   text: string;
   /** There is more than the balloon holds. */
   more?: boolean;
@@ -117,8 +204,14 @@ export interface SpeechBalloonProps {
   decide?: DecisionAsker;
   /** The decision's form or answer is on screen: it stays, and is wider. */
   onDecisionActive?: (active: boolean) => void;
-  /** Wider, for the decision's form. */
-  wide?: boolean;
+  /**
+   * The balloon's width, fixed whatever it says (the user, 17 November 2026:
+   * "stable and fixed"), never wider than the window; `BALLOON_WIDTH`
+   * unless given. Not capped by its container: it hangs from an avatar
+   * narrower than itself, and a percentage there squeezed it to the
+   * avatar's width (18 November 2026).
+   */
+  width?: number;
   /** Puts the peek away: a × beside its line. Never for an approval. */
   onDismissPeek?: () => void;
   /**
@@ -315,6 +408,9 @@ function BalloonHistory({
   );
 }
 
+/** A balloon's width unless given: room for a table, a form or a list without growing. */
+export const BALLOON_WIDTH = 300;
+
 export function SpeechBalloon({
   text,
   more = false,
@@ -326,7 +422,7 @@ export function SpeechBalloon({
   approval,
   decide,
   onDecisionActive,
-  wide = false,
+  width = BALLOON_WIDTH,
   onDismissPeek,
   display = 'history',
   tool,
@@ -341,6 +437,7 @@ export function SpeechBalloon({
   waiting = false,
   fullText,
   onExpandHistory,
+  prompt,
 }: SpeechBalloonProps): JSX.Element {
   const chatText = useChatWords();
   // *more*: the words whole, when they were cut or overflow their lines.
@@ -375,13 +472,6 @@ export function SpeechBalloon({
     <Box
       data-speech-balloon=""
       data-balloon-display={display}
-      maxWidth={
-        wide || listed || offered || whole || (current && attachment)
-          ? 300
-          : current
-            ? 260
-            : 280
-      }
       px={3}
       py={2}
       color="fg.default"
@@ -397,10 +487,11 @@ export function SpeechBalloon({
       sx={{
         position: 'absolute',
         [align]: 0,
-        width:
-          wide || listed || offered || whole || (current && attachment)
-            ? 300
-            : 'max-content',
+        // Fixed, whatever it says: never sized by its words.
+        width,
+        // The window, not the containing block: the balloon is absolute in
+        // an avatar's box, a few dozen pixels wide.
+        maxWidth: 'calc(100vw - 32px)',
         bg: 'canvas.overlay',
         // The current balloon is the agent's voice now: its accent's edge.
         borderColor: current ? 'accent.muted' : 'border.default',
@@ -630,6 +721,7 @@ export function SpeechBalloon({
       ) : null}
       {!current ? <ToolLineAnnouncer line={tool} /> : null}
       {decide && <DecisionAsk ask={decide} onActiveChange={onDecisionActive} />}
+      {prompt ? <BalloonPrompt {...prompt} /> : null}
     </Box>
   );
 }

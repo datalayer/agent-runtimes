@@ -4,7 +4,7 @@
 """Signers and public keys for Web Bot Auth.
 
 A signer is anything that can sign bytes under a key id: the host owns the
-key (Vault transit in Datalayer, I-02), and an agent only ever
+key (Vault transit in Datalayer), and an agent only ever
 holds the signer — never the key. :class:`LocalSigner` holds a key in
 process, for tests and examples only.
 

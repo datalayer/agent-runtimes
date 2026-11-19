@@ -1,13 +1,13 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Voice at the terminal, for ``loop --voice`` (VO-15, VO-16, VO-17).
+"""Voice at the terminal, for ``loop --voice``.
 
 The microphone and the speaker are this machine's, through ``sounddevice``
 (MIT, PortAudio), installed with the ``voice`` extra —
-``pip install 'agent-runtimes[voice]'`` — never a default dependency
-(VO-16). Nothing here imports it at module load: a machine without it is
-told so in a sentence when voice is asked for (VO-17), never a traceback.
+``pip install 'agent-runtimes[voice]'`` — never a default dependency.
+Nothing here imports it at module load: a machine without it is
+told so in a sentence when voice is asked for, never a traceback.
 
 What is said is heard **on this machine** when ``faster-whisper`` is
 installed and the pinned store holds ``openai/whisper-small``
@@ -18,7 +18,7 @@ this machine** by Kokoro when ``kokoro-onnx`` (the ``voice`` extra) is
 installed and the store holds ``hexgrad/kokoro-82m``, else by the speech
 service (``POST /speech/syntheses``, 16-bit PCM), and played here. The store
 is filled from Datalayer's CDN, hash-checked: ``python -m
-agent_runtimes.voice.store`` (VO-16).
+agent_runtimes.voice.store``.
 
 When ``loop`` runs its agent **on Datalayer** (``--cloud``), what
 is said is heard and answers are said **on Datalayer's servers** with the
@@ -26,7 +26,7 @@ person's token, whatever this machine has. Only what the catalogue says runs
 on the machine (``where: machine``) is run here, and Kokoro is first asked to
 say one word in a process of its own: an engine that cannot speak here (eSpeak
 NG's data not found, a crash inside it) is said in a sentence and the answers
-go to the speech service, never a dead terminal (VO-16).
+go to the speech service, never a dead terminal.
 
 A key toggles listening (``Ctrl``+``T``, the ``/voice`` command's shortcut):
 a terminal sees no key release, so there is no holding. The transcript is
@@ -61,7 +61,7 @@ DEFAULT_AI_AGENTS_URL = "https://r1.datalayer.run"
 MODELS_DIR_ENV = store.MODELS_DIR_ENV
 DEFAULT_MODELS_DIR = store.DEFAULT_MODELS_DIR
 
-#: How the store is filled, said where a model is missing (VO-16).
+#: How the store is filled, said where a model is missing.
 FILL_STORE = "python -m agent_runtimes.voice.store"
 
 #: The model heard with on this machine, when it is there.
@@ -69,7 +69,7 @@ LOCAL_MODEL = "whisper-small"
 LOCAL_MODEL_FOLDER = f"openai/{LOCAL_MODEL}"
 
 #: What Kokoro is asked to do in a process of its own before it is relied on:
-#: eSpeak NG, under it, can end the process it runs in (VO-16).
+#: eSpeak NG, under it, can end the process it runs in.
 KOKORO_CHECK = (
     "import sys; from kokoro_onnx import Kokoro; "
     "Kokoro(sys.argv[1], sys.argv[2]).create('Ready.', voice=sys.argv[3], lang=sys.argv[4])"
@@ -81,7 +81,7 @@ DEFAULT_VOICE = "kokoro-af-heart"
 #: The longest one press listens, in seconds: then it stops by itself.
 LONGEST_SECONDS = 60
 
-#: Said when the ``voice`` extra is not installed (VO-16, VO-17).
+#: Said when the ``voice`` extra is not installed.
 NO_SOUNDDEVICE = (
     "Voice at the terminal needs this machine's microphone and speaker: "
     "pip install 'agent-runtimes[voice]' (sounddevice), then run loop --voice again."
@@ -89,7 +89,7 @@ NO_SOUNDDEVICE = (
 
 
 class VoiceRefused(Exception):
-    """Voice cannot run here, said in a sentence (VO-17)."""
+    """Voice cannot run here, said in a sentence."""
 
 
 def wav_of(pcm16: bytes, rate: int = RATE) -> bytes:
@@ -106,7 +106,7 @@ def wav_of(pcm16: bytes, rate: int = RATE) -> bytes:
 def microphone_problem(
     query_devices: Optional[Callable[[], Any]] = None,
 ) -> Optional[str]:
-    """Why voice cannot listen here, in a sentence naming the device found or not (VO-17); ``None`` when it can.
+    """Why voice cannot listen here, in a sentence naming the device found or not; ``None`` when it can.
 
     ``query_devices`` stands in for ``sounddevice.query_devices`` in a test.
     """
@@ -197,7 +197,7 @@ class Listener:
 
 @dataclass
 class Heard:
-    """What a press said, and how it was heard (VO-27's metadata)."""
+    """What a press said, and how it was heard (its metadata)."""
 
     text: str
     language: str
@@ -206,7 +206,7 @@ class Heard:
 
 
 class Hearing:
-    """Where what was said is written: this machine, or Datalayer's servers (VO-16)."""
+    """Where what was said is written: this machine, or Datalayer's servers."""
 
     def __init__(
         self,
@@ -217,7 +217,7 @@ class Hearing:
         post: Optional[Callable[..., Any]] = None,
         on_datalayer: bool = False,
     ) -> None:
-        #: ``loop`` runs its agent on Datalayer: heard there, whatever is here (VO-16).
+        #: ``loop`` runs its agent on Datalayer: heard there, whatever is here.
         self.on_datalayer = on_datalayer
         self.models_dir = models_dir or Path(
             os.path.expanduser(os.getenv(MODELS_DIR_ENV) or DEFAULT_MODELS_DIR)
@@ -319,7 +319,7 @@ class Hearing:
 
 
 class Speaker:
-    """Answers said and played here (``--speak``): by Kokoro on this machine when it is here, else by the speech service (VO-16)."""
+    """Answers said and played here (``--speak``): by Kokoro on this machine when it is here, else by the speech service."""
 
     def __init__(
         self,
@@ -336,7 +336,7 @@ class Speaker:
         on_datalayer: bool = False,
     ) -> None:
         self.voice = voice
-        #: ``loop`` runs its agent on Datalayer: said there, whatever is here (VO-16).
+        #: ``loop`` runs its agent on Datalayer: said there, whatever is here.
         self.on_datalayer = on_datalayer
         self.language = language
         self.token = token if token is not None else _token()
@@ -350,7 +350,7 @@ class Speaker:
         self._kokoro_factory = kokoro
         self._kokoro: Any = None
         # Asks Kokoro to say a word in a process of its own; kokoro-onnx's own
-        # is checked, a stand-in is not unless a test says how (VO-16).
+        # is checked, a stand-in is not unless a test says how.
         self._kokoro_check = kokoro_check or (
             kokoro_problem if kokoro is None else (lambda *_: None)
         )
@@ -478,7 +478,7 @@ class Speaker:
 def kokoro_problem(
     folder: Path, voice: str, language: str, *, python: str = sys.executable
 ) -> Optional[str]:
-    """Why Kokoro cannot say a word here, from a process of its own; ``None`` when it can (VO-16).
+    """Why Kokoro cannot say a word here, from a process of its own; ``None`` when it can.
 
     eSpeak NG, under kokoro-onnx, can end the process it runs in (its data not
     found): asked in a child, that is a sentence instead of a dead terminal.
@@ -542,7 +542,7 @@ def _token() -> Optional[str]:
 
 
 def _signed_in_token() -> Optional[str]:
-    """The token ``datalayer login`` keeps, read as ``loop --cloud`` reads it (L-04); ``None`` when signed out."""
+    """The token ``datalayer login`` keeps, read as ``loop --cloud`` reads it; ``None`` when signed out."""
     from agent_runtimes.loop.launch import NotSignedIn, make_client  # noqa: PLC0415
 
     try:
@@ -580,7 +580,7 @@ class VoiceSession:
     def problem(
         self, query_devices: Optional[Callable[[], Any]] = None
     ) -> Optional[str]:
-        """Why voice cannot run here (VO-17): no microphone, or nothing to hear with."""
+        """Why voice cannot run here: no microphone, or nothing to hear with."""
         return microphone_problem(query_devices) or self.hearing.problem()
 
     @property

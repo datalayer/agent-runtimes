@@ -47,13 +47,13 @@ def _exchange_desk() -> Application:
         scopes=[
             {
                 "name": "orders:read",
-                "description": "Read your orders and their status",
+                "description": "Read your orders and their status, to find the one to exchange; asked when you ask about an order; without it, only the exchange policy",
                 "changes": "none",
                 "personal_data": True,
             },
             {
                 "name": "orders:write",
-                "description": "Exchange an order you approved",
+                "description": "Exchange an order you approved; asked only when you say to exchange one; without it, the desk says what an exchange would be but changes nothing",
                 "changes": "reversible",
                 "personal_data": True,
             },
@@ -193,7 +193,7 @@ def test_what_the_builders_refuse() -> None:
 
 
 def test_a_company_may_offer_personal_agents_no_sign_in() -> None:
-    """D4-08 (PAP 0.3 as published §3.2, `auth.disabled`): off unless said; on, written as
+    """`auth.disabled` (PAP 0.3 as published §3.2): off unless said; on, written as
     `sign_in_disabled`, and the company answers signed out only."""
     quiet = Application("q", "chat", agent="example-blank:0.0.1")
     assert (
@@ -211,7 +211,7 @@ def test_a_company_may_offer_personal_agents_no_sign_in() -> None:
     assert (
         role.sign_in_disabled and closed._pap()["company"]["sign_in_disabled"] is True
     )
-    # Its public skills published to personal agents (D4-06): off unless said.
+    # Its public skills published to personal agents: off unless said.
     publishing = Application("p", "chat", agent="example-blank:0.0.1")
     assert publishing.as_company(publish_skills=True).publish_skills is True
     assert publishing._pap()["company"]["publish_skills"] is True
@@ -224,7 +224,7 @@ def test_a_company_may_offer_personal_agents_no_sign_in() -> None:
 
 
 def test_a_companys_website_flags_are_written_as_the_appspec_says_them() -> None:
-    """D5-09 (PAP draft 0.4 §6): `web_unscoped` with the website, `web_disabled` without it; off unless said."""
+    """PAP draft 0.4 §6: `web_unscoped` with the website, `web_disabled` without it; off unless said."""
     full = Application("w", "chat", agent="example-blank:0.0.1")
     assert (
         full.as_company(interfaces=("agent", "web"), web_unscoped=True).web_unscoped

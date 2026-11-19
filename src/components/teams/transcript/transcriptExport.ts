@@ -4,7 +4,7 @@
  */
 
 /**
- * The transcript as a JSON file (SCENES S3-03): the lines as they are,
+ * The transcript as a JSON file: the lines as they are,
  * under a version, so that `agent_runtimes` reads them back in Python
  * (`loop/scenes/transcript.py`, `lines_of_json`) and a problem seen on a
  * stage is replayed in a test.

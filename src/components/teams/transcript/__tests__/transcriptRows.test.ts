@@ -4,7 +4,7 @@
  */
 
 /**
- * The transcript as rows (SCENES S2-01): a call's duration from its two
+ * The transcript as rows: a call's duration from its two
  * ends, an ask's from the question to the answer, a failed exchange marked,
  * sorting by time holding the open call last; the Markdown; the filter.
  */

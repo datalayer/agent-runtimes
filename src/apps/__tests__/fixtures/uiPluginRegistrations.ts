@@ -4,7 +4,7 @@
  */
 
 /**
- * The registrations a UI spec is held to (F-03): each Reactor
+ * The registrations a UI spec is held to: each Reactor
  * plugin of `src/apps/plugins/` built on a reactor of its own, started, and
  * read back — the Slots it fills, the Contribution Points it contributes to,
  * the Commands it registers, the Contribution Points it offers, and the
@@ -52,11 +52,13 @@ import { NotebookToolbarPlugin } from '../../plugins/notebook-toolbar';
 import { NotebookViewPlugin } from '../../plugins/notebook-view';
 import { LoopPageLayoutPlugin } from '../../plugins/page-layout';
 import { PapSignInPlugin } from '../../plugins/pap-sign-in';
+import { BrowserSessionPlugin } from '../../plugins/browser-session';
 import { PromptPlugin } from '../../plugins/prompt';
 import { SpreadsheetPlugin } from '../../plugins/spreadsheet';
 import { SpreadsheetViewPlugin } from '../../plugins/spreadsheet-view';
 import { SubagentActivityPlugin } from '../../plugins/subagent-activity';
 import { WindowFramePlugin } from '../../plugins/window-frame';
+import { AGENT_UI_PLUGINS, defaultPluginOf } from '../../agentUiPlugins';
 
 /** An application of the catalogue with a page, and a component of its developer's. */
 export const FIXTURE_APP: AppSpec = (() => {
@@ -125,11 +127,17 @@ export const HOW_TO_MOUNT: Record<string, Mount> = {
   'notebook-view': () => [NotebookViewPlugin],
   'page-layout': () => [LoopPageLayoutPlugin],
   'pap-sign-in': () => [PapSignInPlugin],
+  'browser-session': () => [BrowserSessionPlugin],
   prompt: () => [PromptPlugin],
   spreadsheet: () => [SpreadsheetPlugin],
   'spreadsheet-view': () => [SpreadsheetViewPlugin],
   'subagent-activity': () => [SubagentActivityPlugin],
   'window-frame': () => [WindowFramePlugin],
+  // The UI the agents, their MCP servers, skills and tools bring (15
+  // November 2026): each its own plugin, by its UI spec's id.
+  ...Object.fromEntries(
+    Object.keys(AGENT_UI_PLUGINS).map(id => [id, () => [defaultPluginOf(id)!]]),
+  ),
 };
 
 /**
@@ -161,6 +169,8 @@ export const NOT_UI: Record<string, string> = {
     'A sidebar of the checkpoints example, not mounted by the Loop editor or an application.',
   'a2ui-scene': 'A scene of the A2UI examples, cast per example.',
   'pap-example': 'A page of the PAP examples, cast per example.',
+  'locked-ui':
+    'What a visitor sees locked of the UI an agent brings (each its own UI spec), cast per agent with their words.',
   'agent-a2a':
     'An agent capability (which agent answers, and its openers), not a part of the interface.',
   'agent-a2ui':

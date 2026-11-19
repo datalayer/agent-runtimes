@@ -155,10 +155,79 @@ export interface UISpec {
   settings: Record<string, unknown>;
   /** The UI renderers it may be exposed through, ids of `agentspecs/ui-renderers`. */
   renderers: string[];
+  /**
+   * Where in the chat it may go, its default first (agentspecs 0.0.197): the
+   * chat's chrome — `header`, `toolbar`, `footer`, `banner` — a side panel,
+   * `left` or `right`, or a `message`. None for a part of the workspace itself.
+   */
+  placements?: Array<
+    'header' | 'toolbar' | 'footer' | 'banner' | 'left' | 'right' | 'message'
+  >;
+  /**
+   * What it puts in the chat's title bar, and the frontend tool that sets it
+   * (a UI whose first placement is `header`).
+   */
+  header?: UiHeaderSpec;
+  /** The UI plugins it stands in for: a chat that has it leaves them out. */
+  supersedes?: string[];
   /** The catalog its components are written in. */
   catalog: string;
   /** The visual components it renders. */
   components: ComponentSpec[];
+}
+
+/** What an indicator's colour says, in the theme's own tokens. */
+export type UiHeaderTone =
+  'neutral' | 'accent' | 'success' | 'attention' | 'danger';
+
+/** One option of a header drop-down. */
+export interface UiHeaderOptionSpec {
+  /** What the page sends when it is chosen. */
+  id: string;
+  /** What the person reads. */
+  label: string;
+  /** What the agent is told while it is chosen, in place of the item's; empty for nothing. */
+  says?: string;
+}
+
+/**
+ * One item of a header UI: a button that says its `message` (`action`), a
+ * drop-down told to the agent with every turn (`choice`), or something the
+ * agent shows through the header's frontend tool (`indicator`).
+ */
+export interface UiHeaderItemSpec {
+  /** Its name: the argument of the header's frontend tool that sets it. */
+  id: string;
+  kind: 'action' | 'choice' | 'indicator';
+  /** Its name, as the person reads and hears it. */
+  label: string;
+  /** What it means: the person's tooltip, and what the model reads. */
+  description: string;
+  octicon?: string;
+  /** An action's: what pressing it says to the agent, as the person. */
+  message?: string;
+  /** A choice's options, in order. */
+  options?: UiHeaderOptionSpec[];
+  /** A choice's option to start with; its first unsaid. */
+  default?: string;
+  /** A choice's: what the agent is told with every turn, `{label}` the option chosen. */
+  says?: string;
+  /** An indicator's: how it is drawn. */
+  display?: 'label' | 'counter' | 'status' | 'meter';
+  /** A meter's unit, after its value. */
+  unit?: string;
+  /** A meter's full value; 100 unsaid. */
+  max?: number;
+}
+
+/** A header UI's declaration (`agentspecs/ui/<id>.yaml`, `header`). */
+export interface UiHeaderSpec {
+  /** The frontend tool its agent sets it with: `set_<the UI's id>`. */
+  tool?: string;
+  /** When the agent calls the tool, as the model reads it. */
+  when?: string;
+  /** Three items at most. */
+  items: UiHeaderItemSpec[];
 }
 
 /**
@@ -183,6 +252,9 @@ export interface UiChoice {
   plugin: string;
   /** The UI renderer of `agentspecs/ui-renderers` it is exposed through, by id. */
   renderer?: string;
+  /** Where in the chat it goes, one of its spec's `placements`; its default unsaid. */
+  placement?:
+    'header' | 'toolbar' | 'footer' | 'banner' | 'left' | 'right' | 'message';
 }
 
 /** The layer of an agent's visit a protocol answers. */
@@ -1004,6 +1076,11 @@ export interface AppConnectionSpec {
   as: 'owner' | 'user';
   /** The tools it may use, by name or pattern; all when empty. */
   only: string[];
+  /**
+   * Whether it runs without this connection when its secrets are not set up,
+   * as its agent does (agentspecs 0.0.189): only a server its agent says optional.
+   */
+  optional?: boolean;
 }
 
 /** How a Personal Agent Protocol company is reached (PAP §3.1). */
@@ -1086,23 +1163,23 @@ export interface AppPapCompanySpec {
   signedOut: boolean;
   /**
    * Whether it offers personal agents no sign-in (PAP `auth.disabled`, 0.3 as
-   * published): they ask only what anybody may ask, in nobody's account (D4-08).
+   * published): they ask only what anybody may ask, in nobody's account.
    */
   signInDisabled: boolean;
   /**
    * Whether it publishes the application's skills to personal agents as a
    * `skill_index` (PAP 0.3 §9.4): only the public, secret-free ones, which the
-   * platform decides at Ship (D4-06).
+   * platform decides at Ship.
    */
   publishSkills: boolean;
   /**
    * Whether a browser signed in for the person on its website has everything
-   * the account can do there (PAP `web.unscoped`, draft 0.4 §6; D5-09).
+   * the account can do there (PAP `web.unscoped`, draft 0.4 §6).
    */
   webUnscoped: boolean;
   /**
    * Whether it asks personal agents to use its agent and APIs rather than its
-   * website (PAP `web.disabled`, draft 0.4 §6; D5-09).
+   * website (PAP `web.disabled`, draft 0.4 §6).
    */
   webDisabled: boolean;
   interfaces: PapInterface[];
@@ -1117,7 +1194,8 @@ export interface AppPapCompanySpec {
   registeredAgents: string[];
   /**
    * What it does for the person once they confirm (the
-   * `operations` extension): each action and each tool once.
+   * `operations` extension): each action and each tool once. Derived from
+   * the application's `openapi` (its operations carrying `x-pap`), never written.
    */
   operations: AppPapOperationSpec[];
 }
@@ -1891,6 +1969,12 @@ export interface AppSpec {
   backendTools: string[];
   /** Tools of its own, written in its code; absent when it has none. */
   tools?: AppToolSpec[];
+  /**
+   * What it answers when called, as an OpenAPI 3.1 document (agentspecs checks
+   * it): its MCP tools, REST endpoints and PAP operations (`x-pap`). Absent: one
+   * operation, `ask`.
+   */
+  openapi?: Record<string, unknown>;
   /** The Frames it works under. */
   context: string[];
   /** The documents and datasets it answers from. */
@@ -1949,6 +2033,14 @@ export interface AppSpec {
   avatar: string;
   /** Its banner, by name, from the same profile's set. Empty, its id seeds one. */
   banner: string;
+  /**
+   * What it is, as one Markdown document, for a page that presents it beside
+   * its conversation: what a host's plugin draws in the workspace's left
+   * panel (`LoopSlots.leftPanel`). A paragraph, a bullet list of what it
+   * does, a note wholly in emphasis, and a paragraph of links for its
+   * actions, the main one in bold. Unsaid or empty, nothing is presented.
+   */
+  presentation?: string;
 }
 
 /**
@@ -1966,6 +2058,85 @@ export interface AgentShieldFirewall {
 export interface AgentPolicy {
   shield?: AgentShieldFirewall;
 }
+
+/**
+ * Whether the pickers offer an agent: the catalogue enables it and does not
+ * keep it out (`listed: false`); the seven seed agents are offered since agentspecs 0.0.215.
+ */
+export const isAgentspecOffered = (
+  spec: Pick<Agentspec, 'enabled' | 'listed'> | undefined | null,
+): boolean => spec?.enabled === true && spec.listed !== false;
+
+/**
+ * What an agent starts without (agentspecs 0.0.188, the user, 14 November
+ * 2026): MCP servers and skills of its own, by id without version. One whose
+ * secrets are not set up is left out, and the agent told which, instead of
+ * holding the start back; of each group of `atLeastOne`, one must be set up.
+ */
+export interface AgentspecOptional {
+  mcpServers: string[];
+  skills: string[];
+  /**
+   * Backend tools set up by an account the person links in Settings
+   * (`linkedAccounts`, agentspecs 0.0.189): the posting tools of
+   * datalayer-social, left out while that account is not linked.
+   */
+  backendTools?: string[];
+  atLeastOne: string[][];
+}
+
+/** A component of an agent: one of its MCP servers, skills or backend tools. */
+export type AgentspecComponentKind = 'mcpServer' | 'skill' | 'backendTool';
+
+const componentIdOf = (ref: string): string => String(ref ?? '').split(':')[0];
+
+/** Whether the agent starts without this MCP server, skill or backend tool when it is not set up. */
+export const isAgentspecComponentOptional = (
+  spec: Pick<Agentspec, 'optional'> | undefined | null,
+  kind: AgentspecComponentKind,
+  id: string,
+): boolean => {
+  const listed =
+    kind === 'mcpServer'
+      ? spec?.optional?.mcpServers
+      : kind === 'skill'
+        ? spec?.optional?.skills
+        : spec?.optional?.backendTools;
+  return (listed ?? []).includes(componentIdOf(id));
+};
+
+/**
+ * The groups of an agent's optional components none of which is set up:
+ * each names its members by id. `isSetUp` says whether one is, by id.
+ */
+export const unmetAgentspecGroups = (
+  spec: Pick<Agentspec, 'optional'> | undefined | null,
+  isSetUp: (id: string) => boolean,
+): string[][] =>
+  (spec?.optional?.atLeastOne ?? []).filter(
+    group => !group.some(id => isSetUp(componentIdOf(id))),
+  );
+
+/** The engines that run and host an agent (`runtime_engine`), the default first. */
+export const RUNTIME_ENGINES = ['datalayer', 'kagent', 'agentcore'] as const;
+
+/** What runs and hosts an agent: a Datalayer runtime, kagent, or AWS AgentCore. */
+export type RuntimeEngine = (typeof RUNTIME_ENGINES)[number];
+
+/** How an engine is named to a person. */
+export const RUNTIME_ENGINE_LABELS: Record<RuntimeEngine, string> = {
+  datalayer: 'Datalayer',
+  kagent: 'kagent',
+  agentcore: 'AWS AgentCore',
+};
+
+/** The harnesses an engine can run; an engine absent here runs any. */
+export const RUNTIME_ENGINE_HARNESSES: Partial<
+  Record<RuntimeEngine, readonly string[]>
+> = {
+  kagent: ['pydantic-ai'],
+  agentcore: ['pydantic-ai'],
+};
 
 export interface Agentspec {
   /** Unique agent identifier */
@@ -1986,6 +2157,18 @@ export interface Agentspec {
   domain?: string;
   /** Whether the agent is enabled */
   enabled: boolean;
+  /**
+   * Whether the pickers offer the agent (the new agent page, the chats, the
+   * assign menu, loop's pickers), true unless said: an enabled agent that is
+   * not listed runs by id and as a default, without being offered.
+   */
+  listed?: boolean;
+  /**
+   * What the agent starts without (agentspecs 0.0.188): its MCP servers and
+   * skills, by id, left out when their secrets are not set up, and groups of
+   * which one must be.
+   */
+  optional?: AgentspecOptional;
   /** AI model identifier to use for this agent */
   model?: string;
   /**
@@ -2015,6 +2198,13 @@ export interface Agentspec {
   emoji?: string;
   /** Its colour: a name of the palette (`teal`, `indigo`…), drawn in the theme's value for it, or a hex where no name fits (`resolvePaletteColor`, primer-addons) */
   color?: string;
+  /** What it does on its own, in one line: under its name in a list of agents. */
+  tagline?: string;
+  /**
+   * What it is, as one Markdown document, for a page that presents it: a
+   * paragraph, a bullet list of what it does, links for where to read more.
+   */
+  presentation?: string;
   /** Chat suggestions to show users what this agent can do */
   suggestions?: AgentSuggestion[];
   /** Welcome message shown when agent starts */
@@ -2032,6 +2222,22 @@ export interface Agentspec {
    * which says how a client and an agent talk rather than what runs the loop.
    */
   harness?: string;
+  /**
+   * What runs and hosts this agent.
+   *
+   * `datalayer` (the default) is a Datalayer agent runtime, from the
+   * platform's pools or on your own machine; `kagent` is kagent, a Kubernetes
+   * control plane for agents: a kagent Agent (an AgentTemplate and a Harness
+   * running `agent-runtimes serve --target kagent`), reached through kagent's
+   * A2A gateway at `/agents/{namespace}/{name}`, each conversation a session
+   * actor of Agent Substrate, suspended when idle and resumed on the next
+   * message; `agentcore` is Amazon Bedrock AgentCore Runtime in the AWS
+   * account of the organization that launches it. The spec's engine is the
+   * default a launch may override (`runtime_engine` on `POST /runtimes`).
+   * Distinct from `harness`, which says which agent program turns the loop;
+   * `kagent` and `agentcore` run `pydantic-ai` only.
+   */
+  runtimeEngine?: RuntimeEngine;
   /** Sandbox variant to use for this agent (e.g. 'eval', 'jupyter-server', 'kaggle'). */
   sandboxVariant?: string;
   /** User-facing objective for the agent */

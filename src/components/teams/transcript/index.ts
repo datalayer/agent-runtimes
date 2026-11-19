@@ -4,7 +4,7 @@
  */
 
 /**
- * The message views of a scene (SCENES S2, S3): the transcript as rows and
+ * The message views of a scene: the transcript as rows and
  * as a mermaid sequence diagram from the one list of lines, the three
  * views under one switch, the drill-down, the selection the stage shares,
  * the JSON export, and a recording played at its recorded pace

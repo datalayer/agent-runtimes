@@ -5,7 +5,7 @@
 
 /**
  * A coding agent's diff and terminal are drawn by the web chat where its
- * tool results carry them (SH-16): the result's
+ * tool results carry them: the result's
  * `_meta["reactor.ui/display"]`, as the runtime sends it over AG-UI, resolved
  * by the embedded display's type whatever the tool is called.
  */
@@ -96,7 +96,7 @@ afterEach(() => {
 const row = (tool: string) =>
   container.querySelector<HTMLElement>(`[data-chat-tool-row="${tool}"]`);
 
-describe('a coding agent’s displays in the chat (SH-16)', () => {
+describe('a coding agent’s displays in the chat', () => {
   it('draws the diff as a unified diff in the file’s language, whatever the tool is called', async () => {
     const reactor = buildReactorFromPlugins([
       createShieldDisplaysPlugin() as never,

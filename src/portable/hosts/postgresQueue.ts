@@ -8,8 +8,7 @@
  * LOCKED`, leased and renewed while worked, retried with backoff, dead after
  * five attempts, an ingress claim and its job kept in one transaction. Its
  * tables are `<prefix>_jobs`, `<prefix>_event_claims` and
- * `<prefix>_job_replays` (`hostSchemaSql`). Moved from the Slack service
- * (DC-004).
+ * `<prefix>_job_replays` (`hostSchemaSql`). Moved from the Slack service.
  *
  * @module portable/hosts/postgresQueue
  */
@@ -38,7 +37,7 @@ export class PostgresWorkQueue<T> implements WorkQueue<T> {
     readonly tablePrefix: string,
     readonly pollIntervalMs = 250,
     /**
-     * How often a job being worked renews its lease (S-207): well within the
+     * How often a job being worked renews its lease: well within the
      * five minutes after which `reclaimAbandonedJobs` takes a job back, so
      * only a worker that died loses its job, not one answering a long turn.
      */
@@ -124,7 +123,7 @@ export class PostgresWorkQueue<T> implements WorkQueue<T> {
 
   /**
    * Put a dead job back to work: once, by id, the replay kept with who asked
-   * in the same transaction (`<prefix>_job_replays`, S-405), refused or not.
+   * in the same transaction (`<prefix>_job_replays`), refused or not.
    */
   async replay(id: string, operator: string): Promise<boolean> {
     if (!/^\d+$/.test(id)) return false;
@@ -151,7 +150,7 @@ export class PostgresWorkQueue<T> implements WorkQueue<T> {
   }
 
   /**
-   * A dead job's payload, and only a dead one's (S-405): a live job, or an id
+   * A dead job's payload, and only a dead one's: a live job, or an id
    * that is no job, has none to read here.
    */
   async payloadOf(id: string): Promise<unknown> {

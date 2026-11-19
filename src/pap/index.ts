@@ -5,12 +5,14 @@
 
 import {
   AgentIdentityClient,
+  DEFAULT_PROTOCOL_VERSION,
   discoverCompany,
   mediatedSignIn,
   negotiateExtensions,
   offersDevice,
   SUPPORTED_EXTENSIONS,
   offersDirect,
+  organizationLabel,
   type DiscoveredCompany,
   type DiscoveryOptions,
   type JsonWebKeySet,
@@ -18,10 +20,23 @@ import {
   type IdentityRequestOptions,
 } from '@datalayer/personal-agent-protocol';
 
+/**
+ * The one PAP version Agent Runtimes speaks: its SDK's default, the newest it
+ * implements (the 1.0 draft with personal-agent-protocol 0.36). Announced and
+ * accepted alone: a company serving only older versions is refused at
+ * discovery, never negotiated down to.
+ */
+export const PAP_PROTOCOL_VERSION: string = DEFAULT_PROTOCOL_VERSION;
+
 /** Verified public company capabilities safe for model and UI surfaces. */
 export interface PapCompanySummary {
   readonly organization: string;
   readonly domain: string;
+  /**
+   * The name with the domain beside it (`organizationLabel`): the name is what
+   * the domain says about itself, unconfirmed (PAP 1.0 §10.3), never shown alone.
+   */
+  readonly label: string;
   readonly protocolVersion: string;
   readonly issuer: string | null;
   /**
@@ -102,7 +117,11 @@ export class PapPersonalAgentCapability {
     domain: string,
     options: DiscoveryOptions = {},
   ): Promise<PapCompanySummary> {
-    const company = await this.#discover(domain, options);
+    // At the one version Agent Runtimes speaks, whatever else the caller passes.
+    const company = await this.#discover(domain, {
+      ...options,
+      protocolVersions: [PAP_PROTOCOL_VERSION],
+    });
     const { document, oauthMetadata } = company;
     const auth = document.auth;
     const signIn = [
@@ -119,6 +138,7 @@ export class PapPersonalAgentCapability {
     return Object.freeze({
       organization: document.organization.name,
       domain: document.organization.domain,
+      label: organizationLabel(document.organization),
       protocolVersion: document.protocol_version,
       issuer: oauthMetadata?.issuer ?? null,
       signIn: Object.freeze(signIn),

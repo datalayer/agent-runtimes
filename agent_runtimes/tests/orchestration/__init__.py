@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The conformance suite (O0-12).
+"""The conformance suite.
 
 The conformance scenarios, written once and run against every registered
 adapter. That is the point of the item and the exit criterion of Phase 0:
@@ -16,7 +16,7 @@ Three modules:
   Everything protocol-specific in this directory lives there.
 - ``conftest``: the fixture that parametrizes every scenario over the
   registry.
-- ``test_conformance``: scenarios 1 to 6, which is what 19.7 gives O0-12.
+- ``test_conformance``: scenarios 1 to 6.
 
 An adapter that cannot do what a scenario needs is skipped with the reason
 it declared in its own ``AdapterCapabilities``, never quietly passed: a

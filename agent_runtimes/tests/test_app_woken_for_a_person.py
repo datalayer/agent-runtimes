@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A session woken for one person's own source reads it in their name (W-03).
+"""A session woken for one person's own source reads it in their name.
 
 A message in a person's mailbox wakes a session nobody opened, run by the
 scheduler on the owner's key. With that key IAM would list what the owner
@@ -269,7 +269,7 @@ async def test_a_session_woken_for_a_person_reads_in_their_name_with_the_token_g
     assert "A message arrived" in answer_of(events)
     live = sessions.session_of("session-mail-01")
     assert live is not None
-    # It runs as the application's principal, as any woken session does (I-03)...
+    # It runs as the application's principal, as any woken session does...
     assert live.describe()["acts_as"]["kind"] == "principal"
     # ...and its runs find the person's token where a person's own session's
     # would be: keyed on the request's bearer, the owner's key.

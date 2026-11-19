@@ -1,5 +1,5 @@
 {
-  "says": "What `loop` refuses of a scene, recorded from agentspecs (S-10).",
+  "says": "What `loop` refuses of a scene, recorded from agentspecs.",
   "recordedWith": "scripts/record-scene-checks.py",
   "cases": [
     {

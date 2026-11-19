@@ -4,10 +4,10 @@
  */
 
 /**
- * The composer's voice menu (VO-14, VO-21, VO-25, VO-30): beside
+ * The composer's voice menu: beside
  * the microphone, what a person chooses for themselves — the language they
  * speak and hear, when answers are heard, the voice, its speed and loudness,
- * how long they pause before they are done (VO-69), *Send what I say*, the
+ * how long they pause before they are done, *Send what I say*, the
  * microphone, and *Keep speech on this device*. A voice whose licence asks
  * for it shows its attribution under its name (Siwis, CC BY 4.0). Each
  * choice is kept in the person's settings and heard at once by every chat

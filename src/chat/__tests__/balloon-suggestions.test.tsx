@@ -4,7 +4,7 @@
  */
 
 /**
- * What the balloon offers and shows besides its words (T-23): the
+ * What the balloon offers and shows besides its words: the
  * suggestions while it waits for a question, one clicked sent; the chat's
  * three dots while it works with nothing written; *more* and *less* for
  * words cut to fit; and the history drawn large with *Expand*, *Shrink* and
@@ -162,7 +162,7 @@ describe('the three dots', () => {
 
 /**
  * The balloon's words as the eye reads them: without the whole words a screen
- * reader is given beside a cut (H-21, `data-balloon-words-whole`) or the
+ * reader is given beside a cut (`data-balloon-words-whole`) or the
  * announcer that says them once written.
  */
 const drawnWords = (): string => {
@@ -181,15 +181,24 @@ describe('words cut to fit', () => {
       balloon: { text: `${whole.slice(0, 119)}…`, fullText: whole, more: true },
     });
     const toggle = document.querySelector<HTMLElement>('[data-balloon-whole]')!;
+    // Folded, the whole words are drawn as markdown and the balloon's height
+    // clips them (the user, 17 November 2026: a cut flattened tables); more
+    // unfolds the box, less folds it back.
+    const box = () =>
+      document
+        .querySelector('[data-balloon-current-text]')!
+        .getAttribute('data-balloon-current-text');
     expect(toggle.textContent).toBe('more');
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
-    expect(drawnWords()).not.toContain('and that is all.');
+    expect(box()).toBe('');
+    expect(drawnWords()).toContain('and that is all.');
     await act(async () => toggle.click());
+    expect(box()).toBe('whole');
     expect(drawnWords()).toContain('and that is all.');
     expect(toggle.textContent).toBe('less');
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
     await act(async () => toggle.click());
-    expect(drawnWords()).not.toContain('and that is all.');
+    expect(box()).toBe('');
   });
 
   it('offer no more when nothing was cut', async () => {

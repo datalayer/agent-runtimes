@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The parity check (P-27): Chainlit's cookbook examples rebuilt with
+"""The parity check: Chainlit's cookbook examples rebuilt with
 LOOP's API (``examples/chainlit-parity``) do what Chainlit's do — each run
 through an `AppHost`, its model scripted, its words, steps, components,
 actions and window messages checked against the example it rebuilds.
@@ -116,7 +116,7 @@ async def test_text_to_sql_chains_three_steps_and_its_button_takes_action() -> N
     ]
     gen_query, execute_query = steps_of(channel)[:2]
     # The SQL written into its step as the model writes it, as Chainlit's
-    # stream_token does (P-31); the step ends with the query alone.
+    # stream_token does; the step ends with the query alone.
     streamed = [
         event.text
         for event in channel.events
@@ -169,7 +169,7 @@ async def test_the_assistant_calls_its_tools_through_the_rules() -> None:
         "6 × 7 is 42, and it is 74 °F, sunny and windy, in San Francisco."
     )
     # Each call a tool step, as Chainlit's cl.Step(type="tool") — in this
-    # process as on a runtime (P-33).
+    # process as on a runtime.
     calls = [(step.name, step.kind, step.input) for step in steps_of(channel)]
     assert calls == [
         ("calculator", "tool", {"operation": "multiply", "operand1": 6, "operand2": 7}),

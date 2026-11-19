@@ -4,8 +4,7 @@
  */
 
 /**
- * An application's rules, and the approvals it waits on, beside its page
- * (R-01b, U-19).
+ * An application's rules, and the approvals it waits on, beside its page.
  *
  * The rules in words — each action, what it covers, what it does about it —
  * and, under them, what is waiting for the person's yes: the approvals its
@@ -78,7 +77,7 @@ export function ruleInWords(rule: AppRuleSpec): {
 
 /**
  * The rule or Gate an approval was asked under, as the runtime wrote it in
- * its arguments: `_rule` for a rule, `_check` for a Gate (U-19).
+ * its arguments: `_rule` for a rule, `_check` for a Gate.
  */
 export const ruleOfApproval = (approval: ApprovalRecord): string => {
   const said = approval.tool_args?._rule ?? approval.tool_args?._check;
@@ -88,7 +87,7 @@ export const ruleOfApproval = (approval: ApprovalRecord): string => {
 /**
  * The approvals of one application: those its agent asked under its id, and
  * those the runtime marked as its own (`_app`) — a deployment's agent, a
- * Gate's, or a review its drift asked (U-19). Answered anywhere, an
+ * Gate's, or a review its drift asked. Answered anywhere, an
  * approval leaves every list at once: each decision is broadcast to all the
  * person's pages over the same `/ws`.
  */
@@ -104,7 +103,7 @@ export function approvalsOfApp(
 
 const PENDING = { status: 'pending' as const };
 
-/** A result it wants to keep, shown whole before it is (R-24). */
+/** A result it wants to keep, shown whole before it is. */
 export function DraftShown({ draft }: { draft: Draft }): JSX.Element {
   return (
     <Box data-testid="app-draft" mt={1}>
@@ -204,7 +203,7 @@ function Approvals({ app }: { app: AppSpec }): JSX.Element {
 }
 
 /**
- * The rules of the running session (SH-54): what decides it now,
+ * The rules of the running session: what decides it now,
  * the rules the person added, and a rule to add — in force at once, gone with
  * the session, never below the organization's.
  */

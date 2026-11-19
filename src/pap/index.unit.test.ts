@@ -10,12 +10,12 @@ import {
   type JsonWebKeySet,
 } from '@datalayer/personal-agent-protocol';
 import { describe, expect, it, vi } from 'vitest';
-import { PapPersonalAgentCapability } from './index';
+import { PAP_PROTOCOL_VERSION, PapPersonalAgentCapability } from './index';
 
 const company: DiscoveredCompany = {
   discoveryUrl: 'https://shop.example/.well-known/poppy.json',
   document: {
-    protocol_version: '0.4',
+    protocol_version: '1.0',
     organization: { name: 'Example Shop', domain: 'shop.example' },
     auth: {
       issuer: 'https://auth.shop.example',
@@ -25,7 +25,13 @@ const company: DiscoveredCompany = {
       },
     },
     agent: {
-      protocols: [{ type: 'a2a', endpoint: 'https://shop.example/agent' }],
+      protocols: [
+        {
+          type: 'a2a',
+          endpoint: 'https://shop.example/agent',
+          description: 'The catalogue',
+        },
+      ],
     },
     apis: [
       {
@@ -35,7 +41,7 @@ const company: DiscoveredCompany = {
       },
     ],
     // PAP draft 0.4 §3.3: a list, one entry per version the company supports.
-    extensions: { operations: [{ version: '1' }, { version: '2' }] },
+    extensions: { operations: [{ version: '2' }, { version: '3' }] },
   },
   // Direct and Device are what the issuer's grants say (draft 0.3 §3.2).
   oauthMetadata: {
@@ -75,14 +81,21 @@ const keys: JsonWebKeySet = {
 
 describe('PapPersonalAgentCapability', () => {
   it('returns company capabilities without remote endpoints', async () => {
-    const capability = new PapPersonalAgentCapability({
-      discover: vi.fn().mockResolvedValue(company),
-    });
+    const discover = vi.fn().mockResolvedValue(company);
+    const capability = new PapPersonalAgentCapability({ discover });
 
     const summary = await capability.discoverCompany('shop.example');
 
+    // At the one version Agent Runtimes speaks, the newest the SDK has.
+    expect(PAP_PROTOCOL_VERSION).toBe('1.0');
+    expect(discover).toHaveBeenCalledWith('shop.example', {
+      protocolVersions: ['1.0'],
+    });
     expect(summary).toMatchObject({
       organization: 'Example Shop',
+      // The domain beside the unconfirmed name (PAP 1.0 §10.3).
+      label: 'Example Shop (shop.example)',
+      protocolVersion: '1.0',
       signIn: ['direct'],
       scopes: { 'catalogue:read': 'Read the catalogue' },
       scopeHints: {
@@ -91,7 +104,7 @@ describe('PapPersonalAgentCapability', () => {
       protectedResources: ['https://shop.example'],
       interfaces: ['agent:a2a', 'api:openapi'],
       // The version a Session declares: the one this agent implements (Poppy-Extensions).
-      extensions: { operations: '2' },
+      extensions: { operations: '3' },
     });
     expect(JSON.stringify(summary)).not.toContain('openapi.json');
     expect(JSON.stringify(summary)).not.toContain('/agent');

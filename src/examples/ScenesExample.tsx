@@ -4,7 +4,7 @@
  */
 
 /**
- * The scenes of the catalogue (agentspecs `scenes`, A-15), in tabs:
+ * The scenes of the catalogue (agentspecs `scenes`), in tabs:
  * each scene's face and name, its `assumes` line under them, its graph and
  * its transcript behind *Graph · Transcript* (`SceneView`), its members
  * standing where its stage directions put them (`positions`), the entry's
@@ -194,8 +194,12 @@ function Scene({
   const entry = stage.entry;
   const entryInBrowser = entry.runsIn === 'browser';
   const runtimeMembers = useMemo(() => runtimeMembersOf(stage), [stage]);
-  const { inference, needsSignIn, anonymous } =
-    useBrowserInference(entryInBrowser);
+  // A visitor's key names the scene it is for: its models are the scene's.
+  const visitorFor = `scene:${scene.id}`;
+  const { inference, needsSignIn, anonymous } = useBrowserInference(
+    entryInBrowser,
+    visitorFor,
+  );
   // One tracer of what every member does: each inspector shows its own.
   const { tracer: inspector } = useAgentInspector();
   const [reached, setReached] = useState<Record<string, Reached>>({});
@@ -236,7 +240,7 @@ function Scene({
     accept: NOTEBOOK_AND_WORDS,
     inspector,
   });
-  // The script's cues, labelled by the entry's starters (A-13): chips in
+  // The script's cues, labelled by the entry's starters: chips in
   // its balloon while it waits for a question.
   const suggestions = useMemo(
     () => sceneCuesOf(scene, entry.app.interface.starters ?? []),
@@ -262,7 +266,7 @@ function Scene({
       })),
     [stage, runtimeMembers],
   );
-  // The line selected, held here for the transcript and the graph (S3-02):
+  // The line selected, held here for the transcript and the graph:
   // the transcript opens it, the graph draws its edge with a halo, and a
   // click on an edge selects its latest exchange.
   const [selectedLine, setSelectedLine] = useState<string | null>(null);
@@ -308,7 +312,9 @@ function Scene({
             expiresAt={anonymous.expiresAt}
             grantedMs={anonymous.grantedMs}
             label={`${entry.app.name}'s trial key`}
-            onExpire={() => useAnonymousSessionStore.getState().expire()}
+            onExpire={() =>
+              useAnonymousSessionStore.getState().expire(visitorFor)
+            }
           />
         </Box>
       )}
@@ -562,7 +568,7 @@ function Scene({
 }
 
 function Scenes(): JSX.Element {
-  // A scripted scene is played as written on its page (X-02): here, the teams staged live.
+  // A scripted scene is played as written on its page: here, the teams staged live.
   const scenes = useMemo(
     () => listSceneSpecs().filter(scene => scene.kind === 'team'),
     [],

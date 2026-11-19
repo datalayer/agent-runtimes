@@ -120,7 +120,10 @@ class TestTheCatalogue:
         # Gmail's server is offered since agentspecs 0.0.128; its worker is out of the
         # picker since agentspecs 0.0.164 (enabled: false), so the setup names it.
         assert triage.setup == ["The agent 'worker-mail-triage:0.0.1' is not enabled."]
-        assert any("not enabled" in line for line in APP_CATALOGUE["accounting"].setup)
+        # worker-accountant is enabled since agentspecs 0.0.184; jupyter-data-analyst
+        # is enabled, and offered by the pickers since 0.0.215 (the seventh seed agent).
+        assert APP_CATALOGUE["accounting"].setup == []
+        assert APP_CATALOGUE["quote-calculator"].setup == []
         assert APP_CATALOGUE["web-research"].setup == []
         assert APP_CATALOGUE["web-research"].interface.layout == "chat"
 
@@ -365,7 +368,8 @@ class TestWhatARuleDecides:
             )
 
     def test_an_application_has_a_face_and_its_permissions(self) -> None:
-        faces = [found.emoji for found in list_apps()]
+        # A home page demo (tagged `demo`) keeps the face the home page shows.
+        faces = [found.emoji for found in list_apps() if "demo" not in found.tags]
         assert len(set(faces)) == len(faces)
         permissions = APP_CATALOGUE["inbox-triage"].permissions
         assert permissions.spaces == []
@@ -422,7 +426,7 @@ class TestTheGenerator:
 
 
 def test_samples_are_in_the_catalogue_and_kept_by_a_runtime() -> None:
-    """E-06, E-11: an Appspec's samples, published with it by Datalayer
+    """An Appspec's samples, published with it by Datalayer
     — Quote Calculator's price list, a decision's alternatives — are in the
     generated catalogue, and a runtime given the application keeps them."""
     from agentspecs.apps import dump_app
@@ -442,7 +446,7 @@ def test_samples_are_in_the_catalogue_and_kept_by_a_runtime() -> None:
 
 
 def test_a_test_s_files_are_in_the_catalogue_and_kept_by_a_runtime() -> None:
-    """E-01: a test gives its application text files with what it asks
+    """A test gives its application text files with what it asks
     — Report from a File's CSVs — in the generated catalogue, kept by a runtime;
     a case in words alone has none."""
     from agentspecs.apps import dump_app
@@ -468,7 +472,7 @@ def test_a_test_s_files_are_in_the_catalogue_and_kept_by_a_runtime() -> None:
 
 
 def test_a_test_s_conversation_is_in_the_catalogue_and_kept_by_a_runtime() -> None:
-    """E-01: a test that is a conversation — Customer Interview's, which
+    """A test that is a conversation — Customer Interview's, which
     answer its consent and press its actions — is in the generated catalogue,
     turn by turn, and kept by a runtime; a case of one message has none."""
     from agentspecs.apps import dump_app

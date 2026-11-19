@@ -23,7 +23,7 @@ import React, { useEffect, useState } from 'react';
 import { Text, Spinner } from '@primer/react';
 import { AlertIcon } from '@primer/octicons-react';
 import {
-  AppearanceControlsWithStore,
+  AppearanceControls,
   Box,
   createThemeStore,
   DatalayerThemeProvider,
@@ -508,7 +508,10 @@ export const AgentNotebook: React.FC = () => {
           borderColor="border.default"
           flexShrink={0}
         >
-          <AppearanceControlsWithStore useStore={useAgentNotebookThemeStore} />
+          <AppearanceControls
+            layout="inline"
+            useStore={useAgentNotebookThemeStore}
+          />
         </Box>
         <Box display="flex" flex={1} minHeight={0} overflow="hidden">
           {serviceManager && (

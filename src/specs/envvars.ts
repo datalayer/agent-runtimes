@@ -78,6 +78,30 @@ export const BLUESKY_SERVICE_URL_SPEC_0_0_1: EnvvarSpec = {
   emoji: '🔗',
 };
 
+export const BOOKING_AFFILIATE_ID_SPEC_0_0_1: EnvvarSpec = {
+  id: 'BOOKING_AFFILIATE_ID',
+  version: '0.0.1',
+  name: 'Booking.com Affiliate ID',
+  description:
+    "The digit-only affiliate id of a Booking.com partner account, issued at partner onboarding. Sent as x-booking-affiliate-id to Booking.com's MCP server at https://demandapi-mcp.booking.com/v1/sp/mcp/, with the Demand API key.",
+  registrationUrl: 'https://www.booking.com/affiliate-program/v2/index.html',
+  tags: ['authentication', 'booking', 'travel', 'partner'],
+  icon: 'key',
+  emoji: '🔑',
+};
+
+export const BOOKING_DEMAND_API_KEY_SPEC_0_0_1: EnvvarSpec = {
+  id: 'BOOKING_DEMAND_API_KEY',
+  version: '0.0.1',
+  name: 'Booking.com Demand API Key',
+  description:
+    "The Demand API key Booking.com issues to a partner at onboarding. Sent unchanged, with no Bearer prefix, as x-booking-authorization to Booking.com's MCP server at https://demandapi-mcp.booking.com/v1/sp/mcp/, with the affiliate id; the tools it answers are those enabled for the partner's account.",
+  registrationUrl: 'https://developers.booking.com/mcp-server/docs/get-started',
+  tags: ['authentication', 'api-key', 'booking', 'travel', 'partner'],
+  icon: 'key',
+  emoji: '🔑',
+};
+
 export const DISCORD_BOT_TOKEN_SPEC_0_0_1: EnvvarSpec = {
   id: 'DISCORD_BOT_TOKEN',
   version: '0.0.1',
@@ -126,6 +150,18 @@ export const EARTHDATA_USERNAME_SPEC_0_0_1: EnvvarSpec = {
   emoji: '🔑',
 };
 
+export const FREEPIK_API_KEY_SPEC_0_0_1: EnvvarSpec = {
+  id: 'FREEPIK_API_KEY',
+  version: '0.0.1',
+  name: 'Freepik API Key',
+  description:
+    "API key for Freepik's stock content (its API is now served as Magnific's, with the same key), for the stock image skill to search and download its photos. Optional, as one stock image provider's key is enough.",
+  registrationUrl: 'https://www.magnific.com/api',
+  tags: ['authentication', 'api-key', 'images', 'stock', 'skill'],
+  icon: 'key',
+  emoji: '🔑',
+};
+
 export const GEMINI_API_KEY_SPEC_0_0_1: EnvvarSpec = {
   id: 'GEMINI_API_KEY',
   version: '0.0.1',
@@ -146,6 +182,19 @@ export const GITHUB_TOKEN_SPEC_0_0_1: EnvvarSpec = {
     'GitHub API token for repository management and code operations. Required for GitHub MCP server and GitHub skill to interact with GitHub repositories programmatically.',
   registrationUrl: 'https://github.com/settings/tokens',
   tags: ['authentication', 'token', 'github', 'git', 'mcp-server', 'skill'],
+  icon: 'key',
+  emoji: '🔑',
+};
+
+export const GOOGLE_MAPS_API_KEY_SPEC_0_0_1: EnvvarSpec = {
+  id: 'GOOGLE_MAPS_API_KEY',
+  version: '0.0.1',
+  name: 'Google Maps Platform API Key',
+  description:
+    "A Google Maps Platform API key from a Google Cloud project with billing on and the Maps Experience agent tools API (mapstools.googleapis.com) enabled, restricted to that API. Sent as X-Goog-Api-Key to Google's Maps MCP server at https://mapstools.googleapis.com/mcp for places, routes and weather; Google bills the key's project.",
+  registrationUrl:
+    'https://console.cloud.google.com/google/maps-apis/credentials',
+  tags: ['authentication', 'api-key', 'google', 'maps', 'travel'],
   icon: 'key',
   emoji: '🔑',
 };
@@ -205,6 +254,18 @@ export const KAGGLE_API_TOKEN_SPEC_0_0_1: EnvvarSpec = {
   emoji: '🔑',
 };
 
+export const LINKEDIN_LI_AT_SPEC_0_0_1: EnvvarSpec = {
+  id: 'LINKEDIN_LI_AT',
+  version: '0.0.1',
+  name: 'LinkedIn session cookie (li_at)',
+  description:
+    "Your LinkedIn session for your agents' reading: the **value of the cookie named `li_at`** on `www.linkedin.com`, copied from a browser where you are signed in to LinkedIn. Not `JSESSIONID`, `bcookie`, `bscookie`, `liap` or `lidc`: only `li_at`. It is a long string, usually starting with `AQED`.\n\n**Chrome or Edge:** open https://www.linkedin.com signed in, press F12 (or right-click › Inspect), then Application › Storage › Cookies › `https://www.linkedin.com`, find the row named `li_at` and copy its Value column (double-click the value, then copy).\n\n**Firefox:** open https://www.linkedin.com signed in, press F12, then Storage › Cookies › `https://www.linkedin.com`, select the row `li_at` and copy its Value.\n\n**Safari:** Settings › Advanced › Show features for web developers, then Develop › Show Web Inspector › Storage › Cookies › `www.linkedin.com` › `li_at`.\n\nPaste it in Settings › LinkedIn (or as a secret named `LINKEDIN_LI_AT`). It is stored encrypted in your Vault secrets and handed to each new runtime of yours whose agent reads LinkedIn (the Marketer's linkedin MCP server), never to anybody else's. It works until you sign out of LinkedIn in that browser, or it expires (about a year): then paste a new one. Treat it like a password: whoever holds it is signed in to LinkedIn as you.",
+  registrationUrl: 'https://www.linkedin.com',
+  tags: ['authentication', 'cookie', 'linkedin', 'social'],
+  icon: 'key',
+  emoji: '🔑',
+};
+
 export const LLM_API_KEY_SPEC_0_0_1: EnvvarSpec = {
   id: 'LLM_API_KEY',
   version: '0.0.1',
@@ -238,6 +299,30 @@ export const OPENROUTER_API_KEY_SPEC_0_0_1: EnvvarSpec = {
     "API key for OpenRouter, one key in front of the models of many vendors. Required by any harness configured with OpenRouter as its model provider run locally; the person's own. A Datalayer runtime takes no key: its model calls go through ai-inference.",
   registrationUrl: 'https://openrouter.ai/settings/keys',
   tags: ['authentication', 'api-key', 'openrouter', 'harness'],
+  icon: 'key',
+  emoji: '🔑',
+};
+
+export const PEXELS_API_KEY_SPEC_0_0_1: EnvvarSpec = {
+  id: 'PEXELS_API_KEY',
+  version: '0.0.1',
+  name: 'Pexels API Key',
+  description:
+    "API key for Pexels, for the stock image skill to search its photos (200 requests an hour). Optional, as one stock image provider's key is enough.",
+  registrationUrl: 'https://www.pexels.com/api/',
+  tags: ['authentication', 'api-key', 'images', 'stock', 'skill'],
+  icon: 'key',
+  emoji: '🔑',
+};
+
+export const PIXABAY_API_KEY_SPEC_0_0_1: EnvvarSpec = {
+  id: 'PIXABAY_API_KEY',
+  version: '0.0.1',
+  name: 'Pixabay API Key',
+  description:
+    "API key for Pixabay, for the stock image skill to search its photos (100 requests a minute). Optional, as one stock image provider's key is enough.",
+  registrationUrl: 'https://pixabay.com/api/docs/',
+  tags: ['authentication', 'api-key', 'images', 'stock', 'skill'],
   icon: 'key',
   emoji: '🔑',
 };
@@ -277,6 +362,18 @@ export const SLACK_TEAM_ID_SPEC_0_0_1: EnvvarSpec = {
   emoji: '🏢',
 };
 
+export const STRIPE_TEST_AGENT_API_KEY_SPEC_0_0_1: EnvvarSpec = {
+  id: 'STRIPE_TEST_AGENT_API_KEY',
+  version: '0.0.1',
+  name: 'Stripe Agent API Key (test mode)',
+  description:
+    "A Stripe agent API key created in a sandbox (test mode), never a live key: sent as the Bearer token to Stripe's MCP server at https://mcp.stripe.com. Create it in the Stripe Dashboard of a sandbox (Developers › API keys › Create agent key) with only the permissions the agent needs (Checkout Sessions write, Products and Prices read). Since December 2026 Stripe's MCP server takes only agent API keys or OAuth, no secret or plain restricted key. In test mode no card is charged: Stripe's test cards (4242 4242 4242 4242) pay on Stripe's page.",
+  registrationUrl: 'https://docs.stripe.com/keys#agent-keys',
+  tags: ['authentication', 'api-key', 'stripe', 'payments', 'test-mode'],
+  icon: 'key',
+  emoji: '🔑',
+};
+
 export const TAVILY_API_KEY_SPEC_0_0_1: EnvvarSpec = {
   id: 'TAVILY_API_KEY',
   version: '0.0.1',
@@ -287,6 +384,30 @@ export const TAVILY_API_KEY_SPEC_0_0_1: EnvvarSpec = {
   tags: ['authentication', 'api-key', 'search', 'web', 'research'],
   icon: 'key',
   emoji: '🔑',
+};
+
+export const UNSPLASH_ACCESS_KEY_SPEC_0_0_1: EnvvarSpec = {
+  id: 'UNSPLASH_ACCESS_KEY',
+  version: '0.0.1',
+  name: 'Unsplash Access Key',
+  description:
+    "Access key of an Unsplash application, for the stock image skill to search Unsplash's photos. Optional, as one stock image provider's key is enough. A new application is in demo mode (50 requests an hour); set UNSPLASH_TIER to production once Unsplash has approved it.",
+  registrationUrl: 'https://unsplash.com/oauth/applications',
+  tags: ['authentication', 'api-key', 'images', 'stock', 'skill'],
+  icon: 'key',
+  emoji: '🔑',
+};
+
+export const UNSPLASH_TIER_SPEC_0_0_1: EnvvarSpec = {
+  id: 'UNSPLASH_TIER',
+  version: '0.0.1',
+  name: 'Unsplash Tier',
+  description:
+    'The rate limit of the Unsplash application whose key is UNSPLASH_ACCESS_KEY, either demo (50 requests an hour, the default) or production (1000 an hour, once Unsplash approved the application). A setting, not a secret; optional.',
+  registrationUrl: 'https://unsplash.com/documentation#rate-limiting',
+  tags: ['setting', 'images', 'stock', 'skill'],
+  icon: 'gear',
+  emoji: '⚙️',
 };
 
 export const X_BEARER_TOKEN_SPEC_0_0_1: EnvvarSpec = {
@@ -311,23 +432,33 @@ export const ENVVAR_CATALOG: Record<string, EnvvarSpec> = {
   BLUESKY_APP_PASSWORD: BLUESKY_APP_PASSWORD_SPEC_0_0_1,
   BLUESKY_IDENTIFIER: BLUESKY_IDENTIFIER_SPEC_0_0_1,
   BLUESKY_SERVICE_URL: BLUESKY_SERVICE_URL_SPEC_0_0_1,
+  BOOKING_AFFILIATE_ID: BOOKING_AFFILIATE_ID_SPEC_0_0_1,
+  BOOKING_DEMAND_API_KEY: BOOKING_DEMAND_API_KEY_SPEC_0_0_1,
   DISCORD_BOT_TOKEN: DISCORD_BOT_TOKEN_SPEC_0_0_1,
   DISCORD_GUILD_ID: DISCORD_GUILD_ID_SPEC_0_0_1,
   EARTHDATA_PASSWORD: EARTHDATA_PASSWORD_SPEC_0_0_1,
   EARTHDATA_USERNAME: EARTHDATA_USERNAME_SPEC_0_0_1,
+  FREEPIK_API_KEY: FREEPIK_API_KEY_SPEC_0_0_1,
   GEMINI_API_KEY: GEMINI_API_KEY_SPEC_0_0_1,
   GITHUB_TOKEN: GITHUB_TOKEN_SPEC_0_0_1,
+  GOOGLE_MAPS_API_KEY: GOOGLE_MAPS_API_KEY_SPEC_0_0_1,
   GOOGLE_OAUTH_CLIENT_ID: GOOGLE_OAUTH_CLIENT_ID_SPEC_0_0_1,
   GOOGLE_OAUTH_CLIENT_SECRET: GOOGLE_OAUTH_CLIENT_SECRET_SPEC_0_0_1,
   HF_TOKEN: HF_TOKEN_SPEC_0_0_1,
   KAGGLE_API_TOKEN: KAGGLE_API_TOKEN_SPEC_0_0_1,
+  LINKEDIN_LI_AT: LINKEDIN_LI_AT_SPEC_0_0_1,
   LLM_API_KEY: LLM_API_KEY_SPEC_0_0_1,
   OPENAI_API_KEY: OPENAI_API_KEY_SPEC_0_0_1,
   OPENROUTER_API_KEY: OPENROUTER_API_KEY_SPEC_0_0_1,
+  PEXELS_API_KEY: PEXELS_API_KEY_SPEC_0_0_1,
+  PIXABAY_API_KEY: PIXABAY_API_KEY_SPEC_0_0_1,
   SLACK_BOT_TOKEN: SLACK_BOT_TOKEN_SPEC_0_0_1,
   SLACK_CHANNEL_IDS: SLACK_CHANNEL_IDS_SPEC_0_0_1,
   SLACK_TEAM_ID: SLACK_TEAM_ID_SPEC_0_0_1,
+  STRIPE_TEST_AGENT_API_KEY: STRIPE_TEST_AGENT_API_KEY_SPEC_0_0_1,
   TAVILY_API_KEY: TAVILY_API_KEY_SPEC_0_0_1,
+  UNSPLASH_ACCESS_KEY: UNSPLASH_ACCESS_KEY_SPEC_0_0_1,
+  UNSPLASH_TIER: UNSPLASH_TIER_SPEC_0_0_1,
   X_BEARER_TOKEN: X_BEARER_TOKEN_SPEC_0_0_1,
 };
 

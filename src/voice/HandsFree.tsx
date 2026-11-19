@@ -4,17 +4,17 @@
  */
 
 /**
- * *Talk with it*: a conversation by voice, hands-free (VO-12, VO-13),
+ * *Talk with it*: a conversation by voice, hands-free,
  * beside the composer's microphone where the application's voice
  * says `input: hands_free`.
  *
  * On, the microphone stays open. The words are written in the composer as
- * they are heard (VO-11); once the person has spoken and been silent for the
+ * they are heard; once the person has spoken and been silent for the
  * turn's silence (`turnSilenceMs`, 500 ms unless said), what was said is
  * heard whole and **sent** — nothing waits for a click. The answer is said as
  * it is written (hands-free implies `output: always`), and listening goes
  * on through it: speech heard while the agent thinks or speaks is
- * **barge-in** (VO-13) — its voice stops at once, the run is stopped while
+ * **barge-in** — its voice stops at once, the run is stopped while
  * the answer is still being written, the interrupted answer is marked in
  * the conversation, and what was heard starts the next turn. The state is
  * shown at all times: *Listening…*, *Thinking…*, *Speaking…*, *Paused*.
@@ -23,7 +23,7 @@
  * The microphone is opened anew when the agent begins answering, so what it
  * holds then is the person's; the browser's echo cancellation keeps the
  * answer's own sound out (`openMicrophone`). The first use asks for the
- * microphone as the click-to-talk does (VO-61), under the same consent.
+ * microphone as the click-to-talk does, under the same consent.
  *
  * @module voice/HandsFree
  */
@@ -54,7 +54,7 @@ import { INTERIM_MS } from './VoiceInput';
 
 /**
  * While the agent answers, how often the microphone is looked at for the
- * person speaking over it, by the VAD alone (VO-52): looked at every
+ * person speaking over it, by the VAD alone: looked at every
  * `INTERIM_MS` with the words transcribed, barge-in waited up to 0.7 s.
  */
 export const BARGE_IN_POLL_MS = 150;
@@ -62,7 +62,7 @@ export const BARGE_IN_POLL_MS = 150;
 /** The last of the sound looked at for barge-in: 1.5 s, so each look is cheap. */
 const BARGE_IN_WINDOW = Math.round(HEARING_RATE * 1.5);
 
-/** The least speech that is barge-in, in seconds: a short word (VO-52). */
+/** The least speech that is barge-in, in seconds: a short word. */
 const BARGE_IN_SHORTEST = 0.12;
 import type { SpokenMetadata } from './types';
 
@@ -73,17 +73,17 @@ export interface HandsFreeProps {
   /** Whose consent to the microphone is remembered: the application's id. */
   consentKey: string;
   /**
-   * The days the application keeps what is said as sound (VO-63): asked in
+   * The days the application keeps what is said as sound: asked in
    * the first sentence, and each turn's recording sent with its words.
    */
   keepsAudio?: number;
-  /** The microphone the person chose (VO-30); the browser's own when unsaid. */
+  /** The microphone the person chose; the browser's own when unsaid. */
   microphoneId?: string;
-  /** The silence after speech that ends a turn, in ms; 500 unless said (VO-12). */
+  /** The silence after speech that ends a turn, in ms; 500 unless said. */
   turnSilenceMs?: number;
   /** A turn, heard whole: sent at once. */
   send: (text: string, metadata: SpokenMetadata) => void;
-  /** The words heard so far, for the composer (VO-11); `''` gives it back. */
+  /** The words heard so far, for the composer; `''` gives it back. */
   onInterim?: (text: string) => void;
   /** The agent is answering: a run is in progress. */
   running?: boolean;
@@ -92,14 +92,14 @@ export interface HandsFreeProps {
   /**
    * How loud the agent's voice plays now, between 0 and 1 (the speaker's
    * `level`): while it speaks, speech counts as barge-in only above what the
-   * playback can leave in the microphone (VO-13, `heardOverPlayback`).
+   * playback can leave in the microphone (`heardOverPlayback`).
    */
   playbackLevel?: () => number;
-  /** Stops the agent's voice at once (barge-in, VO-13). */
+  /** Stops the agent's voice at once (barge-in). */
   onStopSpeaking?: () => void;
-  /** Stops the run while the answer is still being written (barge-in, VO-13). */
+  /** Stops the run while the answer is still being written (barge-in). */
   onStopRun?: () => void;
-  /** The answer being written was interrupted: marked in the conversation (VO-13). */
+  /** The answer being written was interrupted: marked in the conversation. */
   onInterrupted?: () => void;
   disabled?: boolean;
 }
@@ -202,7 +202,7 @@ export function HandsFree({
       heardWhile.current =
         stateRef.current === 'listening' ? 'listening' : 'answering';
       // Once the person spoke in this turn, its end is looked for often,
-      // by the VAD alone, the words between (VO-52).
+      // by the VAD alone, the words between.
       let spokeThisTurn = false;
       let wordsAt = 0;
       while (alive) {
@@ -277,7 +277,7 @@ export function HandsFree({
           ? { microphone: open.level(), playback: playing() }
           : undefined;
         if (bargedIn(now, so, levels)) {
-          // The person speaks over the agent (VO-13): its voice and its run
+          // The person speaks over the agent: its voice and its run
           // stop; what was heard goes on as the next turn.
           latest.current.onStopSpeaking?.();
           if (now === 'thinking' || runningRef.current) {
@@ -308,7 +308,7 @@ export function HandsFree({
           }
           latest.current.onInterim?.('');
           if (heard) {
-            // Kept as sound too, as the person agreed (VO-63).
+            // Kept as sound too, as the person agreed.
             latest.current.send(
               heard.text,
               keepsAudio
@@ -378,7 +378,7 @@ export function HandsFree({
           aria-pressed={on}
           aria-label={on ? 'Stop talking with it' : 'Talk with it'}
           // `aria-disabled`, never `disabled`: Primer's Tooltip throws for
-          // a trigger that is not interactive (VO-53).
+          // a trigger that is not interactive.
           aria-disabled={disabled || undefined}
           data-hands-free-toggle=""
           onClick={() => {

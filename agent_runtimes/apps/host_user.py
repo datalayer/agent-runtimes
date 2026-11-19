@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Who the user of an embedded application is, when it matters (D-21).
+"""Who the user of an embedded application is, when it matters.
 
 What a host page passes as `user` is a claim: anybody's page can say anything.
 An application whose Appspec says ``deployment.embedded.host.user: signed``
@@ -23,7 +23,7 @@ in — and shows it to its owner once (``POST …/deployments/{uid}/user-secret`
 
 The user it names is the session's: who `host_context` answers as `user`,
 the application's code's ``session.opened_by``, and who a page it saves was
-written for (I-10). A session it does not open is refused in a sentence: 401
+written for. A session it does not open is refused in a sentence: 401
 with no token, 403 with a token that is not one, 503 on a runtime that was
 not given the secret.
 
@@ -67,7 +67,7 @@ MAX_SECONDS = 3600
 #: What a clock apart is forgiven, in seconds.
 LEEWAY_SECONDS = 30
 
-#: The tool its agent reads what the page passes with (D-10).
+#: The tool its agent reads what the page passes with.
 HOST_CONTEXT_TOOL = "host_context"
 
 
@@ -113,7 +113,7 @@ def use_user_secret(deployment_uid: str, secret: Optional[str]) -> None:
     """Give this runtime a deployment's secret in the process; ``None`` takes it back."""
     if secret:
         _GIVEN[deployment_uid] = secret
-        # Verifies the host's tokens, never shown to the model (R-19).
+        # Verifies the host's tokens, never shown to the model.
         hold(secret)
     else:
         release(_GIVEN.pop(deployment_uid, None))
@@ -127,18 +127,18 @@ def _secret_of(deployment_uid: str) -> str:
 
 
 def reads_user(app: AppSpec) -> bool:
-    """Whether its agent reads the page's `user` with `host_context` (D-10)."""
+    """Whether its agent reads the page's `user` with `host_context`."""
     embedded = app.deployment.embedded if app.deployment else None
     host = embedded.host if embedded else None
     return bool(host is not None and "user" in host.context)
 
 
-#: What the tools of a host page's functions are called: `host_<name>` (D-10).
+#: What the tools of a host page's functions are called: `host_<name>`.
 HOST_TOOL_PREFIX = "host_"
 
 
 def host_tools(app: AppSpec) -> frozenset[str]:
-    """The tools its agent is given for the host page (D-10), by name.
+    """The tools its agent is given for the host page, by name.
 
     `host_context` when its Appspec lists what the page passes, and
     `host_<name>` for each function the page offers — as agent-runtimes'

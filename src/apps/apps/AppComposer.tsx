@@ -4,7 +4,7 @@
  */
 
 /**
- * An application's commands and modes in the composer (P-19).
+ * An application's commands and modes in the composer.
  *
  * - Each of its **commands** is a workspace command (`LoopCommand`), listed
  *   in the composer's `/` menu (`composer`): picking it writes `/<name> `,
@@ -14,21 +14,21 @@
  *   one menu each; the option picked goes with every run as
  *   `forwardedProps.loop.modes` (`LoopRunProps`), and the runtime tells the
  *   agent its instructions, on the model it names, for that run.
- * - What a person may **send** without being asked (P-21,
- *   `interface.uploads`): a paper clip beside the composer takes images,
+ * - What a person may **send** without being asked
+ *   (`interface.uploads`): a paper clip beside the composer takes images,
  *   files and recordings of the kinds and sizes the Appspec says — one it
  *   does not take is refused in a sentence and never read — and the files
  *   held go with the next message as `forwardedProps.loop.files`, then are
  *   let go. The runtime refuses again what was sent all the same.
- * - Its **profiles** (P-20, `interface.profiles`): a picker beside the
+ * - Its **profiles** (`interface.profiles`): a picker beside the
  *   composer, on the first unless another is picked. The profile picked goes
  *   with every run as `forwardedProps.loop.profile`, and its starters (else
  *   the application's) are what the empty chat offers, by category
  *   (`LoopChatExtras.openers`). Once the first message is sent, the
  *   conversation keeps its profile: the picker says so and picks no other.
  *
- * Given the application as the person reads it (`translatedAppspec`, LOOP
- * P-26), its words are theirs; the composer's own, the chat's language's
+ * Given the application as the person reads it (`translatedAppspec`),
+ * its words are theirs; the composer's own, the chat's language's
  * (`useChatLanguage`).
  *
  * @module apps/apps/AppComposer
@@ -102,7 +102,7 @@ export async function holdUploads(
 /** The plugin's name, before the application's id. */
 export const APP_COMPOSER_PLUGIN_NAME = '@datalayer/loop-plugin-app-composer';
 
-/** Starters as the empty chat offers them: each under its category (P-20). */
+/** Starters as the empty chat offers them: each under its category. */
 export function startersAsOpeners(
   starters: readonly AppStarterSpec[],
 ): ChatSuggestionItem[] {
@@ -138,7 +138,7 @@ export function defineAppComposerPlugin(app: AppSpec) {
   }));
 
   function ProfilePicker(): JSX.Element | null {
-    // In the chat's language, as the chat's own words (P-26).
+    // In the chat's language, as the chat's own words.
     const words = interfaceWords(useChatLanguage());
     const now = profileChoice(app, useSignalValue(profile));
     const kept = useSignalValue(started);
@@ -245,7 +245,7 @@ export function defineAppComposerPlugin(app: AppSpec) {
   }
 
   const uploads = app.interface.uploads;
-  /** The files held for the next message, and the last refusal (P-21). */
+  /** The files held for the next message, and the last refusal. */
   const held = signal<HeldUploads>({ files: [], refused: null });
 
   function Attach(): JSX.Element | null {

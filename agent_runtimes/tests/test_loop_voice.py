@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Voice at the terminal (VO-15, VO-16, VO-17): ``loop --voice`` and
+"""Voice at the terminal: ``loop --voice`` and
 ``/voice``, where what is said is heard, and the refusals in a sentence. The
 microphone, the speaker and the speech service are stand-ins on the real
 shapes; nothing here needs sounddevice.
@@ -100,7 +100,7 @@ def test_a_recording_is_a_wav_the_service_reads():
 
 
 def test_no_microphone_no_voice_is_a_sentence_naming_the_devices(monkeypatch):
-    """VO-17: refused in a sentence, naming the device found or not; never a traceback."""
+    """Refused in a sentence, naming the device found or not; never a traceback."""
     assert voice.microphone_problem(lambda: devices("Built-in Microphone")) is None
     assert (
         voice.microphone_name(lambda: devices("HDMI", inputs=0) + devices("Headset"))
@@ -130,7 +130,7 @@ def test_no_microphone_no_voice_is_a_sentence_naming_the_devices(monkeypatch):
 def test_heard_on_the_machine_when_the_model_is_here_else_on_the_servers(
     tmp_path: Path, monkeypatch
 ):
-    """VO-16: faster-whisper and the pinned model here, else Datalayer's servers with the person's token."""
+    """Faster-whisper and the pinned model here, else Datalayer's servers with the person's token."""
     monkeypatch.delenv("DATALAYER_TOKEN", raising=False)
     monkeypatch.delenv("DATALAYER_API_KEY", raising=False)
     hearing = voice.Hearing(models_dir=tmp_path, token=None)
@@ -209,7 +209,7 @@ def test_answers_are_said_a_piece_at_a_time_and_played_here():
 async def test_the_key_toggles_listening_and_the_words_go_on_the_prompt_line(
     monkeypatch,
 ):
-    """VO-15: Ctrl+T (the /voice shortcut) listens, then hears; the transcript waits for the prompt line."""
+    """Ctrl+T (the /voice shortcut) listens, then hears; the transcript waits for the prompt line."""
     assert voice_command.SHORTCUT == "c-t"
     heard_here: list[bytes] = []
 
@@ -307,7 +307,7 @@ class RunRecorder:
 
 @pytest.mark.asyncio
 async def test_a_line_said_is_sent_with_how_it_was_heard_not_just_its_words():
-    """VO-15, VO-27: the prompt line's message carries input voice, the language, the engine and where."""
+    """The prompt line's message carries input voice, the language, the engine and where."""
     session = voice.VoiceSession(
         hearing=voice.Hearing(models_dir=Path("/nowhere"), token="t0k")
     )
@@ -357,7 +357,7 @@ async def test_words_said_then_edited_are_still_said_but_a_command_is_not():
 
 
 def test_the_runtime_marks_a_run_spoken_from_its_forwarded_voice():
-    """The AG-UI endpoint `loop` talks to: forwardedProps.voice is the run's spoken input (VO-27)."""
+    """The AG-UI endpoint `loop` talks to: forwardedProps.voice is the run's spoken input."""
     from agent_runtimes.transports.agui import mark_spoken
     from agent_runtimes.voice import heard
 
@@ -384,7 +384,7 @@ def test_the_runtime_marks_a_run_spoken_from_its_forwarded_voice():
 
 
 # ---------------------------------------------------------------------------
-# VO-16: Kokoro on the machine, and the store filled from the CDN
+# Kokoro on the machine, and the store filled from the CDN
 # ---------------------------------------------------------------------------
 
 
@@ -483,7 +483,7 @@ class StandInKokoro:
 def test_answers_are_said_on_the_machine_by_kokoro_when_it_is_here(
     tmp_path, monkeypatch
 ):
-    """VO-16: the extra's Kokoro and the pinned model here: nothing asked of the service, no token needed."""
+    """The extra's Kokoro and the pinned model here: nothing asked of the service, no token needed."""
     from agent_runtimes.voice import store
 
     contents = {"kokoro-v1.0.onnx": b"onnx", "voices-v1.0.bin": b"voices"}
@@ -593,7 +593,7 @@ def _whisper_here(tmp_path: Path, monkeypatch) -> None:
 def test_on_datalayer_what_is_said_is_heard_and_said_there_whatever_is_here(
     tmp_path, monkeypatch
 ):
-    """VO-16: `loop --cloud` hears and speaks on Datalayer, even with the extra and the store here."""
+    """`loop --cloud` hears and speaks on Datalayer, even with the extra and the store here."""
     _kokoro_here(tmp_path, monkeypatch)
     _whisper_here(tmp_path, monkeypatch)
     assert voice.Hearing(models_dir=tmp_path, token="t0k").where == "local"
@@ -641,7 +641,7 @@ def test_on_datalayer_what_is_said_is_heard_and_said_there_whatever_is_here(
 
 
 def test_the_terminal_on_datalayer_hears_and_speaks_there(monkeypatch):
-    """VO-16: the session's voice follows where its agent runs."""
+    """The session's voice follows where its agent runs."""
     here = tux()
     here.speak = True
     assert here.voice_session().hearing.on_datalayer is False
@@ -656,7 +656,7 @@ def test_the_terminal_on_datalayer_hears_and_speaks_there(monkeypatch):
 def test_a_kokoro_that_cannot_speak_here_is_a_sentence_and_the_service_says_the_answers(
     tmp_path, monkeypatch
 ):
-    """VO-16: eSpeak NG ending the process (its data not found) is found in a child, said, and routed round."""
+    """ESpeak NG ending the process (its data not found) is found in a child, said, and routed round."""
     _kokoro_here(tmp_path, monkeypatch)
     checked: list[tuple[str, str]] = []
 
@@ -693,7 +693,7 @@ def test_a_kokoro_that_cannot_speak_here_is_a_sentence_and_the_service_says_the_
 
 
 def test_kokoro_is_asked_to_speak_in_a_process_of_its_own(tmp_path, monkeypatch):
-    """VO-16: the check runs a child; its crash is the sentence's reason, its success is nothing."""
+    """The check runs a child; its crash is the sentence's reason, its success is nothing."""
     _kokoro_here(tmp_path, monkeypatch)
     folder = tmp_path / "hexgrad" / "kokoro-82m"
     dying = tmp_path / "dying-python"
@@ -724,7 +724,7 @@ def test_kokoro_is_asked_to_speak_in_a_process_of_its_own(tmp_path, monkeypatch)
 
 
 def test_a_voice_is_given_its_own_language_tag_not_the_person_s(tmp_path, monkeypatch):
-    """VO-16: `fr` is said as `fr-fr` (eSpeak NG refuses `fr`); a language the voice does not speak is a sentence."""
+    """`fr` is said as `fr-fr` (eSpeak NG refuses `fr`); a language the voice does not speak is a sentence."""
     _kokoro_here(tmp_path, monkeypatch)
     french = voice.Speaker(
         voice="kokoro-ff-siwis",
@@ -751,7 +751,7 @@ def test_a_voice_is_given_its_own_language_tag_not_the_person_s(tmp_path, monkey
 def test_only_what_the_catalogue_says_runs_on_the_machine_runs_here(
     tmp_path, monkeypatch
 ):
-    """VO-16: `where: machine` in the catalogue, or the servers."""
+    """`where: machine` in the catalogue, or the servers."""
     from agent_runtimes.voice import store
 
     assert store.runs_on_the_machine("whisper-small") and store.runs_on_the_machine(
@@ -769,7 +769,7 @@ def test_only_what_the_catalogue_says_runs_on_the_machine_runs_here(
 
 
 def test_the_signed_in_token_is_used_when_no_variable_names_one(monkeypatch):
-    """VO-16: `datalayer login`'s token, as `loop --cloud` reads it, hears and says on Datalayer."""
+    """`datalayer login`'s token, as `loop --cloud` reads it, hears and says on Datalayer."""
     monkeypatch.delenv("DATALAYER_TOKEN", raising=False)
     monkeypatch.delenv("DATALAYER_API_KEY", raising=False)
     monkeypatch.setattr(voice, "_signed_in_token", lambda: "from-login")

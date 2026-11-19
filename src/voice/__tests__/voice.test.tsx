@@ -43,14 +43,14 @@ import type { TransformersModule, VadModule } from '../types';
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
 
-describe('an answer, as it is heard (VO-20)', () => {
+describe('an answer, as it is heard', () => {
   it('is read as plain words', () => {
     expect(
       plainWords(
         '## Result\n\nSee [the report](https://x.io/r) and **this**:\n\n```py\nprint(1)\n```\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\nDone.',
       ),
     ).toBe('Result. See the report and this: A code block. A table. Done.');
-    // A rule between parts is not said; a list's dash still goes (H-21).
+    // A rule between parts is not said; a list's dash still goes.
     expect(plainWords('Found it.\n\n---\n\n- one\n\n***\nDone.')).toBe(
       'Found it. one Done.',
     );
@@ -77,12 +77,12 @@ describe('an answer, as it is heard (VO-20)', () => {
   });
 });
 
-describe('the models, from Datalayer’s origin and as pinned (VO-49)', () => {
+describe('the models, from Datalayer’s origin and as pinned', () => {
   const base = 'https://models.example/speech';
   const pin = SPEECH_MODEL_CATALOGUE['silero-vad'].files[0];
 
   it('knows the pin of a model’s file under the origin', () => {
-    // Kept under its provider, as Datalayer's storage keeps it (VO-48).
+    // Kept under its provider, as Datalayer's storage keeps it.
     expect(pinOf(base, `${base}/snakers4/silero-vad/${pin.path}`)).toEqual(pin);
     expect(modelFolder('kokoro-82m')).toBe('hexgrad/kokoro-82m');
     // Without its provider, or under another, it is no pinned file.
@@ -210,7 +210,7 @@ function engines(heard: string) {
   };
 }
 
-describe('hearing on the device (VO-10, VO-14)', () => {
+describe('hearing on the device', () => {
   it('chooses Moonshine for English and Whisper for French', () => {
     expect(transcriberFor('en-US')?.id).toBe('moonshine-tiny-en');
     expect(transcriberFor('fr-FR')?.id).toBe('whisper-base');
@@ -232,7 +232,7 @@ describe('hearing on the device (VO-10, VO-14)', () => {
       runtimeFiles('https://models.example/speech', '1.31.0'),
     );
     expect(transcript?.text).toBe('Open the notebook.');
-    // Each model read under its provider, as the store keeps it (VO-48).
+    // Each model read under its provider, as the store keeps it.
     expect(stand.asked[0].model).toBe('usefulsensors/moonshine-tiny-en');
     expect(stand.vadUrls[0]).toBe(
       `https://models.example/speech/snakers4/silero-vad/${SPEECH_MODEL_CATALOGUE['silero-vad'].files[0].path}`,
@@ -273,7 +273,7 @@ describe('hearing on the device (VO-10, VO-14)', () => {
   });
 });
 
-describe('the speaker (VO-33)', () => {
+describe('the speaker', () => {
   it('asks the speech service for each sentence, and says a refusal once', async () => {
     const states: unknown[] = [];
     const fetcher = vi.fn(async (_url: string, init?: RequestInit) => {
@@ -299,7 +299,7 @@ describe('the speaker (VO-33)', () => {
     });
     speaker.say('Hello there, how are you?');
     speaker.say('This one is dropped.');
-    // Speaking from the first sentence given, before its sound comes (VO-12).
+    // Speaking from the first sentence given, before its sound comes.
     expect(states[0]).toEqual({ speaking: true });
     await vi.waitFor(() => expect(states.at(-1)?.refused).toBeTruthy());
     expect(fetcher.mock.calls[0][0]).toBe(
@@ -322,7 +322,7 @@ describe('the speaker (VO-33)', () => {
   });
 });
 
-describe('a long answer, said (VO-33, VO-39)', () => {
+describe('a long answer, said', () => {
   it('asks the next sentences only, never more at once than the service lets a person have', async () => {
     const answers: Array<(response: Response) => void> = [];
     const fetcher = vi.fn(
@@ -350,7 +350,7 @@ describe('a long answer, said (VO-33, VO-39)', () => {
   });
 });
 
-describe('the first sound, sooner (VO-52)', () => {
+describe('the first sound, sooner', () => {
   const LONG =
     'The Eiffel Tower was built for the 1889 World’s Fair, and it was the tallest structure in the world for forty years.';
 
@@ -395,7 +395,7 @@ describe('the first sound, sooner (VO-52)', () => {
   });
 });
 
-describe('a sentence streamed, played as it comes (VO-52)', () => {
+describe('a sentence streamed, played as it comes', () => {
   it('asks it streamed, and plays each slice of 16-bit PCM right after the last as it arrives', async () => {
     const started: Array<{ at: number; seconds: number }> = [];
     const sources: Array<{ stop: () => void; onended?: () => void }> = [];
@@ -565,7 +565,7 @@ describe('the answers of a conversation, heard as they are written', () => {
   });
 });
 
-describe('the assistant speaks with its voice (VO-22, VO-23)', () => {
+describe('the assistant speaks with its voice', () => {
   it('speaks while its voice is heard, even once the words have arrived', () => {
     expect(assistantStateOf('idle', { voicing: true })).toBe('speaking');
     expect(assistantStateOf('idle', { speaking: true })).toBe('idle');

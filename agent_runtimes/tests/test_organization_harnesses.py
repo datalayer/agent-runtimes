@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An organization's own harness, served through the same adapter and Shield (SH-46).
+"""An organization's own harness, served through the same adapter and Shield.
 
 Drilled on the ACP SDK's fake agent as the organization's own command: read
 from its organization's catalogue (IAM stood in for), validated with its
@@ -10,7 +10,7 @@ on the organization's policy, then launched over ACP and asked a turn whose
 file edit the Shield decides; refused for another organization, for an
 application of none, and once its command changes (the standalone Shield's
 refusal is agent-shield's own test).
-A listed harness is refused *listed, not drilled yet* (SH-57).
+A listed harness is refused *listed, not drilled yet*.
 """
 
 from __future__ import annotations

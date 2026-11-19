@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Rules a person adds to a running session (SH-54: a person's rules last as long as the session).
+"""Rules a person adds to a running session (a person's rules last as long as the session).
 
 From the session panel — the page's Rules card, the phone's, the terminal — a
 person **adds or tightens** a rule on a session while it runs: in force at

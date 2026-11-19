@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The sessions documentation holds to the code (MH-45).
+"""The sessions documentation holds to the code.
 
 Each verb `loop sessions --help` offers has its row on the CLI page, the
 REPL's commands and `loop plugins` are named, the harness capabilities page

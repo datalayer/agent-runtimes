@@ -4,7 +4,7 @@
  */
 
 /**
- * The transcript as a JSON file (SCENES S3-03): the Sales & Accounting
+ * The transcript as a JSON file: the Sales & Accounting
  * transcript with one refused call exports to the fixture the Python tests
  * read back (`agent_runtimes/tests/fixtures/scene_transcript_export.json`;
  * `UPDATE_GOLDEN=1` writes it again), reads back the same, and another

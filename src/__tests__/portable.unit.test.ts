@@ -153,7 +153,7 @@ describe('the portable entry', () => {
 
   it('reaches no module outside its folder at run time', () => {
     // A phone's Metro graph takes lib/portable/* and nothing else of Agent
-    // Runtimes (M-006): a module it reaches elsewhere is refused there.
+    // Runtimes: a module it reaches elsewhere is refused there.
     for (const file of reached.keys()) {
       expect(dirname(file), file).toBe(folder);
     }
@@ -197,14 +197,14 @@ describe('the portable entry', () => {
     });
   });
 
-  it('carries the reducer (DC-005)', () => {
+  it('carries the reducer', () => {
     expect(
       [...reached.keys()].map(file => file.slice(folder.length + 1)),
     ).toEqual(expect.arrayContaining(['semantic.ts', 'semanticOfAgUi.ts']));
   });
 });
 
-describe('the hosts entry (DC-004)', () => {
+describe('the hosts entry', () => {
   const portable = join(__dirname, '..', 'portable');
   const folder = join(portable, 'hosts');
   const reached = reachedFrom(join(folder, 'index.ts'));

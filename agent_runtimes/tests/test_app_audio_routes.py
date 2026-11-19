@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """
-``@app.audio`` and ``@app.interrupted`` reached over the session API (VO-46).
+``@app.audio`` and ``@app.interrupted`` reached over the session API.
 
 ``POST /apps/sessions/{uid}/audio`` takes a turn's sound as its body — WAV,
 FLAC, Ogg Opus or WebM, as its ``Content-Type`` says, at most a minute —
@@ -227,7 +227,7 @@ def test_an_application_without_code_sends_the_words_to_its_agent_marked_spoken(
     asked = [m for m in thread["messages"] if m["role"] == "user"]
     # The words heard, with its settings in words as a typed message has them.
     assert asked[-1]["content"].startswith(SAID)
-    # And the record keeps the turn as said, never the sound (VO-29).
+    # And the record keeps the turn as said, never the sound.
     spoken = [
         r
         for r in runtime.records
@@ -243,7 +243,7 @@ def test_a_message_said_on_the_page_reaches_app_audio_as_heard_there(
     """The page hears what is said — in the browser or by the speech
     service — and sends the words marked spoken: an application whose code
     has ``@app.audio`` is given them as what was heard, the sound staying
-    where it was heard (VO-46). A typed message is not.
+    where it was heard. A typed message is not.
     """
     run = {
         "threadId": "session-a-008",
@@ -344,7 +344,7 @@ async def test_spoken_over_the_turn_s_reader_is_told_then_its_stream_ends() -> N
 async def test_at_the_terminal_voice_gives_the_sound_to_app_audio(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """``loop`` running an application whose code hears (VO-46, VO-15):
+    """``loop`` running an application whose code hears:
     ``/voice`` twice, and the turn's sound goes to ``@app.audio``, heard
     where ``loop --voice`` hears — not to the prompt line.
     """

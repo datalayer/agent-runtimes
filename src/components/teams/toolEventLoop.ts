@@ -5,7 +5,7 @@
 
 /**
  * A streaming tool's events, told to an entry that runs in the page
- * (AGENT_BATTLE B1-00, 6 November 2026): each event is a turn the entry did
+ * (6 November 2026): each event is a turn the entry did
  * not ask for — sent at once while it is idle, held while a turn is in
  * flight and sent as one turn, the latest per source, when it ends — the
  * way the chat's loop does it (`ChatBase`), for the team hook's own loop.

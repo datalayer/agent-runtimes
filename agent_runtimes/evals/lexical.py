@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The report as a Lexical document (B3-03).
+"""The report as a Lexical document.
 
 The report engine answers one structured report; this hydrates it into a
 serialized Lexical editor state a person can open, read in the report's
@@ -67,7 +67,7 @@ REPORT_SECTIONS: tuple[tuple[str, str], ...] = (
 # ---------------------------------------------------------------------------
 # Nodes: the shapes the editor writes, shared with every document the runtime
 # writes (`agent_runtimes.utils.lexical`). Every block here is marked with its
-# provenance, which the report editor locks (B4-04).
+# provenance, which the report editor locks.
 # ---------------------------------------------------------------------------
 
 IS_BOLD = BOLD
@@ -80,8 +80,8 @@ def _evidence(provenance: dict[str, Any]) -> dict[str, Any]:
 
     Under `$`, which Lexical keeps through a load, a save and the
     collaboration binding even for a key it does not know, so the mark stays
-    on the block, and the report editor locks the blocks that have it
-    (B4-04). A field beside `type` would be dropped the first time the
+    on the block, and the report editor locks the blocks that have it.
+    A field beside `type` would be dropped the first time the
     document is opened.
     """
     return {"evidence": provenance}
@@ -126,7 +126,7 @@ def _analysis_output(
 
 
 def _from_ci(launch: dict[str, Any]) -> str:
-    """Where a launch made by CI came from (B6-02), or nothing."""
+    """Where a launch made by CI came from, or nothing."""
     config = as_dict(launch.get("config"))
     git = as_dict(config.get("git"))
     if not git:
@@ -194,7 +194,7 @@ def _case_rows(experiment: dict[str, Any]) -> list[dict[str, Any]]:
     return [row for row in (metrics.get("case_results") or []) if isinstance(row, dict)]
 
 
-#: The analysis kinds that are drawn rather than written out (B3-10).
+#: The analysis kinds that are drawn rather than written out.
 #:
 #: A heatmap and a pairwise table are grids a reader compares across; flattened
 #: into prose or a plain table they stop being comparisons. They reach the
@@ -679,7 +679,7 @@ def build_eval_report_lexical(
 
     # A stable anchor on every block, kept in its node state with the rest of
     # its provenance: a link names the block (`?block=`) and opens the report
-    # on it wherever narrative has since been written around it (B4-07).
+    # on it wherever narrative has since been written around it.
     for index, child in enumerate(children, start=1):
         child["$"]["evidence"]["block"] = f"block-{index}"
     return {
@@ -695,7 +695,7 @@ def build_eval_report_lexical(
 
 
 # ---------------------------------------------------------------------------
-# The document back out (B4-08)
+# The document back out
 # ---------------------------------------------------------------------------
 
 

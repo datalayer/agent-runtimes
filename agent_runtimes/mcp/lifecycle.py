@@ -177,7 +177,7 @@ _BEARER_ARG = re.compile(r"^\s*Authorization:\s*Bearer\s*$", re.IGNORECASE)
 
 
 class _Failures(dict[str, str]):
-    """Why each server failed, a credential never kept in it (R-19).
+    """Why each server failed, a credential never kept in it.
 
     What a start failed with is answered by the routes and said to whoever
     configured the agent: an error that echoes a command line with its
@@ -326,7 +326,7 @@ class MCPLifecycleManager:
                 logger.warning(
                     f"Environment variable '{name}' not found or empty during expansion"
                 )
-        # Used by the tool, never shown to the model (R-19).
+        # Used by the tool, never shown to the model.
         return expand_env_vars(
             value,
             env_source,
@@ -398,7 +398,7 @@ class MCPLifecycleManager:
         # If user provides a command, or a url to reach a remote server at, use
         # their config entirely. Its args, env and headers keep their `${VAR}`:
         # they are expanded as the server starts, so a secret never sits in
-        # the config the routes answer (R-19).
+        # the config the routes answer.
         if user_config:
             expanded = dict(user_config)
             if isinstance(expanded.get("command"), str):
@@ -734,6 +734,7 @@ class MCPLifecycleManager:
             self._failed_servers[server_id] = error
             return None
 
+        in_jupyter = False
         # Create the pydantic MCP server
         try:
             # Build env dict:
@@ -741,7 +742,7 @@ class MCPLifecycleManager:
             #  2. Layer extra_env (from API request body, e.g. decoded secrets)
             #  3. Layer config.env (from catalog/mcp.json, may contain ${VAR} refs)
             # This ordering lets config.env reference extra_env values via ${VAR}.
-            # Without the secrets a configure gave for other servers (R-19).
+            # Without the secrets a configure gave for other servers.
             env = env_for_server(os.environ, config)
             # A deployment's agent acts as its principal (`apps/principal`):
             # a server of the catalogue asking for `${DATALAYER_API_KEY}` on a
@@ -751,7 +752,7 @@ class MCPLifecycleManager:
             # Seen 6 November 2026: the home page's Accounting could not open
             # `odoo-accounting`, its runtime holding no key at all.
             # On the visitors' runtime, the gateway's Odoo servers start with
-            # the demo books' key, for a catalogue Battle's runs alone (B4-01).
+            # the demo books' key, for a catalogue Battle's runs alone.
             principal = self._principal_key(server_id, config, env)
             if not principal and self._asks_for_datalayer_key(config):
                 from agent_runtimes.apps.battle_books import books_start_key
@@ -762,7 +763,7 @@ class MCPLifecycleManager:
 
             if extra_env:
                 env.update(extra_env)
-                # Used by the server, never shown to the model (R-19).
+                # Used by the server, never shown to the model.
                 hold_env(extra_env)
                 # Names only: never any part of a value.
                 logger.info(
@@ -785,7 +786,7 @@ class MCPLifecycleManager:
                     for key, value in config.env.items()
                 }
                 logger.debug(f"  Expanded config.env: {list(expanded_env.keys())}")
-                # Used by the server, never shown to the model (R-19).
+                # Used by the server, never shown to the model.
                 hold_env(expanded_env)
                 env.update(expanded_env)
 
@@ -805,10 +806,18 @@ class MCPLifecycleManager:
                 self._failed_servers[server_id] = problem
                 return None
 
+            refused = await self._seed_browser_session(server_id)
+            if refused:
+                # LinkedIn refused the session pasted in Settings: not started,
+                # its tools left out with why; Sign in in the chat starts it again.
+                logger.warning(f"✗ {refused}")
+                self._failed_servers[server_id] = refused
+                return None
+
             if remote:
                 # Reached at its url, no process: its headers sent with
                 # every request, the bearer among them expanded here and
-                # held, never shown to the model (R-19).
+                # held, never shown to the model.
                 headers = self._expanded_headers(config, env)
                 problem = empty_bearer_problem(
                     server_id,
@@ -820,7 +829,7 @@ class MCPLifecycleManager:
                     self._failed_servers[server_id] = problem
                     return None
                 # An AgentCore Gateway: its bearer minted for the run by
-                # the agentcore identity provider, never a header (AC-20).
+                # the agentcore identity provider, never a header.
                 try:
                     gateway_auth = gateway_auth_of(config)
                 except IdentityRefused as refused:
@@ -834,9 +843,33 @@ class MCPLifecycleManager:
                     MCP_SERVER_HANDSHAKE_TIMEOUT,
                     auth=gateway_auth,
                 )
+            elif self._in_jupyter(server_id):
+                # The Pod's Jupyter container runs it (the agent-runtimes
+                # image cannot: patchright has no musl build), reached on the
+                # Pod's 127.0.0.1 over Streamable HTTP; given its catalogue's
+                # environment alone, never this process's secrets.
+                from agent_runtimes.mcp import jupyter_host
+
+                hosted_env = {
+                    key: str(env[key]) for key in (config.env or {}) if key in env
+                }
+                try:
+                    hosted_url = await jupyter_host.start_server(server_id, hosted_env)
+                except Exception as error:  # noqa: BLE001 - said, as any start that fails
+                    detail = redact(
+                        f"Failed to start MCP server '{server_id}' in the "
+                        f"Jupyter container: {error}"
+                    )
+                    logger.error(f"✗ {detail}")
+                    self._failed_servers[server_id] = detail
+                    return None
+                in_jupyter = True
+                pydantic_server = remote_toolset(
+                    server_id, hosted_url, {}, MCP_SERVER_HANDSHAKE_TIMEOUT
+                )
             elif config.transport == "streamable-http" and config.url:
                 # Its command runs as a local HTTP process, reached at its
-                # url (W-02: Gmail, whose every request carries a
+                # url (Gmail, whose every request carries a
                 # token IAM minted for whom the run acts for).
                 return await self._start_http_process_server(
                     server_id, config, env, expanded_args
@@ -885,6 +918,11 @@ class MCPLifecycleManager:
         # Start the server
         exit_stack = AsyncExitStack()
         await exit_stack.__aenter__()
+        if in_jupyter:
+            from agent_runtimes.mcp import jupyter_host
+
+            # Stopped there when it stops here, or when no attempt succeeds.
+            exit_stack.push_async_callback(jupyter_host.stop_server, server_id)
 
         try:
             return await self._attempts(server_id, config, pydantic_server, exit_stack)
@@ -1096,7 +1134,7 @@ class MCPLifecycleManager:
         One served deployment with a token: its principal is the key. None, or
         several with different tokens: nothing is chosen, and the server
         fails closed as before (`empty_bearer_problem`). Held, never shown
-        to the model (R-19); logged by name, never by value.
+        to the model; logged by name, never by value.
         """
         if env.get("DATALAYER_API_KEY"):
             return ""
@@ -1135,7 +1173,7 @@ class MCPLifecycleManager:
         self, config: MCPServer, env: dict[str, str]
     ) -> dict[str, str]:
         """A remote server's headers with their ``${VAR}`` expanded, the
-        credentials among them held, never shown to the model (R-19).
+        credentials among them held, never shown to the model.
         """
         headers = {
             name: self._expand_env_vars(value, lookup_env=env)
@@ -1158,6 +1196,49 @@ class MCPLifecycleManager:
         sentence = getattr(refusals, "sentence", None)
         return sentence or error_detail
 
+    @staticmethod
+    async def _seed_browser_session(server_id: str) -> str:
+        """
+        Write the person's session pasted in Settings as the server's, before its first start.
+
+        A server read through a browser session (LinkedIn's): its session from
+        ``LINKEDIN_LI_AT`` when the runtime was given it (the user, 15 November
+        2026). What fails is said by its name alone, and the server starts
+        anyway: the chat's Sign in stays.
+
+        Returns
+        -------
+        str
+            Why the server is not started — LinkedIn refused that session and
+            none was signed in from the chat since — or ``""``.
+        """
+        from agent_runtimes.mcp.browser_session import (
+            provider_of_server,
+            seed,
+            settings_refused,
+            settings_refused_reason,
+        )
+
+        provider = provider_of_server(server_id)
+        if provider is None:
+            return ""
+        try:
+            await seed(provider)
+        except Exception as error:  # noqa: BLE001 - never the value: its name alone
+            logger.warning(
+                f"The {provider.name} session in Settings was not written: "
+                f"{type(error).__name__}"
+            )
+        return settings_refused_reason(provider) if settings_refused(provider) else ""
+
+    @staticmethod
+    def _in_jupyter(server_id: str) -> bool:
+        """Whether the Pod's Jupyter container runs this server (a browser session's, on Alpine)."""
+        from agent_runtimes.mcp.browser_session import in_jupyter, provider_of_server
+
+        provider = provider_of_server(server_id)
+        return provider is not None and in_jupyter(provider)
+
     async def _start_http_process_server(
         self,
         server_id: str,
@@ -1168,7 +1249,7 @@ class MCPLifecycleManager:
         """Start a server's command as a local HTTP process, reached at its url.
 
         Nothing is asked of it here: a server that opens what each request's
-        token says (Gmail, W-02) answers nobody without one, so its
+        token says (Gmail) answers nobody without one, so its
         tools are listed by each run's own toolset
         (`google_workspace.toolset_for_the_run`), never by the process's.
         """
@@ -1263,7 +1344,7 @@ class MCPLifecycleManager:
         every turn after: Disaster Assessment's `earthdata` started 11 ms
         before the runtime's key was in its environment, its header expanded
         empty, and the deployment answered without its tools for hours
-        (H-03, 2026-10-10). The turn that finds it stopped goes on
+        (2026-10-10). The turn that finds it stopped goes on
         without it; the next one finds it running.
 
         Returns
@@ -1293,6 +1374,59 @@ class MCPLifecycleManager:
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
         return True
+
+    def knows(self, server_id: str) -> bool:
+        """
+        Whether this runtime was asked for a server: running, starting, failed
+        or started once and stopped.
+
+        Parameters
+        ----------
+        server_id : str
+            The server's id.
+
+        Returns
+        -------
+        bool
+            True when the runtime's agents use it.
+        """
+        return (
+            server_id in self._configs
+            or server_id in self._catalog_servers
+            or server_id in self._config_servers
+            or server_id in self._failed_servers
+            or server_id in self._starting_servers
+        )
+
+    async def restart(self, server_id: str) -> bool:
+        """
+        Stop a server and start it again the way it was first started, at once.
+
+        What a browser session signed in for its server asks
+        (``agent_runtimes.mcp.browser_session``): the server reads the session
+        as it starts, so it is started again without waiting for
+        :data:`RETRY_SECONDS`.
+
+        Parameters
+        ----------
+        server_id : str
+            The server's id.
+
+        Returns
+        -------
+        bool
+            Whether it runs again.
+        """
+        await self.stop_server(server_id)
+        self._failed_servers.pop(server_id, None)
+        self._failure_reasons.pop(server_id, None)
+        self._retried_at.pop(server_id, None)
+        instance = await self.start_server(
+            server_id,
+            config=self._configs.get(server_id),
+            extra_env=self._extra_envs.get(server_id),
+        )
+        return instance is not None
 
     def get_running_server(
         self, server_id: str, is_config: bool | None = None

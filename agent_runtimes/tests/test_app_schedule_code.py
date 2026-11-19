@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A ``@app.schedule`` handler's code runs on a tick (R-14).
+"""A ``@app.schedule`` handler's code runs on a tick.
 
 The platform's scheduler wakes a deployment by the position of its trigger
 among the application's triggers; on the runtime it opens a session of the
@@ -9,7 +9,7 @@ deployment's agent on the session API, said to be woken. An application
 written in Python whose code declared the schedule at that position runs that
 handler, with the session, in the opener's place — as a command's code runs,
 from what the registry holds for it (``loop.app.schedule``). Nobody is
-present: its rules know it (R-16), on the agent the runtime makes as in
+present: its rules know it, on the agent the runtime makes as in
 process. Everything runs in process: the runtime's real routes, a model that
 says what it was given, nothing reached over the network.
 """
@@ -259,7 +259,7 @@ def test_the_scheduler_s_start_session_runs_the_handler_on_the_runtime(
 def test_the_runtime_s_agent_of_a_woken_deployment_knows_nobody_is_present(
     creation_spy: Dict[str, Any],  # noqa: F811 - the fixture
 ) -> None:
-    """R-16 on a runtime: the rules of the agent it makes for a deployment
+    """On a runtime: the rules of the agent it makes for a deployment
     woken by a schedule say nobody is present; of one a person opens, not."""
     from agent_runtimes.routes.agents import CreateAgentRequest, create_agent
 
@@ -278,7 +278,7 @@ def test_the_runtime_s_agent_of_a_woken_deployment_knows_nobody_is_present(
         assert rules.unattended is not None
         return rules.unattended
 
-    # The deployment's principal holds a token: its agent is made (I-03).
+    # The deployment's principal holds a token: its agent is made.
     principal.give_principal_token("dep-1", "narrowed", expires_in=3600)
     token = _SESSION.set("session-tick-05")
     try:
@@ -360,8 +360,11 @@ def _reading(codes: Dict[str, Any]) -> List[tuple]:
 def test_no_payload_that_makes_a_deployments_agent_carries_code() -> None:
     """ai-agents' `/wake` and its keeper make a deployment's agent with its
     Appspec and its instance, never its code: the runtime reads the
-    version's `app.py` from the deployment as the agent is made (R-14)."""
-    from agent_runtimes.apps.deployments import kept_payload, session_payload
+    version's `app.py` from the deployment as the agent is made."""
+    from agent_runtimes.apps.deployments import (
+        deployment_runtime_payload,
+        session_payload,
+    )
 
     spec = tick_spec()
     woken_by = {"kind": "schedule", "position": 1}
@@ -370,7 +373,9 @@ def test_no_payload_that_makes_a_deployments_agent_carries_code() -> None:
     )
     assert "app_code" not in woken
     assert woken["app_instance"]["woken_by"] == woken_by
-    kept = kept_payload(spec, app_uid="app-14", deployment_uid="dep-14", version=2)
+    kept = deployment_runtime_payload(
+        spec, app_uid="app-14", deployment_uid="dep-14", version=2
+    )
     assert "app_code" not in kept
     assert kept["app_instance"]["version"] == 2
     with pytest.raises(TypeError):
@@ -383,7 +388,7 @@ def test_no_payload_that_makes_a_deployments_agent_carries_code() -> None:
             code=TICK_CODE,
         )
     with pytest.raises(TypeError):
-        kept_payload(  # type: ignore[call-arg]
+        deployment_runtime_payload(  # type: ignore[call-arg]
             spec, app_uid="app-14", deployment_uid="dep-14", version=2, code=TICK_CODE
         )
 
@@ -572,7 +577,7 @@ def test_ai_agents_is_asked_for_the_version_the_agent_runs(
     assert request.headers["authorization"] == "Bearer person"
     answers.append(httpx.Response(200, json={"success": True, "code": None}))
     assert asyncio.run(module._code_from_ai_agents("dep-14", 2, "person")) is None
-    # With no token, asked as nobody (R-30): ai-agents answers a deployment
+    # With no token, asked as nobody: ai-agents answers a deployment
     # somebody without an account may talk to, and refuses the rest.
     answers.append(httpx.Response(200, json={"success": True, "code": TICK_CODE}))
     assert asyncio.run(module._code_from_ai_agents("dep-14", 2, None)) == TICK_CODE
@@ -588,7 +593,7 @@ def test_ai_agents_is_asked_for_the_version_the_agent_runs(
 def test_the_deployed_version_is_the_authority_over_a_code_that_says_none(
     creation_spy: Dict[str, Any],  # noqa: F811 - the fixture
 ) -> None:
-    """Drilled 2026-10-08 (P-24): the Studio stamps the deployed Appspec
+    """Drilled 2026-10-08: the Studio stamps the deployed Appspec
     `version: 0.0.4` while the version's ejected `app.py` holds a `SPEC`
     with no version — the kept runtime refused it 422 three times. A code
     that says no version is of the version deployed; one that says another
@@ -660,11 +665,11 @@ def test_the_deployed_version_is_the_authority_over_a_code_that_says_none(
 def test_the_agent_a_kept_runtime_is_made_with_runs_the_deployments_code(
     creation_spy: Dict[str, Any],  # noqa: F811 - the fixture
 ) -> None:
-    """The keeper of a deployment kept always on (R-33) makes its agent from
-    `kept_payload`, and the create route reads the version's `app.py` from
+    """The keeper of a deployment kept always on makes its agent from
+    `deployment_runtime_payload`, and the create route reads the version's `app.py` from
     the deployment as for a tick, and every session of that agent — a visitor's at the
     address, not only a woken one — runs with the code; without it, none."""
-    from agent_runtimes.apps.deployments import kept_payload
+    from agent_runtimes.apps.deployments import deployment_runtime_payload
     from agent_runtimes.apps.loading import load_app
     from agent_runtimes.routes.agents import CreateAgentRequest, create_agent
 
@@ -675,11 +680,11 @@ def test_the_agent_a_kept_runtime_is_made_with_runs_the_deployments_code(
         asked = _reading(codes)
         for name, code in (("r14-kept", TICK_CODE), ("r14-kept-spec", None)):
             codes["dep-14"] = code
-            payload = kept_payload(
+            payload = deployment_runtime_payload(
                 spec, app_uid="app-14", deployment_uid="dep-14", version=2
             )
             request = CreateAgentRequest(**{**payload, "name": name})
-            # Made with the key the keeper started the runtime with (R-33).
+            # Made with the key the keeper started the runtime with.
             asyncio.run(create_agent(request, _Bearing("kept-key")))
         assert asked == [("dep-14", 2, "kept-key"), ("dep-14", 2, "kept-key")]
         served = sessions.code_of(load_app(spec), "r14-kept")
@@ -879,7 +884,7 @@ def test_a_kept_runtimes_code_keeps_each_turn_and_takes_feedback(
     remote: TestClient,  # noqa: F811 - the fixture
     answers_itself: bool,
 ) -> None:
-    """P-24, drilled 2026-10-08: a hosted Python application on its kept
+    """Drilled 2026-10-08: a hosted Python application on its kept
     runtime, whose code answered with no model, showed *0 turns* after three
     questions and was not found by the words asked; its page's feedback was
     refused, *This runtime runs no application.* Each question is now a turn
@@ -969,7 +974,7 @@ def test_the_runtimes_application_is_its_kept_agents(
 ) -> None:
     """The agents route keeps the application an agent is made for, as
     `/apps/configure` does its own: a kept runtime answers what its
-    application is (P-24), several say which is meant, and an agent
+    application is, several say which is meant, and an agent
     deleted takes it away."""
     from agent_runtimes.routes import apps as routes
     from agent_runtimes.routes.acp import _agents

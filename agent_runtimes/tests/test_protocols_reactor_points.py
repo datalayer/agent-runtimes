@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Every protocol plugin held to its ``reactor-points.json`` (PR-50).
+"""Every protocol plugin held to its ``reactor-points.json``.
 
 For each point of each protocol: exported under the id the file says,
 declared by the plugin the file names, its default contributed at order
@@ -157,7 +157,7 @@ def test_each_plugin_describes_its_protocol():
 
 
 def test_each_description_names_its_catalogue_entry():
-    """A runtime's answer is read against the agentspecs catalogue by this id (PR-50):
+    """A runtime's answer is read against the agentspecs catalogue by this id:
     it names a protocol the catalogue lists, and the version the catalogue says."""
     from agent_runtimes.specs.protocols import get_protocol  # noqa: PLC0415
 

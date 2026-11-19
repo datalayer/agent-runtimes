@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The contract every `ExecutionStore` keeps (O0-04 and O1-02).
+"""The contract every `ExecutionStore` keeps.
 
 The Phase 0 store tests, written once against the port rather than against
 the in-memory store, so the Solr store of the control plane runs exactly the
@@ -136,7 +136,7 @@ class CreatingContract:
 
     @pytest.mark.asyncio
     async def test_an_execution_keeps_its_place_in_its_tree(self) -> None:
-        """O2-01: the root, the parent and the depth are set when an execution
+        """The root, the parent and the depth are set when an execution
         is created, and no write rewrites them — a tree is one query on its
         root, and moving one execution would move its subtree with it."""
         store = self.make_store()

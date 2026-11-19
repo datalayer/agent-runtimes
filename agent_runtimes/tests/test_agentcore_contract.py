@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Amazon Bedrock AgentCore Runtime's contract, answered by agent-runtimes (AC-01..AC-03).
+"""Amazon Bedrock AgentCore Runtime's contract, answered by agent-runtimes.
 
 The contract's routes in process, on an agent registered as configure-from-spec
 registers it — its AG-UI app over a pydantic-ai agent — on a model that says
@@ -172,7 +172,7 @@ def run_input(text: str, thread: str = UID) -> Dict[str, Any]:
     }
 
 
-# --- AC-03: the padding rule ------------------------------------------------------------
+# --- The padding rule ------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -203,7 +203,7 @@ def test_what_the_rule_did_not_make_is_not_a_session(sid: str) -> None:
         agentcore_to_session_uid(sid)
 
 
-# --- AC-02: /ping -----------------------------------------------------------------------
+# --- /ping -----------------------------------------------------------------------
 
 
 def test_ping_is_healthy_with_no_time_before_any_change(client: TestClient) -> None:
@@ -272,7 +272,7 @@ def test_a_background_task_keeps_it_busy_until_done() -> None:
     assert asyncio.run(scenario()) == ["HealthyBusy", "Healthy"]
 
 
-# --- AC-02 / AC-03: /invocations ------------------------------------------------------
+# --- /invocations ------------------------------------------------------
 
 
 def test_a_run_agent_input_is_streamed_as_sse_on_the_sessions_thread(
@@ -473,7 +473,7 @@ def test_no_agent_configured_is_said(client: TestClient) -> None:
     )
 
 
-# --- AC-02: /ws -------------------------------------------------------------------------
+# --- /ws -------------------------------------------------------------------------
 
 
 def test_the_websocket_runs_the_same_turn(client: TestClient, model: Said) -> None:
@@ -498,7 +498,7 @@ def test_the_websocket_runs_the_same_turn(client: TestClient, model: Said) -> No
         assert "one session per invocation" in refused["error"]
 
 
-# --- AC-03: a session unknown to the process, resumed from its record ------------------
+# --- A session unknown to the process, resumed from its record ------------------
 
 
 @pytest.fixture()
@@ -619,7 +619,7 @@ def test_a_first_session_is_run_as_it_comes(client: TestClient, recorded: Said) 
     assert answer.json() == {"response": "Heard 1: Hi", "status": "success"}
 
 
-# --- AC-01: serve --target agentcore ----------------------------------------------------
+# --- Serve --target agentcore ----------------------------------------------------
 
 
 def test_the_settings_refuse_without_a_spec_and_read_the_port() -> None:

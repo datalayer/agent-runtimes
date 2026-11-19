@@ -6,7 +6,7 @@
  */
 
 /**
- * The host client's administration call (DC-106): the
+ * The host client's administration call: the
  * contract's request with the host key, and Datalayer's refusal of anyone
  * but the linked owner said as a `HostRefusedError`.
  */
@@ -145,7 +145,7 @@ describe('DatalayerHostClient.self', () => {
           uid: 'bd7e7160',
           account_uid: 'owner',
           default_deployment: 'dep-1',
-          deployments: [{ uid: 'dep-1', app_name: 'Chat', kept: true }],
+          deployments: [{ uid: 'dep-1', app_name: 'Chat', always_on: true }],
           channels: [],
           direct_only: [],
           paused: false,
@@ -156,7 +156,7 @@ describe('DatalayerHostClient.self', () => {
       accountUid: 'owner',
       channels: [],
       defaultDeployment: 'dep-1',
-      deployments: [{ appName: 'Chat', kept: true, uid: 'dep-1' }],
+      deployments: [{ alwaysOn: true, appName: 'Chat', uid: 'dep-1' }],
       directOnly: [],
       paused: false,
       uid: 'bd7e7160',
@@ -171,6 +171,36 @@ describe('DatalayerHostClient.self', () => {
     ).toBe('dlhk_key');
   });
 
+  it('reads the registered webhook: its key, and whether ai-agents asks it registered again', async () => {
+    const answer = (delivery: Record<string, unknown>) =>
+      new DatalayerHostClient(API, (async () =>
+        Response.json({
+          success: true,
+          host: { uid: 'h-1', deployments: [], delivery },
+        })) as typeof fetch);
+    const url = 'https://slack.example/datalayer/deliveries/h-1';
+    expect(
+      (await answer({ url, version: 1, renew: true }).self('k')).delivery,
+    ).toEqual({ renew: true, url, version: 1 });
+    expect(
+      (
+        await answer({
+          url,
+          version: 2,
+          key: 'ai-agents-host-deliveries-v1',
+          renew: false,
+        }).self('k')
+      ).delivery,
+    ).toEqual({
+      key: 'ai-agents-host-deliveries-v1',
+      renew: false,
+      url,
+      version: 2,
+    });
+    // No webhook registered (the outbox is read): nothing to renew.
+    expect((await answer({ version: 1 }).self('k')).delivery).toBeUndefined();
+  });
+
   it('refuses an answer without the installation uid', async () => {
     const client = new DatalayerHostClient(API, (async () =>
       Response.json({
@@ -178,5 +208,34 @@ describe('DatalayerHostClient.self', () => {
         host: { deployments: [] },
       })) as typeof fetch);
     await expect(client.self('dlhk_key')).rejects.toThrow();
+  });
+});
+
+describe('DatalayerHostClient.setWebhook', () => {
+  it('answers the secret and the key it is derived under, and refuses a key of another ring', async () => {
+    const reply = (key?: string) =>
+      new DatalayerHostClient(API, (async () =>
+        Response.json({
+          success: true,
+          url: 'https://slack.example/datalayer/deliveries/h-1',
+          events: ['approval.requested'],
+          version: 2,
+          signing_secret: 's'.repeat(64),
+          ...(key ? { key } : {}),
+        })) as typeof fetch);
+    expect(
+      await reply('ai-agents-host-deliveries-v3').setWebhook('k', 'https://x'),
+    ).toEqual({
+      key: 'ai-agents-host-deliveries-v3',
+      signingSecret: 's'.repeat(64),
+      version: 2,
+    });
+    expect(await reply().setWebhook('k', 'https://x')).toEqual({
+      signingSecret: 's'.repeat(64),
+      version: 2,
+    });
+    await expect(
+      reply('ai-agents-host-tokens-v1').setWebhook('k', 'https://x'),
+    ).rejects.toThrow();
   });
 });

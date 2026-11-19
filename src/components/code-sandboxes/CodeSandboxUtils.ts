@@ -37,8 +37,8 @@ export type IDatalayerCodeSandboxDesc = IRuntimeDesc & {
    * version it launches, the class that prices it, whether anything was built
    * for this variant — is decided by the rules in `codeSandboxEnvironments`,
    * and they read the entry. Copying a field at a time here is how the
-   * launcher and the picker came to disagree about the same environment
-   * (E1-19). Absent on a sandbox that already runs and on a
+   * launcher and the picker came to disagree about the same environment.
+   * Absent on a sandbox that already runs and on a
    * kernelspec of a server or of the browser.
    */
   environment?: IDatalayerEnvironment;

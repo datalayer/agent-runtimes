@@ -4,7 +4,7 @@
  */
 
 /**
- * *Sign in at a company*, in the chat (PI-56): where the
+ * *Sign in at a company*, in the chat: where the
  * gateway's `pap_sign_in` answers, the company's page as a button opening a
  * new tab, the code large and copyable with a code to scan for Device
  * Sign-In, Datalayer's own page for Mediated Sign-In (where the person types
@@ -48,7 +48,7 @@ export function PapSignInCard({
   const read =
     context.status === 'complete' ? readPapSignIn(context.result) : null;
   // A Direct Sign-In: Datalayer's `/pap/signed-in`, in the tab the company sent the person
-  // back to, says how it came back (P-04); the conversation goes on here.
+  // back to, says how it came back; the conversation goes on here.
   const company =
     read && !('refused' in read) && read.mode === 'direct'
       ? (read.company ?? '')
@@ -94,7 +94,7 @@ export function PapSignInCard({
       setCopied(false);
     }
   };
-  // Who the person signs in at: the company itself for a Direct Sign-In (P-04), the page's host otherwise.
+  // Who the person signs in at: the company itself for a Direct Sign-In, the page's host otherwise.
   const named = read.company ?? read.host;
   // The company that asks, by name and domain, beside the page (PAP §4.6, §4.7).
   const org = read.organization;

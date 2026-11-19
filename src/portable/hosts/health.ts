@@ -4,12 +4,12 @@
  */
 
 /**
- * Liveness and readiness (S-101): `/healthz` says the
+ * Liveness and readiness: `/healthz` says the
  * process answers; `/readyz` says it can take durable work now — its store
  * and its queue answer — and never asks the host or Datalayer, so a
  * transient outage of either does not take the pods out of service: accepted
  * work waits in the queue instead. And the window a signed host request's
- * timestamp must fall in. Moved from the Slack service (DC-004).
+ * timestamp must fall in. Moved from the Slack service.
  *
  * @module portable/hosts/health
  */

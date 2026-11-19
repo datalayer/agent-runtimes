@@ -10,12 +10,20 @@
  * (new chat, clear, settings), view-mode segmented toggle, and custom
  * header actions / content.
  *
+ * The actions side is a primer-addons `Toolbar` (the user, 15 November
+ * 2026: "the chat header is actually a primer addons toolbar"): the chat's
+ * own controls, the items the agent's UI plugins and the host add
+ * (`headerItems`), and the host's `headerActions`, each an item of one bar.
+ * What does not fit a narrow chat (the Personal page's column, an embed)
+ * moves into its "…" menu — the plugins' chips first, the host's actions,
+ * the kernel indicator and what a host pins never.
+ *
  * @module chat/header/ChatHeaderBase
  */
 
 import { type ReactNode } from 'react';
-import { Heading, IconButton, Label, Text, Truncate } from '@primer/react';
-import { Box } from '@datalayer/primer-addons';
+import { Heading, IconButton, Text, Truncate } from '@primer/react';
+import { Box, Toolbar, type ToolbarItem } from '@datalayer/primer-addons';
 import {
   KernelIndicator,
   type ExecutionState,
@@ -91,7 +99,18 @@ export interface ChatBaseHeaderProps {
   disableReason?: string;
   brandIcon?: ReactNode;
   headerContent?: ReactNode;
+  /**
+   * What leads the title row, before the agent's face and name: a control
+   * for what stands on the leading edge of the chat (the workspace's left
+   * panel's toggle).
+   */
+  headerLeading?: ReactNode;
   headerActions?: ReactNode;
+  /**
+   * Items of the actions toolbar, after the chat's own controls: the agent's
+   * UI plugins' header chrome, the session menu… — see `ChatCommonProps`.
+   */
+  headerItems?: ToolbarItem[];
   showInformation?: boolean;
   onInformationClick?: () => void;
   padding: number;
@@ -153,13 +172,18 @@ export interface ChatBaseHeaderProps {
 // Component
 // ---------------------------------------------------------------------------
 
+/** Under this width of its title row, in pixels, the header's inline content is not drawn: the name keeps the room. */
+export const HEADER_CONTENT_NARROW = 400;
+
 export function ChatBaseHeader({
   title,
   subtitle,
   disableReason,
   brandIcon,
   headerContent,
+  headerLeading,
   headerActions,
+  headerItems,
   showInformation,
   onInformationClick,
   padding,
@@ -224,6 +248,95 @@ export function ChatBaseHeader({
     />
   ) : null;
 
+  /*
+   * The actions toolbar: a leading spacer keeps them on the trailing edge,
+   * then the chat's controls, the given items, and the host's own actions —
+   * pinned, since a host puts its close button there.
+   */
+  const toolbarItems: ToolbarItem[] = [
+    { key: 'chat-header-lead', type: 'spacer' },
+  ];
+  if (kernelIndicatorPlacement === 'right' && kernelIndicatorElement) {
+    toolbarItems.push({
+      key: 'chat-header-kernel',
+      type: 'custom',
+      pinned: true,
+      render: () => kernelIndicatorElement,
+    });
+  }
+  if (headerButtons?.showNewChat) {
+    toolbarItems.push({
+      key: 'chat-header-new',
+      type: 'button',
+      icon: PlusIcon,
+      ariaLabel: 'New chat',
+      title: 'New chat',
+      onClick: onNewChat,
+    });
+  }
+  if (headerButtons?.showClear && messageCount > 0) {
+    toolbarItems.push({
+      key: 'chat-header-clear',
+      type: 'button',
+      icon: TrashIcon,
+      ariaLabel: 'Clear messages',
+      title: 'Clear messages',
+      onClick: onClear,
+    });
+  }
+  if (headerButtons?.showSettings) {
+    toolbarItems.push({
+      key: 'chat-header-settings',
+      type: 'button',
+      icon: GearIcon,
+      ariaLabel: 'Settings',
+      title: 'Settings',
+      onClick: () => headerButtons?.onSettings?.(),
+    });
+  }
+  // Companion surface control (Chat only / Notebook / Document).
+  if (showEphemeralSurfaceControl) {
+    toolbarItems.push({
+      key: 'chat-header-surface',
+      type: 'custom',
+      render: () => (
+        <EphemeralSurfaceControl
+          mode={ephemeralSurfaceMode}
+          onChange={onEphemeralSurfaceModeChange}
+          enableNotebook={enableEphemeralNotebookOption}
+          enableDocument={enableEphemeralDocumentOption}
+        />
+      ),
+    });
+  }
+  // View mode segmented toggle — the same control a floating composer
+  // carries in its footer; see `ChatViewModeToggle`.
+  if (chatViewMode && onChatViewModeChange) {
+    toolbarItems.push({
+      key: 'chat-header-view-mode',
+      type: 'custom',
+      render: () => (
+        <ChatViewModeToggle
+          value={chatViewMode}
+          onChange={onChatViewModeChange}
+          disabledModes={disabledViewModes}
+          modes={offeredViewModes}
+        />
+      ),
+    });
+  }
+  if (headerItems?.length) {
+    toolbarItems.push(...headerItems);
+  }
+  if (headerActions) {
+    toolbarItems.push({
+      key: 'chat-header-actions',
+      type: 'custom',
+      pinned: true,
+      render: () => headerActions,
+    });
+  }
+
   return (
     <Box
       display="flex"
@@ -231,21 +344,32 @@ export function ChatBaseHeader({
       bg="canvas.default"
       borderBottom="1px solid"
       borderColor="border.default"
+      // What the agent's notices never slide over (`apps/plugins/notices`).
+      data-chat-header=""
     >
-      {/* Title row */}
+      {/* Title row: its own width is what its parts read (a container). */}
       <Box
         display="flex"
         alignItems="center"
         justifyContent="space-between"
         p={padding}
+        sx={{ containerType: 'inline-size' }}
+        data-chat-header-row=""
       >
+        {/* What it is: up to two thirds of the row, and never less than
+            what the toggle, the face and a short name take (13rem), so that
+            a narrow chat (a phone, the panel's toggle leading) keeps
+            "Shopper" whole; the toolbar, after it, moves into "…". */}
         <Box
           display="flex"
           alignItems="center"
           gap={2}
           minWidth={0}
-          flex="1 1 auto"
+          maxWidth="min(100%, max(65%, 13rem))"
+          flex="0 1 auto"
+          data-chat-header-what=""
         >
+          {headerLeading}
           {kernelIndicatorPlacement === 'left' && kernelIndicatorElement}
           {brandIcon || <AiAgentIcon colored size={20} />}
           {(title || subtitle) && (
@@ -254,6 +378,8 @@ export function ChatBaseHeader({
               flexDirection="column"
               minWidth={0}
               maxWidth="100%"
+              flex="0 1 auto"
+              data-chat-header-title=""
             >
               {title && (
                 <Heading
@@ -286,17 +412,30 @@ export function ChatBaseHeader({
               )}
             </Box>
           )}
-          {/* Why the chat is off, next to what it is. Said plainly rather
-              than implied by a dead input box. */}
-          {disableReason && (
-            <Label variant="attention" sx={{ flexShrink: 0 }}>
-              {disableReason}
-            </Label>
-          )}
-          {/* Inline header content (e.g., protocol label) */}
-          {headerContent}
+          {/* Inline header content (e.g., protocol label, its state): what
+              gives way first when the row is short, long before the name,
+              and not drawn at all in a row as narrow as a phone's, where it
+              would show only its first letters. */}
+          {headerContent ? (
+            <Box
+              display="flex"
+              alignItems="center"
+              minWidth={0}
+              overflow="hidden"
+              flex="0 1000 auto"
+              sx={{
+                [`@container (max-width: ${HEADER_CONTENT_NARROW}px)`]: {
+                  display: 'none',
+                },
+              }}
+              data-chat-header-content=""
+            >
+              {headerContent}
+            </Box>
+          ) : null}
           {showInformation && (
             <IconButton
+              sx={{ flexShrink: 0 }}
               icon={InfoIcon}
               aria-label="Information"
               variant="invisible"
@@ -307,59 +446,38 @@ export function ChatBaseHeader({
           {kernelIndicatorPlacement === 'center' && kernelIndicatorElement}
         </Box>
 
-        <Box display="flex" alignItems="center" gap={1} flexShrink={0}>
-          {kernelIndicatorPlacement === 'right' && kernelIndicatorElement}
-          {/* Header buttons */}
-          {headerButtons?.showNewChat && (
-            <IconButton
-              icon={PlusIcon}
-              aria-label="New chat"
-              variant="invisible"
-              size="small"
-              onClick={onNewChat}
-            />
-          )}
-          {headerButtons?.showClear && messageCount > 0 && (
-            <IconButton
-              icon={TrashIcon}
-              aria-label="Clear messages"
-              variant="invisible"
-              size="small"
-              onClick={onClear}
-            />
-          )}
-          {headerButtons?.showSettings && (
-            <IconButton
-              icon={GearIcon}
-              aria-label="Settings"
-              variant="invisible"
-              size="small"
-              onClick={headerButtons.onSettings}
-            />
-          )}
-          {/* Companion surface control (Chat only / Notebook / Document) */}
-          {showEphemeralSurfaceControl && (
-            <EphemeralSurfaceControl
-              mode={ephemeralSurfaceMode}
-              onChange={onEphemeralSurfaceModeChange}
-              enableNotebook={enableEphemeralNotebookOption}
-              enableDocument={enableEphemeralDocumentOption}
-            />
-          )}
-          {/* View mode segmented toggle — the same control a floating
-              composer carries in its footer; see `ChatViewModeToggle`. */}
-          {chatViewMode && onChatViewModeChange && (
-            <ChatViewModeToggle
-              value={chatViewMode}
-              onChange={onChatViewModeChange}
-              disabledModes={disabledViewModes}
-              modes={offeredViewModes}
-            />
-          )}
-          {/* Custom header actions */}
-          {headerActions}
+        {/* A box of its own: its width, what the row leaves after the
+            title, is the room the toolbar measures. */}
+        <Box flex="1 1 0" minWidth="40px" ml={2}>
+          <Toolbar
+            items={toolbarItems}
+            variant="inline"
+            gap={4}
+            ariaLabel="Chat actions"
+            overflowAriaLabel="More chat actions"
+          />
         </Box>
       </Box>
+      {/* Why the chat is off, under what it is, wrapped on its own line.
+          Said plainly rather than implied by a dead input box. In the title
+          row a long sentence that would not shrink squeezed the title to
+          nothing and was drawn over it ("arketer", 14 November 2026). */}
+      {disableReason && (
+        <Box px={padding} pb={2} mt={-1}>
+          <Text
+            role="status"
+            data-chat-disable-reason=""
+            sx={{
+              display: 'block',
+              fontSize: 1,
+              color: 'attention.fg',
+              overflowWrap: 'anywhere',
+            }}
+          >
+            {disableReason}
+          </Text>
+        </Box>
+      )}
     </Box>
   );
 }

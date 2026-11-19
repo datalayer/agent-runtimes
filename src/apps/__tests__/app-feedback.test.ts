@@ -4,7 +4,7 @@
  */
 
 /**
- * Feedback from the people who use an application (V-18): offered only
+ * Feedback from the people who use an application: offered only
  * where its record keeps it, sent to the runtime under the conversation's
  * thread, and a refusal said in the runtime's own sentence.
  */
@@ -96,7 +96,7 @@ describe('feedback on an application’s answers', () => {
     );
   });
 
-  it('names its thumbs, on the buttons themselves, and says which is pressed (P-24)', () => {
+  it('names its thumbs, on the buttons themselves, and says which is pressed', () => {
     expect(FEEDBACK_WORDS.liked).toBe('This answer was useful');
     expect(FEEDBACK_WORDS.disliked).toBe('This answer was not useful');
     const strip = readFileSync(

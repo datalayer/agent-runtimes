@@ -4,13 +4,13 @@
  */
 
 /**
- * What only the runtime knows of voice, as it says it over AG-UI (VO-35)
- * and Vercel AI (VO-36): `voice.settings` — the running application's
+ * What only the runtime knows of voice, as it says it over AG-UI
+ * and Vercel AI: `voice.settings` — the running application's
  * voice and language, at a run's start — and `voice.say` — a short line the
  * agent wants heard and not written (*One moment*), shown as a caption while
  * it is said. The chat reads `voice.say` from a run's custom events
  * (`CUSTOM`, the chat's `activity`) or data parts (`data-voice.say`); it
- * already knows its application's voice from `/apps/configure` (VO-45), and
+ * already knows its application's voice from `/apps/configure`, and
  * `voice.settings` is for clients that do not ask it.
  *
  * @module voice/sayAloud
@@ -23,7 +23,7 @@ export const VOICE_SAY_EVENT = 'voice.say';
 export const VOICE_SETTINGS_EVENT = 'voice.settings';
 
 /**
- * The person spoke over the agent, the runtime says (VO-46): a client
+ * The person spoke over the agent, the runtime says: a client
  * playing its voice stops it.
  */
 export const VOICE_INTERRUPTED_EVENT = 'voice.interrupted';
@@ -39,7 +39,7 @@ export interface VoiceActivity {
 
 const nameOf = (type: string): string => type.replace(/^data-/, '');
 
-/** Whether an activity is the runtime's `voice.interrupted` (VO-46). */
+/** Whether an activity is the runtime's `voice.interrupted`. */
 export const isVoiceInterrupted = (activity: VoiceActivity): boolean =>
   nameOf(activity.type) === VOICE_INTERRUPTED_EVENT;
 

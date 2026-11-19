@@ -4,7 +4,7 @@
  */
 
 /**
- * A streaming frontend tool (AGENT_BATTLE B1-00): subscribed once, its events
+ * A streaming frontend tool: subscribed once, its events
  * reach the harness while it is subscribed, nothing after; refused where
  * nobody listens.
  */

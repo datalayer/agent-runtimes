@@ -7,11 +7,11 @@
  * Computing environments API functions for the Datalayer platform.
  *
  * `GET /environments` lists the platform's environments and the user
- * environments the caller may use. The registry beside it (served by Runtimes since E1-01)
+ * environments the caller may use. The registry beside it (served by Runtimes)
  * creates environments, their
  * versions, builds and artifacts, and serves build logs. The specification a
- * version carries is typed from the JSON Schema `code-sandboxes` exports
- * (D-14), in `models/environments.generated.ts`.
+ * version carries is typed from the JSON Schema `code-sandboxes` exports,
+ * in `models/environments.generated.ts`.
  *
  * A conditional write names the record it replaces with `If-Match`, the
  * `etag` every record carries. A keyed create is replayed with the same
@@ -297,7 +297,7 @@ export const updateEnvironment = async (
  * Delete an environment, softly. Refused with 409 `DL_ENV_CONFLICT` while a
  * version is promoted, an artifact is referenced, or a runtime still runs one
  * of its artifacts, whoever launched it: the refusal's `detail` is an
- * `IEnvironmentDeletionConflict`, whose `runtimes` name each one (E1-15).
+ * `IEnvironmentDeletionConflict`, whose `runtimes` name each one.
  * Refused with 503 `DL_ENV_UNAVAILABLE` when the service cannot read which
  * runtimes run it; nothing is deleted then either.
  * @param token - Authentication token
@@ -352,7 +352,7 @@ export const archiveEnvironment = async (
 
 /**
  * Promote a version, or none with `versionUid: null`; a rollback is the same
- * call with an older version, and builds nothing (E1-15).
+ * call with an older version, and builds nothing.
  *
  * A partially ready version is promoted only when
  * `acknowledgeUnavailableVariants` names exactly its unavailable variants:
@@ -538,7 +538,7 @@ export const validateEnvironmentVersion = async (
 
 /**
  * Resolve a version into its lock. The service answers 501 until
- * E1-04 builds the resolver, whose answer this resolves to.
+ * The resolver, once built, answers what this resolves to.
  * @param token - Authentication token
  * @param versionUid - The version's uid
  * @param options - Correlation id and abort signal
@@ -622,7 +622,7 @@ export const listEnvironmentBuilds = async (
 };
 
 /**
- * The sandboxes running a version now: yours by uid, anybody else's counted (E2-19).
+ * The sandboxes running a version now: yours by uid, anybody else's counted.
  * @param token - Authentication token
  * @param versionUid - The version's uid
  * @param options - Correlation id and abort signal
@@ -648,7 +648,7 @@ export const getEnvironmentVersionSandboxes = async (
 };
 
 /**
- * An owner's build quotas and what it holds against each (E1-13, E2-19).
+ * An owner's build quotas and what it holds against each.
  * @param token - Authentication token
  * @param owner - The caller's own when empty; an organization's by its uid
  * @param options - Correlation id and abort signal
@@ -708,7 +708,7 @@ export const listEnvironmentArtifacts = async (
 
 /**
  * Launch a trial sandbox of a ready or partially ready version, before it is
- * promoted (E1-14).
+ * promoted.
  *
  * Only an owner tries a version. The runtime is launched as `POST /runtimes`
  * launches one, with the version pinned, a given name saying which version it
@@ -743,9 +743,9 @@ export const trialEnvironmentVersion = async (
 };
 
 /**
- * Publish a promoted version to the public Library (D-12, E2-15).
+ * Publish a promoted version to the public Library.
  *
- * Only an owner publishes (D-19), and only a version whose every input is
+ * Only an owner publishes, and only a version whose every input is
  * public — no build secret, only public indexes — and whose Datalayer
  * artifact passed its scan: otherwise the refusal is `DL_ENV_PUBLICATION_BLOCKED`.
  * The snapshot frozen is immutable, so publishing the same version again reads
@@ -776,8 +776,8 @@ export const publishEnvironmentVersion = async (
 };
 
 /**
- * Withdraw a version from the public Library; running sandboxes keep it (D-12,
- * E2-15). The snapshot is kept, so a later publish restores exactly what was
+ * Withdraw a version from the public Library; running sandboxes keep it.
+ * The snapshot is kept, so a later publish restores exactly what was
  * public.
  * @param token - Authentication token
  * @param versionUid - The version's uid
@@ -804,7 +804,7 @@ export const unpublishEnvironmentVersion = async (
 };
 
 /**
- * A version's public publication and its immutable snapshot (D-12, E2-15), or
+ * A version's public publication and its immutable snapshot, or
  * a 404 when it is not public. The publication is world-visible, so any
  * signed-in caller reads it; a version never published, or one withdrawn,
  * reads 404.
@@ -833,8 +833,7 @@ export const getEnvironmentPublication = async (
 };
 
 /**
- * Fork a published version into the caller's own private environment (D-12,
- * E2-15).
+ * Fork a published version into the caller's own private environment.
  *
  * Any signed-in caller forks. The fork is made from the published version's
  * exact spec and reuses the published Datalayer artifact — the same immutable
@@ -920,7 +919,7 @@ export const getEnvironmentBuild = async (
 };
 
 /**
- * Read a build's stored log chunks after a cursor: the polling side of D-15.
+ * Read a build's stored log chunks after a cursor: the polling side of the build log.
  * @param token - Authentication token
  * @param buildUid - The build's uid
  * @param page - `cursor`, the sequence of the last chunk read, and the page size
@@ -1006,7 +1005,7 @@ export const retryEnvironmentBuild = async (
   );
 };
 
-// -- Following a build's log (D-15) --------------------------------------------
+// -- Following a build's log --------------------------------------------
 
 /** The event the log stream ends with, once the build is terminal and every chunk is sent. */
 export const BUILD_LOG_END_EVENT = 'end';
@@ -1110,7 +1109,7 @@ const pause = (milliseconds: number, signal?: AbortSignal): Promise<void> =>
   });
 
 /**
- * Follow a build's log until the build is terminal (D-15).
+ * Follow a build's log until the build is terminal.
  *
  * Modelled on core's `subscribeToExecution`: the stream is Server-Sent Events
  * read with `fetch`, which unlike `EventSource` carries the bearer token. Each
@@ -1118,7 +1117,7 @@ const pause = (milliseconds: number, signal?: AbortSignal): Promise<void> =>
  * service answered or in the middle of the stream, is resumed with the last id
  * received as `Last-Event-ID`, so no chunk is repeated; after `maxReconnects`
  * drops in a row with no chunk between them, `done` rejects. The stream ends
- * with `end` once the build is terminal and every chunk is sent (E1-16). A
+ * with `end` once the build is terminal and every chunk is sent. A
  * refusal is not retried: `done` rejects with `BuildLogSubscriptionRefused`,
  * such as the 404 a caller who may not read the build is answered before the
  * stream opens. An abort ends the subscription quietly.

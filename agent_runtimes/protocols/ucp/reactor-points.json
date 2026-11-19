@@ -17,7 +17,7 @@
       "resolution": "single",
       "tenant": null,
       "extension": false,
-      "note": "Without an approver nothing is bought (U-19, U-25 on Datalayer)."
+      "note": "Without an approver nothing is bought (tool approvals and approvals in advance on Datalayer)."
     },
     {
       "id": "ucp.paymentInstruments",
@@ -31,7 +31,7 @@
       "resolution": "single",
       "tenant": null,
       "extension": false,
-      "note": "The host holds payment tokens (IAM custody, PI-11); a model never sees one."
+      "note": "The host holds payment tokens (IAM custody); a model never sees one."
     },
     {
       "id": "ucp.proposalStore",

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A tool's display, beside the output the page draws, on the Vercel AI stream (RU-1).
+"""A tool's display, beside the output the page draws, on the Vercel AI stream.
 
 The Vercel AI twin of ``agent_runtimes.transports.agui_displays``: a tool
 result that carried a display reaches the model as the display's model view
@@ -11,7 +11,7 @@ only; this one sends the page that output with ``_meta["reactor.ui/display"]``
 beside it — the shape ``resolveToolResult`` (``@datalayer/reactor/ui``) reads.
 
 An agent whose answers may be heard has its voice said right after the
-start: a ``data-voice.settings`` data part (VO-36, the twin of AG-UI's ``voice.settings``).
+start: a ``data-voice.settings`` data part (the twin of AG-UI's ``voice.settings``).
 """
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ __all__ = ["DisplayVercelAIAdapter", "DisplayVercelAIEventStream"]
 class DisplayVercelAIEventStream(VercelAIEventStream[Any, Any]):
     """Vercel AI's event stream, with a tool's display beside its output."""
 
-    #: The running agent's voice, said at the run's start (VO-36); None, nothing said.
+    #: The running agent's voice, said at the run's start; None, nothing said.
     voice: Optional[dict[str, Any]] = None
 
     async def before_stream(self) -> AsyncIterator[Any]:

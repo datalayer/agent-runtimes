@@ -4,7 +4,7 @@
  */
 
 /**
- * The standalone `<Chat>` on a session (VSCODE VS-24): the thread a host
+ * The standalone `<Chat>` on a session: the thread a host
  * gives is drawn — read from its runtime by uid when asked —, the thread's
  * `⋯` menu is drawn from the `loop.session.action` registry when a Reactor
  * is registered and the host lends the menu its ways, and a running tool
@@ -189,7 +189,7 @@ async function reactorWith(entry: SessionActionContribution): Promise<void> {
   registerReactor(reactor);
 }
 
-describe('the standalone Chat on a session (VS-24)', () => {
+describe('the standalone Chat on a session', () => {
   it('draws the thread it is given', async () => {
     const chat = await mountChat({
       thread: {

@@ -363,6 +363,83 @@ async def give_inference_token_endpoint(
     }
 
 
+class SocialTokenRequest(BaseModel):
+    """The runtime's social token, as the companion gives it (14 November 2026)."""
+
+    token: str
+
+
+@router.put("/social/token")
+async def give_social_token_endpoint(
+    request: Request, body: SocialTokenRequest
+) -> dict[str, Any]:
+    """Give this runtime its social token, and read which accounts the person linked.
+
+    The companion calls it as the runtime is assigned to its person, with
+    their token narrowed by IAM to its social routes and to this runtime
+    (``agent_runtimes.tools.social``). Only the pod itself may. The linked
+    accounts are read with it at once: an optional posting tool counts in its
+    group when its account is linked.
+    """
+    from agent_runtimes.apps.callers import POD_SECRET_HEADER, is_the_pod
+    from agent_runtimes.tools.social import (
+        give_social_token,
+        refresh_linked_accounts,
+    )
+
+    if not is_the_pod(
+        request.client.host if request.client else None,
+        request.headers.get(POD_SECRET_HEADER),
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Only the runtime's own pod gives it its social token.",
+        )
+    if not body.token.strip():
+        raise HTTPException(status_code=422, detail="The token is empty.")
+    expires_at = give_social_token(body.token)
+    accounts = await refresh_linked_accounts()
+    linked = sorted(
+        key for key, value in (accounts or {}).items() if value.get("linked")
+    )
+    return {
+        "expiresAt": expires_at,
+        "linked": linked,
+        "note": (
+            f"Linked: {', '.join(linked)}."
+            if linked
+            else "No X, Bluesky or LinkedIn account is linked."
+            if accounts is not None
+            else "The linked accounts could not be read."
+        ),
+    }
+
+
+class MailToMeRequest(BaseModel):
+    """A mail to the person this runtime runs for (the email skill, 15 November 2026)."""
+
+    subject: str
+    text: str
+
+
+@router.post("/mail")
+async def mail_me_endpoint(body: MailToMeRequest) -> dict[str, Any]:
+    """Send one mail to the person this runtime runs for, through Datalayer's mailer.
+
+    The datalayer-skills `email` skill calls it from the sandbox: the runtime
+    sends it with its social token through IAM's ``/social/mail``, to the
+    person alone (never another address), a few a day; no mail credential is in
+    the runtime or the sandbox. A runtime given no social token (a visitor's, a
+    deployment's) sends none.
+    """
+    from agent_runtimes.tools.social import send_mail
+
+    sent = await send_mail("me", body.subject, body.text)
+    if isinstance(sent, str):
+        raise HTTPException(status_code=409, detail=sent)
+    return sent
+
+
 class AgentCoreWorkloadRequest(BaseModel):
     """The workload token a pod is given for AgentCore Identity, as the companion gives it."""
 
@@ -375,7 +452,7 @@ class AgentCoreWorkloadRequest(BaseModel):
 async def give_agentcore_workload_token_endpoint(
     request: Request, body: AgentCoreWorkloadRequest
 ) -> dict[str, Any]:
-    """Give this pod the workload token the ``agentcore`` identity provider uses (ID-06).
+    """Give this pod the workload token the ``agentcore`` identity provider uses.
 
     The companion asks AgentCore Identity for it with the person's token
     (``GetWorkloadAccessTokenForJWT``) and gives it here, as it gives the
@@ -401,7 +478,7 @@ async def give_agentcore_workload_token_endpoint(
 
 @router.post("/identity/authorizations/{authorization_id}/decline")
 async def decline_authorization_endpoint(authorization_id: str) -> dict[str, Any]:
-    """Decline the grant a tool waits for, as the chat's *Decline* asks (ID-10).
+    """Decline the grant a tool waits for, as the chat's *Decline* asks.
 
     The id is the one the ``identity.authorization_required`` event carried to
     the person's own turn stream, never listed elsewhere. The tool call ends
@@ -681,14 +758,18 @@ async def list_catalog_skills(agent_id: str | None = None) -> dict[str, Any]:
         # Env var refs are versioned (`TAVILY_API_KEY:0.0.1`); the variable is
         # the part before the colon.
         required = [ref.split(":")[0] for ref in (spec.envvars or [])]
-        # `optional_env_vars` and `enabled` are written in the YAML but are not
-        # fields on SkillSpec, so pydantic drops them: read them defensively
-        # rather than assuming either shape.
+        # Given when the account has them, never required; of `any_of`, one at
+        # least must be set for the skill to be activated (agentspecs 0.0.218).
         optional = [
             str(ref).split(":")[0]
             for ref in (getattr(spec, "optional_env_vars", None) or [])
         ]
+        any_of = [
+            str(ref).split(":")[0]
+            for ref in (getattr(spec, "any_of_env_vars", None) or [])
+        ]
         missing = [name for name in required if not os.getenv(name)]
+        one_is_set = not any_of or any(os.getenv(name) for name in any_of)
 
         skills.append(
             {
@@ -703,8 +784,10 @@ async def list_catalog_skills(agent_id: str | None = None) -> dict[str, Any]:
                 "dependencies": list(spec.dependencies or []),
                 "required_env_vars": required,
                 "optional_env_vars": optional,
+                "any_of_env_vars": any_of,
+                "set_env_vars": [name for name in optional if os.getenv(name)],
                 "missing_env_vars": missing,
-                "ready": not missing,
+                "ready": not missing and one_is_set,
             }
         )
 
@@ -1098,7 +1181,7 @@ async def get_agent_spec_endpoint(
         **spec,
         "sandbox": sandbox_status.model_dump() if sandbox_status else None,
         # Why its configure was refused — a secret its specs declare and it was
-        # not given (R-19) — so a launch waiting for it says so, and stops.
+        # not given — so a launch waiting for it says so, and stops.
         **({"set_up_refused": refused} if refused else {}),
     }
 

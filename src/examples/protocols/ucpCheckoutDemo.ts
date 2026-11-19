@@ -4,8 +4,7 @@
  */
 
 /**
- * The *UCP checkout* gallery example's work (EX-10, after
- * EX-04): the UCP client buying from *Example Store*, the local test
+ * The *UCP checkout* gallery example's work: the UCP client buying from *Example Store*, the local test
  * merchant running in the page (`protocols/ucp/merchant`). A checkout is
  * proposed as an exact, revisioned purchase; completing it asks the host's
  * approver — the page's card — once, and the proposal is spent whatever the

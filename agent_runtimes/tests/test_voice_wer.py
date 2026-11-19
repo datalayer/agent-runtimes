@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What the speech models heard of the recorded fixtures, against their baselines (VO-50, VO-51).
+"""What the speech models heard of the recorded fixtures, against their baselines.
 
 `scripts/voice/measure.py` runs the models — the browser's speech-to-text
 on the fixtures, the server's voices said and heard back — and writes what
@@ -55,7 +55,7 @@ def test_every_fixture_is_there_and_licensed():
         if model["task"] == "stt" and "device" in model["where"]
         for language in model["languages"]
     ]
-    # The server's models, measured on the fixtures' languages they hear (VO-47).
+    # The server's models, measured on the fixtures' languages they hear.
     + [
         (model["id"], language)
         for model in SPEECH_MODEL_CATALOGUE.values()

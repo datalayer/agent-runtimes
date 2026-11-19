@@ -12,6 +12,7 @@ Provides REST API endpoints for:
 """
 
 import asyncio
+import dataclasses
 import importlib.metadata
 import logging
 import os
@@ -19,7 +20,7 @@ import re
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, Literal, cast
+from typing import Any, Callable, Literal, Optional, cast
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field, model_validator
@@ -75,8 +76,8 @@ from ..services import (
     wire_skills_into_codemode,
 )
 from ..specs.agents import AGENTSPECS
-from ..specs.agents import get_agent_spec as _get_agent_spec
 from ..specs.agents import list_agentspecs as list_library_agents
+from ..specs.library import get_library_agent_spec
 
 try:
     from ..specs.events import EVENT_KIND_AGENT_ASSIGNED
@@ -117,7 +118,7 @@ _api_prefix = "/api/v1"
 _agentspecs: dict[str, dict[str, Any]] = {}
 
 #: Why an agent's configure was refused, by agent name, until one succeeds:
-#: answered with its creation spec, so a launch waiting for it says why (R-19).
+#: answered with its creation spec, so a launch waiting for it says why.
 _SET_UP_REFUSED: dict[str, str] = {}
 
 _PARAM_TOKEN_PATTERNS = [
@@ -192,6 +193,43 @@ def _kernel_names(declared: DeclaredSecrets) -> frozenset[str]:
     return declared.kernel if kernel_holds_owner_secrets() else frozenset()
 
 
+def left_out_of(declared: DeclaredSecrets) -> Any:
+    """
+    What an agent built from these declarations starts without, on this runtime, now.
+
+    The one place that decides it (a ``LeftOut``): its ``as_names()`` is what a
+    page reads, by variable name and never by value.
+    """
+    return _left_out(declared)
+
+
+def _left_out(
+    declared: DeclaredSecrets,
+    owners: Optional[dict[str, dict[str, str]]] = None,
+    fenced: frozenset[str] = frozenset(),
+) -> Any:
+    """What an agent starts without here: what is not set up in this runtime's
+    environment, and a skill whose optional secrets its sandbox may not hold.
+
+    ``fenced`` names the servers whose secrets are the demo account's own
+    alone on the visitors' runtime (`battle_books.owners_secrets_of`): theirs
+    count only when ``owners`` holds them, never from the environment.
+    """
+    from agent_runtimes.apps.principal import kernel_holds_owner_secrets
+
+    from_owners = {name for values in (owners or {}).values() for name in values}
+    fenced_names = {
+        name for server in fenced for name in declared.servers.get(server, ())
+    }
+
+    def available(name: str) -> bool:
+        if name in fenced_names:
+            return name in from_owners
+        return bool((os.environ.get(name) or "").strip())
+
+    return declared.left_out(available, sandbox_holds=kernel_holds_owner_secrets())
+
+
 def _kernel_refused(
     declared: DeclaredSecrets, available: Callable[[str], bool], who: str
 ) -> list[str]:
@@ -201,21 +239,6 @@ def _kernel_refused(
     if kernel_holds_owner_secrets():
         return []
     return declared.kernel_refused(available, who)
-
-
-def get_library_agent_spec(agent_id: str) -> Any:
-    """An agent of the library by id — or a Cog's, which is an agent equipped with Frames.
-
-    A Cog carries its whole agent spec, its Frames' context in its system
-    prompt; an application may name a Cog where it names an agent.
-    """
-    spec = _get_agent_spec(agent_id)
-    if spec is not None:
-        return spec
-    from ..specs.cogs import get_cog
-
-    cog = get_cog(agent_id)
-    return cog.spec if cog is not None else None
 
 
 def _without_approval_capabilities(capabilities: list[Any]) -> list[Any]:
@@ -237,7 +260,7 @@ def _with_subagents(
     The spec an agent's capabilities are built from, with the subagents the request names.
 
     A request's subagents replace the spec's rather than add to them: a team's
-    supervisor is given exactly its members (O2-09). An agent created with no
+    supervisor is given exactly its members. An agent created with no
     spec at all is given one holding only its name and those subagents.
 
     Parameters
@@ -648,12 +671,12 @@ def get_stored_agent_spec(agent_id: str) -> dict[str, Any] | None:
 
 
 def _application_code_of(code: dict[str, Any], app: Any) -> Any:
-    """The `Application` a deployment's ``app.py`` defines (R-14), loaded
+    """The `Application` a deployment's ``app.py`` defines, loaded
     from the text the request carries: refused (422) when it is not an
     ``app.py``, does not load, defines another application than the
     Appspec the agent runs, or says itself another version. A code that
     says no version takes the deployed one: the stored version is the
-    authority (P-24).
+    authority.
     """
     from agent_runtimes.apps.application import load_application_source
     from agent_runtimes.apps.deployments import DeployRefused, code_carried
@@ -682,7 +705,7 @@ def _application_code_of(code: dict[str, Any], app: Any) -> Any:
                 "runs: its code is another application's."
             ),
         )
-    # The deployment's stored version is the authority (P-24): a code
+    # The deployment's stored version is the authority: a code
     # that says no version of its own (an ejected ``app.py``) is of the
     # version deployed; one that says another is refused.
     declared = application.declared_version
@@ -1232,7 +1255,7 @@ class McpServerSelection(BaseModel):
         return self.origin == "contents"
 
 
-#: Why a request that makes an agent carries no code (R-14).
+#: Why a request that makes an agent carries no code.
 APP_CODE_REFUSED = (
     "A deployment's code is read from the deployment: a request that makes "
     "its agent carries none (app_code is refused)."
@@ -1259,7 +1282,7 @@ class CreateAgentRequest(BaseModel):
     @classmethod
     def _carries_no_code(cls, data: Any) -> Any:
         """Refuse `app_code`: a deployment's code is read from the deployment
-        by the runtime (R-14), never taken from the request that makes
+        by the runtime, never taken from the request that makes
         its agent and run in its principal's name.
         """
         if isinstance(data, dict) and ("app_code" in data or "appCode" in data):
@@ -1467,7 +1490,7 @@ class AgentListResponse(BaseModel):
 def _keep_app_recorder(
     agent_id: str, running_app: Any, request: "CreateAgentRequest"
 ) -> Any:
-    """The record of the application this agent runs (R-07), kept for it."""
+    """The record of the application this agent runs, kept for it."""
     from agent_runtimes.apps.record import AppRecorder, keep_agent_recorder
     from agent_runtimes.routes.apps import keep_running
 
@@ -1475,7 +1498,7 @@ def _keep_app_recorder(
     # What woke a deployment's session is said with the session, by who may
     # (`routes.apps._woken_by`): never of the agent every session of it runs on.
     deployment = str(serving.get("deployment_uid") or "")
-    # What it did, session by session, kept by ai-agents (R-07).
+    # What it did, session by session, kept by ai-agents.
     recorder = AppRecorder(
         app=running_app,
         app_uid=str(serving.get("app_uid") or ""),
@@ -1483,16 +1506,16 @@ def _keep_app_recorder(
         version=int(serving.get("version") or 0),
         purpose=str(serving.get("purpose") or ""),
         launch_uid=str(serving.get("launch_uid") or ""),
-        # What woke it, when nobody opened it (R-14).
+        # What woke it, when nobody opened it.
         woken_by={} if deployment else dict(serving.get("woken_by") or {}),
-        # Only visitors without an account talk to it (R-30).
+        # Only visitors without an account talk to it.
         visitors=bool(serving.get("visitor_app")),
     )
-    # The session API writes a session's start to it (R-04).
+    # The session API writes a session's start to it.
     keep_agent_recorder(agent_id, recorder)
     # The runtime knows the application this agent runs: what is asked of
     # "the runtime's application" — its feedback, its rules — is answered on
-    # a kept runtime too (P-24).
+    # a kept runtime too.
     keep_running(agent_id, running_app)
     return recorder
 
@@ -1511,7 +1534,7 @@ async def _as_deployed(
     deployment's principal, so nothing they send makes it: not its Appspec, and
     no other field either, each of which would change what runs as the
     principal. It is made as the keeper makes a kept deployment's
-    (`kept_payload`), from the version ai-agents answers, which it answers to
+    (`deployment_runtime_payload`), from the version ai-agents answers, which it answers to
     whoever would be let open a session of the deployment.
 
     Returns
@@ -1520,7 +1543,10 @@ async def _as_deployed(
         The request it is made from, and what ai-agents answered.
     """
     from agent_runtimes.apps.callers import bearer_of
-    from agent_runtimes.apps.deployments import DeployRefused, kept_payload
+    from agent_runtimes.apps.deployments import (
+        DeployRefused,
+        deployment_runtime_payload,
+    )
     from agent_runtimes.apps.loading import AppNotRunnable
     from agent_runtimes.apps.principal import (
         DeploymentCodeUnread,
@@ -1540,7 +1566,7 @@ async def _as_deployed(
     except DeploymentCodeUnread as unread:
         raise HTTPException(status_code=422, detail=str(unread)) from None
     try:
-        payload = kept_payload(
+        payload = deployment_runtime_payload(
             answer["spec"],
             app_uid=str(answer["app_uid"]),
             deployment_uid=deployment,
@@ -1568,10 +1594,10 @@ async def _harness_agent_of(
     running_app: Any,
     http_request: Request,
 ) -> Any:
-    """An agent on a catalogue harness, launched and negotiated (SH-10).
+    """An agent on a catalogue harness, launched and negotiated.
 
     Its permissions are raised through the runtime's tool approvals with the
-    caller's token (SH-12); its record is the application's (SH-18); its
+    caller's token; its record is the application's; its
     sessions are kept in the protocol state store so a restarted runtime
     loads them. What refuses it — an adapter not installed, a
     declared secret missing, no workspace, an agent that lacks what its spec
@@ -1601,13 +1627,13 @@ async def _harness_agent_of(
             recorder=recorder,
             approvals=ToolApprovalManager(approval_config),
             # The caller's token: what a run carrying none of its own reaches
-            # the lent gateway toolsets with (SH-14).
+            # the lent gateway toolsets with.
             credential=approval_config.user_jwt_token or "",
             name=request.name,
             description=request.description or "",
             state_store=protocol_state_store(),
             # An organization's own harness is read for the organization the
-            # application belongs to (SH-46).
+            # application belongs to.
             organization_uid=str(
                 (request.app_instance or {}).get("organization_uid") or ""
             ).strip(),
@@ -2065,6 +2091,63 @@ async def create_agent(
                 Literal["local", "datalayer"], override_provider
             )
 
+        # On the visitors' runtime, an application's optional read connections
+        # in its owner's account to a server outside the gateway take their
+        # secrets from the demo account's own alone, for that account's
+        # deployment (`battle_books`): the Traveller's google-maps.
+        from agent_runtimes.apps.battle_books import (
+            owners_secret_servers,
+            owners_secrets_of,
+        )
+        from agent_runtimes.apps.visitors import visitors_runtime
+
+        app_connections = (request.app_spec or {}).get("connections") or []
+        owners_fenced = (
+            owners_secret_servers(app_connections)
+            if visitors_runtime()
+            else frozenset()
+        )
+        owners_env = (
+            await owners_secrets_of(
+                app_connections, request.app_instance, declared_by_it.servers
+            )
+            if owners_fenced
+            else {}
+        )
+        # What it declares optional and is not set up for is left out, and
+        # it is told which (agentspecs 0.0.188, the user, 14 November 2026).
+        left_out = _left_out(declared_by_it, owners_env, owners_fenced)
+        if left_out:
+            request.skills = [
+                skill
+                for skill in request.skills
+                if _ref_id_of(skill) not in left_out.skills
+            ]
+            # A posting tool whose account the person has not linked (0.0.189).
+            request.backend_tools = [
+                tool
+                for tool in request.backend_tools
+                if _ref_id_of(tool) not in left_out.tools
+            ]
+            # A fenced server left out is not said: a visitor hears nothing of it.
+            said = dataclasses.replace(
+                left_out,
+                servers={
+                    key: names
+                    for key, names in left_out.servers.items()
+                    if key not in owners_fenced
+                },
+            )
+            if said:
+                request.system_prompt = f"{request.system_prompt}\n\n{said.sentence()}"
+            logger.info(
+                "Agent %s starts without %s (not set up)",
+                agent_id,
+                sorted(left_out.servers)
+                + sorted(left_out.skills)
+                + sorted(left_out.tools),
+            )
+
         # Build list of non-MCP toolsets (skills, codemode, etc.)
         # MCP toolsets will be dynamically fetched at run time by the adapter
         non_mcp_toolsets = []
@@ -2091,8 +2174,17 @@ async def create_agent(
                     status_code=422,
                     detail={"problems": refused.problems},
                 ) from None
+            # Its own backend tools beside its agent's (the Demo Shop's
+            # demo-shop-* tools): a local process refuses an application
+            # with backend tools and sends it to a runtime, which brings them.
+            known_tools = {_ref_id_of(tool) for tool in request.backend_tools}
+            request.backend_tools = list(request.backend_tools) + [
+                str(tool)
+                for tool in running_app.backend_tools or []
+                if _ref_id_of(str(tool)) not in known_tools
+            ]
             # The runtime was launched for it and a secret it declares was not
-            # given (R-19): refused in the sentence its launch was.
+            # given: refused in the sentence its launch was.
             launch_refused = _SET_UP_REFUSED.get(running_app.id)
             if launch_refused:
                 raise HTTPException(
@@ -2100,7 +2192,7 @@ async def create_agent(
                 )
             # A deployment's agent acts as its application's principal, with
             # the token ai-agents mints for it from the caller's: it is not
-            # made without one (I-03).
+            # made without one.
             from agent_runtimes.apps.principal import (
                 DeploymentCodeUnread,
                 PrincipalTokenMissing,
@@ -2111,12 +2203,12 @@ async def create_agent(
             from agent_runtimes.apps.visitors import visitors_runtime
 
             serving_deployment = deployment_of(request.app_instance)
-            # The version's own code is the deployment's, read from it (R-14): a request never brings code of its own (`app_code` is
+            # The version's own code is the deployment's, read from it: a request never brings code of its own (`app_code` is
             # refused by the request's model).
             served_code = None
             # On the visitors' runtime nobody's principal acts: a visitor's
             # own token calls its models, and it reaches nothing of its
-            # owner's (R-30).
+            # owner's.
             if serving_deployment and not visitors_runtime():
                 creator = http_request.headers.get("Authorization", "")
                 bearer = (
@@ -2160,10 +2252,10 @@ async def create_agent(
                     served_code = _application_code_of(code, running_app)
             # The contexts it works under, as the organization it belongs
             # to reads them: its version in place of the catalogue's, and
-            # its own (U-31, U-32), read from IAM with the caller's
+            # its own, read from IAM with the caller's
             # token; what cannot be read stops it, and what it disabled is
             # left out and said. Kept for the Required Frame Guard at each
-            # session's start (R-06).
+            # session's start.
             organization_frames = None
             if running_app.context:
                 from datalayer_core.utils.urls import DatalayerURLs
@@ -2197,7 +2289,7 @@ async def create_agent(
                     raise HTTPException(
                         status_code=422, detail={"problems": refused.problems}
                     ) from None
-            # The application runs as a Reactor plugin of its own (F-13).
+            # The application runs as a Reactor plugin of its own.
             register_app(running_app)
             # Codemode calls every tool through `execute_code`, which an
             # application without a shell is refused (rules.py): its tools are
@@ -2211,12 +2303,19 @@ async def create_agent(
             request.selected_mcp_servers = selected_mcp_servers
             # It remembers what its Appspec says, never what its agent's spec
             # does: per person and application, its Preview and its
-            # deployments together (R-18).
+            # deployments together.
             from agent_runtimes.apps.memory import agent_memory
 
             request.memory, request.memory_config = agent_memory(
                 running_app, request.app_instance
             )
+        if left_out.servers:
+            selected_mcp_servers = [
+                server
+                for server in selected_mcp_servers
+                if _ref_id_of(server.id) not in left_out.servers
+            ]
+            request.selected_mcp_servers = selected_mcp_servers
 
         # When codemode is NOT enabled, we start the servers explicitly here
         # When codemode IS enabled, the servers are started via _build_codemode_toolset
@@ -2271,9 +2370,17 @@ async def create_agent(
                             logger.info(
                                 f"Starting Catalog MCP server '{server_id}' for agent {agent_id}"
                             )
+                            # The demo account's own secrets, for a server fenced to them.
+                            owners_secrets = owners_env.get(server_id)
                             instance = await lifecycle_manager.start_server(
-                                server_id, catalog_server
+                                server_id, catalog_server, extra_env=owners_secrets
                             )
+                            if instance and owners_secrets:
+                                from agent_runtimes.apps.battle_books import (
+                                    note_started_with_owners_secrets,
+                                )
+
+                                note_started_with_owners_secrets(server_id)
                             if instance:
                                 started = True
                                 logger.info(f"Started Catalog MCP server '{server_id}'")
@@ -2336,7 +2443,7 @@ async def create_agent(
             "jupyter-server" if request.jupyter_sandbox else "eval"
         )
         # The `browser` sandbox is Pyodide in the page: no sandbox of a
-        # runtime is it, and none stands in for it (F-15, 2026-10-08).
+        # runtime is it, and none stands in for it (2026-10-08).
         if effective_variant == BROWSER_SANDBOX:
             raise HTTPException(
                 status_code=422,
@@ -2383,6 +2490,9 @@ async def create_agent(
         # When a sandbox variant is explicitly requested, eagerly ensure a sandbox
         # is configured and started for that variant even if no MCP servers are
         # selected. This guarantees that sandbox status/WS reflects availability.
+        # Every start runs off the event loop: a Jupyter server takes seconds
+        # to start, and on the loop the runtime answered nothing meanwhile,
+        # its readiness probe included.
         if request.sandbox_variant:
             try:
                 from ..services.code_sandbox_manager import get_code_sandbox_manager
@@ -2403,8 +2513,9 @@ async def create_agent(
                     )
                 elif effective_variant == "jupyter-server":
                     # Prefer per-agent sandbox creation when available.
-                    if hasattr(sandbox_manager, "create_agent_sandbox"):
-                        sandbox_manager.create_agent_sandbox(
+                    if hasattr(sandbox_manager, "ensure_agent_sandbox"):
+                        await asyncio.to_thread(
+                            sandbox_manager.ensure_agent_sandbox,
                             agent_id=agent_id,
                             variant="jupyter-server",
                         )
@@ -2417,7 +2528,7 @@ async def create_agent(
                         # used in tests that only expose configure/get_sandbox.
                         # jupyter_sandbox URL is already applied above when provided;
                         # without URL, manager may start local jupyter (standalone).
-                        sandbox_manager.get_sandbox()
+                        await asyncio.to_thread(sandbox_manager.get_sandbox)
                         logger.info("Eager-started jupyter sandbox")
                 else:
                     # Every other variant, eval included, is one the
@@ -2429,7 +2540,7 @@ async def create_agent(
                     sandbox_manager.configure(
                         variant=cast(SandboxVariant, effective_variant)
                     )
-                    sandbox_manager.get_sandbox()
+                    await asyncio.to_thread(sandbox_manager.get_sandbox)
                     logger.info("Eager-started %s sandbox", effective_variant)
             except HTTPException:
                 raise
@@ -2500,36 +2611,31 @@ async def create_agent(
 
                     sandbox_manager = get_code_sandbox_manager()
 
-                    # Reuse sandbox already created by the eager-start block.
-                    if hasattr(sandbox_manager, "get_agent_sandbox"):
-                        shared_sandbox = sandbox_manager.get_agent_sandbox(agent_id)
-
-                    if shared_sandbox is None:
-                        if hasattr(sandbox_manager, "create_agent_sandbox"):
-                            shared_sandbox = sandbox_manager.create_agent_sandbox(
-                                agent_id=agent_id,
-                                variant="jupyter-server",
-                            )
-                            logger.info(
-                                f"Created per-agent Jupyter sandbox for '{agent_id}'"
-                            )
-                        else:
-                            # Backward-compatible fallback for simple managers used
-                            # in tests that expose only get_sandbox().
-                            shared_sandbox = sandbox_manager.get_sandbox()
-                            logger.info(
-                                f"Using shared Jupyter sandbox for '{agent_id}'"
-                            )
-                    else:
-                        logger.info(
-                            f"Reusing existing Jupyter sandbox for '{agent_id}'"
+                    # Reuse sandbox already created by the eager-start block,
+                    # or start it, off the event loop. Started here rather than
+                    # on the first code run: the codemode toolset initialized
+                    # below already runs code in it.
+                    if hasattr(sandbox_manager, "ensure_agent_sandbox"):
+                        shared_sandbox = await asyncio.to_thread(
+                            sandbox_manager.ensure_agent_sandbox,
+                            agent_id=agent_id,
+                            variant="jupyter-server",
                         )
+                        logger.info(f"Per-agent Jupyter sandbox ready for '{agent_id}'")
+                    else:
+                        # Backward-compatible fallback for simple managers used
+                        # in tests that expose only get_sandbox().
+                        shared_sandbox = await asyncio.to_thread(
+                            sandbox_manager.get_sandbox
+                        )
+                        logger.info(f"Using shared Jupyter sandbox for '{agent_id}'")
                     # The toolset holds a proxy to the agent's sandbox, not the
                     # sandbox itself: switched to another variant or restarted,
-                    # the agent keeps executing in whatever it has now.
+                    # the agent keeps executing in whatever it has now, and one
+                    # lost is made again of the variant the agent asked for.
                     if hasattr(sandbox_manager, "get_agent_managed_sandbox"):
                         shared_sandbox = sandbox_manager.get_agent_managed_sandbox(
-                            agent_id
+                            agent_id, variant="jupyter-server"
                         )
                 except ImportError as e:
                     raise HTTPException(
@@ -2748,7 +2854,7 @@ async def create_agent(
                 final_system_prompt + "\n\n" + running_app.instructions.strip()
             )
 
-        # Create the agent based on the library — or the harness (SH-10):
+        # Create the agent based on the library — or the harness:
         # an agent whose spec names a catalogue harness is launched over ACP
         # in this runtime, the Shield deciding its actions by the
         # application's Rules and the platform's default; nothing of pydantic-ai
@@ -2827,7 +2933,7 @@ async def create_agent(
                     )
 
             # The subagents a caller names replace the spec's: how a team's
-            # supervisor is given its members (O2-09).
+            # supervisor is given its members.
             spec_for_runtime_controls = _with_subagents(
                 spec_for_runtime_controls, request, agent_id
             )
@@ -2863,21 +2969,21 @@ async def create_agent(
 
                 capabilities = _without_approval_capabilities(capabilities)
                 # Its channels are the application's, not its agent's: the
-                # agent's own `notifications` give it no tools (R-37).
+                # agent's own `notifications` give it no tools.
                 capabilities = [
                     capability
                     for capability in capabilities
                     if not isinstance(capability, NotificationsCapability)
                 ]
                 recorder = _keep_app_recorder(agent_id, running_app, request)
-                # And runs its sessions with the deployment's code (R-14).
+                # And runs its sessions with the deployment's code.
                 from agent_runtimes.apps.sessions import serve_agent_code
 
                 serve_agent_code(agent_id, served_code)
                 # Exactly what the terminal's agent of the application runs
                 # with — its rules, checks and record first, what its agent's
-                # spec gave it, then its documents, saving and learning tools
-                # (R-25): one builder, so a cloud runtime's agent lacks
+                # spec gave it, then its documents, saving and learning tools:
+                # one builder, so a cloud runtime's agent lacks
                 # nothing an in-process one has.
                 capabilities = app_capabilities(
                     running_app,
@@ -2982,7 +3088,7 @@ async def create_agent(
 
             # The application instance it serves names every model call it
             # makes through ai-inference, so its owner reads what each
-            # application and deployment spent (R-09).
+            # application and deployment spent.
             serving_app = request.app_instance if running_app is not None else None
             # A typed-decision model, or a model ai-inference said it does
             # not serve, is refused here, in a sentence, rather than at the
@@ -2997,10 +3103,18 @@ async def create_agent(
                 raise HTTPException(status_code=400, detail=f"{refusal}.")
             remember_app_instance(agent_id, serving_app)
             # Which of its gateway's servers it reaches in each user's name,
-            # with the token of who talks to it (I-04).
+            # with the token of who talks to it.
             from agent_runtimes.apps.acting import remember_servers_in_users_name
 
             remember_servers_in_users_name(
+                agent_id, running_app.connections if running_app is not None else None
+            )
+            # Which it connects to read only in its owner's account: a visitor's
+            # run of a demo of the account that keeps the demo books reaches
+            # them with that account's key (`battle_books`).
+            from agent_runtimes.apps.battle_books import remember_owners_servers
+
+            remember_owners_servers(
                 agent_id, running_app.connections if running_app is not None else None
             )
             # The companies it works with as a personal agent, each the
@@ -3009,13 +3123,13 @@ async def create_agent(
 
             remember_agent(agent_id, running_app)
             # In whose name it reaches Gmail, with a token IAM mints per run
-            # for them (W-02).
+            # for them.
             from agent_runtimes.mcp.google_workspace import remember_gmail_connection
 
             remember_gmail_connection(
                 agent_id, running_app.connections if running_app is not None else None
             )
-            # Credentials are never shown to the model (R-19): last, so
+            # Credentials are never shown to the model: last, so
             # it wraps every tool call innermost and reads every request last.
             from agent_runtimes.guardrails.credentials import credentials_withheld
 
@@ -3211,6 +3325,19 @@ async def create_agent(
 
         # Register with ACP (base registration)
         register_agent(agent, info)
+
+        # Its addresses (agent, MCP, API, web) answer for it when they are for it.
+        from ..addresses.servers import RUNTIME_ADDRESSES
+
+        if RUNTIME_ADDRESSES.servers:
+            await RUNTIME_ADDRESSES.agent_made(
+                agent_id,
+                app_spec=request.app_spec,
+                agent_spec_id=request.agent_spec_id,
+                name=request.name,
+                description=request.description,
+                app_instance=request.app_instance,
+            )
         logger.info(
             f"POST /agents: Registered agent '{agent_id}' in _agents. All registered: {list(_agents.keys())}"
         )
@@ -3846,7 +3973,7 @@ async def delete_agent(
 
     # Remove the stored creation spec
     _agentspecs.pop(agent_id, None)
-    # And what the session API knew of it (R-04), and the code it ran (R-14).
+    # And what the session API knew of it, and the code it ran.
     from agent_runtimes.apps.record import keep_agent_recorder
     from agent_runtimes.apps.sessions import serve_agent_code
     from agent_runtimes.routes.apps import keep_running
@@ -3854,7 +3981,7 @@ async def delete_agent(
     keep_agent_recorder(agent_id, None)
     serve_agent_code(agent_id, None)
     keep_running(agent_id, None)
-    # The browser of its computer, when it opened one (R-23).
+    # The browser of its computer, when it opened one.
     from agent_runtimes.apps.browser import close_browser
 
     await close_browser(agent_id)
@@ -4363,7 +4490,10 @@ async def ensure_agent_sandbox(
                 )
                 existing = None
         if existing is None:
-            manager.create_agent_sandbox(agent_id=agent_id, variant=wanted)
+            # Off the event loop: a Jupyter server takes seconds to start.
+            await asyncio.to_thread(
+                manager.create_agent_sandbox, agent_id=agent_id, variant=wanted
+            )
             logger.info(
                 "Started the %s sandbox for agent '%s' on request", wanted, agent_id
             )
@@ -4836,7 +4966,7 @@ async def _start_mcp_servers_for_agent(
             )
             # Pass env vars explicitly so MCP subprocess gets them even if
             # os.environ was not populated (robust, order-independent).
-            # Its own secrets alone: another server's are not its (R-19).
+            # Its own secrets alone: another server's are not its.
             own = server_env_names(config)
             refuse_server_names(
                 server_id,
@@ -5001,7 +5131,7 @@ def _declared_for_app(
     app_spec: dict[str, Any], app_instance: dict[str, Any] | None = None
 ) -> DeclaredSecrets:
     """What an application declares as its agent will be made from it: its
-    agent's agentspec, its connections, its signed user's secret (R-19).
+    agent's agentspec, its connections, its signed user's secret.
 
     422 when the runtime's own loader refuses the Appspec.
     """
@@ -5039,7 +5169,7 @@ def _note_launched_app(
     app_spec: dict[str, Any] | None, app_instance: dict[str, Any] | None
 ) -> DeclaredSecrets | None:
     """Remember the application the runtime was launched for, when the
-    companion names it: its secrets are declared from then on (R-19).
+    companion names it: its secrets are declared from then on.
     """
     if not app_spec:
         return None
@@ -5068,7 +5198,7 @@ async def _setup_env_and_sandbox(
     """
     label = f"mcp-servers/start/{agent_id}" if agent_id else "mcp-servers/start"
     if declared is None:
-        # Started without a spec: what the running agents' specs declare (R-19).
+        # Started without a spec: what the running agents' specs declare.
         declared = _declared_for_agents([agent_id] if agent_id else list(_agents))
         kept, dropped = keep_declared(
             {ev.name: ev.value for ev in body.env_vars if ev.name}, declared.runtime
@@ -5105,7 +5235,7 @@ async def _setup_env_and_sandbox(
             from ..services.code_sandbox_manager import get_code_sandbox_manager
 
             sandbox_manager = get_code_sandbox_manager()
-            # The skills' secrets alone: a server's stays with the server (R-19).
+            # The skills' secrets alone: a server's stays with the server.
             env_dict = {
                 ev.name: ev.value
                 for ev in body.env_vars
@@ -5262,7 +5392,7 @@ async def start_all_agents_mcp_servers(
     Returns:
         Aggregated status of server start operations across all agents.
     """
-    # The application the runtime was launched for (R-19): its secrets are
+    # The application the runtime was launched for: its secrets are
     # set now, before its agent is made, and a missing one is refused here.
     launch_spec, launch_instance = _launch_of(
         body.launch_app_spec, body.launch_app_instance
@@ -5720,7 +5850,7 @@ class ConfigureFromSpecRequest(BaseModel):
     launch_app_spec: dict[str, Any] | None = None
     """The Appspec of the application the runtime was launched for, passed by
     the Operator: declared with this spec, so its agent made later finds its
-    connections' secrets (R-19). Not the agent's own ``app_spec``."""
+    connections' secrets. Not the agent's own ``app_spec``."""
     launch_app_instance: dict[str, Any] | None = None
     """Where that application runs: its app_uid and deployment_uid."""
     owner_uid: str | None = None
@@ -5734,6 +5864,11 @@ class ConfigureFromSpecRequest(BaseModel):
     """Skills of the spec to leave out, by id (``github`` or ``github:0.0.1``):
     their secrets neither declared nor asked for, the skills not given. A
     skill the spec does not have is refused (422)."""
+    address: dict[str, str] | None = None
+    """A person's own agent's name at its four addresses, the handle of the
+    person it acts for and its owner (``{name, acts_for, owner_uid}``), as the
+    Operator routed them: named by the companion alone, once
+    (`agent_runtimes.addresses.servers.take_address`)."""
 
 
 def _skill_ref(skill: Any) -> str:
@@ -5761,6 +5896,28 @@ def _without_skills(spec: Any, agent_spec_id: str, left_out: list[str]) -> Any:
     return spec.model_copy(
         update={"skills": [s for s in spec.skills or [] if _skill_ref(s) not in names]}
     )
+
+
+def _take_address(http_request: Request, address: dict[str, str]) -> None:
+    """Know this runtime's agent's name at its four addresses (a person's own agent):
+    only the pod names it (`callers.is_the_pod`), before its agent is made."""
+    from agent_runtimes.addresses.servers import take_address
+    from agent_runtimes.apps.callers import POD_SECRET_HEADER, is_the_pod
+
+    host = http_request.client.host if http_request.client else None
+    if not is_the_pod(host, http_request.headers.get(POD_SECRET_HEADER)):
+        raise HTTPException(
+            status_code=403,
+            detail="Only the runtime's companion names its agent's addresses.",
+        )
+    try:
+        take_address(
+            str(address.get("name") or ""),
+            acts_for=str(address.get("acts_for") or ""),
+            owner_uid=str(address.get("owner_uid") or ""),
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from None
 
 
 def _take_owner(http_request: Request, owner_uid: str) -> None:
@@ -5791,14 +5948,14 @@ def _take_owner(http_request: Request, owner_uid: str) -> None:
 
 
 class DeclaredSecretsRequest(BaseModel):
-    """What the companion asks before it gives a runtime any secret (R-19)."""
+    """What the companion asks before it gives a runtime any secret."""
 
     agent_spec_id: str | None = None
     """The agentspec it will configure; none: the agents running now."""
     agent_spec: dict[str, Any] | None = None
     app_spec: dict[str, Any] | None = None
     """The application the runtime is launched for: its agent's agentspec and
-    its connections are declared too (R-19)."""
+    its connections are declared too."""
     app_instance: dict[str, Any] | None = None
 
 
@@ -5809,7 +5966,7 @@ async def declared_secrets_endpoint(body: DeclaredSecretsRequest) -> dict[str, A
     Names only, never a value: ``runtime`` (what the process may hold),
     ``kernel`` (what the code sandbox gets: the skills'), ``consumers`` (who
     needs which). The companion gives the runtime those of the account's
-    secrets and no other (R-19, decided 2026-10-07).
+    secrets and no other (decided 2026-10-07).
 
     A runtime launched for a deployment answers what that deployment declares,
     whatever it is asked about (`_launch_of`).
@@ -5836,6 +5993,13 @@ async def declared_secrets_endpoint(body: DeclaredSecretsRequest) -> dict[str, A
     if body.app_spec:
         declared = declared.merged(_declared_for_app(body.app_spec, body.app_instance))
     return declared.as_names()
+
+
+def _ref_id_of(ref: Any) -> str:
+    """An id without its version: ``crawl:0.0.1`` → ``crawl``."""
+    text = str(getattr(ref, "id", ref) or "").strip()
+    base, _, version = text.rpartition(":")
+    return base if base and "." in version else text
 
 
 def _mcp_server_ids_of(agent_id: str) -> list[str]:
@@ -5907,7 +6071,7 @@ async def configure_from_spec_endpoint(
         raise HTTPException(status_code=403, detail=DEPLOYMENT_RUNS_ITS_OWN)
     logger.info("Configuring agent from spec: %s", body.agent_spec_id)
 
-    # ── 1. The library spec, and the secrets its specs declare (R-19) ──
+    # ── 1. The library spec, and the secrets its specs declare ──
     spec = get_library_agent_spec(body.agent_spec_id)
     if spec is None:
         raise HTTPException(
@@ -5917,6 +6081,8 @@ async def configure_from_spec_endpoint(
     target_agent_name = body.agent_id
     if body.owner_uid:
         _take_owner(http_request, body.owner_uid)
+    if body.address:
+        _take_address(http_request, body.address)
     if body.without_mcp_servers:
         # Its MCP servers left out: neither their secrets nor their tools.
         spec = spec.model_copy(update={"mcp_servers": []})
@@ -6096,6 +6262,14 @@ async def configure_from_spec_endpoint(
     # is managed independently and should not trigger an agent restart.
     new_spec_dict = create_request.model_dump()
     new_spec_dict.pop("jupyter_sandbox", None)
+    # What it starts without is part of what it is: a secret set up since
+    # the last configure recreates the agent with what it brings.
+    left_out_now = _left_out(declared)
+    new_spec_dict["left_out"] = (
+        sorted(left_out_now.servers)
+        + sorted(left_out_now.skills)
+        + sorted(left_out_now.tools)
+    )
 
     # ── 5. Compare with stored spec — restart only if changed ────────
     stored_spec = _agentspecs.get(target_agent_name)
@@ -6194,7 +6368,7 @@ async def configure_from_spec_endpoint(
 
     # ── 7. Start MCP servers + inject sandbox env vars (async) ───────
     #    Each server is started with its own secrets; the sandbox gets the
-    #    skills' alone (R-19).
+    #    skills' alone.
     sandbox_env_vars: dict[str, str] = {
         ev.name: ev.value for ev in kernel_env if ev.value
     }

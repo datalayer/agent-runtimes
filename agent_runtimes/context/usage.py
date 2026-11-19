@@ -91,7 +91,7 @@ def serialize_messages(messages: list[Any]) -> list[dict[str, Any]]:
                 part_kind = getattr(part, "part_kind", None)
                 part_dict["part_kind"] = part_kind
 
-                # A tool's display (RU-1): the model view is the
+                # A tool's display: the model view is the
                 # content, as JSON; the whole display is kept beside it for
                 # the page a reloaded history draws.
                 metadata = getattr(part, "metadata", None)
@@ -607,7 +607,7 @@ def _counted(*values: Any) -> int | None:
 @dataclass
 class TurnSpend:
     """
-    What one turn of an agent spent, for the answer that ends it (O2-10).
+    What one turn of an agent spent, for the answer that ends it.
 
     The tokens are the run's own count when the end of the run reports one,
     and otherwise what the agent's usage history grew by during the turn. The

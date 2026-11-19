@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""GenAI spans of every pydantic-ai agent, as AgentCore Evaluations reads them (AC-12, AC-13).
+"""GenAI spans of every pydantic-ai agent, as AgentCore Evaluations reads them.
 
 pydantic-ai's own instrumentation is switched on for every agent
 (:func:`enable_genai_instrumentation`, ``Agent.instrument_all``): the
@@ -212,7 +212,7 @@ def enable_genai_instrumentation(
     return settings
 
 
-# --- AgentCore Observability (AC-13) ---------------------------------------------------
+# --- AgentCore Observability ---------------------------------------------------
 
 
 @dataclass(frozen=True)

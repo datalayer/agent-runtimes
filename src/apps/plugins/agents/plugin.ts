@@ -63,7 +63,9 @@ import {
  */
 export const DEFAULT_DATALAYER_AGENTSPEC = 'jupyter-tutor';
 
-export const AGENTS_PLUGIN_NAME = '@datalayer/loop-plugin-agents';
+import { AGENTS_PLUGIN_NAME } from './pluginName';
+
+export { AGENTS_PLUGIN_NAME };
 
 export type AgentsConfig = {
   /** Server the server-backed targets are reached through. */
@@ -118,6 +120,13 @@ export type AgentsConfig = {
    */
   teamId?: string;
   /**
+   * What a visitor's key for an in-page agent is for (`visitorForOf`):
+   * `team:<id>`, `scene:<id>`, an application (an example's id, `at:<slug>`,
+   * `library:<uid>`) or `battle:<id>`. ai-inference serves the key the models
+   * of what it names and mints none for nothing. Unsaid, the team's.
+   */
+  visitorFor?: string;
+  /**
    * Whether the header offers the team's member picker.
    *
    * True by default: with a team there is a choice to make, and the picker is
@@ -136,24 +145,35 @@ export type AgentsConfig = {
   /**
    * What the agent created on that runtime is created with besides its spec:
    * an application's `app_spec`, so that the runtime runs the application and
-   * decides its tool calls by its rules (R-05, R-03).
+   * decides its tool calls by its rules.
    */
   datalayerCreatePayload?: Record<string, unknown>;
   /**
-   * A conversation without an account (R-30): the application's agent
+   * A conversation without an account: the application's agent
    * is already on the visitors' runtime, so nothing is allocated or created,
    * and the chat speaks to it with a visitor's token for the application.
    */
   datalayerVisitors?: DatalayerVisitors;
   /**
-   * A deployment kept on a runtime of its own (R-33): its agent is
-   * already there, made from the deployment record when the runtime started,
-   * so nothing is allocated or created, and the chat speaks to it with the
-   * person's own token. `url` is the runtime's agent-runtimes address.
+   * An agent already on a runtime of its own, so nothing is allocated or
+   * created: an always-on deployment there, its agent made from the
+   * deployment record when the runtime started, which the chat speaks to
+   * with the person's own token; or the runtime a terminal session runs on,
+   * handed over by `/browser`, reached through the terminal's relay, which
+   * adds the token itself. `url` is the runtime's agent-runtimes address.
+   *
+   * `jupyter` is the runtime's Jupyter server, when the page opens notebooks
+   * on it: its base URL (the ingress) and its own token. Given, the sandbox
+   * is reported running there; absent, the chat is all the page talks to.
+   * `name` is the runtime's.
    */
-  datalayerKept?: { url: string };
+  datalayerKept?: {
+    url: string;
+    name?: string;
+    jupyter?: { url: string; token: string };
+  };
   /**
-   * An embed token for the application (R-20): what an embedded
+   * An embed token for the application: what an embedded
    * application's chat speaks to its session with, for a visitor the platform
    * does not know — it runs a session of the application's deployment, and
    * reaches nothing else.
@@ -161,8 +181,10 @@ export type AgentsConfig = {
   embedToken?: string;
   /**
    * The target is the host's decision, not the reader's: started there even
-   * with the control hidden. For an application that runs where it is
-   * deployed; a workspace leaves it unset.
+   * with the control hidden, and, with the control shown, every other target
+   * held in it with the reason (`heldTargetReason`). For an application that
+   * runs where it is deployed, and for a session handed over from the
+   * terminal, which runs where it was started; a workspace leaves it unset.
    */
   targetFixed?: boolean;
 };
@@ -227,6 +249,7 @@ export const AgentsPlugin = definePlugin<AgentsConfig, unknown, AgentsOutput>({
             'local',
           config.serverUrl,
         ),
+        targetFixed: config.targetFixed,
         kernelSource: config.kernelSource,
         localAgent: config.localAgent,
         // The capacity plugins' say, read at switch time — lazily, because a

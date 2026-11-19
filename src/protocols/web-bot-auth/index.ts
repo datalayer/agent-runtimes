@@ -4,8 +4,7 @@
  */
 
 /**
- * Web Bot Auth: an agent's requests signed, and verified
- * (PR-20 to PR-23).
+ * Web Bot Auth: an agent's requests signed, and verified.
  *
  * Implements `draft-ietf-webbotauth-httpsig-protocol-00` (2026-09-01) by
  * wrapping Cloudflare's `web-bot-auth` 0.2.0, which reproduces the draft's
@@ -20,7 +19,7 @@
  *   atomic nonce check, answering `verified`, `invalid` or `unverified`.
  *
  * The Python package `agent_runtimes.protocols.web_bot_auth` is the same
- * protocol, and both read `fixtures/vectors.json` (PR-51).
+ * protocol, and both read `fixtures/vectors.json`.
  *
  * @module protocols/web-bot-auth
  */

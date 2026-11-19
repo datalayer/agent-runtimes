@@ -106,7 +106,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppAction: {
       additionalProperties: false,
       description:
-        'An action of its code a person presses (`@app.action`, RU-5).\n\nWhat its payload is, typed: the JSON Schema of an object, written from the\npydantic model its code declares (`@app.action(name, payload=Model)`); an\naction declaring none takes nothing. The runtime offers it only where a\ndisplay showed it, or to the session that runs it, each press with a\ntoken; a press of an action not declared here is refused, and its payload\nis checked against this schema before its code runs.',
+        'An action of its code a person presses (`@app.action`).\n\nWhat its payload is, typed: the JSON Schema of an object, written from the\npydantic model its code declares (`@app.action(name, payload=Model)`); an\naction declaring none takes nothing. The runtime offers it only where a\ndisplay showed it, or to the session that runs it, each press with a\ntoken; a press of an action not declared here is refused, and its payload\nis checked against this schema before its code runs.',
       properties: {
         name: {
           description: 'Its name, as its button presses it',
@@ -363,6 +363,13 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           },
           title: 'Only',
           type: 'array',
+        },
+        optional: {
+          default: false,
+          description:
+            "Whether it runs without this connection when its secrets are not set up, as its agent does (the agent's `optional`, whose `at_least_one` groups it follows): only a server its agent says optional",
+          title: 'Optional',
+          type: 'boolean',
         },
       },
       required: ['server'],
@@ -698,7 +705,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         },
         actions: {
           description:
-            'The actions of its code a person presses (`@app.action`, RU-5), each with the JSON Schema of its payload: what its buttons offer, with a token, and nothing else',
+            'The actions of its code a person presses (`@app.action`), each with the JSON Schema of its payload: what its buttons offer, with a token, and nothing else',
           items: {
             $ref: '#/$defs/AppAction',
           },
@@ -1402,15 +1409,6 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           title: 'Registered Agents',
           type: 'array',
         },
-        operations: {
-          description:
-            'What it does for the person once they confirm (the `operations` extension)',
-          items: {
-            $ref: '#/$defs/AppPapOperation',
-          },
-          title: 'Operations',
-          type: 'array',
-        },
       },
       title: 'AppPapCompany',
       type: 'object',
@@ -1552,34 +1550,6 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       },
       required: ['task'],
       title: 'AppPapExcludedTask',
-      type: 'object',
-    },
-    AppPapOperation: {
-      additionalProperties: false,
-      description:
-        "Something a personal agent may ask the application to do for the person,\ndone only once they approve its exact terms (Operations v2).\n\nAsked by a personal agent, the application's agent does not call `tool`:\nthe company answers with the operation, its arguments the terms, and the\npersonal agent asks the person about that revision. Its request sent again\nwith their approval runs the tool, with those arguments and only once.",
-      properties: {
-        action: {
-          description:
-            "The action's name at this company, e.g. `orders.exchange`",
-          title: 'Action',
-          type: 'string',
-        },
-        tool: {
-          description:
-            "The application's tool that does it, called with the terms",
-          title: 'Tool',
-          type: 'string',
-        },
-        summary: {
-          description:
-            'What the person is shown, with `{term}` for each term, e.g. `Exchange order {order_id} for size {size}`; never written by the model',
-          title: 'Summary',
-          type: 'string',
-        },
-      },
-      required: ['action', 'tool', 'summary'],
-      title: 'AppPapOperation',
       type: 'object',
     },
     AppPapReference: {
@@ -2841,10 +2811,38 @@ export const APPSPEC_SCHEMA: JsonSchema = {
             'The UI renderer of `agentspecs/ui-renderers` it is exposed through, by id',
           title: 'Renderer',
         },
+        placement: {
+          anyOf: [
+            {
+              $ref: '#/$defs/UiPlacement',
+            },
+            {
+              type: 'null',
+            },
+          ],
+          default: null,
+          description:
+            "Where in the chat it goes, one of its spec's `placements`; its default unsaid",
+        },
       },
       required: ['plugin'],
       title: 'UiChoice',
       type: 'object',
+    },
+    UiPlacement: {
+      description:
+        'Where a UI goes in the chat (the user, 15 November 2026: "make sure ui can be used to be\ninjected in the chat itself (toolbar, header...) or as chat message (a2ui)").\n\nThe chat\'s own chrome — ``header`` (beside its title), ``toolbar`` (the input toolbar\'s\ncontrols), ``footer`` (under the prompt), ``banner`` (above the messages) — its two side\npanels, ``left`` and ``right`` (beside the conversation, closed until opened; the user,\n18 November 2026: "left and right side panels ... real panels that receive controls and\nvisuals: an agent\'s UI plugins placed there") — or ``message``: a card in the conversation,\ndrawn by a tool renderer or the A2UI renderer.',
+      enum: [
+        'header',
+        'toolbar',
+        'footer',
+        'banner',
+        'left',
+        'right',
+        'message',
+      ],
+      title: 'UiPlacement',
+      type: 'string',
     },
     Visibility: {
       description: 'Who can open a hosted application.',
@@ -2963,6 +2961,21 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       },
       title: 'Tools',
       type: 'array',
+    },
+    openapi: {
+      anyOf: [
+        {
+          additionalProperties: true,
+          type: 'object',
+        },
+        {
+          type: 'null',
+        },
+      ],
+      default: null,
+      description:
+        "What it answers when called, as an OpenAPI 3.1 document: each operation's `summary` and `description` its instruction to the agent, its JSON request body and parameters its inputs, its `200` JSON schema what the agent answers. Its MCP tools, its REST endpoints and its Personal Agent Protocol operations (`x-pap`) all come from it. Without it, the application answers one operation, `ask`. In a file, a path relative to the spec",
+      title: 'Openapi',
     },
     context: {
       description:
@@ -3168,6 +3181,14 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         'Its banner, by name, from the set people choose theirs from on their profile. The one its id seeds when unsaid',
       pattern: '^\\s*([A-Z][A-Za-z0-9]{0,63})?\\s*$',
       title: 'Banner',
+      type: 'string',
+    },
+    presentation: {
+      default: '',
+      description:
+        'What it is, as one Markdown document, for a page that presents it beside its conversation (a panel a host adds to the application): a paragraph, a bullet list of what it does, a note wholly in emphasis, and a paragraph of links for its actions, the main one in bold. Its name and its emoji are the heading above it; raw HTML and headings are refused. Nothing is presented when unsaid',
+      maxLength: 4000,
+      title: 'Presentation',
       type: 'string',
     },
   },

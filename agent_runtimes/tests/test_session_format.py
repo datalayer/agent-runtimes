@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The `session.format` point and `datalayer-session/1` (MH-F04).
+"""The `session.format` point and `datalayer-session/1`.
 
 The built-in format is reached through the point, an unknown id refused
 naming the known ones; its exporter redacts by the spec's rules and counts

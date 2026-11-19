@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The Shield's policies on the runtime (SH-50, SH-31, SH-32, SH-54, SH-35).
+"""The Shield's policies on the runtime.
 
 IAM's documents in force on a managed runtime and fail closed without them;
 the organization's tightening over the Appspec's and the session's; a rule a
@@ -138,7 +138,7 @@ def act(kind: str, **fields: Any) -> Action:
     return Action(kind=kind, title=kind, **{"class": class_of(kind)}, **fields)
 
 
-# --- SH-50: the documents from IAM, fail closed ----------------------------------------
+# --- The documents from IAM, fail closed ----------------------------------------
 
 
 class TestManagedFromIam:
@@ -165,7 +165,7 @@ class TestManagedFromIam:
     async def test_a_change_pushed_over_ai_agents_socket_reaches_the_runtime_at_once(
         self, managed: FakeIam
     ) -> None:
-        """SH-50's push: ai-agents broadcasts ``shield_policy_changed`` on the
+        """The push: ai-agents broadcasts ``shield_policy_changed`` on the
         account's channel when IAM wrote a document; the runtime pulls IAM at
         once, without waiting for the poll."""
         import socket as sockets
@@ -452,7 +452,7 @@ class TestAdmittedHarnesses:
         assert harness_refusal([either, default_policy()], "claude-code") is None
 
 
-# --- SH-31: the three levels on the runtime -----------------------------------------------
+# --- The three levels on the runtime -----------------------------------------------
 
 
 def _ctx():
@@ -501,7 +501,7 @@ class TestThreeLevels:
         )
 
 
-# --- SH-54: a rule added to a running session ----------------------------------------------
+# --- A rule added to a running session ----------------------------------------------
 
 
 class TestSessionRules:
@@ -650,7 +650,7 @@ def remote(runtime: Runtime) -> Iterator[TestClient]:
 
 
 class TestTheApplicationsRulesAreACeiling:
-    """A session rule that loosens the application's own Rules is refused at once (SH-54)."""
+    """A session rule that loosens the application's own Rules is refused at once."""
 
     APP_RULES = Policy(
         scope="team",
@@ -906,7 +906,7 @@ class TestTheSessionRulesRoutes:
         assert session_rules().of("session-0001") == [], "gone with the session"
 
 
-# --- SH-32: the budget, soft then hard -------------------------------------------------------
+# --- The budget, soft then hard -------------------------------------------------------
 
 
 def _model(messages: Any, info: AgentInfo) -> ModelResponse:
@@ -957,7 +957,7 @@ class TestTheModelBudget:
         """The streaming path, left as soon as the answer's text begins (as a
         terminal does), before the response is whole: what pydantic-ai
         counted for the run reaches the session's total at the run's end,
-        and the third request is refused by the hard limit (SH-32, r1 drill
+        and the third request is refused by the hard limit (r1 drill
         of 15 October 2026)."""
         import json
 
@@ -1140,7 +1140,7 @@ class TestTheDeploymentsSpendLimit:
     A deployment's spend limit, handed by ai-agents' keeper in its instance.
 
     Held for each session as a ``team`` document's ``limits.spend`` and said
-    apart from the keeper's day (SH-32).
+    apart from the keeper's day.
     """
 
     def test_it_is_a_team_document_soft_at_the_keepers_warning_share(self) -> None:
@@ -1246,7 +1246,7 @@ async def _allow(sentence: str) -> None:
     return None
 
 
-# --- SH-35: the conformance table on the runtime --------------------------------------------
+# --- The conformance table on the runtime --------------------------------------------
 
 FACES = ("mcp", "a2a", "acp", "ag-ui", "embed")
 TABLE = [

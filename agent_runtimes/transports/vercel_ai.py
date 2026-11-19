@@ -119,7 +119,7 @@ def _extract_eval_identifiers(prompt: str) -> tuple[str | None, str | None]:
 def _extract_eval_binding(prompt: str) -> tuple[str | None, str | None, str | None]:
     """The experiment, evalset and case a prompt names on its own lines
     (`experiment_id=`, `evalset_id=`, `case_id=`): what binds the live event
-    to the experiment the platform evaluates it for (B2-13).
+    to the experiment the platform evaluates it for.
     """
     experiment_id: str | None = None
     evalset_id: str | None = None
@@ -228,7 +228,7 @@ async def _emit_interactive_live_eval_event(
         "target_id": experiment_id,
         "target_type": "experiment",
         # The binding the platform grades the event for, with the
-        # experiment's own evaluators (B2-13); the emitter's own measure
+        # experiment's own evaluators; the emitter's own measure
         # stays beside it as `interactive-pass-rate`.
         "experiment_id": experiment_id,
         "evalset_id": evalset_id,
@@ -1039,7 +1039,7 @@ class VercelAITransport(BaseTransport):
             sdk_version = body.get("sdkVersion") or body.get("sdk_version")
 
             # A message the person said: its transcript is the message, its
-            # UI message's metadata says how it was heard (VO-27).
+            # UI message's metadata says how it was heard.
             from ..voice import hear, spoken_of_vercel_body
 
             hear(spoken_of_vercel_body(body))
@@ -1067,7 +1067,7 @@ class VercelAITransport(BaseTransport):
         )
         # A deployment's agent acts as its application's principal: its token
         # is asked for again, with this request's, when it runs out, and
-        # without one nothing runs (I-03).
+        # without one nothing runs.
         from ..apps.principal import (
             PrincipalTokenMissing,
             deployment_of,
@@ -1089,16 +1089,26 @@ class VercelAITransport(BaseTransport):
                 from starlette.responses import JSONResponse
 
                 return JSONResponse({"detail": str(missing)}, status_code=403)
-        if isinstance(model, str) and model:
-            # A model the agent does not offer, or ai-inference does not
-            # serve, is refused before anything runs.
-            from ..models.offered import model_refusal
+        # An empty model is none: the agent's own.
+        model = model or None
+        # A model the agent does not offer (`offered.run_model_refusal`), a
+        # typed-decision model, or one ai-inference does not serve, is
+        # refused before anything runs.
+        from ..models.offered import (
+            decision_refusal,
+            inference_refusal,
+            run_model_refusal,
+        )
 
-            refusal = model_refusal(self._agent_id, model, effective_inference_provider)
-            if refusal:
-                from starlette.responses import JSONResponse
+        refusal = run_model_refusal(self._agent_id, model)
+        if not refusal and isinstance(model, str):
+            refusal = decision_refusal(model, switch=False)
+            served = inference_refusal(model, effective_inference_provider)
+            refusal = refusal or (f"{served}: the run was refused." if served else None)
+        if refusal:
+            from starlette.responses import JSONResponse
 
-                return JSONResponse({"detail": refusal}, status_code=400)
+            return JSONResponse({"detail": refusal}, status_code=400)
         if effective_inference_provider == "datalayer" and isinstance(model, str):
             # Request body model strings must be wrapped so calls are proxied
             # through datalayer-ai-inference instead of direct/local routing.
@@ -1112,7 +1122,7 @@ class VercelAITransport(BaseTransport):
                     model,
                     "datalayer",
                     # Attributed to the application the agent serves, as
-                    # its own model is (R-09).
+                    # its own model is.
                     app_instance=app_instance_of(self._agent_id),
                 )
             except Exception as exc:
@@ -1398,10 +1408,10 @@ class VercelAITransport(BaseTransport):
                 # Get runtime toolsets from the adapter (includes MCP servers)
                 runtime_toolsets = self._get_runtime_toolsets()
                 # The Datalayer MCP gateway is reached as the application,
-                # never with the process's key: a deployment as its principal
-                # (I-03), its servers in each user's name with the token of
-                # the person talking to it (I-04), a Preview with its run's
-                # token, narrowed to its granted Spaces (R-25).
+                # never with the process's key: a deployment as its principal,
+                # its servers in each user's name with the token of
+                # the person talking to it, a Preview with its run's
+                # token, narrowed to its granted Spaces.
                 from ..apps.principal import gateway_toolsets_of_the_run
 
                 runtime_toolsets = await gateway_toolsets_of_the_run(

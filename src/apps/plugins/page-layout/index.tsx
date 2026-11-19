@@ -41,8 +41,8 @@
  *   stays here rather than moving with the layout: it renders the reply as
  *   the transcript does, with the chat's markdown and the turn footer.
  *
- * Its other arrangement is the **split** (`arrangement: 'split'`, LOOP
- * T-07): the conversation and the work side by side, one hairline between
+ * Its other arrangement is the **split** (`arrangement: 'split'`):
+ * the conversation and the work side by side, one hairline between
  * them that a person drags — the layout an Appspec names `split`, where
  * `page` is this plugin's sheet. `AppRenderer` picks one by the application.
  *
@@ -228,7 +228,7 @@ export function setPageLayoutChatMode(mode: ChatViewMode): void {
 function ChatModeAction(): JSX.Element {
   const mode = useSignalValue(pageLayoutChatMode);
   // The page layout places the chat itself: the floating assistant, which
-  // ChatFloating draws, is offered greyed out with its reason (T-21).
+  // ChatFloating draws, is offered greyed out with its reason.
   return (
     <ChatViewModeToggle
       value={mode}

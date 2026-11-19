@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A team seat on AgentCore Runtime: A2A at ``/`` of port 9000 (AC-05).
+"""A team seat on AgentCore Runtime: A2A at ``/`` of port 9000.
 
 The agent configured from the spec (a pydantic-ai agent on a function model,
 served over AG-UI as ``configure_at_start`` leaves it) is registered with the

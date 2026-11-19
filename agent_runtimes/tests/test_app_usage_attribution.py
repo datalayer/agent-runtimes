@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An application's model calls name it, so its owner reads what it spent (R-09).
+"""An application's model calls name it, so its owner reads what it spent.
 
 Routed through datalayer-ai-inference, every call of an agent that serves an
 application instance carries ``X-Datalayer-App-Uid`` and, for a deployment,
@@ -53,7 +53,7 @@ def test_the_headers_reach_ai_inference_on_every_call(monkeypatch):
 
     monkeypatch.setenv("DATALAYER_AI_INFERENCE_URL", "https://inference.example")
     give_inference_token("the-runtime-token")
-    # A deployment calls as its application's principal (I-03).
+    # A deployment calls as its application's principal.
     give_principal_token("01DEP", "the-principal-token", expires_in=3600)
     model = resolve_model_for_inference_provider(
         "bedrock:x", "datalayer", app_instance=DEPLOYMENT
@@ -91,6 +91,29 @@ def test_the_headers_reach_ai_inference_on_every_call(monkeypatch):
     assert seen[0].headers["authorization"] == "Bearer the-principal-token"
 
 
+def test_a_runtime_on_agentcore_names_its_engine(monkeypatch):
+    """No Datalayer reservation carries an AgentCore runtime: each call says
+    its engine, which ai-inference records as the usage's runtime_engine."""
+    assert models.runtime_engine_headers({"AGENT_RUNTIMES_TARGET": "agentcore"}) == {
+        "X-Datalayer-Runtime-Engine": "agentcore"
+    }
+    assert models.runtime_engine_headers({"AGENT_RUNTIMES_TARGET": "kagent"}) == {}
+    assert models.runtime_engine_headers({}) == {}
+    assert models.inference_usage_headers(
+        DEPLOYMENT, {"AGENT_RUNTIMES_TARGET": "agentcore"}
+    ) == {
+        "X-Datalayer-App-Uid": "01APP",
+        "X-Datalayer-Deployment-Uid": "01DEP",
+        "X-Datalayer-Runtime-Engine": "agentcore",
+    }
+    monkeypatch.setenv("AGENT_RUNTIMES_TARGET", "agentcore")
+    model = resolve_model_for_inference_provider("bedrock:x", "datalayer")
+    assert model.client._client.headers["x-datalayer-runtime-engine"] == "agentcore"
+    monkeypatch.delenv("AGENT_RUNTIMES_TARGET")
+    model = resolve_model_for_inference_provider("bedrock:x", "datalayer")
+    assert "x-datalayer-runtime-engine" not in model.client._client.headers
+
+
 def test_a_model_routed_for_no_application_sends_neither():
     model = resolve_model_for_inference_provider("bedrock:x", "datalayer")
     assert "x-datalayer-app-uid" not in model.client._client.headers
@@ -120,10 +143,11 @@ def test_the_header_names_are_ai_inference_s():
     spelled differently is a call nobody attributes."""
     assert models.APP_UID_HEADER == "X-Datalayer-App-Uid"
     assert models.DEPLOYMENT_UID_HEADER == "X-Datalayer-Deployment-Uid"
+    assert models.RUNTIME_ENGINE_HEADER == "X-Datalayer-Runtime-Engine"
 
 
 def test_a_model_the_persons_modes_choose_names_the_deployment_too(monkeypatch):
-    """R-09: on a runtime, a model a mode chooses (P-19) is called
+    """On a runtime, a model a mode chooses is called
     through the agent's provider, naming the instance it serves — not
     around ai-inference, unmetered on the application."""
     from pydantic_ai import Agent
@@ -151,7 +175,7 @@ def test_a_model_the_persons_modes_choose_names_the_deployment_too(monkeypatch):
 
 
 def test_the_runtimes_session_agent_carries_what_its_agent_was_made_with(monkeypatch):
-    """The agent a runtime's session runs (R-04) is told the provider and the
+    """The agent a runtime's session runs is told the provider and the
     instance its agent was created with."""
     from agent_runtimes.apps import sessions
     from agent_runtimes.routes import agents, agui
@@ -181,7 +205,7 @@ def test_the_runtimes_session_agent_carries_what_its_agent_was_made_with(monkeyp
     assert (made.inference_provider, made.app_instance) == ("datalayer", DEPLOYMENT)
 
 
-# --- a model the chat request names (drilled 2026-10-08, P-24) ---------------------
+# --- a model the chat request names (drilled 2026-10-08) ---------------------
 
 BEDROCK = "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0"
 
@@ -219,6 +243,11 @@ def _post(transport, model: str, monkeypatch) -> tuple[Any, list[Any]]:
         return PlainTextResponse("ran")
 
     monkeypatch.setattr(agui_transport.AGUIAdapter, "dispatch_request", dispatch)
+    # Its agent offers the model the request names: a run names only one of
+    # its agent's models.
+    from agent_runtimes.routes import agents
+
+    monkeypatch.setitem(agents._agentspecs, transport._agent_id, {"model": model})
     response = TestClient(transport.get_app()).post(
         "/",
         json={

@@ -4,7 +4,7 @@
  */
 
 /**
- * What the hands-free cases share (VO-12, VO-13): the browser with Chrome's
+ * What the hands-free cases share: the browser with Chrome's
  * fake microphone playing a fixture, and the application's Preview with
  * hands-free turned on, every state it shows recorded as it changes.
  *
@@ -24,7 +24,7 @@ export const fixture = (name: string): string =>
   fileURLToPath(new URL(`./fixtures/${name}`, import.meta.url));
 
 /**
- * A hosted address to drive instead of the Studio's Preview (VO-53):
+ * A hosted address to drive instead of the Studio's Preview:
  * `/apps/<slug>`, opened by a visitor without an account, the voice turned
  * on for the page alone. The application's own page is lighter than the
  * Studio's, so the browser's own model hears inside the memory a test is
@@ -47,7 +47,7 @@ export const unreachable =
  * character is drawn over the right end of the composer's footer, where the
  * microphone, the voice menu and *Talk with it* are, and takes their clicks
  * (20 October 2026, 1280×900): there they are pressed from the keyboard,
- * Enter on the focused button, as a person using the keyboard does (VO-66).
+ * Enter on the focused button, as a person using the keyboard does.
  */
 export const activate = (
   target: Locator,
@@ -160,7 +160,7 @@ export interface VoiceMoment {
 }
 
 /**
- * The latency probe (VO-52), added before the page loads: the moments the
+ * The latency probe, added before the page loads: the moments the
  * budgets are measured between, in the page's own clock. Chrome's fake
  * microphone starts its file when the page opens it, a moment the page's
  * code does not see; so the probe meters every stream the page opens itself
@@ -294,7 +294,7 @@ export const timeVoice = async (context: BrowserContext): Promise<void> => {
         'data-voice-interim',
       ],
     });
-    // Push-to-talk's key, held and let go (VO-10).
+    // Push-to-talk's key, held and let go.
     window.addEventListener(
       'keydown',
       event => {
@@ -357,7 +357,7 @@ export interface Talk {
   sentenceMarked: () => Promise<boolean>;
   /** The silence that ends a turn, as the hands-free composer was given it (ms). */
   turnSilenceMs: () => Promise<number | undefined>;
-  /** What the latency probe saw (VO-52). */
+  /** What the latency probe saw. */
   times: () => Promise<VoiceMoment[]>;
 }
 
@@ -390,7 +390,7 @@ export async function talkWith(
   );
   // Every state shown, as it changes: a state shown for a moment is seen;
   // and whether a sentence was ever marked as being said, since the answer
-  // may be spoken over a moment later (VO-65, VO-13).
+  // may be spoken over a moment later.
   await context.addInitScript(() => {
     const seen: string[] = [];
     const held = window as unknown as {

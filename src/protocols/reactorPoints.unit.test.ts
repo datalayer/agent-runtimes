@@ -120,7 +120,7 @@ describe('the agent-protocols Extension', () => {
     }
   });
 
-  it('each description names its entry in the agentspecs catalogue (PR-50)', () => {
+  it('each description names its entry in the agentspecs catalogue', () => {
     for (const description of core.listProtocols(buildProtocolsReactor())) {
       const spec = getProtocol(description.catalogue);
       expect(spec, description.catalogue).toBeDefined();

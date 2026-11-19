@@ -30,7 +30,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useReactorPlatform, useSignalValue } from '@datalayer/reactor/react';
 
 import { useAgentRuntimes } from '../../../hooks/useAgentRuntimes';
-import { ensureVisitorAgent } from '../../apps/visitorToken';
+import {
+  ensureVisitorAgent,
+  VisitorRuntimeUnreachable,
+  visitorRetrySeconds,
+} from '../../apps/visitorToken';
 import { AGENTSPECS } from '../../../specs/agents/agents';
 import { IDLE_SANDBOX_TARGET_SIGNAL } from '../../core';
 import { appLaunchOf } from './appLaunch';
@@ -47,10 +51,10 @@ export function DatalayerAgentBridge(): JSX.Element | null {
   const agentSpecId =
     agentsConfig?.datalayerAgentSpecId ?? DEFAULT_DATALAYER_AGENTSPEC;
   const createPayload = agentsConfig?.datalayerCreatePayload;
-  // A conversation without an account (R-30): the agent is already on
+  // A conversation without an account: the agent is already on
   // the visitors' runtime, kept warm there; nothing is allocated or made.
   const visitors = agentsConfig?.datalayerVisitors;
-  // A deployment kept on a runtime of its own (R-33): its agent was made
+  // An always-on deployment, on a runtime of its own: its agent was made
   // there from the deployment record as the runtime started; nothing is
   // allocated or made either.
   const kept = agentsConfig?.datalayerKept;
@@ -62,9 +66,9 @@ export function DatalayerAgentBridge(): JSX.Element | null {
 
   /*
    * On the visitors' runtime, the application's agent made before the page
-   * follows it (D-15): an application at its address has none until
+   * follows it: an application at its address has none until
    * a visitor opens it, and its runtime holds no plugin of it until then —
-   * so the page's plugin of the pair (F-15) would stand down and its chat
+   * so the page's plugin of the pair would stand down and its chat
    * have nothing to speak to. Asked with a visitor's token, the runtime
    * makes it and says which agent it is; the runtime is reported only then,
    * and its refusal is said in its sentence.
@@ -88,21 +92,45 @@ export function DatalayerAgentBridge(): JSX.Element | null {
       return;
     }
     let current = true;
-    ensureVisitorAgent(visitors, visitorAppId)
-      .then(() => {
-        if (current) {
-          setVisitorAgent({ ready: true });
-        }
-      })
-      .catch((error: unknown) => {
-        if (current) {
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    let attempt = 0;
+    /*
+     * Tried again while the visitors' runtime cannot be reached — a reup
+     * rolling it, a refused preflight, a network change — rather than a
+     * dead chat that said "Failed to fetch" until the page was reloaded
+     * (14 November 2026). The sentence says what failed and when it is
+     * tried again; a refusal in the runtime's own sentence is said once.
+     */
+    const ask = () => {
+      ensureVisitorAgent(visitors, visitorAppId)
+        .then(() => {
+          if (current) {
+            setVisitorAgent({ ready: true });
+          }
+        })
+        .catch((error: unknown) => {
+          if (!current) {
+            return;
+          }
+          const said = error instanceof Error ? error.message : String(error);
+          if (!(error instanceof VisitorRuntimeUnreachable)) {
+            setVisitorAgent({ error: said });
+            return;
+          }
+          attempt += 1;
+          const seconds = visitorRetrySeconds(attempt);
           setVisitorAgent({
-            error: error instanceof Error ? error.message : String(error),
+            error: `${said} Trying again in ${seconds} s.`,
           });
-        }
-      });
+          retry = setTimeout(ask, seconds * 1000);
+        });
+    };
+    ask();
     return () => {
       current = false;
+      if (retry) {
+        clearTimeout(retry);
+      }
     };
     // By what it is, not by the host's object.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -160,7 +188,7 @@ export function DatalayerAgentBridge(): JSX.Element | null {
   );
 
   /*
-   * The application the runtime is launched for (R-19): its Appspec
+   * The application the runtime is launched for: its Appspec
    * and where it runs, read from the payload its agent is created with — the
    * Studio's Preview, the hosted page signed in. Sent with the launch, so the
    * runtime is given the secrets its connections declare before its agent is
@@ -193,11 +221,17 @@ export function DatalayerAgentBridge(): JSX.Element | null {
       }
     }
     if (already) {
+      // The runtime's Jupyter, when the host gave it — a terminal session
+      // handed over by `/browser` does: the notebook opens on it, as the
+      // terminal's `/notebook` does. Without it the agent is already on its
+      // runtime and the chat is all the page talks to.
+      const jupyter = visitors ? undefined : kept?.jupyter;
       service.report({
         variant: 'datalayer',
-        // No sandbox reported: the agent is already on its runtime, and the
-        // chat is all the page talks to.
-        sandbox_running: false,
+        sandbox_running: Boolean(jupyter),
+        ...(jupyter
+          ? { jupyter_url: jupyter.url, jupyter_token: jupyter.token }
+          : {}),
         agent_base_url: already,
       });
       return;
@@ -243,6 +277,7 @@ export function DatalayerAgentBridge(): JSX.Element | null {
     status,
     error,
     already,
+    kept,
     visitors,
     visitorAgent,
   ]);

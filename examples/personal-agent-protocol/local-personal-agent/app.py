@@ -29,7 +29,7 @@ from personal_agent_protocol.demo.kit import (
     PersonalAgentHost,
     personal_agent_reactor,
 )
-from personal_agent_protocol.demo.manzanita import manzanita
+from personal_agent_protocol.demo.manzanita import CONFIG, manzanita
 from reactor import PluginManifest
 
 from agent_runtimes.apps import Application
@@ -81,7 +81,11 @@ async def walk_through() -> dict[str, Any]:
     network = InProcessNetwork()
     atlas = AgentIdentity(domain="atlas.example", name="Atlas")
     network.add(atlas.domain, atlas.website())
-    shop, plugin = manzanita(network, clock)
+    shop, plugin = manzanita(
+        network,
+        clock,
+        config=CONFIG,
+    )
     with tempfile.TemporaryDirectory() as folder:
         host = LocalHost(Path(folder))
         async with network.client() as http:

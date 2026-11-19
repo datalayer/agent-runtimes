@@ -4,8 +4,7 @@
  */
 
 /**
- * A public application in the element, for a visitor without an account
- * (D-07, R-30).
+ * A public application in the element, for a visitor without an account.
  *
  * `<datalayer-app app="…">` with no token names a public application. The
  * element reads what it is without anybody's credentials, as the landing's
@@ -19,8 +18,19 @@
  *   drawn from — the Appspec of the version it runs — and whether somebody
  *   signed out may talk to it (`session.opens`); the visitors' runtime
  *   answers `at:<slug>`, making the address's agent when first talked to —
- *   or, for a version with code of its own (`runs_code`), the runtime its
- *   deployment is kept on (`kept.url`), which runs that code;
+ *   or, for a version with code of its own (`runs_code`), its deployment's
+ *   always-on runtime (`always_on_runtime.url`), which runs that code;
+ * - **an example of this bundle deployed at the address of its name** (the
+ *   landing's demo agents, `demo-marketer`): drawn from the Appspec this
+ *   bundle carries — its UI, its title bar's items, its presentation, its
+ *   starters, its frontend tools — never from the deployment's copy (the
+ *   user, 18 November 2026: "the demo agents' specs must not be loaded from
+ *   r1; they ship directly in the JavaScript code"). The deployment says
+ *   only what the runtime decides: whether a visitor may talk to it, and
+ *   where it runs (`runs_code`, `always_on_runtime.url`, `at:<slug>`). The runtime there
+ *   runs the version it was deployed with, its own instructions with it, so
+ *   the page may draw what that version does not set yet (a header's items
+ *   stay empty, a drop-down's option is not read) until its next roll;
  * - **a decision**, named by its id (`01M…`): framed from Datalayer's run
  *   page, as before.
  *
@@ -93,12 +103,24 @@ export type VisitorApp =
   /** A decision, framed from Datalayer's run page. */
   | { kind: 'decision'; app: string }
   /** Not run, and why, in a sentence. */
-  | { kind: 'said'; text: string };
+  | { kind: 'said'; text: string }
+  /**
+   * Nothing at the address: the person reads {@link MISSING_SENTENCE}, the
+   * developer the detail, in the console.
+   */
+  | { kind: 'missing'; detail: string };
+
+/** Said of a demo this bundle does not carry: it is not drawn from anybody else's copy. */
+export const notBundledSentence = (app: string): string =>
+  `“${app}” is not in this page's build, so it is not shown: its spec ships with the page, never from elsewhere.`;
+
+/** What a person reads where no application is at the address: no internal name, no prefix. */
+export const MISSING_SENTENCE = 'No application is at this address.';
 
 /**
  * Where a visitor's conversation with `app` runs: the visitors' runtime beside
- * ai-agents — or `runtime`, the one a deployment with code of its own is
- * kept on (R-30) — its token from ai-inference, at `inference` when it is
+ * ai-agents — or `runtime`, the always-on runtime of a deployment with code
+ * of its own — its token from ai-inference, at `inference` when it is
  * named, else beside ai-agents.
  */
 export function visitorsAt(
@@ -145,16 +167,25 @@ export async function readVisitorApp({
   app,
   fetcher = fetch,
   catalogue = getApp,
+  bundled = false,
 }: {
   api?: string;
   inference?: string;
   app: string;
   fetcher?: typeof fetch;
   catalogue?: (ref: string) => AppSpec | undefined;
+  /**
+   * It must be one of this bundle's (a demo agent of the landing): one the
+   * bundle does not carry is refused in a sentence, and nothing is asked.
+   */
+  bundled?: boolean;
 }): Promise<VisitorApp> {
   const agents = api || DEFAULT_API;
   const mints = inference || api || DEFAULT_INFERENCE;
   const named = app.trim();
+  if (bundled && !catalogue(named)) {
+    return { kind: 'said', text: notBundledSentence(named) };
+  }
   if (isAppUid(named)) {
     return { kind: 'decision', app: named };
   }
@@ -163,14 +194,19 @@ export async function readVisitorApp({
     if (example.kind === 'decision') {
       return { kind: 'decision', app: named };
     }
-    if (!VISITOR_EXAMPLES.includes(example.id)) {
+    if (VISITOR_EXAMPLES.includes(example.id)) {
+      return {
+        kind: 'visitors',
+        app: runnable({ app: example, problems: [] }),
+        visitors: visitorsAt(agents, example.id, undefined, mints),
+      };
+    }
+    // An example the visitors' runtime does not keep may be deployed at an
+    // address of the same name (the landing's demo-marketer and the like,
+    // whose specs the catalogue carries since 14 November 2026): read it there.
+    if (!SLUG.test(named)) {
       return { kind: 'said', text: notKeptSentence(named) };
     }
-    return {
-      kind: 'visitors',
-      app: runnable({ app: example, problems: [] }),
-      visitors: visitorsAt(agents, example.id, undefined, mints),
-    };
   }
   if (!SLUG.test(named)) {
     return {
@@ -199,6 +235,13 @@ export async function readVisitorApp({
     const reason = String(
       body.detail ?? body.message ?? `No application is at "${named}".`,
     );
+    // Nothing there: one sentence for the person, the detail for the developer.
+    if (response.status === 404) {
+      return {
+        kind: 'missing',
+        detail: example ? notKeptSentence(named) : refusedSentence(reason),
+      };
+    }
     return { kind: 'said', text: refusedSentence(reason) };
   }
   const session = (body.session ?? {}) as { opens?: unknown; reason?: unknown };
@@ -210,6 +253,25 @@ export async function readVisitorApp({
       ),
     };
   }
+  const runtime = signedOutRuntime(body);
+  if ('said' in runtime) {
+    return { kind: 'said', text: refusedSentence(runtime.said) };
+  }
+  const visitors = visitorsAt(
+    agents,
+    `${AT_PREFIX}${named}`,
+    runtime.url,
+    mints,
+  );
+  // An example of this bundle: its Appspec is the bundle's, never the
+  // deployment's copy. The deployment said where it runs, and nothing more.
+  if (example) {
+    return {
+      kind: 'visitors',
+      app: runnable({ app: example, problems: [] }),
+      visitors,
+    };
+  }
   const deployment = (body.deployment ?? {}) as { app_name?: unknown };
   const parsed = parseAppspec(body.spec);
   if (parsed.app.kind === 'decision') {
@@ -219,22 +281,18 @@ export async function readVisitorApp({
     typeof deployment.app_name === 'string' && deployment.app_name
       ? deployment.app_name
       : parsed.app.name;
-  const runtime = signedOutRuntime(body);
-  if ('said' in runtime) {
-    return { kind: 'said', text: refusedSentence(runtime.said) };
-  }
   return {
     kind: 'visitors',
     app: runnable({ app: { ...parsed.app, name }, problems: parsed.problems }),
-    visitors: visitorsAt(agents, `${AT_PREFIX}${named}`, runtime.url, mints),
+    visitors,
   };
 }
 
 /**
  * Where somebody without an account talks to an address, as ai-agents says
- * it (R-30, decided 14 October 2026): written as a spec, on the visitors'
- * runtime (`url` unsaid); with code of its own (`runs_code`), on the runtime
- * its deployment is kept on (`kept.url`), which runs that code — never the
+ * it (decided 14 October 2026): written as a spec, on the visitors'
+ * runtime (`url` unsaid); with code of its own (`runs_code`), on its
+ * deployment's always-on runtime (`always_on_runtime.url`), which runs that code — never the
  * visitors', where its plain agent would answer in its code's place. An
  * answer that does not say, or says code with no runtime, is not run.
  */
@@ -249,11 +307,11 @@ export function signedOutRuntime(
   if (!body.runs_code) {
     return {};
   }
-  const kept = (body.kept ?? {}) as { url?: unknown };
-  const url = typeof kept.url === 'string' ? kept.url.trim() : '';
+  const alwaysOn = (body.always_on_runtime ?? {}) as { url?: unknown };
+  const url = typeof alwaysOn.url === 'string' ? alwaysOn.url.trim() : '';
   if (!url) {
     return {
-      said: 'It runs its own code on a runtime kept for it, and none is running now.',
+      said: 'It runs its own code on an always-on runtime of its own, and none is running now.',
     };
   }
   return { url };

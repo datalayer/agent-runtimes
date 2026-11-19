@@ -111,7 +111,7 @@ export interface UseAgentOptions {
    */
   runtimeConnection?: AgentRuntimeConnectionOptions;
   /**
-   * The application the runtime is launched for (R-19): its Appspec,
+   * The application the runtime is launched for: its Appspec,
    * and the saved application and deployment it runs for. Sent with the
    * launch, as `RuntimesClient.create` sends it in Python, so the runtime is
    * given the secrets its connections declare before its agent is made.
@@ -123,9 +123,30 @@ export interface UseAgentOptions {
   appLaunch?: AppLaunch;
 }
 
-/** What an application's launch carries besides its environment (R-19). */
+/** What an application's launch carries besides its environment. */
 export type AppLaunch = Required<Pick<IRuntimeOptions, 'appSpec'>> &
-  Pick<IRuntimeOptions, 'appUid' | 'deploymentUid'>;
+  Pick<IRuntimeOptions, 'appUid' | 'deploymentUid' | 'runtimeEngine'>;
+
+/**
+ * Whether a listed runtime is one an application's deployment goes on with:
+ * launched for that deployment (its secrets given at launch) and not
+ * expired. One per visitor: the listing is the caller's own runtimes.
+ */
+export function reusesAppRuntime(
+  runtime: {
+    deployment_uid?: string | null;
+    expired_at?: string | number | null;
+    ingress?: string;
+  },
+  deploymentUid: string,
+  nowSeconds: number,
+): boolean {
+  if (!runtime.ingress || runtime.deployment_uid !== deploymentUid) {
+    return false;
+  }
+  const expires = Number(runtime.expired_at ?? 0);
+  return !expires || expires > nowSeconds + 60;
+}
 
 /**
  * Return type for the useAgents hook.
@@ -984,9 +1005,13 @@ export function useAgentRuntimes(
     if (!hasSpec || runtime || lifecycleStatus !== 'idle') {
       return;
     }
-    if (appLaunch) {
-      // An application's runtime is launched for it (R-19): a running one
-      // was not given its connections' secrets, so none is looked for.
+    // An application's runtime is launched for it, given its
+    // connections' secrets: a running one launched for another spec was not,
+    // so only one launched for the same deployment is gone on with. Each
+    // visit used to launch its own, and a reload while the first was still
+    // being assigned paid for two (13 November 2026).
+    const deploymentUid = appLaunch?.deploymentUid;
+    if (appLaunch && !deploymentUid) {
       setLookedForExisting(true);
       return;
     }
@@ -1001,9 +1026,13 @@ export function useAgentRuntimes(
         const { listRuntimes } = await import('../api/runtimes/runtimes');
         const runtimesResponse = await listRuntimes(token, runtimesUrl);
         const runtimes = runtimesResponse.runtimes || [];
+        const nowSeconds = Date.now() / 1000;
         const aiAgentRuntimes = runtimes.filter(rt => {
           if (rt.environment?.name !== 'ai-agents-env') {
             return false;
+          }
+          if (deploymentUid) {
+            return reusesAppRuntime(rt, deploymentUid, nowSeconds);
           }
           if (!agentSpecId) {
             return true;
@@ -1101,6 +1130,10 @@ export function useAgentRuntimes(
       // race it: two runtimes for one spec, and whichever answered last wins.
       lookedForExisting &&
       !runtime &&
+      // Another mount's launch still in flight (the workspace rebuilt while
+      // its runtime was being assigned): its runtime is this one's too, read
+      // from the store once it lands, never a second launch.
+      !isLaunching &&
       !hasAutoStarted.current &&
       lifecycleStatus === 'idle'
     ) {
@@ -1112,6 +1145,7 @@ export function useAgentRuntimes(
     autoStart,
     lookedForExisting,
     runtime,
+    isLaunching,
     lifecycleStatus,
     launchRuntime,
   ]);
@@ -1323,6 +1357,8 @@ export function useCreateAgentRuntime() {
           enable_codemode: data.enableCodemode ?? false,
           agent_spec_id: data.agentSpecId || undefined,
           agent_spec: data.agentSpec || undefined,
+          // The person's choice overrides the spec's; none is the spec's.
+          runtime_engine: data.runtimeEngine || undefined,
           user_account_handle: data.userAccountHandle || undefined,
           billing_entity_uid: data.billingEntityUid || undefined,
           billing_entity_type: data.billingEntityType || undefined,

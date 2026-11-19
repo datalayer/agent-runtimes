@@ -4,8 +4,8 @@
  */
 
 /**
- * An answer as it is heard (VO-20): read as plain words, the way
- * the balloon reads it (T-23), and cut into sentences as it is written, so
+ * An answer as it is heard: read as plain words, the way
+ * the balloon reads it, and cut into sentences as it is written, so
  * that the first one is said before the answer is finished.
  *
  * @module voice/sentences
@@ -22,7 +22,7 @@ export function plainWords(markdown: string): string {
       // A table: its rows, said once as what they are.
       .replace(/(^|\n)(\|[^\n]*\|[ \t]*(\n|$))+/g, '$1 A table. \n')
       // A rule between parts (`---`) is not said: Orca read it out in the
-      // balloon's words (H-21, 2026-10-11).
+      // balloon's words (2026-10-11).
       .replace(/^[ \t]*([-*_])([ \t]*\1){2,}[ \t]*$/gm, '')
       .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
       .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')

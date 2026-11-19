@@ -434,7 +434,7 @@ export function ToolCallDisplay({
             </Box>
           </Box>
 
-          {/* Result section (when complete, or as a step streams it, P-31) */}
+          {/* Result section (when complete, or as a step streams it) */}
           {(status === 'complete' || status === 'executing') &&
             result !== undefined && (
               <Box>

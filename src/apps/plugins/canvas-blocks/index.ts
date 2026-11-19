@@ -4,8 +4,8 @@
  */
 
 /**
- * The Canvas's palette as a Contribution Point (C-12): each UI plugin
- * of the catalogue that renders components (`agentspecs/ui`, C-13 — the
+ * The Canvas's palette as a Contribution Point: each UI plugin
+ * of the catalogue that renders components (`agentspecs/ui` — the
  * A2UI surfaces, `a2ui-surface`) has its components contributed to
  * `loop.canvas.block` by a Reactor plugin of its own, one per UI spec. The
  * palette lists what the enabled plugins contribute, and nothing else; a

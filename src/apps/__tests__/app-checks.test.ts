@@ -4,7 +4,7 @@
  */
 
 /**
- * The instant checks of an application (V-01 to V-04), as `loop apps
+ * The instant checks of an application, as `loop apps
  * validate` says them, computed in the page with no model call.
  */
 
@@ -23,7 +23,7 @@ import {
 } from '../apps/checks';
 
 // Two agents the catalogue does not have: one on Claude Code, one on the
-// `custom` harness (SH-01, SH-10), both otherwise the mail triage agent.
+// `custom` harness, both otherwise the mail triage agent.
 vi.mock('../../specs/agents', async importOriginal => {
   const actual = await importOriginal<typeof import('../../specs/agents')>();
   const onHarness = (id: string, harness: string) => ({
@@ -69,10 +69,11 @@ describe('the instant checks', () => {
     expect(checks['inbox-triage'].setup).toEqual([
       'The agent “worker-mail-triage:0.0.1” is not enabled.',
     ]);
-    // Its MCP server is on since agentspecs 0.0.162; its agent is not.
-    expect(checks['accounting'].setup).toEqual([
-      'The agent “worker-accountant:0.0.1” is not enabled.',
-    ]);
+    // Its MCP server is on since agentspecs 0.0.162, its agent since 0.0.184.
+    expect(checks['accounting'].setup).toEqual([]);
+    // Its agent is enabled and out of the pickers since agentspecs 0.0.187
+    // (listed: false): nothing to set up.
+    expect(checks['quote-calculator'].setup).toEqual([]);
   });
 
   it('pass an application that only reads, and tell it its tests decide', () => {
@@ -115,7 +116,7 @@ describe('the instant checks', () => {
     );
   });
 
-  it('refuse an application off with no reason, or a reason on one offered (E-01)', () => {
+  it('refuse an application off with no reason, or a reason on one offered', () => {
     expect(checkAppspec({ ...BASE, enabled: false }).problems).toContain(
       'An application that is not offered says why, under `unavailable_because`.',
     );
@@ -214,7 +215,7 @@ describe('the instant checks', () => {
     expect(ruled.verdict).toBe(PASSES);
   });
 
-  it('refuse a component no UI renders (C-13)', () => {
+  it('refuse a component no UI renders', () => {
     expect(componentNamed('ChoicePicker')?.standard).toBe(true);
     expect(componentNamed('Table')?.properties).toBeDefined();
     const check = checkAppspec({
@@ -236,7 +237,7 @@ describe('the instant checks', () => {
     ]);
   });
 
-  it('refuse a form that asks no named field (C-16)', () => {
+  it('refuse a form that asks no named field', () => {
     const page = (form: Record<string, unknown>) =>
       checkAppspec({
         ...BASE,
@@ -267,7 +268,7 @@ describe('the instant checks', () => {
     ).toEqual(['The form “quote” requires “reason”, which it does not ask.']);
   });
 
-  it('read settings as a form, checked as a Form is, the old list refused (C-16)', () => {
+  it('read settings as a form, checked as a Form is, the old list refused', () => {
     const settings = (value: unknown) =>
       checkAppspec({ ...BASE, interface: { settings: value } }).problems;
     const tone = {
@@ -297,7 +298,7 @@ describe('the instant checks', () => {
     ).toEqual({ type: 'object', properties: { tone } });
   });
 
-  it('need attention for a Guard the runtime does not run (R-06)', () => {
+  it('need attention for a Guard the runtime does not run', () => {
     const check = checkAppspec({
       ...BASE,
       checks: {
@@ -310,7 +311,7 @@ describe('the instant checks', () => {
     ]);
   });
 
-  it("need no attention for the Guards the runtime executes, at a session's start included (R-06)", () => {
+  it("need no attention for the Guards the runtime executes, at a session's start included", () => {
     const check = checkAppspec({
       ...BASE,
       checks: {
@@ -401,7 +402,7 @@ describe('the instant checks', () => {
     ).toContain('banner: is named as its drawing is, `SvgTutorialsHero`.');
   });
 
-  it('read the assistant embed mode and any avatar a plugin may contribute, and refuse an id of the wrong shape (D-07, T-24)', () => {
+  it('read the assistant embed mode and any avatar a plugin may contribute, and refuse an id of the wrong shape', () => {
     const assistant = parseAppspec({
       ...BASE,
       interface: { avatar: 'wizard' },
@@ -517,7 +518,7 @@ describe('the instant checks', () => {
     );
   });
 
-  it('read how the balloon shows the conversation, and refuse any other word (T-23)', () => {
+  it('read how the balloon shows the conversation, and refuse any other word', () => {
     for (const balloon of ['history', 'current'] as const) {
       const app = parseAppspec({ ...BASE, interface: { balloon } }).app;
       expect(app.interface.balloon).toBe(balloon);
@@ -533,7 +534,7 @@ describe('the instant checks', () => {
     ).toContain('interface.balloon: is one of history, current.');
   });
 
-  it('takes hands-free, built 15 October 2026, and refuses a way to talk that is not one (VO-12)', () => {
+  it('takes hands-free, built 15 October 2026, and refuses a way to talk that is not one', () => {
     const said = (voice: unknown) =>
       checkAppspec({ ...BASE, interface: { voice } }).problems;
     for (const input of ['push_to_talk', 'hands_free']) {
@@ -551,7 +552,7 @@ describe('the instant checks', () => {
     );
   });
 
-  it('refuses kept audio as agentspecs does: public, not listening, kept over 30 days (VO-42, VO-63)', () => {
+  it('refuses kept audio as agentspecs does: public, not listening, kept over 30 days', () => {
     const listening = { voice: { enabled: true, input: 'push_to_talk' } };
     const said = (extra: Record<string, unknown>) =>
       checkAppspec({ ...BASE, interface: listening, ...extra }).problems;
@@ -601,7 +602,7 @@ describe('the instant checks', () => {
     expect(said({ record: { include: ['conversations'] } })).toEqual([]);
   });
 
-  it('reads the theme it runs in, and refuses one Appearance does not have (T-30)', () => {
+  it('reads the theme it runs in, and refuses one Appearance does not have', () => {
     // The themes the Appspec accepts (agentspecs' `ThemeVariant`), each one
     // of Appearance's. Appearance's `metal` is not an Appspec theme yet.
     expect(APP_THEME_VARIANTS).toEqual(
@@ -639,7 +640,7 @@ describe('the instant checks', () => {
     expect(said('earth')).toContain('interface.theme: is a mapping.');
   });
 
-  it('checks a context of an organization’s own against the organization’s (U-32)', () => {
+  it('checks a context of an organization’s own against the organization’s', () => {
     const own = { ...BASE, context: ['org-house-style'] };
     expect(
       checkAppspec(own, {
@@ -658,7 +659,7 @@ describe('the instant checks', () => {
   });
 });
 
-describe('what its code declares (P-06)', () => {
+describe('what its code declares', () => {
   const DECLARED = {
     ...BASE,
     tools: [
@@ -725,7 +726,7 @@ describe('what its code declares (P-06)', () => {
     expect(checkAppspec(DECLARED).problems).toEqual([]);
   });
 
-  it('passes an agent on a catalogue harness, the runtime serving it, and refuses custom (SH-10)', () => {
+  it('passes an agent on a catalogue harness, the runtime serving it, and refuses custom', () => {
     expect(checkAppspec({ ...BASE, agent: 'coder:0.0.1' }).problems).toEqual(
       [],
     );

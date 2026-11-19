@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Scenes: the catalogue generated from agentspecs 0.0.61 (A-12).
+"""Scenes: the catalogue generated from agentspecs 0.0.61.
 
 A scene stages a team; the generated catalogue carries it with its cast
 resolved, its entry said, what each beat shows, and what it needs set up.
@@ -16,7 +16,7 @@ from agent_runtimes.specs.scenes import (
 from agent_runtimes.specs.teams import get_team_spec
 from agent_runtimes.types import SceneSpec
 
-#: The four scenes of the home page (A-08): the entry, the members on a runtime.
+#: The four scenes of the home page: the entry, the members on a runtime.
 HOME_SCENES = {
     "sales-and-accounting": ("sales", ["accounting"]),
     "month-end-close": ("month-end-close", ["month-end-close"]),
@@ -29,16 +29,16 @@ HOME_SCENES = {
 
 
 #: The demo stages: the home page's four, and a coding agent behind the Shield.
-DEMO_SCENES = (*HOME_SCENES, "coding-agent-behind-the-shield")
+DEMO_SCENES = (*HOME_SCENES, "coding-agent-behind-the-shield", "buy-from-a-shop")
 
-#: The Personal Agent Protocol's Stages, scripted (X-02).
+#: The Personal Agent Protocol's Stages, scripted.
 PAP_STAGES = (
     "pap-a-person-and-a-company",
     "pap-approve-once",
     "pap-your-application-a-company",
     "pap-two-companies",
 )
-#: The other protocols' Stages, scripted (EX-14, EX-15).
+#: The other protocols' Stages, scripted.
 PROTOCOL_STAGES = ("ucp-a-purchase-approved", "pact-a-personal-agent-at-a-business")
 
 
@@ -99,8 +99,11 @@ def test_the_pap_stages_arrive_scripted_with_their_actors_and_lines() -> None:
 
 def test_each_beat_says_its_cue_its_moves_and_what_it_shows() -> None:
     for scene in (scene for scene in SCENE_CATALOGUE.values() if scene.kind == "team"):
-        # The home page's scenes play four beats; the coding agent two.
-        assert len(scene.script) == (4 if scene.id in HOME_SCENES else 2), scene.id
+        # The home page's scenes play four beats; buying from a shop three; the coding agent two.
+        beats = (
+            4 if scene.id in HOME_SCENES else 3 if scene.id == "buy-from-a-shop" else 2
+        )
+        assert len(scene.script) == beats, scene.id
         for beat in scene.script:
             assert beat.cue.say and beat.moves and beat.expect and beat.shows, (
                 scene.id,

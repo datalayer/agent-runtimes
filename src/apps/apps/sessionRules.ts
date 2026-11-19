@@ -4,7 +4,7 @@
  */
 
 /**
- * A rule a person adds to a running session (SH-54): the
+ * A rule a person adds to a running session: the
  * session API's `/apps/sessions/{uid}/rules`, read and written from the
  * Rules card beside the page, and the words it says.
  *
@@ -102,7 +102,7 @@ export const WHERE_WORDS: Record<'inside' | 'outside', string> = {
 
 /**
  * A rule in words: *writing, sending: leave it to me*; with the default policy's file
- * and shell wording when it says where or what (SH-43) — *writing
+ * and shell wording when it says where or what — *writing
  * inside the workspace (src/**): do it*, *running `git push`: ask me first*.
  */
 export function sessionRuleInWords(rule: SessionRule): string {

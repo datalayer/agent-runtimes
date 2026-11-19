@@ -312,7 +312,9 @@ def test_the_agentspec_names_no_wildcard_host() -> None:
 
 def test_the_agentspec_egress_is_what_the_tools_reach() -> None:
     platform = ["r1.datalayer.run:443", "prod1.datalayer.run:443"]
-    assert _spec_egress() == aws_account.egress_hosts() + platform
+    # The tokenizer file every runtime fetches (agentspecs 0.0.202, 15 November 2026).
+    tokenizer = ["openaipublic.blob.core.windows.net:443"]
+    assert _spec_egress() == aws_account.egress_hosts() + platform + tokenizer
 
 
 def test_every_endpoint_boto3_calls_is_in_the_egress() -> None:

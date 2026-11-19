@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""PAP and PACT in one task: the example answers from both, one record (EX-07, PR-14, PR-53)."""
+"""PAP and PACT in one task: the example answers from both, one record."""
 
 from __future__ import annotations
 
@@ -57,7 +57,7 @@ def test_one_question_two_protocols_one_record(secrets: list[str]) -> None:
     result = asyncio.run(built.application.tools[tool.name]())
 
     assert result["answers"] == [
-        "Manzanita Outfitters: Your order ord_7Hk2: Ridge Jacket, size M, delivered.",
+        "Manzanita Outfitters (manzanita.example): Your order ord_7Hk2: Ridge Jacket, size M, delivered.",
         "Example Air Support: Your booking AB123 flies on 2026-11-02.",
     ]
     events = [(e["protocol"], e["event"]) for e in result["record"]]

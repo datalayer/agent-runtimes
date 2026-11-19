@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Background work with nobody present only reads, unless a rule says otherwise (R-16).
+"""Background work with nobody present only reads, unless a rule says otherwise.
 
 A session woken by a schedule has nobody to ask: what acts on the world —
 writing, sending, buying, deleting, publishing — is done, or asked of its
@@ -101,7 +101,7 @@ async def test_a_rule_of_its_own_says_otherwise() -> None:
     assert [tool for tool, _ in asks.asked] == ["google-workspace__send_gmail_message"]
     keeps = Harness(app(rules=WRITE_DOES))
     await keeps.call(SAVE_TOOL, {"title": "t", "content": "c"})
-    # A page is still shown first (R-24): asked, never done unasked.
+    # A page is still shown first: asked, never done unasked.
     assert keeps.asked[-1][1].behaviour == "ask_first"
 
 

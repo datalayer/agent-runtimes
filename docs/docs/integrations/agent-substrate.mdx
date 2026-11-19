@@ -1,0 +1,203 @@
+---
+title: Agent Substrate
+---
+
+# Agent Substrate
+
+[Agent Substrate](https://ate.dev) ("ate") runs containers as sandboxed,
+stateful **actors** on Kubernetes. Each actor runs in a gVisor or microVM
+sandbox. Many actors share a small pool of warm worker pods. An idle actor is
+suspended to a snapshot of its memory and files and resumed on its next
+request.
+
+Agent Runtimes runs as an actor with `agent-runtimes serve --target ate`. Every
+agentspec of the library can then run as an actor that suspends while it waits
+and resumes where it stopped.
+
+This page is written for Agent Substrate **1.0.0**. To run Agent Runtimes
+through [kagent](./kagent), which itself runs on Agent Substrate, see that page.
+
+## What the target does
+
+| | |
+|---|---|
+| Listens on | `0.0.0.0:80`, the actor's default port (`ATE_PORT` to change it) |
+| Wakeup probe | `GET /ate/wakeup`, answered 200 once the server serves |
+| Identity | `GET /ate/identity`: atespace, actor, actor uid, runtime uid, wakes |
+| Agent at start | the agentspec of `AGENT_SPEC_ID` as `default`; none when unset (agents are created through the API) |
+
+### Identity is read at each wake
+
+Every actor of a template starts from the template's **golden snapshot**, the
+memory of its first actor. Anything the process read at start (environment,
+files, a token) is the golden actor's, the same in every actor. So the target
+reads the actor's identity from its `systemInfo` volume (`/run/ate/actor-name`,
+`atespace`, `actor-uid`) **on each wake**. A wake is the first call to the
+wakeup probe after a quiet spell: Agent Substrate calls the probe on every
+resume, and never while the actor runs.
+
+On each wake:
+
+- the identity is read again. When the actor is named `rt-<uid>`, the
+  Datalayer runtime it serves, `DATALAYER_RUNTIME_ID` is set to that uid;
+- when the template projects a trust bundle at `/run/substrate/certs/ca.pem`
+  and no other CA file is configured, `SSL_CERT_FILE` and `REQUESTS_CA_BUNDLE`
+  name it.
+
+### No credential in the actor
+
+A template's environment is literal, the same for every actor, and part of
+every snapshot. Model and tool keys are put in the actor's outbound requests by
+Agent Substrate's **egress gateway**, from the actor's `EgressPolicy`. The actor
+sends a placeholder. `agent-runtimes-ate template` refuses an environment
+variable whose name says key, token, secret, password or credential.
+
+## Run an agentspec as an actor
+
+You need a cluster with Agent Substrate installed (its
+[quickstart](https://ate.dev/docs/get-started/quickstart/)), `kubectl ate`, a
+`WorkerPool`, and an atespace.
+
+1. Build and push the actor image, `docker/Dockerfile.ate`, and note its
+   **digest**. Templates take images by digest only.
+
+   ```bash
+   docker build -f docker/Dockerfile.ate \
+     --build-arg AGENT_RUNTIMES_VERSION=1.6.36 \
+     -t registry.example.com/agent-runtimes-ate:1.6.36 .
+   docker push registry.example.com/agent-runtimes-ate:1.6.36
+   ```
+
+   It installs Agent Runtimes from PyPI (1.6.36 or later) with the `a2a`, `ui`,
+   `openai`, `anthropic` and `aws` extras, and nothing else: no Node.js, no
+   Chromium. Agent Substrate snapshots an actor's memory and filesystem on
+   suspend and restores them on resume, so a lean image resumes faster;
+   `docker/Dockerfile.agent-runtime` works too, several times slower to restore.
+
+2. Render the template and create it:
+
+   ```bash
+   agent-runtimes-ate template \
+     --atespace agents --name crawler \
+     --image registry.example.com/agent-runtimes@sha256:<digest> \
+     --agent-spec-id crawler \
+     --worker-label workload=agent-runtimes \
+     --env AGENT_RUNTIMES_MODEL=openai:gpt-5-mini \
+     --env OPENAI_BASE_URL=https://inference.example.com/v1 \
+     | kubectl ate create actor-template -f -
+   ```
+
+   The template runs `agent-runtimes serve --target ate`, probes `/ate/wakeup`,
+   mounts the actor's metadata at `/run/ate`, the trust bundle at
+   `/run/substrate/certs`, and a durable `/data`, and sizes each actor
+   (`--cpu-millicores`, 2000 by default; `--memory-bytes`, 2 GiB). The first
+   wake may take up to `--wakeup-timeout-seconds` (180 by default: Agent
+   Substrate's own 30 s was too short for a golden actor on burstable cloud
+   nodes under gVisor). `-o yaml` prints YAML.
+
+3. Create an actor and give it its egress:
+
+   ```bash
+   kubectl ate create actor crawler-1 -a agents --template crawler
+
+   agent-runtimes-ate egress-policy \
+     --host inference.example.com \
+     --credential ate-secret://k8s.io/default/agents/inference/key \
+     | kubectl ate create egress-policy crawler-1 -a agents -f -
+   ```
+
+   The gateway replaces the `Authorization` header of requests to that host
+   with `Bearer <the Secret's value>`. Set the model client's key to any
+   placeholder.
+
+4. Talk to it:
+
+   ```bash
+   kubectl ate proxy actor crawler-1 8000:80 -a agents
+   curl http://localhost:8000/ate/identity
+   ```
+
+   Any Agent Runtimes protocol (AG-UI, Vercel AI, A2A, MCP) works through the
+   proxy. The first request resumes a suspended actor.
+   `kubectl ate suspend actor crawler-1 -a agents` suspends it again.
+
+## Golden snapshots, suspend and resume
+
+A template's first actor is booted, probed through its `wakeupProbe` and
+snapshotted: the **golden snapshot**. Every actor created from the template
+starts from that memory image rather than booting, which is why the identity
+is read at each wake (above). Agent Substrate suspends an idle actor to a
+snapshot of its memory and files, and resumes it when a request reaches it
+through the router; suspend and resume keep the process, its open files and
+its child processes.
+
+In our runs on AWS (a 1.01 GB image from `docker/Dockerfile.ate`, gVisor
+workers): the golden snapshot took 34 to 55 s; a suspend 0.4 to 3.7 s; a
+resume on a request through the platform's ingress 0.68 s the first time and
+0.35 s warm (0.24 to 1.01 s on kind), a warm request 6 to 10 ms; an AG-UI run
+on a suspended actor streamed its first answer in 0.4 s; a WebSocket opened
+through the same path in 0.39 s.
+
+## On a Datalayer plane
+
+A Datalayer runtime can be an actor rather than a Pod, with the same credits
+reservation and the same record, known by its uid.
+
+- **`p up datalayer-ate`** reuses the cluster's Substrate when one is there
+  (kagent's) or installs Agent Substrate 1.0.0, then makes the runtimes'
+  gVisor `WorkerPool` (`datalayer-ate`, 2 workers by default), the atespace
+  `datalayer-runtimes` with the operator as its editor, and the ingress proxy.
+  It first checks the cluster has the certificate feature gates, and stops in
+  a sentence otherwise. `p down datalayer-ate` removes what it made.
+- **The ingress** is `/ate-runtimes/<uid>/` on the runtimes' host. A proxy
+  presents its pod certificate to Agent Substrate's router and sets
+  `ate-target-actor: datalayer-runtimes/rt-<uid>` from the path, replacing any
+  the caller sent; HTTP, cookies and WebSockets pass through, and the request
+  resumes a suspended actor.
+- **The operator's ate part** (`DATALAYER_OPERATOR_ATE_ENABLED=true`, with
+  `DATALAYER_OPERATOR_ATE_ENDPOINT` and `DATALAYER_OPERATOR_ATE_INGRESS_URL`)
+  serves a launch on an actor named `rt-<uid>`, from the template named like
+  its environment (made with `agent-runtimes-ate template`, refused in a
+  sentence when missing): every launch of an environment listed in
+  `DATALAYER_OPERATOR_ATE_ENVIRONMENTS`, and every launch of an agent whose
+  `runtime_engine` is `kagent` (with the operator's kagent part on, see
+  [kagent](./kagent#on-a-datalayer-plane)), whatever its environment. The
+  reservation is opened before the actor and closed with it; it pauses while
+  the actor is suspended and resumes when it runs, so a person pays only while
+  it runs; after an operator restart the actors are taken back from Agent
+  Substrate and IAM. An actor mounts only its template's volumes: a home
+  folder, a Volume or a user environment is refused by name.
+
+To make a plane's template, for the environment `ai-agents-env`:
+
+```bash
+agent-runtimes-ate template --atespace datalayer-runtimes --name ai-agents-env \
+  --image <registry>/agent-runtimes-ate@sha256:<digest> \
+  --agent-spec-id example-simple --wakeup-timeout-seconds 180 \
+  | kubectl ate create actor-template -f -
+```
+
+## Command reference
+
+```bash
+agent-runtimes-ate template --help
+agent-runtimes-ate egress-policy --help
+```
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `AGENT_RUNTIMES_TARGET` | `ate` (set by the template) | the target |
+| `AGENT_SPEC_ID` | unset | the agentspec served as `default` |
+| `ATE_PORT` | `80` | the port |
+| `ATE_SYSTEM_INFO_DIR` | `/run/ate` | where the actor metadata is projected |
+| `ATE_TRUST_BUNDLE` | `/run/substrate/certs/ca.pem` | the trust bundle |
+
+## Limits
+
+- Connections to the outside do not survive a suspend. Clients reconnect on
+  their next call, and tokens fetched before a suspend may have expired.
+- Only HTTP reaches the actor (port 80, or other ports through
+  `kubectl ate proxy`). Raw TCP on other ports does not.
+- Agent Substrate needs Kubernetes with `ClusterTrustBundle`,
+  `ClusterTrustBundleProjection` and `PodCertificateRequest` enabled. See its
+  documentation for the supported versions.

@@ -24,12 +24,15 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    # An application is a Reactor plugin on a PluginPlatform (P-35):
+    # An application is a Reactor plugin on a PluginPlatform:
     # its contributions, its extension, its commands and routes.
     # `reactor.ui` (1.1.0): a tool's display, its model view for the model and
-    # its wire for the page (RU-1); 1.1.1 (unreleased): the ui
+    # its wire for the page; 1.1.1 (unreleased): the ui
     # channel's WebSocket, `reactor.ui.ws` (RU-W).
     "datalayer_reactor>=1.3.7",
+    # An agent's MCP server at its address (`agent_runtimes.addresses.mcp`): one tool
+    # per operation of its openapi, contributed to Reactor's MCP server.
+    "reactor_mcp_server>=1.3.9",
     # PAP is a runtime protocol capability, not an example-only dependency.
     # 0.3.1 is the first release with matching Python/TypeScript Direct Sign-In
     # orchestration and a root-published TypeScript package.
@@ -37,7 +40,7 @@ dependencies = [
     # display, read back here for its model view (the `ui` extra).
     # 0.15.0: the release PapPersonalAgentCapability's local personal agent is
     # tested against (Sessions, Device Sign-In, conversations, Operations,
-    # the reference company of PapCompanyCapability; PR-03).
+    # the reference company of PapCompanyCapability).
     # 0.25.0: PAP draft 0.2 (Device Sign-In names the company, assertions name
     # its issuer, token_for_mcp); a 0.2 personal agent uses only 0.2 companies.
     # 0.27.0: PAP draft 0.3 (a DPoP key per Session, its thumbprint the
@@ -47,34 +50,51 @@ dependencies = [
     # 0.31.0: PAP 0.3 as published (upstream 2289293).
     # 0.32.0: PAP draft 0.4 as of 46beb21 (Poppy-Version, Poppy-Extensions, request ids,
     # working/handoff/responder/closed); a 0.4 personal agent uses only 0.4 companies.
-    "personal-agent-protocol[ui]>=0.32.0,<0.33",
+    # 0.33.0: PAP 0.4 as published (upstream 4803900) and Operations version 3: every
+    # approval says `approver`, an operation's `terms` are required and its `summary`
+    # optional, a company may decline an approval, task coverage is asked per Session
+    # (`tasks.endpoint`), a Device Sign-In link is shown only on the issuer's host or the
+    # company's domain. No compatibility with 0.32: both sides move together.
+    # 0.34.0: operations on websites (Poppy-Operation, the operations endpoint) and the
+    # Browser Control extension, version 1; nothing these applications use changed.
+    # 0.36.0: the 1.0 draft is the SDK's default, the one version a runtime speaks, as a
+    # personal agent and as a company: older versions are refused. `Organization.label`,
+    # the domain beside a company's name.
+    # 0.37.0: 1.0 as published (frozen 2026-11-14): each agent.protocols entry needs a
+    # description (CompanyConfig.agent_description), prompt=consent, PAR, ports.
+    "personal-agent-protocol[ui]>=0.37.5,<0.38",
     # The first releases of both on mcp 2; an older one pins mcp<2.
     "agent-codemode>=1.1.0",
     # 1.4.0: agent-skills is the framework alone (and its `jokes` example).
-    "agent-skills>=1.4.0",
+    # 1.5.0: a skill says the environment it reads (SKILL.md env: required, optional, any_of)
+    # and the toolset keeps one without it out: not listed, not loaded, not run.
+    "agent-skills>=1.5.0",
     # 0.3.0: the catalogue's skills (accounting, crawl, events, github, image, pdf,
     # text-summarizer, video — with its zoom), which the skill specs name as
     # `datalayer_skills.skills.<name>`; the memory skills since 0.2.0. Each skill's own
     # dependencies are the extras `datalayer-skills[skills-<name>]`, installed where the
     # skills' scripts run (docker/Dockerfile.agent-runtime installs `[skills]`).
-    "datalayer-skills>=0.3.0",
+    # 1.6.65 with datalayer-skills 0.6.0: the email skill (datalayer-email), through IAM's /social/mail.
+    # 1.6.70 with datalayer-skills 0.6.1: the email skill's unconfirmed delivery said as such.
+    # datalayer-skills 0.7.0: the stock image skill (image-stock), every key optional, one enough.
+    "datalayer-skills>=0.7.0",  # the Traveller's travel skills (travel-planning, fare-and-stay-comparison, dining)
     # The Appspec and its checks (`loop apps validate`): one validation, the spec's own.
-    # The scene spec (A-11): agentspecs.scenes; components in answers (H-02).
-    # An Appspec's `samples` (E-06, E-11): an older one refuses the field.
-    # An Appspec's `a2a` extensions (PR-02): an older one refuses the field.
-    # 1.5.36 with agentspecs 0.0.103: the policies/ kind (SH-50).
-    # 1.5.38 with agentspecs 0.0.104: the standards/ kind, aiuc-1 and iso-42001 (SH-60).
+    # The scene spec: agentspecs.scenes; components in answers.
+    # An Appspec's `samples`: an older one refuses the field.
+    # An Appspec's `a2a` extensions: an older one refuses the field.
+    # 1.5.36 with agentspecs 0.0.103: the policies/ kind.
+    # 1.5.38 with agentspecs 0.0.104: the standards/ kind, aiuc-1 and iso-42001.
     # 1.5.103 with agentspecs 0.0.143: a Guard extends a Policy; the Guardrails kind is gone.
-    # 1.5.42 with agentspecs 0.0.105: the policies/ kind carries authorize: and authorizer: (SH-74).
-    # agentspecs 0.0.107: the register's listed tier, an organization's own harness, harness team members (SH-57, SH-46, SH-45).
-    # agentspecs 0.0.110: Voice.spoken_as and where: machine, the voice extra on the person's machine (VO-16).
+    # 1.5.42 with agentspecs 0.0.105: the policies/ kind carries authorize: and authorizer:.
+    # agentspecs 0.0.107: the register's listed tier, an organization's own harness, harness team members.
+    # agentspecs 0.0.110: Voice.spoken_as and where: machine, the voice extra on the person's machine.
     # agentspecs 0.0.116: interface.avatar (was interface.assistant, now refused) and the 3D avatar, {kind: model3d, url};
     # 0.0.117: the examples' app.py say avatar too.
-    # agentspecs 0.0.120: the sessions/ kind (the datalayer-session/1 file, MH-12) and every
-    # harness's capabilities table (MH-20); the schema's entry kinds as an enum.
-    # agentspecs 0.0.124: interface.theme.variant may be vscode (T-30), as primer-addons 1.0.41 lists it.
+    # agentspecs 0.0.120: the sessions/ kind (the datalayer-session/1 file) and every
+    # harness's capabilities table; the schema's entry kinds as an enum.
+    # agentspecs 0.0.124: interface.theme.variant may be vscode, as primer-addons 1.0.41 lists it.
     # agentspecs 0.0.127: PAP draft 0.3 in the pap block (company scopes with descriptions and hints, excluded tasks, the web interface) and pap_feedback classed send.
-    # agentspecs 0.0.128: Inbox triage offered — google-workspace, worker-mail-triage and inbox-triage enabled (W-02).
+    # agentspecs 0.0.128: Inbox triage offered — google-workspace, worker-mail-triage and inbox-triage enabled.
     # agentspecs 0.0.130 (0.0.129 unpublished): the catalogue offers four harnesses (Claude Code, Codex, OpenCode, Gemini CLI); a harness
     # not offered says why (unavailable_because, offered_refusal), which the runtime, loop and the Studio say.
     # agentspecs 0.0.132: the fourth harness is pi (pi-acp 0.0.34), Gemini CLI described and not offered; the
@@ -90,11 +110,24 @@ dependencies = [
     # 1.6.27 with agentspecs 0.0.179: Datalayer Steward for AWS (steward-aws, worker-steward-aws, the tag steward).
     # 1.6.28 with agentspecs 0.0.180: the odoo-accounting quarter-close tools, second round, classed.
     # 1.6.29 with agentspecs 0.0.181: the skills load from datalayer_skills.skills.<name>; the Steward's application is aws-steward-agent.
-    "agentspecs>=0.0.181",  # the company role's website flags (web.unscoped, web.disabled)
+    # 1.6.37 with agentspecs 0.0.182: runtime_engine on every agent (datalayer or kagent) and example-kagent.
+    # 1.6.40 with agentspecs 0.0.183: runtime_engine agentcore, the third engine; the Steward for AWS runs on it.
+    # 1.6.48 with agentspecs 0.0.186: worker-shopper, worker-terra and shopify in the catalogue an
+    # application is validated against; five agents enabled, the home page's; the home page's demos.
+    # 1.6.49 with agentspecs 0.0.187: `listed` — example-simple and six others enabled, out of the pickers.
+    # 1.6.50 with agentspecs 0.0.188: `optional` — what an agent starts without; the Marketer drops LinkedIn.
+    # 1.6.51 with agentspecs 0.0.189: datalayer-social — posting on the linked accounts through IAM; optional connections.
+    # 1.6.53 with agentspecs 0.0.190: LinkedIn in datalayer-social (social-post-linkedin, social-comment-linkedin).
+    # 1.6.55 with agentspecs 0.0.191: the linkedin server back in the Marketer, on a browser session.
+    # 1.6.56 with agentspecs 0.0.193: Bluesky, everything through the linked account (datalayer-social).
+    # 1.6.58 with agentspecs 0.0.194: X through the linked account, held to the x-api-budget guardrail.
+    # 1.6.65 with agentspecs 0.0.199: datalayer-email, the Marketer's alerts.at.
+    # agentspecs 0.0.203: the Appspec's openapi, the one source of an app's MCP tools, REST endpoints and PAP operations.
+    "agentspecs>=0.1.3",  # Overture Maps for the Traveller (0.1.3); the demos' own read connections and a sheet built a step a response (0.1.2); deck_add_slides and the Marketer's outline in one call (0.1.1); the chat's side panels and the agent's notices, teams on models the platform serves, the seven demo applications' new versions (0.1.0); header UIs and the page-deck and page-sheet frontend tools, with the seven demo applications that carry them (0.0.219); image-stock and a skill's any_of_env_vars (0.0.218); demo-shopper 0.0.9, which orders through an approval at the Demo Shop (0.0.217; 0.0.8 browsed only, 0.0.216); the Jupyter Data Analyst, the seventh seed agent, its demo-jupyter-data-analyst, and demo-shopper 0.0.7 on read, propose, confirm (0.0.215); the Appspec's presentation and the six demos that say theirs (0.0.214); the Traveller (worker-traveller, demo-traveller; 0.0.213); the Demo Shop: its bundled catalogue, read by agent_runtimes.tools.demo_shop (0.0.204); the Buy from a shop Stage (0.0.206); x-datalayer-gallery, OpenApiOperation.gallery (0.0.207); scope descriptions as the protocol's guide asks (0.0.208 to 0.0.210)
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than
-    # each re-declaring its own copy of the same strings (O3-02).
+    # each re-declaring its own copy of the same strings.
     # Unconditional, not under the `a2a` extra below: delegation
     # metadata is read on the ACP path too. 1.0.0 is the first release under
     # semver proper (the 0.0.x releases made no compatibility promise across
@@ -111,29 +144,29 @@ dependencies = [
     # channel and proxy, the policy, the register, the audit), published from
     # the v0.1.1 tag on 15 October 2026.
     # 0.1.6: agent_shield.conformance and agent_shield.report, the evidence map and the
-    # conformance report ai-agents serves (SH-61, SH-62).
-    # 0.2.0: the authorizer port, the PAP classes and the company role (SH-74, SH-70, SH-71).
-    # 0.2.4: agent_shield.acp.credential (SH-33: the lending the adapter reuses), a terminal's
-    # output pushed while it runs (SH-13, SH-16), the audit's credential shapes fixed.
+    # conformance report ai-agents serves.
+    # 0.2.0: the authorizer port, the PAP classes and the company role.
+    # 0.2.4: agent_shield.acp.credential (the lending the adapter reuses), a terminal's
+    # output pushed while it runs, the audit's credential shapes fixed.
     # 0.2.7: its sentences and the policy schema without decision numbers.
     # 0.2.11: ShieldProxy.run_turn, the turn inside the `shield.turn` span the
     # host opened (ACPAgent opens its own; 0.2.9-0.2.10 nested a second one).
     "datalayer-agent-shield>=0.2.18,<0.3",
     # `CodeExecutionOutcome.outputs` — the mime bundles the A2UI converter
     # draws from — arrived in 1.3.0; `code_sandboxes.environments`, the models
-    # the environments client is typed with (D-14), in 1.5.0;
+    # the environments client is typed with, in 1.5.0;
     # one subpackage per provider, and the typed Marimo kernel helper, in
     # 1.10.0 (the 1.9.x flat module paths are deprecated aliases there); the
     # agentcore variant (AgentCore Code Interpreter) in 1.12.0.
     "code-sandboxes>=1.12.0",
     "croniter",
-    # Web Bot Auth's signature bases (PR-20): RFC 9651
+    # Web Bot Auth's signature bases: RFC 9651
     # structured fields; the RFC 9421 library of PyPI ignores `;key=`.
     "http-sfv>=0.9.9,<0.10",
-    # UCP's own Pydantic models, generated against the 2026-08-25 schemas
-    # (PR-30): 0.5.x is that version.
+    # UCP's own Pydantic models, generated against the 2026-08-25 schemas:
+    # 0.5.x is that version.
     "ucp-sdk>=0.5.0,<0.6",
-    # PACT's JWTs and receipts are verified with it (PR-12).
+    # PACT's JWTs and receipts are verified with it.
     "PyJWT[crypto]>=2.10",
     # A component placed from Python (`Application.component`) is checked
     # against its JSON Schema, as its properties form checks it.
@@ -142,11 +175,11 @@ dependencies = [
     # reported it, arrived in 1.2.2.
     # 1.2.3 is where a delegable agentspec becomes a discoverable, reachable
     # descriptor: `from_agentspec` reads the contract and gives it an A2A
-    # endpoint (O2-07). Below it, every capability query
+    # endpoint. Below it, every capability query
     # answers nothing.
     # 1.2.8 sends a secret's value as it is, with no marker and nothing to
     # decode: one representation end to end, which is what
-    # `datalayer secrets create` writes with (E3-05).
+    # `datalayer secrets create` writes with.
     "datalayer-core>=1.2.12",
     "fastapi",
     "filelock>=3.20.3",
@@ -193,7 +226,7 @@ dependencies = [
     "typer>=0.16.0",
     "urllib3>=2.6.3",
     # The DevTools protocol of the browser on an application's computer
-    # (R-23, `apps/browser.py`).
+    # (`apps/browser.py`).
     "websockets>=13",
 ]
 dynamic = ["version"]
@@ -246,7 +279,7 @@ a2a = [
 ]
 # The ACP client the orchestration adapter speaks, and the route serves.
 #
-# It was imported and declared nowhere — the same defect O0-17 found in
+# It was imported and declared nowhere — the same defect found in
 # ai-agents, and with the same failure: a dependency reached for at the
 # moment of doing the work is missing in every deployment that did not
 # happen to have it. The durable worker runs both adapters, so it is
@@ -260,22 +293,22 @@ a2a = [
 acp = [
     "agent-client-protocol>=0.7.1",
 ]
-# Voice at the terminal (VO-16): the microphone and speaker of the
+# Voice at the terminal: the microphone and speaker of the
 # machine, faster-whisper to hear and Kokoro to say answers here; never a
 # default dependency. `python -m agent_runtimes.voice.store` fills the store
 # (whisper-small, kokoro-82m) from Datalayer's CDN, hash-checked; without it,
 # or when `loop` runs on Datalayer, the person's token hears and says on
 # Datalayer's servers. kokoro-onnx brings eSpeak NG (GPL-3.0) through
 # espeakng-loader, and faster-whisper FFmpeg (LGPL) through av: installed by
-# the person on their own machine, never in a browser bundle (
-# the register's notes, VO-01).
+# the person on their own machine, never in a browser bundle
+# (the register's notes).
 voice = [
     "sounddevice>=0.5.0",
     "faster-whisper>=1.2.1,<2",
     "kokoro-onnx>=0.6.1,<0.7",
 ]
 ui = [
-    "ag-ui-protocol>=0.1.19,<1",  # 1.0.0 (17 September 2026) dropped ThinkingEndEvent and the thinking events transports/agui_stream.py writes; found on r1 in image 0.0.44 (SH-10)
+    "ag-ui-protocol>=0.1.19,<1",  # 1.0.0 (17 September 2026) dropped ThinkingEndEvent and the thinking events transports/agui_stream.py writes; found on r1 in image 0.0.44
     "agent-client-protocol>=0.7.1",
     "mcp-ui-server>=1.0.0,<1.1.0",
 ]
@@ -329,7 +362,7 @@ examples = [
 ]
 cli = [
     # The CLI talks to its agent over AG-UI (`CliTux.send_message`).
-    "ag-ui-protocol>=0.1.19,<1",  # 1.0.0 (17 September 2026) dropped ThinkingEndEvent and the thinking events transports/agui_stream.py writes; found on r1 in image 0.0.44 (SH-10)
+    "ag-ui-protocol>=0.1.19,<1",  # 1.0.0 (17 September 2026) dropped ThinkingEndEvent and the thinking events transports/agui_stream.py writes; found on r1 in image 0.0.44
     "agent-client-protocol>=0.7.1",
     "jupyter-nbmodel-client",
     "pillow",
@@ -338,7 +371,7 @@ cli = [
     "requests",
     "rich>=13.0.0",
     "textual",
-    # `loop apps package` builds an application's wheel (P-29).
+    # `loop apps package` builds an application's wheel.
     "build",
     "hatchling",
 ]
@@ -354,8 +387,8 @@ chat = [
 agent-sudo = [
     "agent-sudo>=0.4.0rc14",
 ]
-# An application's agent written with another framework (P-23,
-# `app.agent`): its runs become the session's steps, its tool calls decided by
+# An application's agent written with another framework
+# (`app.agent`): its runs become the session's steps, its tool calls decided by
 # the application's rules. Opt-in and out of `all`: each brings a framework of
 # its own, and `app.agent` refuses one that is missing with the extra to install.
 langchain = [
@@ -396,7 +429,7 @@ test = [
     "typing-extensions>=4.15.0",
     # The build hook's own test imports it (test_agent_pages).
     "hatchling",
-    # The word error rate of the voice checks (VO-51).
+    # The word error rate of the voice checks.
     "jiwer>=4.0.0",
     # A notebook an application writes analyses in pandas and charts in
     # matplotlib; its test runs one (test_output_formats).
@@ -409,6 +442,7 @@ datalayer-agents = "agent_runtimes.main:main"
 agent-runtimes = "agent_runtimes.main:main"
 loop = "agent_runtimes.main:main"
 l = "agent_runtimes.main:main"
+agent-runtimes-ate = "agent_runtimes.ate.cli:main"
 
 # The Datalayer CLI discovers its extensions through this group: installing
 # agent-runtimes is what makes `datalayer sandboxes` (and the other command
@@ -429,7 +463,7 @@ agent-runtimes = "agent_runtimes.reactor_extension:plugin"
 agent-protocols = "agent_runtimes.protocols.extension:extension"
 # The session's points (harness, session.store, session.format,
 # session.carry, session.hook) and what agent-runtimes contributes to each,
-# delivered as the `agent-runtimes` Reactor Extension (MH-F01).
+# delivered as the `agent-runtimes` Reactor Extension.
 agent-runtimes = "agent_runtimes.plugins.extension:extension"
 
 [tool.hatch.metadata]

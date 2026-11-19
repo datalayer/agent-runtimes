@@ -4,7 +4,7 @@
  */
 
 /**
- * The floating assistant on the page (T-21, T-22, T-27): a character in
+ * The floating assistant on the page: a character in
  * a corner, acting out what the application is doing, with a balloon that
  * says a word while the conversation is closed. Clicked, it opens the
  * conversation; dragged, it moves, and the conversation follows; sent away,
@@ -66,6 +66,7 @@ import { shippedAssistantCharacter } from './catalogue';
 import {
   BalloonHistoryLarge,
   SpeechBalloon,
+  type BalloonPromptConfig,
   type BalloonSuggestion,
 } from './SpeechBalloon';
 import { conversationHeaderText } from './BalloonParts';
@@ -166,7 +167,7 @@ const MOTIONS = {
 
 const BODY = '& .assistant-body';
 
-/** How long it may be sent away for, in the menu's words (T-27). */
+/** How long it may be sent away for, in the menu's words. */
 const AWAY_CHOICES: { away: AssistantAway; label: string }[] = [
   { away: 'page', label: 'Hide for now' },
   { away: 'session', label: 'Hide for this session' },
@@ -235,7 +236,7 @@ export function assistantMenuItems(options: {
   onClear?: () => void;
   onChangeCharacter?: () => void;
   speech?: { muted: boolean; onToggle: () => void };
-  /** The sounds of a character read from a file (T-26): off unless asked. */
+  /** The sounds of a character read from a file: off unless asked. */
   characterSounds?: { on: boolean; onToggle: () => void };
   onResetPosition?: () => void;
   about?: () => void;
@@ -399,7 +400,7 @@ function pixels(value: unknown): number | undefined {
 }
 
 /**
- * Where the balloon goes so that it stays inside the window (T-23): toward
+ * Where the balloon goes so that it stays inside the window: toward
  * the middle of the page from whichever half the character stands in, and
  * below it when it stands too near the top.
  */
@@ -434,11 +435,11 @@ export function balloonSide(
 /** How often the page is looked over for what the assistant must not cover. */
 const CLEAR_CHECK_MS = 400;
 
-/** Why the assistant has stepped aside, if it has (T-27). */
+/** Why the assistant has stepped aside, if it has. */
 export type AssistantAside = 'obstacle' | 'pointer' | undefined;
 
 /**
- * Whether the assistant steps aside (T-27): while an open dialog, an overlay
+ * Whether the assistant steps aside: while an open dialog, an overlay
  * or another chat's composer is under it (`obstacle`), and while the pointer
  * works over or beside it — pressing, or dragging — until it has been away for
  * `POINTER_CALM_MS` (`pointer`). Its own conversation, `own`, is neither, and
@@ -535,13 +536,15 @@ export function useKeepClear(
 }
 
 export interface AssistantStageProps {
+  /** Its balloon's width, fixed (`BALLOON_WIDTH`, 300, unless given). */
+  balloonWidth?: number;
   /**
-   * The avatar: one Datalayer ships, by id (T-25), one loaded from a file
-   * (T-26), or a 3D model.
+   * The avatar: one Datalayer ships, by id, one loaded from a file,
+   * or a 3D model.
    */
   character:
     string | AssistantCharacter | AssistantCharacterData | AssistantModel3D;
-  /** What it acts out (T-22). */
+  /** What it acts out. */
   state: AssistantState;
   /** Its size, in pixels. */
   size?: number;
@@ -573,7 +576,7 @@ export interface AssistantStageProps {
   onCharacterKeyDown?: (event: React.KeyboardEvent<HTMLElement>) => void;
   /**
    * The peek while the conversation is closed: one short line — the agent's
-   * newest words, as the Office Assistant said them (T-23), or a welcome —
+   * newest words, as the Office Assistant said them, or a welcome —
    * that opens the conversation when clicked; `more` says it was cut;
    * `approval`, an approval to answer there, with *Approve* and *Deny*.
    */
@@ -617,7 +620,7 @@ export interface AssistantStageProps {
    */
   expandOnArrival?: boolean;
   /**
-   * How the balloon shows the conversation (T-23): the conversation
+   * How the balloon shows the conversation: the conversation
    * (`history`, the default — closed, the messages in `balloon.history`, or
    * a peek of the newest when none are given; open, the whole history), or
    * the one thing being said or done now (`current`).
@@ -665,11 +668,11 @@ export interface AssistantStageProps {
   sandbox?: AssistantSandbox;
   /** The host's or a plugin's own entries of its menu. */
   contextMenu?: readonly AssistantMenuItem[];
-  /** Send it away (T-27): for the page, for the session, or for good. */
+  /** Send it away: for the page, for the session, or for good. */
   onDismiss: (away: AssistantAway) => void;
   /**
    * Its own conversation's window: a dialog or composer there is not one it
-   * steps aside for, nor is the pointer working there (T-27).
+   * steps aside for, nor is the pointer working there.
    */
   ownRef?: RefObject<HTMLElement | null>;
   /**
@@ -678,17 +681,32 @@ export interface AssistantStageProps {
    */
   decide?: DecisionAsker;
   /**
-   * How loud its voice is now, between 0 and 1, while it is heard (VO-23):
+   * How loud its voice is now, between 0 and 1, while it is heard:
    * the mouth opens with the sound, in three openings, instead of
    * the talking loop. Still, for a reader who asks for reduced motion.
    */
   mouthLevel?: () => number;
   /**
    * Set in a layout — a team's graph — rather than floating over the page:
-   * it never steps aside (T-27), since what is around it is its own label
+   * it never steps aside, since what is around it is its own label
    * and its neighbours, not a page somebody is working on.
    */
   stayPut?: boolean;
+  /**
+   * The × beside the character hides its balloon while one is shown, rather
+   * than sending the character away: the way back to the conversation
+   * stays on the page. The balloon comes back with new words, or when the
+   * pointer comes back to the character; sending it away stays in its menu.
+   */
+  dismissHidesBalloon?: boolean;
+  /**
+   * Its balloon's own prompt line (13 November 2026): a click on the
+   * character opens the balloon with the caret in it, and the balloon stays
+   * until Escape, the ×, or another click; what is sent goes to `onSend`.
+   * The page's composer, when it has one, is still there: this is the way
+   * to write to it from where it stands.
+   */
+  prompt?: Omit<BalloonPromptConfig, 'onClose' | 'focusKey'>;
   /**
    * The agent's own name, used in place of the character's by its menu and
    * its *Send … away*: `Sales`, where the character is a paper clip.
@@ -739,6 +757,7 @@ export function useMouth(
 }
 
 export function AssistantStage({
+  balloonWidth,
   character,
   state,
   size = 88,
@@ -757,6 +776,8 @@ export function AssistantStage({
   decide,
   mouthLevel,
   stayPut = false,
+  dismissHidesBalloon = false,
+  prompt,
   balloonDisplay = 'history',
   expandTarget,
   expandOnArrival = false,
@@ -779,8 +800,8 @@ export function AssistantStage({
   label,
 }: AssistantStageProps): JSX.Element {
   const chatText = useChatWords();
-  // A shipped one by id, a drawing contributed by a plugin (T-24), a
-  // character read from a file (T-26), or a 3D model.
+  // A shipped one by id, a drawing contributed by a plugin, a
+  // character read from a file, or a 3D model.
   const model = isAssistantModel3D(character) ? character : undefined;
   const shipped =
     typeof character === 'string'
@@ -798,7 +819,7 @@ export function AssistantStage({
   // The character, as the figure's description, when it is not its name.
   const describedBy = useId();
   const described = Boolean(agentName || label);
-  // Drawn for the chat's colour mode: the dark drawing on a dark page (T-25).
+  // Drawn for the chat's colour mode: the dark drawing on a dark page.
   const { colorScheme } = useTheme();
   const colorMode = colorScheme?.startsWith('dark') ? 'dark' : 'light';
   // The figure and its balloon are one hover region: the balloon stays
@@ -839,7 +860,7 @@ export function AssistantStage({
     undefined,
   );
   const closeMenu = useCallback(() => setMenuAt(null), []);
-  // A character read from a file plays its sounds only once asked (T-26).
+  // A character read from a file plays its sounds only once asked.
   const [soundsOn, setSoundsOn] = useState(false);
   const hasSounds =
     !shipped &&
@@ -858,8 +879,7 @@ export function AssistantStage({
       detailing !== null ||
       stayPut,
   );
-  // What it covers in its corner, for a line written under a prompt there
-  // (Q-08).
+  // What it covers in its corner, for a line written under a prompt there.
   const cornerRight =
     place.left === undefined && place.top === undefined
       ? pixels(place.right)
@@ -878,8 +898,26 @@ export function AssistantStage({
   useMouth(stageRef, mouthLevel, state === 'speaking');
   // A decision being asked, or its answer, keeps the balloon up.
   const [deciding, setDeciding] = useState(false);
+  // The words whose balloon the × hid: hidden until the words change or the
+  // pointer comes back to the character.
+  const [hushed, setHushed] = useState<string | null>(null);
+  const wasHovered = useRef(hovered);
+  useEffect(() => {
+    if (hovered && !wasHovered.current) {
+      setHushed(null);
+    }
+    wasHovered.current = hovered;
+  }, [hovered]);
+  // Opened by a click, with its prompt: it stays until closed.
+  const [pinned, setPinned] = useState(false);
+  const [promptFocus, setPromptFocus] = useState(0);
   const showBalloon =
-    !aside && !open && !!balloon && (hovered || insist || deciding);
+    !aside &&
+    !open &&
+    !!balloon &&
+    (pinned ||
+      (!(hushed !== null && balloon.text === hushed && !deciding) &&
+        (hovered || insist || deciding)));
   // Suggestions while it waits for a question.
   const waitsForQuestion =
     (state === 'idle' || state === 'greeting') &&
@@ -961,7 +999,7 @@ export function AssistantStage({
         ...place,
         width: size,
         height: size,
-        // Aside (T-27): out of sight, out of the tab order and let through
+        // Aside: out of sight, out of the tab order and let through
         // to what is under it; back as soon as the place is clear.
         opacity: aside ? 0 : 1,
         visibility: aside ? 'hidden' : 'visible',
@@ -1019,7 +1057,7 @@ export function AssistantStage({
         '&[data-assistant-state="speaking"] .assistant-body': {
           animation: 'assistantFloat 1.6s ease-in-out infinite',
         },
-        // Heard (VO-23): the mouth opens with the sound, not on a loop.
+        // Heard: the mouth opens with the sound, not on a loop.
         '&[data-assistant-mouth] .assistant-mouth': {
           animation: 'none',
           transition: 'transform 60ms linear',
@@ -1036,7 +1074,7 @@ export function AssistantStage({
         '&[data-assistant-mouth="3"] .assistant-mouth': {
           transform: 'scaleY(2.8)',
         },
-        // Paused (R-17): it dozes — its eyes shut, its breath slow, a little
+        // Paused: it dozes — its eyes shut, its breath slow, a little
         // greyed — and, still, it is asleep: the shut eyes are not a motion.
         '&[data-assistant-state="paused"] .assistant-body': {
           animation: 'assistantDoze 4.8s ease-in-out infinite',
@@ -1110,6 +1148,20 @@ export function AssistantStage({
             history={balloon.history}
             onExpand={expand ?? undefined}
             expandTitle={visual?.title}
+            prompt={
+              prompt
+                ? {
+                    ...prompt,
+                    focusKey: promptFocus,
+                    onClose: () => {
+                      // Closed as the × closes it: until new words.
+                      setPinned(false);
+                      setHushed(balloon.text);
+                      characterRef.current?.focus();
+                    },
+                  }
+                : undefined
+            }
             onExpandHistory={
               historyVisual
                 ? () => {
@@ -1131,7 +1183,7 @@ export function AssistantStage({
             onSuggestion={onSuggestion}
             decide={decide}
             onDecisionActive={setDeciding}
-            wide={deciding}
+            {...(balloonWidth ? { width: balloonWidth } : {})}
             onOpen={onToggle}
             above={size + 8}
             side={balloonSide(place).side}
@@ -1197,6 +1249,18 @@ export function AssistantStage({
             from &&
             Math.hypot(event.clientX - from.x, event.clientY - from.y) > 4
           ) {
+            return;
+          }
+          if (prompt) {
+            // Its balloon, the caret in its prompt; clicked again, put away.
+            if (pinned && showBalloon) {
+              setPinned(false);
+              setHushed(balloon?.text ?? null);
+            } else {
+              setHushed(null);
+              setPinned(true);
+              setPromptFocus(n => n + 1);
+            }
             return;
           }
           (onCharacterClick ?? onToggle)();
@@ -1267,7 +1331,30 @@ export function AssistantStage({
           />
         )}
       </Box>
-      {(hovered || menuOpen) && !aside && state !== 'goodbye' && (
+      {dismissHidesBalloon &&
+      showBalloon &&
+      !menuOpen &&
+      balloon &&
+      state !== 'goodbye' ? (
+        <Box position="absolute" top="-6px" right="-6px">
+          <IconButton
+            icon={XIcon}
+            aria-label={chatText.hideBalloon}
+            size="small"
+            variant="invisible"
+            data-assistant-hide-balloon=""
+            onClick={() => {
+              setHushed(balloon.text);
+              setPinned(false);
+            }}
+            sx={{
+              bg: 'canvas.default',
+              borderRadius: '50%',
+              boxShadow: 'shadow.small',
+            }}
+          />
+        </Box>
+      ) : (hovered || menuOpen) && !aside && state !== 'goodbye' ? (
         <Box position="absolute" top="-6px" right="-6px">
           <ActionMenu open={menuOpen} onOpenChange={setMenuOpen}>
             <ActionMenu.Anchor>
@@ -1299,7 +1386,7 @@ export function AssistantStage({
             </ActionMenu.Overlay>
           </ActionMenu>
         </Box>
-      )}
+      ) : null}
       <AssistantContextMenu
         at={menuAt}
         items={menuItems}

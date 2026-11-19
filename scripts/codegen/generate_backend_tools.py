@@ -127,6 +127,12 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 f"    description={json.dumps(spec.get('description', ''), ensure_ascii=False)},",
                 f"    tags={_fmt_list(spec.get('tags', []))},",
                 f"    enabled={spec.get('enabled', True)},",
+                # The UI plugins it brings to the chat (agentspecs 0.0.196).
+                *(
+                    [f"    ui={json.dumps(list(spec['ui']), ensure_ascii=False)},"]
+                    if spec.get("ui")
+                    else []
+                ),
                 f'    approval="{spec.get("approval", "auto")}",',
                 f"    timeout={timeout_py},",
                 f"    requires_approval={requires_approval},",
@@ -135,6 +141,11 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 f'        package="{runtime["package"]}",',
                 f'        method="{runtime["method"]}",',
                 "    ),",
+                *(
+                    [f"    linked_accounts={_fmt_list(spec['linked_accounts'])},"]
+                    if spec.get("linked_accounts")
+                    else []
+                ),
                 f"    icon={icon},",
                 f"    emoji={emoji},",
                 ")",
@@ -230,6 +241,11 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 f"  description: {json.dumps(spec.get('description', ''), ensure_ascii=False)},",
                 f"  tags: {tags_json},",
                 f"  enabled: {str(spec.get('enabled', True)).lower()},",
+                *(
+                    [f"  ui: {json.dumps(list(spec['ui']), ensure_ascii=False)},"]
+                    if spec.get("ui")
+                    else []
+                ),
                 f"  approval: '{spec.get('approval', 'auto')}',",
                 f"  timeout: {timeout_ts},",
                 f"  requiresApproval: {str(requires_approval).lower()},",
@@ -238,6 +254,11 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 f"    package: '{runtime['package']}',",
                 f"    method: '{runtime['method']}',",
                 "  },",
+                *(
+                    [f"  linkedAccounts: {json.dumps(list(spec['linked_accounts']))},"]
+                    if spec.get("linked_accounts")
+                    else []
+                ),
                 f"  icon: {icon},",
                 f"  emoji: {emoji},",
                 "};",

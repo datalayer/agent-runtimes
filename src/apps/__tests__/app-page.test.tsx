@@ -4,7 +4,7 @@
  */
 
 /**
- * An application's page (R-01, R-01b): a chat, a widget or a worker
+ * An application's page: a chat, a widget or a worker
  * draws its A2UI surface beside its conversation, publishes what the
  * conversation says to it by path, and answers its buttons through the chat.
  */
@@ -42,7 +42,7 @@ import {
   type InlineSurfaceModel,
 } from '../plugins/a2ui-surface/InlineSurface';
 
-// A Form block's form is fetched when first drawn (D-08): fetched once
+// A Form block's form is fetched when first drawn: fetched once
 // here, so a test's draw finds it there and renders it in its act().
 beforeAll(async () => {
   await import('../../components/a2ui/datalayer/SchemaForm');
@@ -302,9 +302,8 @@ describe('what a button does', () => {
       { name: 'send' },
       data({ '/draft': ' Hello ', '/inputs': inputs }),
     );
-    // What the page did goes with it to the session (R-04): the settings
-    // as the session takes them — a message, never an action of its own
-    // (RU-5).
+    // What the page did goes with it to the session: the settings
+    // as the session takes them — a message, never an action of its own.
     const loop = {
       settings: { product: 'Desktop', short: true },
     };
@@ -379,7 +378,7 @@ describe('what a button does', () => {
       data({ '/inputs': inputs, '/files': files }),
     );
     // The file is not read here: the session puts it where the application
-    // reads it, or refuses it in a sentence (R-04).
+    // reads it, or refuses it in a sentence.
     expect(run).toEqual({
       send: 'Report: Summary',
       inputs: 'Report: Summary',
@@ -589,7 +588,7 @@ describe('the page drawn', () => {
     expect(run).toBeTruthy();
     await act(async () => run!.click());
     expect(actions.map(action => action.name)).toEqual(['run']);
-    // The settings are one form (C-16), drawn with primer-rjsf: no button of
+    // The settings are one form, drawn with primer-rjsf: no button of
     // its own, its values at /inputs for the run.
     const form = container.querySelector('[data-testid="a2ui-form"]');
     expect(form).toBeTruthy();

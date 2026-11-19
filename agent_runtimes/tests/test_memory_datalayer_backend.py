@@ -195,7 +195,7 @@ def test_on_a_datalayer_pod_or_without_a_key_mem0_stays(monkeypatch):
 def test_the_picker_offers_the_marketer_without_its_social_credentials(monkeypatch):
     from agent_runtimes.chat import cli
 
-    assert "worker-marketer" in cli.DEFAULT_AGENTSPEC_CONTEXT_IDS
+    assert "worker-marketer" in cli.offered_agentspec_ids()
     for name in (
         "X_BEARER_TOKEN",
         "BLUESKY_HANDLE",

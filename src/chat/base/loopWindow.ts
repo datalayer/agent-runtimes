@@ -4,11 +4,11 @@
  */
 
 /**
- * Window messages (P-25): what an application's code tells the page it
+ * Window messages: what an application's code tells the page it
  * sits in, outside the conversation — ``session.send_window_message(data)``.
  *
  * The session says it with a `reactor.ui` `window` op named `message`, its
- * `args` `{data}` (RU-3), on the conversation's ui socket (RU-W). The chat does not draw it: it hands
+ * `args` `{data}`, on the conversation's ui socket (RU-W). The chat does not draw it: it hands
  * it to whoever listens here — the embed's host bridge, which raises it on
  * the element as its `window-message` event. A window op of another name is
  * not one this page acts on: refused, it throws.

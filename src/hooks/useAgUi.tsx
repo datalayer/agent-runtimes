@@ -146,7 +146,7 @@ export function useAgUi(options: UseAGUIOptions = {}) {
         });
 
         if (!response.ok) {
-          // Why, in the page's own words (F-15): a 404 at an agent's AG-UI
+          // Why, in the page's own words: a 404 at an agent's AG-UI
           // address means the agent is not on this runtime.
           throw new Error(
             agUiRefusal(

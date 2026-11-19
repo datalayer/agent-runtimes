@@ -108,6 +108,7 @@ adapters_app = typer.Typer(
     name="adapters",
     help="Inspect, import, launch and reproduce external frameworks.",
     no_args_is_help=True,
+    pretty_exceptions_show_locals=False,
 )
 
 INSPECTION_POLL_SECONDS = 2.0
@@ -839,7 +840,7 @@ def _render_report(
         output_path.write_text(markdown_report + "\n", encoding="utf-8")
         console.print(f"[green]Report written:[/green] {output_path}")
     _print_report_console(report, run_limit=run_limit)
-    # Where the same results are read, worked on and shared (B4-08).
+    # Where the same results are read, worked on and shared.
     console.print(f"Live report: {benchmark_report_url(resolved_evalset_id)}")
 
 
@@ -880,7 +881,7 @@ def evals_report(
 
 
 def _print_plan(plan: dict[str, Any]) -> None:
-    """The pre-launch plan (B2-07), as the wizard's review step shows it."""
+    """The pre-launch plan, as the wizard's review step shows it."""
     estimate = plan.get("estimate") or {}
     compute = plan.get("compute") or {}
     table = Table(title="Launch plan")
@@ -930,7 +931,7 @@ def evals_subjects(
     ),
     raw: bool = typer.Option(False, "--raw", help="Print raw JSON output."),
 ) -> None:
-    """What an experiment can run: the subject kinds and the models offered (B2-11)."""
+    """What an experiment can run: the subject kinds and the models offered."""
     client = _make_client(token=token)
     payload = client.evals_list_subjects(billing_entity_uid=billing_entity_uid)
     if raw:

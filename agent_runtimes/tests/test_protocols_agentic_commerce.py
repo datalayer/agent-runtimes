@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The Agentic Commerce Protocol 2026-04-17 at the test seller (PR-40 to PR-43, PR-53)."""
+"""The Agentic Commerce Protocol 2026-04-17 at the test seller."""
 
 from __future__ import annotations
 
@@ -109,7 +109,7 @@ def _client(seller: ExampleOutfitters, platform) -> AgenticCommerceClient:
         credentials=credentials_of(platform),
         extensions=declared_extensions(platform),
         http=http,
-        # A local test seller: its discovery read over the client the test trusts (PI-13).
+        # A local test seller: its discovery read over the client the test trusts.
         metadata=client_fetch(http),
     )
 
@@ -126,7 +126,7 @@ async def _ready(client: AgenticCommerceClient) -> dict[str, Any]:
 
 
 def test_never_named_acp():
-    """PR-40: the Agent Client Protocol keeps `acp`; commerce is `agentic_commerce`."""
+    """The Agent Client Protocol keeps `acp`; commerce is `agentic_commerce`."""
     import agent_runtimes.protocols as protocols
 
     root = Path(protocols.__file__).parent
@@ -247,7 +247,7 @@ async def test_the_seller_holds_the_protocol_to_its_headers():
 
 @pytest.mark.asyncio
 async def test_no_token_reaches_what_an_agent_sees():
-    """PR-53: the payment token and the bearer go to the seller, nowhere else."""
+    """The payment token and the bearer go to the seller, nowhere else."""
     platform = _platform(Person())
     client = _client(ExampleOutfitters(), platform)
     session = await _ready(client)
@@ -265,7 +265,7 @@ async def test_no_token_reaches_what_an_agent_sees():
 
 
 def test_the_revision_fixture_both_languages_read():
-    """PR-51: the TypeScript client computes the same digest from the same session."""
+    """The TypeScript client computes the same digest from the same session."""
     from agent_runtimes.protocols.agentic_commerce import revision_of
 
     fixture = json.loads(

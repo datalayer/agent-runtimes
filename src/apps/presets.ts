@@ -25,7 +25,7 @@
  * The plugin graph is not among them: a host that shows it adds
  * `GraphViewPlugin` (`./plugins/graph`) to the list itself. It brings
  * `@datalayer/reactor-graph` and ECharts with it, which a workspace that never
- * draws the graph — an embedded application (D-08) — should not load.
+ * draws the graph — an embedded application — should not load.
  *
  * @module apps/presets
  */
@@ -50,6 +50,7 @@ import {
 import { ChatHeaderPlugin } from './plugins/chat-header';
 import { A2uiSurfacePlugin } from './plugins/a2ui-surface';
 import { PapSignInPlugin } from './plugins/pap-sign-in';
+import { BrowserSessionPlugin } from './plugins/browser-session';
 import { ShieldDisplaysPlugin } from './plugins/shield-displays';
 import { AgentOutputsXlsxPlugin } from './plugins/agent-outputs/xlsx';
 import { ChatViewPlugin } from './plugins/chat-view';
@@ -65,6 +66,16 @@ import { WindowFramePlugin } from './plugins/window-frame';
 import { DocumentExtension, NotebookExtension } from './extensions';
 import { LoopPageLayoutPlugin, type PageSize } from './plugins/page-layout';
 import type { ResumedThread, ThemeOverrides } from '../types/chat';
+import {
+  maxTurnsOf,
+  type ChatCallToAction,
+} from '../chat/anonymous/anonymousMode';
+import {
+  agentUiChoicesOf,
+  agentUiPluginsFor,
+  lockedUiPluginsFor,
+} from './agentUiPlugins';
+import type { UiChoice } from '../types/agentspecs';
 
 export type LoopPresetOptions = {
   /** Where the agent runtimes service is. */
@@ -173,33 +184,58 @@ export type LoopPresetOptions = {
   agentSummary?: boolean;
   /** The team whose agents are offered. */
   teamId?: string;
+  /**
+   * What a visitor's key for an in-page agent is for: `team:<id>`,
+   * `scene:<id>`, an application (an example's id, `at:<slug>`,
+   * `library:<uid>`) or `battle:<id>`; ai-inference serves the key the models
+   * of what it names. Unsaid, the team's (`team:<teamId>`), else none.
+   */
+  visitorFor?: string;
   /** What a local agent is created from, when one is. */
   localAgent?: AgentsConfig['localAgent'];
   /** The agentspec a Datalayer runtime is allocated with (the `datalayer` target). */
   datalayerAgentSpecId?: string;
   /** What the agent on that runtime is created with besides its spec — an `app_spec`. */
   datalayerCreatePayload?: Record<string, unknown>;
-  /** A conversation without an account, on the visitors' runtime (R-30). */
+  /** A conversation without an account, on the visitors' runtime. */
   datalayerVisitors?: AgentsConfig['datalayerVisitors'];
-  /** A deployment's agent, already on the runtime it is kept on (R-33). */
+  /** A deployment's agent, already on its always-on runtime. */
   datalayerKept?: AgentsConfig['datalayerKept'];
-  /** An embed token: the embedded application's session, and nothing else (R-20). */
+  /** An embed token: the embedded application's session, and nothing else. */
   embedToken?: string;
   /** The target is the host's to fix, even with the agent control hidden. */
   targetFixed?: boolean;
   /** The theme the conversation wears, by name; the person's unless said. */
   themeVariant?: string;
-  /** Laid over that theme, by mode: an application's accent (T-05). */
+  /** Laid over that theme, by mode: an application's accent. */
   themeOverrides?: ThemeOverrides;
   /** The mode the conversation is drawn in, when the host decides it; the person's unless said. */
   colorMode?: 'light' | 'dark';
-  /** Who is answering, as the person meets them (T-08). */
+  /** Who is answering, as the person meets them. */
   presence?: ChatPresence;
+  /**
+   * Run as an anonymous visitor (the user, 15 November 2026): the chat
+   * mints the temporary key itself on the visitors' runtime
+   * (`datalayerVisitors`) and draws the limited preview — see
+   * `ChatPluginConfig.anonymous`.
+   */
+  runAsAnonymous?: boolean;
+  /**
+   * With `runAsAnonymous`, the turns a visitor has today, as the chat counts
+   * and shows them; unsaid, the chat enforces no limit (the runtime's holds).
+   */
+  maxTurns?: number;
+  /** With `runAsAnonymous`, where *Sign in* goes; Datalayer's sign-in page, back here, unsaid. */
+  signInUrl?: string;
+  /** With `runAsAnonymous`, what *Sign in* does, in place of going to `signInUrl`. */
+  onSignIn?: () => void;
+  /** With `runAsAnonymous`, the box's call to action in the host's words, in place of *Sign in*. */
+  callToAction?: ChatCallToAction;
   /** Whether the counters are shown under the prompt; on unless said. */
   showTokenUsage?: boolean;
   /** Its voice, when it has one: the chat's `voice`. */
   voice?: ChatPluginConfig['voice'];
-  /** The conversation to go on with: an embed's session after a reload (D-13). */
+  /** The conversation to go on with: an embed's session after a reload. */
   thread?: ResumedThread;
   /**
    * The agentspec the local agent is created from, by id.
@@ -233,7 +269,7 @@ export type LoopPresetOptions = {
    *
    * True by default. A host whose one view is a page of its own — an
    * application that answers in its page and has no agent to talk to, a
-   * decision (R-02) — passes `false`: the chat and its composer, the
+   * decision — passes `false`: the chat and its composer, the
    * agents, the models, the editors and the page layout all stay out, so
    * that nothing is launched or fetched for a conversation nobody has, and
    * the workspace opens on the view a host's plugin contributes.
@@ -266,6 +302,17 @@ export type LoopPresetOptions = {
    * when it fires.
    */
   firstPromptHook?: () => void;
+  /**
+   * The agent's own UI plugins, by the ids its spec names under `ui`
+   * (`agentUiPlugins`): the Marketer's post previews, the Shopper's
+   * basket… Unsaid, those of the spec the workspace creates
+   * (`datalayerAgentSpecId`, else `localAgentSpec`). An anonymous visitor
+   * (`runAsAnonymous`, `datalayerVisitors`) gets only those that need no
+   * connection of theirs, and those that need one and go in the chat's
+   * chrome drawn locked in the title bar, each signing them in
+   * (`lockedUiPluginsFor`).
+   */
+  uiPlugins?: ReadonlyArray<string | UiChoice>;
 };
 
 /**
@@ -289,6 +336,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     showAgentVariants = false,
     agentSummary = true,
     teamId,
+    visitorFor,
     teamPicker = true,
     pageLayout = false,
     pageLayoutArrangement = 'page',
@@ -309,6 +357,11 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     themeOverrides,
     colorMode,
     presence,
+    runAsAnonymous = false,
+    maxTurns,
+    signInUrl,
+    onSignIn,
+    callToAction,
     showTokenUsage,
     voice,
     thread,
@@ -320,7 +373,12 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     pluginsPanel = false,
     windowFrame = false,
     firstPromptHook,
+    uiPlugins,
   } = options;
+  // The agent's own UI, and whether a visitor's chat draws it.
+  const agentUi =
+    uiPlugins ?? agentUiChoicesOf(datalayerAgentSpecId ?? localAgentSpec);
+  const visitorUi = runAsAnonymous || Boolean(datalayerVisitors);
   const defaultEditor = askedEditor ?? (editors ? 'notebook' : 'none');
 
   // A workspace without a conversation: the theme, the shell's points, and
@@ -357,6 +415,18 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
       themeOverrides,
       colorMode,
       presence,
+      ...(runAsAnonymous
+        ? {
+            anonymous: {
+              ...(maxTurnsOf(maxTurns)
+                ? { maxTurns: maxTurnsOf(maxTurns) }
+                : {}),
+              ...(signInUrl ? { signInUrl } : {}),
+              ...(onSignIn ? { onSignIn } : {}),
+              ...(callToAction ? { callToAction } : {}),
+            },
+          }
+        : {}),
       showTokenUsage,
       ...(voice ? { voice } : {}),
       ...(thread ? { thread } : {}),
@@ -374,9 +444,19 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     // *Sign in at a company*, where the gateway's `pap_sign_in` answers: its
     // own renderer and binding, beside the surfaces rather than inside them.
     PapSignInPlugin,
+    // *Sign in to LinkedIn* in the runtime's own browser, where its agents use
+    // the linkedin server and it holds no session: nothing drawn otherwise —
+    // a visitor gets it locked below instead.
+    BrowserSessionPlugin,
     // A coding agent's diff and terminal, where its tool results carry them:
     // two renderers, no binding — the display says what it is.
     ShieldDisplaysPlugin,
+    // The agent's own: what its spec names under `ui` — each draws one of
+    // its tools or one fact, so every other chat stays as it was.
+    ...agentUiPluginsFor(agentUi, { anonymous: visitorUi }),
+    // To a visitor, what of it needs their own connection, locked in the
+    // title bar: *Sign in to LinkedIn*, *Sign in to post on X*…
+    ...(visitorUi ? lockedUiPluginsFor(agentUi) : []),
     // An XLSX the agent gives, read-only in Cells in its message: the
     // renderer loads Cells when a workbook is drawn, so it costs a chat
     // with none nothing.
@@ -401,6 +481,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
       showAgentVariants,
       showAgentSummary: agentSummary,
       teamId,
+      visitorFor,
       showTeamPicker: teamPicker,
       localAgent:
         localAgent ??

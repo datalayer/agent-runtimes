@@ -4,7 +4,7 @@
  */
 
 /**
- * What the floating assistant's balloon shows (T-23): the whole
+ * What the floating assistant's balloon shows: the whole
  * conversation (`history`), or only what it says or does now (`current`);
  * and, either way, the tool it calls, in plain words — "Using
  * **list_invoices**…", then "Done: list_invoices" or "list_invoices failed".
@@ -78,7 +78,7 @@ export function toolDisplayName(tool: string): string {
 
 /**
  * The three parts a tool line is said in: before the name, the name, after
- * it — in the chat's language (P-26), English unless said.
+ * it — in the chat's language, English unless said.
  */
 export function toolLineParts(
   line: BalloonToolLine,

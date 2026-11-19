@@ -2,15 +2,15 @@
 # Distributed under the terms of the Modified BSD License.
 
 """An agent of the application's own code: a plain function, a LangGraph graph
-or LangChain runnable, a LlamaIndex agent or workflow (P-23).
+or LangChain runnable, a LlamaIndex agent or workflow.
 
 ``app.agent(...)`` gives the application such an agent in place of the
 catalogue's: ``session.agent`` is then a `FrameworkAgent`, with the same
 ``run`` and ``stream`` as an `AppAgent`, so that the default answer and the
 code that calls ``session.agent`` do not change. What the framework does is
 turned into the session's steps — the run, each model call, each tool call
-with its input and output — which the chat shows and the record keeps
-(P-16); its answer is the session's message.
+with its input and output — which the chat shows and the record keeps;
+its answer is the session's message.
 
 Its rules still decide every tool call LOOP can see:
 
@@ -24,10 +24,10 @@ Its rules still decide every tool call LOOP can see:
   theirs: no rule decides one. ``loop apps validate`` says so, and the Canvas
   shows what the agent is.
 
-A tool LOOP sees is decided as a tool of its code is (P-06): by what
+A tool LOOP sees is decided as a tool of its code is: by what
 ``tools=`` says it does, or by a rule that names it; one it is not told of is
 left to the person, and so refused. The built-in checks and the Gates run on
-each call (R-06), and on the answer: a credential is withheld as the answer
+each call, and on the answer: a credential is withheld as the answer
 streams, and an answer a Gate or a check of its code refuses is not given.
 
 The frameworks are optional: ``agent-runtimes[langgraph]``,
@@ -717,7 +717,7 @@ class FrameworkAgent:
                 raise AppCheckBlockedError(str(retry)) from None
 
     async def _preflight(self, prompt: str) -> None:
-        """The checks of a session's start, once per session (R-06); refused,
+        """The checks of a session's start, once per session; refused,
         `AppCheckBlockedError` with their sentences.
         """
         from agent_runtimes.apps.guards import AppChecksCapability
@@ -754,7 +754,7 @@ class FrameworkAgent:
         return text
 
     async def _withheld(self, pieces: AsyncIterator[str]) -> AsyncIterator[str]:
-        """The pieces of an answer as they come, a credential withheld (R-06)."""
+        """The pieces of an answer as they come, a credential withheld."""
         from pydantic_ai.messages import (
             PartDeltaEvent,
             PartEndEvent,
@@ -859,7 +859,7 @@ class FrameworkAgent:
         token = _RUN.set(run)
         given: List[str] = []
         try:
-            # The session's start (R-06): its preflight checks, once, before
+            # The session's start: its preflight checks, once, before
             # its code is first asked; a stop is recorded as any other.
             await self._preflight(prompt)
             pieces = self._pieces(run, prompt, context)

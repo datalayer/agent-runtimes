@@ -40,7 +40,7 @@ type Answered = {
  * What a screen reader hears of a press, as one sentence: the choice, then
  * that the member is asked, then its reply. The lines drawn were the live
  * region, and Orca read them run together with the spinner's own words —
- * *You chose: Not nowLoading Asking Accounting…* (H-21, 2026-10-11). The
+ * *You chose: Not nowLoading Asking Accounting…* (2026-10-11). The
  * reply is said in plain words, without Markdown's signs (its backticks).
  */
 export function answerSaid(

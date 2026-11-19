@@ -62,14 +62,14 @@ For several lines in one session, slash commands among them, see [Run without in
 
 ### Here, or on Datalayer
 
-`loop` asks **where** the agent runs first: *on this machine* (a local server, with your own model keys) or *on Datalayer* (a cloud runtime, billed by the minute). Datalayer is offered once you are signed in (`datalayer login`, or `DATALAYER_API_KEY`). Otherwise `loop` says so in one line and runs here. Without a terminal it always runs here unless a flag says otherwise, so a script never starts something billed by surprise.
+`loop` asks **where** the agent runs first — among the launch rows of its start screen when you have sessions to go on with ([As `loop` starts](../sessions/cli.mdx#as-loop-starts)), else as its own question: *on this machine* (a local server, with your own model keys) or *on Datalayer* (a cloud runtime, billed by the second). Datalayer is offered once you are signed in (`datalayer login`, or `DATALAYER_API_KEY`). Otherwise `loop` says so in one line and runs here. Without a terminal it always runs here unless a flag says otherwise, so a script never starts something billed by surprise.
 
 On this machine, `loop` then lists the agentspecs your local model keys allow, as before. On Datalayer it lists **no agentspecs**. Launching an agent in the cloud needs an environment that supports it, so you pick an environment instead. The list is read through the Datalayer SDK (`AgentClient.list_environments`):
 
 ```text
 ? Where should the agent run?
     On this machine — a local server, with your own model keys
-  ❯ On Datalayer — a cloud runtime with Datalayer's models, billed by the minute
+  ❯ On Datalayer — a cloud runtime with Datalayer's models, billed by the second
 
 Credits: 12,808.98 left.
 31 of your environments say nothing about agents and are not listed: --environment <name> to try one.
@@ -387,17 +387,17 @@ refused before anything is launched. See
 ### Deploy: an application at its address
 
 `loop apps deploy <app id>` deploys a saved version at the application's
-hosted address, `/apps/<slug>`, as the Ship tab does (S-06) — and, kept
+hosted address, `/apps/<slug>`, as the Ship tab does — and, kept
 always on, serves it over A2A at a **stable address** that names the
-deployment and no runtime (A-08):
+deployment and no runtime:
 `/api/ai-agents/v1/apps/deployments/at/<slug>/a2a/`. The address stays the
 same when its runtime is started again or the deployment moves to another
-version; ai-agents passes each request to the runtime it is kept on now.
+version; ai-agents passes each request to its always-on runtime now.
 
 ```bash
 loop apps deploy <id> --slug desk                                   # version: the latest saved; who may open it: private
 loop apps deploy <id> --slug desk --visibility public               # anybody
-loop apps deploy <id> --slug desk --always-on --spend-limit 50 --a2a          # kept on a runtime of its own, served over A2A
+loop apps deploy <id> --slug desk --always-on --spend-limit 50 --a2a          # always on, on a runtime of its own, served over A2A
 loop apps deploy <id> --slug desk --visibility link --always-on --spend-limit 50 --a2a --visitors   # visitors may ask it too
 loop apps deploy <id> --no-a2a                                      # stop serving it over A2A
 ```
@@ -410,18 +410,18 @@ loop apps deploy <id> --no-a2a                                      # stop servi
 | `--visibility` | Who may open it: `private`, `link` or `public`, as the Ship tab says it. |
 | `--always-on` / `--not-always-on` | Keep it on a runtime of its own, paid by you, within `--spend-limit`. |
 | `--spend-limit` | The most it may spend in a day, in credits (from midnight UTC). Required with `--always-on`; a public deployment without one has 50. |
-| `--a2a` / `--no-a2a` | Kept always on, serve it over A2A at its stable address. |
+| `--a2a` / `--no-a2a` | Always on, serve it over A2A at its stable address. |
 | `--visitors` / `--no-visitors` | Served over A2A and open to anyone with the link: visitors without an account may ask it too — their runs only read, a few a day each. |
 
 It prints the address, the `A2A:` line when it is served, and the embed
 snippet for the site. Pause, resume, roll back and take down stay on the Ship
 tab and on `/studio/deployments`. See
-[A team of applications over A2A, A kept deployment at a stable address](/apps/teams-over-a2a).
+[A team of applications over A2A, An always-on deployment at a stable address](/apps/teams-over-a2a).
 
 ### Eject: an application into Python
 
 `loop apps eject app.yaml` writes an application built by spec or on the
-Canvas as an `app.py` that reproduces it (P-13): the file holds the
+Canvas as an `app.py` that reproduces it: the file holds the
 spec, ready for code, and builds the same spec again — checked before it is
 written; otherwise nothing is. It is one way, and it says so first: from then
 on the file is the application's source, its spec built from it. It asks
@@ -435,8 +435,8 @@ loop apps eject app.yaml --yes           # app.py, which builds it the same
 loop apps push app.py --app <id>         # the next version; the versions so far are kept
 ```
 
-Your conversations with an application, and what was said of their answers
-(P-24):
+Your conversations with an application, and what was said of their answers:
+
 
 ```bash
 loop apps threads [<id>] [--search words] [--tag tag] [--limit 50]   # newest first: title, turns, tags, session id
@@ -510,7 +510,7 @@ and the action of its code they press (`press`, with its `payload`), in
 order. Here, each is played in the application's session: what it asks is
 answered by the next turn that says or chooses, a press runs its
 `@app.action` with the payload — the action the session offered under that
-name, with its token, the payload checked against its model (RU-5); one it does not offer fails the test — the other turns are its
+name, with its token, the payload checked against its model; one it does not offer fails the test — the other turns are its
 messages. The judge
 reads the whole conversation — each turn and what it answered — and its
 record, which says what its code kept (`session.record`: an insight, a
@@ -626,7 +626,7 @@ puts in the browser (Sales) is played as the page plays it: its model and its
 prompt, without the connections, skills and backend tools a browser has not.
 With `--cloud`, every member that runs on a runtime gets a cloud runtime of
 its own, launched for its application so that the runtime is given the
-secrets its connections declare and no other (R-19: the account's
+secrets its connections declare and no other (the account's
 `DATALAYER_API_KEY` for the Odoo books through the gateway, `TAVILY_API_KEY`
 for the crawl), configured with it and served over A2A as `serve_accounting.py`
 does; its route answers a key granted to it, given as `--key <member>=<key>`
@@ -707,7 +707,7 @@ In `loop`'s prompt the conversation is a **session** from its first message:
 it is kept in the record, listed, paused and resumed — on this machine and on
 Datalayer (`--cloud`) alike. The whole of it is on the [`loop sessions`](../sessions/cli.mdx) page; in short:
 
-- **As `loop` starts**, with nothing on the command line that says what to run, it lists your paused sessions before asking where a new agent should run — those kept on this machine and, signed in, those on Datalayer. Pick one and it is resumed where it lives, its conversation loaded; *Start a new session*, which Enter picks, goes on to the usual questions. With none paused, nothing is printed.
+- **As `loop` starts**, with nothing on the command line that says what to run, it opens the screen `loop sessions` opens, with its launch rows first: *Start a new session on this machine* and *on Datalayer* (where it runs, asked there; one *Start a new session* row with `--local`, `--cloud` or signed out), highlighted, and under them your sessions in the same two groups and table. Enter on a launch row starts a new session; on a session, resumes it where it lives, as `loop --resume <uid>` does; Esc leaves. With no session listed, nothing is drawn. See [As `loop` starts](../sessions/cli.mdx#as-loop-starts).
 - **`/sessions`** lists your sessions, numbered, each with its kind (`agent` or `app`) and its state (`open`, `paused`, `ended`).
 - **`/pause`** pauses this session and leaves. What the conversation holds is given to the agent's memory first, when its agentspec has one. Under `--cloud` the runtime is given back without asking; on this machine the server stops with the prompt. It prints the way back.
 - **`/resume <n or uid>`** goes on with a session, by its number in the last `/sessions` or by its id: its conversation is loaded and your next message is its next turn.
@@ -916,7 +916,7 @@ executable, and `datalayer agent-teams …` wherever it is installed beside the
 Datalayer CLI. See the [agent-teams CLI](https://agent-teams.datalayer.tech/cli).
 
 One of them is run from `loop`: a paused session that is a seat of a team run,
-picked in the list `loop` shows as it starts, lets its run go on as
+picked on the screen `loop` opens as it starts, lets its run go on as
 `agent-teams sessions resume <run>` does.
 
 ## Extending, and Being an Extension

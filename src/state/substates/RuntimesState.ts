@@ -252,10 +252,10 @@ const kernelsPoll = new Poll({
     max: 300 * 1000,
   },
   name: '@datalayer/jupyter-kernels:KernelsManager#kernels',
-  standby: () =>
-    iamStore.getState().token || runtimesStore.getState().runtimesUrl
-      ? 'when-hidden'
-      : true,
+  // Only for somebody signed in: the list is the person's, asked with their
+  // token. A runtimes URL alone (it always has one) polled for a visitor
+  // signed out too, a 401 each minute on a public page (14 November 2026).
+  standby: () => (iamStore.getState().token ? 'when-hidden' : true),
 });
 
 // Force refresh at expiration date if next tick is after it.

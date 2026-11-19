@@ -4,7 +4,7 @@
  */
 
 /**
- * The transcript as a table (SCENES S2-01), Primer's `DataTable`: time,
+ * The transcript as a table, Primer's `DataTable`: time,
  * from → to, over A2A or MCP, kind, text, how long, state. Sortable by time
  * (an open call last among its ties) unless *Failed first* orders it, a
  * failed row marked, a click on a row

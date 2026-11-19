@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Any ``BaseAgent`` served over AG-UI, from its ``stream`` (SH-10, SH-19).
+"""Any ``BaseAgent`` served over AG-UI, from its ``stream``.
 
 The AG-UI transport runs a pydantic-ai agent through pydantic-ai's own
 adapter; an agent that is not one — a harness driven over ACP — has only
@@ -176,7 +176,7 @@ async def agui_events(
                     message_id=str(uuid.uuid4()),
                     tool_call_id=call_id,
                     # `_meta["reactor.ui/display"]` beside the result, as the
-                    # page reads every protocol display (SH-16).
+                    # page reads every protocol display.
                     content=json.dumps(
                         {
                             key: data[key]

@@ -5,8 +5,8 @@
 """
 Generate the TypeScript types of the Environment specification from its JSON Schema.
 
-The pydantic models of ``code_sandboxes.environments`` are the specification
-(D-14). ``code-sandboxes`` exports them as
+The pydantic models of ``code_sandboxes.environments`` are the specification.
+``code-sandboxes`` exports them as
 ``schemas/environment-v1alpha1.json``; this writes what that schema says, in
 TypeScript, to ``src/models/environments.generated.ts``, as ``core`` generates
 its orchestration and MCP types.

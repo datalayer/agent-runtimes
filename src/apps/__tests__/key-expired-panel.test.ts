@@ -28,7 +28,9 @@ const CHAT_VIEW = readFileSync(
 
 /** The view's outermost element, from its `return (` to the end. */
 function workspaceRoot(): string {
-  const at = CHAT_VIEW.lastIndexOf('    <Box\n      ref={viewRef}');
+  // Under the anonymous visitor's provider since 15 November 2026: found by
+  // its ref, at whatever depth.
+  const at = CHAT_VIEW.search(/<Box\n\s+ref=\{viewRef\}/);
   expect(at).toBeGreaterThan(-1);
   return CHAT_VIEW.slice(at);
 }

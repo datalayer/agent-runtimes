@@ -4,7 +4,7 @@
  */
 
 /**
- * `ChatFloating` holding a conversation its host draws (R-01): the
+ * `ChatFloating` holding a conversation its host draws: the
  * embed's bubble, panel and assistant hold the LOOP workspace, and keep
  * their chrome — the window's header and close, the button's balloon and
  * blink on words not yet heard, the assistant acting what the host says the
@@ -245,7 +245,7 @@ describe('ChatFloating, holding its host’s conversation', () => {
     expect(props.balloon).toEqual({ text: ASSISTANT_WORDS.paused });
   });
 
-  it('holds the first approval in its balloon, answered by the chat’s own answers (T-23)', async () => {
+  it('holds the first approval in its balloon, answered by the chat’s own answers', async () => {
     const onApproveApproval = vi.fn();
     const onRejectApproval = vi.fn();
     const pendingApprovals = [

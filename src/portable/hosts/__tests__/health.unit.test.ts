@@ -5,7 +5,7 @@
  * @vitest-environment node
  */
 
-/** Liveness, readiness and the request window (DC-004). */
+/** Liveness, readiness and the request window. */
 
 import type { AddressInfo } from 'node:net';
 import { afterEach, describe, expect, it } from 'vitest';

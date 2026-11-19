@@ -4,9 +4,9 @@
  */
 
 /**
- * What the floating assistant's gallery shows (T-21 to T-27): every
- * state a character acts (T-22), and stepped aside (T-27), with the balloon
- * each one says — the agent's latest saying (T-23), an approval to answer,
+ * What the floating assistant's gallery shows: every
+ * state a character acts, and stepped aside, with the balloon
+ * each one says — the agent's latest saying, an approval to answer,
  * or that it is paused. Static data only: no agent, no server.
  *
  * @module examples/utils/avatarGallery
@@ -150,7 +150,7 @@ export function sampleHistory(count: number): DisplayItem[] {
   return items;
 }
 
-/** The tool the gallery calls (T-23): Odoo's, as Accounting calls it. */
+/** The tool the gallery calls: Odoo's, as Accounting calls it. */
 export const SAMPLE_TOOL = 'list_invoices';
 
 /** The sample tool's line, at a phase: "Using list_invoices…", "Done: …", "… failed". */
@@ -203,7 +203,7 @@ export const SAMPLE_NOTEBOOK_ARTIFACT = {
 export const SAMPLE_NOTEBOOK_SAYING =
   'Here is the notebook Accounting gave: the open invoices.';
 
-/** The approval the gallery waits on (T-23): answered in the balloon. */
+/** The approval the gallery waits on: answered in the balloon. */
 export function sampleApproval(
   onApprove: () => void,
   onDeny: () => void,

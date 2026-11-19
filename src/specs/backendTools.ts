@@ -138,6 +138,114 @@ export const DECIDE_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   emoji: '⚖️',
 };
 
+export const DEMO_SHOP_FIND_PRODUCTS_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec =
+  {
+    id: 'demo-shop-find-products',
+    version: '0.0.1',
+    name: 'Find Demo Shop Products',
+    description:
+      "Find the demo shop's products by words, category and price range, the cheapest first, each with its photo, price, rating and stock. Drawn as a grid of product cards.",
+    tags: ['shopping', 'demo', 'demo-shop'],
+    enabled: true,
+    ui: [{ plugin: 'product-cards' }],
+    approval: 'auto',
+    timeout: undefined,
+    requiresApproval: false,
+    runtime: {
+      language: 'python',
+      package: 'agent_runtimes.tools.demo_shop',
+      method: 'find_products',
+    },
+    icon: '@primer/octicons-react:search',
+    emoji: '🔎',
+  };
+
+export const DEMO_SHOP_GET_PRODUCT_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'demo-shop-get-product',
+  version: '0.0.1',
+  name: 'Get a Demo Shop Product',
+  description:
+    'One product of the demo shop with its photo, price, rating, stock and description. Drawn as a product card.',
+  tags: ['shopping', 'demo', 'demo-shop'],
+  enabled: true,
+  ui: [{ plugin: 'product-cards' }],
+  approval: 'auto',
+  timeout: undefined,
+  requiresApproval: false,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.demo_shop',
+    method: 'get_product',
+  },
+  icon: '@primer/octicons-react:package',
+  emoji: '📦',
+};
+
+export const DEMO_SHOP_LIST_PRODUCTS_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec =
+  {
+    id: 'demo-shop-list-products',
+    version: '0.0.1',
+    name: 'List Demo Shop Products',
+    description:
+      "List the demo shop's products, all or one category's, each with its photo, price, rating and stock. Drawn as a grid of product cards.",
+    tags: ['shopping', 'demo', 'demo-shop'],
+    enabled: true,
+    ui: [{ plugin: 'product-cards' }],
+    approval: 'auto',
+    timeout: undefined,
+    requiresApproval: false,
+    runtime: {
+      language: 'python',
+      package: 'agent_runtimes.tools.demo_shop',
+      method: 'list_products',
+    },
+    icon: '@primer/octicons-react:apps',
+    emoji: '🛍️',
+  };
+
+export const DEMO_SHOP_PLACE_TEST_ORDER_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec =
+  {
+    id: 'demo-shop-place-test-order',
+    version: '0.0.1',
+    name: 'Place a Demo Shop Test Order',
+    description:
+      "Place a test order of a basket at the demo shop: answered with a test order number, and nothing is charged, nothing ships and nothing is kept. Placed only once the person said to. Drawn with each product's photo.",
+    tags: ['shopping', 'demo', 'demo-shop'],
+    enabled: true,
+    ui: [{ plugin: 'product-cards' }],
+    approval: 'auto',
+    timeout: undefined,
+    requiresApproval: false,
+    runtime: {
+      language: 'python',
+      package: 'agent_runtimes.tools.demo_shop',
+      method: 'place_test_order',
+    },
+    icon: '@primer/octicons-react:check-circle',
+    emoji: '✅',
+  };
+
+export const DEMO_SHOP_QUOTE_BASKET_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'demo-shop-quote-basket',
+  version: '0.0.1',
+  name: 'Quote a Demo Shop Basket',
+  description:
+    "Price a basket of the demo shop's products from its catalogue: each line and the total, summed by the tool. A quote, not an order: nothing is reserved. Drawn with each product's photo.",
+  tags: ['shopping', 'demo', 'demo-shop'],
+  enabled: true,
+  ui: [{ plugin: 'product-cards' }],
+  approval: 'auto',
+  timeout: undefined,
+  requiresApproval: false,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.demo_shop',
+    method: 'quote_basket',
+  },
+  icon: '@primer/octicons-react:list-ordered',
+  emoji: '🧾',
+};
+
 export const DISPLAY_RECIPE_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   id: 'display-recipe',
   version: '0.0.1',
@@ -408,6 +516,10 @@ export const LIST_RECOMMENDATIONS_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
     'List the recommendations recorded in this session, highest estimated saving first, by kind (cost or fix) and state, with the sum of their estimated monthly savings.',
   tags: ['recommendations', 'steward'],
   enabled: true,
+  ui: [
+    { plugin: 'aws-savings', renderer: 'a2ui' },
+    { plugin: 'aws-savings-badge' },
+  ],
   approval: 'auto',
   timeout: undefined,
   requiresApproval: false,
@@ -448,6 +560,10 @@ export const RECORD_RECOMMENDATION_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
     "Record one recommendation — a cost saving or a technical fix — with the evidence it rests on (each read's source, call, time and values), its estimate and how it was computed, its confidence and its fix as a reviewable change with its rollback; refused when any of them is missing.",
   tags: ['recommendations', 'steward'],
   enabled: true,
+  ui: [
+    { plugin: 'a2ui-surface', renderer: 'a2ui' },
+    { plugin: 'aws-savings-badge' },
+  ],
   approval: 'auto',
   timeout: undefined,
   requiresApproval: false,
@@ -518,6 +634,547 @@ export const RUNTIME_SENSITIVE_ECHO_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   emoji: '🛡️',
 };
 
+export const SHOW_BASKET_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'show-basket',
+  version: '0.0.1',
+  name: 'Show Basket',
+  description:
+    'Show the person the basket — each item with its seller, quantity, price and photo, the shipping, and the total summed by the tool. Nothing is bought by showing it. Drawn by the shopping-basket UI plugin.',
+  tags: ['shopping', 'card', 'shopper'],
+  enabled: true,
+  ui: [
+    { plugin: 'shopping-basket', renderer: 'a2ui' },
+    { plugin: 'basket-total' },
+  ],
+  approval: 'auto',
+  timeout: undefined,
+  requiresApproval: false,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.cards',
+    method: 'show_basket',
+  },
+  icon: '@primer/octicons-react:package',
+  emoji: '🛒',
+};
+
+export const SHOW_COMPARISON_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'show-comparison',
+  version: '0.0.1',
+  name: 'Show Comparison',
+  description:
+    'Show the person the products compared, side by side — price, variant, availability, rating, seller and photo — and the one you would pick with why. Drawn as a table by the product-comparison UI plugin.',
+  tags: ['shopping', 'card', 'shopper'],
+  enabled: true,
+  ui: [{ plugin: 'product-comparison', renderer: 'a2ui' }],
+  approval: 'auto',
+  timeout: undefined,
+  requiresApproval: false,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.cards',
+    method: 'show_comparison',
+  },
+  icon: '@primer/octicons-react:table',
+  emoji: '📊',
+};
+
+export const SHOW_INDEX_RESULT_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'show-index-result',
+  version: '0.0.1',
+  name: 'Show Index Result',
+  description:
+    'Show the person an index computed from the pixels (NDVI, NDWI, NBR) over an area on each date, the change between the dates, its map and what limits the reading. Drawn by the earth-index UI plugin.',
+  tags: ['earth-observation', 'card', 'terra'],
+  enabled: true,
+  ui: [{ plugin: 'earth-index', renderer: 'a2ui' }],
+  approval: 'auto',
+  timeout: undefined,
+  requiresApproval: false,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.cards',
+    method: 'show_index_result',
+  },
+  icon: '@primer/octicons-react:graph',
+  emoji: '🌿',
+};
+
+export const SHOW_ITINERARY_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'show-itinerary',
+  version: '0.0.1',
+  name: 'Show Itinerary',
+  description:
+    'Show the person the trip day by day, each stop with its time and its place on a map. Drawn by the trip-itinerary UI plugin.',
+  tags: ['travel', 'card', 'traveller'],
+  enabled: true,
+  ui: [{ plugin: 'trip-itinerary' }],
+  approval: 'auto',
+  timeout: undefined,
+  requiresApproval: false,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.cards',
+    method: 'show_itinerary',
+  },
+  icon: '@primer/octicons-react:calendar',
+  emoji: '🗺️',
+};
+
+export const SHOW_RECONCILIATION_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'show-reconciliation',
+  version: '0.0.1',
+  name: 'Show Reconciliation',
+  description:
+    'Show the person bank lines beside the invoices they would settle, with the difference and a confidence; the person approves the matches and sends them back. Drawn by the bank-reconciliation UI plugin.',
+  tags: ['accounting', 'card', 'accountant'],
+  enabled: true,
+  ui: [{ plugin: 'bank-reconciliation', renderer: 'a2ui' }],
+  approval: 'auto',
+  timeout: undefined,
+  requiresApproval: false,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.cards',
+    method: 'show_reconciliation',
+  },
+  icon: '@primer/octicons-react:git-compare',
+  emoji: '🧾',
+};
+
+export const SHOW_SCENES_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'show-scenes',
+  version: '0.0.1',
+  name: 'Show Scenes',
+  description:
+    'Show the person the satellite scenes found, by date, each with its collection, sensor and cloud cover as the catalogue gave them. Drawn by the earth-scenes UI plugin.',
+  tags: ['earth-observation', 'card', 'terra'],
+  enabled: true,
+  ui: [{ plugin: 'earth-scenes', renderer: 'a2ui' }],
+  approval: 'auto',
+  timeout: undefined,
+  requiresApproval: false,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.cards',
+    method: 'show_scenes',
+  },
+  icon: '@primer/octicons-react:globe',
+  emoji: '🛰️',
+};
+
+export const SHOW_TRIAL_BALANCE_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'show-trial-balance',
+  version: '0.0.1',
+  name: 'Show Trial Balance',
+  description:
+    "Show the person a trial balance for a period — each account's debit, credit and balance, the totals summed by the tool and whether they agree. Drawn by the trial-balance UI plugin.",
+  tags: ['accounting', 'card', 'accountant'],
+  enabled: true,
+  ui: [{ plugin: 'trial-balance' }],
+  approval: 'auto',
+  timeout: undefined,
+  requiresApproval: false,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.cards',
+    method: 'show_trial_balance',
+  },
+  icon: '@primer/octicons-react:law',
+  emoji: '⚖️',
+};
+
+export const SHOW_TRIP_BUDGET_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'show-trip-budget',
+  version: '0.0.1',
+  name: 'Show Trip Budget',
+  description:
+    'Show the person what the trip costs, line by line, quotes apart from estimates, the total summed by the tool and what is left of their budget. Drawn by the trip-budget UI plugin.',
+  tags: ['travel', 'card', 'traveller'],
+  enabled: true,
+  ui: [{ plugin: 'trip-budget' }],
+  approval: 'auto',
+  timeout: undefined,
+  requiresApproval: false,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.cards',
+    method: 'show_trip_budget',
+  },
+  icon: '@primer/octicons-react:credit-card',
+  emoji: '💰',
+};
+
+export const SHOW_TRIP_MAP_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'show-trip-map',
+  version: '0.0.1',
+  name: 'Show Trip Map',
+  description:
+    "Show the person the places of up to three trip options on one map — stays, restaurants, sights, stations — numbered by day, one option at a time with a switch between them, over Overture Maps' open basemap. Only points a tool returned. Drawn by the trip-map UI plugin.",
+  tags: ['travel', 'card', 'traveller', 'maps'],
+  enabled: true,
+  ui: [{ plugin: 'trip-map' }],
+  approval: 'auto',
+  timeout: undefined,
+  requiresApproval: false,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.cards',
+    method: 'show_trip_map',
+  },
+  icon: '@primer/octicons-react:location',
+  emoji: '🗺️',
+};
+
+export const SHOW_TRIP_OPTIONS_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'show-trip-options',
+  version: '0.0.1',
+  name: 'Show Trip Options',
+  description:
+    'Show the person up to three trips, one card each with dates, price and highlights, to choose from; the choice comes back as their next turn. Nothing is booked. Drawn by the trip-options UI plugin.',
+  tags: ['travel', 'card', 'traveller'],
+  enabled: true,
+  ui: [{ plugin: 'trip-options', renderer: 'a2ui' }],
+  approval: 'auto',
+  timeout: undefined,
+  requiresApproval: false,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.cards',
+    method: 'show_trip_options',
+  },
+  icon: '@primer/octicons-react:briefcase',
+  emoji: '🧳',
+};
+
+export const SHOW_VAT_SUMMARY_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'show-vat-summary',
+  version: '0.0.1',
+  name: 'Show VAT Summary',
+  description:
+    "Show the person the VAT for a period — the return's boxes with base and tax, what is due and deductible, and the net to pay or to be refunded. Nothing is filed. Drawn by the vat-summary UI plugin.",
+  tags: ['accounting', 'card', 'accountant', 'vat'],
+  enabled: true,
+  ui: [{ plugin: 'vat-summary' }],
+  approval: 'auto',
+  timeout: undefined,
+  requiresApproval: false,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.cards',
+    method: 'show_vat_summary',
+  },
+  icon: '@primer/octicons-react:checklist',
+  emoji: '💶',
+};
+
+export const SOCIAL_ACCOUNTS_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'social-accounts',
+  version: '0.0.1',
+  name: 'Social Accounts',
+  description:
+    "Read which of X, Bluesky and LinkedIn the person linked in Settings, and the handle or name of each, through Datalayer's IAM; no account's token ever reaches the agent.",
+  tags: ['social', 'datalayer-social'],
+  enabled: true,
+  ui: [{ plugin: 'social-accounts' }],
+  approval: 'auto',
+  timeout: undefined,
+  requiresApproval: false,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.social',
+    method: 'social_accounts',
+  },
+  icon: '@primer/octicons-react:person',
+  emoji: '🪪',
+};
+
+export const SOCIAL_COMMENT_LINKEDIN_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec =
+  {
+    id: 'social-comment-linkedin',
+    version: '0.0.1',
+    name: 'Comment on LinkedIn',
+    description:
+      "Comment as the person under one LinkedIn post they name by its address, through Datalayer's IAM; it waits for the person's approval every time.",
+    tags: ['social', 'linkedin', 'datalayer-social'],
+    enabled: true,
+    ui: [
+      { plugin: 'linkedin-post-preview', renderer: 'a2ui' },
+      { plugin: 'linkedin-link' },
+    ],
+    approval: 'manual',
+    timeout: undefined,
+    requiresApproval: true,
+    runtime: {
+      language: 'python',
+      package: 'agent_runtimes.tools.social',
+      method: 'comment_on_linkedin',
+    },
+    linkedAccounts: ['linkedin'],
+    icon: '@datalayer/icons-react:linked-in',
+    emoji: '💬',
+  };
+
+export const SOCIAL_FOLLOW_BLUESKY_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'social-follow-bluesky',
+  version: '0.0.1',
+  name: 'Follow on Bluesky',
+  description:
+    "Follow one Bluesky account as the person, through Datalayer's IAM; it waits for the person's approval every time.",
+  tags: ['social', 'bluesky', 'datalayer-social'],
+  enabled: true,
+  approval: 'manual',
+  timeout: undefined,
+  requiresApproval: true,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.social',
+    method: 'follow_on_bluesky',
+  },
+  linkedAccounts: ['bluesky'],
+  icon: '@primer/octicons-react:person-add',
+  emoji: '➕',
+};
+
+export const SOCIAL_LIKE_BLUESKY_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'social-like-bluesky',
+  version: '0.0.1',
+  name: 'Like on Bluesky',
+  description:
+    "Like one Bluesky post as the person, through Datalayer's IAM; it waits for the person's approval every time.",
+  tags: ['social', 'bluesky', 'datalayer-social'],
+  enabled: true,
+  approval: 'manual',
+  timeout: undefined,
+  requiresApproval: true,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.social',
+    method: 'like_on_bluesky',
+  },
+  linkedAccounts: ['bluesky'],
+  icon: '@primer/octicons-react:heart',
+  emoji: '❤️',
+};
+
+export const SOCIAL_LIKE_X_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'social-like-x',
+  version: '0.0.1',
+  name: 'Like on X',
+  description:
+    "Like one X post as the person, through Datalayer's IAM; it waits for the person's approval every time, held to the person's X budget.",
+  tags: ['social', 'x', 'datalayer-social'],
+  enabled: true,
+  approval: 'manual',
+  timeout: undefined,
+  requiresApproval: true,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.social',
+    method: 'like_on_x',
+  },
+  linkedAccounts: ['x'],
+  icon: '@primer/octicons-react:heart',
+  emoji: '❤️',
+};
+
+export const SOCIAL_POST_BLUESKY_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'social-post-bluesky',
+  version: '0.0.1',
+  name: 'Post to Bluesky',
+  description:
+    "Publish one post on the person's own Bluesky account, linked in Settings, with up to four PNG or JPEG images and their alt text, through Datalayer's IAM; it waits for the person's approval every time.",
+  tags: ['social', 'bluesky', 'datalayer-social'],
+  enabled: true,
+  ui: [{ plugin: 'bluesky-post-preview', renderer: 'a2ui' }],
+  approval: 'manual',
+  timeout: undefined,
+  requiresApproval: true,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.social',
+    method: 'post_to_bluesky',
+  },
+  linkedAccounts: ['bluesky'],
+  icon: '@datalayer/icons-react:bluesky',
+  emoji: '🦋',
+};
+
+export const SOCIAL_POST_LINKEDIN_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'social-post-linkedin',
+  version: '0.0.1',
+  name: 'Post to LinkedIn',
+  description:
+    "Publish one post on the person's own LinkedIn profile, linked in Settings, with one PNG or JPEG image and its alt text, through Datalayer's IAM; it waits for the person's approval every time.",
+  tags: ['social', 'linkedin', 'datalayer-social'],
+  enabled: true,
+  ui: [
+    { plugin: 'linkedin-post-preview', renderer: 'a2ui' },
+    { plugin: 'linkedin-link' },
+  ],
+  approval: 'manual',
+  timeout: undefined,
+  requiresApproval: true,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.social',
+    method: 'post_to_linkedin',
+  },
+  linkedAccounts: ['linkedin'],
+  icon: '@datalayer/icons-react:linked-in',
+  emoji: '💼',
+};
+
+export const SOCIAL_POST_X_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'social-post-x',
+  version: '0.0.1',
+  name: 'Post to X',
+  description:
+    "Publish one post on the person's own X account, linked in Settings, with up to four PNG or JPEG images, through Datalayer's IAM; it waits for the person's approval every time.",
+  tags: ['social', 'x', 'datalayer-social'],
+  enabled: true,
+  ui: [{ plugin: 'x-post-preview', renderer: 'a2ui' }],
+  approval: 'manual',
+  timeout: undefined,
+  requiresApproval: true,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.social',
+    method: 'post_to_x',
+  },
+  linkedAccounts: ['x'],
+  icon: '@datalayer/icons-react:x',
+  emoji: '✖️',
+};
+
+export const SOCIAL_READ_BLUESKY_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'social-read-bluesky',
+  version: '0.0.1',
+  name: 'Read Bluesky',
+  description:
+    "Read Bluesky as the person, with their account linked in Settings: their timeline, someone's posts, a thread and its replies, who liked or reposted a post, a profile, search of posts and people, their notifications, follows and followers, through Datalayer's IAM.",
+  tags: ['social', 'bluesky', 'datalayer-social'],
+  enabled: true,
+  approval: 'auto',
+  timeout: undefined,
+  requiresApproval: false,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.social',
+    method: 'read_bluesky',
+  },
+  linkedAccounts: ['bluesky'],
+  icon: '@datalayer/icons-react:bluesky',
+  emoji: '🦋',
+};
+
+export const SOCIAL_READ_X_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'social-read-x',
+  version: '0.0.1',
+  name: 'Read X',
+  description:
+    "Read X as the person, with their account linked in Settings: their own profile, someone's, a post, their timeline, their posts, their mentions, the replies to a post and a search of recent posts, through Datalayer's IAM; each read is held to the person's X budget.",
+  tags: ['social', 'x', 'datalayer-social'],
+  enabled: true,
+  approval: 'auto',
+  timeout: undefined,
+  requiresApproval: false,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.social',
+    method: 'read_x',
+  },
+  linkedAccounts: ['x'],
+  icon: '@datalayer/icons-react:x',
+  emoji: '✖️',
+};
+
+export const SOCIAL_REPLY_BLUESKY_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'social-reply-bluesky',
+  version: '0.0.1',
+  name: 'Reply on Bluesky',
+  description:
+    "Reply as the person under one Bluesky post they or the agent named by its address, through Datalayer's IAM; it waits for the person's approval every time.",
+  tags: ['social', 'bluesky', 'datalayer-social'],
+  enabled: true,
+  ui: [{ plugin: 'bluesky-post-preview', renderer: 'a2ui' }],
+  approval: 'manual',
+  timeout: undefined,
+  requiresApproval: true,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.social',
+    method: 'reply_on_bluesky',
+  },
+  linkedAccounts: ['bluesky'],
+  icon: '@datalayer/icons-react:bluesky',
+  emoji: '💬',
+};
+
+export const SOCIAL_REPLY_X_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'social-reply-x',
+  version: '0.0.1',
+  name: 'Reply on X',
+  description:
+    "Reply as the person under one X post, through Datalayer's IAM; it waits for the person's approval every time. A reply costs Datalayer USD 0.015 at X, USD 0.20 with a link, held to the person's X budget.",
+  tags: ['social', 'x', 'datalayer-social'],
+  enabled: true,
+  ui: [{ plugin: 'x-post-preview', renderer: 'a2ui' }],
+  approval: 'manual',
+  timeout: undefined,
+  requiresApproval: true,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.social',
+    method: 'reply_on_x',
+  },
+  linkedAccounts: ['x'],
+  icon: '@primer/octicons-react:reply',
+  emoji: '↩️',
+};
+
+export const SOCIAL_REPOST_BLUESKY_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'social-repost-bluesky',
+  version: '0.0.1',
+  name: 'Repost on Bluesky',
+  description:
+    "Repost one Bluesky post on the person's profile, through Datalayer's IAM; it waits for the person's approval every time.",
+  tags: ['social', 'bluesky', 'datalayer-social'],
+  enabled: true,
+  approval: 'manual',
+  timeout: undefined,
+  requiresApproval: true,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.social',
+    method: 'repost_on_bluesky',
+  },
+  linkedAccounts: ['bluesky'],
+  icon: '@primer/octicons-react:sync',
+  emoji: '🔁',
+};
+
+export const SOCIAL_REPOST_X_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
+  id: 'social-repost-x',
+  version: '0.0.1',
+  name: 'Repost on X',
+  description:
+    "Repost one X post on the person's profile, through Datalayer's IAM; it waits for the person's approval every time, held to the person's X budget.",
+  tags: ['social', 'x', 'datalayer-social'],
+  enabled: true,
+  approval: 'manual',
+  timeout: undefined,
+  requiresApproval: true,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.social',
+    method: 'repost_on_x',
+  },
+  linkedAccounts: ['x'],
+  icon: '@primer/octicons-react:sync',
+  emoji: '🔁',
+};
+
 export const UPDATE_PLAN_STEP_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   id: 'update-plan-step',
   version: '0.0.1',
@@ -550,6 +1207,12 @@ export const BACKEND_TOOL_CATALOG: Record<string, BackendToolSpec> = {
   'create-plan': CREATE_PLAN_BACKEND_TOOL_SPEC_0_0_1,
   'current-time': CURRENT_TIME_BACKEND_TOOL_SPEC_0_0_1,
   decide: DECIDE_BACKEND_TOOL_SPEC_0_0_1,
+  'demo-shop-find-products': DEMO_SHOP_FIND_PRODUCTS_BACKEND_TOOL_SPEC_0_0_1,
+  'demo-shop-get-product': DEMO_SHOP_GET_PRODUCT_BACKEND_TOOL_SPEC_0_0_1,
+  'demo-shop-list-products': DEMO_SHOP_LIST_PRODUCTS_BACKEND_TOOL_SPEC_0_0_1,
+  'demo-shop-place-test-order':
+    DEMO_SHOP_PLACE_TEST_ORDER_BACKEND_TOOL_SPEC_0_0_1,
+  'demo-shop-quote-basket': DEMO_SHOP_QUOTE_BASKET_BACKEND_TOOL_SPEC_0_0_1,
   'display-recipe': DISPLAY_RECIPE_BACKEND_TOOL_SPEC_0_0_1,
   'example-create-plan': EXAMPLE_CREATE_PLAN_BACKEND_TOOL_SPEC_0_0_1,
   'example-current-time': EXAMPLE_CURRENT_TIME_BACKEND_TOOL_SPEC_0_0_1,
@@ -571,6 +1234,31 @@ export const BACKEND_TOOL_CATALOG: Record<string, BackendToolSpec> = {
   'runtime-echo': RUNTIME_ECHO_BACKEND_TOOL_SPEC_0_0_1,
   'runtime-send-mail': RUNTIME_SEND_MAIL_BACKEND_TOOL_SPEC_0_0_1,
   'runtime-sensitive-echo': RUNTIME_SENSITIVE_ECHO_BACKEND_TOOL_SPEC_0_0_1,
+  'show-basket': SHOW_BASKET_BACKEND_TOOL_SPEC_0_0_1,
+  'show-comparison': SHOW_COMPARISON_BACKEND_TOOL_SPEC_0_0_1,
+  'show-index-result': SHOW_INDEX_RESULT_BACKEND_TOOL_SPEC_0_0_1,
+  'show-itinerary': SHOW_ITINERARY_BACKEND_TOOL_SPEC_0_0_1,
+  'show-reconciliation': SHOW_RECONCILIATION_BACKEND_TOOL_SPEC_0_0_1,
+  'show-scenes': SHOW_SCENES_BACKEND_TOOL_SPEC_0_0_1,
+  'show-trial-balance': SHOW_TRIAL_BALANCE_BACKEND_TOOL_SPEC_0_0_1,
+  'show-trip-budget': SHOW_TRIP_BUDGET_BACKEND_TOOL_SPEC_0_0_1,
+  'show-trip-map': SHOW_TRIP_MAP_BACKEND_TOOL_SPEC_0_0_1,
+  'show-trip-options': SHOW_TRIP_OPTIONS_BACKEND_TOOL_SPEC_0_0_1,
+  'show-vat-summary': SHOW_VAT_SUMMARY_BACKEND_TOOL_SPEC_0_0_1,
+  'social-accounts': SOCIAL_ACCOUNTS_BACKEND_TOOL_SPEC_0_0_1,
+  'social-comment-linkedin': SOCIAL_COMMENT_LINKEDIN_BACKEND_TOOL_SPEC_0_0_1,
+  'social-follow-bluesky': SOCIAL_FOLLOW_BLUESKY_BACKEND_TOOL_SPEC_0_0_1,
+  'social-like-bluesky': SOCIAL_LIKE_BLUESKY_BACKEND_TOOL_SPEC_0_0_1,
+  'social-like-x': SOCIAL_LIKE_X_BACKEND_TOOL_SPEC_0_0_1,
+  'social-post-bluesky': SOCIAL_POST_BLUESKY_BACKEND_TOOL_SPEC_0_0_1,
+  'social-post-linkedin': SOCIAL_POST_LINKEDIN_BACKEND_TOOL_SPEC_0_0_1,
+  'social-post-x': SOCIAL_POST_X_BACKEND_TOOL_SPEC_0_0_1,
+  'social-read-bluesky': SOCIAL_READ_BLUESKY_BACKEND_TOOL_SPEC_0_0_1,
+  'social-read-x': SOCIAL_READ_X_BACKEND_TOOL_SPEC_0_0_1,
+  'social-reply-bluesky': SOCIAL_REPLY_BLUESKY_BACKEND_TOOL_SPEC_0_0_1,
+  'social-reply-x': SOCIAL_REPLY_X_BACKEND_TOOL_SPEC_0_0_1,
+  'social-repost-bluesky': SOCIAL_REPOST_BLUESKY_BACKEND_TOOL_SPEC_0_0_1,
+  'social-repost-x': SOCIAL_REPOST_X_BACKEND_TOOL_SPEC_0_0_1,
   'update-plan-step': UPDATE_PLAN_STEP_BACKEND_TOOL_SPEC_0_0_1,
 };
 

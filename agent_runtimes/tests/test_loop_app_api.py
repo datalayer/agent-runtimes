@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The application API: `Application`, `AppHost` and `Session` (P-01 to P-03)."""
+"""The application API: `Application`, `AppHost` and `Session`."""
 
 import asyncio
 from pathlib import Path
@@ -70,7 +70,7 @@ def hosted(
     return host, channel, sent
 
 
-# --- P-01: the module -------------------------------------------------------------
+# --- The module -------------------------------------------------------------
 
 
 def test_an_application_session_is_not_the_workspace_session():
@@ -78,7 +78,7 @@ def test_an_application_session_is_not_the_workspace_session():
     assert Session.__module__ == "agent_runtimes.apps.session"
 
 
-# --- P-02: declarations, attached to an Appspec ------------------------------------
+# --- Declarations, attached to an Appspec ------------------------------------
 
 
 def test_declarations_are_the_spec():
@@ -248,7 +248,7 @@ async def test_a_schedule_runs_in_a_session_of_its_own():
     host, channel, sent = hosted(app)
     session = await host.tick("monday")
     assert channel.messages[-1].session_id == session.uid
-    # Its record says the schedule woke it (R-14).
+    # Its record says the schedule woke it.
     woken = {"kind": "schedule", "schedule": "monday", "cron": "0 9 * * 1"}
     assert sent[-1]["session_uid"] == session.uid
     assert sent[-1]["woken_by"] == woken
@@ -257,7 +257,7 @@ async def test_a_schedule_runs_in_a_session_of_its_own():
         await host.tick("friday")
 
 
-# --- C-15: a component placed from Python ------------------------------------------
+# --- A component placed from Python ------------------------------------------
 
 
 def test_a_component_is_placed_on_the_surface_and_checked_against_its_schema():
@@ -307,7 +307,7 @@ def test_a_component_its_schema_refuses_is_not_placed():
 
 
 def test_every_component_is_a_typed_call_writing_the_node_the_canvas_writes():
-    """C-15: ``app.ui.<component>`` for every component of the catalog —
+    """``app.ui.<component>`` for every component of the catalog —
     its properties named and typed from the same JSON Schema — writes the node
     ``app.component`` writes, which the YAML and the Canvas read."""
     import inspect
@@ -355,7 +355,7 @@ def test_a_typed_call_its_schema_refuses_is_not_placed_a_standard_one_too():
 
 
 def test_python_yaml_and_back_are_one_surface():
-    """C-15: what Python places is the spec's text, and read back from
+    """What Python places is the spec's text, and read back from
     that text it is the same surface — one component, three editors."""
     import yaml
 
@@ -410,7 +410,7 @@ class Quote(BaseModel):
 
 
 def test_an_action_is_typed_in_its_appspec():
-    """RU-5: ``@app.action(name, payload=Model)`` writes the
+    """``@app.action(name, payload=Model)`` writes the
     model's JSON Schema in the Appspec; an action without one takes nothing."""
     app = quote_app()
 
@@ -436,7 +436,7 @@ def test_an_action_is_typed_in_its_appspec():
 
 
 async def test_a_press_its_model_refuses_never_reaches_its_handler():
-    """RU-5: the payload is checked against its model, each field
+    """The payload is checked against its model, each field
     and why; the handler is given the model, an action taking nothing nothing."""
     app = quote_app()
     seen: list = []
@@ -466,7 +466,7 @@ async def test_a_press_its_model_refuses_never_reaches_its_handler():
     assert seen == [Quote(values=Seats(seats=2)), "cleared"]
 
 
-# --- P-03: the session --------------------------------------------------------------
+# --- The session --------------------------------------------------------------
 
 
 async def test_send_and_stream():
@@ -488,7 +488,7 @@ async def test_send_and_stream():
 
 
 async def test_an_answer_shows_components_of_the_catalog():
-    """What an answer shows is the catalog the Canvas places (P-04)."""
+    """What an answer shows is the catalog the Canvas places."""
     host, channel, _ = hosted(interview())
     session = await host.open()
     sent = await session.send(
@@ -617,7 +617,7 @@ async def test_steps_nest_and_say_how_they_ended():
 
 
 async def test_steps_are_kept_in_the_record_with_its_actions():
-    """A step that ended is a `step` entry, sent when the outermost one ends (P-16)."""
+    """A step that ended is a `step` entry, sent when the outermost one ends."""
     host, _, sent = hosted(interview(), include=("actions",))
     session = await host.open()
     sent.clear()
@@ -802,7 +802,7 @@ def test_the_local_agent_is_its_agents_prompt_then_the_applications_instructions
     # Its model is never called here: building it is the test.
 
 
-# --- P-14: the whole life cycle ---------------------------------------------------
+# --- The whole life cycle ---------------------------------------------------
 
 
 async def test_end_cancels_what_runs_reacts_and_takes_nothing_more():
@@ -871,7 +871,7 @@ def test_end_and_logout_are_one_handler_each_and_marked_as_code():
     assert EVENTS[-3:] == ("end", "logout", "page")
 
 
-# --- P-15: messages that change ---------------------------------------------------
+# --- Messages that change ---------------------------------------------------
 
 
 async def test_a_message_is_updated_and_removed_where_the_user_reads_it():
@@ -959,7 +959,7 @@ async def test_run_sync_and_cache():
         await fetch(["a"])
 
 
-# --- P-28: an application is a Reactor plugin ----------------------------------------
+# --- An application is a Reactor plugin ----------------------------------------
 
 
 async def test_an_application_is_its_plugin_each_reaction_a_contribution():
@@ -992,7 +992,7 @@ async def test_an_application_is_its_plugin_each_reaction_a_contribution():
         app, channel, agent=host._agent, recorder=host.recorder, platform=platform
     )
     # Its identity is the plugin's manifest; its spec and every reaction are
-    # contributions of that plugin, delivered as its extension (P-35).
+    # contributions of that plugin, delivered as its extension.
     assert host.plugin.name == "loop-app-customer-interview"
     assert [e["name"] for e in platform.list_extensions()] == [host.plugin.name]
     assert find_app("customer-interview", platform) == app.spec
@@ -1039,7 +1039,7 @@ async def test_an_application_is_its_plugin_each_reaction_a_contribution():
         await host.press(session, "save", {})
 
 
-# --- P-19: commands and modes in the composer ---------------------------------------
+# --- Commands and modes in the composer ---------------------------------------
 
 
 def test_commands_and_modes_are_declared_in_the_spec():
@@ -1085,7 +1085,7 @@ def test_commands_and_modes_are_declared_in_the_spec():
         app.spec  # noqa: B018
 
 
-# --- P-20, P-26: profiles, starters, the nine inputs, translations -------------------
+# --- Profiles, starters, the nine inputs, translations -------------------
 
 
 async def test_profiles_starters_settings_inputs_and_translations_are_declared():

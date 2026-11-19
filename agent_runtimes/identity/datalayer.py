@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The built-in ``datalayer`` identity provider (ID-20): what exists today,
+"""The built-in ``datalayer`` identity provider: what exists today,
 behind the ``identity.provider`` point, with no change of behaviour.
 
 - ``inbound_token`` — the platform JWT the caller carries, unchanged.
@@ -18,7 +18,7 @@ behind the ``identity.provider`` point, with no change of behaviour.
   :class:`AuthorizationRequired` carries the link. Any other provider is
   refused, IAM holds no grant for it.
 - ``api_key`` — the secret of that name the runtime was given: on a
-  deployment only what its specs declare (R-19), set in this process's
+  deployment only what its specs declare, set in this process's
   environment by the configure (``guardrails.declared_secrets``).
 - ``complete_binding`` — refused: IAM binds a consent on its own pages.
 """

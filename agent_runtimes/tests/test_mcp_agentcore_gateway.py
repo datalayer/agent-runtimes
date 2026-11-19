@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An AgentCore Gateway as a remote MCP server, its bearer minted for the run (AC-20)."""
+"""An AgentCore Gateway as a remote MCP server, its bearer minted for the run."""
 
 from __future__ import annotations
 
@@ -307,7 +307,7 @@ def test_the_generated_catalogue_carries_the_auth(
     )
 
 
-# --- the policy session (AC-44) ---------------------------------------------------
+# --- the policy session ---------------------------------------------------
 
 
 def _asked(

@@ -2,7 +2,7 @@
 
 The [Agentic Commerce Protocol](https://github.com/agentic-commerce-protocol/agentic-commerce-protocol)
 `2026-04-17` against a local test seller, _Example Outfitters_, in one
-process with no network (example EX-05).
+process with no network.
 In code it is `agentic_commerce`, never `acp` (the Agent Client Protocol).
 
 ```bash

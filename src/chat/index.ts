@@ -68,6 +68,13 @@ export { NotebookToolSurfaces } from './messages/NotebookToolSurfaces';
 export { ChatSidebar, type ChatSidebarProps } from './ChatSidebar';
 export { ChatStandalone } from './ChatStandalone';
 export { ChatBase } from './base/ChatBase';
+// A conversation run as an anonymous visitor (`runAsAnonymous`, `maxTurns`).
+export { ANONYMOUS_WORDS, type ChatAnonymous } from './anonymous/anonymousMode';
+export {
+  AnonymousPreviewBox,
+  AnonymousKeyClock,
+  type AnonymousChatState,
+} from './anonymous/AnonymousChat';
 export {
   InputPrompt,
   type InputPromptProps,
@@ -170,7 +177,7 @@ export {
 } from '../agents/AgentRuntimeChat';
 export * from './EphemeralSurfaceControl';
 
-// The chat's own words in the person's language (P-26)
+// The chat's own words in the person's language
 export { ChatLanguage, useChatLanguage, useChatWords } from './ChatLanguage';
 export {
   CHAT_WORDS,

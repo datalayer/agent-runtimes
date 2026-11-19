@@ -32,7 +32,7 @@ from personal_agent_protocol.demo.kit import (
     ScriptedApprovals,
     personal_agent_reactor,
 )
-from personal_agent_protocol.demo.manzanita import DOMAIN, manzanita
+from personal_agent_protocol.demo.manzanita import CONFIG, DOMAIN, manzanita
 from personal_agent_protocol.operations import OperationsClient, operations_negotiated
 
 from agent_runtimes.apps import Application
@@ -65,7 +65,11 @@ async def run_manzanita_journey() -> dict[str, Any]:
     network = InProcessNetwork()
     atlas = AgentIdentity(domain="atlas.example", name="Atlas")
     network.add(atlas.domain, atlas.website())
-    shop, shop_plugin = manzanita(network, clock)
+    shop, shop_plugin = manzanita(
+        network,
+        clock,
+        config=CONFIG,
+    )
     http = network.client()
     approvals = ScriptedApprovals(
         always=True
@@ -97,7 +101,8 @@ async def run_manzanita_journey() -> dict[str, Any]:
         tenant_id=TENANT,
         company=company,
     )
-    name = company.document.organization.name
+    # The domain beside the name: the name is unconfirmed (PAP 1.0 §10.3).
+    name = company.document.organization.label
     steps.append(f"discovered {name}; signed-out Session, its ID chosen here")
 
     # A question only a signed-in user can have answered.
@@ -119,7 +124,6 @@ async def run_manzanita_journey() -> dict[str, Any]:
         scopes=("orders:read", "orders:write"),
         tenant_id=TENANT,
         organization=company.document.organization,
-        protected_resources=metadata.protected_resources,
         pairwise_user_id=PAIRWISE,
     )
     steps.append(f"Ada opened {started.verification_uri} and entered the code")
@@ -144,7 +148,7 @@ async def run_manzanita_journey() -> dict[str, Any]:
     proposal = [e for e in page.events if e.type != "state"][-1].message.operation  # type: ignore[union-attr]
     if not (proposal is not None):
         raise RuntimeError("the example world is incomplete")
-    steps.append(f"company proposed revision {proposal.revision}: {proposal.summary}")
+    steps.append(f"company proposed revision {proposal.revision}: {proposal.shown}")
 
     # Ada approves exactly that revision, in the host's own interface; it is done once.
     # Draft 0.4 §3.4: Operations as the company lists it and the Session declares it.

@@ -21,7 +21,7 @@ feature while keeping protocol secrets outside model context.
 | [`mediated-sign-in`](./mediated-sign-in/)                 | The extension grant, credentials on `pap.protectedInput`  | Questions asked and outcome; credentials withheld |
 | [`conversation-streaming`](./conversation-streaming/)     | SSE events, display-only deltas, Last-Event-ID            | Event evidence; credentials withheld              |
 | [`conversation-control`](./conversation-control/)         | Direct Conversation, handoff and close                    | Statuses and event types; credentials withheld    |
-| [`operations`](./operations/)                             | Operations version 2: the person asked, at most once      | What was asked and what the company said          |
+| [`operations`](./operations/)                             | Operations version 3: the person asked, at most once      | What was asked and what the company said          |
 | [`user-with-a-company`](./user-with-a-company/)           | A user with a company, end to end                         | What each party saw; codes and tokens withheld    |
 | [`two-companies`](./two-companies/)                       | Two companies composed: Ledgerly at Northwind             | Each approval the person gave; secrets withheld   |
 | [`sign-in-display`](./sign-in-display/)                   | The sign-in card as a display (`PapSignIn`)               | Display's model view; no link, no code            |
@@ -29,17 +29,19 @@ feature while keeping protocol secrets outside model context.
 | [`company-role`](./company-role/)                         | `pap.company`: propose, approve, perform once             | Proposals, revisions and gate decisions           |
 | [`local-personal-agent`](./local-personal-agent/)         | `PapPersonalAgentCapability` with the host's reactor      | Summaries only; tokens and device code withheld   |
 | [`local-company`](./local-company/)                       | `PapCompanyCapability`: the application as a company      | What the person was shown; ticket used once       |
+| [`shop`](./shop/)                                         | The Demo Shop and a personal agent buying from it         | Products, a quote, a test order approved once     |
 
-Every example runs against the PAP Python SDK — Agent Runtimes pins 0.32.0
-(`personal-agent-protocol[ui]`), which implements
-[PAP draft 0.4](https://personalagentprotocol.org/docs/spec) as of upstream
-`46beb21` (revision 2026-11-06), the specification published at
+Every example runs against the PAP Python SDK 0.37 — Agent Runtimes pins
+`personal-agent-protocol[ui]>=0.37.0,<0.38` — at the one version Agent Runtimes
+speaks, the newest the SDK implements and its default:
+[1.0](https://personalagentprotocol.org/docs/1.0/spec) as published and frozen
+on 2026-11-14 (upstream `8c02b42`), the specification published at
 [personalagentprotocol.org](https://personalagentprotocol.org)
-from [personal-agent-protocol/personal-agent-protocol](https://github.com/personal-agent-protocol/personal-agent-protocol):
-every request with the Session header names its version in `Poppy-Version` and
-the extensions its Session declares in `Poppy-Extensions`, every conversation
-POST carries a request `id`, and a conversation stands in `working`, `handoff`,
-`responder` and `closed`. All of them ran on 8 November 2026 at the SDK 0.32.0
+from [personal-agent-protocol/personal-agent-protocol](https://github.com/personal-agent-protocol/personal-agent-protocol).
+The demo companies serve that version alone and the personal agents discover
+them at it alone, on the SDK's defaults: no example names a version; every
+request with the Session header names `1.0` in `Poppy-Version`. All of them ran
+on 17 November 2026 at the SDK 0.37.0
 (`python scripts/validate_pap_examples.py`). Most run
 the SDK's self-contained `demo` worlds: real keys, proofs and HTTP over ASGI in
 one process, with no network and no model.

@@ -4,7 +4,7 @@
  */
 
 /**
- * The floating assistant's two balloon displays (T-23): `history`, a
+ * The floating assistant's two balloon displays: `history`, a
  * peek closed and the whole conversation open, counted in its header;
  * `current`, only what is said or done now, *Now* on it, nothing to scroll.
  * Either way a tool call is said in plain words — "Using list_invoices…",
@@ -32,6 +32,7 @@ import {
   type BalloonToolLine,
 } from '../assistant/toolLine';
 import { conversationHeaderText } from '../assistant/BalloonParts';
+import balloonSource from '../assistant/SpeechBalloon.tsx?raw';
 
 const mounted: Array<() => void> = [];
 
@@ -222,7 +223,7 @@ describe('the two balloon displays', () => {
   });
 });
 
-describe('the words, to a screen reader (H-21)', () => {
+describe('the words, to a screen reader', () => {
   const words = (container: HTMLElement) =>
     container.querySelector('[data-balloon-words-announce]');
 
@@ -288,8 +289,10 @@ describe('the words, to a screen reader (H-21)', () => {
       },
     });
     const drawn = container.querySelector('[data-balloon-current-text]');
+    // The whole words as markdown, clipped by the balloon's height: the cut
+    // text flattened tables and lists (the user, 17 November 2026).
     expect(drawn?.querySelector('[aria-hidden="true"]')?.textContent).toBe(
-      'Ask me for a report, such as revenue or a customer…',
+      'Ask me for a report, such as revenue or a customer’s balance.',
     );
     expect(
       drawn?.querySelector('[data-balloon-words-whole]')?.textContent,
@@ -498,5 +501,14 @@ describe('the history balloon lists the conversation', () => {
     expect(
       container.querySelector('[data-balloon-current-text]')?.textContent,
     ).toBe('Yes, it ran at 9:40.');
+  });
+});
+
+describe('the balloon width', () => {
+  it('is capped by the window, never by the avatar it hangs from (18 November 2026)', () => {
+    // Absolute in an avatar's box a few dozen pixels wide: a percentage
+    // there squeezed the balloon to a column two words wide.
+    expect(balloonSource).not.toContain("maxWidth: '100%'");
+    expect(balloonSource).toContain("maxWidth: 'calc(100vw - 32px)'");
   });
 });

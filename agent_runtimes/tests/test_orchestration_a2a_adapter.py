@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Tests for the A2A binding (O0-06).
+"""Tests for the A2A binding.
 
 A worker that has never heard of Datalayer runs an execution to completion,
 its artifacts are registered, the parent's ``agent.subagent`` events keep
@@ -233,7 +233,7 @@ class TestDelegation:
     async def test_a_completed_seat_task_leaves_its_session_on_the_attempt(
         self, monkeypatch
     ):
-        # MH-38/MH-42: the seat's apps session, on the completed status, is the
+        # The seat's apps session, on the completed status, is the
         # attempt's — what the run swaps, clones and exports (found on r1, 22
         # October 2026: a completed seat's attempt carried none).
         ended = (
@@ -263,7 +263,7 @@ class TestDelegation:
 
     @pytest.mark.asyncio
     async def test_the_attempt_keeps_what_the_worker_says_it_spent(self, monkeypatch):
-        # O2-10: the status that ends the task says what the task spent.
+        # The status that ends the task says what the task spent.
         spent = {
             "inputTokens": 1200,
             "outputTokens": 340,

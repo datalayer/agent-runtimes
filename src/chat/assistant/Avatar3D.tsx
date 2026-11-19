@@ -63,7 +63,7 @@ export interface Avatar3DProps {
   size: number;
   /** How loud its voice is now, between 0 and 1, while it is heard. */
   mouthLevel?: () => number;
-  /** Stepped aside (T-27): it walks out of its square, and back after. */
+  /** Stepped aside: it walks out of its square, and back after. */
   aside?: boolean;
   /** A count: changed, it plays its state again — the same model, not drawn again. */
   replay?: number;

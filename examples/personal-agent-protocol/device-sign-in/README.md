@@ -2,8 +2,8 @@
 
 This example runs PAP Device Sign-In through the real Python SDK. It shows the
 human a company-owned link and code, respects the company's polling interval
-and `slow_down`, checks the verification link against the issuer and its
-`protected_resources`, reports partial consent, and stores the refresh token
+and `slow_down`, checks the verification link against the issuer's host and the
+company's domain, reports partial consent, and stores the refresh token
 behind an opaque Reactor reference. Sign-in is plain OAuth: it names no Session.
 
 The Agent Runtimes tool receives only lifecycle evidence. Device codes, client

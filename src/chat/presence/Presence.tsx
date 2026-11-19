@@ -4,11 +4,11 @@
  */
 
 /**
- * An application's presence in its chat (T-08): its face, with a quiet
+ * An application's presence in its chat: its face, with a quiet
  * motion around it while it thinks or works, and one line saying what it is
  * doing. The face is never redrawn; the motion is a soft ring in the accent,
  * still under `prefers-reduced-motion`, and the line changes at the theme's
- * status pace (T-10). Paused, the ring is a still, muted dashed circle and
+ * status pace. Paused, the ring is a still, muted dashed circle and
  * the face is dimmed: nothing moves around something that does nothing.
  *
  * @module chat/presence/Presence
@@ -25,7 +25,7 @@ const ACCENT = 'var(--theme-accent)';
 
 /**
  * A face at `size`: an emoji drawn in Fluent Emoji, the same on every
- * platform (T-20) — the system's, as text, only for one Datalayer ships
+ * platform — the system's, as text, only for one Datalayer ships
  * no drawing of — or a host's own drawing, left as it is.
  */
 export function FaceDrawing({ face, size }: { face: ReactNode; size: number }) {
@@ -43,7 +43,7 @@ export function PresenceFace({
 }: {
   /**
    * The face: an emoji, drawn at `size`, or a host's own drawing of it — an
-   * avatar on its disc (I-07) — as wide as `size`.
+   * avatar on its disc — as wide as `size`.
    */
   face: ReactNode;
   size: number;

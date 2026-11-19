@@ -4,7 +4,7 @@
  */
 
 /**
- * The ai-agents host client every chat host calls (moved from the Slack service, DC-004).
+ * The ai-agents host client every chat host calls (moved from the Slack service).
  *
  * @module portable/hosts/client
  */
@@ -45,9 +45,23 @@ export type HostSelf = Readonly<{
     state: 'allow' | 'deny';
   }>;
   defaultDeployment?: string;
-  deployments: ReadonlyArray<{ appName: string; kept: boolean; uid: string }>;
+  deployments: ReadonlyArray<{
+    alwaysOn: boolean;
+    appName: string;
+    uid: string;
+  }>;
   directOnly: readonly string[];
   paused: boolean;
+  /**
+   * The registered webhook, if any: where, the key its secret is derived
+   * under, and whether ai-agents asks it registered again.
+   */
+  delivery?: Readonly<{
+    key?: string;
+    renew: boolean;
+    url: string;
+    version: number;
+  }>;
   /** The installation's own uid: what its deliveries are addressed to. */
   uid: string;
 }>;
@@ -160,7 +174,7 @@ export class DatalayerHostClient {
 
   /**
    * The installation as Datalayer keeps it: the deployments it allows (with
-   * their application's name and whether each is kept on), the default, the
+   * their application's name and whether each is always on), the default, the
    * channel policy, whether it is paused, and its uid (a host bound
    * outside the install flow, such as a development app given its key,
    * reads it here to poll its deliveries).
@@ -182,18 +196,28 @@ export class DatalayerHostClient {
       })),
       defaultDeployment: host.default_deployment || undefined,
       deployments: host.deployments.map(one => ({
+        alwaysOn: one.always_on ?? false,
         appName: one.app_name ?? '',
-        kept: one.kept ?? false,
         uid: one.uid,
       })),
       directOnly: host.direct_only ?? [],
       paused: host.paused ?? false,
+      ...(host.delivery?.url
+        ? {
+            delivery: {
+              ...(host.delivery.key ? { key: host.delivery.key } : {}),
+              renew: host.delivery.renew ?? false,
+              url: host.delivery.url,
+              version: host.delivery.version ?? 0,
+            },
+          }
+        : {}),
       uid: host.uid,
     };
   }
 
   /**
-   * The host's own administration (DC-106, `/datalayer-admin`):
+   * The host's own administration (`/datalayer-admin`):
    * pause, resume or one channel's rule, for the host
    * user linked to the installation's owner; Datalayer refuses anyone else
    * (403), whatever their role in the host.
@@ -272,11 +296,15 @@ export class DatalayerHostClient {
     return { linked: state.linked, principalUid: state.principal_uid };
   }
 
-  /** Where deliveries are pushed: answered the secret they are signed with, once. */
+  /**
+   * Where deliveries are pushed: answered the secret they are signed with,
+   * once, and the key it is derived under (kept beside it: every push names
+   * it). Registering again moves the version: the old secret stops.
+   */
   async setWebhook(
     hostKey: string,
     url: string,
-  ): Promise<{ signingSecret: string; version: number }> {
+  ): Promise<{ key?: string; signingSecret: string; version: number }> {
     const hook = await this.#call(
       'Datalayer did not register the delivery address',
       '/apps/hosts/self/delivery',
@@ -290,7 +318,11 @@ export class DatalayerHostClient {
       },
       webhookSchema,
     );
-    return { signingSecret: hook.signing_secret, version: hook.version };
+    return {
+      ...(hook.key ? { key: hook.key } : {}),
+      signingSecret: hook.signing_secret,
+      version: hook.version,
+    };
   }
 
   /** What the installation has not acknowledged, oldest first: pushed or not. */
@@ -314,7 +346,7 @@ export class DatalayerHostClient {
   }
 
   /**
-   * *Open in Datalayer* (S-305): a one-use code for the host token's person
+   * *Open in Datalayer*: a one-use code for the host token's person
    * that opens one session or approval after sign-in. Answers the landing's
    * path that redeems it; never a bearer token in a URL.
    */

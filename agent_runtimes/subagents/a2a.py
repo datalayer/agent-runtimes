@@ -15,8 +15,8 @@ the remote run is republished on the parent's monitoring stream through the
 same ``agent.subagent`` events an in-process subagent produces, with
 ``transport: "a2a"`` on them so a reader can tell the two apart.
 
-A run the orchestration control plane dispatched takes no child this way
-(O2-06): it asks the control plane for one
+A run the orchestration control plane dispatched takes no child this way:
+it asks the control plane for one
 (``request_child``), which resolves, authorizes and dispatches it inside the
 tree's budget and depth, and resolving, launching or relaying to an agent
 itself is refused (``ChildNotRequested``).
@@ -161,7 +161,7 @@ def caller_token() -> str | None:
 
 
 class ChildNotRequested(PermissionError):
-    """A worker reaching or starting a child itself, rather than asking the control plane for it (O2-06)."""
+    """A worker reaching or starting a child itself, rather than asking the control plane for it."""
 
 
 def refuse_in_an_orchestrated_run(what: str) -> None:
@@ -198,7 +198,7 @@ def child_slot(name: str, task: str) -> str:
 
     The same task to the same subagent is the same child, so a run replayed
     after its worker restarted finds the child it asked for rather than
-    starting a second (O2-01); another task is another child.
+    starting a second; another task is another child.
 
     Parameters
     ----------
@@ -229,7 +229,7 @@ async def request_child(
     Ask the control plane for a child execution, follow it, and answer with what it produced.
 
     Asked with the run's own token, which the control plane holds to the
-    run's execution (O2-06). The child is resolved, authorized, dispatched,
+    run's execution. The child is resolved, authorized, dispatched,
     watched and committed as any execution is, over whichever protocol its
     agent speaks: the control plane places an A2A child and an ACP child
     under the same parent alike. What it does reaches the parent's stream as
@@ -335,7 +335,7 @@ def spec_id_of(ref: str | None) -> str | None:
 
     Only a trailing version is dropped: what follows the last colon when it is
     a version, such as ``0.0.1``. A team's seat, ``team:<team>/<seat>``,
-    carries a colon that is not one, and stays whole (O2-09).
+    carries a colon that is not one, and stays whole.
 
     Parameters
     ----------
@@ -433,7 +433,7 @@ async def ensure_remote_agent(
     registration against the new runtime for a cloud one.
 
     Refused inside a run the control plane dispatched, which asks for its
-    children instead (O2-06).
+    children instead.
     """
     refuse_in_an_orchestrated_run("resolve or launch an agent")
     token = caller_token()
@@ -482,7 +482,7 @@ async def serve_agentspec(
 
     What launching an agent comes down to once there is a server to launch it
     on: this server, a Datalayer runtime this module launched, or the runtime
-    the orchestration control plane brought up for an execution (O2-06).
+    the orchestration control plane brought up for an execution.
 
     Parameters
     ----------
@@ -506,7 +506,7 @@ async def serve_agentspec(
     fields : dict[str, Any] | None
         What an agent defined inline is registered with, or overrides of the
         agentspec's: a system prompt, a model, tools, MCP servers (a team's
-        seat, O2-09).
+        seat).
 
     Returns
     -------
@@ -580,7 +580,7 @@ class RelayOutcome:
     """What the remote agent said with its final status: the reason, when it failed."""
     metadata: dict[str, Any] | None = None
     """The final status message's metadata: which limit of a delegated model
-    budget stopped the run, when one did (O1-07)."""
+    budget stopped the run, when one did."""
     asked: dict[str, Any] | None = None
     """The approval an ``input-required`` status carries
     (``datalayer.approvalRequest``): what the task waits on, for a caller
@@ -742,7 +742,7 @@ async def relay_a2a_task(
     """Send ``task`` to the remote agent and republish its run; return its answer.
 
     ``metadata`` goes on the message: what an orchestrated delegation carries
-    beside the objective, its model budget (O1-07).
+    beside the objective, its model budget.
 
     ``on_input`` answers an approval the task waits on (``input-required``
     carrying ``datalayer.approvalRequest``): given the request, it returns the
@@ -751,7 +751,7 @@ async def relay_a2a_task(
     followed to its end. Without it, the wait is left on the outcome's state.
 
     Refused inside a run the control plane dispatched, which asks for its
-    children instead (O2-06).
+    children instead.
     """
     refuse_in_an_orchestrated_run("delegate a task to an agent")
     import httpx

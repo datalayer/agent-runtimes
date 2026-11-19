@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The browser of an application's computer (R-23).
+"""The browser of an application's computer.
 
 When its permissions turn *browse* on, its agent opens pages in a headless
 Chromium that runs in the runtime's own container — the image installs the
@@ -31,6 +31,7 @@ import ipaddress
 import json
 import logging
 import os
+import random
 import shutil
 import socket
 import tempfile
@@ -39,6 +40,7 @@ from pathlib import Path
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Protocol
 from urllib.parse import urlsplit
 
+from agent_runtimes.apps import human_input
 from agent_runtimes.apps.computer import ComputerRefused
 
 logger = logging.getLogger(__name__)
@@ -60,6 +62,38 @@ WIDTH, HEIGHT = 1280, 800
 #: caches and took close to 20 seconds on GitHub's runners, sometimes more.
 LOAD_TIMEOUT = 30.0
 START_TIMEOUT = 60.0
+
+#: How Chromium is started headless, wherever it runs: the runtime's container
+#: runs as nobody, with no user namespaces for Chromium's own sandbox (the pod
+#: is the sandbox), and so does the Jupyter container's.
+CHROMIUM_FLAGS = (
+    "--headless=new",
+    "--no-sandbox",
+    "--disable-dev-shm-usage",
+    "--disable-gpu",
+    "--disable-extensions",
+    "--disable-background-networking",
+    "--disable-sync",
+    "--no-first-run",
+    "--no-default-browser-check",
+    "--mute-audio",
+    f"--window-size={WIDTH},{HEIGHT}",
+    "--remote-debugging-address=127.0.0.1",
+    "--remote-debugging-port=0",
+)
+
+#: How the sign-in browser is started: headful, on the Jupyter container's
+#: virtual display (``agent_runtimes.mcp.jupyter_host``), its window taller
+#: than the page by the browser's own bars, as a person's is. reCAPTCHA
+#: Enterprise scored the headless one a bot on LinkedIn's sign-in (r1, 15
+#: November 2026). Never ``--enable-automation``.
+SIGNIN_FLAGS = tuple(
+    f"--window-size={WIDTH},{HEIGHT + 100}"
+    if flag.startswith("--window-size")
+    else flag
+    for flag in CHROMIUM_FLAGS
+    if not flag.startswith("--headless")
+) + ("--window-position=0,0",)
 
 #: The most of a page's text an agent is told.
 TEXT_LIMIT = 60_000
@@ -328,13 +362,24 @@ class ChromiumBrowser:
 
     def __init__(
         self,
-        process: asyncio.subprocess.Process,
+        process: Optional[asyncio.subprocess.Process],
         profile: str,
         connection: _Connection,
         private: bool,
+        on_close: Optional[Callable[[], Awaitable[None]]] = None,
+        humane: bool = False,
     ) -> None:
-        """Keep the browser process, its profile and its connection."""
+        """Keep the browser process (none when another container runs it), its profile and its connection."""
         self._process = process
+        self._on_close = on_close
+        #: Whether clicks travel and typing presses keys as a hand would
+        #: (``agent_runtimes.apps.human_input``): the sign-in browser's.
+        self._humane = humane
+        self._rng = random.Random()  # nosec B311 - pointer and key timing, no secret
+        #: Where the pointer is, once it moved.
+        self._mouse: Optional[tuple[float, float]] = None
+        #: Its DevTools port on the Pod's 127.0.0.1, once known.
+        self.devtools_port: Optional[int] = None
         self._profile = profile
         self._connection = connection
         self._private = private
@@ -353,21 +398,7 @@ class ChromiumBrowser:
         profile = tempfile.mkdtemp(prefix="computer-browser-")
         process = await asyncio.create_subprocess_exec(
             executable,
-            "--headless=new",
-            # The runtime's container runs as nobody, with no user namespaces
-            # for Chromium's own sandbox: the pod is the sandbox.
-            "--no-sandbox",
-            "--disable-dev-shm-usage",
-            "--disable-gpu",
-            "--disable-extensions",
-            "--disable-background-networking",
-            "--disable-sync",
-            "--no-first-run",
-            "--no-default-browser-check",
-            "--mute-audio",
-            f"--window-size={WIDTH},{HEIGHT}",
-            "--remote-debugging-address=127.0.0.1",
-            "--remote-debugging-port=0",
+            *CHROMIUM_FLAGS,
             f"--user-data-dir={profile}",
             "about:blank",
             stdin=asyncio.subprocess.DEVNULL,
@@ -386,6 +417,39 @@ class ChromiumBrowser:
             raise
         private = private_allowed()
         browser = cls(process, profile, _Connection(socket_), private)
+        browser.devtools_port = port
+        await browser._prepare()
+        return browser
+
+    @classmethod
+    async def attach(
+        cls,
+        port: int,
+        on_close: Callable[[], Awaitable[None]],
+        humane: bool = False,
+    ) -> "ChromiumBrowser":
+        """
+        Drive a Chromium another container of the Pod started, at its DevTools port.
+
+        The browser a person signs in to LinkedIn with on a cloud runtime runs
+        in its Jupyter container (``agent_runtimes.mcp.jupyter_host``), on the
+        Pod's 127.0.0.1: driven from here as one started here is, and stopped
+        there by ``on_close``. Its pages are refused private addresses the same
+        way. ``humane`` has clicks travel and typing press keys as a hand
+        would (the sign-in browser).
+        """
+        try:
+            page_url = await _page_socket(port)
+            import websockets
+
+            socket_ = await websockets.connect(page_url, max_size=None)
+        except BaseException:
+            await on_close()
+            raise
+        browser = cls(
+            None, "", _Connection(socket_), private_allowed(), on_close, humane
+        )
+        browser.devtools_port = port
         await browser._prepare()
         return browser
 
@@ -541,18 +605,58 @@ class ChromiumBrowser:
         if not (0 <= x <= WIDTH and 0 <= y <= HEIGHT):
             raise ComputerRefused(400, f"{x}, {y} is not on the page.")
         async with self._lock:
-            for kind in ("mouseMoved", "mousePressed", "mouseReleased"):
-                await self._connection.send(
-                    "Input.dispatchMouseEvent",
-                    {"type": kind, "x": x, "y": y, "button": "left", "clickCount": 1},
-                )
+            if self._humane:
+                await self._travel_and_click(x, y)
+            else:
+                for kind in ("mouseMoved", "mousePressed", "mouseReleased"):
+                    await self._connection.send(
+                        "Input.dispatchMouseEvent",
+                        {
+                            "type": kind,
+                            "x": x,
+                            "y": y,
+                            "button": "left",
+                            "clickCount": 1,
+                        },
+                    )
             await self._settle()
             return await self._seen()
 
+    async def _travel_and_click(self, x: float, y: float) -> None:
+        """Move the pointer to ``x``, ``y`` along a hand's path, rest, press, release."""
+        start = self._mouse or (
+            self._rng.uniform(WIDTH * 0.3, WIDTH * 0.7),
+            self._rng.uniform(HEIGHT * 0.3, HEIGHT * 0.7),
+        )
+        send = self._connection.send
+        for px, py, wait in human_input.mouse_path(
+            start, (x, y), self._rng, WIDTH, HEIGHT
+        ):
+            await asyncio.sleep(wait)
+            await send(
+                "Input.dispatchMouseEvent",
+                {"type": "mouseMoved", "x": px, "y": py, "button": "none"},
+            )
+        self._mouse = (x, y)
+        rest, hold = human_input.click_timing(self._rng)
+        await asyncio.sleep(rest)
+        click = {"x": x, "y": y, "button": "left", "buttons": 1, "clickCount": 1}
+        await send("Input.dispatchMouseEvent", {"type": "mousePressed", **click})
+        await asyncio.sleep(hold)
+        await send(
+            "Input.dispatchMouseEvent",
+            {"type": "mouseReleased", **click, "buttons": 0},
+        )
+
     async def type_text(self, text: str) -> PageSeen:
-        """Type ``text`` where the focus is."""
+        """Type ``text`` where the focus is: key by key in the sign-in browser."""
         async with self._lock:
-            await self._connection.send("Input.insertText", {"text": text})
+            if self._humane:
+                for event, wait in human_input.keystrokes(text, self._rng):
+                    await self._connection.send("Input.dispatchKeyEvent", event)
+                    await asyncio.sleep(wait)
+            else:
+                await self._connection.send("Input.insertText", {"text": text})
             return await self._seen()
 
     async def _key(self, key: str) -> None:
@@ -588,8 +692,8 @@ class ChromiumBrowser:
                 "Input.dispatchMouseEvent",
                 {
                     "type": "mouseWheel",
-                    "x": WIDTH / 2,
-                    "y": HEIGHT / 2,
+                    "x": self._mouse[0] if self._mouse else WIDTH / 2,
+                    "y": self._mouse[1] if self._mouse else HEIGHT / 2,
                     "deltaX": 0,
                     "deltaY": dy,
                 },
@@ -597,10 +701,32 @@ class ChromiumBrowser:
             await asyncio.sleep(0.1)
             return await self._seen()
 
+    async def cookies(self, urls: List[str]) -> List[Dict[str, Any]]:
+        """
+        The cookies the browser would send to ``urls``, as DevTools gives them.
+
+        What a browser session hands an MCP server that reads its own
+        (``agent_runtimes.mcp.browser_session``): never logged.
+
+        Parameters
+        ----------
+        urls : list of str
+            The addresses whose cookies are asked for.
+
+        Returns
+        -------
+        list of dict
+            DevTools' cookies: name, value, domain, path, expires, httpOnly,
+            secure, sameSite.
+        """
+        answer = await self._connection.send("Network.getCookies", {"urls": urls})
+        return list((answer or {}).get("cookies") or [])
+
     @property
     def alive(self) -> bool:
         """Tell whether the browser and its connection are up."""
-        return self._process.returncode is None and self._connection.open
+        running = self._process is None or self._process.returncode is None
+        return running and self._connection.open
 
     async def close(self) -> None:
         """Close the connection and stop the browser."""
@@ -608,6 +734,10 @@ class ChromiumBrowser:
             await self._connection.close()
         except Exception:
             pass
+        if self._process is None:
+            if self._on_close is not None:
+                await self._on_close()
+            return
         _stop(self._process)
         try:
             await asyncio.wait_for(self._process.wait(), 5)
@@ -683,8 +813,10 @@ def browser_running(agent_id: str) -> Optional[Browser]:
     return browser if browser is not None and browser.alive else None
 
 
-async def browser_of(agent_id: str) -> Browser:
-    """An agent's browser, started on its first page."""
+async def browser_of(
+    agent_id: str, factory: Optional[BrowserFactory] = None
+) -> Browser:
+    """An agent's browser, started on its first page (by ``factory`` when given)."""
     lock = _STARTING.setdefault(agent_id, asyncio.Lock())
     async with lock:
         running = browser_running(agent_id)
@@ -693,7 +825,7 @@ async def browser_of(agent_id: str) -> Browser:
         stale = _BROWSERS.pop(agent_id, None)
         if stale is not None:
             await stale.close()
-        browser = await (_FACTORY or ChromiumBrowser.launch)()
+        browser = await (_FACTORY or factory or ChromiumBrowser.launch)()
         _BROWSERS[agent_id] = browser
         return browser
 
@@ -721,12 +853,14 @@ async def close_browsers() -> None:
 __all__ = [
     "BROWSER_ENV",
     "Browser",
+    "CHROMIUM_FLAGS",
     "BrowserFailed",
     "ChromiumBrowser",
     "HEIGHT",
     "KEYS",
     "PRIVATE_ENV",
     "PageSeen",
+    "SIGNIN_FLAGS",
     "WIDTH",
     "browser_of",
     "browser_running",

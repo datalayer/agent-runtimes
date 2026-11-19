@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The session's shape and states in the record (MH-01).
+"""The session's shape and states in the record.
 
 A session is `open`, `paused` or `ended` — the record's word, written on
 every change — and, while open, the runtime says its turn phase beside it
@@ -108,7 +108,7 @@ def test_the_shape_in_the_record_and_describe(
         "turn": "idle",
         "held": True,
         "harness": None,
-        # The first turn's first line, until the person gives one (MH-43).
+        # The first turn's first line, until the person gives one.
         "title": "One",
         "archived": False,
         "lineage": {"forked_from": None, "imported_from": None},

@@ -4,7 +4,7 @@
  */
 
 /**
- * MCP conformance in TypeScript (PR-51, EX-09), as
+ * MCP conformance in TypeScript, as
  * `test_protocols_mcp.py`: the fixture's wire answers read through
  * `@modelcontextprotocol/sdk`'s schemas, and the `McpClient` reading a server
  * of the SDK that answers the fixture, in memory — the same readings the

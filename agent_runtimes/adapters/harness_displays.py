@@ -1,11 +1,11 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The ``diff`` and ``terminal`` displays of a harness's tool results (SH-16).
+"""The ``diff`` and ``terminal`` displays of a harness's tool results.
 
 A harness's ``tool_call_update`` carries what it changed as a diff and what
 it ran as a terminal. The page and the phone draw them as they draw every
-protocol display (M-037, RU-1): beside the tool's result,
+protocol display: beside the tool's result,
 in ``_meta["reactor.ui/display"]``, typed here as Reactor displays —
 
 - ``application/vnd.datalayer.shield.diff+json``: ``{path, old_text,

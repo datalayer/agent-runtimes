@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The harness catalogue over HTTP (VSCODE VS-03, META_HARNESS MH-F02).
+"""The harness catalogue over HTTP.
 
 ``GET /api/v1/harnesses`` answers what ``loop harnesses`` prints: each
 harness the ``harness`` contribution point accepts — the catalogue's and a

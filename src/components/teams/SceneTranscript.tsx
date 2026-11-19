@@ -4,7 +4,7 @@
  */
 
 /**
- * The transcript of a scene, drawn (A-06): the lines
+ * The transcript of a scene, drawn: the lines
  * {@link transcriptOfSpans} or {@link transcriptOfRecord} built, each with
  * its time, who speaks or acts and to whom, and the words or the tool —
  * and *Copy as text*, which copies them with their times
@@ -50,7 +50,7 @@ export type SceneTranscriptProps = {
   copy?: boolean;
   /** The clipboard: `navigator.clipboard.writeText` unless a test gives one. */
   writeText?: (text: string) => Promise<void>;
-  /** The selected line's key: drawn marked (SCENES S2-03). */
+  /** The selected line's key: drawn marked. */
   selected?: string | null;
   /** A line was clicked, or its time's button pressed: its key. */
   onSelect?: (key: string) => void;

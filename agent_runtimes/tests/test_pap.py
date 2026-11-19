@@ -21,7 +21,7 @@ class CompanyClient:
             discovery_url="https://shop.example/.well-known/poppy.json",
             document=DiscoveryDocument.model_validate(
                 {
-                    "protocol_version": "0.4",
+                    "protocol_version": "1.0",
                     "organization": {"name": "Example Shop", "domain": "shop.example"},
                     "auth": {
                         "issuer": "https://auth.shop.example",
@@ -38,6 +38,7 @@ class CompanyClient:
                             {
                                 "type": "a2a",
                                 "endpoint": "https://shop.example/agent",
+                                "description": "Orders, returns and the catalogue",
                             }
                         ]
                     },
@@ -49,7 +50,7 @@ class CompanyClient:
                         }
                     ],
                     # Draft 0.4 §3.3: a list, one entry per version the company supports.
-                    "extensions": {"operations": [{"version": "2"}]},
+                    "extensions": {"operations": [{"version": "3"}]},
                 }
             ),
             # Direct and Device are what the issuer's grants say (draft 0.3 §3.2).
@@ -108,12 +109,15 @@ async def test_company_summary_contains_capabilities_but_no_endpoints() -> None:
     summary = await capability.discover_company("shop.example")
 
     assert summary.organization == "Example Shop"
+    # The domain beside the unconfirmed name (PAP 1.0 §10.3).
+    assert summary.label == "Example Shop (shop.example)"
+    assert summary.protocol_version == "1.0"
     assert summary.sign_in == ("direct",)
     assert summary.scopes == {"catalogue:read": "Read the catalogue"}
     assert summary.scope_hints["catalogue:read"].changes == "none"
     assert summary.protected_resources == ("https://shop.example",)
     assert summary.interfaces == ("agent:a2a", "api:openapi")
-    assert summary.extensions == {"operations": "2"}
+    assert summary.extensions == {"operations": "3"}
     serialized = summary.model_dump_json()
     assert "openapi.json" not in serialized
     assert "/agent" not in serialized

@@ -5,7 +5,7 @@
 
 /**
  * The split: the conversation and the work side by side, one hairline
- * between them that a person drags (T-07, an Appspec's `layout: split`).
+ * between them that a person drags (an Appspec's `layout: split`).
  *
  * The page layout's other arrangement. Where `page` puts the work on a sheet
  * and the conversation in a panel that opens when wanted, `split` keeps both
@@ -16,7 +16,7 @@
  * The hairline is a separator a person can move with the pointer or the
  * keyboard (arrows by a step, Home and End to the bounds); the share it
  * leaves the conversation is kept while the workspace is mounted. The page
- * opens at the theme's pace (T-10, `paneOpening`).
+ * opens at the theme's pace (`paneOpening`).
  *
  * @module apps/plugins/page-layout/SplitLayout
  */
@@ -189,7 +189,7 @@ export function SplitLayout({
                   minHeight: 0,
                   display: 'flex',
                   // The page opening beside the conversation, at the theme's
-                  // pace (T-10): no motion where the theme sets none.
+                  // pace: no motion where the theme sets none.
                   ...paneOpening('right'),
                 }
               : // Mounted but out of sight: the editors keep their place.

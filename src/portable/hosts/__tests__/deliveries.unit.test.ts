@@ -6,7 +6,7 @@
  */
 
 /**
- * Deliveries to a host (DC-004): the signed webhook,
+ * Deliveries to a host: the signed webhook,
  * the outbox poller, and a delivery handled once then acknowledged.
  */
 
@@ -15,12 +15,18 @@ import type { AddressInfo } from 'node:net';
 import { createServer, type Server } from 'node:http';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { deliveryOfOutbox } from '../contracts';
+import {
+  deliveryOfOutbox,
+  deliverySignature,
+  SHARED_SECRET_DELIVERIES_UNTIL,
+} from '../contracts';
 import {
   DeliveryPoller,
+  DeliveryRenewal,
   deliveryRoute,
   receiveDelivery,
   type DeliveryJob,
+  type DeliverySecret,
 } from '../deliveries';
 
 const contracts = JSON.parse(
@@ -45,12 +51,17 @@ afterEach(async () => {
 });
 
 async function serve(
-  secrets: Record<string, string>,
+  secrets: Record<string, string | DeliverySecret>,
   enqueue: (job: DeliveryJob) => Promise<void>,
   now = timestamp,
 ): Promise<string> {
   const route = deliveryRoute(
-    { deliverySecretOf: async hostUid => secrets[hostUid] },
+    {
+      deliverySecretOf: async hostUid => {
+        const kept = secrets[hostUid];
+        return typeof kept === 'string' ? { secret: kept } : kept;
+      },
+    },
     enqueue,
     () => now,
   );
@@ -106,6 +117,174 @@ describe('deliveryRoute', () => {
       ).status,
     ).toBe(400);
     expect(enqueue).not.toHaveBeenCalled();
+  });
+
+  it("verifies a push under ai-agents' own key only when it names the key kept", async () => {
+    const key = 'ai-agents-host-deliveries-v1';
+    const enqueue = vi.fn(async () => undefined);
+    // After the window: a keyed registration knows no date.
+    const late = SHARED_SECRET_DELIVERIES_UNTIL + 86400;
+    const url = await serve({ 'inst-1': { key, secret } }, enqueue, late);
+    const keyed = {
+      'X-Datalayer-Delivery-Key': key,
+      'X-Datalayer-Signature': deliverySignature(secret, late, body),
+      'X-Datalayer-Timestamp': String(late),
+    };
+    expect((await post(`${url}/inst-1`, keyed)).status).toBe(200);
+    const { 'X-Datalayer-Delivery-Key': _named, ...unnamed } = keyed;
+    expect((await post(`${url}/inst-1`, unnamed)).status).toBe(401);
+    expect(
+      (
+        await post(`${url}/inst-1`, {
+          ...keyed,
+          'X-Datalayer-Delivery-Key': 'ai-agents-host-deliveries-v2',
+        })
+      ).status,
+    ).toBe(401);
+    expect(enqueue).toHaveBeenCalledTimes(1);
+  });
+
+  it("accepts a secret of the platform's shared secret until the window ends, never after", async () => {
+    const enqueue = vi.fn(async () => undefined);
+    const before = SHARED_SECRET_DELIVERIES_UNTIL - 60;
+    const sign = (at: number) => ({
+      'X-Datalayer-Signature': deliverySignature(secret, at, body),
+      'X-Datalayer-Timestamp': String(at),
+    });
+    let url = await serve({ 'inst-1': secret }, enqueue, before);
+    expect((await post(`${url}/inst-1`, sign(before))).status).toBe(200);
+    // A keyless registration's push never names a key.
+    expect(
+      (
+        await post(`${url}/inst-1`, {
+          ...sign(before),
+          'X-Datalayer-Delivery-Key': 'ai-agents-host-deliveries-v1',
+        })
+      ).status,
+    ).toBe(401);
+    await new Promise(resolve => server?.close(resolve));
+    server = undefined;
+    const at = SHARED_SECRET_DELIVERIES_UNTIL;
+    url = await serve({ 'inst-1': secret }, enqueue, at);
+    expect((await post(`${url}/inst-1`, sign(at))).status).toBe(401);
+    expect(enqueue).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('DeliveryRenewal', () => {
+  const KEY = 'ai-agents-host-deliveries-v1';
+  type Registered = {
+    key?: string;
+    renew: boolean;
+    url: string;
+    version: number;
+  };
+  const setup = (
+    delivery: Registered | undefined,
+    kept: DeliverySecret | undefined,
+  ) => {
+    const keep = vi.fn(async () => undefined);
+    const setWebhook = vi.fn(async () => ({
+      key: KEY,
+      signingSecret: 'n'.repeat(64),
+      version: 4,
+    }));
+    const renewal = new DeliveryRenewal(
+      {
+        boundHosts: async () => [{ hostKey: 'k1', hostUid: 'h1' }],
+        deliverySecretOf: async () => kept,
+      },
+      {
+        self: async () =>
+          ({ delivery, uid: 'h1' }) as unknown as Awaited<
+            ReturnType<DeliveryRenewal['client']['self']>
+          >,
+        setWebhook,
+      },
+      keep,
+      { warn: vi.fn() },
+    );
+    return { keep, renewal, setWebhook };
+  };
+  const URL_ = 'https://slack.example/datalayer/deliveries/h1';
+
+  it('registers again when ai-agents asks, at the address it holds, and keeps the new secret, key and version', async () => {
+    const { keep, renewal, setWebhook } = setup(
+      { renew: true, url: URL_, version: 1 },
+      { secret: 'o'.repeat(64) },
+    );
+    expect(await renewal.renewOnce()).toBe(1);
+    expect(setWebhook).toHaveBeenCalledWith('k1', URL_);
+    expect(keep).toHaveBeenCalledWith('h1', {
+      key: KEY,
+      secret: 'n'.repeat(64),
+      version: 4,
+    });
+  });
+
+  it('registers again when the key or the version kept is not what ai-agents registered', async () => {
+    for (const kept of [
+      { secret: 'o'.repeat(64) },
+      // Two replicas renewed at once and the earlier answer was kept last.
+      { key: KEY, secret: 'o'.repeat(64), version: 2 },
+    ]) {
+      const { keep, renewal } = setup(
+        { key: KEY, renew: false, url: URL_, version: 3 },
+        kept,
+      );
+      expect(await renewal.renewOnce()).toBe(1);
+      expect(keep).toHaveBeenCalledTimes(1);
+    }
+  });
+
+  it('leaves alone a current registration, one ai-agents does not ask for, and an installation without a webhook', async () => {
+    const cases: Array<[Registered | undefined, DeliverySecret | undefined]> = [
+      [
+        { key: KEY, renew: false, url: URL_, version: 3 },
+        { key: KEY, secret: 's', version: 3 },
+      ],
+      // ai-agents still signs under the shared secret: nothing to gain.
+      [{ renew: false, url: URL_, version: 1 }, { secret: 's' }],
+      [undefined, undefined],
+    ];
+    for (const [delivery, kept] of cases) {
+      const { renewal, setWebhook } = setup(delivery, kept);
+      expect(await renewal.renewOnce()).toBe(0);
+      expect(setWebhook).not.toHaveBeenCalled();
+    }
+  });
+
+  it('goes on past an installation that fails, and says so', async () => {
+    const warn = vi.fn();
+    const keep = vi.fn(async () => undefined);
+    const renewal = new DeliveryRenewal(
+      {
+        boundHosts: async () => [
+          { hostKey: 'k1', hostUid: 'h1' },
+          { hostKey: 'k2', hostUid: 'h2' },
+        ],
+        deliverySecretOf: async () => ({ secret: 's' }),
+      },
+      {
+        self: async (hostKey: string) => {
+          if (hostKey === 'k1') throw new Error('down');
+          return {
+            delivery: { renew: true, url: URL_, version: 2 },
+            uid: 'h2',
+          } as never;
+        },
+        setWebhook: async () => ({ key: KEY, signingSecret: 'n', version: 3 }),
+      },
+      keep,
+      { warn },
+    );
+    expect(await renewal.renewOnce()).toBe(1);
+    expect(keep).toHaveBeenCalledWith('h2', {
+      key: KEY,
+      secret: 'n',
+      version: 3,
+    });
+    expect(warn).toHaveBeenCalledTimes(1);
   });
 });
 

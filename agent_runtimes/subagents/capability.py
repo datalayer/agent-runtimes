@@ -174,7 +174,7 @@ def _build_subagent_capabilities(
                 )
             )
 
-    # Credentials are never shown to its model either (R-19).
+    # Credentials are never shown to its model either.
     from ..guardrails.credentials import credentials_withheld
 
     return credentials_withheld(capabilities)
@@ -355,7 +355,7 @@ class SubagentsCapability(AbstractCapability[Any]):
             try:
                 if remote is not None and run_execution() is not None:
                     # A run the control plane dispatched asks it for the
-                    # child rather than taking it (O2-06).
+                    # child rather than taking it.
                     output = await self._run_as_requested_child(
                         remote, subagent_name, tool_call_id, task
                     )
@@ -422,7 +422,7 @@ class SubagentsCapability(AbstractCapability[Any]):
         tool_call_id: str | None,
         task: str,
     ) -> str:
-        """Ask the control plane for the subagent as a child of this run's execution (O2-06).
+        """Ask the control plane for the subagent as a child of this run's execution.
 
         The child's progress comes back on the parent's monitoring stream as
         the phases a relayed run produces, with ``transport: "a2a"``, so the

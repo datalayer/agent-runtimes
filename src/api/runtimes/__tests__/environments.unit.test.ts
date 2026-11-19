@@ -6,12 +6,12 @@
 /**
  * Every call of the environments API: its method, its URL, its body, and the
  * headers a conditional or keyed write carries, held to the routes of
- * the environments API as Runtimes serves them (E1-01). Following a build's
- * log runs on the stream E1-16's route sent, recorded in
+ * the environments API as Runtimes serves them. Following a build's
+ * log runs on the stream its route sent, recorded in
  * `agent_runtimes/tests/environments_build_logs_recorded.sse`, and on streams
  * written to break where a network would. A trial, a promotion's record and
  * its refusal, and a deletion refused while a runtime runs the environment
- * are what E1-14's and E1-15's routes answered, recorded beside it in
+ * are what their routes answered, recorded beside it in
  * `environments_registry_recorded.json`.
  */
 
@@ -466,7 +466,7 @@ const CALLS: Array<[string, () => Promise<unknown>, Sent]> = [
   ],
 ];
 
-/** The routes of the environments API, as E1-01 serves them; the log's `follow` is `subscribeToBuildLogs`. */
+/** The routes of the environments API, as Runtimes serves them; the log's `follow` is `subscribeToBuildLogs`. */
 const SECTION_9_ROUTES = [
   'POST /environments',
   'GET /environments',
@@ -494,9 +494,9 @@ const SECTION_9_ROUTES = [
   'GET /environment-builds/{uid}/logs',
   'POST /environment-builds/{uid}/cancel',
   'POST /environment-builds/{uid}/retry',
-  // An owner's quotas and holdings, read before a refusal quotes them (E2-19).
+  // An owner's quotas and holdings, read before a refusal quotes them.
   'GET /environment-quotas',
-  // The sandboxes running a version (E2-19).
+  // The sandboxes running a version.
   'GET /environment-versions/{uid}/sandboxes',
 ];
 
@@ -582,7 +582,7 @@ describe('Runtimes Environments API', () => {
 
 const encoder = new TextEncoder();
 
-/** What E1-16's routes answered for one build, recorded from Runtimes' in-memory app. */
+/** What the build log routes answered for one build, recorded from Runtimes' in-memory app. */
 const FIXTURES = join(
   __dirname,
   '..',
@@ -858,7 +858,7 @@ describe('subscribeToBuildLogs', () => {
   });
 });
 
-// -- Trials, promotions and deletions (E1-14, E1-15) --------------------------
+// -- Trials, promotions and deletions --------------------------
 
 interface IRecordedCall {
   method: string;
@@ -939,7 +939,7 @@ const answering = (recorded: IRecordedCall) => {
 
 const segments = (recorded: IRecordedCall) => recorded.path.split('/');
 
-describe('Trials, promotions and deletions, as E1-14 and E1-15 answered them', () => {
+describe('Trials, promotions and deletions, as Runtimes answered them', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -999,7 +999,7 @@ describe('Trials, promotions and deletions, as E1-14 and E1-15 answered them', (
     expect(byVariant.datalayer.policyDecision).toMatchObject({
       outcome: 'pass',
     });
-    // E1-08 made no decision for the e2b artifact, and the record says so.
+    // The scan made no decision for the e2b artifact, and the record says so.
     expect(byVariant.e2b.policyDecision).toBeNull();
     expect(RECORDED.get_partially_ready_version.body.promotion).toBeNull();
   });

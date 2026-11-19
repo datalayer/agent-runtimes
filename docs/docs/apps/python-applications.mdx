@@ -60,7 +60,7 @@ runtime reads it from the deployment when the deployment's agent is made
 (`GET /api/ai-agents/v1/apps/deployments/{uid}/code?version=N` on
 ai-agents, with the token of whoever opened the session, admitted as for the
 deployment's principal's token), wherever that agent is made: the hosted page
-— whether or not the deployment is kept always on — an embed, a tick, an
+— whether or not the deployment is always on — an embed, a tick, an
 always-on runtime. Every session of that agent runs your code: its handlers
 answer, not the plain agent. Code is never taken from the request that makes
 the agent: a request carrying `app_code` is refused (422), and a deployment's
@@ -68,11 +68,11 @@ code that cannot be read stops its agent from being made, in a sentence. A
 deployment whose record does not say whether its version has code — one
 deployed before the file was kept — is refused (409): deploy it again.
 
-**Signed out, on the runtime it is kept on** (decided 14 October 2026:
-*kept runtime + refusal*). A visitor without an account never talks to a
+**Signed out, on its always-on runtime** (decided 14 October 2026:
+*always-on runtime + refusal*). A visitor without an account never talks to a
 Python application on the shared visitors' runtime, whose plain agent would
-answer in your code's place. ai-agents points them at the runtime the
-deployment is kept always on (`runs_code` and `kept.url` in what
+answer in your code's place. ai-agents points them at the deployment's
+always-on runtime (`runs_code` and `always_on_runtime.url` in what
 `/apps/deployments/at/{slug}` answers somebody signed out); that runtime takes
 their visitor's token for its own address only, makes the address's agent
 with the deployment's code (read as nobody, which ai-agents answers only for a
@@ -80,10 +80,10 @@ deployment such a visitor may talk to), and holds them to what the visitors'
 runtime does: their own token for its models, so ai-inference's limits for
 visitors apply and nobody's account pays; reading only; their turns a day and
 minutes a conversation; nothing remembered and nothing recorded. So a Python
-application open to `link` or `public` must be kept always on: opening it to
+application open to `link` or `public` must be always on: opening it to
 them, turning always on off while it is, or moving an open address to a
-Python version not kept on is refused (409, *A Python application open to
-people without an account must be kept always on*). One not kept on, or whose
+Python version not always on is refused (409, *A Python application open to
+people without an account must be always on*). One not always on, or whose
 runtime is not running now, is refused to a visitor in a sentence, never run
 as the plain agent; the visitors' runtime refuses such an address too.
 
@@ -604,16 +604,16 @@ bounded amount of credits for its runtime — the deployment's spend limit
 when its owner set one, else the platform's own small reservation — never
 a share of what the owner has left.
 
-A deployment kept **always on** runs your code too. Its version's `app.py`
+An **always-on** deployment runs your code too. Its version's `app.py`
 is kept with the deployment as it is deployed or moved to another version,
-beside its spec, and the runtime it is kept on reads it from the
-deployment each time its agent is made there (`kept_payload` carries none),
+beside its spec, and its always-on runtime reads it from the
+deployment each time its agent is made there (`deployment_runtime_payload` carries none),
 with the key it was started with — also when the platform starts it again
 with nobody present, which reads no Spacer item; the runtime of a version
 it moves to, made before the move is written, reads that version's. Every session of that agent — a
-visitor's at the address, a tick's — runs with it. A deployment kept
-before its code was kept with it is not guessed to have none: it stops
-being kept on, saying it is to be deployed again.
+visitor's at the address, a tick's — runs with it. An always-on deployment
+from before its code was kept with it is not guessed to have none: it stops
+being always on, saying it is to be deployed again.
 
 **A `@app.schedule` handler runs on the tick** when the runtime runs the
 application's code — an `app.py` of the catalogue, at the version the
@@ -1455,8 +1455,8 @@ a `feedback` entry of the session — `{"liked", "comment", "message", "by"}`,
 `message` naming the answer by its place in the conversation (`answer-2`) —
 and then `@app.feedback(session, feedback)` runs; what it sends is kept in
 the conversation. Feedback is kept on the conversation's application —
-the one whose agent recorded it on that runtime, a deployment's kept always
-on (whose agent runs the version's `app.py`) as much as a configured one; a
+the one whose agent recorded it on that runtime, an always-on
+deployment's (whose agent runs the version's `app.py`) as much as a configured one; a
 conversation the runtime did not record is refused (404, *This runtime runs
 no application.* when it runs none). Its owner lists a thread's feedback
 from the terminal:

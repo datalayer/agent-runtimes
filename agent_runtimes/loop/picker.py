@@ -11,6 +11,12 @@ and the last row), typing filters, Enter resumes the session where it lives, and
 key each does the rest to the highlighted row — pause, end, transfer,
 export, delete, start over — each said in a one-line legend.
 
+`loop`, as it starts, draws the same screen (:func:`agent_runtimes.commands.
+sessions.run_picker` runs both): its launch rows first — *Start a new
+session*, on this machine or on Datalayer when where it runs is still to be
+asked — highlighted by default, and under them the sessions exactly as
+`loop sessions` lists them.
+
 This module is the picker's model, which needs no terminal (what is
 listed, filtered, highlighted, and whether an action applies to a row, with
 why not), its text and JSON listings for a run nobody is at, and the
@@ -191,11 +197,29 @@ def row_line(row: Paused, now: Optional[datetime] = None) -> str:
     )
 
 
+@dataclass(frozen=True)
+class Launch:
+    """A row above the sessions that starts a new one, as `loop` starts."""
+
+    id: str
+    label: str
+
+
+#: Said when a session's key is pressed on a launch row.
+ON_A_LAUNCH_ROW = "This row starts a new session: Enter starts it. The other keys act on a session's row."
+
+
 @dataclass
 class Picker:
-    """What is listed, filtered and highlighted."""
+    """What is listed, filtered and highlighted.
+
+    ``launch`` rows, when `loop` starts, come first, above the sessions;
+    the sessions are numbered from 1 under them, as `loop sessions` numbers
+    them. ``index`` counts the launch rows, then the sessions.
+    """
 
     rows: List[Paused]
+    launch: Tuple[Launch, ...] = ()
     signed_in: bool = True
     typed: str = ""
     index: int = 0
@@ -228,14 +252,28 @@ class Picker:
         """The sessions drawn, in the order they are numbered."""
         return [row for _, rows in self.groups() for row in rows]
 
+    def count(self) -> int:
+        """The rows that can be highlighted: the launch rows, then the sessions drawn."""
+        return len(self.launch) + len(self.visible())
+
+    def _position(self) -> int:
+        return max(0, min(self.index, self.count() - 1))
+
+    def highlighted_launch(self) -> Optional[Launch]:
+        """The launch row highlighted, or ``None`` when a session is."""
+        position = self._position()
+        return self.launch[position] if position < len(self.launch) else None
+
     def highlighted(self) -> Optional[Paused]:
+        """The session highlighted, or ``None`` when none is (or a launch row is)."""
         rows = self.visible()
-        if not rows:
+        position = self._position() - len(self.launch)
+        if not rows or position < 0:
             return None
-        return rows[max(0, min(self.index, len(rows) - 1))]
+        return rows[position]
 
     def move(self, by: int) -> None:
-        count = len(self.visible())
+        count = self.count()
         if count:
             self.index = (max(0, min(self.index, count - 1)) + by) % count
         self.said = ""
@@ -257,7 +295,7 @@ class Picker:
         the first row: a page goes from one place's rows into the other's,
         as the arrows do, and never around.
         """
-        count = len(self.visible())
+        count = self.count()
         if count:
             here = max(0, min(self.index, count - 1))
             self.index = max(0, min(here + pages * self.page_size(), count - 1))
@@ -270,7 +308,7 @@ class Picker:
 
     def last(self) -> None:
         """Highlight the last row."""
-        self.index = max(0, len(self.visible()) - 1)
+        self.index = max(0, self.count() - 1)
         self.said = ""
 
     def cursor_line(self) -> int:
@@ -294,12 +332,23 @@ class Picker:
         self.said = ""
         number = self.number
         if number is None:
-            self.index = 0
+            # Filtering highlights the first session that matches; nothing
+            # typed, the first row (a launch row when `loop` starts).
+            self.index = len(self.launch) if self.typed and self.visible() else 0
         elif 1 <= number <= len(self.visible()):
-            self.index = number - 1
+            self.index = len(self.launch) + number - 1
 
-    def act(self, action: str) -> Optional[Tuple[str, Paused]]:
-        """The action and the session it is done to, or ``None`` with why said."""
+    def act(self, action: str) -> Optional[Tuple[str, Optional[Paused]]]:
+        """The action and the session it is done to, or ``None`` with why said.
+
+        Enter on a launch row answers that row's id, and no session.
+        """
+        launch = self.highlighted_launch()
+        if launch is not None:
+            if action == "resume":
+                return launch.id, None
+            self.said = ON_A_LAUNCH_ROW
+            return None
         row = self.highlighted()
         if row is None:
             self.said = "No session is highlighted."
@@ -317,7 +366,23 @@ class Picker:
         return [] if self.signed_in else [NOT_SIGNED_IN]
 
     def lines(self) -> List[Tuple[str, str]]:
-        """What is drawn, each line with its style: ``title``, ``row``, ``on``, ``dim``."""
+        """What is drawn, each line with its style: ``title``, ``row``, ``on``,
+        ``dim``: the launch rows, then the sessions (:meth:`session_lines`).
+        """
+        on = self.highlighted_launch()
+        return [
+            (
+                "on" if launch is on else "row",
+                f"{'❯' if launch is on else ' '} {launch.label}",
+            )
+            for launch in self.launch
+        ] + self.session_lines()
+
+    def session_lines(self) -> List[Tuple[str, str]]:
+        """The sessions as drawn, the same from `loop` and from `loop sessions`:
+        the filter, the two groups with how each keeps its sessions, the
+        table, the legend and what was said.
+        """
         # A row is one line: the table is as wide as the terminal less the
         # marker, its title the column that is cut. A sentence is wrapped
         # here, between words: the terminal would cut it inside one.
@@ -456,9 +521,10 @@ STYLES = {
 
 def pick(
     picker: Picker, *, input: Any = None, output: Any = None
-) -> Optional[Tuple[str, Paused]]:
+) -> Optional[Tuple[str, Optional[Paused]]]:
     """Draw the picker in the terminal and answer what was chosen: the
-    action and its session, or ``None`` when the person left.
+    action and its session, a launch row's id and ``None``, or ``None`` when
+    the person left.
 
     ``input`` and ``output`` stand in for the terminal in a test.
     """
@@ -550,6 +616,8 @@ def pick(
 __all__ = [
     "ACTIONS",
     "Action",
+    "Launch",
+    "ON_A_LAUNCH_ROW",
     "LEGEND",
     "NOT_LISTED",
     "NOT_SIGNED_IN",

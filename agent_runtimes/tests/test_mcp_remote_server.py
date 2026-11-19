@@ -161,7 +161,7 @@ async def test_a_remote_server_starts_at_its_url_with_its_header_expanded(
         assert gateway.seen and all(
             seen.get("authorization") == f"Bearer {KEY}" for seen in gateway.seen
         )
-        # The config the routes answer keeps its placeholder (R-19).
+        # The config the routes answer keeps its placeholder.
         assert config.headers == {"Authorization": "Bearer ${DATALAYER_API_KEY}"}
         assert "odoo-accounting" not in manager.get_failed_servers()
     finally:

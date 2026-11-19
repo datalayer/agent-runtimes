@@ -4,8 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-app-page` — an application's page, as a plugin
- * (R-01, R-01b).
+ * `@datalayer/loop-plugin-app-page` — an application's page, as a plugin.
  *
  * A chat, a widget or a worker runs as its conversation; its page — its
  * A2UI surface, or the default page of its kind when none is composed — is
@@ -19,7 +18,7 @@
  * its host's (the Studio's run page, its hosted address, its embed) — is
  * contributed by the host through `defineAppHostPagePlugin`, as the
  * workspace's one view (`LoopViewType`), in a workspace without a
- * conversation (R-02).
+ * conversation.
  *
  * @module apps/plugins/app-page
  */
@@ -88,7 +87,7 @@ export type AppHostPageProps = {
 };
 
 /**
- * The plugin that makes a host's page the workspace's view (R-02): the
+ * The plugin that makes a host's page the workspace's view: the
  * page a host draws for an application whose kind the workspace has no page
  * for — a decision's. The workspace opens on it; it is ordered before every
  * other view.

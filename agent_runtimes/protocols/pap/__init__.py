@@ -11,7 +11,7 @@ implements of PAP on ``protocols.description`` and declares the one point the
 runtime adds between a company service and the application it asks:
 
 - ``pap.company.operationTickets``: where a perform turn's one-use ticket is
-  redeemed for the operation the person confirmed (B-04). The
+  redeemed for the operation the person confirmed. The
   default is Datalayer's company service (ai-agents); a local company
   (:class:`agent_runtimes.pap.PapCompanyCapability`) contributes its own
   tickets at a lower order on the runtime's platform.
@@ -73,10 +73,19 @@ class CompanyServiceTickets:
         return body if isinstance(body, dict) else None
 
 
-def _version() -> str:
-    from personal_agent_protocol import PROTOCOL_PROFILE  # noqa: PLC0415
+def pap_protocol_version() -> str:
+    """The one PAP version a runtime speaks: its SDK's default, the newest it implements
+    (1.0 as published with personal-agent-protocol 0.37). Announced and accepted alone, as a
+    personal agent and as a company, as the SDK does by default: a company on an older
+    version is refused, never negotiated down to.
+    """
+    from personal_agent_protocol import DEFAULT_PROTOCOL_VERSION  # noqa: PLC0415
 
-    return str(PROTOCOL_PROFILE)
+    return DEFAULT_PROTOCOL_VERSION
+
+
+def _version() -> str:
+    return pap_protocol_version()
 
 
 class PapPlugin:
@@ -93,7 +102,7 @@ class PapPlugin:
                 version=_version(),
                 roles=("personal-agent", "company"),
                 status="implemented",
-                specification="https://personalagentprotocol.org/docs/0.4/spec",
+                specification="https://personalagentprotocol.org/docs/spec",
                 plugin=PLUGIN,
                 catalogue="pap",
                 points=POINTS,
@@ -125,6 +134,7 @@ def plugin() -> tuple[PluginManifest, PapPlugin]:
 
 __all__ = [
     "OPERATION_TICKETS",
+    "pap_protocol_version",
     "PLUGIN",
     "POINTS",
     "CompanyServiceTickets",

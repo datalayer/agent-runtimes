@@ -1,0 +1,12 @@
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+apiVersion: api.kagent.dev/v1alpha3
+kind: Agent
+metadata:
+  name: agent-runtimes
+spec:
+  template:
+    ref:
+      name: agent-runtimes
+  harnessRef:
+    name: agent-runtimes

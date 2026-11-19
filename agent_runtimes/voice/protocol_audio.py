@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Audio sent by a protocol client, heard through the speech service (VO-28).
+"""Audio sent by a protocol client, heard through the speech service.
 
 On the web the page transcribes and the runtime sees text. A protocol
 client may send the sound itself — AG-UI's ``AudioInputContent`` in a user
@@ -11,15 +11,15 @@ message (``{"type": "audio", "source": {"type": "data", "value": <base64>,
 heard by ``HearA2AAudio`` before the task is made), or ACP's
 ``AudioContentBlock`` (``{"type": "audio", "data": <base64>, "mimeType"}``,
 heard by ``hear_acp_prompt`` before the turn). The runtime does not hear it: it asks ai-agents'
-speech service (``POST /api/ai-agents/v1/speech/transcriptions``, VO-34) with
+speech service (``POST /api/ai-agents/v1/speech/transcriptions``) with
 the caller's own token, and the message enters the conversation as the
-transcript, marked spoken (``input: "voice"``, ``where: "server"``, VO-27) so
-the record keeps the words and never the sound (VO-29).
+transcript, marked spoken (``input: "voice"``, ``where: "server"``) so
+the record keeps the words and never the sound.
 
 What cannot be heard is refused in a sentence, never passed on as sound the
 model would not read: a source given by URL (the runtime fetches no address a
 client names), a type the service does not read, no token, the service's own
-refusal. The sound is held in memory for the call only (VO-60).
+refusal. The sound is held in memory for the call only.
 """
 
 from __future__ import annotations
@@ -154,7 +154,7 @@ async def hear_agui_messages(
     ai_agents_url: Optional[str] = None,
     client: Optional[httpx.AsyncClient] = None,
 ) -> Tuple[Dict[str, Any], Optional[SpokenInput]]:
-    """An AG-UI run whose newest user message carries audio, with that audio heard (VO-28).
+    """An AG-UI run whose newest user message carries audio, with that audio heard.
 
     Returns the body with the audio parts replaced by their transcript, as
     text parts, and the spoken input it was — or the body unchanged and
@@ -238,7 +238,7 @@ async def hear_a2a_message(
     ai_agents_url: Optional[str] = None,
     client: Optional[httpx.AsyncClient] = None,
 ) -> Tuple[Dict[str, Any], Optional[SpokenInput]]:
-    """An A2A message whose file parts carry audio, with that audio heard (VO-28).
+    """An A2A message whose file parts carry audio, with that audio heard.
 
     Returns the message with each audio file part replaced by its transcript,
     as a text part, and ``metadata.voice`` saying it was spoken — or the
@@ -286,7 +286,7 @@ async def hear_acp_prompt(
     ai_agents_url: Optional[str] = None,
     client: Optional[httpx.AsyncClient] = None,
 ) -> Tuple[List[Any], Optional[SpokenInput]]:
-    """An ACP prompt whose ``AudioContentBlock``s are heard (VO-28).
+    """An ACP prompt whose ``AudioContentBlock``s are heard.
 
     ``{"type": "audio", "data": <base64>, "mimeType": "audio/wav"}`` becomes
     the text block of its transcript. Returns the prompt's blocks and the
@@ -336,7 +336,7 @@ A2A_INVALID_PARAMS = -32602
 
 
 class HearA2AAudio:
-    """ASGI middleware: an A2A message's audio heard before the agent sees it (VO-28).
+    """ASGI middleware: an A2A message's audio heard before the agent sees it.
 
     A ``message/send`` or ``message/stream`` whose message holds audio file
     parts is heard by the speech service with the request's own bearer

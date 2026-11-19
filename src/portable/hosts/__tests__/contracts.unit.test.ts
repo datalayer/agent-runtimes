@@ -9,7 +9,7 @@
  * The host contracts, against the same file ai-agents tests its half with
  * (services/ai-agents/tests/fixtures/hosts/contracts.json): a change on
  * either side that breaks the other fails here or there. Ported from the
- * Slack service (DC-004).
+ * Slack service.
  */
 
 import { readFileSync } from 'node:fs';
@@ -19,6 +19,7 @@ import {
   deliveryOfOutbox,
   deliverySignature,
   DELIVERY_HEADER,
+  DELIVERY_KEY_HEADER,
   HOST_KEY_HEADER,
   hostMayDecide,
   IDEMPOTENCY_HEADER,
@@ -64,6 +65,7 @@ describe('Datalayer host contracts', () => {
   it('names the headers ai-agents and the session API read', () => {
     expect(contracts.headers).toMatchObject({
       delivery: DELIVERY_HEADER,
+      delivery_key: DELIVERY_KEY_HEADER,
       host_key: HOST_KEY_HEADER,
       idempotency_key: IDEMPOTENCY_HEADER,
       signature: SIGNATURE_HEADER,

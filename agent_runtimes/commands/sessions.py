@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Sessions: `loop sessions …` (MH-17).
+"""Sessions: `loop sessions …`.
 
 With nothing else, `loop sessions` is the picker: your sessions in two
 groups, **On this machine** and **On Datalayer**, one to choose and resume
@@ -32,7 +32,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import typer
 from rich.console import Console
@@ -53,7 +53,7 @@ errors = Console(stderr=True, soft_wrap=True)
 #: Where the local runtime answers when nothing names one.
 DEFAULT_SERVER = "http://localhost:8000"
 
-#: The old verbs, retired (decision 17): each answers with this sentence.
+#: The old verbs, retired: each answers with this sentence.
 RETIRED = {
     "threads": "`loop apps threads` is retired: list your conversations with `loop sessions list [--app <id>]`.",
     "feedback": "`loop apps feedback` is retired: read what people said of a conversation with `loop sessions feedback <uid>`.",
@@ -109,7 +109,12 @@ def _client(server: Optional[str], cloud: bool) -> Any:
     return httpx.Client(base_url=base, headers=headers, timeout=120.0)
 
 
-_clients: Dict[str, Any] = {"make": None}
+_clients: Dict[str, Any] = {"make": None, "record": None}
+
+
+def use_record(read: Any) -> None:
+    """What reads Datalayer's record — ``(params) -> {sessions, has_more}`` — for a test; ``None`` for the real one."""
+    _clients["record"] = read
 
 
 def use_client(make: Any) -> None:
@@ -130,10 +135,48 @@ def _refusal_of(response: Any) -> str:
 
 
 def _ask(client: Any, method: str, path: str, **kwargs: Any) -> Any:
-    response = client.request(method, f"/api/v1/apps/sessions{path}", **kwargs)
+    import httpx
+
+    try:
+        response = client.request(method, f"/api/v1/apps/sessions{path}", **kwargs)
+    except httpx.TransportError:
+        # No runtime there: one sentence, never a traceback.
+        base = str(getattr(client, "base_url", "") or DEFAULT_SERVER).rstrip("/")
+        raise SessionsRefused(
+            f"No runtime answers at {base}. Start one with `agent-runtimes serve`, "
+            "or name it with --server (or AGENT_RUNTIMES_URL)."
+        ) from None
     if response.status_code >= 300:
         raise SessionsRefused(_refusal_of(response))
     return response
+
+
+def _record_listing(params: Dict[str, Any]) -> Dict[str, Any]:
+    """Your sessions in Datalayer's record, asked with your token: ``{sessions, has_more}``.
+
+    A test installs its own through :func:`use_record`.
+    """
+    if _clients["record"] is not None:
+        return _clients["record"](params)
+    import asyncio
+
+    from agent_runtimes.apps.callers import VERIFIER
+    from agent_runtimes.apps.session_store import SessionStoreError, _list_sessions
+    from agent_runtimes.loop.launch import NotSignedIn, make_client
+
+    try:
+        _, token = make_client()
+    except NotSignedIn as refused:
+        raise SessionsRefused(f"{refused} Sign in with `datalayer login`.") from None
+
+    async def ask() -> Dict[str, Any]:
+        person = await VERIFIER.verify(token, "")
+        return await _list_sessions(token, {"opened_by": person.uid, **params})
+
+    try:
+        return asyncio.run(ask())
+    except SessionStoreError as refused:
+        raise SessionsRefused(refused.reason) from None
 
 
 def _exit(refused: Exception) -> None:
@@ -477,14 +520,30 @@ def _quiet() -> None:
         logging.getLogger(name).setLevel(logging.ERROR)
 
 
-def run_picker(as_json: bool = False, everything: bool = False) -> None:
-    """`loop sessions`: the picker in a terminal, the two groups printed
+def run_picker(
+    as_json: bool = False,
+    everything: bool = False,
+    launch: Sequence[Tuple[str, str]] = (),
+    highlighted: str = "",
+) -> Optional[Tuple[str, Any]]:
+    """The sessions screen, for `loop sessions`, `loop --resume` and the
+    start of `loop`: the picker in a terminal, the two groups printed
     otherwise — each a markdown table. Listed: the sessions that run and
     those that can be gone on with; ``everything`` lists the ended ones too.
+
+    ``launch``, from the start of `loop`: its launch rows ``(id, label)``,
+    drawn above the sessions, ``highlighted`` (an id) the one Enter picks.
+    Then what was chosen is answered, nothing run: ``(id, None)`` for a
+    launch row, ``("resume", session)`` for a session, which `loop` resumes
+    as `loop --resume <uid>` does, with its own flags; ``None`` when the
+    person left. With no session listed, the highlighted launch row is
+    answered at once, unasked. Without ``launch``, Enter goes on as
+    `loop --resume <uid>` and this process becomes it.
     """
     from agent_runtimes.loop.launch import interactive
     from agent_runtimes.loop.picker import (
         NOT_LISTED,
+        Launch,
         Picker,
         listing_json,
         listing_lines,
@@ -493,12 +552,15 @@ def run_picker(as_json: bool = False, everything: bool = False) -> None:
 
     _quiet()
     token = _token()
+    rows_above = tuple(Launch(key, label) for key, label in launch)
     said = ""
     while True:
         rows = every_session(token) if everything else listed_sessions(token)
+        if rows_above and not rows:
+            return highlighted or rows_above[0].id, None
         if as_json:
             print(json.dumps(listing_json(rows, signed_in=bool(token)), indent=1))
-            return
+            return None
         if not interactive():
             # Printed as it is, never wrapped: a table's row is one line.
             for line in (
@@ -506,12 +568,20 @@ def run_picker(as_json: bool = False, everything: bool = False) -> None:
                 *([] if everything else [NOT_LISTED]),
             ):
                 print(line)
-            return
-        chosen = pick(Picker(rows, signed_in=bool(token), said=said))
+            return None
+        picker = Picker(rows, launch=rows_above, signed_in=bool(token), said=said)
+        picker.index = next(
+            (index for index, row in enumerate(rows_above) if row.id == highlighted), 0
+        )
+        chosen = pick(picker)
         if chosen is None:
-            return
+            return None
         action, row = chosen
+        if row is None:
+            return action, None
         if action == "resume":
+            if rows_above:
+                return action, row
             _run_loop(resume_command(row))
         if action == "start_over":
             _run_loop(start_over_command(row))
@@ -690,16 +760,20 @@ def list_sessions(
     terminal the table fits its width, the title cut; piped, it is a
     markdown table.
     """
+    params: Dict[str, Any] = {"limit": limit}
+    if app_id:
+        params["app"] = app_id
+    if archived:
+        params["archived"] = "true"
+    if state:
+        params["state"] = state
     try:
-        client = _client(server, cloud)
-        params: Dict[str, Any] = {"limit": limit}
-        if app_id:
-            params["app"] = app_id
-        if archived:
-            params["archived"] = "true"
-        if state:
-            params["state"] = state
-        answer = _ask(client, "GET", "", params=params).json()
+        if cloud and not (server or os.environ.get("AGENT_RUNTIMES_URL")):
+            # Your sessions on Datalayer are in its record, not on a runtime:
+            # read there, with your token, as the picker's second group does.
+            answer = _record_listing(params)
+        else:
+            answer = _ask(_client(server, cloud), "GET", "", params=params).json()
     except SessionsRefused as refused:
         _exit(refused)
         return

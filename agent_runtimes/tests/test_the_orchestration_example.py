@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The O0-13 scenario, run in continuous integration.
+"""The orchestration scenario, run in continuous integration.
 
 ``examples/orchestration`` delegates one objective to an A2A worker and to an
 ACP worker over one code path, and its whole claim is that the only difference
@@ -96,7 +96,7 @@ def runs(recorded: Any) -> list[Any]:
 
 
 class TestTheMeasuresOfTheScenario:
-    """The measures of O1-14 have a number for this scenario."""
+    """The orchestration measures have a number for this scenario."""
 
     def test_nothing_was_repeated_superseded_or_recovered(
         self, runs: list[Any], recorded: Any
@@ -144,7 +144,7 @@ class TestTheMeasuresOfTheScenario:
 
 
 class TestTheOnlyDifferenceIsTheDescriptor:
-    """The claim of O0-13, made checkable."""
+    """The example's claim, made checkable."""
 
     def test_the_two_descriptors_differ_in_the_worker_and_where_it_answers(
         self, runs: list[Any]

@@ -4,15 +4,15 @@
  */
 
 /**
- * Voice, in the browser, driven (VO-53): Chrome plays a fixture into
+ * Voice, in the browser, driven: Chrome plays a fixture into
  * its microphone (`--use-file-for-fake-audio-capture`), and the composer of
  * an application's Preview on the landing hears it — the browser's models
- * read from Datalayer's CDN with its own CORS header (VO-49), the words
- * written in the box as they are heard and greyed until final (VO-11), the
- * microphone stopping by itself after the silence (VO-10), nothing sent; the
- * person's voice menu beside it (VO-30). With *Detect the language I speak*
- * chosen, the same words are heard on Datalayer's servers instead (VO-34,
- * VO-14): asked apart, the recording sent to the speech service, the
+ * read from Datalayer's CDN with its own CORS header, the words
+ * written in the box as they are heard and greyed until final, the
+ * microphone stopping by itself after the silence, nothing sent; the
+ * person's voice menu beside it. With *Detect the language I speak*
+ * chosen, the same words are heard on Datalayer's servers instead:
+ * asked apart, the recording sent to the speech service, the
  * language found there. Hands-free and barge-in are
  * `voice-hands-free.spec.ts`, on a fixture of their own.
  *
@@ -84,7 +84,7 @@ test.use({
   },
 });
 
-test.describe('voice in the composer, heard in the browser (VO-53)', () => {
+test.describe('voice in the composer, heard in the browser', () => {
   test.skip(Boolean(deviceUnreachable), deviceUnreachable);
   // A visitor at a hosted address has no account.
   test.use({
@@ -115,7 +115,7 @@ test.describe('voice in the composer, heard in the browser (VO-53)', () => {
         });
       }
     });
-    // The moments the latency budgets are measured between (VO-52).
+    // The moments the latency budgets are measured between.
     await timeVoice(context);
     // Nothing of the application is changed: its voice is turned on here
     // only, heard by the browser's own model.
@@ -126,7 +126,7 @@ test.describe('voice in the composer, heard in the browser (VO-53)', () => {
     });
     const mic = page.locator('[data-voice-mic]').first();
     await expect(mic).toBeEnabled({ timeout: 120_000 });
-    // The person's menu is beside it (VO-30).
+    // The person's menu is beside it.
     await expect(page.locator('[data-voice-menu]').first()).toBeVisible();
 
     await activate(mic);
@@ -135,7 +135,7 @@ test.describe('voice in the composer, heard in the browser (VO-53)', () => {
       await activate(yes);
     }
     const box = page.locator('[contenteditable=true]').first();
-    // Greyed while heard (VO-11).
+    // Greyed while heard.
     await expect(page.locator('[data-voice-interim]')).toHaveCount(1, {
       timeout: 120_000,
     });
@@ -147,10 +147,10 @@ test.describe('voice in the composer, heard in the browser (VO-53)', () => {
     await expect(box).toHaveText(/weather like in/i);
     await expect(page.locator('[data-voice-interim]')).toHaveCount(0);
     await expect(box).toHaveCSS('font-style', 'normal');
-    // Held (VO-10): Ctrl+Space held while the fixture is said again (the
+    // Held: Ctrl+Space held while the fixture is said again (the
     // fake microphone starts its file again when the page reopens it), let
     // go once it has been quiet a moment; the words come into the emptied
-    // box. The moment it is let go is the push-to-talk budget's (VO-52).
+    // box. The moment it is let go is the push-to-talk budget's.
     await box.press('Control+a');
     await box.press('Delete');
     await expect(box).not.toHaveText(/weather/i);
@@ -172,7 +172,7 @@ test.describe('voice in the composer, heard in the browser (VO-53)', () => {
     await expect(page.locator('[data-voice-input="idle"]')).toHaveCount(1);
     console.log(`voice times: ${JSON.stringify(await voiceTimes(page))}`);
     expect(sent).toEqual([]);
-    // The models came from Datalayer's CDN, readable from this origin (VO-49).
+    // The models came from Datalayer's CDN, readable from this origin.
     expect(models.length).toBeGreaterThan(0);
     for (const model of models) {
       expect(model.status).toBeLessThan(300);
@@ -181,18 +181,18 @@ test.describe('voice in the composer, heard in the browser (VO-53)', () => {
   });
 });
 
-test.describe('voice in the composer, heard on the servers (VO-53)', () => {
+test.describe('voice in the composer, heard on the servers', () => {
   test.skip(Boolean(unreachable), unreachable);
   test.use({ storageState: process.env.E2E_STATE || undefined });
 
-  test('with detection chosen, hears the fixture on Datalayer’s servers and finds its language (VO-34, VO-14)', async ({
+  test('with detection chosen, hears the fixture on Datalayer’s servers and finds its language', async ({
     page,
     context,
   }) => {
-    // Heard as it is said (VO-11): the stream's final words, and the sound
+    // Heard as it is said: the stream's final words, and the sound
     // sent — the speech only, the silence around it stays in the browser.
     const finals: { language?: string; text?: string }[] = [];
-    // The words heard so far, while the person speaks (VO-11).
+    // The words heard so far, while the person speaks.
     const partials: string[] = [];
     let soundBytes = 0;
     await context.route('**/api/**', route =>

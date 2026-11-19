@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Who the user is, when it matters (D-21).
+"""Who the user is, when it matters.
 
 An embedded application whose Appspec says `deployment.embedded.host.user:
 signed` opens a session only for a user the host's server signed: a token,
@@ -188,7 +188,7 @@ def test_host_context_answers_the_signed_user_whoever_the_page_says() -> None:
     assert signed_host_context(_answered(page), None) == _answered(page)
 
 
-# --- who wrote what it saves (I-10) ----------------------------------------------
+# --- who wrote what it saves ----------------------------------------------
 
 
 def test_what_it_saves_says_the_signed_user_it_wrote_for() -> None:

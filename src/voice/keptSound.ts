@@ -4,7 +4,7 @@
  */
 
 /**
- * What the person said, kept as sound (VO-63): an application whose record
+ * What the person said, kept as sound: an application whose record
  * keeps `audio` (`record.include`), and a person who agreed in the
  * microphone's first sentence, send each turn's recording with its words —
  * `forwardedProps.voice.sound`, a 16-bit mono WAV at 16 kHz — and its
@@ -17,7 +17,7 @@
 import { HEARING_RATE } from './capture';
 import type { SpokenSound } from './types';
 
-/** The longest a sound is kept, whatever the record keeps (decision 10). */
+/** The longest a sound is kept, whatever the record keeps. */
 export const AUDIO_KEPT_DAYS_AT_MOST = 30;
 
 /** The most of a turn kept: a minute. */
@@ -38,7 +38,7 @@ export function keptAudioDays(record?: {
   return Math.max(1, Math.min(days, AUDIO_KEPT_DAYS_AT_MOST));
 }
 
-/** The sentence added to the microphone's first one when the sound is kept (VO-61). */
+/** The sentence added to the microphone's first one when the sound is kept. */
 export const keptAudioSentence = (days: number): string =>
   `This application also keeps what you say as sound, with this conversation, for ${days} ${
     days === 1 ? 'day' : 'days'

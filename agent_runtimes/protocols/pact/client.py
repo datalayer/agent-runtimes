@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A PACT 1.0 personal agent (PR-11 to PR-13, personal-agent side).
+"""A PACT 1.0 personal agent (personal-agent side).
 
 Talks to a Brand's agent over A2A 1.0 HTTP+JSON: every request but
 the card carries a fresh personal-agent JWT signed by the host's key,
@@ -77,7 +77,7 @@ class InMemoryDelegationStore:
 
 @runtime_checkable
 class ReceiptStore(Protocol):
-    """Keeps the receipts a Brand signed (``pact.receiptStore``): the record (R-07)."""
+    """Keeps the receipts a Brand signed (``pact.receiptStore``): the record."""
 
     async def keep(self, brand: str, user: str, claims: Mapping[str, Any]) -> None: ...
 
@@ -135,7 +135,7 @@ class PactPersonalAgent:
         default_factory=lambda: httpx.AsyncClient(timeout=15.0)
     )
     #: How the Brand's public metadata (its card, its OAuth metadata and keys)
-    #: is read: the PAP SDK's single egress path (PI-13), or
+    #: is read: the PAP SDK's single egress path, or
     #: ``egress.client_fetch`` for a local test Provider.
     metadata: Fetch = field(
         default_factory=lambda: metadata_fetch(

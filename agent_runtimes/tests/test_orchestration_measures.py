@@ -1,12 +1,12 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The orchestration measures, taken by the store's rules (O1-14).
+"""The orchestration measures, taken by the store's rules.
 
 The measures are taken where the rules are — a delegation created or found
 again, a milestone, a move into a terminal state, a commit — so the tests
 drive the in-memory store through the same calls the control plane, durable
-and the O0-13 example make, and read the points the instruments kept.
+and the orchestration example make, and read the points the instruments kept.
 
 What they hold: each measure is taken once, a repeat is told apart rather
 than counted twice, an execution is counted with what it recovered from, a

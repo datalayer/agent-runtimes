@@ -4,7 +4,7 @@
  */
 
 /**
- * *Rules for this session…* on a thread's menu (SHIELD SH-54): the session
+ * *Rules for this session…* on a thread's menu: the session
  * section of the application's Rules card — what decides the session now,
  * the rules the person added, the presets and a rule to add — shown over the
  * thread, so an application whose layout is the conversation alone (`chat`,

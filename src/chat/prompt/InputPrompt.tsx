@@ -119,7 +119,7 @@ export interface InputPromptProps {
    */
   footerExtras?: ReactNode;
   /**
-   * The words in the box are still being heard by the microphone (VO-11):
+   * The words in the box are still being heard by the microphone:
    * shown greyed, in italics, until they are final.
    */
   interim?: boolean;
@@ -187,7 +187,7 @@ export interface InputPromptProps {
   promptVariant?: InputPromptVariant;
   /** Agents the prompt may address by typing `@`. Lexical only. */
   mentionableAgents?: MentionableAgent[];
-  /** Commands listed while `/` is typed, before the prompt's own (P-19). Lexical only. */
+  /** Commands listed while `/` is typed, before the prompt's own. Lexical only. */
   promptCommands?: PromptCommand[];
   /**
    * What was sent to this agent before this page loaded, oldest first.
@@ -326,6 +326,12 @@ export interface InputPromptProps {
   authToken?: string;
   /** Pre-fetched MCP status from WebSocket — bypasses REST polling */
   mcpStatusData?: McpToolsetsStatusResponse | null;
+  /**
+   * An anonymous visitor's conversation (the user, 15 November 2026): the
+   * agent's MCP servers and skills, by name, which the indicators list as
+   * disabled, in the warning colour.
+   */
+  anonymousDisabled?: { mcpServers: string[]; skills: string[] };
 }
 
 // ---------------------------------------------------------------------------
@@ -402,6 +408,7 @@ export function InputPrompt({
   apiBase,
   authToken,
   mcpStatusData,
+  anonymousDisabled,
 }: InputPromptProps) {
   const chatText = useChatWords();
   const isKernelBusy = kernelStatus === 'busy';
@@ -488,7 +495,7 @@ export function InputPrompt({
 
   const body = (
     <Box
-      // Words still being heard, greyed until final (VO-11); the same Box
+      // Words still being heard, greyed until final; the same Box
       // either way, so the editor is never mounted again.
       data-voice-interim={interim ? '' : undefined}
       sx={
@@ -548,11 +555,17 @@ export function InputPrompt({
               apiBase={apiBase}
               authToken={authToken}
               data={mcpStatusData}
+              {...(anonymousDisabled
+                ? { disabled: anonymousDisabled.mcpServers }
+                : {})}
             />
             <SkillsStatusIndicator
               skillsCount={skills.length}
               enabledCount={enabledSkills.size}
               loading={skillsLoading}
+              {...(anonymousDisabled
+                ? { disabled: anonymousDisabled.skills }
+                : {})}
             />
           </>
         }
@@ -616,7 +629,7 @@ export function InputPrompt({
                   id: 'session-controls',
                   px: padding,
                   // Its right end — the voice controls — is never under
-                  // the floating assistant in its corner (T-27).
+                  // the floating assistant in its corner.
                   clearsAssistant: true,
                   py: 0.5,
                   minHeight: 36,

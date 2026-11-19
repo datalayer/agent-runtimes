@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """A copilot in a page — Chainlit's cookbook ``copilot`` and ``window-message``,
-rebuilt with LOOP's API (P-27).
+rebuilt with LOOP's API.
 
 Chainlit's copilot is its widget mounted in a page of the developer's
 (``mountChainlitWidget``) by a script its server serves, answering
@@ -10,7 +10,7 @@ Chainlit's copilot is its widget mounted in a page of the developer's
 it (``on_window_message``, ``send_window_message``).
 
 Here: the application mounted into the developer's own FastAPI
-(``app.mount``, P-25) — its page the embed, as a **bubble** in the corner of
+(``app.mount``) — its page the embed, as a **bubble** in the corner of
 the host's page — answering *Hello, world!* and telling the page what it
 received (``session.send_window_message``); what the page posts is an
 ``@app.window`` turn. Run it with ``uvicorn copilot:api``: the host page is at

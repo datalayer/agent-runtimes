@@ -153,7 +153,7 @@ export type FrontendToolsToVercelAIOptions = {
     error?: string,
   ) => void;
   /**
-   * Where a streaming tool's events go (AGENT_BATTLE B1-00): the chat, which
+   * Where a streaming tool's events go: the chat, which
    * tells the model each as a turn it did not ask for. Without it a
    * streaming tool is refused.
    */

@@ -4,7 +4,7 @@
  */
 
 /**
- * A conversation by voice, hands-free (VO-12, VO-13): the states,
+ * A conversation by voice, hands-free: the states,
  * the turn ended by the silence and sent by itself, the answer spoken over.
  * The microphone and the hearing are stand-ins built on the real
  * interfaces (`Capture`, `Hearing`).
@@ -40,7 +40,7 @@ vi.mock('../capture', async original => ({
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
 
-describe('what hands-free is doing (VO-12)', () => {
+describe('what hands-free is doing', () => {
   it('is off, paused, speaking, thinking or listening, in that order of precedence', () => {
     const off = { on: false, paused: false, speaking: true, running: true };
     expect(handsFreeState(off)).toBe('off');
@@ -65,7 +65,7 @@ describe('what hands-free is doing (VO-12)', () => {
     expect(HANDS_FREE_WORDS.listening).toBe('Listening…');
   });
 
-  it('ends a turn after the silence once the person spoke, 500 ms unless said (VO-52)', () => {
+  it('ends a turn after the silence once the person spoke, 500 ms unless said', () => {
     expect(TURN_SILENCE_MS).toBe(500);
     expect(turnEnded({ spoke: true, silentMs: 499 })).toBe(false);
     expect(turnEnded({ spoke: true, silentMs: 500 })).toBe(true);
@@ -73,7 +73,7 @@ describe('what hands-free is doing (VO-12)', () => {
     expect(turnEnded({ spoke: true, silentMs: 400 }, 300)).toBe(true);
   });
 
-  it('is barged in when the person speaks while the agent thinks or speaks (VO-13)', () => {
+  it('is barged in when the person speaks while the agent thinks or speaks', () => {
     const spoke = { spoke: true, silentMs: 0 };
     expect(bargedIn('speaking', spoke)).toBe(true);
     expect(bargedIn('thinking', spoke)).toBe(true);
@@ -81,7 +81,7 @@ describe('what hands-free is doing (VO-12)', () => {
     expect(bargedIn('speaking', { spoke: false, silentMs: 0 })).toBe(false);
   });
 
-  it("counts speech over the answer only above what the answer's own sound can leave in the microphone (VO-13)", () => {
+  it("counts speech over the answer only above what the answer's own sound can leave in the microphone", () => {
     const spoke = { spoke: true, silentMs: 0 };
     expect(ECHO_SHARE).toBe(0.6);
     expect(VOICE_OVER_ECHO).toBe(0.08);
@@ -91,7 +91,7 @@ describe('what hands-free is doing (VO-12)', () => {
     expect(heardOverPlayback({ microphone: 0.3, playback: 0.5 })).toBe(false);
     expect(heardOverPlayback({ microphone: 0.37, playback: 0.5 })).toBe(false);
     expect(heardOverPlayback({ microphone: 0.38, playback: 0.5 })).toBe(true);
-    // A share measured on a laptop's own speakers (VO-52) is given in.
+    // A share measured on a laptop's own speakers is given in.
     expect(heardOverPlayback({ microphone: 0.3, playback: 0.5 }, 0.4)).toBe(
       true,
     );
@@ -184,7 +184,7 @@ async function until(check: () => boolean, ms = 4000): Promise<void> {
   }
 }
 
-describe('Talk with it (VO-12, VO-13)', () => {
+describe('Talk with it', () => {
   let root: Root;
   let container: HTMLDivElement;
   const opened: ReturnType<typeof microphone>[] = [];
@@ -246,7 +246,7 @@ describe('Talk with it (VO-12, VO-13)', () => {
     await until(() => opened.length === 1);
     expect(state()).toBe('listening');
     expect(hearing.readied).toBe(1);
-    // The person speaks: the words come as they are heard (VO-11).
+    // The person speaks: the words come as they are heard.
     hearing.heard = { text: 'What is the', spoke: true, silentMs: 0 };
     await until(() => interim.includes('What is the'));
     expect(sent).toEqual([]);
@@ -287,7 +287,7 @@ describe('Talk with it (VO-12, VO-13)', () => {
     expect(opened.every(mic => !mic.open)).toBe(true);
   });
 
-  it('stops the voice and the run when the person speaks over the agent, and marks the answer (VO-13)', async () => {
+  it('stops the voice and the run when the person speaks over the agent, and marks the answer', async () => {
     const hearing = new StandInHearing();
     const stopped = { voice: 0, run: 0, marked: 0 };
     const draw = (running: boolean, speaking: boolean) =>
@@ -330,7 +330,7 @@ describe('Talk with it (VO-12, VO-13)', () => {
     expect(stopped.marked).toBeGreaterThanOrEqual(1);
   });
 
-  it('once the person spoke, looks for the end of the turn often, by the VAD alone (VO-52)', async () => {
+  it('once the person spoke, looks for the end of the turn often, by the VAD alone', async () => {
     class QuickHearing extends StandInHearing {
       quiet = 0;
       transcribed = 0;
@@ -374,7 +374,7 @@ describe('Talk with it (VO-12, VO-13)', () => {
     expect(Date.now() - quietAt).toBeLessThan(BARGE_IN_POLL_MS + 300);
   });
 
-  it('while it answers, looks for the person by the VAD alone, often, over the last moment (VO-52)', async () => {
+  it('while it answers, looks for the person by the VAD alone, often, over the last moment', async () => {
     class QuickHearing extends StandInHearing {
       looked: number[] = [];
       transcribed = 0;
@@ -427,7 +427,7 @@ describe('Talk with it (VO-12, VO-13)', () => {
     expect(Date.now() - spoke).toBeLessThan(BARGE_IN_POLL_MS + 250);
   });
 
-  it("does not take the answer's own sound for the person while it plays, and stops for the person's voice over it (VO-13)", async () => {
+  it("does not take the answer's own sound for the person while it plays, and stops for the person's voice over it", async () => {
     const hearing = new StandInHearing();
     const stopped = { voice: 0, run: 0, marked: 0 };
     const playback = { now: 0.6 };
@@ -503,7 +503,7 @@ describe('Talk with it (VO-12, VO-13)', () => {
   });
 });
 
-describe('answerSpokenOver (VO-13)', () => {
+describe('answerSpokenOver', () => {
   it('is the agent’s answer to the last turn, written or being said', () => {
     const turn = [
       { id: 'u1', role: 'user' },

@@ -6,7 +6,7 @@
 /**
  * Standard Catalog.
  *
- * The standards a conformance report answers (SH-60).
+ * The standards a conformance report answers.
  *
  * This file is AUTO-GENERATED from YAML specifications.
  * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.

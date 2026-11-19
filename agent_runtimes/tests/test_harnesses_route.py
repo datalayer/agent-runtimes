@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The harness catalogue over HTTP (VSCODE VS-03): ``GET /api/v1/harnesses``
+"""The harness catalogue over HTTP: ``GET /api/v1/harnesses``
 answers what ``loop harnesses`` prints — the accepted ``harness``
 contributions with their terms, register entry, capabilities and ACP launch
 — and ``GET /api/v1/harnesses/{id}`` one of them, or a refusal in a sentence.
@@ -34,7 +34,7 @@ def test_the_catalogue_is_listed_with_terms_register_and_capabilities(
     answer = client.get("/api/v1/harnesses")
     assert answer.status_code == 200
     listed = {harness["id"]: harness for harness in answer.json()["harnesses"]}
-    # The offered ones alone (the restriction to four, META_HARNESS): a harness the
+    # The offered ones alone (the restriction to four): a harness the
     # catalogue describes and does not offer is not listed, and named is refused below.
     served = {
         spec.id

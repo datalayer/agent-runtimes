@@ -45,6 +45,7 @@ import type {
   AppPapAlternativeSpec,
   AppPapCompanyScopeSpec,
   AppPapExcludedTaskSpec,
+  AppPapOperationSpec,
   AppPapSpec,
   PapProfile,
   AppPactSpec,
@@ -312,6 +313,9 @@ const uiChoices = (value: unknown): UiChoice[] =>
     ? value.filter(isData).map(item => ({
         plugin: text(item.plugin),
         ...(text(item.renderer) ? { renderer: text(item.renderer) } : {}),
+        ...(text(item.placement)
+          ? { placement: text(item.placement) as UiChoice['placement'] }
+          : {}),
       }))
     : [];
 
@@ -451,6 +455,7 @@ const KNOWN_KEYS = [
   'skills',
   'backend_tools',
   'tools',
+  'openapi',
   'context',
   'contents',
   'connections',
@@ -482,6 +487,7 @@ const KNOWN_KEYS = [
   'emoji',
   'avatar',
   'banner',
+  'presentation',
 ] as const;
 
 /** Where a check of its code runs. */
@@ -505,6 +511,8 @@ function parseConnection(data: Data): AppConnectionSpec {
     access: oneOf(data.access, ['read', 'write'] as const, 'read'),
     as: oneOf(data.as, ['owner', 'user'] as const, 'owner'),
     only: texts(data.only),
+    // Optional as its agent says (agentspecs 0.0.189): it starts without it.
+    optional: data.optional === true,
   };
 }
 
@@ -547,7 +555,34 @@ const enumsOf = <T extends string>(
  * Personal Agent Protocol: the companies the
  * application works with, and whether it is one. Defaults are agentspecs'.
  */
-function parsePap(data: Data): AppPapSpec {
+/**
+ * The PAP operations of an application's `openapi`: one per operation carrying
+ * `x-pap` (`action`, `tool`, `summary`), in the document's order — agentspecs'
+ * `pap_operations`. `pap.company.operations` is never written.
+ */
+export function papOperationsOf(openapi: unknown): AppPapOperationSpec[] {
+  const found: AppPapOperationSpec[] = [];
+  const paths = isData(openapi) && isData(openapi.paths) ? openapi.paths : {};
+  for (const item of Object.values(paths)) {
+    if (!isData(item)) {
+      continue;
+    }
+    for (const method of ['get', 'post', 'put', 'patch', 'delete']) {
+      const operation = item[method];
+      if (isData(operation) && isData(operation['x-pap'])) {
+        const pap = operation['x-pap'];
+        found.push({
+          action: text(pap.action),
+          tool: text(pap.tool),
+          summary: text(pap.summary),
+        });
+      }
+    }
+  }
+  return found;
+}
+
+function parsePap(data: Data, openapi?: unknown): AppPapSpec {
   const company = isData(data.company) ? data.company : {};
   return {
     profile: data.profile as PapProfile,
@@ -591,11 +626,7 @@ function parsePap(data: Data): AppPapSpec {
         'any',
       ),
       registeredAgents: texts(company.registered_agents),
-      operations: records(company.operations).map(operation => ({
-        action: text(operation.action),
-        tool: text(operation.tool),
-        summary: text(operation.summary),
-      })),
+      operations: papOperationsOf(openapi),
     },
   };
 }
@@ -715,17 +746,7 @@ function dumpPap(pap: AppPapSpec | undefined): Data {
         )
         .list('extensions', pap.company.extensions)
         .value<string>('personal_agents', pap.company.personalAgents, 'any')
-        .list('registered_agents', pap.company.registeredAgents)
-        .list(
-          'operations',
-          pap.company.operations.map(
-            operation =>
-              new Writer()
-                .text('action', operation.action, '\u0000')
-                .text('tool', operation.tool, '\u0000')
-                .text('summary', operation.summary, '\u0000').data,
-          ),
-        ).data,
+        .list('registered_agents', pap.company.registeredAgents).data,
     ).data;
 }
 
@@ -1487,6 +1508,7 @@ export function parseAppspec(document: unknown): ParsedAppspec {
     skills: texts(data.skills),
     backendTools: texts(data.backend_tools),
     tools: records(data.tools).map(parseTool),
+    ...(isData(data.openapi) ? { openapi: data.openapi } : {}),
     context: texts(data.context),
     contents: texts(data.contents),
     connections: records(data.connections).map(parseConnection),
@@ -1580,6 +1602,10 @@ export function parseAppspec(document: unknown): ParsedAppspec {
     avatar: text(data.avatar).trim(),
     banner: text(data.banner).trim(),
   };
+  const presentation = text(data.presentation).trim();
+  if (presentation) {
+    app.presentation = presentation;
+  }
   if (isData(data.decision)) {
     app.decision = parseDecision(data.decision);
   }
@@ -1590,7 +1616,12 @@ export function parseAppspec(document: unknown): ParsedAppspec {
     if (problem) {
       problems.push(problem);
     } else {
-      app.pap = parsePap(data.pap);
+      if (isData(data.pap.company) && 'operations' in data.pap.company) {
+        problems.push(
+          '`pap.company.operations` are not written: they come from `openapi`, each operation that a person approves carrying `x-pap`.',
+        );
+      }
+      app.pap = parsePap(data.pap, data.openapi);
     }
   }
   if (isData(data.pact)) {
@@ -1643,6 +1674,18 @@ export function uiProblems(app: Pick<AppSpec, 'ui' | 'enabled'>): string[] {
             : ''),
       );
       continue;
+    }
+    if (choice.placement !== undefined) {
+      const allowed = spec.placements ?? [];
+      if (allowed.length === 0) {
+        problems.push(
+          `The UI plugin ${spec.name} ('${id}') has no place in the chat: it takes no \`placement\`.`,
+        );
+      } else if (!allowed.includes(choice.placement)) {
+        problems.push(
+          `The UI plugin ${spec.name} ('${id}') does not go in the chat's ${choice.placement}: in its ${allowed.join(', ')} only.`,
+        );
+      }
     }
     if (choice.renderer === undefined) {
       continue;
@@ -2121,6 +2164,7 @@ export function dumpAppspec(app: AppSpec): Data {
         does: tool.does,
       })),
     )
+    .present('openapi', app.openapi as Data | undefined)
     .list('context', app.context)
     .list('contents', app.contents)
     .list(
@@ -2131,17 +2175,19 @@ export function dumpAppspec(app: AppSpec): Data {
             .text('server', connection.server, '\u0000')
             .value<string>('access', connection.access, 'read')
             .value<string>('as', connection.as, 'owner')
-            .list('only', connection.only).data,
+            .list('only', connection.only)
+            .value<boolean>('optional', connection.optional ?? false, false)
+            .data,
       ),
     )
     .list('protocols', app.protocols)
     .list(
       'ui',
-      app.ui.map(choice =>
-        choice.renderer
-          ? { plugin: choice.plugin, renderer: choice.renderer }
-          : { plugin: choice.plugin },
-      ),
+      app.ui.map(choice => ({
+        plugin: choice.plugin,
+        ...(choice.renderer ? { renderer: choice.renderer } : {}),
+        ...(choice.placement ? { placement: choice.placement } : {}),
+      })),
     )
     .part('pap', dumpPap(app.pap))
     .part('pact', dumpPact(app.pact))
@@ -2310,7 +2356,8 @@ export function dumpAppspec(app: AppSpec): Data {
     .text('icon', app.icon ?? DEFAULT_ICON, DEFAULT_ICON)
     .text('emoji', app.emoji, DEFAULT_EMOJI)
     .text('avatar', app.avatar ?? '', '')
-    .text('banner', app.banner ?? '', '');
+    .text('banner', app.banner ?? '', '')
+    .text('presentation', app.presentation ?? '', '');
   return writer.data;
 }
 

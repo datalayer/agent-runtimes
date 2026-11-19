@@ -27,7 +27,7 @@ class CheckpointConfig:
     store : str
         Storage backend: "in_memory", "file", "s3", or "protocol_state" — an
         execution's checkpoints in the runtime's protocol state store, which
-        outlive the process and need the execution as their scope (O2-05).
+        outlive the process and need the execution as their scope.
     file_dir : str
         Directory for file-based storage.
     """

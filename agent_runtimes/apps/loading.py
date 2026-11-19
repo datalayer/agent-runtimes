@@ -30,9 +30,9 @@ def load_app(document: Mapping[str, Any], plugins_off: Sequence[str] = ()) -> Ap
 
     Its setup notes say what it names that is not enabled today, a block of
     its page from a UI plugin in ``plugins_off`` — the catalogue ids its
-    organization has turned off (C-12) — among it.
+    organization has turned off — among it.
 
-    A context of its organization's own (``org-…``, U-32) is checked
+    A context of its organization's own (``org-…``) is checked
     where its organization's contexts are read, when its agent is made
     (`frames.frames_instructions`), not here: the document does not say its
     organization.
@@ -62,7 +62,18 @@ def load_app(document: Mapping[str, Any], plugins_off: Sequence[str] = ()) -> Ap
         *spec.app_setup(validated),
         *plugins_off_setup_notes(validated.interface, plugins_off),
     ]
-    return AppSpec.model_validate(data)
+    app = AppSpec.model_validate(data)
+    if app.agent:
+        # A mode's or a profile's model is one its agent offers: said here,
+        # where the Appspec is read, never as a run refused.
+        from agent_runtimes.models.offered import mode_model_problems, offered_of
+        from agent_runtimes.specs.library import get_library_agent_spec
+
+        offered = offered_of(get_library_agent_spec(app.agent), {"model": app.model})
+        problems = mode_model_problems(app, offered)
+        if problems:
+            raise AppNotRunnable(problems)
+    return app
 
 
 def frame_id_of(ref: str) -> str:

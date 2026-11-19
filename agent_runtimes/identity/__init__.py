@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Third-party tokens for tools and skills, whatever the provider (ID-22).
+"""Third-party tokens for tools and skills, whatever the provider.
 
 One call::
 

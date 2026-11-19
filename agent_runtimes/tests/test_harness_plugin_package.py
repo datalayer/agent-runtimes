@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A harness plugin package, installed and discovered (MH-F10).
+"""A harness plugin package, installed and discovered.
 
 The worked example as a test: ``examples/plugins/aider-harness`` installed
 with pip into a folder of its own (no dependencies: agent-runtimes is the

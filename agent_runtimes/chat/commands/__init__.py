@@ -202,7 +202,7 @@ def build_registry(
         browser_document,
         suggestions,
         voice,
-        # The session's verbs (MH-18): this conversation as a session.
+        # The session's verbs: this conversation as a session.
         sessions,
         pause,
         resume,

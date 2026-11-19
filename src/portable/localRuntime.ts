@@ -4,8 +4,8 @@
  */
 
 /**
- * A local runtime on a person's machine, and the harness it runs (VSCODE
- * VS-02, VS-03; DESKTOP DK-05, DK-06, DK-25): the pure part every host
+ * A local runtime on a person's machine, and the harness it runs:
+ * the pure part every host
  * shares — the VS Code extension host and Datalayer Desktop's main process
  * alike import it as `@datalayer/agent-runtimes/lib/portable/localRuntime`.
  *
@@ -303,7 +303,7 @@ export function portOf(line: string): number | null {
 
 /**
  * The origins a host's content-security policy admits for one local
- * runtime, and nothing else on loopback (DESKTOP DK-05).
+ * runtime, and nothing else on loopback.
  *
  * @param port - The runtime's port.
  *
@@ -332,7 +332,7 @@ export interface RuntimeEnvironmentInput {
   sessionsPath?: string;
 }
 
-/** Where each declared credential came from, said to the person (VSCODE O-1, DESKTOP O-2). */
+/** Where each declared credential came from, said to the person. */
 export type CredentialSource = 'environment' | 'secrets';
 
 /** The environment a local runtime is started with, and where its credentials came from. */
@@ -345,7 +345,7 @@ export interface RuntimeEnvironment {
  * The environment of a local runtime: the trimmed set of the person's
  * shell, the declared credentials by name (the environment first, the
  * secret store second — nothing undeclared), the folder as the workspace,
- * the file session store (META_HARNESS decision K: without it a signed-in
+ * the file session store (without it a signed-in
  * runtime would pick the record), and the person's token and IAM when
  * signed in.
  *
@@ -432,7 +432,7 @@ export function localRuntimeHandle(
 }
 
 // ---------------------------------------------------------------------------
-// The harness on the machine (VS-03, DK-06)
+// The harness on the machine
 // ---------------------------------------------------------------------------
 
 /** One harness of the catalogue, as the check reads it. */
@@ -459,7 +459,7 @@ export interface HarnessFacts {
   licence: string;
   /** Tier restrictions, or empty. */
   tierRestrictions: string;
-  /** The capabilities table (MH-20). */
+  /** The capabilities table. */
   capabilities: {
     resume: string;
     forkHistory: string;
@@ -760,7 +760,7 @@ export function harnessCheck(
 }
 
 /**
- * The sentence that says where a credential came from (VSCODE O-1, DESKTOP O-2).
+ * The sentence that says where a credential came from.
  *
  * @param name - The credential's name.
  * @param source - Where it was found.

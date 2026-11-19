@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""`loop apps pull` and `push` (S-04): the same file in a repository and in the Studio."""
+"""`loop apps pull` and `push`: the same file in a repository and in the Studio."""
 
 import json
 
@@ -105,7 +105,7 @@ def test_an_application_in_the_older_form_is_refused(store, spacer):
         push(store, "app-1", SOURCE)
 
 
-# --- P-10: an app.py kept in the application's item ------------------------------
+# --- An app.py kept in the application's item ------------------------------
 
 CODE = {"file": "app.py", "text": "from agent_runtimes.apps import Application\n"}
 

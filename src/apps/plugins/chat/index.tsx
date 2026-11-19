@@ -16,6 +16,7 @@ import {
   SyncIcon,
 } from '@primer/octicons-react';
 import { contribution, definePlugin } from '@datalayer/reactor';
+import type { ChatAnonymous } from '../../../chat/anonymous/anonymousMode';
 import type { ToolbarItem } from '@datalayer/primer-addons';
 import {
   LoopAgentGate,
@@ -82,8 +83,8 @@ export interface ChatPresence {
   /** What it says before anyone writes. */
   welcome?: string;
   /**
-   * Its deployment is paused (R-17): it says so beside its face, and
-   * its assistant dozes (T-08, T-22), whatever its last turn left behind.
+   * Its deployment is paused: it says so beside its face, and
+   * its assistant dozes, whatever its last turn left behind.
    */
   paused?: boolean;
   /**
@@ -96,7 +97,7 @@ export interface ChatPresence {
   /**
    * Told what it last said, and whether its newest words are an answer, as
    * they change — for a host that says them outside the conversation, as the
-   * embed's floating chrome does in its balloon and its blink (R-01).
+   * embed's floating chrome does in its balloon and its blink.
    * Read once, when the workspace is built: pass a stable function, such as
    * a state setter.
    */
@@ -114,12 +115,12 @@ export type ChatSaid = {
 export type ChatPluginConfig = {
   /**
    * The theme the conversation wears, by name: the person's unless said. An
-   * application says `loop` (T-06, T-12) — the conversation then takes
+   * application says `loop` — the conversation then takes
    * the theme's bubbles, pills and colours whatever the page around it wears.
    */
   themeVariant?: string;
   /**
-   * Laid over that theme, by mode: an application's accent (T-05), so
+   * Laid over that theme, by mode: an application's accent, so
    * that its bubbles and its one button wear its colour and not the theme's.
    */
   themeOverrides?: ThemeOverrides;
@@ -131,13 +132,22 @@ export type ChatPluginConfig = {
    */
   colorMode?: 'light' | 'dark';
   /**
-   * Who is answering, as the person meets them (T-08): a name, a face
+   * Who is answering, as the person meets them: a name, a face
    * and a welcome, in place of the agent's id and a generic icon. An
    * application sets its own.
    */
   presence?: ChatPresence;
   /**
-   * The conversation to go on with (D-13): an embedded application's
+   * Run as an anonymous visitor (the user, 15 November 2026): the box on
+   * top with the turns left and *Sign in*, the temporary key's clock in the
+   * header, *Anonymous* in the footer, the MCP servers and skills listed
+   * disabled, *Sign in to use* a tool refused for want of an account, and the
+   * prompt closed while the key is checked and once the turns or the minutes
+   * are spent. Set from `runAsAnonymous` (`loopPlugins`).
+   */
+  anonymous?: ChatAnonymous;
+  /**
+   * The conversation to go on with: an embedded application's
    * session, reattached after its page reloaded, and what it holds.
    */
   thread?: ResumedThread;
@@ -147,7 +157,7 @@ export type ChatPluginConfig = {
    */
   showTokenUsage?: boolean;
   /**
-   * Its voice (VO-10, VO-20, VO-49): a microphone in the composer,
+   * Its voice: a microphone in the composer,
    * the words written in it as they are heard, and the answers said by
    * Datalayer's speech service — an application's `interface.voice`
    * (`chatVoiceOf`). None unless said.
@@ -159,7 +169,7 @@ export type ChatPluginConfig = {
    * Configured on the plugin rather than passed to the workspace: the prompt
    * belongs to the chat, and a shell that has no chat plugin has no prompt to
    * put a placeholder in. A host that wants different words says so where the
-   * words are. Empty, the chat's own, in the person's language (P-26).
+   * words are. Empty, the chat's own, in the person's language.
    */
   placeholder: string;
   /**
@@ -353,7 +363,7 @@ export const ChatPlugin = definePlugin<ChatPluginConfig>({
     return {};
   },
   contributes: [
-    // The thread's menu entries (MH-F08): each says with `when` whether it
+    // The thread's menu entries: each says with `when` whether it
     // applies; the chat draws what the registry holds, a host adds its own.
     ...CHAT_SESSION_ACTIONS.map(entry =>
       contribution(LoopSessionAction, entry, {

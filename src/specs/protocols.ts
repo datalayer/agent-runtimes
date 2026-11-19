@@ -6,7 +6,7 @@
 /**
  * Protocol Catalog.
  *
- * The agent protocols Datalayer targets (PS-01).
+ * The agent protocols Datalayer targets.
  *
  * This file is AUTO-GENERATED from YAML specifications.
  * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
@@ -140,7 +140,7 @@ export const PAP_PROTOCOL_0_0_1: ProtocolSpec = {
   publisher: 'Sierra, Meta',
   layer: 'consent',
   specUrl: 'https://personalagentprotocol.org',
-  specVersion: 'draft 0.4',
+  specVersion: 'draft 1.0',
   status: 'shipped',
   connects: "Companies, as a person's agent there, or being one",
   packages: {

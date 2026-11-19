@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""GenAI spans of a harness's turn driven over ACP (AC-12): one ``invoke_agent``
+"""GenAI spans of a harness's turn driven over ACP: one ``invoke_agent``
 per turn, one ``execute_tool`` per tool call, under the runtime's scope.
 """
 

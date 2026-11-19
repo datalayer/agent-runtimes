@@ -697,7 +697,7 @@ class TestParseSkills:
 
 
 class TestServeOrchestrator:
-    """--orchestrator-root registers the orchestrator as an ACP agent (O2-08)."""
+    """--orchestrator-root registers the orchestrator as an ACP agent."""
 
     def test_an_agentspec_root_is_handed_to_the_app(self) -> None:
         with patch.dict(os.environ, {}, clear=False), patch("uvicorn.run") as mock_run:

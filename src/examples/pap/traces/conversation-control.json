@@ -3,7 +3,7 @@
   "title": "Conversation control",
   "description": "A Direct Conversation under an open one, a handoff to a person at Manzanita, and closing, through the real ConversationClient.",
   "generator": "examples/personal-agent-protocol/traces/generate.py",
-  "sdk": "personal-agent-protocol 0.32.0",
+  "sdk": "personal-agent-protocol 0.36.0",
   "parties": [
     {
       "id": "user",
@@ -86,7 +86,7 @@
               "content-type": "application/json"
             },
             "body": {
-              "protocol_version": "0.4",
+              "protocol_version": "1.0",
               "organization": {
                 "name": "Manzanita Outfitters",
                 "domain": "manzanita.example"
@@ -132,16 +132,19 @@
               "web": {
                 "browser_session_endpoint": "https://manzanita.example/poppy/browser-session"
               },
-              "feedback": {
-                "endpoint": "https://manzanita.example/poppy/feedback"
-              },
-              "excluded_tasks": {
-                "url": "https://manzanita.example/poppy/excluded-tasks.json"
+              "tasks": {
+                "endpoint": "https://manzanita.example/poppy/tasks"
               },
               "extensions": {
                 "operations": [
                   {
-                    "version": "2"
+                    "version": "3",
+                    "endpoint": "https://manzanita.example/poppy/operations"
+                  }
+                ],
+                "browser-control": [
+                  {
+                    "version": "1"
                   }
                 ],
                 "links": [
@@ -247,7 +250,8 @@
               ],
               "authorization_endpoint": "https://manzanita.example/oauth/authorize",
               "code_challenge_methods_supported": ["S256"],
-              "device_1": "https://manzanita.example/oauth/device"
+              "device_1": "https://manzanita.example/oauth/device",
+              "client_id_metadata_document_supported": true
             }
           }
         }
@@ -326,7 +330,7 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
-              "id": "req_XSR3SKeEAANSIWLnFUqnPg",
+              "id": "req_VSsenZRF4iKe983ErV8Jng",
               "message": {
                 "author": {
                   "type": "agent"
@@ -347,7 +351,7 @@
                   "created_at": "2026-10-11T09:00:00Z",
                   "type": "message",
                   "message": {
-                    "id": "req_XSR3SKeEAANSIWLnFUqnPg",
+                    "id": "req_VSsenZRF4iKe983ErV8Jng",
                     "author": {
                       "type": "agent"
                     },
@@ -365,7 +369,7 @@
                       "type": "agent"
                     },
                     "role": "company",
-                    "as_of_request": "req_XSR3SKeEAANSIWLnFUqnPg",
+                    "as_of_request": "req_VSsenZRF4iKe983ErV8Jng",
                     "text": "Hello from Manzanita Outfitters. Ask me about an order."
                   }
                 }
@@ -449,7 +453,7 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
-              "id": "req_mjMEXXexenM3mnqayLUhFg",
+              "id": "req_RcaxQdcsbbWNpA51zBP4jA",
               "message": {
                 "author": {
                   "type": "human"
@@ -532,7 +536,7 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
-              "id": "req_gRt4MjFfxL3ml0fvRj5n2g",
+              "id": "req_8E81ogyJZveLplgPTViFHA",
               "message": {
                 "author": {
                   "type": "agent"
@@ -622,7 +626,7 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
-              "id": "req_qhxw1Nv3JHtGWc3nPlowdQ"
+              "id": "req_Sfiu5XGjf8uyfnVLB717MA"
             }
           },
           "response": {
@@ -648,7 +652,7 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
-              "id": "req_H6dJqM3I05JdS6LDxA4R_g"
+              "id": "req_4nSRwbF4SINGTCTTXTOHUw"
             }
           },
           "response": {
@@ -685,7 +689,7 @@
                   "created_at": "2026-10-11T09:00:00Z",
                   "type": "message",
                   "message": {
-                    "id": "req_XSR3SKeEAANSIWLnFUqnPg",
+                    "id": "req_VSsenZRF4iKe983ErV8Jng",
                     "author": {
                       "type": "agent"
                     },
@@ -703,7 +707,7 @@
                       "type": "agent"
                     },
                     "role": "company",
-                    "as_of_request": "req_XSR3SKeEAANSIWLnFUqnPg",
+                    "as_of_request": "req_VSsenZRF4iKe983ErV8Jng",
                     "text": "Hello from Manzanita Outfitters. Ask me about an order."
                   }
                 },
@@ -815,7 +819,7 @@
               "poppy-session": "‹Session JWT›"
             },
             "body": {
-              "id": "req_yWVCDRK5M-6zRFwWzMGsWA"
+              "id": "req_3zi1Y_9Ra0NbRJOlAs1daA"
             }
           },
           "response": {

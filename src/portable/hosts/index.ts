@@ -9,7 +9,7 @@
  * semantic events a turn is reduced to, approval renderers, deliveries, the
  * turn's state, application resolution, the durable queue, quotas, secrets
  * at rest, observability, dead letters, health, the shared schema and the
- * forbidden-graph gate (DC-004, DC-005).
+ * forbidden-graph gate.
  *
  * Imported as `@datalayer/agent-runtimes/lib/portable/hosts`, and only by a
  * Node service, which bundles it with esbuild. It reaches `src/portable/` and
@@ -64,7 +64,6 @@ export {
   type TurnProvenance,
   type TurnStream,
 } from './agentClient';
-export { hostSessionUid } from './sessionUid';
 export {
   DATALAYER_ONLY,
   MAIL_WORDS,
@@ -77,11 +76,13 @@ export {
   DELIVERY_PATH,
   DELIVERY_ROUTE,
   DeliveryPoller,
+  DeliveryRenewal,
   deliveryRoute,
   receiveDelivery,
   type BoundHostKey,
   type DeliveryClaimStore,
   type DeliveryJob,
+  type DeliverySecret,
   type DeliverySink,
 } from './deliveries';
 export {

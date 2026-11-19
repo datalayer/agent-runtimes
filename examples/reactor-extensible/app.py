@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An application that extends with Reactor's vocabulary (P-35).
+"""An application that extends with Reactor's vocabulary.
 
 It is a Reactor plugin, ``loop-app-support-desk-plus``, and its author
 extends it as any Reactor plugin is extended:

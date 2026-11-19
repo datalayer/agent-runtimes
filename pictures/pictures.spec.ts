@@ -4,7 +4,7 @@
  */
 
 /**
- * Pictures as tests (T-16, and T-27's states of the floating assistant).
+ * Pictures as tests, among them the states of the floating assistant.
  *
  * Each picture is a page of `html/pictures.html` — the real chat components
  * with fixed data (`src/stories/loop/ReferenceScreens.tsx`) — taken once its
@@ -56,8 +56,8 @@ const ASSISTANT = [
   'aside',
   'current',
 ] as const;
-// Each character idle, light and dark (T-25), and the owl an example plugin
-// contributes (T-24); the paper clip's is `assistant-idle`.
+// Each character idle, light and dark, and the owl an example plugin
+// contributes; the paper clip's is `assistant-idle`.
 const CHARACTERS = ['wizard', 'cat', 'eyes', 'owl'] as const;
 
 async function show(page: Page, query: string): Promise<void> {
@@ -104,7 +104,7 @@ for (const theme of THEMES) {
   }
 }
 
-// The floating assistant in the theme of applications, in both modes (T-27).
+// The floating assistant in the theme of applications, in both modes.
 for (const mode of MODES) {
   test.describe(`assistant · ${mode}`, () => {
     test.use({ colorScheme: mode, viewport: { width: 480, height: 360 } });
@@ -126,7 +126,7 @@ for (const mode of MODES) {
           await expect(stage).not.toHaveAttribute('data-assistant-aside', /.+/);
         }
         if (picture === 'current') {
-          // Current (T-23): only what it does now, the tool it calls — the
+          // Current: only what it does now, the tool it calls — the
           // chat's own tool card since the balloon draws with the chat's
           // components (48e6c666).
           await expect(
@@ -141,7 +141,7 @@ for (const mode of MODES) {
   });
 }
 
-// The conversation open, as the assistant's balloon (T-23): the history, the
+// The conversation open, as the assistant's balloon: the history, the
 // welcome first, the Lexical composer last, no header nor footer; a window
 // tall enough for its 60%.
 for (const mode of MODES) {
@@ -153,7 +153,7 @@ for (const mode of MODES) {
       await expect(
         page.locator('[data-conversation-balloon] [contenteditable="true"]'),
       ).toBeVisible();
-      // History: its header counts the messages (T-23).
+      // History: its header counts the messages.
       await expect(
         page.locator('[data-conversation-balloon] [data-balloon-header]'),
       ).toHaveText('Conversation · 2');
@@ -162,8 +162,8 @@ for (const mode of MODES) {
   });
 }
 
-// Datalayer's characters, each in its own drawing for the mode (T-25), and a
-// character a plugin contributes (T-24), idle in the theme of applications.
+// Datalayer's characters, each in its own drawing for the mode, and a
+// character a plugin contributes, idle in the theme of applications.
 for (const mode of MODES) {
   test.describe(`character · ${mode}`, () => {
     test.use({ colorScheme: mode, viewport: { width: 480, height: 360 } });
@@ -183,7 +183,7 @@ for (const mode of MODES) {
   });
 }
 
-// The gallery's grid (T-16, T-22, T-26, T-27): every character — Datalayer's
+// The gallery's grid: every character — Datalayer's
 // five (its orb among them), the owl a plugin contributes and a test sprite read by the clippy.js
 // reader — in every state and stepped aside, still, in both modes.
 for (const mode of MODES) {

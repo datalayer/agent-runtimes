@@ -7,30 +7,34 @@ title: Personal Agent Protocol
 
 Agent Runtimes depends on Personal Agent Protocol (PAP, or Poppy) in Python
 and TypeScript: `personal-agent-protocol[ui]` and
-`@datalayer/personal-agent-protocol` (0.29.0, implementing
-[draft 0.3](https://personalagentprotocol.org/docs/0.3/spec) as of its revision
-2026-10-30, the
-[Operations extension](https://personalagentprotocol.org/docs/0.3/extensions/operations)
-version 2 and the Mediated Sign-In extension version 1; see the SDKs'
-[protocol coverage](https://personal-agent-protocol.datalayer.tech/protocol/coverage/)).
-At that draft:
+`@datalayer/personal-agent-protocol` (0.37, `>=0.37.0,<0.38`). It speaks one
+version of the protocol, the newest its SDK implements and the SDK's default:
+[1.0](https://personalagentprotocol.org/docs/1.0/spec) as published and frozen
+on 2026-11-14 (upstream `8c02b42`), with the Operations extension version 3 and the
+Mediated Sign-In extension version 1 (retiring on 2027-03-17); see the SDKs'
+[protocol coverage](https://personal-agent-protocol.datalayer.tech/protocol/coverage/).
+Every agent's `poppy.json` says, in each `agent.protocols` entry's `description`
+(required by 1.0), what its agent can help with: the Appspec's `description`, or
+*Anything about* its name when the Appspec says nothing.
+`agent_runtimes.protocols.pap.pap_protocol_version()` (TypeScript:
+`PAP_PROTOCOL_VERSION`) names it.
 
-- A **Session** is local: the agent chooses a random `sid` for a pairwise User
-  ID, and no request is sent. Every request to a company carries a fresh
-  `Poppy-Session` JWT naming it. A company that answers `invalid_session` gets
-  one new Session, then the agent stops.
-- That JWT is signed with a **delegated key**, one per User ID at one company,
-  which a key in the agent's `jwks_uri` vouches for with a delegation naming no
-  person and no company.
-- Sign-in is **plain OAuth**: a Bearer access token for the account, and a
-  refresh token the host keeps by reference. A sign-in names no Session, and a
-  refresh gets a token any of the person's Sessions uses. The issuer comes from
-  the domain's protected resource metadata.
-- **Operations version 2**: a company answers an action with an operation, whose
-  `revision` is opaque. The agent asks the person about every operation, never
-  approves one for them, and sends their approval as a retry of the same request.
-- **Mediated Sign-In** is an extension grant at the token endpoint, offered with
-  `extensions["mediated-sign-in"]`.
+- **One version, both roles.** As a personal agent, discovery asks for that
+  version alone (the SDK's default `DiscoveryClient`): a company that serves
+  only an older one is refused with `unsupported_protocol_version`, naming the
+  version spoken, and nothing is sent; it is never negotiated down to. As a
+  company (`PapCompanyCapability`), `poppy.json` is that version's document and a
+  request in another `Poppy-Version` is refused.
+- Every request with the Session header names that version in `Poppy-Version`
+  and the extensions its Session declares in `Poppy-Extensions`.
+- **The domain beside the name.** Nothing in `poppy.json` confirms that a domain
+  belongs to the company in `organization.name` (§10.3): a summary carries
+  `label` (`Organization.label`, `Name (domain)`), and what the person is shown
+  names the company by its label or its domain, never the name alone.
+- **Operations version 3**: a company answers an action with an operation whose
+  `terms` are its own values; the agent asks the person about it (or approves on a
+  standing permission that covers its terms), every approval says its `approver`,
+  and a company may decline an approval.
 
 The protocol itself is specified by the
 [Personal Agent Protocol organization on GitHub](https://github.com/personal-agent-protocol):
@@ -425,7 +429,7 @@ personal agent's side of the same exchange over HTTP.
 ```mermaid
 sequenceDiagram
     participant A as A person's own agent
-    participant S as Datalayer company service (<slug>.apps.datalayer.ai)
+    participant S as Company agent host (<slug>.agent.datalayer.ai)
     participant D as The application (deployment, over A2A)
     participant P as Person (signed in to Datalayer)
     A->>S: discovery, Session, sign-in (Device or Direct)
@@ -498,6 +502,7 @@ an account, and none reaches a Datalayer service.
 | `company-discovery`, `agent-identity` | `PapPersonalAgentCapability`: verified public summaries | live |
 | `local-personal-agent` | `PapPersonalAgentCapability` with the host's reactor: Session, Device Sign-In, conversation, an operation the person approves | demo worlds |
 | `local-company` | `PapCompanyCapability`: the application as a company over A2A, an operation performed once through its ticket | in process |
+| `shop` | The Demo Shop (`demo-shop`) as a company and a personal agent buying from it: products with their photos, a quote, a test order approved and placed once — nothing charged, nothing shipped | in process |
 | `delegation`, `session-lifecycle`, `browser-session` | Sessions: delegated keys, a random `sid`, `invalid_session`, browser join | in process |
 | `direct-sign-in-boundary`, `direct-sign-in-lifecycle` | Direct Sign-In: state, PKCE, partial consent | in process |
 | `device-sign-in` | Device Sign-In: link, code, paced polling | in process |

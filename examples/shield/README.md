@@ -2,7 +2,7 @@
 
 Examples of a coding agent — Claude Code, Codex, any agent speaking the
 [Agent Client Protocol](https://agentclientprotocol.com) — run behind the
-Shield (box SH-23). Each runs on a **fake
+Shield. Each runs on a **fake
 agent** first: the ACP SDK agent the tests drill every harness on
 ([`agent_runtimes/tests/fixtures/acp_fake_agent.py`](../../agent_runtimes/tests/fixtures/acp_fake_agent.py)),
 which needs no model and no key. What a prompt makes it do: `edit` asks to
@@ -70,7 +70,7 @@ python harness_on_the_runtime.py --harness claude-code --prompt "Add a line to R
 ```
 
 ```text
-Claude Code's adapter @agentclientprotocol/claude-agent-acp@0.91.0 is not installed: neither /home/you/.agent-shield/harnesses/claude-code@0.91.0/node_modules/.bin/claude-agent-acp (`agent-shield setup --harness claude-code`) nor 'claude-agent-acp' on the PATH (the runtime image installs it at build, SH-05).
+Claude Code's adapter @agentclientprotocol/claude-agent-acp@0.91.0 is not installed: neither /home/you/.agent-shield/harnesses/claude-code@0.91.0/node_modules/.bin/claude-agent-acp (`agent-shield setup --harness claude-code`) nor 'claude-agent-acp' on the PATH (the runtime image installs it at build).
 ```
 
 Not run with Claude Code itself here: the only Anthropic key at hand has no

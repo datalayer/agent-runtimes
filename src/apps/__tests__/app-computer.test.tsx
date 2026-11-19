@@ -4,7 +4,7 @@
  */
 
 /**
- * An application's computer beside its page (R-23, R-01b): a plugin of
+ * An application's computer beside its page: a plugin of
  * the workspace's sidebar, mounted by the preset with the rules card and the
  * activity feed. It says which of its parts are off, lists what its agent
  * ran on it from the conversation's tool calls, shows its files read-only
@@ -391,7 +391,7 @@ describe('the computer view', () => {
     saved.mockRestore();
   });
 
-  it('downloads a file from the origin the runtime named (D-22)', async () => {
+  it('downloads a file from the origin the runtime named', async () => {
     /*
      * The runtimes' host is every runtime's, so a file served from it is
      * same-origin with every other runtime. The runtime says which host is
@@ -669,7 +669,7 @@ describe('the computer view', () => {
     expect(container.textContent).toContain('No GET ');
   });
 
-  it('asks nothing and says why while no runtime is assigned (P-24)', async () => {
+  it('asks nothing and says why while no runtime is assigned', async () => {
     const calls = runtime({});
     const reason = 'No runtime available. At capacity.';
     const { container } = await render(

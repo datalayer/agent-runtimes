@@ -4,14 +4,13 @@
  */
 
 /**
- * What may never reach a host service's production code (S-005):
+ * What may never reach a host service's production code:
  * Jupyter, JupyterLab, Lumino, Datalayer's Jupyter packages,
  * React, Primer, Reactor and the other host services. Checked over the
  * service's source imports, its esbuild bundle's module graph
  * (`forbiddenInBundle`, over the metafile) and the installed graph of the
  * bundle's externals (`npm ls --omit=dev --omit=peer --all`). Pure functions:
- * each service reads its files and runs them. Moved from the Slack service
- * (DC-004).
+ * each service reads its files and runs them. Moved from the Slack service.
  *
  * @module portable/hosts/forbiddenGraph
  */

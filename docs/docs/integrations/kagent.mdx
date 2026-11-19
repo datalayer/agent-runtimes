@@ -1,0 +1,315 @@
+---
+title: kagent
+---
+
+# kagent
+
+[kagent](https://kagent.dev) is a Kubernetes control plane for agents. From
+its 1.0 release, an agent is an `Agent` (`api.kagent.dev/v1alpha3`) that pairs
+an `AgentTemplate` (model, prompt, MCP tools) with a `Harness` (the runtime
+image), and kagent runs it as a sandboxed actor per conversation (Session),
+behind its A2A gateway.
+
+Agent Runtimes runs as a kagent **BYO Harness**: any agentspec of the library
+becomes a kagent Agent, invoked through kagent's gateway, CLI and UI.
+
+This page is written for kagent **1.0.1** (Substrate 1.0.0). kagent 0.x
+(`kagent.dev/v1alpha2`, `spec.type: BYO` Deployments) is a different contract
+and is not supported.
+
+## How it works
+
+```
+kagent A2A gateway ──A2A v1, gRPC :80──▶ kagent bridge ──A2A 1.0 JSON-RPC──▶ agent-runtimes serve --target kagent
+                                          │  /readyz :8081                      (127.0.0.1:8765, the agentspec
+                                          └─ kagent's task store (gRPC)          of AGENT_SPEC_ID, as `default`)
+```
+
+The image (`docker/Dockerfile.kagent`) holds two Python environments:
+
+- **the kagent bridge** (`agent_runtimes/kagent/bridge.py`), with kagent's
+  `kagent-core` and `a2a-sdk` 1.x. It does what kagent asks of a BYO image:
+  it materializes the configuration kagent hands the actor
+  (`/config/config.json`, `/config/agent-card.json`), serves A2A v1 over gRPC
+  on port 80 and `GET /readyz` on 8081, and saves every task through kagent's
+  task store. Each task is forwarded to the agent-runtimes server beside it,
+  and its artifacts and final state are relayed back.
+- **agent-runtimes**, started by the bridge with
+  `agent-runtimes serve --target kagent`. It serves the agentspec named by
+  `AGENT_SPEC_ID` over its usual A2A transport, on loopback.
+
+The agent card kagent serves is the one kagent compiles from the Agent.
+
+## The agentspec: `runtime_engine: kagent`
+
+An agentspec says what runs and hosts it on the line after its `harness`
+(see [Agentspecs](../agentspecs#harness-and-runtime-engine)). An agent meant
+for kagent says `runtime_engine: kagent`, and keeps the `pydantic-ai` harness:
+kagent serves it through the agent-runtimes server. The catalogue's example is
+`example-kagent`, a simple conversational agent with no MCP servers of its own
+(the template's remote MCP servers are added at start), no skills, no frontend
+tools and the `eval` sandbox, since no Jupyter server runs beside it in the
+actor. Set it as the Harness's `AGENT_SPEC_ID`, with a release of
+agent-runtimes whose catalogue has it.
+
+Any agentspec of the library with the `pydantic-ai` harness runs under kagent;
+`runtime_engine` says where it is meant to run, so that a Datalayer plane
+sends it there (below). A launch may override it: choosing kagent under
+"Where it runs" on Datalayer (an agent's launch, or an application's
+deployment) sends `runtime_engine: kagent` with the launch, whatever the spec
+says, and an agent turned by another harness is refused in a sentence.
+
+## Harness, AgentTemplate and Agent
+
+`deploy/kagent/` holds the three objects (`api.kagent.dev/v1alpha3`):
+
+- the **`Harness`**: the image, by digest, its command (the bridge), its
+  literal environment (`AGENT_SPEC_ID`, `AGENT_RUNTIMES_MODEL` for a model of
+  its own), and the Substrate `WorkerPool` its actors run on, with where their
+  snapshots go;
+- the **`AgentTemplate`**: what kagent hands the agent, its model
+  (a `ModelConfig`, optional for a BYO harness), its prompt and its remote MCP
+  tools;
+- the **`Agent`**: a template and a harness, by reference.
+
+```yaml
+apiVersion: api.kagent.dev/v1alpha3
+kind: Harness
+metadata:
+  name: agent-runtimes
+spec:
+  byo: {}
+  workload:
+    image: <registry>/agent-runtimes-kagent@sha256:<digest>
+    command: ["/opt/kagent-bridge/bin/python", "-I", "/opt/kagent-bridge/bridge.py"]
+  env:
+    - name: AGENT_SPEC_ID
+      value: example-kagent
+  substrate:
+    workerPoolRef:
+      name: kagent-default
+---
+apiVersion: api.kagent.dev/v1alpha3
+kind: Agent
+metadata:
+  name: agent-runtimes
+spec:
+  template:
+    ref:
+      name: agent-runtimes
+  harnessRef:
+    name: agent-runtimes
+```
+
+## Each conversation is an actor
+
+kagent runs the Agent as [Agent Substrate](./agent-substrate) actors, one per
+**Session**: the A2A `contextId` of the conversation. The Harness's first
+actor is booted and snapshotted (its **golden snapshot**); each Session's
+actor (`session-<contextId>`) starts from it. After a task, kagent suspends
+the actor to a snapshot of its memory and files; the next message on the same
+`contextId` resumes it from that snapshot, with the conversation where it was.
+
+In our runs on AWS (kagent 1.0.1, a 1.27 GB image, a c7i.xlarge worker under
+gVisor): the Agent was Ready 34 s after `kubectl apply`, a first task with
+pydantic-ai's test model completed in 22 s end to end, the actor was
+checkpointed in 0.1 s after it, and a second message on the same `contextId`
+resumed it and completed in 22 s, the restore taking 21 s of that. A leaner
+image restores faster. On burstable nodes the golden actor may not answer
+kagent's fixed 30 s readiness probe: give kagent's `WorkerPool` a
+non-burstable node type.
+
+## The A2A path
+
+kagent's controller serves the A2A gateway on `:8083`, under
+**`/agents/{namespace}/{name}`**: the card at
+`GET /agents/{namespace}/{name}/.well-known/agent-card.json`, JSON-RPC
+(`SendMessage`, `SendStreamingMessage`…, header `A2A-Version: 1.0`) at
+`POST /agents/{namespace}/{name}`. kagent 1.0.1 answers every other path with
+an empty 200, older spellings such as `/api/a2a/...` included: check the
+card's JSON, not its status.
+
+## Models
+
+The model of the Agent's `AgentTemplate` (a kagent `ModelConfig`) is the one
+the agent calls:
+
+| kagent provider | agent-runtimes model | endpoint |
+| --- | --- | --- |
+| `OpenAI` | `openai:<model>` (`openai-responses:<model>` with `apiFormat: responses`) | `openAI.baseUrl` → `OPENAI_BASE_URL` |
+| `Anthropic` | `anthropic:<model>` | `anthropic.baseUrl` → `ANTHROPIC_BASE_URL` |
+| `Bedrock` | `bedrock:<model>` | `bedrock.region` → `AWS_REGION` |
+
+Any other provider stops the agent at start, with a sentence saying so.
+Without a model in the template, the agentspec's own model is used.
+
+The API key never enters the actor: kagent's egress gateway sets it on each
+call to the endpoint, from the Secret the `ModelConfig` names.
+
+**With Datalayer**, use Datalayer's AI inference, an OpenAI-compatible
+endpoint billed in Datalayer credits: a `ModelConfig` of provider `OpenAI`
+whose `baseUrl` is your Datalayer plane's `/api/ai-inference/v1` and whose
+Secret holds a Datalayer API key (`deploy/kagent/modelconfig-datalayer.yaml`).
+Its `model` is an agent-runtimes model id, such as
+`bedrock:us.anthropic.claude-sonnet-4-6`.
+
+**With your own provider**, a `ModelConfig` of that provider and a Secret with
+its key (`deploy/kagent/modelconfig-openai-compatible.yaml`). The examples
+ship no key.
+
+## MCP tools
+
+The `RemoteMCPServer` tools of the template are given to the agent as remote
+MCP servers over Streamable HTTP, beside the agentspec's own. Secret-backed
+headers stay in kagent's egress gateway, as for models.
+
+agent-runtimes serves the **whole** server under kagent. A binding it cannot
+honour as written stops the agent at start instead of serving more than was
+bound: a `tools` selection, `requireApproval`, token or header passthrough,
+and SSE servers.
+
+## Deploy
+
+1. Install kagent 1.0.1 (`kagent install`; Kubernetes 1.35 with kagent's
+   feature gates).
+2. Build and push the image, naming a release of agent-runtimes that has the
+   kagent target:
+
+   ```bash
+   docker build -f docker/Dockerfile.kagent \
+     --build-arg AGENT_RUNTIMES_VERSION=<version> \
+     -t <registry>/agent-runtimes-kagent:<version> .
+   docker push <registry>/agent-runtimes-kagent:<version>
+   ```
+
+3. In `deploy/kagent/harness.yaml`, set the image **by digest** (kagent runs
+   no other) and `AGENT_SPEC_ID`; in `modelconfig-datalayer.yaml`, your plane's
+   `baseUrl`. Create the model Secret, then:
+
+   ```bash
+   kubectl apply -k deploy/kagent
+   kubectl get agents.api.kagent.dev -n kagent
+   ```
+
+4. Talk to it through kagent's gateway:
+
+   ```bash
+   kubectl port-forward -n kagent svc/kagent-controller 8083:8083
+   curl -H 'X-User-Id: admin@kagent.dev' \
+     http://127.0.0.1:8083/agents/kagent/agent-runtimes/.well-known/agent-card.json
+   curl -H 'X-User-Id: admin@kagent.dev' -H 'A2A-Version: 1.0' \
+     -H 'content-type: application/json' \
+     http://127.0.0.1:8083/agents/kagent/agent-runtimes \
+     -d '{"jsonrpc":"2.0","id":"1","method":"SendMessage","params":{"message":{"messageId":"m1","role":"ROLE_USER","parts":[{"text":"Hello"}]}}}'
+   ```
+
+## Datalayer mode: the agent on a Datalayer runtime
+
+By default the agent runs in the actor, beside the bridge. In the bridge's
+**Datalayer mode** it runs on a Datalayer runtime instead, with the
+runtime's metering and identity: the bridge starts no agent-runtimes, and
+
+1. on the first task of the actor's session, it launches a runtime for its
+   Agent through the platform's Runtimes API, as any Datalayer client does
+   (`agent-runtimes kagent launch-runtime`: the environment, the agentspec,
+   `client_id: kagent`, `agent_uid: <namespace>/<agent>`). The runtime comes
+   from the platform's pools with its credits reservation, and is known by
+   its uid; the agentspec is served on it over A2A;
+2. it forwards every task of the session to that runtime's A2A endpoint, in
+   the session's context, and keeps the runtime: its uid is written in the
+   actor's durable `/data`, so a restarted bridge goes on with it. Once the
+   runtime has expired, the next task launches another;
+3. when kagent stops the actor, the bridge ends the runtime
+   (`agent-runtimes kagent end-runtime`), which closes its reservation. A
+   runtime the bridge could not end ends with its reservation
+   (`DATALAYER_RUNTIME_MINUTES`, 30 by default).
+
+The key's owner pays for the runtime, as for any launch; on a Datalayer plane
+whose operator watches kagent Agents, deleting the Agent also ends its
+runtimes.
+
+**The key.** kagent mounts no Secret in an actor: the Datalayer API key is put
+in each request by Substrate's egress gateway, through an `EgressPolicy` that
+binds the Secret to the plane's origin, and the bridge sends kagent's
+placeholder (`DATALAYER_API_KEY_INJECTED=true`). Run elsewhere, the bridge
+reads the key from a mounted Secret's file (`DATALAYER_API_KEY_FILE`).
+Exactly one of the two; a `DATALAYER_API_KEY` in the environment is refused.
+
+**Fail fast.** Datalayer mode never falls back to the local server: a missing
+plane, agentspec, Agent or key stops the bridge at start, in a sentence. A
+launch the platform refuses (no credits, an unknown environment) fails the
+task, in a sentence.
+
+The overlay `deploy/kagent-datalayer` sets it up on top of `deploy/kagent`:
+the Harness's environment, the `EgressPolicy` (`datalayer-plane`) and the
+Agent's `egressPolicyRefs`. Set your plane in both places, and add the host
+your runtimes are served under to the policy when it is not the plane's:
+
+```bash
+kubectl create secret generic datalayer-api-key -n kagent \
+  --from-literal=api-key="$DATALAYER_API_KEY"
+kubectl apply -k deploy/kagent-datalayer
+```
+
+## On a Datalayer plane
+
+- **`p up datalayer-kagent`** installs kagent 1.0.1 and Agent Substrate 1.0.0
+  on the plane's cluster with kagent's own pinned, checksummed CLI
+  (`kagent install`), every bundled agent off and kagent's default model
+  provider at the plane's AI inference. It first checks the cluster: Kubernetes
+  1.35 or later with `ClusterTrustBundle`, `ClusterTrustBundleProjection`,
+  `PodCertificateRequest` and `certificates.k8s.io/v1beta1`, and stops in a
+  sentence otherwise. `p down datalayer-kagent` uninstalls it (and refuses
+  while `datalayer-ate` is up, which shares its Substrate).
+- **The operator's kagent part** (`DATALAYER_OPERATOR_KAGENT_ENABLED=true`)
+  ties the runtimes a bridge launches in Datalayer mode to their Agent: each
+  is labelled with the Agent, the Agent is annotated with its runtimes' uids,
+  and deleting the Agent ends them.
+- **`runtime_engine` decides.** A runtime launched for an agent whose engine
+  is `kagent` needs that part: with it off, the launch is refused before
+  anything is reserved, in a sentence naming the engine. With it on, a kagent
+  bridge's launch is the runtime behind its Agent's session actor, and any
+  other launch of the agent is served on an Agent Substrate actor, as kagent
+  serves it, which needs the operator's [ate part](./agent-substrate#on-a-datalayer-plane).
+  The engine is the launch's own `runtime_engine` when it names one (a
+  person's choice, or a kagent deployment's), the spec's otherwise.
+  The runtime's record says its engine (`runtime_engine`), and so does the
+  reservation IAM keeps for its usage: the platform's usage lists kagent's
+  runtimes under a tab of their own.
+
+## Running the pair without kagent
+
+The bridge runs outside kagent with its tasks in memory
+(`KAGENT_BRIDGE_LOCAL=true`), the configuration written by hand in
+`KAGENT_CONFIG_DIR`:
+
+```bash
+mkdir -p /tmp/kagent-config
+echo '{"runtime":{"name":"agent","namespace":"local","port":50051,"control_plane_url":"http://127.0.0.1:8083","gateway_url":"http://127.0.0.1:8083"},"agent":{}}' \
+  > /tmp/kagent-config/config.json
+echo '{"name":"agent","description":"An agentspec","version":"v1","capabilities":{"streaming":true}}' \
+  > /tmp/kagent-config/agent-card.json
+AGENT_SPEC_ID=example-blank AGENT_RUNTIMES_MODEL=test \
+KAGENT_CONFIG_DIR=/tmp/kagent-config KAGENT_BRIDGE_LOCAL=true \
+  <bridge venv>/bin/python -I agent_runtimes/kagent/bridge.py
+```
+
+`AGENT_RUNTIMES_MODEL=test` is pydantic-ai's test model: it answers without
+calling any model. The bridge then answers A2A v1 over gRPC on 50051.
+
+## Environment
+
+| Variable | Read by | Meaning |
+| --- | --- | --- |
+| `AGENT_SPEC_ID` | agent-runtimes | The agentspec served (Harness `spec.env`). Required. |
+| `AGENT_RUNTIMES_KAGENT_PORT` | both | The loopback port of agent-runtimes, 8765. |
+| `KAGENT_CONFIG_DIR` | bridge | Where kagent's configuration is, `/config`. |
+| `KAGENT_BRIDGE_LOCAL` | bridge | `true`: tasks in memory, outside kagent. |
+| `KAGENT_BRIDGE_TASK_TIMEOUT` | bridge | Seconds one task may take, 600. |
+| `AGENT_RUNTIMES_COMMAND` | bridge | The agent-runtimes executable, set in the image. |
+| `DATALAYER_RUNTIME_ENVIRONMENT` | bridge | Set: Datalayer mode, the runtime launched in this environment. |
+| `DATALAYER_RUN_URL` | bridge | Datalayer mode: the plane. Required. |
+| `DATALAYER_API_KEY_INJECTED` | bridge | Datalayer mode: `true`, the key put in each request by kagent's egress gateway. |
+| `DATALAYER_API_KEY_FILE` | bridge | Datalayer mode: the file of a mounted Secret holding the key (outside kagent). |
+| `DATALAYER_RUNTIME_MINUTES` | bridge | Datalayer mode: the runtime's reservation, 30 minutes. |
+| `DATALAYER_RUNTIME_STATE_DIR` | bridge | Datalayer mode: where the runtime's uid is kept, `/data/datalayer`. |

@@ -149,6 +149,12 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             [
                 f"    envvars={_fmt_list(spec.get('envvars', []))},",
                 f"    optional_env_vars={_fmt_list(spec.get('optional_env_vars', []))},",
+                # Its activation rule, when it has one (agentspecs 0.0.218).
+                *(
+                    [f"    any_of_env_vars={_fmt_list(spec['any_of_env_vars'])},"]
+                    if spec.get("any_of_env_vars")
+                    else []
+                ),
                 f"    dependencies={_fmt_list(spec.get('dependencies', []))},",
                 *(
                     [
@@ -163,6 +169,12 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 f"    icon={icon},",
                 f"    emoji={emoji},",
                 f"    enabled={spec.get('enabled', False)},",
+                # The UI plugins it brings to the chat (agentspecs 0.0.196).
+                *(
+                    [f"    ui={json.dumps(list(spec['ui']), ensure_ascii=False)},"]
+                    if spec.get("ui")
+                    else []
+                ),
                 ")",
                 "",
             ]
@@ -296,8 +308,9 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
             f"export const {const_name}: SkillSpec = {{",
             f"  id: '{skill_id}',",
             f"  version: '{version}',",
-            f"  name: '{spec['name']}',",
-            f"  description: '{spec['description']}',",
+            # Quoted as JSON: a description may hold an apostrophe ("the trip's days").
+            f"  name: {json.dumps(spec['name'], ensure_ascii=False)},",
+            f"  description: {json.dumps(spec['description'], ensure_ascii=False)},",
             f"  module: {module_ts},",
             f"  package: {package_ts},",
             f"  method: {method_ts},",
@@ -322,6 +335,15 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
             [
                 f"  requiredEnvVars: {envvars_json},",
                 f"  optionalEnvVars: {optional_env_vars_json},",
+                *(
+                    [
+                        "  anyOfEnvVars: "
+                        + str(spec["any_of_env_vars"]).replace("'", '"')
+                        + ","
+                    ]
+                    if spec.get("any_of_env_vars")
+                    else []
+                ),
                 f"  dependencies: {dependencies_json},",
                 *(
                     [f"  install: {json.dumps(install_of(spec), ensure_ascii=False)},"]
@@ -332,6 +354,11 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 f"  icon: {icon},",
                 f"  emoji: {emoji},",
                 f"  enabled: {str(spec.get('enabled', False)).lower()},",
+                *(
+                    [f"  ui: {json.dumps(list(spec['ui']), ensure_ascii=False)},"]
+                    if spec.get("ui")
+                    else []
+                ),
                 "};",
                 "",
             ]

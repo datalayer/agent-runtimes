@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""`datalayer executions`, mirrored into agent-runtimes' own CLI (O1-13):
+"""`datalayer executions`, mirrored into agent-runtimes' own CLI:
 reused, not rebuilt, so `agent-runtimes`/`datalayer-agents`/`loop`/`l`
 — which have no `executions` group of their own — reach the same commands the
 `datalayer` CLI does, over the one implementation core already has.

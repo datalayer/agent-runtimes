@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A toolset lent to a harness, on the pod's loopback (SH-14).
+"""A toolset lent to a harness, on the pod's loopback.
 
 The harness is given this address in place of the gateway's and of a credential
 (`mcp.lent_stdio`): the bearer is added here, in the process that holds it, so it

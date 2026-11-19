@@ -34,7 +34,7 @@ from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
 
 
 class Row(BaseModel):
-    """What the button presses with: the row it was on (RU-5)."""
+    """What the button presses with: the row it was on."""
 
     row: int = 0
 

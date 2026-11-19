@@ -28,6 +28,17 @@ DEV_UI = "AGENT_RUNTIMES_DEV_UI"
 DEV_UI_URL = "AGENT_RUNTIMES_DEV_UI_URL"
 
 
+def split_jupyter_url(jupyter_url: str) -> tuple[str, str]:
+    """The session's ``jupyter_url`` as ``(base, token)``.
+
+    ``jupyter_url`` is ``<base>?token=<token>``; the token is empty when the
+    server wants none.
+    """
+    base, _, query = jupyter_url.partition("?")
+    token = urllib.parse.parse_qs(query).get("token", [""])[0]
+    return base.rstrip("/"), token
+
+
 def agent_page_url(
     page: str,
     *,
@@ -48,9 +59,8 @@ def agent_page_url(
     else:
         url = f"{server_url.rstrip('/')}/static/{page}?agentId={agent}"
     if jupyter_url:
-        base, _, query = jupyter_url.partition("?")
-        token = urllib.parse.parse_qs(query).get("token", [""])[0]
-        url += f"&jupyterBaseUrl={urllib.parse.quote(base.rstrip('/'), safe='')}"
+        base, token = split_jupyter_url(jupyter_url)
+        url += f"&jupyterBaseUrl={urllib.parse.quote(base, safe='')}"
         if token:
             url += f"&jupyterToken={urllib.parse.quote(token, safe='')}"
     return url

@@ -6,11 +6,13 @@
 from __future__ import annotations
 
 import webbrowser
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 import httpx
 
 from agent_runtimes.loop.commands import CommandArgSpec
+
+from ..pages import split_jupyter_url
 
 if TYPE_CHECKING:
     from ..tux import CliTux
@@ -43,6 +45,35 @@ _LEGACY_PAGES = {
 }
 
 
+def _handoff_runtime(tux: "CliTux") -> dict[str, Any]:
+    """Where this session's agent runs, for the page to take that place.
+
+    On Datalayer (``tux.where``) the page is served through the relay, which
+    looks like a local server, so it is told: the runtime's name, and its
+    Jupyter base URL and token — what ``/notebook`` opens the runtime's
+    Jupyter with. The token goes in the handoff, never in the page's URL.
+
+    Raises
+    ------
+    ValueError
+        On Datalayer with no Jupyter address for the runtime.
+    """
+    if not tux.where:
+        return {"where": "local"}
+    base, token = split_jupyter_url(tux.jupyter_url or "")
+    if not (base and token and tux.cloud_runtime):
+        raise ValueError(
+            f"This session runs on {tux.where}, and its runtime's Jupyter server "
+            "is not known here: the page would have no notebook to open."
+        )
+    return {
+        "where": "datalayer",
+        "name": tux.cloud_runtime,
+        "jupyter_url": base,
+        "jupyter_token": token,
+    }
+
+
 async def _mint_handoff(tux: "CliTux", view: str) -> Optional[str]:
     """Ask the server for a single-use code that carries this session over.
 
@@ -62,6 +93,7 @@ async def _mint_handoff(tux: "CliTux", view: str) -> Optional[str]:
         "model": getattr(session, "model", None),
         "view": view,
         "sandbox": dict(getattr(session, "sandbox", {}) or {}),
+        "runtime": _handoff_runtime(tux),
     }
 
     try:
@@ -92,7 +124,11 @@ async def execute(tux: "CliTux", argv: str = "") -> Optional[str]:
         )
         return None
 
-    code = await _mint_handoff(tux, view)
+    try:
+        code = await _mint_handoff(tux, view)
+    except ValueError as refused:
+        tux.console.print(f"  {refused}", style=STYLE_MUTED)
+        return None
 
     if code:
         url = f"{tux.server_url}/loop?handoff={code}"

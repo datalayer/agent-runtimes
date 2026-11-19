@@ -4,8 +4,8 @@
  */
 
 /**
- * The rules of clean (T-17), held where an application's own chrome is
- * drawn: its reactions (the thumbs of V-18, T-06), the rail (T-07) and the
+ * The rules of clean, held where an application's own chrome is
+ * drawn: its reactions (the thumbs), the rail and the
  * split — line icons in the ink, no verdict's colour on a control, no
  * filled button beside the composer's, no gradient.
  */

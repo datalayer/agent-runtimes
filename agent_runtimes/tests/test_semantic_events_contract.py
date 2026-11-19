@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """The semantic agent events contract, tested by the runtime that emits the
-events (DC-005, S-004).
+events.
 
 `src/portable/semantic-events.json` is what a chat host (Slack, Discord)
 reduces a session's AG-UI stream to; `src/portable/semanticOfAgUi.ts`

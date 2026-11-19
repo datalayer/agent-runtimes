@@ -23,18 +23,26 @@ from personal_agent_protocol import (
     generate_request_id,
     operations_content,
 )
+from personal_agent_protocol.company import build_company, company_app
 from personal_agent_protocol.demo.kit import (
     AgentIdentity,
+    ClockPlugin,
     InProcessNetwork,
     MutableClock,
     PersonalAgentHost,
     ScriptedApprovals,
+    one_origin,
     personal_agent_reactor,
 )
+from personal_agent_protocol.demo.ledgerly import CONFIG as LEDGERLY_CONFIG
 from personal_agent_protocol.demo.ledgerly import DOMAIN as LEDGERLY
-from personal_agent_protocol.demo.ledgerly import ledgerly
+from personal_agent_protocol.demo.ledgerly import (
+    LedgerlyAsPersonalAgent,
+    LedgerlyPlugin,
+)
 from personal_agent_protocol.demo.northwind import ACCOUNT, northwind
 from personal_agent_protocol.operations import OperationsClient
+from reactor import PluginManifest
 
 from agent_runtimes.apps import Application
 
@@ -55,6 +63,37 @@ app = Application(
         "a company-to-company protocol. Never expose tokens, codes, or Session JWTs."
     ),
 )
+
+
+def ledgerly(
+    network: InProcessNetwork, clock: MutableClock
+) -> tuple[Any, LedgerlyAsPersonalAgent]:
+    """Ledgerly, the SDK's demo firm, as a company at the one PAP version Agent Runtimes
+    speaks. Its own personal agent at Northwind is the SDK's, on the SDK's default version.
+    """
+
+    at_northwind = LedgerlyAsPersonalAgent(network, clock)
+    service = build_company(
+        LEDGERLY_CONFIG,
+        http_client=network.client(),
+        address_resolver=network.resolve,
+        plugins=[
+            (
+                PluginManifest(name="ledgerly", version="1"),
+                LedgerlyPlugin(at_northwind),
+            ),
+            (PluginManifest(name="ledgerly-clock", version="1"), ClockPlugin(clock)),
+        ],
+    )
+    network.add(
+        LEDGERLY,
+        one_origin(
+            at_northwind.identity.website(),
+            company_app(service),
+            (at_northwind.identity.path, "/jwks.json"),
+        ),
+    )
+    return service, at_northwind
 
 
 @app.tool(does="read")
@@ -100,7 +139,6 @@ async def run_two_companies() -> dict[str, Any]:
         scopes=("books:read", "payments:write"),
         tenant_id=TENANT,
         organization=company.document.organization,
-        protected_resources=metadata.protected_resources,
     )
     await firm.approve_device(started.user_code, account_id="acct_ada_ledgerly")
     clock.advance(started.poll_interval)
@@ -164,12 +202,12 @@ async def run_two_companies() -> dict[str, Any]:
         ),
         "ledgerly_identity_at_northwind": at_northwind.identity.client_id,
         "connect_at": connect["verification_uri"],
-        "relayed_summary": relayed.summary,
+        "relayed_summary": relayed.shown,
         "ada_was_asked_by": ada.asked[0].company_name,
         "bank_payments_before_ada_approved": performed_before_approval,
         "after_ada_approved": paid.text,
         "bank_record_approved_revision": first.approved,
-        "next_payment_asks_ada": second.summary if second else None,
+        "next_payment_asks_ada": second.shown if second else None,
         "bank_payments_performed": len(bank_plugin.executor.performed),
         "tokens_codes_and_session_jwts_withheld": True,
     }

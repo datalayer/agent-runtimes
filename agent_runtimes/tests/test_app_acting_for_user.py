@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A deployment's connections in the name of who uses it (I-04).
+"""A deployment's connections in the name of who uses it.
 
 The gateway's servers an application reaches in each user's name are reached
 with the token of the person talking to it, which IAM mints from what they let
@@ -106,7 +106,7 @@ def test_the_servers_in_the_users_name_are_reached_with_their_token(
     )
     toolsets_for_the_run([SimpleNamespace(id="datalayer")], PRINCIPAL)
     # Not let act in their name: nothing of theirs, and never the principal's either — the
-    # server is left out of the run (an empty Bearer broke the whole run, B-04),
+    # server is left out of the run (an empty Bearer broke the whole run),
     # never handed back as the process holds it.
     other = SimpleNamespace(id="tavily")
     assert toolsets_for_the_run(
@@ -123,7 +123,7 @@ def test_the_servers_in_the_users_name_are_reached_with_their_token(
 def test_a_company_in_each_persons_name_is_left_out_of_a_turn_nobody_signed_in_to_datalayer_asked(
     monkeypatch: Any,
 ) -> None:
-    """B-04/R-07, found on r1 (runtime image 0.0.30): a company application's
+    """Found on r1 (runtime image 0.0.30): a company application's
     turn for a personal agent runs as its deployment's principal; its own company connection
     in each person's name had no token, was opened with `Bearer ` and the MCP client refused
     the header — the whole turn failed (*could not answer just now*). That company is left

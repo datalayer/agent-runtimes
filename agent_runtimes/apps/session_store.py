@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Where sessions are kept: the ``session.store`` point's two contributions (MH-F03).
+"""Where sessions are kept: the ``session.store`` point's two contributions.
 
 The entries half of a session's truth — its record — is a
 :class:`~agent_runtimes.plugins.points.SessionStore`: **the record store**,
@@ -97,7 +97,7 @@ def _page(
     query: str,
     archived: bool,
 ) -> SessionPage:
-    """One page of described sessions, newest first, the filters of MH-02 applied."""
+    """One page of described sessions, newest first, the filters applied."""
     uid = str(owner.get("uid") or "")
     kind = str(owner.get("kind") or "")
     kept = []
@@ -353,7 +353,7 @@ Reader = Callable[[str, str], Awaitable[List[Dict[str, Any]]]]
 
 #: How many entries of one session ai-agents answers at once (its `MAX_READ`):
 #: the record is read back page by page, `start` moving by this many, until
-#: ai-agents says there are no more (R-22 (4)).
+#: ai-agents says there are no more.
 RECORD_PAGE = 1000
 
 #: The most entries one session is read back whole with: the session file's

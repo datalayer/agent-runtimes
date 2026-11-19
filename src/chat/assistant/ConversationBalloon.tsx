@@ -6,7 +6,7 @@
 /**
  * The floating assistant's conversation, open: a balloon over the character
  * that holds the conversation itself — the history as the chat draws it, the
- * welcome first, an approval as a message with *Approve* and *Deny* (T-23),
+ * welcome first, an approval as a message with *Approve* and *Deny*,
  * the composer last — with no header and no footer, a tail toward the
  * character, a close control, and a height that leaves the page in sight
  * while the history scrolls inside it.
@@ -148,7 +148,7 @@ export function ConversationBalloonClose({
 /**
  * An approval the agent waits on, as a message of the history: what it asks
  * to do, the rule it was asked under, *Approve* and *Deny*, and how many more
- * wait (T-23). Brought into view when it arrives.
+ * wait. Brought into view when it arrives.
  */
 export function BalloonApprovalMessage({
   approval,

@@ -720,7 +720,7 @@ def show_components(
     -------
     str
         That it is shown, or why not: a refusal is the call's answer, not its
-        failure, and the answer says it in words (H-02, 2026-10-08).
+        failure, and the answer says it in words (2026-10-08).
     """
     outputs = current_run_outputs()
     if outputs is None or not outputs.accepts(A2UI_MEDIA_TYPE):

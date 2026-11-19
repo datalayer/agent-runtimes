@@ -165,8 +165,8 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             ]
         )
         # Where an HTTP server is reached: a remote one is connected to there
-        # (`odoo-accounting`), a local one's command listens there (W-02,
-        # `google-workspace`).
+        # (`odoo-accounting`), a local one's command listens there
+        # (`google-workspace`).
         if spec.get("url"):
             lines.append(f'    url="{spec["url"]}",')
         # The headers a remote server is sent with every request, their
@@ -177,7 +177,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             for key, value in headers.items():
                 lines.append(f'        "{key}": "{value}",')
             lines.append("    },")
-        # A bearer minted for the run (AC-20): an AgentCore Gateway trusting
+        # A bearer minted for the run: an AgentCore Gateway trusting
         # the identity named, never a header written in the spec.
         if spec.get("auth"):
             auth = spec["auth"]
@@ -190,13 +190,25 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             lines.append(f"    env={env_formatted},")
 
         lines.append(f"    required_env_vars={envvars_formatted},")
+        # The UI plugins it brings to the chat (agentspecs 0.0.196).
+        if spec.get("ui"):
+            lines.append(f"    ui={json.dumps(list(spec['ui']), ensure_ascii=False)},")
         # What the code its tools write reads in the code sandbox: given there
-        # when the account has them, never required (R-19).
+        # when the account has them, never required.
         sandbox_envvars = spec.get("sandbox_envvars", [])
         if sandbox_envvars:
             lines.append(
                 "    sandbox_env_vars=["
                 + ", ".join(f'"{v}"' for v in sandbox_envvars)
+                + "],"
+            )
+        # What the runtime is given when the account has it, never required
+        # (LinkedIn's LINKEDIN_LI_AT, the person's session, 15 November 2026).
+        optional_envvars = spec.get("optional_envvars", [])
+        if optional_envvars:
+            lines.append(
+                "    optional_env_vars=["
+                + ", ".join(f'"{v}"' for v in optional_envvars)
                 + "],"
             )
         # The rest of what the spec says (the user, 7 November 2026): its tags,
@@ -398,6 +410,11 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 "  tools: [],",
                 f"  requiredEnvVars: {envvars_formatted},",
                 *(
+                    [f"  ui: {json.dumps(list(spec['ui']), ensure_ascii=False)},"]
+                    if spec.get("ui")
+                    else []
+                ),
+                *(
                     [f"  tags: {json.dumps(list(spec['tags']), ensure_ascii=False)},"]
                     if spec.get("tags")
                     else []
@@ -410,6 +427,13 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 *(
                     [f"  sandboxEnvVars: {json.dumps(list(spec['sandbox_envvars']))},"]
                     if spec.get("sandbox_envvars")
+                    else []
+                ),
+                *(
+                    [
+                        f"  optionalEnvVars: {json.dumps(list(spec['optional_envvars']))},"
+                    ]
+                    if spec.get("optional_envvars")
                     else []
                 ),
                 *[

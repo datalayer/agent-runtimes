@@ -195,7 +195,7 @@ def create_checkpoint_store(
         )
     if store_type == "protocol_state":
         # An execution's checkpoints, where every process of this runtime
-        # reads them (O2-05). Imported here: that module builds on this one.
+        # reads them. Imported here: that module builds on this one.
         from .protocol_state import ProtocolStateCheckpointStore
 
         # No scope is refused by the store itself, naming what it needs.

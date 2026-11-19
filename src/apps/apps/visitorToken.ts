@@ -5,7 +5,7 @@
 
 /**
  * A visitor's token, for a conversation without an account on the visitors'
- * runtime (R-30).
+ * runtime.
  *
  * ai-inference mints it (`POST /anonymous/token`) naming the visitor — the id
  * this tab keeps for them, so that a new token is the same visitor, whose
@@ -15,7 +15,7 @@
  * visitor is on the servers (turns a day, a session's minutes, a rate and a
  * ceiling for the day), not the life of a key.
  *
- * A token may also name the catalogue Battle it is played for (B4-01): its
+ * A token may also name the catalogue Battle it is played for: its
  * model calls then count against that play's own budget at ai-inference,
  * instead of the visitor's rate, and the runtime that plays a member of the
  * Battle's scene reads the Battle from it (`fetchBattleToken`, and
@@ -36,7 +36,7 @@ export type DatalayerVisitors = {
   app: string;
   /** ai-inference, which mints the visitor's token. */
   inferenceUrl: string;
-  /** The catalogue Battle the token is played for, when it is (B4-01). */
+  /** The catalogue Battle the token is played for, when it is. */
   battle?: string;
 };
 
@@ -104,7 +104,9 @@ async function mintVisitorToken(
   fetcher: typeof fetch,
 ): Promise<MintedVisitorToken> {
   const base = inferenceUrl.replace(/\/+$/, '');
-  const response = await fetcher(
+  const response = await reached(
+    fetcher,
+    'Datalayer’s inference, which gives a visitor’s key,',
     `${base}/api/ai-inference/v1/anonymous/token`,
     {
       method: 'POST',
@@ -167,7 +169,7 @@ export type BattleToken = {
 
 /**
  * Mint the token one play of a catalogue Battle is played with, by the
- * visitor this tab keeps (B4-01): the players in the page call their models
+ * visitor this tab keeps: the players in the page call their models
  * with it, its calls counted against the play's budget. Never renewed: a play
  * is minutes, and the next play mints its own.
  */
@@ -269,12 +271,54 @@ export function visitorAgentOf(app: string): string {
   return `at-${slug}`;
 }
 
+/**
+ * The visitors' runtime, or ai-inference beside it, could not be reached —
+ * the network failed (a CORS preflight refused while the runtime rolls) or
+ * it answered 5xx: worth trying again, unlike a refusal in its sentence.
+ */
+export class VisitorRuntimeUnreachable extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'VisitorRuntimeUnreachable';
+  }
+}
+
+/** Seconds before the visitors' runtime is asked again, after `attempt` failures: 2, 4, 8, 16, then every 30. */
+export function visitorRetrySeconds(attempt: number): number {
+  return Math.min(30, 2 ** Math.max(1, attempt));
+}
+
+/** A fetch that says a network failure as `VisitorRuntimeUnreachable`, naming what was asked. */
+async function reached(
+  fetcher: typeof fetch,
+  what: string,
+  url: string,
+  init: RequestInit,
+): Promise<Response> {
+  let response: Response;
+  try {
+    response = await fetcher(url, init);
+  } catch (error) {
+    throw new VisitorRuntimeUnreachable(
+      `${what} could not be reached (${
+        error instanceof Error ? error.message : String(error)
+      }).`,
+    );
+  }
+  if (response.status >= 500) {
+    throw new VisitorRuntimeUnreachable(
+      `${what} did not answer (HTTP ${response.status}).`,
+    );
+  }
+  return response;
+}
+
 /** The agent the visitors' runtime holds for a visitor, and the application it runs. */
 export type VisitorAgent = { agent: string; appId: string };
 
 /**
  * Ask the visitors' runtime for the agent a visitor's token names, made
- * there if it is not (`POST /api/v1/apps/visitors/agent`, D-15): an
+ * there if it is not (`POST /api/v1/apps/visitors/agent`): an
  * application at its address has its agent made as it is first opened, so
  * that the runtime holds the application before the page follows it.
  * Throws with the runtime's sentence when it refuses.
@@ -285,10 +329,12 @@ export async function fetchVisitorAgent(
   fetcher: typeof fetch = fetch,
 ): Promise<VisitorAgent> {
   const base = runtimeUrl.replace(/\/+$/, '');
-  const response = await fetcher(`${base}/api/v1/apps/visitors/agent`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const response = await reached(
+    fetcher,
+    'The visitors’ runtime',
+    `${base}/api/v1/apps/visitors/agent`,
+    { method: 'POST', headers: { Authorization: `Bearer ${token}` } },
+  );
   const body = (await response.json().catch(() => ({}))) as {
     agent?: string;
     app_id?: string;

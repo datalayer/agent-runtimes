@@ -25,13 +25,13 @@ card is read by anyone: it says what may be asked, and that a key is needed.
 
 **As whom it runs.** A run started by a remote caller acts with the caller's
 key and never with the runtime's own: the key is handed to the run as its
-delegated credential (`datalayer.credential`, O1-17), so the Datalayer MCP
+delegated credential (`datalayer.credential`), so the Datalayer MCP
 gateway is reached with it (`agent_runtimes.mcp.datalayer_gateway`) and
 decides what it reaches from what the key was granted.
 
 **Visitors.** An application its owner served *open to visitors*
 (``/apps/configure`` with ``visitors: true``) also answers a visitor without
-an account, as R-30 does for ``at:<slug>`` addresses: a visitor's token
+an account, as is done for ``at:<slug>`` addresses: a visitor's token
 from ai-inference (``POST /anonymous/token``) naming the visitor and this
 application by its id, verified with ai-inference (``GET /anonymous/whoami``).
 A token for another application is refused. A visitor's run never acts with
@@ -220,7 +220,7 @@ def card_of(app: Any, url: str) -> Any:
         default_input_modes=["text/plain"],
         default_output_modes=outputs,
         face={"emoji": app.emoji, **({"avatar": app.avatar} if app.avatar else {})},
-        # What the Appspec declares beside the runtime's own (PR-02): published after the A2A plugin's contributions, a URI the
+        # What the Appspec declares beside the runtime's own: published after the A2A plugin's contributions, a URI the
         # runtime already publishes refused.
         extensions=[
             extension.model_dump(by_alias=True) for extension in app.a2a.extensions
@@ -266,7 +266,7 @@ def _with_credential(body: bytes, token: str) -> bytes:
     # The key it was called with, whatever the message says: a caller does
     # not pick the identity its run acts as.
     ours[CREDENTIAL_FIELD] = token
-    # Nor the Battle it is played for: only a visitor's token names one (B4-01).
+    # Nor the Battle it is played for: only a visitor's token names one.
     from agent_runtimes.apps.visitors import A2A_BATTLE_FIELD
 
     ours.pop(A2A_BATTLE_FIELD, None)
@@ -281,7 +281,7 @@ def as_visitors_run(
     """A visitor's request, the run it starts marked theirs, with the owner's key when given.
 
     Whatever the message says: a visitor does not unmark their run, nor pick
-    the identity it acts as, nor name a Battle their token does not (B4-01).
+    the identity it acts as, nor name a Battle their token does not.
     """
     try:
         request = json.loads(body or b"null")
@@ -486,7 +486,7 @@ class A2AGate:
         await self.app(scope, replay(_with_credential(body, token), receive), send)
 
     async def _visitor(self, token: str, scope: Any, receive: Any, send: Any) -> None:
-        """A visitor's request: answered when its owner opened it to visitors (R-30)."""
+        """A visitor's request: answered when its owner opened it to visitors."""
         refusal: Optional[tuple[int, str]] = None
         visitor = ""
         battle = ""
@@ -541,7 +541,7 @@ class A2AGate:
         claims = _unverified_claims(token)
         if caller.kind == "principal":
             # The deployment's own principal, as ai-agents sends it a company's
-            # turn (B-04): only the principal this runtime acts as,
+            # turn: only the principal this runtime acts as,
             # for the same deployment grant; any other principal is refused.
             from agent_runtimes.apps.principal import (
                 is_held_principal,  # noqa: PLC0415

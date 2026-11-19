@@ -21,13 +21,22 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  anonymousSessionOf,
   anonymousTimeLeft,
+  anonymousTokenRequest,
   readJwtClaims,
   tokenLifetimeMs,
   useAnonymousSessionStore,
 } from '../anonymousToken';
 
 const URL = 'https://inference.example';
+
+/** What the keys in these tests are for: a team of the catalogue. */
+const FOR = 'team:jupyter';
+
+/** The session for {@link FOR}, as the store holds it now. */
+const session = (visitorFor = FOR) =>
+  anonymousSessionOf(useAnonymousSessionStore.getState(), visitorFor);
 
 /** The TTL the service is configured with, as it actually answers today. */
 const KEY_TTL_S = 300;
@@ -52,11 +61,12 @@ function respondWithKeys(ttlSeconds = KEY_TTL_S) {
     vi.fn(async () => {
       const issuedAt = Math.floor(Date.now() / 1000);
       minted += 1;
+      const sub = `anonymous:${minted}`;
       return {
         ok: true,
         json: async () => ({
           token: jwt({
-            sub: `anonymous:${minted}`,
+            sub,
             iat: issuedAt,
             exp: issuedAt + ttlSeconds,
           }),
@@ -125,14 +135,14 @@ describe('reading the token', () => {
 describe('starting a session', () => {
   it('counts down to what the token itself declares', async () => {
     const startedAt = Date.now();
-    useAnonymousSessionStore.getState().start(URL);
+    useAnonymousSessionStore.getState().start(URL, FOR);
     await settle();
 
-    const session = useAnonymousSessionStore.getState();
-    expect(session.status).toBe('active');
-    expect(session.token).toBeTruthy();
-    expect(session.expiresAt).toBe(startedAt + KEY_TTL_S * 1000);
-    expect(session.grantedMs).toBe(KEY_TTL_S * 1000);
+    const held = session();
+    expect(held.status).toBe('active');
+    expect(held.token).toBeTruthy();
+    expect(held.expiresAt).toBe(startedAt + KEY_TTL_S * 1000);
+    expect(held.grantedMs).toBe(KEY_TTL_S * 1000);
   });
 
   it('follows the service when it signs for longer', async () => {
@@ -141,12 +151,10 @@ describe('starting a session', () => {
     // whole change. Nothing in the page should need editing to agree.
     respondWithKeys(600);
     const startedAt = Date.now();
-    useAnonymousSessionStore.getState().start(URL);
+    useAnonymousSessionStore.getState().start(URL, FOR);
     await settle();
 
-    expect(useAnonymousSessionStore.getState().expiresAt).toBe(
-      startedAt + 600_000,
-    );
+    expect(session().expiresAt).toBe(startedAt + 600_000);
   });
 
   it('gives a visitor one key however many times it is asked for', async () => {
@@ -154,76 +162,76 @@ describe('starting a session', () => {
     // re-runs — and a second key on the next render is a trial that never
     // ends.
     const store = useAnonymousSessionStore.getState();
-    store.start(URL);
-    store.start(URL);
+    store.start(URL, FOR);
+    store.start(URL, FOR);
     await settle();
-    useAnonymousSessionStore.getState().start(URL);
+    useAnonymousSessionStore.getState().start(URL, FOR);
     await settle();
 
     expect(minted).toBe(1);
   });
 
   it('does not ask a host with nowhere to ask', () => {
-    useAnonymousSessionStore.getState().start('');
-    expect(useAnonymousSessionStore.getState().status).toBe('idle');
+    useAnonymousSessionStore.getState().start('', FOR);
+    expect(session().status).toBe('idle');
     expect(minted).toBe(0);
   });
 });
 
 describe('when the key expires', () => {
   it('stops, and gives the key up', async () => {
-    useAnonymousSessionStore.getState().start(URL);
+    useAnonymousSessionStore.getState().start(URL, FOR);
     await settle();
 
     await vi.advanceTimersByTimeAsync(KEY_TTL_S * 1000 + 1000);
 
-    const session = useAnonymousSessionStore.getState();
-    expect(session.status).toBe('expired');
+    const held = session();
+    expect(held.status).toBe('expired');
     // Handing the token back afterwards would let the chat keep sending it —
     // the service would refuse, and the refusal reads as a broken agent rather
     // than as the trial being over.
-    expect(session.token).toBeUndefined();
+    expect(held.token).toBeUndefined();
   });
 
   it('does not quietly mint another', async () => {
-    useAnonymousSessionStore.getState().start(URL);
+    useAnonymousSessionStore.getState().start(URL, FOR);
     await settle();
     await vi.advanceTimersByTimeAsync(KEY_TTL_S * 1000 + 1000);
 
-    useAnonymousSessionStore.getState().start(URL);
+    useAnonymousSessionStore.getState().start(URL, FOR);
     await settle();
 
     expect(minted).toBe(1);
-    expect(useAnonymousSessionStore.getState().status).toBe('expired');
+    expect(session().status).toBe('expired');
   });
 
   it('can be ended early by whoever notices first', async () => {
     // A backgrounded tab throttles `setTimeout`; the countdown on screen
     // recomputes from the wall clock and gets there first. Either may call it,
     // and the second call must be a no-op.
-    useAnonymousSessionStore.getState().start(URL);
+    useAnonymousSessionStore.getState().start(URL, FOR);
     await settle();
 
-    useAnonymousSessionStore.getState().expire();
-    useAnonymousSessionStore.getState().expire();
+    useAnonymousSessionStore.getState().expire(FOR);
+    useAnonymousSessionStore.getState().expire(FOR);
 
-    expect(useAnonymousSessionStore.getState().status).toBe('expired');
+    expect(session().status).toBe('expired');
   });
 });
 
 describe('when somebody signs in', () => {
   it('drops the key and cancels its timer', async () => {
-    useAnonymousSessionStore.getState().start(URL);
+    useAnonymousSessionStore.getState().start(URL, FOR);
     await settle();
 
     useAnonymousSessionStore.getState().clear();
-    expect(useAnonymousSessionStore.getState().status).toBe('idle');
-    expect(useAnonymousSessionStore.getState().token).toBeUndefined();
+    expect(session().status).toBe('idle');
+    expect(session().token).toBeUndefined();
 
     // A member who signed in must not find their session marked expired a
     // minute later by a timer nobody cancelled.
     await vi.advanceTimersByTimeAsync(5 * KEY_TTL_S * 1000);
-    expect(useAnonymousSessionStore.getState().status).toBe('idle');
+    expect(session().status).toBe('idle');
   });
 });
 
@@ -233,11 +241,11 @@ describe('when the service refuses', () => {
       'fetch',
       vi.fn(async () => ({ ok: false, status: 429, json: async () => ({}) })),
     );
-    useAnonymousSessionStore.getState().start(URL);
+    useAnonymousSessionStore.getState().start(URL, FOR);
     await settle();
 
-    expect(useAnonymousSessionStore.getState().status).toBe('failed');
-    expect(useAnonymousSessionStore.getState().error).toMatch(/429/);
+    expect(session().status).toBe('failed');
+    expect(session().error).toMatch(/429/);
     // Not retried at once: the endpoint is open to anyone and therefore rate
     // limited, and hammering it earns a longer refusal.
     const attempts = () =>
@@ -260,13 +268,13 @@ describe('when the service refuses', () => {
       json: async () => ({}),
     }));
     vi.stubGlobal('fetch', refuse);
-    useAnonymousSessionStore.getState().start(URL);
+    useAnonymousSessionStore.getState().start(URL, FOR);
     await settle();
-    expect(useAnonymousSessionStore.getState().status).toBe('failed');
+    expect(session().status).toBe('failed');
 
     respondWithKeys();
     await vi.advanceTimersByTimeAsync(5_000);
-    expect(useAnonymousSessionStore.getState().status).toBe('active');
+    expect(session().status).toBe('active');
   });
 });
 
@@ -277,5 +285,48 @@ describe('reading the clock', () => {
     expect(anonymousTimeLeft({ expiresAt: now - 5_000 }, now)).toBe(0);
     // Nothing to count is nothing left, not `NaN` in a header.
     expect(anonymousTimeLeft({}, now)).toBe(0);
+  });
+});
+
+describe('what a key is for (18 November 2026)', () => {
+  it('names it to the service: an application, a team or a scene as `app`, a Battle as `battle`', () => {
+    expect(anonymousTokenRequest('team:jupyter')).toEqual({
+      app: 'team:jupyter',
+    });
+    expect(anonymousTokenRequest('scene:sales-and-accounting')).toEqual({
+      app: 'scene:sales-and-accounting',
+    });
+    expect(anonymousTokenRequest('library:01JABC')).toEqual({
+      app: 'library:01JABC',
+    });
+    expect(anonymousTokenRequest('battle:pong')).toEqual({ battle: 'pong' });
+  });
+
+  it('sends it with the mint', async () => {
+    useAnonymousSessionStore.getState().start(URL, FOR);
+    await settle();
+    const [, init] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock
+      .calls[0] as [string, RequestInit];
+    expect(JSON.parse(String(init.body))).toEqual({ app: FOR });
+  });
+
+  it('holds one key for each thing a page runs, apart', async () => {
+    const store = useAnonymousSessionStore.getState();
+    store.start(URL, FOR);
+    store.start(URL, 'scene:sales-and-accounting');
+    await settle();
+    expect(minted).toBe(2);
+    expect(session().token).not.toBe(
+      session('scene:sales-and-accounting').token,
+    );
+    useAnonymousSessionStore.getState().expire(FOR);
+    expect(session().status).toBe('expired');
+    expect(session('scene:sales-and-accounting').status).toBe('active');
+  });
+
+  it('asks for none for nothing', () => {
+    useAnonymousSessionStore.getState().start(URL, '');
+    expect(session('').status).toBe('idle');
+    expect(minted).toBe(0);
   });
 });

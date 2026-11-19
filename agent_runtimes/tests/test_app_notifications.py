@@ -1,13 +1,13 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An application's notifications go through the channels it names (R-37).
+"""An application's notifications go through the channels it names.
 
 When a rule or a Gate asks a person through the tool-approval path, the
 channels of the application's ``notifications`` are told — through ai-agents,
 with the principal's token on a deployment, with the person's in a Preview —
 and each channel's outcome is written to its record; a channel Datalayer does
-not offer is refused here in R-27's words. ai-agents is faked over HTTP, the
+not offer is refused here in a sentence. ai-agents is faked over HTTP, the
 tool-approval path with its own method.
 """
 
@@ -132,7 +132,7 @@ def test_a_deployment_sends_as_its_principal_through_the_channels_it_names(ai_ag
     assert body["event"] == APPROVAL_REQUESTED
     assert body["app_uid"] == "app-1" and body["deployment_uid"] == "dep-1"
     assert body["session_uid"] == "s-1"
-    # Its face first, where only text goes (I-08).
+    # Its face first, where only text goes.
     assert body["title"] == f"{notifier.app.emoji} Inbox triage asks before it acts"
     assert notifier.app.emoji
     assert (

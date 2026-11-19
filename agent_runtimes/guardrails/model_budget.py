@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The model budget a delegation sets on one run (O1-07).
+"""The model budget a delegation sets on one run.
 
 An execution's policy may bound what its worker spends on models — input
 tokens, output tokens, cost. The orchestration adapters carry that budget with

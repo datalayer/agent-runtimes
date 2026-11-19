@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What agent protocols this runtime speaks (PR-50).
+"""What agent protocols this runtime speaks.
 
 ``GET {prefix}/protocols``: each protocol plugin's description, as it
 contributed it to ``protocols.description`` — its id, name, layer, the

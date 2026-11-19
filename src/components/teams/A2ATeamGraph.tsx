@@ -7,7 +7,7 @@
  * A team over A2A, as a graph (React Flow): each member is its character
  * (`AssistantStage`), with its name and where it runs under it, and an edge
  * links the entry to each peer it asks — one peer (`peer`, a team of two)
- * or several (`peers`, a team of N; A-08). The edges are the team's
+ * or several (`peers`, a team of N). The edges are the team's
  * `talks_to` (`links`): a peer that talks to another peer has its edge
  * drawn too, still, since the page runs the entry's asks only.
  *
@@ -20,7 +20,7 @@
  *
  * The members stand where the layout puts them: the entry on the left and
  * the peers to its right, one under another — or where a scene's stage
- * directions say (`positions`, fractions of the box; A-13): the
+ * directions say (`positions`, fractions of the box): the
  * distinct `x` values are the columns, left to right, the distinct `y`
  * values the rows, top to bottom.
  *
@@ -154,6 +154,8 @@ export type A2ATeamGraphProps = {
    * a balloon gets at least its own. Unsaid, the backdrop's.
    */
   balloonRoom?: number;
+  /** Every member's balloon width, fixed (`BALLOON_WIDTH`, 300, unless given). */
+  balloonWidth?: number;
   /**
    * How the stage is drawn (`SceneStageSpec.backdrop`): `studio`, the
    * drawing every scene had first, `hero` or `plain`. `studio` when unsaid,
@@ -168,7 +170,7 @@ export type A2ATeamGraphProps = {
   minHeight?: number;
   /**
    * The exchange selected in the transcript, as the edge it is on
-   * (`selectedEdgeOf`, SCENES S3-02): drawn with a halo on every backdrop —
+   * (`selectedEdgeOf`): drawn with a halo on every backdrop —
    * the edge by its id, or by its ends either way, since an answer travels
    * the asker's edge back.
    */
@@ -438,6 +440,7 @@ export function A2ATeamGraph({
   size = 96,
   calls = [],
   balloonRoom,
+  balloonWidth,
   backdrop,
   minHeight,
   selected,
@@ -629,7 +632,7 @@ export function A2ATeamGraph({
             selectable: false,
             // Above the edge and its label: a balloon overflows its node.
             zIndex: 10,
-            data: { id, side, size },
+            data: { id, side, size, ...(balloonWidth ? { balloonWidth } : {}) },
           } as Node<MemberData>,
           // A member's connections move with it.
           ...connections.map((connection, at) => {
@@ -668,6 +671,7 @@ export function A2ATeamGraph({
       CONNECTION_X,
       CONNECTION_WIDTH,
       NODE_WIDTH,
+      balloonWidth,
     ],
   );
   // The notebook open under the graph runs on a Pyodide kernel in the page:
@@ -870,7 +874,7 @@ export function A2ATeamGraph({
               edges={edges}
               nodeTypes={look.nodeTypes}
               edgeTypes={look.edgeTypes}
-              // A click on an edge: its latest exchange, for the page (S3-02).
+              // A click on an edge: its latest exchange, for the page.
               onEdgeClick={
                 onSelectEdge
                   ? (_event, edge) =>

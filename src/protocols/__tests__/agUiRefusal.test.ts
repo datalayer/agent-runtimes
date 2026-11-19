@@ -4,7 +4,7 @@
  */
 
 /**
- * Why an AG-UI run was not answered, in the page's own words (F-15):
+ * Why an AG-UI run was not answered, in the page's own words:
  * the page says the agent is not on this runtime instead of
  * `AG-UI request failed: 404`, and says the platform's own sentence
  * whenever the refusal carried one.
@@ -19,7 +19,7 @@ import {
   refusalDetail,
 } from '../../portable/agUiRefusal';
 
-describe('what the page says of an AG-UI refusal (F-15)', () => {
+describe('what the page says of an AG-UI refusal', () => {
   it('says the agent is not on this runtime, never the bare status, on a 404', () => {
     expect(agUiRefusal(404, 'Not Found')).toBe(AG_UI_NOT_ON_RUNTIME);
     expect(agUiRefusal(404, 'Not Found')).not.toContain('AG-UI request failed');

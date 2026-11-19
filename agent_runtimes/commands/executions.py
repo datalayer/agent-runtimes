@@ -3,7 +3,7 @@
 
 """The ``executions`` command group, mirrored here so it is reachable through
 the standalone ``agent-runtimes`` / ``datalayer-agents`` CLI too, not only
-through ``datalayer`` (O1-13).
+through ``datalayer``.
 
 The commands — ``run``, ``watch``, ``steer``, ``pause``, ``resume``,
 ``cancel``, ``artifacts`` — are core's own: ``datalayer_core.cli.commands.

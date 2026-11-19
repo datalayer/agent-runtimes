@@ -10,7 +10,7 @@ import { createHash } from 'node:crypto';
  * host and Datalayer ids are pseudonymous (`pseudonym`), so a trace can be
  * followed `host event → job → installation hash → session → host message`
  * without naming an installation, a person or what they wrote. Moved from
- * the Slack service (DC-004).
+ * the Slack service.
  *
  * @module portable/hosts/observability
  */
@@ -65,7 +65,7 @@ const CREDENTIAL_NAME =
 
 /**
  * A copy with credentials redacted but words kept: what an audited,
- * privileged payload read shows (S-405).
+ * privileged payload read shows.
  */
 export function redactCredentials(value: unknown, depth = 0): unknown {
   if (depth > 8) return REDACTED;
@@ -129,7 +129,7 @@ export class Logger {
   }
 
   /**
-   * An identity audit event (S-103): who (pseudonymous), which installation
+   * An identity audit event: who (pseudonymous), which installation
    * (its hash), what happened, why. Never a code, a token or a principal's
    * name.
    */

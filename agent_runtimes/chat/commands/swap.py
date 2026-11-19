@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Slash command: /swap <agent> - Swap this session's agent in place (MH-18)."""
+"""Slash command: /swap <agent> - Swap this session's agent in place."""
 
 from __future__ import annotations
 

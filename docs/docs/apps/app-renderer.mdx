@@ -57,8 +57,8 @@ From the application, `AppRenderer` sets on `LoopEmbed`:
 | `teamPicker`, `showAgentVariants`, `pluginsPanel` | `false`. The plugin graph is not among the preset's plugins any more: a host that shows it adds `GraphViewPlugin` itself.   |
 | `editors`, `showViewSelector`, `pageLayout`, `pageLayoutArrangement`, … | What its layout asks for (`appLayoutOptions(app)`): see [An application's layout](./index.mdx#an-applications-layout). |
 | `datalayerAgentSpecId`, `datalayerCreatePayload`   | On Datalayer, a runtime allocated with a plain agentspec and the application's agent created on it with the application's spec, so that the runtime enforces its rules. |
-| `datalayerVisitors`                                | `{url, app, inferenceUrl}`: without an account (R-30), the application already runs on the visitors' runtime at `url`; nothing is allocated or made, and the chat speaks to it with a visitor's token for `app` (an example's id, or `at:<slug>`), minted by ai-inference and minted again before it runs out (`useVisitorToken`). See *Visitors without an account* in [Session API](./session-api). |
-| `datalayerKept`                                    | `{url}`: a deployment kept always on (R-33) already has its agent on a runtime of its own, at `url`, made from its deployment record (`kept_payload`; the runtime reads its version's `app.py` from the deployment when it is written in Python, which that agent's sessions run) as that runtime started; nothing is allocated or made, and the chat speaks to it with the person's own token. ai-agents names `url` at the deployment's address for a person it lets talk to it. |
+| `datalayerVisitors`                                | `{url, app, inferenceUrl}`: without an account, the application already runs on the visitors' runtime at `url`; nothing is allocated or made, and the chat speaks to it with a visitor's token for `app` (an example's id, or `at:<slug>`), minted by ai-inference and minted again before it runs out (`useVisitorToken`). See *Visitors without an account* in [Session API](./session-api). |
+| `datalayerKept`                                    | `{url}`: an always-on deployment already has its agent on a runtime of its own, at `url`, made from its deployment record (`deployment_runtime_payload`; the runtime reads its version's `app.py` from the deployment when it is written in Python, which that agent's sessions run) as that runtime started; nothing is allocated or made, and the chat speaks to it with the person's own token. ai-agents names `url` at the deployment's address for a person it lets talk to it. |
 
 **A host wins over the application.** Every `LoopEmbed` prop a host passes is
 applied after these, and replaces them: `showTokenUsage` brings the counters
@@ -188,7 +188,7 @@ block no enabled plugin contributes is not drawn; it says, in its place,
 *This page places Chart, which no enabled plugin contributes: it is drawn once
 the plugin that contributes it is on.*
 
-The components its developer wrote (`interface.custom_components`, P-17)
+The components its developer wrote (`interface.custom_components`)
 are among them: the application's own plugin (`app-components`,
 `defineAppComponentsPlugin`), in its preset only, contributes each as a block
 (`loop.canvas.block`) and as a renderer (`loop.a2ui.component`), which its
@@ -201,7 +201,7 @@ the module the page fetched without credentials and checked against its
 only under a name it declares, written where its binding points before its
 action is dispatched. Another application's workspace has none of them.
 
-What its answers show (`session.send(text, show=[...])`, P-04) is drawn
+What its answers show (`session.send(text, show=[...])`) is drawn
 under the answer by the same renderer, Datalayer's catalog with the
 application's own components — the one a team's answers are drawn with on
 the home page. Among them, a **file to download** (`Download`): its name, its
@@ -212,7 +212,7 @@ followed — the block says so in its place.
 ## No markup in its conversation
 
 An application may be hosted on the platform's own origin, where people are
-signed in (D-22), so nothing a model, a connection or an application
+signed in, so nothing a model, a connection or an application
 writes as markup reaches the page — in its Preview, at its address and
 embedded alike:
 
@@ -274,20 +274,344 @@ beside it what it is allowed to do and what it did:
   the conversation ends. An application not saved on Datalayer has no record:
   the feed says it is recorded once it is. Real use only: the sessions its
   tests ran (`purpose: test`, the Evals engine's) are read apart
-  (`listSessions(…, tests)`, R-07). What the person answered when they
+  (`listSessions(…, tests)`). What the person answered when they
   were asked is a step of its own — *send_gmail_message: approved*,
   *declined*, or *not answered in time* — whether a rule or a Gate asked. A
   run's start is sent at once (`run`), so that the platform reads what is in
-  progress (R-15); the feed shows it as no step.
+  progress; the feed shows it as no step.
 - **Computer** (`defineAppComputerPlugin`, `AppComputer`): the sandbox its
   agent runs on, live — see [Its computer](#its-computer).
 
 The words are `BEHAVIOUR_WORDS`, `ACTION_WORDS` and `coverOf`
 (`apps/apps/rules`), the record's reader `apps/apps/records`.
 
+## In its title bar: buttons, drop-downs and indicators
+
+An application's `ui` may name a **header UI** — `shop-header`, `trip-header`, `social-header`,
+`books-header`, `aws-header`, `earth-header`, `notebook-header`, one per seed agent — and its
+chat's title bar then carries up to three small parts, all 28px high and in the theme's own
+tokens (`apps/toolCards/headerItems`):
+
+| Part | What it is | How it talks with the chat |
+|------|------------|----------------------------|
+| `HeaderAction` | A button. | Pressing it says its message to the agent, as the person (`viewControls.send`). |
+| `HeaderChoice` | A drop-down: an `ActionMenu` whose button is named for what it is on (`Network: Bluesky`), its options `menuitemradio`. | The option it is on goes with **every run**: `forwardedProps.loop.header.<ui id>.<item id>`, contributed through `LoopRunProps`. The runtime tells the agent the sentence the UI spec declares for it, for that run only (`agent_runtimes.apps.header`). |
+| `HeaderIndicator` | What the agent shows: words (`label`), a number and its words (`counter`), a dot and its words (`status`) or a small bar (`meter`), in a tone (`neutral`, `accent`, `success`, `attention`, `danger`). A polite live region (`role="status"`, `aria-live="polite"`): a screen reader says it when it changes. | Set by the agent through the header's **frontend tool**. Nothing is drawn before the agent said it. |
+
+What a header holds is declared, not coded: its UI spec's `header` in agentspecs
+(`agentspecs/ui/shop-header.yaml`), carried by the catalogue (`UI_CATALOGUE['shop-header'].header`).
+A plugin folder is a few lines:
+
+```tsx
+// src/apps/plugins/social-header/index.tsx
+import { defineHeaderPlugin } from '../../toolCards/headerItems';
+
+export const socialHeaderPlugin = defineHeaderPlugin({ id: 'social-header' });
+```
+
+`defineHeaderPlugin` registers, under `@datalayer/loop-plugin-<id>`:
+
+- **each item as its own entry of `LoopSlots.chatHeader`**, so that a narrow chat moves them into
+  the title bar's "…" menu one by one, before the chat's own controls;
+- **the header's frontend tool**, `set_<id>` (`set_shop_header`), handed to the chat through
+  `LoopChatExtras`. The extras of several plugins now add up their `frontendTools`, each name once
+  (`mergeChatExtras`): a header's tool beside a host example's;
+- **its drop-downs' options with every run**, through `LoopRunProps`.
+
+### The tool, and why one per header
+
+The model calls `set_shop_header({ basket: { value: 3, label: "$84.00" }, approval: { label:
+"Approval needed", tone: "attention" } })`; the page runs it — it checks the arguments against the
+header's items and answers `{ set: ["basket", "approval"] }` — and the title bar changes, with no
+call to a server. Its arguments are one per item it sets, typed from the declaration
+(`headerToolParameters`): an indicator takes `{ value?, max?, label?, tone?, visible? }`, a
+drop-down one of its option ids, and only the items named change. An argument the header does
+not have is said back to the model (`ignored`); a call that sets nothing is an error it can read.
+
+One tool per header rather than one shared `set_header_indicator`: a frontend tool is offered to
+the model by name with its JSON Schema, so a header's own tool has exactly its items as
+arguments, each described in the words of its spec, and an agent is offered only the tool of the
+header it has. A shared tool would take a free item name and an untyped value.
+
+### Where the state lives
+
+- **Indicators** are the fold of the tool's answered calls in the conversation, in order
+  (`headerStateOf` over `toolCards/toolResults`, which the transcript feeds): a re-render changes
+  nothing, and a conversation opened again shows them as they stood, since its calls are in its
+  transcript. A conversation started over forgets them (the transcript's record is cleared when a
+  chat that held messages holds none).
+- **A drop-down** is what the person picked last, kept by the plugin for the workspace on screen,
+  unless the tool set it since (the person says "we are three", the agent sets `travellers`). A
+  pick is not written in the conversation: opened again, a conversation shows the default, or
+  what the tool last set.
+- **An indicator that an older chip already read** keeps reading it until the tool says
+  otherwise (`derive`): `shop-header`'s basket from the last `show_basket`, `trip-header`'s trip
+  from the itinerary shown, `aws-header`'s savings from the recommendations listed. Such a header
+  `supersedes` the chip (`basket-total`, `trip-summary`, `aws-savings-badge`): a workspace that
+  mounts the header leaves the chip out, whoever brought it.
+
+### Where it is drawn
+
+In a Loop workspace: an `Application`, and a chat mounted with the preset's `uiPlugins`. The
+plain `Chat` component does not draw header UIs yet: there the older chips stay. A visitor's demo
+has them: they need no connection of the person's.
+
+## In its conversation: a deck and a sheet the agent builds
+
+An application's `ui` may name a **page UI** — `page-deck`, `page-sheet` — and its agent then has a
+set of frontend tools that run in the page, on a deck or a workbook kept there for the conversation
+(`apps/pageTools`). Nothing reaches the runtime: the page checks each call, changes what it keeps,
+and answers the model.
+
+Each run that carries the page's answers back is a round, and a person's message takes ten at most
+(see *Ten rounds of page tools a message* in [Session API](./session-api)): an agent makes a step's
+calls together in one response — a sheet created and written, then formatted with its panel and
+header — and a deck's outline in one `deck_add_slides` call.
+
+| UI | Tools | Drawn by |
+| --- | --- | --- |
+| `page-deck` | `deck_create`, `deck_set_title`, `deck_add_slide`, `deck_add_slides` (several slides in one call, refused whole on one bad slide), `deck_update_slide`, `deck_move_slide`, `deck_delete_slide`, `deck_set_theme`, `deck_read` | Datalayer Decks' `DeckView`: the slides, **Notes**, **Present** for the full screen. |
+| `page-sheet` | `sheet_create`, `sheet_write_range`, `sheet_read_range`, `sheet_format_range`, `sheet_freeze`, `sheet_add_tab`, `sheet_show_tab`, `sheet_insert_chart` | Datalayer Cells' `Spreadsheet`, with its formula bar and tabs, editable; **Export CSV** through Cells' own writer. |
+
+Each is a tool card plugin (`defineToolCardPlugin`) that also takes `frontendTools`: the kit
+contributes them through `LoopChatExtras`, so they reach the agent wherever it runs — in the page,
+or on a runtime, where they are sent with each run and executed here when it calls one. The plugin
+binds every tool of its set to one card:
+
+- the **last call that changed** the deck or the workbook draws it, live;
+- every call before it is **one line** saying what it did (*Added a bullets slide “The plan”*,
+  *Wrote 6 rows from A2*);
+- a call the page refused, or one that failed, keeps the chat's own row.
+
+```tsx
+import { deckTools, emptyDeck } from '@datalayer/agent-runtimes/lib/apps/pageTools/deck';
+
+// The same tools, bound to a deck of your own: what a Battle's deck arena does.
+let deck = emptyDeck();
+const tools = deckTools({ read: () => deck, change: next => (deck = next(deck)) });
+```
+
+**What the page checks.** Every argument is typed and checked before anything changes; a refusal is
+a sentence for the model, and leaves the deck or the sheet as it was. A slide's text is drawn as
+text and a cell as a number, a text or a boolean: markup in either is shown as written. A picture,
+and a link in a slide's text, is an `https://` address. A text starting with `=` is a formula,
+computed by Cells' engine and nothing else; a format is named (`currency` with `EUR`), never a
+format code. A deck holds 40 slides; a workbook 8 tabs, a tab 20,000 cells, a write 2,000.
+
+**The theme of a deck** (`deck_set_theme`) is the deck's alone: it is given to Decks as its host's
+theme and never to the page, so a dark deck does not turn the conversation dark.
+
+**What is kept** (`pageTools/conversation`). The deck or the workbook belongs to the conversation
+on the page and stays as the transcript is drawn again. It is written nowhere else. When the page
+is loaded again and the conversation comes back with its recorded calls, it is built again by
+replaying those that succeeded, in order; when the conversation starts over, it is emptied.
+**What a person typed into the sheet's cells is not replayed**: the sheet says so and offers the
+export. While the page lives, the person's edits and the agent's writes are one workbook:
+`sheet_read_range` answers what is on screen.
+
+**Not there.** A deck is not printed or saved from a conversation: Decks prints a deck from a page
+of its own, which a deck kept in the page does not have.
+
+**Where it is drawn.** A page UI's placements are `message`, `right` and `left`. The Marketer and
+the Accountant, and their demos, place theirs `right`: the deck or the sheet is drawn in the
+workspace's right panel, which opens with the first call, and the conversation keeps one line per
+call. Placed `message`, the last call that changed it draws it in the conversation instead.
+
+## Under its composer: what it runs with
+
+An application's composer lists what its agent runs with, in three menus beside its other
+controls: its **MCP servers**, its **skills** and its **model** (`EquipmentBar`,
+`chat/prompt/menus/EquipmentMenus`). Each lists everything the agent declares, on or off, and
+each trigger counts what is on: `1/2` servers running, `3/5` skills active, the model's name (its
+icon alone on a phone).
+
+| Menu | A row says |
+|------|-----------|
+| MCP servers | **Running** (with how many tools), **Starting**, **Failed** (with the reason its start gave), **Not started**, or **Off**: an optional server whose secrets are not set up, with what it needs, such as `needs DISCORD_BOT_TOKEN, DISCORD_GUILD_ID`. |
+| Skills | **Active**, or **Not activated** with what it needs: `needs TAVILY_API_KEY`, or `needs one of PEXELS_API_KEY, UNSPLASH_ACCESS_KEY` for a skill that one key among several sets up. |
+| Model | **In use**, **Available**, or **Not available** with the runtime's reason. |
+
+What is said of a secret is the *name* of its variable, never its value.
+
+**They are read, not chosen.** A person using an application chooses none of these: its builder
+did, in its spec. A row is a menu item a keyboard reaches and a screen reader reads whole (its
+name, its state, why); choosing one does nothing and leaves the menu open, and each menu says so
+at its foot. Nothing is switched from here, and no model is sent with a run. This holds for
+everybody: a visitor at a demo, somebody signed in at a deployment's page, and its builder in the
+Preview. An agent's own chat keeps its selectors, which do switch.
+
+**Where it is read.** The servers and the skills come from the runtime the application runs on,
+`GET /api/v1/apps/agents/{agent}/equipment` ([the session API](./session-api.mdx)), asked with
+the caller's token and again every half minute; the models from the chat's read of them,
+`GET /api/v1/configure/models`. Both are answered wherever an application runs: the visitors'
+runtime and a deployment's included. Until the runtime answers, the menus list what the agent's
+spec declares, with no state, and say **Declared**; they stay so on a runtime that does not have
+the route, and for models when the runtime calls none of them usable (the visitors' runtime
+calls the model with each visitor's own token).
+
+Shown for an application that runs on a runtime with its Appspec; not for an agent turned in
+the page, which has no runtime to ask.
+
+## Beside its conversation: the side panels
+
+The workspace has two side panels, one on each side of the view (`apps/shell/SidePanel`): the
+**left** one (`LoopSlots.leftPanel`), where a host says what the application is (next section),
+and the **right** one (`LoopSlots.rightPanel`), where the agent's UI placed `right` shows. A UI
+spec that lists `left` or `right` among its placements may be placed in either:
+
+| Placed there | What it draws | In the conversation |
+| --- | --- | --- |
+| `page-deck`, `page-sheet` | The deck or the sheet, live (`defineToolCardPlugin(options, side)`, its `Panel`) | A line per call (`useCardSide`, `cardRole`) |
+| A header UI | Its items stacked under its name (`defineHeaderPlugin(...)(side)`) | Nothing |
+| A chrome UI | Its component (`defineChromePlugin`) | Nothing |
+
+```yaml
+# agentspecs/agents/worker-marketer.yaml (abridged)
+ui:
+  - plugin: page-deck
+    placement: right
+  - plugin: side-panels
+```
+
+Both panels follow one contract. Closed to start with; a toggle while closed and something fills
+it, the left one leading the chat's title bar (`chatHeaderLeading`), the right one trailing it
+(`chatHeaderTrailing`), each with `aria-expanded` and `aria-controls`; open, the toggle is gone,
+the panel's Close control or Escape closes it and the focus goes back to the toggle. A panel takes
+the width its widest component asks (`panel.width`: the deck 520, the sheet 600), and when two
+open panels would leave the conversation under 480px, the one opened last stays
+(`useSidePanels`, `bothFit`). Under 720px a panel opens over the conversation, the whole of it.
+
+**What opens it is the conversation's.** It opens with the first call of the tools its UI
+follows (`panel.follows`: the deck's first slide), with the agent's `open_side_panel` and closes
+with `close_side_panel` (the `side-panels` UI, `{side}` each; `open_side_panel` is refused in a
+sentence when nothing is placed on that side), and with the person's toggle, whose word holds
+until the agent's next call (`sidePanelCallEvent`, `sidePanelOpen`). It is all read from the
+conversation's recorded calls (`toolResults`), so a conversation opened again shows its panels
+as they stood, and one started over closes them (`ToolResultsStore.getGeneration`).
+
+## Over its conversation, for a moment: notices
+
+The agent slides a short notice in from an edge of the conversation with one frontend tool,
+`show_notice({tone, title, text?, edge?, seconds?})`, of the `notices` UI (`apps/plugins/notices`):
+info, success, warning or error, a title of up to 80 characters and a line of up to 280, from the
+north (unsaid), east, south or west. It is primer-addons' `SlidingPanel`, `contained` in the
+conversation (`LoopSlots.viewOverlay`, between the chat's title bar and its composer,
+`conversationInsets`): never over the page around the workspace, the application's controls or
+the person's typing. It says it comes from the agent, holds words only and no control but its
+Close, and goes after its seconds (8 for info and success, 12 for a warning; an error stays until
+closed), with Close, Escape or a click. One per edge: a new one on the same edge replaces the old,
+and the agent is told (`replaced`). An error is read out at once (`role="alert"`), the others
+politely (`role="status"`). Nothing is kept: a conversation opened again shows none.
+
+## The left panel: what a host says about it
+
+A host may say something *about* the application on the leading edge of its
+workspace: its presentation, a guide. That is the left panel
+(`LoopSlots.leftPanel`), and any host fills it with a plugin of its own,
+handed to the application (`<Application renderer={{ plugins: [MyPlugin] }} />`,
+or `AppRenderer`'s `plugins`):
+
+```tsx
+import { definePlugin } from '@datalayer/reactor';
+import type { ReactorReactOutput } from '@datalayer/reactor/react';
+import { LoopSlots } from '@datalayer/agent-runtimes/lib/apps/core';
+import type { LoopLeftPanelComponent } from '@datalayer/agent-runtimes/lib/apps/shell';
+
+const about: LoopLeftPanelComponent = {
+  id: 'about',
+  slot: LoopSlots.leftPanel,
+  // Rendered with the workspace and the application it draws.
+  Component: ({ application }) => <About app={application} />,
+  panel: {
+    // Its toggle's name; a function reads it off the application.
+    label: application => `About ${application?.name}`,
+    // No toggle and no panel for an application with nothing to present.
+    when: application => Boolean(application?.presentation),
+  },
+};
+
+export const AboutPlugin = definePlugin<Record<string, never>, unknown, ReactorReactOutput>({
+  name: 'my-host-about',
+  build: () => ({ components: [about] }),
+});
+```
+
+The shell does the rest. The panel is **closed to start with**, so the page
+keeps the whole width; its toggle is an icon button leading the chat's title bar, before the
+application's face and name
+(in the workspace's header when it draws one), which says what it opens
+(`panel.label`), that it is closed (`aria-expanded="false"`) and which
+element it controls (`aria-controls`). The toggle is there **only while the
+panel is closed**: open, the panel's Close control closes it, and the toggle
+shows back with the focus on it. On opening, the focus moves into the panel,
+to its Close control, so that a keyboard or a screen reader is not left on
+a button that has gone; Escape closes it from anywhere inside. Open, the
+panel is a column of `LEFT_PANEL_WIDTH` (400px) beside the page; in a
+workspace narrower than `LEFT_PANEL_NARROW` (720px, a phone) it opens over
+the page instead. Its width and opacity move in 200ms, and not at all under
+`prefers-reduced-motion`. Closed, it is out of the tab order, and its
+components are mounted on the first opening only. Make the plugin once,
+outside the host's render: a new plugin restarts the workspace.
+
+### Closing it from inside
+
+The shell keeps whether the panel is open, and hands it to each component of
+the slot (`LoopLeftPanelProps`), beside the workspace and the application:
+
+| Prop | Type | What it is |
+| --- | --- | --- |
+| `application` | `AppSpec \| undefined` | The application the workspace draws. |
+| `open` | `boolean` | Whether the panel is open. |
+| `close` | `() => void` | Close it: the toggle shows back, the focus on it. |
+| `toggle` | `() => void` | Open it when closed, close it when open. |
+| `panelId` | `string` | The panel's element id, which its toggle controls. |
+
+There is always **one** Close control. Unless the component says otherwise,
+the shell draws it: an X icon button at the top of the panel, named
+*Close: …* after the toggle. A component that draws its own says so with
+`panel.closes: true`, and the shell draws none; mark that control with
+`data-loop-left-panel-close` and the focus goes to it when the panel opens:
+
+```tsx
+import { IconButton } from '@primer/react';
+import { XIcon } from '@primer/octicons-react';
+import type { LoopLeftPanelComponent, LoopLeftPanelProps } from '@datalayer/agent-runtimes/lib/apps/shell';
+
+function About({ application, close }: LoopLeftPanelProps) {
+  return (
+    <>
+      <IconButton icon={XIcon} aria-label="Close" onClick={close} data-loop-left-panel-close="" />
+      <h3>{application?.name}</h3>
+    </>
+  );
+}
+
+const about: LoopLeftPanelComponent = {
+  id: 'about',
+  slot: LoopSlots.leftPanel,
+  Component: About as LoopLeftPanelComponent['Component'],
+  panel: { label: application => `About ${application?.name}`, closes: true },
+};
+```
+
+The application is said to the host's plugins by `AppRenderer` itself, as
+the `LoopApplication` contribution (`{ app }`, the Appspec in the words the
+person reads): a host that names an application (`app="demo-marketer"`)
+has not read its spec, and its plugin reads it there
+(`useContributions(LoopApplication)`), or takes the `application` prop the
+left panel renders its components with.
+
+What an application says of itself for such a panel is its Appspec's
+`presentation`, one Markdown document
+([agentspecs: Its presentation](https://agentspecs.datalayer.tech/docs/apps#its-presentation));
+a person's own agent carries its agentspec's (`agentAppspec`). The few
+blocks drawn in a way of their own (a check mark before each item of a
+list, a note in emphasis, links as buttons) are the host's to draw:
+agent-runtimes ships the slot, not the panel.
+
 ## Its computer
 
-An application's computer is the sandbox its agent runs on (R-23). Its
+An application's computer is the sandbox its agent runs on. Its
 Appspec's `permissions.computer` turns on three parts, each off until it is
 turned on, and a part that is off gives its agent no tool — it is never shown
 one, where its connections' tools are filtered (`AppRulesCapability.prepare_tools`,
@@ -395,7 +719,7 @@ and an application's page under [An application's page](./index.mdx#an-applicati
 ## When it cannot answer
 
 A host that knows the application cannot answer — its model is not offered,
-or not served today (R-27) — wraps it in `ChatAvailabilityProvider`
+or not served today — wraps it in `ChatAvailabilityProvider`
 (`chat/base/ChatAvailability`) with `disabled` and the reason in a sentence.
 The workspace's chat honours it as it honours a sandbox's gate: the composer
 is switched off and says the reason, instead of sending a question nothing
@@ -415,7 +739,7 @@ to:
 | *Live*                         | A model answers now; nothing plays from a recording.                                                                                                                                                                                                        |
 | the model, *Claude Sonnet 4.6* | Resolved as the chat resolves it on the browser target: the agent spec under the application's id, then the agent the application names, then the platform's default (`DEFAULT_MODEL`), shown by its catalogue name without its provider. The application's own `model` is sent only to a runtime, and is not read in the browser. |
 | *nothing is kept*              | A signed-out conversation is not saved: closing the page ends it.                                                                                                                                                                                           |
-| the limit                      | **Not built.** There is no limit per visitor and no spend ceiling for the day yet, and no recorded conversation that would play, saying it is one, when the limit is reached (H-04, H-08). The page says nothing about a limit until there is one. |
+| the limit                      | **Not built.** There is no limit per visitor and no spend ceiling for the day yet, and no recorded conversation that would play, saying it is one, when the limit is reached. The page says nothing about a limit until there is one. |
 
 *How it is built*, a quiet link under the chat, turns the frame over to show
 the same application written out, read only, as the Studio's text view writes
@@ -424,14 +748,14 @@ documentation is on the site, at
 [/docs/applications/home-chat](https://datalayer.ai/docs/applications/home-chat).
 
 **On the visitors' runtime.** Given `target="datalayer"` and
-`datalayerVisitors`, it runs on the visitors' runtime (R-30): with its
+`datalayerVisitors`, it runs on the visitors' runtime: with its
 search, reading only, nothing kept, under a visitor's limits. In the browser
 target the model answers alone: no runtime, no tool, no search.
 
 ## Commands and modes in the composer
 
 An application's Appspec may give its composer **commands** and **modes**
-(`interface.commands`, `interface.modes`, P-19). `AppRenderer` adds them
+(`interface.commands`, `interface.modes`). `AppRenderer` adds them
 as a plugin of their own (`defineAppComposerPlugin`), only for an application
 that has some:
 
@@ -480,7 +804,7 @@ and a mode's model for an agent whose model its host chose itself.
 
 An application's Appspec may offer several **profiles** — assistants in one
 application, each with its instructions, its model and its starters
-(`interface.profiles`, P-20). The composer's plugin adds a picker beside
+(`interface.profiles`). The composer's plugin adds a picker beside
 the composer, *Profile: Support*, on the first unless another is picked; the
 profile picked goes with every run as `forwardedProps.loop.profile`, and the
 runtime tells the agent its `instructions` before the modes' and runs its
@@ -498,7 +822,7 @@ rebuilding the workspace.
 
 ## The nine inputs
 
-The settings' form (`interface.settings`, C-16) is drawn with the inputs
+The settings' form (`interface.settings`) is drawn with the inputs
 `interface.settings_ui` names, a uiSchema by field name — the page's Form
 block takes it as `ui` (Form 1.1.0). Seven are `@datalayer/primer-rjsf`'s
 widgets: Select (a field with an `enum`), Slider (`range`), TextInput (a
@@ -515,7 +839,7 @@ What a person reads of an application — its name, description and welcome,
 its starters and their categories, its settings' titles and their values'
 names, its commands' descriptions, its modes and its profiles — is shown in
 their language when its Appspec is translated into it
-(`interface.translations`, by BCP 47 tag, P-26), and in its own words
+(`interface.translations`, by BCP 47 tag), and in its own words
 otherwise. `AppRenderer` picks the language: its `language` prop, else the
 browser's; `fr-CA` reads `fr` (`pickLanguage`). `translatedAppspec(app,
 preferred)` is the application as they read it; the agent is still created
@@ -586,7 +910,7 @@ POST /api/v1/apps/feedback
 ```
 
 `message` names the answer it is about by its place among the
-conversation's answers (`answerIdOf`, P-24). The answer says
+conversation's answers (`answerIdOf`). The answer says
 `{"kept": true, "summary": ..., "heard": ...}`: `heard` is whether the
 application's Python code ran its `@app.feedback`.
 
@@ -597,11 +921,11 @@ sends it to ai-agents at once, through the same `/api/ai-agents/v1/apps/records`
 every entry takes. It answers `404` for a conversation it did not record,
 `409` for an application that keeps no feedback, and `502` when the record
 could not be sent, with the reason; the strip says that sentence. The
-Studio's Readiness page counts what was kept (V-18).
+Studio's Readiness page counts what was kept.
 
 ## A thread opened from the history
 
-A host that opens one of the person's earlier conversations (P-24)
+A host that opens one of the person's earlier conversations
 hands the chat its session's uid with `fromRuntime`:
 
 ```tsx
@@ -619,7 +943,7 @@ is said, and a new conversation starts.
 An application whose Appspec grants it a Space to write
 (`permissions.spaces`, `access: write`) is given one tool on the runtime,
 `save_to_space(title, content, space?)` — the result it wants to keep, in
-markdown (R-24). Nothing is written before a person saw it:
+markdown. Nothing is written before a person saw it:
 
 - **Shown first.** The call is always asked on the approvals path — whatever
   its rules say of writing, short of *Leave it to me*, which refuses it — and
@@ -650,7 +974,7 @@ Preview, the person. A visitor without an account only reads: the call is
 refused before anybody is asked. On a deployment the approval reaches its
 maker, as every approval of its rules does.
 
-**What it writes says who wrote it** (I-10). The page ends with its
+**What it writes says who wrote it**. The page ends with its
 byline — *Written by 📬 Inbox Triage, for Ana Lopez.*, or *Written by 📬 Inbox
 Triage, on its own.* in a session nobody opened — and the document's metadata
 names the application and the person it acted for (`authorship`). The person
@@ -686,7 +1010,7 @@ not signed; what only reads is never touched.
 ## What it learns
 
 An application saved on Datalayer is given two more tools on the runtime
-(R-26, `agent_runtimes.apps.learning`):
+(`agent_runtimes.apps.learning`):
 
 - `propose_skill(name, description, instructions)` — what a conversation
   worked out, written so that it can be done again: a name in lower-case
@@ -705,13 +1029,13 @@ Its owner reviews the queue on the application's page in the Studio
 an approved one declined again with **Stop using it**
 (`GET …/apps/skills?app_uid=`, `POST …/apps/skills/{uid}/decision`). Neither
 tool acts outside the platform, so both are reading to its rules. A visitor
-without an account proposes nothing (R-30), and an application run from its
+without an account proposes nothing, and an application run from its
 file learns nothing.
 
 ## With nobody present
 
 A session nobody opened — woken by one of its schedules (`woken_by`) — has
-nobody to ask (R-16). Its rules capability is told so
+nobody to ask. Its rules capability is told so
 (`AppRulesCapability.unattended`, set from the recorder by
 `unattended_when_woken` — on the agent made in process by `app_capabilities`
 and on the one a runtime makes for a deployment):
@@ -728,7 +1052,7 @@ still shown first: with a rule on writing, its maker is asked.
 At its address and embedded — wherever it runs as a deployment, so whenever
 `instance.deploymentUid` is given — an application says under its prompt,
 before anything is written, what its record keeps of the conversation and for
-how long (R-31). The words come from its Appspec: each item of
+how long. The words come from its Appspec: each item of
 `record.include` in a person's words (`KEPT_ITEMS`), and `record.keep_for`
 as a duration (`keptForWords`):
 
@@ -738,7 +1062,7 @@ An application whose `include` is empty still keeps that a session took place,
 and says that alone: *Quiet keeps only that this conversation took place, for
 a year.* To a visitor not signed in — the page passes `datalayerVisitors` — it
 says *Nothing of this conversation is kept: you are not signed in.*, since
-nothing is (R-30). Its builder's Preview says nothing: it is theirs.
+nothing is. Its builder's Preview says nothing: it is theirs.
 
 It is a plugin of its own (`defineAppKeptPlugin`, a `LoopPromptPanel`
 contribution below the prompt), drawn by the composer in every layout, and
@@ -762,6 +1086,7 @@ conversation, and a decision drawn by the real workspace as its host's page
 says when one is not (`app-page-blocks.test.tsx`); components its developer
 wrote, reviewed, contributed by its own plugin and drawn in their frame
 (`app-custom-components.test.tsx`); the presence state (`presence-status.test.ts`); in
+the side panels — the deck placed right drawn there and a line per call, opened by its first call, by the agent's tools and by the person, the one opened last kept, a conversation started over closing them, a header UI stacked — and the notices — one per edge, words only, between the title bar and the composer (`side-panels.test.tsx`, `left-panel.test.tsx`); the three menus under the composer — every server, skill and model listed with its state and why, read only, the spec until the runtime answers (`equipment-menus.test.tsx`, `test_app_equipment.py`); a header UI — its tool's typed arguments, a call changing an indicator, a drop-down's option going with the next run, a button's message, names and roles (`header-items.test.tsx`), and the sentences the runtime tells for a drop-down (`test_app_header.py`, `test_app_sessions.py`); in
 the landing, the home page's line — the model resolved as the chat resolves
 it, the words of the line — and its *How it is built* (`homeLight.spec.ts`).
 With nobody present: reading goes on, acting without a rule refused, a rule

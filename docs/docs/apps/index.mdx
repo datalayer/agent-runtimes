@@ -90,7 +90,8 @@ inside the Datalayer app, and inside a JupyterLab panel.
 | `LoopCommand` | — | every plugin; each command is a slash command, a palette entry, and (optionally) a keystroke |
 | `LoopAgentGate` | chat plugin | agents plugin — whether there is anything to talk to, and why not |
 | `LoopNotebookToolbar` / `LoopDocumentToolbar` items | toolbar plugins | the chat contributes its agent actions onto the editors' toolbars |
-| Slots (`LoopSlots.header`, `chatHeader`, `promptAction`, `inpromptMenu`, `footer`, `status`, `sidebar`, `root`) | shell | anything with chrome to add — the floating prompt uses `root`, the + uses `promptAction` |
+| Slots (`LoopSlots.header`, `chatHeader`, `promptAction`, `inpromptMenu`, `footer`, `status`, `sidebar`, `leftPanel`, `rightPanel`, `viewOverlay`, `root`) | shell | anything with chrome to add — the floating prompt uses `root`, the + uses `promptAction`, a host's presentation of the application uses `leftPanel` ([closed until opened](./app-renderer#the-left-panel-what-a-host-says-about-it)), the agent's UI placed `right` uses `rightPanel` ([the side panels](./app-renderer#beside-its-conversation-the-side-panels)), its notices `viewOverlay` |
+| `LoopApplication` | `AppRenderer` | a host's plugins — the Appspec of the application the workspace draws |
 
 The segmented editor control shows **nothing at all** until a plugin
 contributes an editor: an empty workspace is an empty control, not a fake one.
@@ -428,7 +429,7 @@ An application names its contexts — the [Frames](https://agentspecs.datalayer.
 of the catalogue, and its organization's own, whose ids start with `org-` — in
 its `context`. A runtime tells its agent them after the agent's own prompt and
 before the application's `instructions`, as the organization it belongs to
-reads them (U-31, U-32):
+reads them:
 
 - the version the organization's owners saved of a catalogue Frame — its
   rules, words and voice — in place of the catalogue's, the rest of the Frame
@@ -520,7 +521,7 @@ its words, and `appKindPaths(app)` adds the application's settings:
 
 `/status` is where the answer stands, in a word (Ready, Thinking, Answering,
 Answered, Stopped). `/inputs/<id>` is a field of `interface.settings`, the
-JSON Schema of the settings' form (C-16). A page with no surface composed
+JSON Schema of the settings' form. A page with no surface composed
 draws them as one `Form` block, with `@datalayer/primer-rjsf`: a form without an
 action has no button and writes its values at `/inputs` as they are filled, for
 the next run. A `ChoicePicker` a builder placed at a setting holds a list, the
@@ -544,7 +545,7 @@ follow what a button or a block sent.
 held in the page. `run` sends the files there with the inputs, and `upload`, a
 File upload's own action, runs at once on the files of its context (else those
 at `/files`): each is uploaded to the application's runtime first, and its ref
-goes to the application's session with the chat's run (RU-6: no
+goes to the application's session with the chat's run (no
 bytes in the run)
 (`forwardedProps.loop`, see [Session API](./session-api)), which puts each in
 the sandbox of an application with a shell, whatever its type and size, gives
@@ -565,7 +566,7 @@ is said where it would have been drawn.
 ### Checks
 
 An application's checks run beside its rules, enforced by the runtime
-(`apps/guards.py`, `AppChecksCapability`; R-06). agentspecs
+(`apps/guards.py`, `AppChecksCapability`). agentspecs
 declares Guards and Gates; this runtime executes them. Three moments:
 
 - **At a session's start** (`preflight`), once per session, before its model
@@ -573,7 +574,7 @@ declares Guards and Gates; this runtime executes them. Three moments:
   open. The built-in check first: nothing shaped like a credential in what
   the application tells its model (its instructions, its modes', its
   profiles'); one found stops the session — *The instructions hold a GitHub
-  token: nothing sensitive is given to its model.* — since R-19 would withhold
+  token: nothing sensitive is given to its model.* — since the rule would withhold
   it anyway and a secret written there is a fault of the Appspec. Then each
   preflight Guard it names under `checks.guards`, run on its Appspec:
   - the **Required Frame Guard** (`frames_missing`): every context under
@@ -597,7 +598,7 @@ declares Guards and Gates; this runtime executes them. Three moments:
     Shield cuts nothing then), and reading each of its documents and Spaces
     is not denied by the Policy's rules for who launched it.
 
-  Every Guard's verdict is a `check` entry of the record (R-07) —
+  Every Guard's verdict is a `check` entry of the record —
   `stage: preflight`, `guard`, `passed`, `gate` when a Gate read it
   (`configuration-check`), and its sentence. A Guard that fails **stops the
   session** with that sentence, a Gate naming it or not: there is nothing to
@@ -682,14 +683,32 @@ Earthdata connection's bearer does.
 | --- | --- |
 | the runtime's process | every declared secret |
 | an MCP server | its own, and no other server's |
-| the code sandbox (the kernel the model's code runs in) | the skills' and the servers' `sandbox_envvars` alone: a server's credential stays with the server |
+| the code sandbox (the kernel the model's code runs in) | the skills' (their `envvars`, and the `optional_env_vars` the account has) and the servers' `sandbox_envvars` alone: a server's credential stays with the server |
 | a person's notebook (a runtime with no agentspec and no application) | its kernel keeps the account's secrets (decided 2026-10-07) |
 | anything else | nothing: a secret no spec declares is given to nothing |
+
+**A skill's optional secrets, and its any-of rule** (agentspecs 0.0.218). A
+skill's `optional_env_vars` are given to the runtime and its sandbox when the
+account has them and are never required. A skill that says `any_of_env_vars`
+is activated when one at least of them is there: the stock image skill,
+`image-stock`, with one key among `UNSPLASH_ACCESS_KEY`, `PEXELS_API_KEY`,
+`PIXABAY_API_KEY` and `FREEPIK_API_KEY`, which a person sets in Settings ›
+Secrets under those names. With none, the agent starts without the skill,
+whether its spec lists it under `optional` or not: it is not offered its
+tools, and its instructions say which keys would set it up. With some, the
+skill offers those providers alone. Such a secret never refuses a runtime: on
+one its deployment's owner did not launch, whose sandbox holds none of the
+owner's secrets, the skill is left out. The toolset decides the same from the
+skill's own `SKILL.md` (`env`, agent-skills 1.5.0), read at each call: a skill
+whose required variable is not set, or none of whose any-of variables is, is
+not listed, not loaded and not run. `GET /api/v1/configure/skills` says for
+each skill its `optional_env_vars`, its `any_of_env_vars`, which are set
+(`set_env_vars`, by name) and whether it is `ready`.
 
 **An application's runtime is launched with its Appspec.** Whoever launches
 one for an application sends its Appspec with the launch —
 `RuntimesClient.create(app_spec=…)` refuses `app_uid` without it, and so does
-the Operator (`422`); `loop apps run --cloud`, a deployment kept on its
+the Operator (`422`); `loop apps run --cloud`, an always-on deployment's
 runtime and a scheduled or event session all send it. The Operator hands it
 to the companion's start hooks, the companion declares it with the spec and
 hands it on (`launch_app_spec`) to `configure-from-spec` or
@@ -741,7 +760,7 @@ it.
 skills' declared secrets in its environment, because a skill's script needs
 them. A secret printed as it is, is withheld; one printed changed — reversed,
 encoded — is not, since no value matches it. An application's answer is
-checked for credentials by its built-in check too (R-06).
+checked for credentials by its built-in check too.
 
 ## Extending Loop
 

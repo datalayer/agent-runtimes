@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The Universal Commerce Protocol, ``2026-08-25`` (PR-30 to PR-32).
+"""The Universal Commerce Protocol, ``2026-08-25``.
 
 A shopping client over the REST binding, read through ``ucp-sdk``'s models
 (:mod:`.client`); UCP as a Reactor plugin whose approver, payment instruments,
@@ -9,7 +9,7 @@ proposal store and capability extensions are contribution points
 (:mod:`.plugin`); and a local test merchant (:mod:`.merchant`). A purchase is
 an exact, revisioned proposal, approved by the person, completed once.
 
-Tools and their action classes (F-10): ``search``, ``propose`` and, after
+Tools and their action classes: ``search``, ``propose`` and, after
 the sale, ``get_order`` are ``read``; ``create``, ``update`` and ``cancel`` a
 checkout are ``write``; ``complete`` is ``buy``.
 """
@@ -33,8 +33,8 @@ from .client import (
     revision_of,
 )
 
-#: Each operation's action class (F-10), for Rules (R-05): agentspecs'
-#: ``protocol-tools/ucp.yaml`` (PR-54).
+#: Each operation's action class, for Rules: agentspecs'
+#: ``protocol-tools/ucp.yaml``.
 ACTION_CLASSES = operation_classes("ucp")
 
 __all__ = [

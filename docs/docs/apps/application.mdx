@@ -1,0 +1,162 @@
+---
+sidebar_position: 2.8
+title: The Application component
+---
+
+# The Application component
+
+`Application` puts an application in a React page as a component of the page
+itself: no custom element, no script to load, the page's own theme. It is what
+the [`<datalayer-app>` element](./embedding.mdx) draws in its shadow root, so a
+page that mounts the component and a page that pastes the snippet get the same
+application, drawn by the same code.
+
+```tsx
+import { Application } from '@datalayer/agent-runtimes/lib/apps/Application';
+```
+
+It is also exported from `@datalayer/agent-runtimes/lib/apps`.
+
+## Two examples
+
+A public application for a visitor who is not signed in. Here it is the
+Marketer demo at its address, with ten turns in the preview:
+
+```tsx
+<div style={{ height: 560 }}>
+  <Application
+    app="demo-marketer"
+    runsOn={{ kind: 'visitor', maxTurns: 10, onSignIn: () => goToSignIn() }}
+  />
+</div>
+```
+
+A person's own agent, already running on one of their runtimes:
+
+```tsx
+import {
+  Application,
+  agentAppspec,
+} from '@datalayer/agent-runtimes/lib/apps/Application';
+
+<Application
+  app={agentAppspec(spec)} // its agentspec, as a chat
+  runsOn={{
+    kind: 'runtime',
+    url: 'https://r1.datalayer.run/agent-runtimes/pool/rt-1',
+    agentId: 'default', // the agent's name on that runtime
+    name: 'rt-1',
+    thread: { id: sessionUid, messages: [], fromRuntime: true }, // go on with a session
+  }}
+/>;
+```
+
+## Props
+
+| Prop | What it is |
+| --- | --- |
+| `app` | An Appspec, or a name: a catalogue example (`web-research`), an application at its address on Datalayer (`demo-marketer`), or a decision's id. A name is read before anything is drawn. |
+| `runsOn` | Where it runs: `visitor`, `runtime`, `server` or `datalayer` (see below). |
+| `theme` | `host` (the default) uses the page's primer-addons theme. `own` uses the application's own theme, `loop` unless the Appspec names one, as the element does. |
+| `height` | The height of an inline application. By default it fills its container (`100%`). |
+| `skeleton` | What holds its place while a name is read. A skeleton by default, never a loading sentence. |
+| `mode` | `inline`, `bubble`, `panel` or `assistant`. The Appspec's `deployment.embedded.mode` by default, then inline. |
+| `accent`, `colorMode`, `font` | The host's accent, mode and font over the application's. |
+| `language` | The language the application is read in (`fr`, `pt-BR`). The browser's by default. |
+| `speech` | Where its voice runs, when its Appspec has one. |
+| `host` | What the page gives the application and what it is told: values, functions, events ([the page and the application, talking](./embedding.mdx#the-page-and-the-application-talking)). |
+| `plugins` | The host's plugins for the assistant mode's characters. |
+| `instance` | What its record is kept under on Datalayer. |
+| `renderer` | What the host's own page adds to its workspace: `plugins` (cards, panels, menu actions; a [left panel](./app-renderer#the-left-panel-what-a-host-says-about-it) that presents the application), `pluginsOff` (UI plugins its organization turned off), `computer`, `sidebar`, `autoFocusPrompt`. Datalayer's page at an application's address (`/apps/<slug>`) passes these. |
+| `resume` | On a host's server with an embed token: keep the visit's session in the page's storage (on by default). |
+| `ownPortal` | Draw overlays inside its own root. Only for a component mounted in a root of its own, such as the element's shadow root. |
+
+## Where it runs
+
+### `visitor`
+
+The visitor is not signed in. The application runs on the visitors' runtime
+next to ai-agents. The chat mints a visitor's token from ai-inference for that
+one application, and mints it again before it runs out.
+
+| Field | What it is |
+| --- | --- |
+| `api` | ai-agents. Default: the platform's configuration, then the AI plane. Given, it is ai-inference's address too. |
+| `inference` | ai-inference, when it is not at `api`. |
+| `anonymous` | The limited preview, on unless `false`. The preview shows the turns left, the temporary key's clock and *Sign in*. What the agent would bring that needs one of the visitor's own connections shows as locked chips in the title bar. |
+| `maxTurns` | The turns a visitor has today, as the preview counts them. |
+| `signInUrl` / `onSignIn` | Where *Sign in* goes, or what it does. |
+| `callToAction` | The preview's call to action in the host's words, in place of *Sign in*: `{ says, label, onAction }`, the box's sentence, its button's word and what the button does. For a viewer the host knows is signed in and who tries the demo on the visitors' runtime all the same: the turns are still counted, only the words and the action change. |
+| `origin` | Where Datalayer's run page is, for a decision. Default: the page's origin. |
+| `visitors` | The runtime and token target, when the host has already read them. The element passes this. |
+
+What a visitor may not use is said in one sentence in the application's place:
+an application that acts through its owner's connections, or one that runs
+code of its own on a runtime that is not running.
+
+Where nothing is at the address (ai-agents answers 404: an address nobody
+deployed, a private one, an example the visitors' runtime does not keep), the
+person reads *No application is at this address.*, centred in the
+application's frame in the theme's muted text, with no internal name. The
+detail for the developer (which examples are kept for visitors, the embed
+token a private address takes) is written to the browser's console. The
+element (`<datalayer-app>`) says it the same way.
+
+### `runtime`
+
+The agent is already running on a runtime of the person's. Nothing is launched,
+and nothing is created on the runtime.
+
+| Field | What it is |
+| --- | --- |
+| `url` | The runtime's agent-runtimes address (`…/agent-runtimes/<pool>/<name>`). |
+| `agentId` | The agent's name on that runtime, often `default`, for a person's own agent made from its agentspec. Leave it out for an always-on deployment: its own agent answers, made under the application's id. |
+| `name` | The runtime's name. |
+| `thread` | The session to continue: one the runtime holds, or a paused one resumed on it (`fromRuntime: true`). |
+
+The chat sends each turn through the runtime's session API
+(`/api/v1/apps/agents/<agentId>/ag-ui/`), so every conversation is a session
+that can be listed, paused and resumed. It authenticates with the signed-in
+person's token from core's IAM store.
+
+`agentAppspec(spec)` turns an agentspec into the Appspec of a chat: the agent's
+name, emoji, welcome, suggestions as starters, and the UI of the agent and its
+MCP servers and skills.
+
+### `server` and `datalayer`
+
+`server` runs it on an agent-runtimes server of the host's own (`url`), with
+the visit's embed token (`embedToken`) when it has one. `datalayer` launches
+it on a Datalayer runtime with the signed-in person's credentials; its
+`thread` continues a conversation opened from the person's history.
+
+## Where Datalayer uses it
+
+- The six agent demos on datalayer.ai's home page: visitor mode.
+- A Personal agent's page: runtime mode, on the person's own runtime.
+- An application at its address, `/apps/<slug>`, and its run page in the
+  Studio: visitor mode signed out, runtime mode when it is always on,
+  `datalayer` otherwise; `mode: 'assistant'` when it is shipped as its avatar
+  alone.
+- `<datalayer-app>`, which wraps it.
+
+## The theme
+
+With `theme: 'host'`, the application takes the page's primer-addons theme and
+colour mode. The application's accent is laid over it inside the
+conversation. A theme its Appspec names (`interface.theme`), or a `colorMode`
+or `font` the host passes, puts it in its own theme instead. Floating modes
+always use their own theme.
+
+## What the element adds
+
+`<datalayer-app>` reads what only an element can be given and draws
+`Application` with `theme: 'own'` and `ownPortal`:
+
+- an Appspec written inside it, or one at an address (`spec`);
+- an application read with its embed token;
+- its attributes and CSS variables;
+- its shadow root, which keeps the page's styles and the application's apart.
+
+A name with no token is read with `resolveApplication`, the same function
+`Application` uses.

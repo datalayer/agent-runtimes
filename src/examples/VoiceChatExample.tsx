@@ -50,7 +50,7 @@ const LANGUAGES = [
   { tag: 'fr-FR', label: 'Français' },
 ] as const;
 
-/** When answers are heard (VO-21): on request is the Appspec's default. */
+/** When answers are heard: on request is the Appspec's default. */
 const OUTPUTS = [
   { output: 'on_request', label: 'Read aloud on request' },
   { output: 'always', label: 'Always read aloud' },

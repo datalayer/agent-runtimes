@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Tests for the ACP binding (O0-07).
+"""Tests for the ACP binding.
 
 The same execution that ran through A2A runs through ACP with no
 orchestration logic changed: a session is opened, a turn is prompted, its
@@ -67,7 +67,7 @@ SPEC_UPDATES = [
 ]
 
 #: The same turn in the dialect agent-runtimes' own ACP route spoke until
-#: O1-11: flattened into the parameters, a bare string for the content block.
+#: Flattened into the parameters, a bare string for the content block.
 ROUTE_UPDATES = [
     {
         "method": "session/update",
@@ -360,7 +360,7 @@ class TestDelegation:
         """A session is a projection of the execution.
 
         The identifier has to be on the attempt or the next step cannot
-        load it, and O1-11 moves session ownership behind this store.
+        load it, and session ownership moved behind this store.
         """
         store = InMemoryExecutionStore()
 
@@ -385,7 +385,7 @@ class TestDelegation:
 
     @pytest.mark.asyncio
     async def test_the_attempt_keeps_what_the_agent_says_the_turn_spent(self):
-        # O2-10: in the answer's `_meta`, as agent-runtimes' ACP route sends it.
+        # In the answer's `_meta`, as agent-runtimes' ACP route sends it.
         spent = {"inputTokens": 21, "outputTokens": 8, "cost": None, "currency": "USD"}
         channel = FakeChannel(script=SPEC_UPDATES, meta={"datalayer": {"usage": spent}})
         store = InMemoryExecutionStore()
@@ -399,7 +399,7 @@ class TestDelegation:
     async def test_an_update_outside_the_schema_carries_no_answer(self):
         """The flattened dialect with a bare ``chunk`` is not the schema's.
 
-        agent-runtimes' own route spoke it until O1-11; now that the route
+        agent-runtimes' own route spoke it once; now that the route
         speaks the schema, an update in that shape is read as nothing rather
         than guessed at.
         """
@@ -485,7 +485,7 @@ class TestApprovals:
     async def test_a_permission_request_is_reported_and_refused_when_nobody_can_answer(
         self,
     ):
-        """Answering for a person is the control plane's (O1-08).
+        """Answering for a person is the control plane's.
 
         Leaving the request unanswered would stop the worker with no reason
         recorded anywhere, which is the failure mode this refusal replaces.
@@ -760,7 +760,7 @@ class TestOtherOperations:
 class TestTheTrace:
     @pytest.mark.asyncio
     async def test_the_connection_carries_the_delegation_trace_to_the_agent(self):
-        """O0-11: restored on every worker.
+        """Restored on every worker.
 
         ACP has no per-message header, so the connection is where the trace
         goes, and nobody has to remember to put it there: the attempt span

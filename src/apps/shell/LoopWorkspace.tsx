@@ -61,6 +61,7 @@ import {
 import { SIDEBAR_WIDTH } from '../plugins/plugins-panel';
 import { ViewSwitcher } from './ViewSwitcher';
 import { SidebarRail } from './SidebarRail';
+import { SidePanel, SidePanelToggle, useSidePanels } from './SidePanel';
 
 export type LoopWorkspaceProps = {
   /** Server backing this session. */
@@ -164,7 +165,7 @@ export type LoopWorkspaceProps = {
    */
   headerContainer?: HTMLElement | null;
   /**
-   * The sidebar as a rail (T-07): a narrow column of line icons, one per
+   * The sidebar as a rail: a narrow column of line icons, one per
    * panel, and the chosen panel beside it — rather than every panel stacked
    * in one column. False by default; an application's shell asks for it. In
    * a `panel` layout the sidebar stays a stack under the view.
@@ -277,7 +278,7 @@ function WorkspaceBody({
   useEffect(() => {
     setAgentId(initialAgentId);
   }, [initialAgentId]);
-  // The thread the chat sends on, said by the chat (its session, SH-54).
+  // The thread the chat sends on, said by the chat (its session).
   const [thread, setThreadState] = useState<string | undefined>(undefined);
   const setThread = useCallback((next: string) => {
     setThreadState(current => (current === next ? current : next));
@@ -301,6 +302,54 @@ function WorkspaceBody({
   // Read to decide whether the column exists at all, not to render it: the
   // slot does that.
   const sidebar = useSlotComponents(LoopSlots.sidebar);
+  // The side panels: what a host says about the work on the leading edge
+  // (`LoopSlots.leftPanel`), what the agent builds beside the conversation
+  // on the trailing one (`LoopSlots.rightPanel`). Closed until the person
+  // or the agent opens them; decided together, so that two never leave the
+  // view too narrow (`useSidePanels`).
+  const rowRef = useRef<HTMLDivElement | null>(null);
+  const sidePanels = useSidePanels(rowRef);
+  const leftPanel = sidePanels.left;
+  const rightPanel = sidePanels.right;
+  const leftPanelToggle = useMemo(
+    () =>
+      leftPanel.components.length > 0 ? (
+        <SidePanelToggle panel={leftPanel} />
+      ) : null,
+    // The toggle is drawn again when what it says changes, not on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      leftPanel.components.length,
+      leftPanel.open,
+      leftPanel.label,
+      leftPanel.icon,
+      leftPanel.panelId,
+      leftPanel.setOpen,
+    ],
+  );
+  const rightPanelToggle = useMemo(
+    () =>
+      rightPanel.components.length > 0 ? (
+        <SidePanelToggle panel={rightPanel} />
+      ) : null,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      rightPanel.components.length,
+      rightPanel.open,
+      rightPanel.label,
+      rightPanel.icon,
+      rightPanel.panelId,
+      rightPanel.setOpen,
+    ],
+  );
+  /*
+   * Where the toggles go: in the workspace's header when it draws one, else
+   * in the chat's title bar — the left one leading it, before the agent's
+   * face and name, the right one trailing it — each on the side its panel
+   * opens from.
+   */
+  const chatHeaderLeading = showHeader ? null : leftPanelToggle;
+  const chatHeaderTrailing = showHeader ? null : rightPanelToggle;
   const commandsRef = useRef(commands);
   const currentWorkspace = useRef<LoopWorkspaceContext | null>(null);
   const compact = layout === 'panel';
@@ -339,7 +388,7 @@ function WorkspaceBody({
         argv: command.argv,
       });
       // What a command sends goes to the agent as if typed: an
-      // application's command sends its prompt (P-19).
+      // application's command sends its prompt.
       if (result?.prompt) {
         onSend?.(result.prompt, currentWorkspace.current!);
         prompts.submit(result.prompt);
@@ -372,6 +421,8 @@ function WorkspaceBody({
       viewControls,
       setViewControls,
       chatHeaderActions,
+      chatHeaderLeading,
+      chatHeaderTrailing,
       chatViewModes,
     }),
     [
@@ -387,6 +438,8 @@ function WorkspaceBody({
       viewControls,
       setViewControls,
       chatHeaderActions,
+      chatHeaderLeading,
+      chatHeaderTrailing,
       chatViewModes,
     ],
   );
@@ -420,11 +473,13 @@ function WorkspaceBody({
    */
   const headerControls = (
     <>
+      {showHeader ? leftPanelToggle : null}
       {headerActions}
       <ReactorSlot slot={LoopSlots.header} props={{ workspace }} />
       {showViewSelector ? (
         <ViewSwitcher views={views} workspace={workspace} compact={compact} />
       ) : null}
+      {showHeader ? rightPanelToggle : null}
     </>
   );
 
@@ -510,8 +565,22 @@ function WorkspaceBody({
         </Box>
       ) : null}
 
-      <Box flex="1 1 auto" minHeight={0} display="flex">
+      <Box
+        ref={rowRef}
+        flex="1 1 auto"
+        minHeight={0}
+        display="flex"
+        // What the left panel opens over, in a narrow workspace.
+        position="relative"
+      >
+        <SidePanel
+          panel={leftPanel}
+          narrow={sidePanels.narrow}
+          props={{ workspace }}
+        />
         <Box flex="1 1 auto" minWidth={0} minHeight={0} position="relative">
+          {/* What slides in over the view, inside its bounds: the agent's notices. */}
+          <ReactorSlot slot={LoopSlots.viewOverlay} props={{ workspace }} />
           <ReactorViewHost
             point={LoopViewType}
             active={effectiveViewType}
@@ -523,6 +592,11 @@ function WorkspaceBody({
             )}
           />
         </Box>
+        <SidePanel
+          panel={rightPanel}
+          narrow={sidePanels.narrow}
+          props={{ workspace }}
+        />
         {sidebar.length > 0 && sidebarRail && !compact ? (
           <SidebarRail
             components={sidebar}

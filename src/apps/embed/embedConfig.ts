@@ -4,7 +4,7 @@
  */
 
 /**
- * An application in another product's page, as its host writes it (D-07, D-08, D-11, T-13): one script tag and one element, `<datalayer-app>`,
+ * An application in another product's page, as its host writes it: one script tag and one element, `<datalayer-app>`,
  * whose attributes — or, for the theme, the host's CSS variables — say what
  * it shows and how it looks.
  *
@@ -62,6 +62,12 @@ export const EMBED_ATTRIBUTES = {
     'The language the visitor reads the application in, as BCP 47 tags it (fr, pt-BR): its translation into it, and the chat’s own words; the visitor’s browser’s by default.',
   'user-token':
     'A token your server signed with the deployment’s secret, naming your user (HS256: sub, name, exp at most an hour away): what an application that says user: signed opens its session with.',
+  anonymous:
+    'true or false: whether a public application talked to without an account shows the limited preview — the box with the turns left and Sign in, the temporary key’s clock, Anonymous in the footer, its MCP servers and skills listed disabled; true by default.',
+  'max-turns':
+    'The turns a visitor without an account has today, as the preview counts and shows them (10 for Datalayer’s demos); unsaid, the preview counts none and only Datalayer’s own limits apply.',
+  'sign-in':
+    'Where the preview’s Sign in goes: an address; Datalayer’s sign-in page by default, brought back to this page.',
 } as const;
 
 export type EmbedAttribute = keyof typeof EMBED_ATTRIBUTES;
@@ -100,8 +106,8 @@ export const EMBED_OBSERVED_ATTRIBUTES = Object.keys(
 ) as EmbedAttribute[];
 
 /**
- * What a host may set from its own stylesheet, on the element or above it
- * (D-11): the accent, the face and the mode. An attribute says the same and
+ * What a host may set from its own stylesheet, on the element or above it:
+ * the accent, the face and the mode. An attribute says the same and
  * wins over the variable.
  */
 export const EMBED_HOST_VARIABLES = {
@@ -118,7 +124,7 @@ export const EMBED_COLOR_MODES: EmbedColorMode[] = ['light', 'dark', 'auto'];
 export type EmbedFloatingView = 'floating-small' | 'panel' | 'assistant';
 
 /**
- * The four modes (D-07), and the chat they float in: a **bubble** is the
+ * The four modes, and the chat they float in: a **bubble** is the
  * round button that opens a popup — the copilot pattern; a **panel** is the
  * conversation at the page's right edge, at full height; the **assistant** is
  * the character that speaks in a balloon. **Inline** has no chat of
@@ -223,7 +229,7 @@ export type EmbedLook = {
   colorMode: EmbedColorMode;
   /** The host's face; empty for the theme's own. */
   font: string;
-  /** The theme the application names (T-30); `loop` when it names none. */
+  /** The theme the application names; `loop` when it names none. */
   variant: AppThemeVariant;
 };
 
@@ -257,7 +263,7 @@ export function embedLookOf(
 }
 
 /**
- * Whether a visit's conversation is picked up again after a reload (D-13): on unless the host writes `resume="false"`. Anything else is
+ * Whether a visit's conversation is picked up again after a reload: on unless the host writes `resume="false"`. Anything else is
  * refused in a sentence.
  */
 export function resumeOf(value: string | null | undefined): boolean {
@@ -267,7 +273,7 @@ export function resumeOf(value: string | null | undefined): boolean {
 }
 
 /**
- * The language a host says its visitor reads (P-26), checked: a BCP 47
+ * The language a host says its visitor reads, checked: a BCP 47
  * tag (`fr`, `pt-BR`), else refused in a sentence. Unsaid, none: the
  * visitor's browser's.
  */
@@ -286,6 +292,69 @@ export function languageOf(
   return text;
 }
 
+/**
+ * Whether a visitor without an account is shown the limited preview (the
+ * user, 15 November 2026): on unless the host writes `anonymous="false"`.
+ */
+export function anonymousOf(value: string | null | undefined): boolean {
+  return (
+    oneOf(value, ['true', 'false'] as const, 'a value of anonymous') !== 'false'
+  );
+}
+
+/**
+ * The turns a visitor has today as the preview counts them: a whole number
+ * above none, else refused in a sentence. Unsaid, none: no limit counted.
+ */
+export function maxTurnsAttributeOf(
+  value: string | null | undefined,
+): number | undefined {
+  const text = value?.trim();
+  if (!text) {
+    return undefined;
+  }
+  const turns = Number(text);
+  if (!/^\d+$/.test(text) || !Number.isInteger(turns) || turns < 1) {
+    throw new EmbedAttributeError(
+      `datalayer-app: "${text}" is not a number of turns; max-turns is a whole number, such as 10.`,
+    );
+  }
+  return turns;
+}
+
+/**
+ * Where the preview's *Sign in* goes: the host's address (http or https),
+ * else Datalayer's sign-in page at `origin`, brought back to `page` — by its
+ * path when it is on that origin, else by its address.
+ */
+export function signInOf(
+  value: string | null | undefined,
+  origin: string,
+  page: {
+    href: string;
+    origin: string;
+    pathname: string;
+    search: string;
+    hash: string;
+  },
+): string {
+  const text = value?.trim();
+  if (text) {
+    if (!/^https?:\/\//.test(text)) {
+      throw new EmbedAttributeError(
+        `datalayer-app: "${text}" is not an address to sign in at; sign-in is an http or https address.`,
+      );
+    }
+    return text;
+  }
+  const base = origin.replace(/\/+$/, '');
+  const back =
+    page.origin === base
+      ? `${page.pathname}${page.search}${page.hash}`
+      : page.href;
+  return `${base}/signin?post_auth_redirect=${encodeURIComponent(back)}`;
+}
+
 /** The height of an inline application, in pixels. */
 export function inlineHeightOf(value: string | null | undefined): number {
   const height = Number.parseInt(value ?? '', 10);
@@ -300,7 +369,7 @@ const attributeValue = (value: string): string =>
     .replace(/>/g, '&gt;');
 
 /**
- * The element's properties a page may set (D-10, D-08): what it passes, the
+ * The element's properties a page may set: what it passes, the
  * functions it offers and the embed token.
  */
 export const EMBED_PROPERTIES = ['context', 'functions', 'token'] as const;
@@ -313,7 +382,7 @@ export const EMBED_PROPERTIES = ['context', 'functions', 'token'] as const;
  * element sets them on an element not yet upgraded: each becomes a property
  * of that object, which shadows the class's accessor once it is defined, and
  * the application was never offered the page's functions (seen 2026-10-10,
- * D-10: the run sent no tool). Called as the element is constructed.
+ * The run sent no tool). Called as the element is constructed.
  */
 export function adoptPropertiesSetEarly(
   element: object,
@@ -346,25 +415,25 @@ export type EmbedSnippetOptions = {
   theme?: EmbedColorMode;
   font?: string;
   /**
-   * Its voice listens (VO-18, `embedListens`): the snippet says that
+   * Its voice listens (`embedListens`): the snippet says that
    * the page's `Permissions-Policy` must allow the microphone, which the
    * element asks for in the page itself.
    */
   listens?: boolean;
 };
 
-/** Said in a snippet whose application listens (VO-18): the element is in the page, so the page's policy decides. */
+/** Said in a snippet whose application listens: the element is in the page, so the page's policy decides. */
 export const EMBED_MICROPHONE_NOTE =
   '<!-- It listens: this page’s Permissions-Policy must allow the microphone (microphone=(self)), or its composer says the microphone was refused. -->';
 
-/** Whether an application's voice listens (VO-18): its snippet and its frame ask for the microphone. */
+/** Whether an application's voice listens: its snippet and its frame ask for the microphone. */
 export function embedListens(app: Pick<AppSpec, 'interface'>): boolean {
   const voice = app.interface.voice;
   return Boolean(voice?.enabled && voice.input !== 'off');
 }
 
 /**
- * The snippet a host pastes (D-08): one script tag and one element. A public
+ * The snippet a host pastes: one script tag and one element. A public
  * application needs no token; a private one takes the token its owner was
  * issued for it, written as given, so the snippet works for as long as the
  * token lives — a host's own page writes the one its server is issued for
@@ -390,4 +459,27 @@ export function embedSnippetOf(options: EmbedSnippetOptions): string {
     `<script src="${attributeValue(origin + EMBED_SCRIPT_PATH)}" async></script>`,
     `<${EMBED_TAG}${written}></${EMBED_TAG}>`,
   ].join('\n');
+}
+
+/** The run page an application on Datalayer is framed from. */
+export function frameSrcOf(origin: string, app: string, token = ''): string {
+  // The token in the fragment, which no server is sent: it reaches the page
+  // and no access log.
+  return `${origin.replace(/\/+$/, '')}/public/apps/${encodeURIComponent(app)}/run?embed=1${
+    token ? `#token=${encodeURIComponent(token)}` : ''
+  }`;
+}
+
+/**
+ * A framed run page told the visitor's language: `language=` in its
+ * query, before the fragment that holds the token.
+ */
+export function frameInLanguage(src: string, language?: string): string {
+  if (!language) {
+    return src;
+  }
+  const at = src.indexOf('#');
+  const [page, fragment] =
+    at < 0 ? [src, ''] : [src.slice(0, at), src.slice(at)];
+  return `${page}${page.includes('?') ? '&' : '?'}language=${encodeURIComponent(language)}${fragment}`;
 }

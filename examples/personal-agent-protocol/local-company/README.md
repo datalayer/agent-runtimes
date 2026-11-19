@@ -16,7 +16,7 @@ company (`personal_agent_protocol.company`):
 
 A local company offers the `agent` interface and Device Sign-In, approved on
 the host's own page (`approve_device`). In Datalayer the same company is
-hosted by the company service at `<slug>.apps.datalayer.ai`.
+answered at its agent host, `<slug>.agent.datalayer.ai`, from the runtime it is kept on.
 
 ```bash
 loop apps run examples/personal-agent-protocol/local-company/app.py

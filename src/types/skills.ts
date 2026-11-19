@@ -10,6 +10,7 @@
  * - `enabled`: enabled, SKILL.md loading pending
  * - `loaded`: SKILL.md loaded, included in the LLM system prompt
  */
+import type { UiChoice } from './agentspecs';
 export type SkillStatus = 'available' | 'enabled' | 'loaded';
 
 /**
@@ -84,6 +85,11 @@ export interface SkillsResponse {
  *   containing `SKILL.md` (relative to the configured skills folder).
  */
 export interface SkillSpec {
+  /**
+   * The UI plugins it brings to the chat that uses it (agentspecs 0.0.196):
+   * injected after the agent's own while it is in use (`apps/agentUiPlugins`).
+   */
+  ui?: UiChoice[];
   /** Unique skill identifier */
   id: string;
   /** Skill version */
@@ -110,8 +116,10 @@ export interface SkillSpec {
   skillMetadata?: Record<string, string>;
   /** Environment variables required by this skill */
   requiredEnvVars: string[];
-  /** Optional environment variables */
+  /** Optional environment variables: given when the account has them, never required */
   optionalEnvVars?: string[];
+  /** Its activation rule: one at least of these must be set, or the skill is left out */
+  anyOfEnvVars?: string[];
   /** Python package dependencies */
   dependencies?: string[];
   /** How it is installed where an agent runs it */

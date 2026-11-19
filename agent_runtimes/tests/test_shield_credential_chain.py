@@ -1,10 +1,10 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Authority across the chain (SH-33).
+"""Authority across the chain.
 
 A run delegated with an execution's credential (``_meta.datalayer.credential``
-over ACP, ``metadata.datalayer.credential`` over A2A, O1-17) lends
+over ACP, ``metadata.datalayer.credential`` over A2A) lends
 its harness the gateway's toolsets with *that* credential — before a
 deployment's principal or the caller's token — so a sub-agent the harness
 spawns, which reaches MCP through the servers its parent was lent, is held to
@@ -269,7 +269,7 @@ async def test_the_credential_in_an_a2a_messages_metadata_scopes_the_harnesss_su
     gateway: tuple[Gateway, str],
     workspace: Path,
 ) -> None:
-    """Over A2A: the delegating message's ``metadata.datalayer.credential`` (O1-17)
+    """Over A2A: the delegating message's ``metadata.datalayer.credential``
     leaves the message before the task keeps it, is held for the run, and lends the
     harness's MCP — the sub-agent's write refused by the read-only credential, the
     credential nowhere in the task's history or the audit."""

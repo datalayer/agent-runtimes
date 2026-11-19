@@ -4,13 +4,13 @@
  */
 
 /**
- * A thread opened from a person's history, to go on with it (P-24).
+ * A thread opened from a person's history, to go on with it.
  *
  * A thread is a session of an application: its uid is the conversation's
  * AG-UI thread. Opened again, its conversation is read from the runtime the
  * chat runs on — the session's messages while the runtime holds it
- * (`GET …/sessions/{uid}/messages`, D-13), else the session resumed from its
- * record (`POST …/sessions/{uid}/resume` with the agent, R-04), whose
+ * (`GET …/sessions/{uid}/messages`), else the session resumed from its
+ * record (`POST …/sessions/{uid}/resume` with the agent), whose
  * stream's `MESSAGES_SNAPSHOT` says what it holds — and the chat draws it
  * and goes on with it on the same thread.
  *

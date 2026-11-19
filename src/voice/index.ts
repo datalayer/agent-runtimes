@@ -66,15 +66,15 @@ export interface ChatVoice {
   language: string;
   /**
    * `push_to_talk`: the microphone in the composer; `hands_free`: that, and
-   * *Talk with it* beside it — a conversation by voice (VO-12, VO-13);
+   * *Talk with it* beside it — a conversation by voice;
    * `off`: none.
    */
   input: 'off' | 'push_to_talk' | 'hands_free';
-  /** The silence after speech that ends a hands-free turn, in ms (VO-12): 500 when unsaid. */
+  /** The silence after speech that ends a hands-free turn, in ms: 500 when unsaid. */
   turnSilenceMs?: number;
   /**
    * When answers are heard: `always`, as they are written; `on_request`, a
-   * *Read aloud* under each answer (VO-21); or `off`, the default.
+   * *Read aloud* under each answer; or `off`, the default.
    */
   output?: 'off' | 'on_request' | 'always';
   /** The voice of the catalogue answers are spoken with; the language's first when unsaid. */
@@ -84,8 +84,8 @@ export interface ChatVoice {
   /** The packages that hear, loaded when voice is first used: transformers.js and vad-web when unsaid. */
   engines?: VoiceEngines;
   /**
-   * How long a silence, after speech, stops a microphone clicked on, in ms
-   * (VO-10, VO-69): 1,500 when unsaid; longer for a person who pauses.
+   * How long a silence, after speech, stops a microphone clicked on, in ms:
+   * 1,500 when unsaid; longer for a person who pauses.
    */
   silenceMs?: number;
   /** ai-agents, whose speech service says the answers, and hears where the browser does not. */
@@ -97,12 +97,12 @@ export interface ChatVoice {
    * `interface.voice.where`.
    */
   where?: 'auto' | 'device' | 'server';
-  /** The person asked for their language to be found by Whisper on the server (VO-14). */
+  /** The person asked for their language to be found by Whisper on the server. */
   detect?: boolean;
   /** The token the speech service is asked with. */
   token?: string;
   /**
-   * The days the application keeps what is said as sound (VO-63), when its
+   * The days the application keeps what is said as sound, when its
    * record keeps `audio`: asked in the microphone's first sentence, each
    * turn's recording sent with its words. Never for a visitor.
    */
@@ -110,14 +110,14 @@ export interface ChatVoice {
   /** Send what is said at once, rather than put it in the composer. */
   sendWhatISay?: boolean;
   /**
-   * How fast the voice speaks, as a multiplier of its own pace (VO-25,
-   * VO-30). The speech service has no speed of its own, so this is applied
+   * How fast the voice speaks, as a multiplier of its own pace.
+   * The speech service has no speed of its own, so this is applied
    * where the sound is played.
    */
   rate?: number;
-  /** How loud it is, 0 to 1 (VO-25, VO-30). */
+  /** How loud it is, 0 to 1. */
   volume?: number;
-  /** The microphone to listen with, a `MediaDeviceInfo.deviceId` (VO-30). */
+  /** The microphone to listen with, a `MediaDeviceInfo.deviceId`. */
   microphoneId?: string;
   /** Whose consent to the microphone is remembered: the application's id. */
   consentKey?: string;

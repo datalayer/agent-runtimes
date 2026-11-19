@@ -4,7 +4,7 @@
  */
 
 /**
- * The conversation's components, as one contract for every renderer (M-032):
+ * The conversation's components, as one contract for every renderer:
  * the props each one takes, and what each says — to the
  * eye and to a screen reader — computed here once, so that a native renderer
  * (Datalayer Mobile's `.native` views) and the web's draw the same rows with
@@ -60,7 +60,7 @@ export type QuestionCardProps = {
 };
 
 /**
- * A protocol display under its tool row (M-037): what it shows is
+ * A protocol display under its tool row: what it shows is
  * `displayLine`'s and the display's own — a coding agent's `diff` as a
  * unified diff in the file's language (`unifiedDiffLines`), its `terminal`
  * as the command and the output kept; what the person does goes out
@@ -78,7 +78,7 @@ export type ProtocolDisplayProps = {
   onSignedIn: (words: string) => void;
   /**
    * Open a Direct Conversation under the conversation a company answered in
-   * (`portable/direct`, M-038); absent where none can be opened.
+   * (`portable/direct`); absent where none can be opened.
    */
   onOpenDirect?: (company: string, conversationId: string) => void;
 };

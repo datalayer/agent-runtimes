@@ -228,7 +228,7 @@ class ACPClient:
 
         What the session said so far is replayed as updates before the load
         is answered, and an agent that keeps its sessions still has them
-        after a restart (O1-11).
+        after a restart.
 
         Args:
             session_id: The session to load.

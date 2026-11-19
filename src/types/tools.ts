@@ -6,6 +6,7 @@
 /**
  * Runtime binding metadata for a tool implementation.
  */
+import type { UiChoice } from './agentspecs';
 export interface BackendToolRuntimeSpec {
   /** Implementation language */
   language: 'python' | 'typescript';
@@ -19,6 +20,11 @@ export interface BackendToolRuntimeSpec {
  * Specification for a runtime tool.
  */
 export interface BackendToolSpec {
+  /**
+   * The UI plugins it brings to the chat that uses it (agentspecs 0.0.196):
+   * injected after the agent's own while it is in use (`apps/agentUiPlugins`).
+   */
+  ui?: UiChoice[];
   /** Unique tool identifier */
   id: string;
   /** Version */
@@ -39,6 +45,11 @@ export interface BackendToolSpec {
   requiresApproval?: boolean;
   /** Runtime binding metadata */
   runtime: BackendToolRuntimeSpec;
+  /**
+   * The accounts the person links in Settings that set it up, one of them
+   * enough (`x`, `bluesky`; agentspecs 0.0.189): no secret is pasted for it.
+   */
+  linkedAccounts?: string[];
   /** The icon, `<package>:<name>` — `@datalayer/icons-react:odoo` (agentspecs.marks; see `SpecMark`) */
   icon?: string;
   /** Drawn where there is no icon */
@@ -87,7 +98,7 @@ export interface FrontendToolSpec {
    */
   toolset: string | string[];
   /**
-   * The tools of the set that stream (AGENT_BATTLE B1-00): called once,
+   * The tools of the set that stream: called once,
    * each keeps pushing events the harness tells the model as turns it did
    * not ask for — an arena's `arena_watch`.
    */
@@ -217,7 +228,7 @@ export interface FrontendToolDefinition<
    * the page keeps pushing events through `subscribe` until the
    * subscription ends. The harness tells the model each event as a turn it
    * did not ask for (an arena says where the ball is rather than waiting to
-   * be asked; AGENT_BATTLE, 6 November 2026).
+   * be asked, 6 November 2026).
    */
   streams?: boolean;
 

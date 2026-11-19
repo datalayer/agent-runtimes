@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The contexts an application's agent works under (U-31, U-32).
+"""The contexts an application's agent works under.
 
 An application names its contexts — the Frames of the catalogue, or its
 organization's own (``org-…``) — in its ``context``. Its agent is told them
@@ -11,7 +11,7 @@ owners saved in place of the catalogue's, and its own beside.
 
 The organization's Frames are kept by IAM
 (``GET /api/iam/v1/organizations/{uid}/frames``) and read with the caller's
-token, as the plugins it turned off are (C-12). An organization that changed
+token, as the plugins it turned off are. An organization that changed
 nothing reads the catalogue's. What cannot be read — no token, IAM
 unreachable or refusing, an answer of the wrong shape — is said and stops the
 application: an agent never works under the catalogue's version in place of

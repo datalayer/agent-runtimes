@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The orchestration extension's wire contract, as JSON Schema (O3-01).
+"""The orchestration extension's wire contract, as JSON Schema.
 
 `EXTENSION_URI` is a public identifier: a worker's A2A agent card advertises
 it, an ACP `initialize` result names it, and a third party is expected to
@@ -18,8 +18,8 @@ envelope and the schema does not, which is what
 Only what is actually on the wire is described. Three fields the specification
 proposes — `acknowledgement`, `attempt`, `contextManifest` — are deliberately
 absent, because a schema that described them would tell an implementer to
-expect fields nothing sends. Two joined the wire with a harness served over A2A
-(SH-15): a worker's artifact carries `artifactProvenance` in its
+expect fields nothing sends. Two joined the wire with a harness served over A2A:
+a worker's artifact carries `artifactProvenance` in its
 metadata, and a task waiting on an approval carries `approvalRequest` on its
 `input-required` status message, which the orchestrator answers on the same
 task with `approval`.
@@ -48,7 +48,7 @@ BUDGET_FIELD = "budget"
 #: What a worker says stopped it, which `budget.budget_refusal` reads.
 ERROR_FIELD = "error"
 
-#: What a task waiting on `input-required` waits for (SH-15), which
+#: What a task waiting on `input-required` waits for, which
 #: `transports.a2a.A2AApprovals` writes.
 APPROVAL_REQUEST_FIELD = "approvalRequest"
 

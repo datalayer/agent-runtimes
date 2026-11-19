@@ -4,14 +4,14 @@
  */
 
 /**
- * Dead letters (S-405, DC-403): jobs that failed five
+ * Dead letters: jobs that failed five
  * times. By default an operator sees their metadata and a hash of their
  * payload — never the words of a prompt or a delivery. Replaying puts one
  * back to work, once. Reading a payload is privileged: a dead job's only, it
  * needs a reason, is recorded in `<prefix>_payload_access` and audited, and
  * its credentials are still redacted. Every replay is kept in
- * `<prefix>_job_replays` with who asked. Moved from the Slack service
- * (DC-004); each service keeps only the bin that opens its
+ * `<prefix>_job_replays` with who asked. Moved from the Slack service;
+ * each service keeps only the bin that opens its
  * database and calls `runDeadLettersCli`.
  *
  * @module portable/hosts/deadLetters
@@ -139,7 +139,7 @@ export const DEAD_LETTERS_USAGE =
 
 /**
  * `dead-letters list | replay <id> | payload <id> <reason…>`: metadata and
- * hashes by default (S-405). Who acts is said in `operator`
+ * hashes by default. Who acts is said in `operator`
  * (`DATALAYER_OPERATOR`), never taken from the container's user: a replay
  * and a payload read are kept with this name. Answers the exit code.
  */

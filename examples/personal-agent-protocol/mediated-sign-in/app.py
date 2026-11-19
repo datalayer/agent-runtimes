@@ -16,7 +16,7 @@ from personal_agent_protocol.demo.kit import (
     ScriptedInput,
     personal_agent_reactor,
 )
-from personal_agent_protocol.demo.manzanita import ADA, ADA_CODE, manzanita
+from personal_agent_protocol.demo.manzanita import ADA, ADA_CODE, CONFIG, manzanita
 from personal_agent_protocol.mediated import (
     MEDIATED_EXTENSION,
     MediatedSignInClient,
@@ -52,7 +52,11 @@ async def explain_mediated_sign_in() -> dict[str, Any]:
     network = InProcessNetwork()
     atlas = AgentIdentity(domain="atlas.example", name="Atlas")
     network.add(atlas.domain, atlas.website())
-    manzanita(network, clock)
+    manzanita(
+        network,
+        clock,
+        config=CONFIG,
+    )
     http = network.client()
     # The host's trusted input surface (`pap.protectedInput`). In a real host the user
     # types into it; here a script answers: her credentials, a wrong code, the right one.
