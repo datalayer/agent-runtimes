@@ -92,6 +92,7 @@ import type {
   ToolStreamEvent,
 } from '../../types/tools';
 import { ToolEventTurns } from '../../tools/toolEventTurns';
+import { runPageTool } from './pageTool';
 import {
   internalQueryClient,
   isToolCallMessage,
@@ -4071,32 +4072,40 @@ function ChatBaseInner({
         return;
       }
       try {
-        const result = await toolHandler(toolCallMsg.args);
-        if (adapterRef.current) {
-          await adapterRef.current.sendToolResult(toolCallId, {
-            toolCallId,
-            success: true,
-            result,
-          });
+        // Always answered: what it returned, or why it failed — a call left
+        // without a result stopped the run, and the runtime could not count
+        // the failure (it ends a turn whose page tool failed twice).
+        const answered = await runPageTool(
+          toolCallMsg.toolName,
+          toolHandler,
+          toolCallMsg.args,
+          toolCallId,
+        );
+        if (!answered.success) {
+          console.error(
+            '[ChatBase] Frontend tool execution error:',
+            answered.error,
+          );
         }
-        recorderRef.current?.recorder.toolEnded(toolCallId, { result });
+        if (adapterRef.current) {
+          await adapterRef.current.sendToolResult(toolCallId, answered);
+        }
+        recorderRef.current?.recorder.toolEnded(
+          toolCallId,
+          answered.success
+            ? { result: answered.result }
+            : { error: answered.error },
+        );
         reduce({
           type: 'TOOL_CALL_DONE',
           toolCallId,
-          success: true,
-          result,
+          success: answered.success,
+          ...(answered.success
+            ? { result: answered.result }
+            : { error: answered.error }),
         });
       } catch (err) {
-        console.error('[ChatBase] Frontend tool execution error:', err);
-        recorderRef.current?.recorder.toolEnded(toolCallId, {
-          error: (err as Error).message,
-        });
-        reduce({
-          type: 'TOOL_CALL_DONE',
-          toolCallId,
-          success: false,
-          error: (err as Error).message,
-        });
+        console.error('[ChatBase] Frontend tool result not sent:', err);
       } finally {
         pendingToolExecutionsRef.current--;
         if (pendingToolExecutionsRef.current < 0) {

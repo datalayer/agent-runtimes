@@ -311,6 +311,7 @@ export class AGUIAdapter extends BaseProtocolAdapter {
         role: string;
         content: string | ContentPart[] | null;
         tool_call_id?: string;
+        error?: string;
         tool_calls?: Array<{
           id: string;
           type: string;
@@ -328,6 +329,15 @@ export class AGUIAdapter extends BaseProtocolAdapter {
       // For tool messages, add the tool_call_id (snake_case for AG-UI/OpenAI format)
       if (msg.role === 'tool' && msg.metadata?.toolCallId) {
         baseMessage.tool_call_id = msg.metadata.toolCallId as string;
+      }
+      // A failed tool's result: AG-UI's `error` on its tool message.
+      if (msg.role === 'tool' && msg.metadata?.isError) {
+        baseMessage.error =
+          typeof msg.metadata.error === 'string' && msg.metadata.error
+            ? msg.metadata.error
+            : typeof msg.content === 'string'
+              ? msg.content
+              : 'The tool failed.';
       }
 
       // For assistant messages with tool calls, convert to AG-UI format
@@ -540,8 +550,12 @@ export class AGUIAdapter extends BaseProtocolAdapter {
     ).map(tr => ({
       id: generateMessageId(),
       role: 'tool' as const,
-      content:
-        typeof tr.result.result === 'string'
+      // A failed page tool answers why, as its content and as AG-UI's
+      // `error` (below): the runtime counts it, and ends a turn whose
+      // page tool failed twice.
+      content: !tr.result.success
+        ? tr.result.error || `${tr.toolName} failed`
+        : typeof tr.result.result === 'string'
           ? tr.result.result
           : JSON.stringify(tr.result.result),
       createdAt: new Date(),
@@ -549,6 +563,9 @@ export class AGUIAdapter extends BaseProtocolAdapter {
         toolCallId: tr.toolCallId,
         toolName: tr.toolName,
         isError: !tr.result.success,
+        ...(!tr.result.success
+          ? { error: tr.result.error || `${tr.toolName} failed` }
+          : {}),
       },
     }));
 
