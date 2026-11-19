@@ -4,75 +4,55 @@
  */
 
 /**
- * The model, the MCP servers and the skills of an application's agent, as
- * three read-only menus under its composer (the user, 18 November 2026: "the
- * application component should show in the footer the model, mcp and skill
- * selector — those selectors should indicate all the available (enabled or
- * disabled)").
+ * The MCP servers and the skills of a conversation, in one overlay each,
+ * opened from either of two triggers: the dot beside the composer's send
+ * button, or the menu in its footer (the user, 19 November 2026: "the exact
+ * same overlay should be shown, the indicator and footer are just one way to
+ * show the same information").
  *
- * The same triggers as an agent chat's own selectors (`ToolsMenu`,
- * `SkillsMenu`, `ModelSelector`): an icon and a count. Each opens a menu
- * that lists everything the agent declares, on or off, with its state in
- * words and why one is off — the names of the variables it needs, never a
- * value. A person using an application chooses none of them: its builder
- * did, in its spec. So a row selects nothing, and the menu says so.
+ * Both triggers take the same rows (`equipmentLists`) and say the same
+ * summary (`summaryOf`): the dot by its colour and its tooltip, the footer
+ * by its icon and its count. The overlay lists every server and skill, on or
+ * off, with its state in words and why one is off, and the conversation's
+ * switches: a server's tools all at once or one by one, each tool's
+ * approval, a skill, all the skills, each skill's approval, and codemode.
+ * A switch that cannot be used is drawn disabled, with its reason.
+ *
+ * An application's model is listed apart (`EquipmentModelMenu`): chosen by
+ * its builder, the same for everyone, to read.
  *
  * @module chat/prompt/menus/EquipmentMenus
  */
 
-import type { JSX } from 'react';
-import { ActionList, ActionMenu, Button, Text, Tooltip } from '@primer/react';
-import { AiModelIcon, BriefcaseIcon, type Icon } from '@primer/octicons-react';
+import { forwardRef, useEffect, useId, type JSX, type ReactNode } from 'react';
+import {
+  ActionList,
+  ActionMenu,
+  Button,
+  Text,
+  ToggleSwitch,
+  Tooltip,
+} from '@primer/react';
+import { AiModelIcon, BriefcaseIcon } from '@primer/octicons-react';
 // Primer's MCP mark (the user, 19 November 2026), by its own path: the
 // package's index types do not declare it, its per-icon entry does.
 import { McpIcon } from '@primer/octicons-react/McpIcon';
 import { Box } from '@datalayer/primer-addons';
-import type {
-  Equipment,
-  EquipmentModel,
-  EquipmentServer,
-  EquipmentSkill,
-} from '../../../hooks/useEquipment';
-
-export const EQUIPMENT_WORDS = {
-  readOnly:
-    'Chosen by the application. Shown for you to read: nothing here changes it.',
-  declared:
-    'As its spec declares them: its runtime has not said their state yet.',
-  model: 'Model',
-  servers: 'MCP servers',
-  skills: 'Skills',
-  none: { servers: 'It uses no MCP server.', skills: 'It has no skill.' },
-  optional: 'optional',
-  serverState: {
-    started: 'Running',
-    starting: 'Starting',
-    failed: 'Failed',
-    not_started: 'Not started',
-    left_out: 'Off',
-  },
-  skillState: { active: 'Active', not_activated: 'Not activated' },
-  modelState: {
-    current: 'In use',
-    available: 'Available',
-    off: 'Not available',
-  },
-  declaredState: 'Declared',
-} as const;
-
-type Tone = 'success' | 'attention' | 'danger' | 'neutral' | 'accent';
-
-/** A row of a menu: what it is, its state in words, and why it is off. */
-export type EquipmentRow = {
-  id: string;
-  name: string;
-  state: string;
-  tone: Tone;
-  /** Whether it counts as on. */
-  on: boolean;
-  reason?: string;
-  note?: string;
-};
+import { defaultIndicatorColors } from '@datalayer/primer-addons/lib/theme';
+import type { Equipment } from '../../../hooks/useEquipment';
+import { SpecMark, hasMark, marksOfMcpServer, marksOfSkill } from '../../marks';
+import {
+  EQUIPMENT_WORDS,
+  modelRow,
+  rowWords,
+  summaryOf,
+  type EquipmentLists,
+  type EquipmentRow,
+  type EquipmentStatus,
+  type ServerRow,
+  type SkillRow,
+  type Tone,
+} from './equipmentRows';
 
 const TONES: Record<Tone, { fg: string; bg: string }> = {
   success: { fg: 'success.fg', bg: 'success.subtle' },
@@ -82,101 +62,615 @@ const TONES: Record<Tone, { fg: string; bg: string }> = {
   neutral: { fg: 'fg.muted', bg: 'neutral.subtle' },
 };
 
-/** An MCP server as a row. */
-export function serverRow(server: EquipmentServer): EquipmentRow {
-  const words = EQUIPMENT_WORDS.serverState;
-  const state = server.state;
-  return {
-    id: server.id,
-    name: server.name,
-    state: state ? words[state] : EQUIPMENT_WORDS.declaredState,
-    tone:
-      state === 'started'
-        ? 'success'
-        : state === 'failed'
-          ? 'danger'
-          : state === 'starting'
-            ? 'attention'
-            : 'neutral',
-    on: state === 'started',
-    ...(server.reason ? { reason: server.reason } : {}),
-    ...(state === 'started' && server.tools !== undefined
-      ? { note: `${server.tools} ${server.tools === 1 ? 'tool' : 'tools'}` }
-      : server.optional
-        ? { note: EQUIPMENT_WORDS.optional }
-        : {}),
+const DOT_COLOURS: Record<EquipmentStatus, string> = {
+  none: defaultIndicatorColors.neutral,
+  off: defaultIndicatorColors.muted,
+  starting: defaultIndicatorColors.warning,
+  failed: defaultIndicatorColors.danger,
+  on: defaultIndicatorColors.success,
+};
+
+/** What the switches do: the conversation's own handlers. */
+export type EquipmentSwitches = {
+  onToggleMcpTool: (serverId: string, toolName: string) => void;
+  onToggleAllMcpServerTools: (
+    serverId: string,
+    toolNames: string[],
+    enable: boolean,
+  ) => void;
+  onToggleMcpToolApproval: (serverId: string, toolName: string) => void;
+  onToggleSkill: (skillId: string) => void;
+  onToggleAllSkills: (skillIds: string[], enable: boolean) => void;
+  onToggleSkillApproval: (skillId: string) => void;
+  /** The runtime's sentence for the last switch it refused: said in the overlay. */
+  refusal?: string;
+  /** Codemode, where the chat offers it; its toggle disabled without a handler. */
+  codemode?: {
+    enabled: boolean;
+    onToggle?: (enabled: boolean) => void | Promise<void>;
   };
+};
+
+export type EquipmentKind = 'servers' | 'skills';
+
+const TITLES: Record<EquipmentKind, string> = {
+  servers: EQUIPMENT_WORDS.servers,
+  skills: EQUIPMENT_WORDS.skills,
+};
+
+/** A state, as a small pill. */
+function StatePill({ row }: { row: EquipmentRow }): JSX.Element {
+  const tone = TONES[row.tone];
+  return (
+    <Text
+      sx={{
+        fontSize: '11px',
+        px: '6px',
+        py: '1px',
+        borderRadius: 999,
+        bg: tone.bg,
+        color: tone.fg,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {row.state}
+    </Text>
+  );
 }
 
-/** A skill as a row. */
-export function skillRow(skill: EquipmentSkill): EquipmentRow {
-  const state = skill.state;
-  return {
-    id: skill.id,
-    name: skill.name,
-    state: state
-      ? EQUIPMENT_WORDS.skillState[state]
-      : EQUIPMENT_WORDS.declaredState,
-    tone: state === 'active' ? 'success' : 'neutral',
-    on: state === 'active',
-    ...(skill.reason ? { reason: skill.reason } : {}),
-    ...(skill.optional ? { note: EQUIPMENT_WORDS.optional } : {}),
-  };
+/** A switch with its word above it, labelled by what it switches. */
+function Switch({
+  word,
+  checked,
+  labelledBy,
+  locked,
+  onToggle,
+  name,
+}: {
+  word: string;
+  checked: boolean;
+  labelledBy: string;
+  locked?: string;
+  onToggle: () => void;
+  /** What the tests find it by. */
+  name: string;
+}): JSX.Element {
+  return (
+    <Box
+      display="flex"
+      flexDirection="column"
+      alignItems="center"
+      gap="2px"
+      data-equipment-switch={name}
+      data-equipment-checked={checked ? 'true' : 'false'}
+      data-equipment-locked={locked ? 'true' : 'false'}
+      title={locked}
+    >
+      <Text sx={{ fontSize: '10px', color: 'fg.muted' }}>{word}</Text>
+      <ToggleSwitch
+        size="small"
+        checked={checked}
+        disabled={Boolean(locked)}
+        onClick={onToggle}
+        aria-labelledby={labelledBy}
+      />
+    </Box>
+  );
 }
 
-/** A model as a row. */
-export function modelRow(model: EquipmentModel): EquipmentRow {
-  const off = model.isAvailable === false;
-  return {
-    id: model.id,
-    name: model.name,
-    state: model.current
-      ? EQUIPMENT_WORDS.modelState.current
-      : off
-        ? EQUIPMENT_WORDS.modelState.off
-        : EQUIPMENT_WORDS.modelState.available,
-    tone: model.current ? 'accent' : off ? 'neutral' : 'success',
-    on: !off,
-    ...(off && model.unavailableReason
-      ? { reason: model.unavailableReason }
-      : {}),
-  };
+/** A row's name line: its mark, its name, its state. */
+function RowHead({
+  row,
+  labelId,
+  mark,
+}: {
+  row: EquipmentRow;
+  labelId: string;
+  mark?: ReactNode;
+}): JSX.Element {
+  return (
+    <Box display="flex" alignItems="center" gap={1} minWidth={0}>
+      {mark}
+      <Text
+        id={labelId}
+        sx={{
+          fontWeight: 'semibold',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          color: row.on ? undefined : 'fg.muted',
+        }}
+      >
+        {row.name}
+      </Text>
+      <StatePill row={row} />
+    </Box>
+  );
 }
 
-/** What a row says to a screen reader: its name, its state, and why. */
-export function rowWords(row: EquipmentRow): string {
-  return [row.name, row.state, row.reason, row.note].filter(Boolean).join(', ');
+/** A muted line under a name: its reason, its note, or its description. */
+function Line({ children }: { children: ReactNode }): JSX.Element | null {
+  return children ? (
+    <Text
+      sx={{
+        display: 'block',
+        fontSize: 0,
+        color: 'fg.muted',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+      }}
+    >
+      {children}
+    </Text>
+  ) : null;
+}
+
+const ROW_SX = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 2,
+  px: 3,
+  py: 2,
+} as const;
+
+function ServerBlock({
+  row,
+  switches,
+  scope,
+}: {
+  row: ServerRow;
+  switches: EquipmentSwitches;
+  scope: string;
+}): JSX.Element {
+  const labelId = `${scope}-server-${row.id}`;
+  const names = row.tools.map(tool => tool.name);
+  const toolsOn = row.tools.filter(tool => tool.enabled).length;
+  // Without its tools listed, the server is on unless switched off whole.
+  const allOn = names.length > 0 ? toolsOn === names.length : row.on;
+  const marks = marksOfMcpServer({ id: row.id });
+  return (
+    <Box
+      role="group"
+      aria-label={rowWords(row)}
+      data-equipment-row={row.id}
+      data-equipment-on={row.on ? 'true' : 'false'}
+      borderTop="1px solid"
+      borderColor="border.muted"
+    >
+      <Box sx={ROW_SX}>
+        <Box flex={1} minWidth={0}>
+          <RowHead
+            row={row}
+            labelId={labelId}
+            mark={
+              hasMark(marks) ? (
+                <SpecMark icon={marks.icon} emoji={marks.emoji} size={16} />
+              ) : undefined
+            }
+          />
+          <Line>{[row.reason, row.note].filter(Boolean).join(' · ')}</Line>
+        </Box>
+        <Switch
+          word={EQUIPMENT_WORDS.enableAll}
+          name={`server:${row.id}`}
+          checked={allOn}
+          labelledBy={labelId}
+          locked={row.locked}
+          onToggle={() =>
+            switches.onToggleAllMcpServerTools(row.switchId, names, !allOn)
+          }
+        />
+      </Box>
+      {row.tools.map(tool => {
+        const toolId = `${labelId}-tool-${tool.name}`;
+        return (
+          <Box
+            key={tool.name}
+            sx={{ ...ROW_SX, pl: 5 }}
+            data-equipment-tool={`${row.id}:${tool.name}`}
+          >
+            <Box flex={1} minWidth={0}>
+              <Text id={toolId} sx={{ fontSize: 1 }}>
+                {tool.name}
+              </Text>
+              <Line>{tool.description}</Line>
+            </Box>
+            <Box display="flex" alignItems="center" gap={3}>
+              <Switch
+                word={EQUIPMENT_WORDS.enabled}
+                name={`tool:${row.id}:${tool.name}`}
+                checked={tool.enabled}
+                labelledBy={toolId}
+                locked={row.locked}
+                onToggle={() =>
+                  switches.onToggleMcpTool(row.switchId, tool.name)
+                }
+              />
+              <Switch
+                word={EQUIPMENT_WORDS.approved}
+                name={`tool-approval:${row.id}:${tool.name}`}
+                checked={tool.approved}
+                labelledBy={toolId}
+                locked={row.locked}
+                onToggle={() =>
+                  switches.onToggleMcpToolApproval(row.switchId, tool.name)
+                }
+              />
+            </Box>
+          </Box>
+        );
+      })}
+    </Box>
+  );
+}
+
+function SkillBlock({
+  row,
+  switches,
+  scope,
+}: {
+  row: SkillRow;
+  switches: EquipmentSwitches;
+  scope: string;
+}): JSX.Element {
+  const labelId = `${scope}-skill-${row.id}`;
+  const marks = marksOfSkill(row.id);
+  return (
+    <Box
+      role="group"
+      aria-label={rowWords(row)}
+      data-equipment-row={row.id}
+      data-equipment-on={row.on ? 'true' : 'false'}
+      borderTop="1px solid"
+      borderColor="border.muted"
+      sx={ROW_SX}
+    >
+      <Box flex={1} minWidth={0}>
+        <RowHead
+          row={row}
+          labelId={labelId}
+          mark={
+            hasMark(marks) ? (
+              <SpecMark icon={marks.icon} emoji={marks.emoji} size={16} />
+            ) : undefined
+          }
+        />
+        <Line>
+          {[row.reason, row.note, row.reason ? undefined : row.description]
+            .filter(Boolean)
+            .join(' · ')}
+        </Line>
+      </Box>
+      <Box display="flex" alignItems="center" gap={3}>
+        <Switch
+          word={EQUIPMENT_WORDS.enabled}
+          name={`skill:${row.id}`}
+          checked={row.enabled}
+          labelledBy={labelId}
+          locked={row.locked}
+          onToggle={() => switches.onToggleSkill(row.switchId)}
+        />
+        <Switch
+          word={EQUIPMENT_WORDS.approved}
+          name={`skill-approval:${row.id}`}
+          checked={row.approved}
+          labelledBy={labelId}
+          locked={row.locked}
+          onToggle={() => switches.onToggleSkillApproval(row.switchId)}
+        />
+      </Box>
+    </Box>
+  );
 }
 
 /**
- * One read-only menu: a trigger with an icon and a count, and the list. A
- * row is a menu item a keyboard reaches and a screen reader reads; choosing
- * one does nothing and leaves the menu open.
+ * The overlay's content: the list, its switches, and what it says of them.
+ * The one component both triggers open.
+ */
+export function EquipmentPanel({
+  kind,
+  lists,
+  switches,
+}: {
+  kind: EquipmentKind;
+  lists: EquipmentLists;
+  switches: EquipmentSwitches;
+}): JSX.Element {
+  const scope = useId().replace(/:/g, '');
+  const rows = kind === 'servers' ? lists.servers : lists.skills;
+  const { summary } = summaryOf(kind, rows, lists.declared);
+  const title = TITLES[kind];
+  const codemode = kind === 'servers' ? switches.codemode : undefined;
+  const open = lists.skills.filter(row => !row.locked);
+  const allSkillsOn = open.length > 0 && open.every(row => row.enabled);
+  return (
+    <Box data-equipment-panel={kind} aria-label={title} role="group">
+      <Box px={3} py={2}>
+        <Text sx={{ fontSize: 0, fontWeight: 'semibold', color: 'fg.muted' }}>
+          {title}
+          {rows.length > 0 ? ` · ${summary}` : ''}
+        </Text>
+      </Box>
+      {codemode ? (
+        <Box sx={ROW_SX} borderTop="1px solid" borderColor="border.muted">
+          <Box flex={1} minWidth={0}>
+            <Text
+              id={`${scope}-codemode`}
+              sx={{ fontWeight: 'semibold', display: 'block' }}
+            >
+              {EQUIPMENT_WORDS.codemode}
+            </Text>
+            <Line>
+              {codemode.enabled
+                ? EQUIPMENT_WORDS.codemodeOn
+                : EQUIPMENT_WORDS.codemodeOff}
+            </Line>
+          </Box>
+          <Switch
+            word={EQUIPMENT_WORDS.enabled}
+            name="codemode"
+            checked={codemode.enabled}
+            labelledBy={`${scope}-codemode`}
+            locked={
+              codemode.onToggle ? undefined : EQUIPMENT_WORDS.codemodeLocked
+            }
+            onToggle={() => void codemode.onToggle?.(!codemode.enabled)}
+          />
+        </Box>
+      ) : null}
+      {kind === 'skills' && rows.length > 0 ? (
+        <Box sx={ROW_SX} borderTop="1px solid" borderColor="border.muted">
+          <Text
+            id={`${scope}-all-skills`}
+            sx={{ fontSize: 0, fontWeight: 'semibold', color: 'fg.muted' }}
+          >
+            {EQUIPMENT_WORDS.enableAll} (
+            {lists.skills.filter(row => row.enabled).length}/{rows.length})
+          </Text>
+          <Switch
+            word={EQUIPMENT_WORDS.enableAll}
+            name="all-skills"
+            checked={allSkillsOn}
+            labelledBy={`${scope}-all-skills`}
+            locked={
+              open.length === 0
+                ? lists.skills.find(row => row.locked)?.locked
+                : undefined
+            }
+            onToggle={() =>
+              switches.onToggleAllSkills(
+                open.map(row => row.switchId),
+                !allSkillsOn,
+              )
+            }
+          />
+        </Box>
+      ) : null}
+      {rows.length === 0 ? (
+        <Box px={3} py={2} borderTop="1px solid" borderColor="border.muted">
+          <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
+            {EQUIPMENT_WORDS.none[kind]}
+          </Text>
+        </Box>
+      ) : kind === 'servers' ? (
+        lists.servers.map(row => (
+          <ServerBlock
+            key={row.id}
+            row={row}
+            switches={switches}
+            scope={scope}
+          />
+        ))
+      ) : (
+        lists.skills.map(row => (
+          <SkillBlock
+            key={row.id}
+            row={row}
+            switches={switches}
+            scope={scope}
+          />
+        ))
+      )}
+      <Box
+        px={3}
+        py={2}
+        borderTop="1px solid"
+        borderColor="border.muted"
+        data-equipment-note=""
+      >
+        {switches.refusal ? (
+          <Text
+            role="alert"
+            data-equipment-refusal=""
+            sx={{ fontSize: 0, color: 'danger.fg', display: 'block', mb: 1 }}
+          >
+            {switches.refusal}
+          </Text>
+        ) : null}
+        <Text sx={{ fontSize: 0, color: 'fg.muted', display: 'block' }}>
+          {EQUIPMENT_WORDS.switches}
+        </Text>
+        {lists.declared ? (
+          <Text sx={{ fontSize: 0, color: 'fg.muted', display: 'block' }}>
+            {EQUIPMENT_WORDS.declared}
+          </Text>
+        ) : null}
+      </Box>
+    </Box>
+  );
+}
+
+const PULSE_KEYFRAMES = `
+@keyframes equipment-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+`;
+
+function usePulseKeyframes(): void {
+  useEffect(() => {
+    const id = '__equipment-pulse-keyframes__';
+    if (document.getElementById(id)) return;
+    const style = document.createElement('style');
+    style.id = id;
+    style.textContent = PULSE_KEYFRAMES;
+    document.head.appendChild(style);
+  }, []);
+}
+
+/*
+ * The triggers take the anchor's props (its click, its ref, its ARIA) onto
+ * their button: `ActionMenu.Anchor` gives them to the tooltip's child.
+ */
+type AnchorProps = Record<string, unknown>;
+
+/** The dot: the list's status in its colour, its summary in its tooltip. */
+const DotTrigger = forwardRef<
+  HTMLButtonElement,
+  AnchorProps & { kind: EquipmentKind; status: EquipmentStatus; label: string }
+>(function DotTrigger({ kind, status, label, ...anchor }, ref) {
+  usePulseKeyframes();
+  return (
+    <button
+      {...anchor}
+      ref={ref}
+      type="button"
+      aria-label={label}
+      data-equipment-dot={kind}
+      data-equipment-status={status}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 28,
+        height: 28,
+        padding: 0,
+        border: 'none',
+        background: 'none',
+        cursor: 'pointer',
+        lineHeight: 0,
+      }}
+    >
+      <Box
+        as="span"
+        display="inline-block"
+        width={12}
+        height={12}
+        borderRadius="50%"
+        bg={DOT_COLOURS[status]}
+        flexShrink={0}
+        animation={
+          status === 'starting'
+            ? 'equipment-pulse 1.5s ease-in-out infinite'
+            : undefined
+        }
+        reducedMotion={{ animation: 'none' }}
+      />
+    </button>
+  );
+});
+
+/** The footer's trigger: an icon and a count. */
+const ButtonTrigger = forwardRef<
+  HTMLButtonElement,
+  AnchorProps & {
+    kind: EquipmentKind;
+    count: string;
+    label: string;
+    declared: boolean;
+  }
+>(function ButtonTrigger({ kind, count, label, declared, ...anchor }, ref) {
+  return (
+    <Button
+      {...anchor}
+      ref={ref}
+      type="button"
+      variant="invisible"
+      size="small"
+      aria-label={label}
+      leadingVisual={kind === 'servers' ? McpIcon : BriefcaseIcon}
+      data-equipment-menu={kind}
+      data-equipment-source={declared ? 'declared' : 'live'}
+    >
+      <Text sx={{ fontSize: 0, fontVariantNumeric: 'tabular-nums' }}>
+        {count}
+      </Text>
+    </Button>
+  );
+});
+
+/**
+ * The MCP servers or the skills, from a dot or from the footer: the same
+ * overlay either way. A dot with nothing to say is not drawn; the footer's
+ * menu says "none".
  */
 export function EquipmentMenu({
   kind,
-  icon,
-  title,
-  rows,
-  count,
-  summary,
-  empty,
-  declared = false,
-  align = 'start',
+  trigger,
+  lists,
+  switches,
 }: {
-  kind: 'model' | 'servers' | 'skills';
-  icon: Icon;
-  title: string;
-  rows: EquipmentRow[];
-  /** What the trigger shows beside its icon. */
-  count: string;
-  /** What the trigger says: its tooltip and its name. */
-  summary: string;
-  empty?: string;
-  declared?: boolean;
-  align?: 'start' | 'end';
-}): JSX.Element {
-  const label = `${title} — ${summary}`;
+  kind: EquipmentKind;
+  trigger: 'dot' | 'button';
+  lists: EquipmentLists;
+  switches: EquipmentSwitches;
+}): JSX.Element | null {
+  const rows = kind === 'servers' ? lists.servers : lists.skills;
+  const { status, count, summary } = summaryOf(kind, rows, lists.declared);
+  if (trigger === 'dot' && status === 'none') {
+    return null;
+  }
+  const label = `${TITLES[kind]} — ${summary}`;
+  return (
+    <ActionMenu>
+      <ActionMenu.Anchor>
+        <Tooltip text={label} direction="n">
+          {trigger === 'dot' ? (
+            <DotTrigger kind={kind} status={status} label={label} />
+          ) : (
+            <ButtonTrigger
+              kind={kind}
+              count={count}
+              label={label}
+              declared={lists.declared}
+            />
+          )}
+        </Tooltip>
+      </ActionMenu.Anchor>
+      <ActionMenu.Overlay
+        side="outside-top"
+        align={trigger === 'dot' ? 'end' : 'start'}
+        width="large"
+      >
+        <Box maxHeight="60vh" overflowY="auto">
+          <EquipmentPanel kind={kind} lists={lists} switches={switches} />
+        </Box>
+      </ActionMenu.Overlay>
+    </ActionMenu>
+  );
+}
+
+/**
+ * An application's model, to read: chosen by its builder, the same for
+ * everyone. Every model it may run on, the one in use marked, an unusable
+ * one with why. Not drawn when no model is known.
+ */
+export function EquipmentModelMenu({
+  equipment,
+}: {
+  equipment: Pick<Equipment, 'models' | 'modelsSource'>;
+}): JSX.Element | null {
+  const models = equipment.models.map(modelRow);
+  const current = equipment.models.find(model => model.current);
+  if (models.length === 0) {
+    return null;
+  }
+  const summary = current
+    ? `${current.name}, of ${models.length} it may run on`
+    : `${models.length} it may run on`;
+  const label = `${EQUIPMENT_WORDS.model} — ${summary}`;
+  const declared = equipment.modelsSource === 'declared';
   return (
     <ActionMenu>
       <ActionMenu.Anchor>
@@ -186,14 +680,13 @@ export function EquipmentMenu({
             variant="invisible"
             size="small"
             aria-label={label}
-            leadingVisual={icon}
-            data-equipment-menu={kind}
+            leadingVisual={AiModelIcon}
+            data-equipment-menu="model"
             data-equipment-source={declared ? 'declared' : 'live'}
           >
             <Text
               sx={{
                 fontSize: 0,
-                fontVariantNumeric: 'tabular-nums',
                 maxWidth: 160,
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -202,69 +695,42 @@ export function EquipmentMenu({
                 verticalAlign: 'bottom',
                 // A model's name is long: on a phone its icon stands alone,
                 // and the tooltip and the menu say which.
-                ...(kind === 'model'
-                  ? { '@media (max-width: 480px)': { display: 'none' } }
-                  : {}),
+                '@media (max-width: 480px)': { display: 'none' },
               }}
             >
-              {count}
+              {current?.name ?? String(models.length)}
             </Text>
           </Button>
         </Tooltip>
       </ActionMenu.Anchor>
-      <ActionMenu.Overlay side="outside-top" align={align} width="medium">
+      <ActionMenu.Overlay side="outside-top" align="end" width="medium">
         <Box maxHeight="60vh" overflowY="auto">
-          <ActionList aria-label={title}>
+          <ActionList aria-label={EQUIPMENT_WORDS.model}>
             <ActionList.Group>
               <ActionList.GroupHeading>
-                {title}
-                {rows.length > 0 ? ` · ${summary}` : ''}
+                {EQUIPMENT_WORDS.model} · {summary}
               </ActionList.GroupHeading>
-              {rows.length === 0 ? (
+              {models.map(row => (
                 <ActionList.Item
+                  key={row.id}
+                  // Read, not chosen: the menu stays open.
                   onSelect={event => event.preventDefault()}
-                  sx={{ color: 'fg.muted' }}
+                  aria-label={rowWords(row)}
+                  data-equipment-row={row.id}
+                  data-equipment-on={row.on ? 'true' : 'false'}
+                  sx={row.on ? undefined : { color: 'fg.muted' }}
                 >
-                  {empty}
+                  {row.name}
+                  <ActionList.TrailingVisual>
+                    <StatePill row={row} />
+                  </ActionList.TrailingVisual>
+                  {row.reason ? (
+                    <ActionList.Description variant="block">
+                      {row.reason}
+                    </ActionList.Description>
+                  ) : null}
                 </ActionList.Item>
-              ) : (
-                rows.map(row => {
-                  const tone = TONES[row.tone];
-                  return (
-                    <ActionList.Item
-                      key={row.id}
-                      // Read, not chosen: the menu stays open.
-                      onSelect={event => event.preventDefault()}
-                      aria-label={rowWords(row)}
-                      data-equipment-row={row.id}
-                      data-equipment-on={row.on ? 'true' : 'false'}
-                      sx={row.on ? undefined : { color: 'fg.muted' }}
-                    >
-                      {row.name}
-                      <ActionList.TrailingVisual>
-                        <Text
-                          sx={{
-                            fontSize: '11px',
-                            px: '6px',
-                            py: '1px',
-                            borderRadius: 999,
-                            bg: tone.bg,
-                            color: tone.fg,
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {row.state}
-                        </Text>
-                      </ActionList.TrailingVisual>
-                      {row.reason || row.note ? (
-                        <ActionList.Description variant="block">
-                          {[row.reason, row.note].filter(Boolean).join(' · ')}
-                        </ActionList.Description>
-                      ) : null}
-                    </ActionList.Item>
-                  );
-                })
-              )}
+              ))}
             </ActionList.Group>
           </ActionList>
           <Box
@@ -275,7 +741,7 @@ export function EquipmentMenu({
             data-equipment-note=""
           >
             <Text sx={{ fontSize: 0, color: 'fg.muted', display: 'block' }}>
-              {EQUIPMENT_WORDS.readOnly}
+              {EQUIPMENT_WORDS.modelChosen}
             </Text>
             {declared ? (
               <Text sx={{ fontSize: 0, color: 'fg.muted', display: 'block' }}>
@@ -286,81 +752,5 @@ export function EquipmentMenu({
         </Box>
       </ActionMenu.Overlay>
     </ActionMenu>
-  );
-}
-
-const of = (on: number, all: number, declared: boolean): string =>
-  declared ? String(all) : `${on}/${all}`;
-
-/** The three menus, in the order of an agent chat's selectors: tools, skills, model. */
-export function EquipmentBar({
-  equipment,
-}: {
-  equipment: Equipment;
-}): JSX.Element {
-  const declared = equipment.source === 'declared';
-  const servers = equipment.servers.map(serverRow);
-  const skills = equipment.skills.map(skillRow);
-  const models = equipment.models.map(modelRow);
-  const serversOn = servers.filter(row => row.on).length;
-  const skillsOn = skills.filter(row => row.on).length;
-  const current = equipment.models.find(model => model.current);
-  return (
-    <Box
-      display="inline-flex"
-      alignItems="center"
-      role="group"
-      aria-label="What this application runs with"
-      data-equipment-bar={equipment.source}
-    >
-      <EquipmentMenu
-        kind="servers"
-        icon={McpIcon}
-        title={EQUIPMENT_WORDS.servers}
-        rows={servers}
-        count={of(serversOn, servers.length, declared)}
-        summary={
-          servers.length === 0
-            ? 'none'
-            : declared
-              ? `${servers.length} declared`
-              : `${serversOn} of ${servers.length} running`
-        }
-        empty={EQUIPMENT_WORDS.none.servers}
-        declared={declared}
-      />
-      <EquipmentMenu
-        kind="skills"
-        icon={BriefcaseIcon}
-        title={EQUIPMENT_WORDS.skills}
-        rows={skills}
-        count={of(skillsOn, skills.length, declared)}
-        summary={
-          skills.length === 0
-            ? 'none'
-            : declared
-              ? `${skills.length} declared`
-              : `${skillsOn} of ${skills.length} active`
-        }
-        empty={EQUIPMENT_WORDS.none.skills}
-        declared={declared}
-      />
-      {models.length > 0 ? (
-        <EquipmentMenu
-          kind="model"
-          icon={AiModelIcon}
-          title={EQUIPMENT_WORDS.model}
-          rows={models}
-          count={current?.name ?? String(models.length)}
-          summary={
-            current
-              ? `${current.name}, of ${models.length} it may run on`
-              : `${models.length} it may run on`
-          }
-          declared={equipment.modelsSource === 'declared'}
-          align="end"
-        />
-      ) : null}
-    </Box>
   );
 }

@@ -32,14 +32,13 @@ describe('an application in the chat', () => {
     expect(chat).not.toContain('fontSize: 48');
   });
 
-  it('keeps none of the session’s controls under its composer', () => {
-    for (const control of [
-      'showAgentsMenu',
-      'showToolsMenu',
-      'showSkillsMenu',
-    ]) {
+  it('keeps no chooser under its composer, and lists its servers and skills to switch', () => {
+    for (const control of ['showAgentsMenu', 'showToolsMenu']) {
       expect(chat).toContain(`${control}: !presence,`);
     }
+    // Its MCP servers and skills: the same overlays as the dots open.
+    expect(chat).toContain('showMcpMenu: true,');
+    expect(chat).toContain('showSkillsMenu: true,');
     expect(chat).toContain('showModelSelector: !presence && !ownRoutesOnly,');
   });
 

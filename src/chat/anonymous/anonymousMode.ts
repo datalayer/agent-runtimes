@@ -83,10 +83,6 @@ export const ANONYMOUS_WORDS = {
     `This conversation without an account has had its ${minutes} minutes: start a new one, or sign in to keep going.`,
   /** A tool refused for want of an account. */
   signInToUse: (tool: string) => `Sign in to use ${tool}`,
-  /** An MCP server or a skill a visitor cannot use. */
-  disabled: 'Disabled',
-  mcpDisabled: 'MCP servers are disabled without an account',
-  skillsDisabled: 'Skills are disabled without an account',
   /**
    * A UI the agent brings that needs the person's own connection, drawn
    * locked for a visitor (`apps/plugins/locked-ui`): what its chip says.

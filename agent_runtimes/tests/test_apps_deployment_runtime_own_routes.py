@@ -90,6 +90,8 @@ OWN = {
     ("POST", "/api/v1/apps/sessions/{uid}/press"),
     ("POST", "/api/v1/apps/sessions/{uid}/page"),
     ("PUT", "/api/v1/apps/sessions/{uid}/settings"),
+    ("GET", "/api/v1/apps/sessions/{uid}/switches"),
+    ("PUT", "/api/v1/apps/sessions/{uid}/switches"),
     ("POST", "/api/v1/apps/sessions/{uid}/window"),
     # A turn said, and the person speaking over the agent.
     ("POST", "/api/v1/apps/sessions/{uid}/audio"),

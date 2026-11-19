@@ -270,7 +270,18 @@ def _build_default_mcp_enabled_tools_by_server(
 def _get_agent_mcp_enabled_tools_by_server(
     agent_id: str | None,
 ) -> dict[str, list[str]]:
-    """Get effective enabled MCP tools per server for an agent."""
+    """Get effective enabled MCP tools per server for an agent.
+
+    During a conversation's turn, as that conversation switched them
+    (``apps.switches``): never written to the agent's state.
+    """
+    from agent_runtimes.apps.switches import enabled_tools_in_force
+
+    return enabled_tools_in_force(agent_id, _agent_mcp_enabled_tools(agent_id))
+
+
+def _agent_mcp_enabled_tools(agent_id: str | None) -> dict[str, list[str]]:
+    """The agent's own enabled MCP tools per server, whoever's turn is under way."""
     key = _stream_key(agent_id)
     overrides = _MCP_ENABLED_TOOLS_BY_AGENT.get(key)
 
@@ -305,6 +316,8 @@ def _get_agent_mcp_approved_tools_by_server(
     The universe of tools for each server is the set of currently *enabled*
     tools. By default none are approved until explicitly toggled.
     """
+    from agent_runtimes.apps.switches import approved_tools_in_force
+
     key = _stream_key(agent_id)
     approved_by_server = _MCP_APPROVED_TOOLS_BY_AGENT.get(key, {})
     enabled_by_server = _get_agent_mcp_enabled_tools_by_server(agent_id)
@@ -312,7 +325,7 @@ def _get_agent_mcp_approved_tools_by_server(
     for server_id, enabled_tool_names in enabled_by_server.items():
         approved = approved_by_server.get(server_id, set())
         result[server_id] = sorted(set(enabled_tool_names) & approved)
-    return result
+    return approved_tools_in_force(agent_id, result, enabled_by_server)
 
 
 def get_agent_approved_mcp_tool_names(agent_id: str | None) -> set[str]:
@@ -471,13 +484,18 @@ def get_agent_skills_snapshot(agent_id: str | None) -> list[dict[str, Any]]:
 
 
 def get_agent_enabled_skill_ids(agent_id: str | None) -> set[str]:
-    """Return enabled (enabled/loaded) skill IDs for an agent."""
+    """Return enabled (enabled/loaded) skill IDs for an agent.
+
+    During a conversation's turn, as that conversation switched them.
+    """
+    from agent_runtimes.apps.switches import skills_in_force
+
     _seed_agent_skills(agent_id)
     enabled: set[str] = set()
     for skill_id, entry in _SKILLS_BY_AGENT.get(_stream_key(agent_id), {}).items():
         if entry.get("status") in {"enabled", "loaded"}:
             enabled.add(skill_id)
-    return enabled
+    return skills_in_force(agent_id, enabled, approvals=False)
 
 
 def get_agent_tracked_skill_ids(agent_id: str | None) -> set[str]:
@@ -548,13 +566,18 @@ def set_agent_turn_enabled_skills(
 
 
 def get_agent_approved_skill_ids(agent_id: str | None) -> set[str]:
-    """Return approved skill IDs for an agent."""
+    """Return approved skill IDs for an agent.
+
+    During a conversation's turn, as that conversation switched them.
+    """
+    from agent_runtimes.apps.switches import skills_in_force
+
     _seed_agent_skills(agent_id)
     approved: set[str] = set()
     for skill_id, entry in _SKILLS_BY_AGENT.get(_stream_key(agent_id), {}).items():
         if bool(entry.get("approved", False)):
             approved.add(skill_id)
-    return approved
+    return skills_in_force(agent_id, approved, approvals=True)
 
 
 def _build_all_mcp_tools_by_server() -> dict[str, set[str]]:

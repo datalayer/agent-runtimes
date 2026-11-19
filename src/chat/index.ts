@@ -82,8 +82,6 @@ export {
   type InputPromptBaseProps,
 } from './prompt';
 export {
-  McpStatusIndicator,
-  type McpStatusIndicatorProps,
   type McpServerStatus,
   type McpAggregateStatus,
   SandboxStatusIndicator,

@@ -158,6 +158,10 @@ import {
   type ToolApprovalConfig,
 } from '../messages/ChatMessageList';
 import { InputPrompt } from '../prompt/InputPrompt';
+import {
+  parseApprovedMcpToolsByServer,
+  parseEnabledMcpToolsByServer,
+} from '../prompt/menus/equipmentRows';
 import { ComposerVoice, spokenOf } from '../../voice/ComposerVoice';
 import { answerSpokenOver } from '../../voice/handsFreeRules';
 import { ReadAloud, readsAloud } from '../../voice/ReadAloud';
@@ -607,88 +611,6 @@ function formatToolResultFallback(result: unknown): string {
   } catch {
     return 'Tool completed successfully.';
   }
-}
-
-function parseEnabledMcpToolsByServer(
-  mcpStatusData: unknown,
-): Map<string, Set<string>> | null {
-  if (!mcpStatusData || typeof mcpStatusData !== 'object') {
-    return null;
-  }
-
-  const raw = (
-    mcpStatusData as {
-      enabled_tools_by_server?: unknown;
-    }
-  ).enabled_tools_by_server;
-
-  if (raw == null) {
-    return new Map<string, Set<string>>();
-  }
-
-  if (typeof raw !== 'object') {
-    return new Map<string, Set<string>>();
-  }
-
-  const parsed = new Map<string, Set<string>>();
-  for (const [serverId, toolNames] of Object.entries(
-    raw as Record<string, unknown>,
-  )) {
-    if (!Array.isArray(toolNames)) {
-      continue;
-    }
-    const validToolNames = toolNames.filter(
-      (name): name is string => typeof name === 'string' && name.length > 0,
-    );
-    const normalizedToolNames = validToolNames.map(name => {
-      const sep = name.indexOf('__');
-      return sep >= 0 ? name.slice(sep + 2) : name;
-    });
-    parsed.set(serverId, new Set(normalizedToolNames));
-  }
-
-  return parsed;
-}
-
-function parseApprovedMcpToolsByServer(
-  mcpStatusData: unknown,
-): Map<string, Set<string>> | null {
-  if (!mcpStatusData || typeof mcpStatusData !== 'object') {
-    return null;
-  }
-
-  const raw = (
-    mcpStatusData as {
-      approved_tools_by_server?: unknown;
-    }
-  ).approved_tools_by_server;
-
-  if (raw == null) {
-    return new Map<string, Set<string>>();
-  }
-
-  if (typeof raw !== 'object') {
-    return new Map<string, Set<string>>();
-  }
-
-  const parsed = new Map<string, Set<string>>();
-  for (const [serverId, toolNames] of Object.entries(
-    raw as Record<string, unknown>,
-  )) {
-    if (!Array.isArray(toolNames)) {
-      continue;
-    }
-    const validToolNames = toolNames.filter(
-      (name): name is string => typeof name === 'string' && name.length > 0,
-    );
-    const normalizedToolNames = validToolNames.map(name => {
-      const sep = name.indexOf('__');
-      return sep >= 0 ? name.slice(sep + 2) : name;
-    });
-    parsed.set(serverId, new Set(normalizedToolNames));
-  }
-
-  return parsed;
 }
 
 // ---------------------------------------------------------------------------
@@ -5077,14 +4999,6 @@ function ChatBaseInner({
     );
   }
 
-  // ---- apiBase for indicators (derived from configEndpoint) ----
-  // Indicators (McpStatusIndicator, SandboxStatusIndicator) prepend
-  // "/api/v1/configure/…" themselves, so we need the raw base URL
-  // (without "/api/v1") rather than getApiBaseFromConfig() which keeps it.
-  const indicatorApiBase = protocol?.configEndpoint
-    ? protocol.configEndpoint.replace(/\/api\/v1\/(config|configure)\/?$/, '')
-    : undefined;
-
   /*
    * Whether the composer may be typed in.
    *
@@ -5406,7 +5320,6 @@ function ChatBaseInner({
       availableFrontendTools={builtinTools.frontend}
       mcpServers={filteredMcpServers}
       enabledMcpTools={enabledMcpTools}
-      enabledMcpToolCount={getEnabledMcpToolNames().length}
       onToggleMcpTool={toggleMcpTool}
       onToggleAllMcpServerTools={toggleAllMcpServerTools}
       approvedMcpTools={approvedMcpTools}
@@ -5418,8 +5331,6 @@ function ChatBaseInner({
       onToggleAllSkills={toggleAllSkills}
       approvedSkills={approvedSkills}
       onToggleSkillApproval={toggleSkillApproval}
-      apiBase={indicatorApiBase}
-      authToken={protocol?.authToken}
       mcpStatusData={effectiveMcpStatusData}
     />
   ) : null;
