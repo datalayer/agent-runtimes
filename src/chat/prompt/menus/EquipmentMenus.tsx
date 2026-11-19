@@ -22,12 +22,10 @@
 
 import type { JSX } from 'react';
 import { ActionList, ActionMenu, Button, Text, Tooltip } from '@primer/react';
-import {
-  AiModelIcon,
-  BriefcaseIcon,
-  PlugIcon,
-  type Icon,
-} from '@primer/octicons-react';
+import { AiModelIcon, BriefcaseIcon, type Icon } from '@primer/octicons-react';
+// Primer's MCP mark (the user, 19 November 2026), by its own path: the
+// package's index types do not declare it, its per-icon entry does.
+import { McpIcon } from '@primer/octicons-react/McpIcon';
 import { Box } from '@datalayer/primer-addons';
 import type {
   Equipment,
@@ -317,7 +315,7 @@ export function EquipmentBar({
     >
       <EquipmentMenu
         kind="servers"
-        icon={PlugIcon}
+        icon={McpIcon}
         title={EQUIPMENT_WORDS.servers}
         rows={servers}
         count={of(serversOn, servers.length, declared)}
