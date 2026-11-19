@@ -157,6 +157,7 @@ describe('the stage of a scene', () => {
 
   it('serves each member on a runtime on a local port of its own, Accounting on 8767', () => {
     expect(sceneRuntimeMembers()).toEqual([
+      'demo-shop',
       'code-explainer',
       'crop-monitoring',
       'disaster-assessment',
@@ -166,15 +167,16 @@ describe('the stage of a scene', () => {
     ]);
     // What serve_scenes.py gives by the same rule.
     expect(sceneRuntimePorts()).toEqual({
-      'code-explainer': 8768,
-      'crop-monitoring': 8769,
-      'disaster-assessment': 8770,
-      'change-detection': 8771,
-      'month-end-close': 8772,
+      'demo-shop': 8768,
+      'code-explainer': 8769,
+      'crop-monitoring': 8770,
+      'disaster-assessment': 8771,
+      'change-detection': 8772,
+      'month-end-close': 8773,
       accounting: 8767,
     });
     expect(sceneMemberUrl('change-detection', {})).toBe(
-      'http://127.0.0.1:8771/api/v1/a2a/agents/change-detection',
+      'http://127.0.0.1:8772/api/v1/a2a/agents/change-detection',
     );
     expect(
       sceneMemberUrl('change-detection', {
@@ -254,7 +256,7 @@ describe('the Scenes example', () => {
     expect(
       container.querySelector('[data-team-member="change-detection"]')
         ?.textContent,
-    ).toContain('127.0.0.1:8771');
+    ).toContain('127.0.0.1:8772');
     // Not reached: drawn all the same, and what each needs said.
     await act(async () => {
       await Promise.resolve();
@@ -265,7 +267,7 @@ describe('the Scenes example', () => {
       'change-detection',
     ]);
     expect(needs[0].textContent).toContain(
-      'Disaster Assessment is not reachable at http://127.0.0.1:8770/api/v1/a2a/agents/disaster-assessment: fetch failed',
+      'Disaster Assessment is not reachable at http://127.0.0.1:8771/api/v1/a2a/agents/disaster-assessment: fetch failed',
     );
     expect(needs[0].textContent).toContain(
       "The agent 'worker-disaster-assessment:0.0.1' is not enabled.",
