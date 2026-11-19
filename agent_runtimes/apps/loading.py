@@ -67,7 +67,7 @@ def load_app(document: Mapping[str, Any], plugins_off: Sequence[str] = ()) -> Ap
         # A mode's or a profile's model is one its agent offers: said here,
         # where the Appspec is read, never as a run refused.
         from agent_runtimes.models.offered import mode_model_problems, offered_of
-        from agent_runtimes.routes.agents import get_library_agent_spec
+        from agent_runtimes.specs.library import get_library_agent_spec
 
         offered = offered_of(get_library_agent_spec(app.agent), {"model": app.model})
         problems = mode_model_problems(app, offered)

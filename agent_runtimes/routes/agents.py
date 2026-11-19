@@ -76,8 +76,8 @@ from ..services import (
     wire_skills_into_codemode,
 )
 from ..specs.agents import AGENTSPECS
-from ..specs.agents import get_agent_spec as _get_agent_spec
 from ..specs.agents import list_agentspecs as list_library_agents
+from ..specs.library import get_library_agent_spec
 
 try:
     from ..specs.events import EVENT_KIND_AGENT_ASSIGNED
@@ -239,21 +239,6 @@ def _kernel_refused(
     if kernel_holds_owner_secrets():
         return []
     return declared.kernel_refused(available, who)
-
-
-def get_library_agent_spec(agent_id: str) -> Any:
-    """An agent of the library by id — or a Cog's, which is an agent equipped with Frames.
-
-    A Cog carries its whole agent spec, its Frames' context in its system
-    prompt; an application may name a Cog where it names an agent.
-    """
-    spec = _get_agent_spec(agent_id)
-    if spec is not None:
-        return spec
-    from ..specs.cogs import get_cog
-
-    cog = get_cog(agent_id)
-    return cog.spec if cog is not None else None
 
 
 def _without_approval_capabilities(capabilities: list[Any]) -> list[Any]:
