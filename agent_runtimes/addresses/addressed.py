@@ -55,7 +55,7 @@ class AddressedAgent:
     agent_source: AgentSource
     hosts: Optional[AddressHosts] = None
     role: Role = "app"
-    #: For a person's own agent: the handle of the person it acts for.
+    #: For a person's own agent: the account (ULID) of the person it acts for.
     acts_for: str = ""
     #: Where its calls are recorded (a runtime launched for a deployment); none locally.
     calls: Optional[CallRecorder] = None

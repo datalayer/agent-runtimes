@@ -66,7 +66,7 @@ Mode = Literal["mcp", "api", "web"]
 ENABLED_VARIABLE = "AGENT_RUNTIMES_ADDRESSES"
 NAME_VARIABLE = "AGENT_RUNTIMES_ADDRESS_NAME"
 AGENT_VARIABLE = "AGENT_RUNTIMES_ADDRESS_AGENT_ID"
-#: For a person's own agent: the handle of the person it acts for.
+#: For a person's own agent: the account (ULID) of the person it acts for.
 ACTS_FOR_VARIABLE = "AGENT_RUNTIMES_ADDRESS_ACTS_FOR"
 
 PORTS: Dict[Mode, int] = {"mcp": MCP_PORT, "api": API_PORT, "web": WEB_PORT}
@@ -270,9 +270,9 @@ class RuntimeAddresses:
 
 def take_address(name: str, *, acts_for: str = "", owner_uid: str = "") -> None:
     """This runtime's agent's name at its four addresses, as the platform routed them —
-    a person's own agent's (``{agent}-{handle}``), with the handle of the person it acts
-    for and its owner, who alone may call it unless they allow others. Said once: a name
-    is never changed, and another is refused (``ValueError``)."""
+    a person's own agent's (``{agent}-{account ulid}``), with the account of the person
+    it acts for and its owner, who alone may call it unless they allow others. Said
+    once: a name is never changed, and another is refused (``ValueError``)."""
     AddressHosts.of(name)
     held = (os.environ.get(NAME_VARIABLE) or "").strip()
     if held and held != name:

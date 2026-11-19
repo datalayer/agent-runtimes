@@ -475,20 +475,27 @@ def test_a_personal_agents_poppy_json_says_whom_it_acts_for() -> None:
     agent = addressed(
         Answers(),
         spec,
-        policy=AddressPolicy("private", owner_uid="eric"),
-        name="marketer-eric",
+        policy=AddressPolicy("private", owner_uid="01HXK3V9Q8M2C4R7T5W6Y8Z0AB"),
+        name="marketer-01hxk3v9q8m2c4r7t5w6y8z0ab",
     )
-    agent.role, agent.acts_for = "personal", "eric"
+    agent.role, agent.acts_for = "personal", "01HXK3V9Q8M2C4R7T5W6Y8Z0AB"
     document = poppy_document(agent)
     parsed = DiscoveryDocument.model_validate(document)
-    assert parsed.organization.domain == "marketer-eric.agent.datalayer.ai"
+    assert (
+        parsed.organization.domain
+        == "marketer-01hxk3v9q8m2c4r7t5w6y8z0ab.agent.datalayer.ai"
+    )
     assert parsed.agent is not None and parsed.agent.protocols[0].type == "a2a"
     assert parsed.agent.protocols[0].description == spec["description"]
     [entry] = document["extensions"][AGENT_EXTENSION]
-    assert entry["role"] == "personal" and entry["acts_for"] == "eric"
+    assert (
+        entry["role"] == "personal"
+        and entry["acts_for"] == "01HXK3V9Q8M2C4R7T5W6Y8Z0AB"
+    )
     assert (
         entry["access"] == "private"
-        and entry["web"] == "https://marketer-eric.web.datalayer.ai"
+        and entry["web"]
+        == "https://marketer-01hxk3v9q8m2c4r7t5w6y8z0ab.web.datalayer.ai"
     )
     assert parsed.auth is None
 
@@ -780,9 +787,11 @@ async def test_a_runtimes_own_agent_is_a_persons_at_its_addresses(
 ) -> None:
     from agent_runtimes.addresses.servers import addressed_in_runtime
 
-    monkeypatch.setenv("AGENT_RUNTIMES_ADDRESS_NAME", "marketer-eric")
-    monkeypatch.setenv("AGENT_RUNTIMES_ADDRESS_ACTS_FOR", "eric")
-    monkeypatch.setenv("AGENT_RUNTIMES_ADDRESS_OWNER", "uid-eric")
+    monkeypatch.setenv(
+        "AGENT_RUNTIMES_ADDRESS_NAME", "marketer-01hxk3v9q8m2c4r7t5w6y8z0ab"
+    )
+    monkeypatch.setenv("AGENT_RUNTIMES_ADDRESS_ACTS_FOR", "01HXK3V9Q8M2C4R7T5W6Y8Z0AB")
+    monkeypatch.setenv("AGENT_RUNTIMES_ADDRESS_OWNER", "01HXK3V9Q8M2C4R7T5W6Y8Z0AB")
     monkeypatch.delenv("AGENT_RUNTIMES_ADDRESS_VISIBILITY", raising=False)
     agent = await addressed_in_runtime(
         "marketer",
@@ -792,15 +801,19 @@ async def test_a_runtimes_own_agent_is_a_persons_at_its_addresses(
     )
     assert (agent.role, agent.acts_for, agent.access.policy.visibility) == (
         "personal",
-        "eric",
+        "01HXK3V9Q8M2C4R7T5W6Y8Z0AB",
         "private",
     )
     assert (
         agent.hosts is not None
-        and agent.hosts.web == "https://marketer-eric.web.datalayer.ai"
+        and agent.hosts.web
+        == "https://marketer-01hxk3v9q8m2c4r7t5w6y8z0ab.web.datalayer.ai"
     )
     assert [operation.operation_id for operation in agent.operations] == ["ask"]
-    assert poppy_document(agent)["extensions"][AGENT_EXTENSION][0]["acts_for"] == "eric"
+    assert (
+        poppy_document(agent)["extensions"][AGENT_EXTENSION][0]["acts_for"]
+        == "01HXK3V9Q8M2C4R7T5W6Y8Z0AB"
+    )
 
 
 def test_the_main_server_is_untouched_until_an_agent_answers_at_its_host() -> None:
@@ -822,16 +835,22 @@ def test_a_runtime_takes_its_name_once(monkeypatch: pytest.MonkeyPatch) -> None:
 
     for variable in (servers.NAME_VARIABLE, servers.ACTS_FOR_VARIABLE, OWNER_VARIABLE):
         monkeypatch.delenv(variable, raising=False)
-    servers.take_address("marketer-eric", acts_for="eric", owner_uid="u-1")
+    servers.take_address(
+        "marketer-01hxk3v9q8m2c4r7t5w6y8z0ab",
+        acts_for="01HXK3V9Q8M2C4R7T5W6Y8Z0AB",
+        owner_uid="01HXK3V9Q8M2C4R7T5W6Y8Z0AB",
+    )
     import os
 
-    assert os.environ[servers.NAME_VARIABLE] == "marketer-eric"
-    assert os.environ[servers.ACTS_FOR_VARIABLE] == "eric"
-    assert os.environ[OWNER_VARIABLE] == "u-1"
+    assert os.environ[servers.NAME_VARIABLE] == "marketer-01hxk3v9q8m2c4r7t5w6y8z0ab"
+    assert os.environ[servers.ACTS_FOR_VARIABLE] == "01HXK3V9Q8M2C4R7T5W6Y8Z0AB"
+    assert os.environ[OWNER_VARIABLE] == "01HXK3V9Q8M2C4R7T5W6Y8Z0AB"
     # Said again, the same: nothing changes; another name is refused.
-    servers.take_address("marketer-eric")
-    with pytest.raises(ValueError, match="answers at marketer-eric already"):
-        servers.take_address("shopper-eric")
+    servers.take_address("marketer-01hxk3v9q8m2c4r7t5w6y8z0ab")
+    with pytest.raises(
+        ValueError, match="answers at marketer-01hxk3v9q8m2c4r7t5w6y8z0ab already"
+    ):
+        servers.take_address("shopper-01hxk3v9q8m2c4r7t5w6y8z0ab")
     with pytest.raises(ValueError, match="is not an address"):
         servers.take_address("Not An Address")
 

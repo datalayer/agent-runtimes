@@ -521,7 +521,10 @@ def test_a_datalayer_agent_is_discovered_at_its_agent_host(
     )
     assert company_domain("Manzanita.Example.") == DOMAIN
     monkeypatch.setenv("DATALAYER_COMPANY_HOSTS_DOMAIN", "example.test")
-    assert company_domain("marketer-eric") == "marketer-eric.agent.example.test"
+    assert (
+        company_domain("marketer-01hxk3v9q8m2c4r7t5w6y8z0ab")
+        == "marketer-01hxk3v9q8m2c4r7t5w6y8z0ab.agent.example.test"
+    )
     for refused in (
         "http://shop.agent.datalayer.ai",
         "https://shop.agent.datalayer.ai/poppy",

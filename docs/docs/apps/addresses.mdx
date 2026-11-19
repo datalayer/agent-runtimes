@@ -322,11 +322,12 @@ agent address. What the runtime is told:
 | --- | --- |
 | `AGENT_RUNTIMES_ADDRESS_NAME` | Its name in its four addresses |
 | `AGENT_RUNTIMES_ADDRESS_AGENT_ID` | Which agent answers, when the runtime makes several |
-| `AGENT_RUNTIMES_ADDRESS_ACTS_FOR` | For a person's own agent, whom it acts for |
+| `AGENT_RUNTIMES_ADDRESS_ACTS_FOR` | For a person's own agent, the account (ULID) it acts for |
 | `AGENT_RUNTIMES_ADDRESS_OWNER` | For a person's own agent, the account that alone may call it unless they allow others |
 
 On Datalayer the platform says them: a person's own agent is named
-`{agent}-{handle}` (`marketer-eric`), told to the runtime as it is assigned; a
+`{agent}-{account}`, its agent and its person's account ULID in lower case
+(`marketer-01hxk3v9q8m2c4r7t5w6y8z0ab`), never a handle, told to the runtime as it is assigned; a
 deployment's name is its address, said by Datalayer with what it runs, once its
 owner turned its addresses on. A runtime launched for a deployment reads who may
 call it from Datalayer, with its proof, and again while it runs (a change takes
