@@ -157,8 +157,11 @@ async def test_a_scope_the_company_does_not_let_in_is_never_let_in(world: Any, m
 class _GatewayTools:
     """A company's toolset as the gateway serves it: every `pap` tool, by its own name."""
 
-    def __init__(self, url: str, *, id: str, http_client: Any) -> None:  # noqa: A002
-        self.url, self.id = url, id
+    def __init__(self, url: str, *, id: str, http_client: Any, renew_token: Any = None) -> None:  # noqa: A002
+        self.url, self.id, self.renew_token = url, id, renew_token
+        _GatewayTools.made.append(self)
+
+    made: list["_GatewayTools"] = []
 
     def filtered(self, offered: Any) -> "_Offered":
         return _Offered(self, offered)
@@ -242,3 +245,52 @@ def test_the_filter_offers_the_names_given_and_no_other() -> None:
     offered = datalayer_gateway._only(visitors_pap.VISITOR_COMPANY_TOOLS)
     names = sorted(pap_connections.TOOL_CLASSES_BY_PROTOCOL["pap"])
     assert [name for name in names if offered(None, SimpleNamespace(name=name))] == ["pap_confirm", "pap_propose", "pap_read"]
+
+
+# --- the execution its token was issued for has ended: renewed once --------
+
+
+@pytest.mark.asyncio
+async def test_an_ended_execution_drops_the_token_and_asks_ai_agents_once(world: Any, monkeypatch: Any) -> None:
+    """Decided 19 November 2026: after the deployment moved to a new spec version, the
+    gateway refused every call with the token held; the visitors' runtime drops it,
+    asks for a new one once, and the call is asked again with it."""
+    monkeypatch.setattr(datalayer_gateway, "DisplayMCPToolset", _GatewayTools)
+    _GatewayTools.made.clear()
+    _let_in(world)
+    await gateway_toolsets_of_the_run(AGENT, [], "visitors-token")
+    (company,) = _GatewayTools.made
+    assert company.renew_token is not None
+    world.answers["dep-shopper"] = {**world.answers["dep-shopper"], "access_token": "renewed"}
+    assert await company.renew_token(TOKEN) == "renewed"
+    assert principal.principal_token("dep-shopper") == "renewed"
+    # Another toolset of the run, still with the old token: given the new one, ai-agents not asked again.
+    assert await company.renew_token(TOKEN) == "renewed"
+    assert len(world.asked) == 2
+
+
+@pytest.mark.asyncio
+async def test_concurrent_ended_calls_ask_ai_agents_once(world: Any, monkeypatch: Any) -> None:
+    import asyncio
+
+    monkeypatch.setattr(datalayer_gateway, "DisplayMCPToolset", _GatewayTools)
+    _GatewayTools.made.clear()
+    _let_in(world)
+    await gateway_toolsets_of_the_run(AGENT, [], "visitors-token")
+    (company,) = _GatewayTools.made
+    world.answers["dep-shopper"] = {**world.answers["dep-shopper"], "access_token": "renewed"}
+    assert await asyncio.gather(company.renew_token(TOKEN), company.renew_token(TOKEN)) == ["renewed", "renewed"]
+    assert len(world.asked) == 2
+
+
+@pytest.mark.asyncio
+async def test_an_ended_execution_ai_agents_will_not_renew_gives_no_token(world: Any, monkeypatch: Any) -> None:
+    monkeypatch.setattr(datalayer_gateway, "DisplayMCPToolset", _GatewayTools)
+    _GatewayTools.made.clear()
+    _let_in(world)
+    await gateway_toolsets_of_the_run(AGENT, [], "visitors-token")
+    (company,) = _GatewayTools.made
+    del world.answers["dep-shopper"]
+    assert await company.renew_token(TOKEN) == ""
+    # The ended token is not kept: the next turn reaches no company with it.
+    assert principal.principal_token("dep-shopper") is None

@@ -87,3 +87,54 @@ async def test_a_deployments_run_reaches_it_as_its_principal(seen: list) -> None
         AGENT, [SimpleNamespace(id="datalayer")], "openers-token"
     )
     assert seen == [{"Authorization": f"Bearer {PRINCIPAL_TOKEN}"}]
+
+
+@pytest.mark.asyncio
+async def test_a_deployments_ended_execution_is_renewed_with_the_runs_token(
+    seen: list, monkeypatch: Any
+) -> None:
+    """The principal's token is held in one place for a signed-in deployment's runtime
+    and the visitors' alike: the gateway's refusal of an ended execution renews it once,
+    asked with the token the run's request carries."""
+    made: list[dict[str, Any]] = []
+
+    class Gateway:
+        def __init__(self, url: str, **kwargs: Any) -> None:
+            made.append(kwargs)
+
+    asked: list[tuple[str, str]] = []
+
+    async def ask(deployment_uid: str, bearer: str) -> dict[str, Any]:
+        asked.append((deployment_uid, bearer))
+        return {"access_token": "renewed", "expires_in": 3600, "principal_uid": "p"}
+
+    monkeypatch.setattr(datalayer_gateway, "DisplayMCPToolset", Gateway)
+    principal.use_asker(ask)
+    try:
+        remember_app_instance(AGENT, {"app_uid": "01APP", "deployment_uid": "dep-1"})
+        principal.give_principal_token("dep-1", PRINCIPAL_TOKEN, expires_in=3600)
+        await gateway_toolsets_of_the_run(
+            AGENT, [SimpleNamespace(id="datalayer")], "openers-token"
+        )
+        (gateway,) = made
+        assert await gateway["renew_token"](PRINCIPAL_TOKEN) == "renewed"
+        assert asked == [("dep-1", "openers-token")]
+        assert principal.principal_token("dep-1") == "renewed"
+    finally:
+        principal.use_asker(None)
+
+
+@pytest.mark.asyncio
+async def test_a_previews_token_is_never_renewed(seen: list, monkeypatch: Any) -> None:
+    made: list[dict[str, Any]] = []
+
+    class Gateway:
+        def __init__(self, url: str, **kwargs: Any) -> None:
+            made.append(kwargs)
+
+    monkeypatch.setattr(datalayer_gateway, "DisplayMCPToolset", Gateway)
+    remember_app_instance(AGENT, {"app_uid": "01APP"})
+    await gateway_toolsets_of_the_run(
+        AGENT, [SimpleNamespace(id="datalayer")], PREVIEW_TOKEN
+    )
+    assert [m.get("renew_token") for m in made] == [None]

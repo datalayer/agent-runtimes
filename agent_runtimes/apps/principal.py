@@ -132,6 +132,7 @@ __all__ = [
     "read_owner_secrets",
     "ensure_launcher_known",
     "renew_principal_token",
+    "renewer_after_execution_ended",
     "use_code_reader",
     "use_memberships_asker",
     "use_preview_asker",
@@ -1102,6 +1103,104 @@ def api_key_for(deployment_uid: str) -> Callable[[], Awaitable[str]]:
     return api_key
 
 
+#: deployment uid -> the renewal under way after its execution ended: concurrent
+#: calls refused alike wait for one ask.
+_RENEWING: dict[str, "asyncio.Future[None]"] = {}
+
+
+def renewer_after_execution_ended(
+    deployment_uid: str, ask_fresh: Callable[[], Awaitable[None]]
+) -> Callable[[str], Awaitable[str]]:
+    """
+    How a run's gateway toolsets renew a deployment's principal token when the
+    gateway refuses a call because the execution it was issued for has ended
+    (the deployment moved to a new spec version).
+
+    Parameters
+    ----------
+    deployment_uid : str
+        The deployment whose principal token is held here.
+    ask_fresh : Callable[[], Awaitable[None]]
+        Asks ai-agents for a new token and holds it; never raises.
+
+    Returns
+    -------
+    Callable[[str], Awaitable[str]]
+        Given the token refused, the token now held when it is another one —
+        renewed by another call already, or asked for now, once for concurrent
+        calls — else ``""``.
+    """
+
+    async def renew(stale: str) -> str:
+        held = principal_token(deployment_uid)
+        if held and held != stale:
+            return held
+        under_way = _RENEWING.get(deployment_uid)
+        if under_way is None:
+            under_way = asyncio.ensure_future(ask_fresh())
+            _RENEWING[deployment_uid] = under_way
+            under_way.add_done_callback(
+                lambda _done: _RENEWING.pop(deployment_uid, None)
+            )
+        await under_way
+        fresh = principal_token(deployment_uid) or ""
+        return "" if fresh == stale else fresh
+
+    return renew
+
+
+def _visitors_renewal(deployment_uid: str) -> Callable[[], Awaitable[None]]:
+    """The visitors' runtime's: the ended token dropped, then asked for once."""
+
+    async def ask_fresh() -> None:
+        from agent_runtimes.apps import visitors_pap
+
+        forget_principal_token(deployment_uid)
+        await visitors_pap.ensure(deployment_uid)
+        logger.info(
+            "Deployment %s's execution ended: its visitors' principal token %s.",
+            deployment_uid,
+            "renewed" if principal_token(deployment_uid) else "could not be renewed",
+        )
+
+    return ask_fresh
+
+
+def _deployment_renewal(
+    deployment_uid: str, bearer: Optional[str]
+) -> Callable[[], Awaitable[None]]:
+    """A deployment's runtime's: asked with the token the run's request carries. A
+    token not renewed is left held, as the keeper's renewal reads it."""
+
+    async def ask_fresh() -> None:
+        if not bearer:
+            return
+        try:
+            answer = await _asker["ask"](deployment_uid, bearer)
+        except PrincipalTokenMissing as error:
+            logger.warning(
+                "Deployment %s's execution ended and its principal token could not be renewed: %s",
+                deployment_uid,
+                error,
+            )
+            return
+        token = str(answer.get("access_token") or "")
+        if not token:
+            return
+        give_principal_token(
+            deployment_uid,
+            token,
+            expires_in=int(answer.get("expires_in") or 0),
+            principal_uid=str(answer.get("principal_uid") or ""),
+        )
+        logger.info(
+            "Deployment %s's execution ended: its principal token renewed.",
+            deployment_uid,
+        )
+
+    return ask_fresh
+
+
 async def gateway_toolsets_of_the_run(
     agent_id: Optional[str], toolsets: list[Any], bearer: Optional[str]
 ) -> list[Any]:
@@ -1175,6 +1274,9 @@ async def gateway_toolsets_of_the_run(
                 if acting == "owner" and domain_of(sid) in let_in
             ),
             company_tools=visitors_pap.VISITOR_COMPANY_TOOLS,
+            renew=renewer_after_execution_ended(
+                deployment, _visitors_renewal(deployment)
+            ),
         )
     from agent_runtimes.apps.acting import acting_token, servers_in_users_name
 
@@ -1189,6 +1291,9 @@ async def gateway_toolsets_of_the_run(
         in_users_name=in_users_name,
         users_token=(await acting_token(deployment, bearer) if in_their_name else ""),
         companies=companies,
+        renew=renewer_after_execution_ended(
+            deployment, _deployment_renewal(deployment, bearer)
+        ),
     )
 
 

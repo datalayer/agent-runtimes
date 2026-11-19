@@ -27,6 +27,12 @@ not found". The MCP spec says the client then opens a new session; the SDK's
 client gives up instead, and the run failed with ``RuntimeError: Session not
 found``. The toolset opens a new session once and asks that one call again
 (:func:`session_lost`); a second loss, or any other error, surfaces as before.
+
+A deployment's principal token is narrowed to its execution, which ends when
+the deployment moves to a new spec version; the gateway then refuses every call
+made with it (:func:`execution_ended`). A toolset given ``renew_token`` asks it
+for a new token once and asks the call again; no new token, or the same
+refusal again, is the tool's answer in a sentence, with no third call.
 """
 
 from __future__ import annotations
@@ -48,8 +54,10 @@ from reactor.ui import DISPLAY_META_KEY, DISPLAY_TYPES, DisplayWire
 
 __all__ = [
     "MCP_INIT_TIMEOUT",
+    "ConnectionNotRenewed",
     "DisplayMCPToolset",
     "McpServerUnreachable",
+    "execution_ended",
     "model_view_of",
     "page_meta",
     "returned",
@@ -93,6 +101,44 @@ def session_lost(error: BaseException) -> bool:
         isinstance(error, McpError)
         and error.error.code == INVALID_REQUEST
         and error.error.message in SESSION_LOST_MESSAGES
+    )
+
+
+#: The JSON-RPC code of the Datalayer gateway's refusals (its enforcement's
+#: ``JSON_RPC_FORBIDDEN``), answered with HTTP 200 as an answer to the call.
+GATEWAY_REFUSED = -32000
+
+
+def execution_ended(error: BaseException) -> bool:
+    """
+    Whether the gateway refused a call because the execution its token was
+    issued for has ended (or could not be read).
+
+    A deployment's principal token is narrowed to its execution, which ends
+    when the deployment moves to a new spec version: every call made with the
+    old token is then refused. The gateway says so in the error's ``data``,
+    ``rule: live`` and ``decided_by: execution`` — matched on those, never on
+    the sentence.
+
+    Parameters
+    ----------
+    error : BaseException
+        What the call raised.
+
+    Returns
+    -------
+    bool
+        True for that refusal, bare or the only kind in a group.
+    """
+    if isinstance(error, BaseExceptionGroup):
+        return all(execution_ended(leaf) for leaf in error.exceptions)
+    if not isinstance(error, McpError) or error.error.code != GATEWAY_REFUSED:
+        return False
+    data = error.error.data
+    return (
+        isinstance(data, dict)
+        and data.get("rule") == "live"
+        and data.get("decided_by") == "execution"
     )
 
 
@@ -173,6 +219,18 @@ def page_meta(part: object) -> dict[str, Any] | None:
 MCP_INIT_TIMEOUT = 30.0
 
 
+class ConnectionNotRenewed(RuntimeError):
+    """A call the gateway refused because its token's execution has ended, and
+    no new token reached it: what the tool returns, in a sentence."""
+
+    def __init__(self, tool: str) -> None:
+        super().__init__(
+            f"{tool!r} could not be called: this agent's connection to Datalayer "
+            "was issued for a deployment version that has ended, and it could not "
+            "be renewed. Say so; it cannot be done now."
+        )
+
+
 class McpServerUnreachable(RuntimeError):
     """An MCP server a run needs did not open: said in a sentence, the run ends."""
 
@@ -199,8 +257,12 @@ class DisplayMCPToolset(MCPToolset):
             # A pre-built Client carries its own; passing one beside it is refused.
             kwargs.setdefault("init_timeout", MCP_INIT_TIMEOUT)
         self._init_timeout = kwargs.get("init_timeout")
+        self._renew_token = kwargs.pop("renew_token", None)
+        self._bearer_client = kwargs.get("http_client")
         super().__init__(*args, **kwargs)
-        call = self._once_more_on_a_lost_session(self.client.call_tool)
+        call = self._once_more_on_a_renewed_token(
+            self._once_more_on_a_lost_session(self.client.call_tool)
+        )
         self.client.list_tools = self._once_more_on_a_lost_session(
             self.client.list_tools
         )
@@ -237,6 +299,43 @@ class DisplayMCPToolset(MCPToolset):
                     raise
             await self._reopen(lost)
             return await request(*a, **kw)
+
+        return asked
+
+    def _once_more_on_a_renewed_token(self, request: Any) -> Any:
+        """``request`` on the client, asked again once with a new token when the
+        gateway refused it because the execution its token was issued for has
+        ended (:func:`execution_ended`), and the toolset was given a way to
+        renew its token. No new token, or the same refusal again, is said in a
+        sentence (:class:`ConnectionNotRenewed`), with no third call.
+        """
+
+        async def asked(*a: Any, **kw: Any) -> Any:
+            try:
+                return await request(*a, **kw)
+            except BaseException as error:
+                if self._renew_token is None or not execution_ended(error):
+                    raise
+            tool = str(kw.get("name") or (a[0] if a else ""))
+            headers = getattr(self._bearer_client, "headers", None)
+            if headers is None:
+                raise ConnectionNotRenewed(tool)
+            stale = str(headers.get("Authorization") or "").removeprefix("Bearer ")
+            fresh = await self._renew_token(stale)
+            if not fresh:
+                raise ConnectionNotRenewed(tool)
+            logger.warning(
+                "The MCP server `%s` refused a call: the execution its token was "
+                "issued for has ended. Asking it again with a renewed token.",
+                self.id or self.label,
+            )
+            headers["Authorization"] = f"Bearer {fresh}"
+            try:
+                return await request(*a, **kw)
+            except BaseException as error:
+                if not execution_ended(error):
+                    raise
+            raise ConnectionNotRenewed(tool)
 
         return asked
 
@@ -302,6 +401,8 @@ class DisplayMCPToolset(MCPToolset):
         token = _caught.set(caught)
         try:
             value = await super().call_tool(name, tool_args, ctx, tool)
+        except ConnectionNotRenewed as not_renewed:
+            return str(not_renewed)
         finally:
             _caught.reset(token)
         if not caught:
