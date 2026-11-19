@@ -320,6 +320,8 @@ export {
   type AgentRunClient,
   type AgentTurn,
   type AppSessionsClient,
+  type ConversationSwitch,
+  type ConversationSwitchesState,
   type RuntimeClientOptions,
   type SessionStart,
   type StreamOptions,

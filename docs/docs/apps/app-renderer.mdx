@@ -444,12 +444,15 @@ What is said of a secret is the *name* of its variable, never its value.
 
 **The switches.** Each overlay has the conversation's switches: a server's tools all at once
 (**Enable all**) or one by one, each tool's approval, each skill, all the skills, each skill's
-approval, and **Codemode** where the chat offers it. They are sent to the runtime over its
-monitoring stream. A switch that cannot be used is drawn disabled, with why: a server that is not
-running, or not set up (its reason), a tool list the runtime has not given yet, or a runtime that
-takes no switch from the page (the visitors' runtime and a deployment's answer the application's
-own routes alone, and open no monitoring stream). Nothing says "disabled without an account" for
-what the runtime does offer a visitor. The model is the application's, the same for everyone: it
+approval, and **Codemode** where the chat offers it. Over the runtime's monitoring stream where
+it is open; otherwise — the visitors' runtime, a deployment's — through the session API,
+`PUT /api/v1/apps/sessions/{uid}/switches` ([the session API](./session-api.mdx)), for that
+conversation alone, with the visitor's token or the person's: never the deployment's agent nor
+anybody else's conversation. They can be used once the conversation has started (its first
+message opens its session). A switch that cannot be used is drawn disabled, with why: a server that
+is not running, or not set up (its reason), or a conversation not started yet. A switch the
+runtime refuses is said in the overlay, in its words. Nothing says "disabled without an account"
+for what the runtime does offer a visitor. The model is the application's, the same for everyone: it
 is read, never chosen, and no model is sent with a run.
 
 **Where it is read.** The servers and the skills come from the runtime the application runs on,

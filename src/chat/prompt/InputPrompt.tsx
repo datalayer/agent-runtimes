@@ -343,6 +343,13 @@ export interface InputPromptProps {
    * them); none when they can. Every switch is then drawn disabled, with it.
    */
   switchesLocked?: string;
+  /**
+   * The skills the conversation switched, on or off, where its runtime keeps
+   * them for it (the session API's switches): over the agent's own word.
+   */
+  skillsSwitched?: Record<string, boolean>;
+  /** The runtime's sentence for the last switch it refused: said in the overlay. */
+  switchRefusal?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -419,6 +426,8 @@ export function InputPrompt({
   mcpStatusData,
   equipment,
   switchesLocked,
+  skillsSwitched,
+  switchRefusal,
 }: InputPromptProps) {
   const chatText = useChatWords();
   const isKernelBusy = kernelStatus === 'busy';
@@ -475,6 +484,7 @@ export function InputPrompt({
         approvedMcpTools,
         skills,
         enabledSkills,
+        skillsSwitched,
         approvedSkills,
         locked: switchesLocked,
       }),
@@ -486,6 +496,7 @@ export function InputPrompt({
       approvedMcpTools,
       skills,
       enabledSkills,
+      skillsSwitched,
       approvedSkills,
       switchesLocked,
     ],
@@ -497,6 +508,7 @@ export function InputPrompt({
     onToggleSkill,
     onToggleAllSkills,
     onToggleSkillApproval,
+    ...(switchRefusal ? { refusal: switchRefusal } : {}),
     // Where the chat offers codemode: an agent's chat, or a host that
     // switches it.
     ...(toolsOffered || onToggleCodemode

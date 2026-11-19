@@ -290,7 +290,7 @@ const TRAVELLER = readEquipment({
 const traveller = (more: Partial<EquipmentSources> = {}) =>
   equipmentLists({
     equipment: { source: 'live', ...TRAVELLER },
-    locked: EQUIPMENT_WORDS.locked.ownRoutes,
+    locked: EQUIPMENT_WORDS.locked.notStarted,
     ...more,
   });
 
@@ -338,9 +338,10 @@ describe('the rows, from every source', () => {
     });
     // Off for a reason of its own, or for the runtime's.
     expect(lists.servers[2].locked).toBe('needs BOOKING_COM_API_KEY');
-    expect(lists.servers[0].locked).toBe(EQUIPMENT_WORDS.locked.noTools);
+    // Switched whole, its tools listed or not: the runtime knows them.
+    expect(lists.servers[0].locked).toBe(EQUIPMENT_WORDS.locked.notStarted);
     expect(lists.skills[2].locked).toBe('needs TAVILY_API_KEY');
-    expect(lists.skills[0].locked).toBe(EQUIPMENT_WORDS.locked.ownRoutes);
+    expect(lists.skills[0].locked).toBe(EQUIPMENT_WORDS.locked.notStarted);
     expect(JSON.stringify(lists)).not.toMatch(/without an account/);
   });
 
@@ -376,6 +377,22 @@ describe('the rows, from every source', () => {
     ).toEqual([
       ['Loaded', true, false],
       ['Off', false, true],
+    ]);
+  });
+
+  it('take what the conversation switched over the agent’s word: a skill, a server without its tools listed', () => {
+    const lists = traveller({
+      locked: undefined,
+      enabledMcpTools: new Map([['kiwi', new Set<string>()]]),
+      skillsSwitched: { 'travel-planning': false, crawl: true },
+    });
+    expect(lists.servers[0]).toMatchObject({ on: false, state: 'Running' });
+    expect(lists.servers[1].on).toBe(true);
+    expect(lists.skills.map(row => [row.id, row.on, row.state])).toEqual([
+      ['travel-planning', false, 'Off'],
+      ['datalayer-memory-add', true, 'Active'],
+      // Not activated stays off, whatever is sent.
+      ['crawl', false, 'Not activated'],
     ]);
   });
 
@@ -562,6 +579,49 @@ describe('the switches', () => {
         .querySelector('[data-equipment-switch="skill:crawl"]')
         ?.getAttribute('title'),
     ).toBe('needs TAVILY_API_KEY');
+  });
+});
+
+describe('a refused switch', () => {
+  it('is said in the overlay, in the runtime’s words', () => {
+    render(
+      <ThemeProvider>
+        <EquipmentMenu
+          kind="servers"
+          trigger="dot"
+          lists={traveller({ locked: undefined })}
+          switches={{
+            ...switches(),
+            refusal: 'kiwi has no tool book.',
+          }}
+        />
+      </ThemeProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^MCP servers — / }));
+    expect(screen.getByRole('alert').textContent).toBe(
+      'kiwi has no tool book.',
+    );
+  });
+
+  it('a server without its tools listed is still switched whole', () => {
+    const asked: string[] = [];
+    render(
+      <ThemeProvider>
+        <EquipmentMenu
+          kind="servers"
+          trigger="button"
+          lists={traveller({ locked: undefined })}
+          switches={switches(asked)}
+        />
+      </ThemeProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^MCP servers — / }));
+    fireEvent.click(
+      document.querySelector(
+        '[data-equipment-switch="server:kiwi"] button',
+      ) as Element,
+    );
+    expect(asked).toEqual(['server kiwi  false']);
   });
 });
 

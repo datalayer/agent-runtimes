@@ -75,9 +75,8 @@ export const EQUIPMENT_WORDS = {
   declaredState: 'Declared',
   locked: {
     notRunning: 'Not running: nothing to switch until it starts.',
-    noTools: 'Its runtime has not listed its tools yet.',
-    ownRoutes:
-      'This runtime answers the application alone: it takes no switch from this page.',
+    notStarted:
+      'Send a first message: the switches apply to this conversation once it has started.',
     notConnected: 'Not connected to its runtime yet: the switches wait for it.',
   },
 } as const;
@@ -143,6 +142,8 @@ export type EquipmentSources = {
   /** The skills the runtime reports for the conversation. */
   skills?: SkillInfo[];
   enabledSkills?: Set<string>;
+  /** The skills the conversation switched, on or off: over anything else. */
+  skillsSwitched?: Record<string, boolean>;
   approvedSkills?: Set<string>;
   /** Why no switch can be used here; none when they can. */
   locked?: string;
@@ -297,19 +298,21 @@ function serverRows(sources: EquipmentSources): ServerRow[] {
           }))
         : [];
     const toolsOn = tools.filter(tool => tool.enabled).length;
+    // Switched off whole by the conversation, its tools listed or not.
+    const switchedOff = sources.enabledMcpTools?.get(switchId)?.size === 0;
     const count = tools.length || said?.tools || live?.tools_count;
     const reason =
       said?.reason ||
       (state === 'failed' ? live?.reason || live?.error : undefined) ||
       undefined;
+    // A running server is switched whole whether or not its tools are
+    // listed: its runtime knows them.
     const locked =
       state === undefined
         ? EQUIPMENT_WORDS.declared
         : state !== 'started'
           ? (reason ?? EQUIPMENT_WORDS.locked.notRunning)
-          : tools.length === 0
-            ? EQUIPMENT_WORDS.locked.noTools
-            : sources.locked;
+          : sources.locked;
     const note =
       state === 'started' && tools.length > 0
         ? `${toolsOn}/${plural(tools.length, 'tool')} on`
@@ -326,7 +329,9 @@ function serverRows(sources: EquipmentSources): ServerRow[] {
         ? EQUIPMENT_WORDS.serverState[state]
         : EQUIPMENT_WORDS.declaredState,
       tone: toneOfServer(state),
-      on: state === 'started' && (tools.length === 0 || toolsOn > 0),
+      on:
+        state === 'started' &&
+        (tools.length === 0 ? !switchedOff : toolsOn > 0),
       tools,
       ...(reason ? { reason } : {}),
       ...(note ? { note } : {}),
@@ -356,18 +361,25 @@ function skillRows(sources: EquipmentSources): SkillRow[] {
     const isDeclared = said !== undefined && !said.state && !known;
     // The conversation's word when the runtime reports the skill; the
     // equipment's otherwise: an active skill is on.
+    const switched = sources.skillsSwitched?.[switchId];
     const enabled = unavailable
       ? false
-      : known
-        ? (sources.enabledSkills?.has(switchId) ?? false)
-        : said?.state === 'active';
+      : switched !== undefined
+        ? switched
+        : known
+          ? (sources.enabledSkills?.has(switchId) ?? false)
+          : said?.state === 'active';
     const state = unavailable
       ? EQUIPMENT_WORDS.skillState.not_activated
-      : known?.status
-        ? EQUIPMENT_WORDS.skillState[known.status]
-        : said?.state
-          ? EQUIPMENT_WORDS.skillState[said.state]
-          : EQUIPMENT_WORDS.declaredState;
+      : switched !== undefined
+        ? switched
+          ? EQUIPMENT_WORDS.skillState.enabled
+          : EQUIPMENT_WORDS.skillState.available
+        : known?.status
+          ? EQUIPMENT_WORDS.skillState[known.status]
+          : said?.state
+            ? EQUIPMENT_WORDS.skillState[said.state]
+            : EQUIPMENT_WORDS.declaredState;
     const reason = said?.reason || undefined;
     const locked = unavailable
       ? (reason ?? EQUIPMENT_WORDS.skillState.not_activated)

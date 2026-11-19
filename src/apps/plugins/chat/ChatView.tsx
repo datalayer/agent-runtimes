@@ -110,6 +110,7 @@ import { useIAMStore } from '../../../state';
 import { useVisitorToken } from '../../apps/visitorToken';
 import { useEquipment } from '../../../hooks/useEquipment';
 import { useMcpToolSwitches } from '../../../hooks/useMcpToolSwitches';
+import { useConversationSwitches } from '../../../hooks/useConversationSwitches';
 import { EQUIPMENT_WORDS } from '../../../chat/prompt/menus/equipmentRows';
 import {
   ANONYMOUS_MINUTES,
@@ -2119,8 +2120,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * The MCP servers' live status and the conversation's switches, over the
    * runtime's monitoring stream (opened by `ChatBase`): the host's status
    * when it feeds one. Without that stream — a runtime held to the
-   * application's own routes opens none — every switch is drawn disabled,
-   * with why.
+   * application's own routes opens none — an application's switches go
+   * through its session API instead (`conversationSwitches`, below).
    */
   const storeMcpStatus = useAgentRuntimeMcpStatus();
   const mcpStatus = chatExtras.mcpStatusData ?? storeMcpStatus ?? undefined;
@@ -2130,12 +2131,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     status: mcpStatus,
     servers: configQuery.data?.mcpServers ?? [],
   });
-  const switchesLocked =
-    wsState === 'connected'
-      ? undefined
-      : ownRoutesOnly
-        ? EQUIPMENT_WORDS.locked.ownRoutes
-        : EQUIPMENT_WORDS.locked.notConnected;
+  const viaStream = wsState === 'connected';
+  const viaSessionApi = !viaStream && runsApp && Boolean(agentServerUrl);
   // `undefined` until the runtime answers: its answer is then the list.
   const [catalogModels, setCatalogModels] = useState<ModelConfig[] | undefined>(
     undefined,
@@ -2266,6 +2263,30 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       ),
     [skillsQuery.data],
   );
+  /*
+   * An application's switches through its session API (the user, 19
+   * November 2026), where no monitoring stream is open — the visitors'
+   * runtime, a deployment's: for this conversation alone, read once its
+   * session is held and again after each turn, a refused one said.
+   */
+  const conversationSwitches = useConversationSwitches({
+    client: viaSessionApi ? sessionsClient : undefined,
+    uid: threadUid,
+    held,
+    refresh: busy,
+    skillOn: skillId =>
+      enabledSkills.has(skillId) ||
+      equipment.skills.some(
+        skill => skill.id === skillId && skill.state === 'active',
+      ),
+  });
+  const switchesLocked = viaStream
+    ? undefined
+    : viaSessionApi
+      ? conversationSwitches.started
+        ? undefined
+        : EQUIPMENT_WORDS.locked.notStarted
+      : EQUIPMENT_WORDS.locked.notConnected;
 
   /*
    * Taken here first, then told to the server.
@@ -2478,30 +2499,48 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     mcpServers: configQuery.data?.mcpServers ?? [],
     mcpStatusData: mcpStatus,
     showMcpMenu: true,
-    enabledMcpTools: mcpSwitches.enabledMcpTools,
-    approvedMcpTools: mcpSwitches.approvedMcpTools,
-    onToggleMcpTool: mcpSwitches.onToggleMcpTool,
-    onToggleAllMcpServerTools: mcpSwitches.onToggleAllMcpServerTools,
-    onToggleMcpToolApproval: mcpSwitches.onToggleMcpToolApproval,
     showSkillsMenu: true,
     skills: skillsQuery.data?.skills ?? [],
     skillsLoading: skillsQuery.isLoading,
     enabledSkills,
-    approvedSkills,
-    onToggleSkillApproval: skillId =>
-      approvedSkills.has(skillId)
-        ? skillActions.unapproveSkill(skillId)
-        : skillActions.approveSkill(skillId),
-    onToggleSkill: skillId =>
-      enabledSkills.has(skillId)
-        ? skillActions.disableSkill(skillId)
-        : skillActions.enableSkill(skillId),
-    onToggleAllSkills: (skillIds, enable) =>
-      skillIds.forEach(skillId =>
-        enable
-          ? skillActions.enableSkill(skillId)
-          : skillActions.disableSkill(skillId),
-      ),
+    ...(viaSessionApi
+      ? {
+          // This conversation's own switches, kept by its runtime.
+          enabledMcpTools: conversationSwitches.enabledMcpTools,
+          approvedMcpTools: conversationSwitches.approvedMcpTools,
+          onToggleMcpTool: conversationSwitches.onToggleMcpTool,
+          onToggleAllMcpServerTools:
+            conversationSwitches.onToggleAllMcpServerTools,
+          onToggleMcpToolApproval: conversationSwitches.onToggleMcpToolApproval,
+          skillsSwitched: conversationSwitches.skillsSwitched,
+          approvedSkills: conversationSwitches.approvedSkills,
+          onToggleSkill: conversationSwitches.onToggleSkill,
+          onToggleAllSkills: conversationSwitches.onToggleAllSkills,
+          onToggleSkillApproval: conversationSwitches.onToggleSkillApproval,
+          switchRefusal: conversationSwitches.refusal,
+        }
+      : {
+          enabledMcpTools: mcpSwitches.enabledMcpTools,
+          approvedMcpTools: mcpSwitches.approvedMcpTools,
+          onToggleMcpTool: mcpSwitches.onToggleMcpTool,
+          onToggleAllMcpServerTools: mcpSwitches.onToggleAllMcpServerTools,
+          onToggleMcpToolApproval: mcpSwitches.onToggleMcpToolApproval,
+          approvedSkills,
+          onToggleSkill: skillId =>
+            enabledSkills.has(skillId)
+              ? skillActions.disableSkill(skillId)
+              : skillActions.enableSkill(skillId),
+          onToggleAllSkills: (skillIds, enable) =>
+            skillIds.forEach(skillId =>
+              enable
+                ? skillActions.enableSkill(skillId)
+                : skillActions.disableSkill(skillId),
+            ),
+          onToggleSkillApproval: skillId =>
+            approvedSkills.has(skillId)
+              ? skillActions.unapproveSkill(skillId)
+              : skillActions.approveSkill(skillId),
+        }),
     codemodeEnabled: chatExtras.codemodeEnabled ?? false,
     onToggleCodemode: chatExtras.onToggleCodemode,
     isA2AProtocol: false,

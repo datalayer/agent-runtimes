@@ -82,6 +82,8 @@ export type EquipmentSwitches = {
   onToggleSkill: (skillId: string) => void;
   onToggleAllSkills: (skillIds: string[], enable: boolean) => void;
   onToggleSkillApproval: (skillId: string) => void;
+  /** The runtime's sentence for the last switch it refused: said in the overlay. */
+  refusal?: string;
   /** Codemode, where the chat offers it; its toggle disabled without a handler. */
   codemode?: {
     enabled: boolean;
@@ -224,7 +226,8 @@ function ServerBlock({
   const labelId = `${scope}-server-${row.id}`;
   const names = row.tools.map(tool => tool.name);
   const toolsOn = row.tools.filter(tool => tool.enabled).length;
-  const allOn = names.length > 0 && toolsOn === names.length;
+  // Without its tools listed, the server is on unless switched off whole.
+  const allOn = names.length > 0 ? toolsOn === names.length : row.on;
   const marks = marksOfMcpServer({ id: row.id });
   return (
     <Box
@@ -476,6 +479,15 @@ export function EquipmentPanel({
         borderColor="border.muted"
         data-equipment-note=""
       >
+        {switches.refusal ? (
+          <Text
+            role="alert"
+            data-equipment-refusal=""
+            sx={{ fontSize: 0, color: 'danger.fg', display: 'block', mb: 1 }}
+          >
+            {switches.refusal}
+          </Text>
+        ) : null}
         <Text sx={{ fontSize: 0, color: 'fg.muted', display: 'block' }}>
           {EQUIPMENT_WORDS.switches}
         </Text>
