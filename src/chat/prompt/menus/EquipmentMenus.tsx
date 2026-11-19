@@ -24,7 +24,14 @@
  * @module chat/prompt/menus/EquipmentMenus
  */
 
-import { forwardRef, useEffect, useId, type JSX, type ReactNode } from 'react';
+import {
+  forwardRef,
+  useEffect,
+  useId,
+  type ComponentPropsWithoutRef,
+  type JSX,
+  type ReactNode,
+} from 'react';
 import {
   ActionList,
   ActionMenu,
@@ -523,7 +530,7 @@ function usePulseKeyframes(): void {
  * The triggers take the anchor's props (its click, its ref, its ARIA) onto
  * their button: `ActionMenu.Anchor` gives them to the tooltip's child.
  */
-type AnchorProps = Record<string, unknown>;
+type AnchorProps = Omit<ComponentPropsWithoutRef<'button'>, 'type'>;
 
 /** The dot: the list's status in its colour, its summary in its tooltip. */
 const DotTrigger = forwardRef<
