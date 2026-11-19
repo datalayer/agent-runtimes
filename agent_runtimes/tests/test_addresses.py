@@ -1199,7 +1199,8 @@ class _IssuedHere:
     """A company whose issuer issued tokens: one for its MCP server and one default, to
     a personal agent; and one for its MCP server to another MCP client (the SDK's
     public clients), whose account is ``mcp_client_account``. Each is the SDK's own
-    record of an access token."""
+    record of an access token.
+    """
 
     def __init__(
         self,

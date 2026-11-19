@@ -67,7 +67,8 @@ def _apis(addressed: AddressedAgent) -> list[Dict[str, str]]:
 
 def company_document(addressed: AddressedAgent) -> Dict[str, Any]:
     """The ``poppy.json`` of an agent that is a company: the SDK's company document on its
-    agent host, its APIs at their own hosts."""
+    agent host, its APIs at their own hosts.
+    """
     hosts = addressed.hosts
     if hosts is None:
         raise ValueError(

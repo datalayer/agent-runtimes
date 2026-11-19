@@ -5900,7 +5900,8 @@ def _without_skills(spec: Any, agent_spec_id: str, left_out: list[str]) -> Any:
 
 def _take_address(http_request: Request, address: dict[str, str]) -> None:
     """Know this runtime's agent's name at its four addresses (a person's own agent):
-    only the pod names it (`callers.is_the_pod`), before its agent is made."""
+    only the pod names it (`callers.is_the_pod`), before its agent is made.
+    """
     from agent_runtimes.addresses.servers import take_address
     from agent_runtimes.apps.callers import POD_SECRET_HEADER, is_the_pod
 

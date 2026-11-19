@@ -50,8 +50,9 @@ DEVICE_PATH = "/pap/device"
 
 
 def device_redirect(addressed: AddressedAgent, scope: dict) -> str:
-    """Studio's device page for this company, with the code from the link and nothing
-    else of its query; the name is the host's, never the request's."""
+    """The Studio device page for this company, with the code from the link and nothing
+    else of its query; the name is the host's, never the request's.
+    """
     from urllib.parse import parse_qsl, urlencode
 
     query = (scope.get("query_string") or b"").decode("latin-1")

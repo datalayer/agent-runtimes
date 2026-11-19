@@ -339,7 +339,7 @@ Runner = Callable[[DatalayerMode, list[str]], Awaitable[dict[str, Any]]]
 
 
 async def run_agent_runtimes(mode: DatalayerMode, args: list[str]) -> dict[str, Any]:
-    """``agent-runtimes kagent <args>`` in agent-runtimes' environment.
+    """Run ``agent-runtimes kagent <args>`` in agent-runtimes' environment.
 
     The key reaches that process in its environment only (never on its
     command line); a failure raises its sentence from stderr.
@@ -714,7 +714,7 @@ def executor(
 
 
 def request_handler(card: Any, forward: Any, local: bool) -> Any:
-    """kagent-core's request handler: the controller's task store, or memory when local."""
+    """The kagent-core request handler: the controller's task store, or memory when local."""
     from kagent.core.a2a import KAgentRequestContextBuilder, TelemetryRequestHandler
 
     if local:

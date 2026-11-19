@@ -274,7 +274,13 @@ def test_the_identity_names_the_runtime_uid_never_a_worker(client: TestClient) -
 
 @pytest.fixture
 def no_server(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[dict[str, Any]]]:
-    """No server started; the environment serve_server writes is put back after."""
+    """No server started; the environment serve_server writes is put back after.
+
+    Yields
+    ------
+    list of dict
+        The keyword arguments of each ``uvicorn.run`` call, in order.
+    """
     import uvicorn
 
     environ = dict(os.environ)

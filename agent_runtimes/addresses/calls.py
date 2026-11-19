@@ -92,7 +92,7 @@ class CallRecorder:
 
 
 def ai_agents_sender(name: str) -> Sender:
-    """Sends a batch to ai-agents for the deployment this runtime was launched for, at ``name``."""
+    """Send a batch to ai-agents for the deployment this runtime was launched for, at ``name``."""
 
     async def send(calls: List[dict]) -> None:
         import httpx

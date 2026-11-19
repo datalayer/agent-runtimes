@@ -42,9 +42,10 @@ def studio_url() -> str:
 
 
 def consent_page(name: str) -> str:
-    """Datalayer's consent page for the company at ``name``, with the request the
+    """The Datalayer consent page for the company at ``name``, with the request the
     company's authorization endpoint names (``{request_id}``): where a person signed in
-    to Datalayer allows or refuses a client that asks to sign in."""
+    to Datalayer allows or refuses a client that asks to sign in.
+    """
     return f"{studio_url()}/pap/consent?slug={name}&request={{request_id}}"
 
 

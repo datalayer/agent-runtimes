@@ -51,7 +51,7 @@ _SECRET = secrets.token_bytes(32)
 
 
 def iam_public_url() -> str:
-    """Datalayer's authorization server, as a browser reaches it."""
+    """The Datalayer authorization server, as a browser reaches it."""
     from datalayer_core.utils.urls import DatalayerURLs
 
     url = (os.environ.get("DATALAYER_IAM_PUBLIC_URL") or "").strip() or (
@@ -273,7 +273,8 @@ async def answer(scope: dict, receive: Any, send: Any, *, host: str, name: str) 
 
 def iam_userinfo_checker(iam_url: str) -> Any:
     """Whose an access token Datalayer's authorization server issued is
-    (``/oauth/userinfo``, its ``sub``)."""
+    (``/oauth/userinfo``, its ``sub``).
+    """
 
     async def check(token: str) -> Optional[str]:
         import httpx

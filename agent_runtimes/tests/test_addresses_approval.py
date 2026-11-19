@@ -67,7 +67,8 @@ ORDER = {"total": 9.5}
 
 def _shop() -> Dict[str, Any]:
     """The company: `quote` needs no approval; `order` (POST /orders) is one a person
-    approves, under `orders:write`."""
+    approves, under `orders:write`.
+    """
     document = json.loads(json.dumps(OPENAPI))
     document["paths"]["/orders"] = json.loads(json.dumps(document["paths"]["/quote"]))
     order = document["paths"]["/orders"]["post"]

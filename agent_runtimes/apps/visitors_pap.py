@@ -55,7 +55,7 @@ _RUN_COMPANIES: ContextVar[Optional[Mapping[str, tuple[str, ...]]]] = ContextVar
 
 
 def take_key() -> str:
-    """This runtime's key to ai-agents, taken out of the environment the first time; ``""`` for none."""
+    """The key of this runtime to ai-agents, taken out of the environment the first time; ``""`` for none."""
     from agent_runtimes.guardrails.credentials import hold
 
     with _LOCK:
@@ -120,7 +120,8 @@ async def _ask(deployment_uid: str, key: str) -> dict[str, Any]:
 async def ensure(deployment_uid: str) -> bool:
     """Whether the deployment's principal token is held for its visitors, asked for when it is not
     or runs out. ``False`` — and nothing beyond reading — for a deployment ai-agents does not let
-    further, on another runtime, or with no key."""
+    further, on another runtime, or with no key.
+    """
     from agent_runtimes.apps.principal import (
         PrincipalTokenMissing,
         _ensure_held,
@@ -159,7 +160,8 @@ def enter_run(deployment_uid: str) -> None:
 def exempts(tool: str, classes: Sequence[str], behaviour: str) -> bool:
     """Whether a visitor's turn may make this call although it does more than read: a read, a
     proposal or a confirmation at a company the run's deployment lets its visitors use, its rules
-    saying *do it*."""
+    saying *do it*.
+    """
     from agent_runtimes.apps.pap_connections import domain_of, pap_tool
     from agent_runtimes.apps.rules import DO_IT
 

@@ -227,7 +227,13 @@ def test_server_ids_are_unique() -> None:
 
 @pytest.fixture()
 def no_server(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[dict[str, Any]]]:
-    """No server started; the environment serve_server writes is put back after."""
+    """No server started; the environment serve_server writes is put back after.
+
+    Yields
+    ------
+    list of dict
+        The keyword arguments of each ``uvicorn.run`` call, in order.
+    """
     import uvicorn
 
     environ = dict(os.environ)

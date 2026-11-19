@@ -552,7 +552,8 @@ class TestInThePostgreSQL:
 class TestBeforeTheApproval:
     """The estimate runs before the person is asked (15 November 2026): a call
     past a budget is refused with the guardrail's sentence, and the approval
-    guardrail is never reached for it."""
+    guardrail is never reached for it.
+    """
 
     @pytest.mark.asyncio
     async def test_a_call_past_the_budget_is_refused_before_any_approval(
@@ -629,7 +630,8 @@ class TestBeforeTheApproval:
 class TestADeferredCall:
     """A post asks first: pydantic-ai defers it for approval before any execute
     hook, and the approval guardrail asks the person in `handle_deferred_tool_calls`.
-    The budget answers there first."""
+    The budget answers there first.
+    """
 
     @pytest.mark.asyncio
     async def test_a_post_past_the_budget_is_denied_before_the_person_is_asked(

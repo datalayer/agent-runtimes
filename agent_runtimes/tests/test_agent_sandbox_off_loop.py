@@ -53,7 +53,13 @@ class _SlowSandbox(EvalSandbox):
 
 @pytest.fixture
 def manager(monkeypatch: pytest.MonkeyPatch) -> CodeSandboxManager:
-    """A fresh real manager whose sandboxes are slow to start."""
+    """A fresh real manager whose sandboxes are slow to start.
+
+    Yields
+    ------
+    CodeSandboxManager
+        The manager, its agent sandboxes stopped after the test.
+    """
     monkeypatch.delenv("DATALAYER_RUNTIME_JUPYTER_SIDECAR", raising=False)
     # A started sandbox writes its variant into the environment: give it back.
     monkeypatch.setenv("DATALAYER_CODE_SANDBOX_VARIANT", "eval")
