@@ -194,13 +194,14 @@ export const PAGE_DECK_FRONTEND_TOOL_SPEC_0_0_1: FrontendToolSpec = {
   version: '0.0.1',
   name: 'Deck in the page',
   description:
-    'Build a slide deck in the conversation — create it, add, replace, move and delete slides with speaker notes and pictures, set its look, read it back — shown to the person as it is built.',
+    'Build a slide deck in the conversation — create it, lay its slides out in one call, add, replace, move and delete slides with speaker notes and pictures, set its look, read it back — shown to the person as it is built.',
   tags: ['frontend', 'decks', 'presentations', 'page'],
   enabled: true,
   toolset: [
     'deck_create',
     'deck_set_title',
     'deck_add_slide',
+    'deck_add_slides',
     'deck_update_slide',
     'deck_move_slide',
     'deck_delete_slide',
