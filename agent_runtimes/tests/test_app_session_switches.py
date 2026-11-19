@@ -242,7 +242,7 @@ def test_what_is_offered_is_what_runs_and_what_is_active(
 
 
 def _opened(client: TestClient, thread: str, person: str) -> None:
-    run = {
+    run: Dict[str, Any] = {
         "threadId": thread,
         "runId": f"run-{thread}",
         "state": None,
