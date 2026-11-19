@@ -216,13 +216,24 @@ visitors' runtime only.*), and this one refuses anybody signed in.
 - **It only reads.** In a visitor's turn a tool whose action class is not
   *read*, or one its rules would ask about, is not run, whatever the rules
   say: *Without an account it only reads: `send_mail` would do more than
-  read, so it asked nobody and did nothing.*
+  read, so it asked nobody and did nothing.* A tool the page runs — one of
+  the run's AG-UI frontend tools, or of its spec's frontend tool sets and
+  header UIs, the title bar, a deck, a sheet, a side panel, a notice — only
+  changes the visitor's own screen, and is called as anybody calls it; a tool
+  of the server under the same name is still refused.
 - **Nothing is kept.** Nothing is remembered of a visitor, no record is sent,
   feedback is refused, and a session the runtime no longer holds is not
   resumed.
 - **Limits.** `AGENT_RUNTIMES_VISITOR_TURNS` turns a day per visitor (10),
   `AGENT_RUNTIMES_VISITOR_SESSION_MINUTES` minutes per session from its start
-  (15), each refused with a sentence (`429`).
+  (15), each refused with a sentence (`429`). A turn is a person's message:
+  a run that only carries what the page's tools answered, for the calls the
+  run before made of it, is the same turn and takes none; a run with a
+  message, or with results for calls the run before never made, takes one.
+- **A page tool failing twice ends the turn**, for everybody: the same tool
+  of the page answering with an error (its AG-UI tool message's `error`)
+  twice in a turn ends it in a sentence naming the tool and what it said,
+  rather than running the agent again.
 - **An application at its address** (`at:<slug>`) is made here as its page
   opens — the page asks `POST /api/v1/apps/visitors/agent` with the visitor's
   token before it follows the application, so that the runtime holds it

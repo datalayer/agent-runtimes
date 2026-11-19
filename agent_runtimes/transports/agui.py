@@ -419,6 +419,7 @@ class AGUITransport(BaseTransport):
                 skills_from_request: list[str] | None = None
                 identities_from_request: list[dict[str, Any]] | None = None
                 header_told = ""
+                body: Any = None
                 metric_user_id: str | None = None
                 metric_user_provider: str | None = None
                 metric_user_jwt_token = extract_jwt_token(
@@ -764,6 +765,14 @@ class AGUITransport(BaseTransport):
                 # entire request duration via contextvars.
                 set_request_identities(identities_from_request)
                 set_request_user_jwt(metric_user_jwt_token)
+                # The run's frontend tools, which the page runs: a visitor
+                # calls them as anybody does (`apps.page_tools`). Set for the
+                # whole request, as the identities are.
+                from ..apps.page_tools import tool_names_of, use_run_frontend_tools
+
+                use_run_frontend_tools(
+                    tool_names_of(body.get("tools") if isinstance(body, dict) else [])
+                )
                 logger.debug("[AG-UI] Set request identities for streaming")
                 logger.info(
                     "[AG-UI] Prompt metrics identity context: user_id=%s provider=%s identities=%s",

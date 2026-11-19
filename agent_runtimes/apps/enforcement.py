@@ -102,6 +102,7 @@ from agent_runtimes.apps.host_user import (
     HOST_TOOL_PREFIX,
     host_tools,
 )
+from agent_runtimes.apps.page_tools import runs_in_the_page
 from agent_runtimes.apps.pap_company import performs, propose
 from agent_runtimes.apps.pap_connections import (
     acts_as,
@@ -186,6 +187,9 @@ SEVERAL_RUNS_SENTENCE = (
 
 #: A visitor without an account's turn, which only reads.
 SIGNED_OUT = "signed_out"
+
+#: A tool the page runs, which changes only the screen of whoever is looking.
+PAGE_TOOL = "page_tool"
 
 #: Background work with nobody present, which only reads unless a rule says otherwise.
 UNATTENDED = "unattended"
@@ -889,6 +893,14 @@ class AppRulesCapability(AbstractCapability[Any]):
                 # 13 October 2026: raised, it failed Exchange Desk's whole
                 # turn, so nothing proposed reached the person).
                 raise SkipToolExecution(proposed)
+        # A tool the page runs, as the run or the spec declares it
+        # (`page_tools`), never by its name alone: it changes only the screen
+        # of whoever is looking, so it is done, a visitor's call too.
+        if runs_in_the_page(self.app, call.tool_name, tool_def):
+            done = replace(decision, behaviour=DO_IT, because=PAGE_TOOL)
+            if self.record is not None:
+                self.record(replace(enforced, decision=done))
+            return args
         # A visitor without an account only reads, and nobody is asked for
         # them: whatever the rules say, anything else is not done.
         refusal = visitor_refusal(call.tool_name, decision.classes, decision.behaviour)
