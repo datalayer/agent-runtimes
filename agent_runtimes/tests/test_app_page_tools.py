@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import Any, AsyncIterator, Dict, Iterator, List, Optional
+from typing import Any, AsyncIterator, Dict, Iterator, List, Optional, Tuple
 
 import pytest
 from ag_ui.core import (
@@ -406,6 +406,234 @@ def test_the_same_page_tool_failing_twice_ends_a_signed_in_turn(
     )
     _fails_twice(remote, as_("ada"), "thread-fails-p")
     assert model.calls == 2
+
+
+# --- what the model sees of its turn ------------------------------------------------
+
+QUOTE = "quote_basket"
+
+#: The Shopper's own quote, a tool of the server that only reads.
+SHOPPER = {
+    **ASSISTANT,
+    "tools": [
+        {
+            "name": QUOTE,
+            "description": "Price the basket at the shop.",
+            "does": ["read"],
+        }
+    ],
+}
+
+
+class ShopperModel:
+    """The Shopper as it looped: it prices the basket whenever it cannot see
+    its quote, shows it in the title bar, and answers once it sees both."""
+
+    def __init__(self) -> None:
+        self.quotes = 0
+        self.headers = 0
+
+    async def stream(
+        self, messages: List[ModelMessage], info: AgentInfo
+    ) -> AsyncIterator[Any]:
+        def returns(message: ModelMessage) -> List[str]:
+            return [
+                part.tool_name
+                for part in (message.parts if isinstance(message, ModelRequest) else [])
+                if isinstance(part, ToolReturnPart)
+            ]
+
+        last = returns(messages[-1])
+        if QUOTE in last and HEADER.name not in last:
+            self.headers += 1
+            yield {
+                0: DeltaToolCall(
+                    name=HEADER.name,
+                    json_args=json.dumps({"basket": {"value": 2, "label": "$39.98"}}),
+                    tool_call_id=f"header-{self.headers}",
+                )
+            }
+            return
+        if any(QUOTE in returns(message) for message in messages):
+            yield "The basket: a pan and a knife, $39.98."
+            return
+        self.quotes += 1
+        yield {
+            0: DeltaToolCall(
+                name=QUOTE,
+                json_args=json.dumps({"items": ["pan", "knife"]}),
+                tool_call_id=f"quote-{self.quotes}",
+            )
+        }
+
+    def __call__(self, messages: List[ModelMessage], info: AgentInfo) -> Any:
+        raise AssertionError("The chat streams.")
+
+
+def make_shopper(runtime: Runtime) -> ShopperModel:
+    """The example's agent with the Shopper's quote, on the model that looped."""
+    from agent_runtimes.adapters.pydantic_ai_adapter import PydanticAIAdapter
+    from agent_runtimes.transports import AGUITransport
+
+    agent_id = "notes-assistant"
+    app = load_app(SHOPPER)
+    plugins.register_app(app)
+    recorder = AppRecorder(
+        app=app, app_uid="", deployment_uid="", version=0, send=runtime.send
+    )
+    model = ShopperModel()
+
+    async def quote_basket(items: List[str]) -> Dict[str, Any]:
+        """Price the basket at the shop."""
+        return {"items": items, "total": "$39.98"}
+
+    agent = Agent(
+        FunctionModel(model, stream_function=model.stream),
+        tools=[quote_basket],
+        capabilities=app_capabilities(app, recorder=recorder, agent_id=agent_id),
+    )
+    register_agui_agent(
+        agent_id,
+        AGUITransport(PydanticAIAdapter(agent, agent_id=agent_id), agent_id=agent_id),
+    )
+    agents._agentspecs[agent_id] = {
+        "app_spec": SHOPPER,
+        "app_instance": {"visitor_app": "notes-assistant"},
+    }
+    keep_agent_recorder(agent_id, recorder)
+    runtime.models[agent_id] = model  # type: ignore[assignment]
+    return model
+
+
+def server_calls(events: List[Dict[str, Any]]) -> List[Dict[str, str]]:
+    """The calls of the server's tools a run made, as the chat keeps them."""
+    calls: Dict[str, Dict[str, str]] = {}
+    for event in events:
+        kind, call = event.get("type"), str(event.get("toolCallId") or "")
+        if kind == "TOOL_CALL_START" and event.get("toolCallName") != HEADER.name:
+            calls[call] = {"id": call, "name": str(event["toolCallName"]), "args": ""}
+        elif kind == "TOOL_CALL_ARGS" and call in calls:
+            calls[call]["args"] += str(event.get("delta") or "")
+        elif kind == "TOOL_CALL_RESULT" and call in calls:
+            calls[call]["content"] = str(event.get("content"))
+    return list(calls.values())
+
+
+def continued(
+    header: str, done: List[Dict[str, str]], content: Optional[str] = None
+) -> List[Any]:
+    """The continuation the chat sends: the run's calls, the server's and the
+    page's, then their results, the server's as the run gave them."""
+    page = answered(header)
+    return [
+        AssistantMessage(
+            id=f"a-{header}",
+            tool_calls=[
+                *(
+                    ToolCall(
+                        id=call["id"],
+                        function=FunctionCall(
+                            name=call["name"], arguments=call["args"]
+                        ),
+                    )
+                    for call in done
+                ),
+                *page[0].tool_calls,
+            ],
+        ),
+        *(
+            ToolMessage(
+                id=f"t-{call['id']}",
+                tool_call_id=call["id"],
+                content=call["content"] if content is None else content,
+            )
+            for call in done
+        ),
+        page[1],
+    ]
+
+
+def _first_run(client: TestClient, thread: str) -> Tuple[Any, str, List[Any]]:
+    asked = UserMessage(id="u1", content="Put a pan and a knife in a basket.")
+    events = events_of(
+        client.post(
+            AGUI,
+            headers=as_visitor("tab-ada-0001"),
+            json=run_of(thread, "r1", [asked]),
+        )
+    )
+    (header,) = asked_of_the_page(events)
+    return asked, header, server_calls(events)
+
+
+def test_a_continuation_without_the_runs_server_calls_loops(
+    runtime: Runtime, visitors_runtime: TestClient
+) -> None:
+    model = make_shopper(runtime)
+    asked, header, done = _first_run(visitors_runtime, "thread-loops")
+    assert [call["name"] for call in done] == [QUOTE]
+    # What the chat sent before: the page's call alone. The model cannot see
+    # its quote, prices again, and asks the page again.
+    again = events_of(
+        visitors_runtime.post(
+            AGUI,
+            headers=as_visitor("tab-ada-0001"),
+            json=run_of("thread-loops", "r2", [asked, *answered(header)]),
+        )
+    )
+    assert asked_of_the_page(again) == ["header-2"]
+    assert (model.quotes, model.headers) == (2, 2)
+
+
+def test_a_continuation_with_the_runs_server_calls_answers_in_the_same_turn(
+    runtime: Runtime, visitors_runtime: TestClient
+) -> None:
+    model = make_shopper(runtime)
+    asked, header, done = _first_run(visitors_runtime, "thread-sees")
+    said = events_of(
+        visitors_runtime.post(
+            AGUI,
+            headers=as_visitor("tab-ada-0001"),
+            json=run_of("thread-sees", "r2", [asked, *continued(header, done)]),
+        )
+    )
+    assert asked_of_the_page(said) == []
+    assert answer_of(said) == "The basket: a pan and a knife, $39.98."
+    assert (model.quotes, model.headers) == (1, 1)
+    # The same turn: one taken, for the message.
+    assert visitors.TURNS._taken["tab-ada-0001"] == 1
+
+
+def test_server_results_the_runtime_did_not_give_take_a_turn(
+    runtime: Runtime, visitors_runtime: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv(visitors.TURNS_ENV, "10")
+    make_shopper(runtime)
+    asked, header, done = _first_run(visitors_runtime, "thread-changed")
+    # A server result changed on the way back: a turn.
+    events_of(
+        visitors_runtime.post(
+            AGUI,
+            headers=as_visitor("tab-ada-0001"),
+            json=run_of(
+                "thread-changed",
+                "r2",
+                [asked, *continued(header, done, content='{"total": "$0.00"}')],
+            ),
+        )
+    )
+    assert visitors.TURNS._taken["tab-ada-0001"] == 2
+    asked, header, _ = _first_run(visitors_runtime, "thread-made-up")
+    # A server call the run never made: a turn.
+    made_up = [{"id": "quote-made-up", "name": QUOTE, "args": "{}", "content": "{}"}]
+    events_of(
+        visitors_runtime.post(
+            AGUI,
+            headers=as_visitor("tab-ada-0001"),
+            json=run_of("thread-made-up", "r2", [asked, *continued(header, made_up)]),
+        )
+    )
+    assert visitors.TURNS._taken["tab-ada-0001"] == 4
 
 
 @pytest.fixture(autouse=True)

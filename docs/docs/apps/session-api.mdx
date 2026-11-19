@@ -228,8 +228,11 @@ visitors' runtime only.*), and this one refuses anybody signed in.
   `AGENT_RUNTIMES_VISITOR_SESSION_MINUTES` minutes per session from its start
   (15), each refused with a sentence (`429`). A turn is a person's message:
   a run that only carries what the page's tools answered, for the calls the
-  run before made of it, is the same turn and takes none; a run with a
-  message, or with results for calls the run before never made, takes one.
+  run before made of it, is the same turn and takes none; it may carry the
+  run's calls of the server's tools too, each with its result exactly as the
+  run gave it, so the model sees what it already did. A run with a message,
+  with results for calls the run before never made, or with a server result
+  changed, takes one.
 - **A page tool failing twice ends the turn**, for everybody: the same tool
   of the page answering with an error (its AG-UI tool message's `error`)
   twice in a turn ends it in a sentence naming the tool and what it said,

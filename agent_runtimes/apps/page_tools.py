@@ -17,7 +17,9 @@ nothing beyond their own screen.
 **A turn is a person's message.** Each answer of a page tool comes back as a
 run of its own; such a run, carrying nothing new but the results of the calls
 the run before asked of the page, is the same turn (:class:`PageCalls`): a
-deck built with three tools is one of a visitor's turns. Anything else is a
+deck built with three tools is one of a visitor's turns. It may carry the
+run's calls of the server's tools too, with what they answered, so that the
+model sees what it already did: each only as the run answered it. Anything else is a
 turn — a message, a result for a call the run before never made, the same
 result sent twice, a conversation changed before it — so that nothing passes
 for free that a person said.
@@ -182,8 +184,15 @@ class PageCalls:
     said: Optional[Tuple[str, ...]] = None
     """What the person had said as the last run started."""
 
+    done: Dict[str, str] = field(default_factory=dict)
+    """The calls of the server's tools the last run made: what each answered,
+    by call id, as the run streamed it."""
+
     declared: frozenset[str] = frozenset()
     """The page's tools the last run declared."""
+
+    _started: Dict[str, str] = field(default_factory=dict, repr=False)
+    """The server's calls of the run under way, by id, until they answer."""
 
     failures: Dict[str, int] = field(default_factory=dict)
     """How often each page tool failed in the turn under way."""
@@ -196,12 +205,12 @@ class PageCalls:
         the person said is what they had said then. Whatever it is, what the
         last run asked is forgotten: a result is taken once.
         """
-        asked, said = self.asked, self.said
-        self.asked = {}
+        asked, done, said = self.asked, self.done, self.said
+        self.asked, self.done, self._started = {}, {}, {}
         self.declared = frozenset(tool_names_of(tools))
         messages = _messages(raw)
         self.said = _said(messages) if messages is not None else None
-        answered = self._answered(messages, asked, said)
+        answered = self._answered(messages, asked, done, said)
         if answered is None:
             self.failures = {}
         return answered
@@ -210,6 +219,7 @@ class PageCalls:
     def _answered(
         messages: Optional[List[Any]],
         asked: Mapping[str, str],
+        done: Mapping[str, str],
         said: Optional[Tuple[str, ...]],
     ) -> Optional[Answered]:
         from ag_ui.core import AssistantMessage, ToolMessage
@@ -229,23 +239,42 @@ class PageCalls:
         ):
             return None
         ids = [message.tool_call_id for message in trailing]
-        if len(set(ids)) != len(ids) or any(each not in asked for each in ids):
+        if len(set(ids)) != len(ids) or not any(each in asked for each in ids):
             return None
+        for message in trailing:
+            if message.tool_call_id in asked:
+                continue
+            # A call of the server's, carried so the model sees what it did:
+            # only as the run answered it, word for word.
+            if done.get(message.tool_call_id) != message.content:
+                return None
         return Answered(
             [
                 (message.tool_call_id, asked[message.tool_call_id], message.error or "")
                 for message in reversed(trailing)
+                if message.tool_call_id in asked
             ]
         )
 
     def heard(self, event: Mapping[str, Any]) -> None:
-        """An event of the run: a call of a tool of the page it declared is remembered."""
-        if event.get("type") != "TOOL_CALL_START":
-            return
-        name = event.get("toolCallName")
+        """An event of the run: its calls of the page's tools, and what the
+        server's own answered, are remembered."""
+        kind = event.get("type")
         call = event.get("toolCallId")
-        if isinstance(name, str) and name in self.declared and isinstance(call, str):
-            self.asked[call] = name
+        if not isinstance(call, str):
+            return
+        if kind == "TOOL_CALL_START":
+            name = event.get("toolCallName")
+            if not isinstance(name, str):
+                return
+            if name in self.declared:
+                self.asked[call] = name
+            else:
+                self._started[call] = name
+        elif kind == "TOOL_CALL_RESULT" and call in self._started:
+            content = event.get("content")
+            if isinstance(content, str):
+                self.done[call] = content
 
     def failed_twice(self, answered: Answered) -> str:
         """The sentence that ends the turn when a page tool failed twice in it, or ``""``."""
