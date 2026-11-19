@@ -757,6 +757,26 @@ SHOW_TRIP_BUDGET_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     emoji="💰",
 )
 
+SHOW_TRIP_MAP_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
+    id="show-trip-map",
+    version="0.0.1",
+    name="Show Trip Map",
+    description="Show the person the places of up to three trip options on one map — stays, restaurants, sights, stations — numbered by day, one option at a time with a switch between them, over Overture Maps' open basemap. Only points a tool returned. Drawn by the trip-map UI plugin.",
+    tags=["travel", "card", "traveller", "maps"],
+    enabled=True,
+    ui=[{"plugin": "trip-map"}],
+    approval="auto",
+    timeout=None,
+    requires_approval=False,
+    runtime=BackendToolRuntimeSpec(
+        language="python",
+        package="agent_runtimes.tools.cards",
+        method="show_trip_map",
+    ),
+    icon="@primer/octicons-react:location",
+    emoji="🗺️",
+)
+
 SHOW_TRIP_OPTIONS_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     id="show-trip-options",
     version="0.0.1",
@@ -1151,6 +1171,7 @@ BACKEND_TOOL_CATALOG: Dict[str, BackendToolSpec] = {
     "show-scenes": SHOW_SCENES_BACKEND_TOOL_SPEC_0_0_1,
     "show-trial-balance": SHOW_TRIAL_BALANCE_BACKEND_TOOL_SPEC_0_0_1,
     "show-trip-budget": SHOW_TRIP_BUDGET_BACKEND_TOOL_SPEC_0_0_1,
+    "show-trip-map": SHOW_TRIP_MAP_BACKEND_TOOL_SPEC_0_0_1,
     "show-trip-options": SHOW_TRIP_OPTIONS_BACKEND_TOOL_SPEC_0_0_1,
     "show-vat-summary": SHOW_VAT_SUMMARY_BACKEND_TOOL_SPEC_0_0_1,
     "social-accounts": SOCIAL_ACCOUNTS_BACKEND_TOOL_SPEC_0_0_1,

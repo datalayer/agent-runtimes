@@ -131,6 +131,75 @@ def test_the_traveller_and_terra_cards_order_and_complete_their_data():
     assert index["index"] == "NDVI" and index["image"] == ""
 
 
+def test_the_trip_map_keeps_the_points_a_tool_returned_and_its_attribution():
+    # The user, 19 November 2026: the Traveller's options on a real map (Overture Maps).
+    shown = cards.show_trip_map(
+        [
+            {
+                "title": "Best balance",
+                "places": [
+                    {
+                        "name": "Casa Portuguesa do Pastel de Bacalhau",
+                        "lat": 38.710182,
+                        "lon": -9.137451,
+                        "kind": "food",
+                        "day": 2,
+                        "url": "https://www.openstreetmap.org/?mlat=38.71",
+                    },
+                    {
+                        "name": "Hotel Rio Baixa",
+                        "lat": 38.7112,
+                        "lon": -9.1385,
+                        "kind": "stay",
+                    },
+                    {
+                        "name": "Tower",
+                        "lat": 38.6916,
+                        "lon": -9.2160,
+                        "kind": "museum",
+                        "url": "javascript:x",
+                    },
+                ],
+            },
+            {
+                "id": "cheapest",
+                "title": "Cheapest",
+                "places": [{"name": "Alfama", "lat": 38.7118, "lon": -9.1300}],
+            },
+        ],
+        title="Lisbon · 12–15 Mar",
+        attribution="Places: Overture Maps Foundation (overturemaps.org), release 2026-11-18.0; from meta (CDLA-Permissive-2.0).",
+    )
+    assert shown["shown"] == "trip-map" and shown["title"] == "Lisbon · 12–15 Mar"
+    assert [o["id"] for o in shown["options"]] == ["option-1", "cheapest"]
+    food, stay, tower = shown["options"][0]["places"]
+    assert (food["kind"], food["day"], stay["kind"], stay["day"]) == (
+        "food",
+        2,
+        "stay",
+        None,
+    )
+    # A kind it does not know is a sight; a link that is not https is dropped.
+    assert tower["kind"] == "sight" and tower["url"] == ""
+    assert "Overture Maps Foundation" in shown["attribution"]
+    # The box the map opens on holds every point of every option.
+    west, south, east, north = shown["bounds"]
+    assert west <= -9.2160 and east >= -9.1300 and south <= 38.6916 and north >= 38.7118
+
+
+def test_the_trip_map_refuses_what_it_cannot_draw():
+    assert "three at most" in cards.show_trip_map(
+        [{"title": "a", "places": [{"name": "x", "lat": 1, "lon": 1}]}] * 4
+    )
+    assert "lat" in cards.show_trip_map(
+        [{"title": "a", "places": [{"name": "x", "lat": 120, "lon": 1}]}]
+    )
+    assert "no option has a place" in cards.show_trip_map(
+        [{"title": "a", "places": []}]
+    )
+    assert cards.show_trip_map([]).startswith("Refused")
+
+
 def test_each_show_tool_is_a_catalogue_backend_tool_bringing_its_card():
     for tool_id, method, plugin in (
         ("show-comparison", "show_comparison", "product-comparison"),
@@ -141,6 +210,7 @@ def test_each_show_tool_is_a_catalogue_backend_tool_bringing_its_card():
         ("show-trip-options", "show_trip_options", "trip-options"),
         ("show-itinerary", "show_itinerary", "trip-itinerary"),
         ("show-trip-budget", "show_trip_budget", "trip-budget"),
+        ("show-trip-map", "show_trip_map", "trip-map"),
         ("show-scenes", "show_scenes", "earth-scenes"),
         ("show-index-result", "show_index_result", "earth-index"),
     ):

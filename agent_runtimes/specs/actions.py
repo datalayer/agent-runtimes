@@ -57,6 +57,7 @@ BACKEND_TOOL_ACTIONS: Dict[str, List[str]] = {
     "show-scenes": ["read"],
     "show-trial-balance": ["read"],
     "show-trip-budget": ["read"],
+    "show-trip-map": ["read"],
     "show-trip-options": ["read"],
     "show-vat-summary": ["read"],
     "social-accounts": ["read"],
@@ -176,6 +177,9 @@ SERVER_ACTIONS: Dict[str, ServerActionsSpec] = {
                 "search_earth_datasets": ["read"],
                 "search_earth_datagranules": ["read"],
                 "download_earth_data_granules": ["read"],
+                "overture_search_places": ["read"],
+                "overture_place_details": ["read"],
+                "overture_place_categories": ["read"],
                 "odoo_get_context": ["read"],
                 "odoo_get_account": ["read"],
                 "odoo_get_settings": ["read"],
@@ -848,6 +852,19 @@ SERVER_ACTIONS: Dict[str, ServerActionsSpec] = {
             "signs": {},
         }
     ),
+    "overture": ServerActionsSpec.model_validate(
+        {
+            "checked": "2026-11-19",
+            "default": [],
+            "tools": {
+                "overture_search_places": ["read"],
+                "overture_place_details": ["read"],
+                "overture_place_categories": ["read"],
+            },
+            "conditions": {},
+            "signs": {},
+        }
+    ),
     "salesforce": ServerActionsSpec.model_validate(
         {"checked": None, "default": [], "tools": {}, "conditions": {}, "signs": {}}
     ),
@@ -1176,6 +1193,9 @@ APP_BEHAVIOURS: Dict[str, Dict[str, str]] = {
         "google-maps.search_places": "do_it",
         "kiwi.feedback-to-devs": "leave_to_me",
         "kiwi.search-flight": "do_it",
+        "overture.overture_place_categories": "do_it",
+        "overture.overture_place_details": "do_it",
+        "overture.overture_search_places": "do_it",
     },
     "disaster-assessment": {
         "earthdata.download_earth_data_granules": "leave_to_me",

@@ -303,6 +303,9 @@ export const DATALAYER_MCP_SERVER_0_0_1: MCPServer = {
       search_earth_datasets: 'read',
       search_earth_datagranules: 'read',
       download_earth_data_granules: 'read',
+      overture_search_places: 'read',
+      overture_place_details: 'read',
+      overture_place_categories: 'read',
       odoo_get_context: 'read',
       odoo_get_account: 'read',
       odoo_get_settings: 'read',
@@ -455,7 +458,7 @@ export const DATALAYER_MCP_SERVER_0_0_1: MCPServer = {
       mount_local_folder: 'read',
     },
     checked: '2026-10-05',
-    note: "Read off the gateway's own table of what it serves (datalayer-mcp-server's tool_policy), every toolset included: the base surface and those a URL turns on (contents, library, odoo, earthdata, marimo). Running code is a write: what it changes is what it is given. Launching a sandbox spends credits; a snapshot of one is storage that is billed. An application's connection to this server is what the gateway grants it, tool by tool, by these classes: reading reaches only the tools that only read.",
+    note: "Read off the gateway's own table of what it serves (datalayer-mcp-server's tool_policy), every toolset included: the base surface and those a URL turns on (contents, library, odoo, earthdata, overture, marimo). Running code is a write: what it changes is what it is given. Launching a sandbox spends credits; a snapshot of one is storage that is billed. An application's connection to this server is what the gateway grants it, tool by tool, by these classes: reading reaches only the tools that only read.",
   },
 };
 
@@ -1307,6 +1310,45 @@ export const ODOO_MCP_SERVER_0_0_1: MCPServer = {
   },
 };
 
+export const OVERTURE_MCP_SERVER_0_0_1: MCPServer = {
+  id: 'overture',
+  version: '0.0.1',
+  name: 'Overture Maps',
+  description:
+    'Open places from Overture Maps — restaurants, cafés, hotels, museums, sights and shops with their addresses, phones, websites and sources — around a point or in a box, through the Datalayer MCP server, with no key',
+  icon: '@primer/octicons-react:location',
+  emoji: '📍',
+  url: 'https://mcp.datalayer.run/mcp?only=overture',
+  args: [],
+  headers: { Authorization: 'Bearer ${DATALAYER_API_KEY}' },
+  transport: 'streamable-http',
+  enabled: true,
+  isAvailable: false,
+  tools: [],
+  requiredEnvVars: ['DATALAYER_API_KEY:0.0.1'],
+  ui: [{ plugin: 'trip-map' }],
+  tags: ['travel', 'maps', 'places', 'open-data', 'overture'],
+  documentationUrl: 'https://datalayer.ai/docs/mcp/toolsets',
+  signupUrl: 'https://overturemaps.org/',
+  apiKeyUrl: 'https://datalayer.ai/settings/api-keys',
+  setup:
+    "Nothing to set beyond your [Datalayer API key](https://datalayer.ai/settings/api-keys) in `DATALAYER_API_KEY`: Datalayer's gateway reads [Overture Maps](https://overturemaps.org/)' open release itself, with no key. Show the places with their attribution: © OpenStreetMap contributors, Overture Maps Foundation, and each place's sources.",
+  install: {
+    type: 'remote',
+    command: '',
+    note: "Nothing to install: Datalayer's MCP gateway with its overture toolset, reached at its URL.",
+  },
+  actions: {
+    tools: {
+      overture_search_places: 'read',
+      overture_place_details: 'read',
+      overture_place_categories: 'read',
+    },
+    checked: '2026-11-19',
+    note: "Read off the gateway's own code (datalayer-mcp-server's extensions/overture, its tool_policy): three reads of Overture's public release on S3 — places in an area, one place at its point, the categories of an area. Nothing here writes or sends.",
+  },
+};
+
 export const SALESFORCE_MCP_SERVER_0_0_1: MCPServer = {
   id: 'salesforce',
   version: '0.0.1',
@@ -1586,6 +1628,7 @@ export const MCP_SERVER_LIBRARY: Record<string, MCPServer> = {
   linkedin: LINKEDIN_MCP_SERVER_0_0_1,
   'odoo-accounting': ODOO_ACCOUNTING_MCP_SERVER_0_0_1,
   odoo: ODOO_MCP_SERVER_0_0_1,
+  overture: OVERTURE_MCP_SERVER_0_0_1,
   salesforce: SALESFORCE_MCP_SERVER_0_0_1,
   shopify: SHOPIFY_MCP_SERVER_0_0_1,
   slack: SLACK_MCP_SERVER_0_0_1,

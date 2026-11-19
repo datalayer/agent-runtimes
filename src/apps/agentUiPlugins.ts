@@ -90,6 +90,7 @@ import { TrialBalancePlugin } from './plugins/trial-balance';
 import { TripBudgetPlugin } from './plugins/trip-budget';
 import { tripHeaderPlugin } from './plugins/trip-header';
 import { TripItineraryPlugin } from './plugins/trip-itinerary';
+import { TripMapPlugin } from './plugins/trip-map';
 import { TripOptionsPlugin } from './plugins/trip-options';
 import { TripSummaryChip, tripSummaryPlugin } from './plugins/trip-summary';
 import { VatSummaryPlugin } from './plugins/vat-summary';
@@ -181,6 +182,7 @@ export const AGENT_UI_PLUGINS: Readonly<Record<string, AgentUiPlugin>> = {
   // The Traveller.
   'trip-options': { needsConnection: false, message: TripOptionsPlugin },
   'trip-itinerary': { needsConnection: false, message: TripItineraryPlugin },
+  'trip-map': { needsConnection: false, message: TripMapPlugin },
   'trip-budget': { needsConnection: false, message: TripBudgetPlugin },
   'trip-summary': {
     needsConnection: false,

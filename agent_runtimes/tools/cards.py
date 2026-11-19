@@ -5,7 +5,7 @@
 
 Each tool takes what the agent wants the person to see — the Shopper's
 comparison and basket, the Accountant's reconciliation, trial balance and VAT,
-the Traveller's options, itinerary and budget, Terra's scenes and index — checks
+the Traveller's options, their map, itinerary and budget, Terra's scenes and index — checks
 it, and answers it normalized under ``shown``. The page draws the call with the
 agent's own UI plugin (agent-runtimes ``src/apps/plugins/<id>``, bound to the
 tool by name), from the arguments while the call runs and from the answer once
@@ -35,6 +35,7 @@ __all__ = [
     "show_scenes",
     "show_trial_balance",
     "show_trip_budget",
+    "show_trip_map",
     "show_trip_options",
     "show_vat_summary",
 ]
@@ -502,6 +503,90 @@ def show_trip_budget(
         "total": total,
         "budget": budget,
         "left": None if budget is None else _cents(budget - total),
+    }
+
+
+#: What a place on the trip map is, each drawn its own way; anything else is a sight.
+TRIP_MAP_KINDS = ("stay", "food", "sight", "transport", "other")
+
+#: The most places an option draws.
+MOST_MAP_PLACES = 40
+
+
+class _MapPlace(_Row):
+    name: str = Field(min_length=1)
+    lat: float = Field(ge=-90, le=90)
+    lon: float = Field(ge=-180, le=180)
+    kind: str = "sight"
+    day: Optional[int] = Field(default=None, ge=1)
+    time: str = ""
+    address: str = ""
+    url: str = ""
+
+    @field_validator("url")
+    @classmethod
+    def _link(cls, value: str) -> str:
+        return _https(value)
+
+    @field_validator("kind")
+    @classmethod
+    def _kind(cls, value: str) -> str:
+        return value.lower() if value.lower() in TRIP_MAP_KINDS else "sight"
+
+
+class _MapOption(_Row):
+    id: str = ""
+    title: str = Field(min_length=1)
+    places: List[_MapPlace] = Field(default_factory=list, max_length=MOST_MAP_PLACES)
+
+
+def show_trip_map(
+    options: List[Dict[str, Any]], title: str = "", attribution: str = ""
+) -> Any:
+    """Show the person the places of up to three trip options on a map.
+
+    One option at a time, with a switch between them, its places numbered
+    by day over Overture Maps' open basemap. Only points a tool returned
+    (Overture's, Google Maps'): never a point you made up.
+
+    Args:
+        options: One to three ``{id, title, places}``, ``places`` at most
+            40 ``{name, lat, lon, kind, day, time, address, url}`` — ``kind``
+            stay, food, sight, transport or other; ``day`` the day it is
+            visited (1, 2, ...); ``url`` the place's link.
+        title: The map's title (``Lisbon · 12–15 Mar``).
+        attribution: The line the places' tool answered (Overture's
+            ``attribution``), shown under the map.
+
+    Returns:
+        ``{"shown": "trip-map", "options", "bounds", "title",
+        "attribution"}`` — ``bounds`` the box holding every place —, or a
+        sentence starting ``Refused``.
+    """
+    if isinstance(options, list) and len(options) > 3:
+        return "Refused: the trip map was not shown (options: three at most)."
+    try:
+        rows = _rows(options, _MapOption, "options")
+    except ValidationError as error:
+        return _refusal("The trip map", error)
+    except ValueError as error:
+        return f"Refused: the trip map was not shown ({error})."
+    points = [(place.lat, place.lon) for row in rows for place in row.places]
+    if not points:
+        return "Refused: the trip map was not shown (no option has a place)."
+    shown = []
+    for index, row in enumerate(rows):
+        option = row.model_dump()
+        option["id"] = row.id or f"option-{index + 1}"
+        shown.append(option)
+    lats = [lat for lat, _ in points]
+    lons = [lon for _, lon in points]
+    return {
+        "shown": "trip-map",
+        "options": shown,
+        "bounds": [min(lons), min(lats), max(lons), max(lats)],
+        "title": title.strip(),
+        "attribution": attribution.strip(),
     }
 
 

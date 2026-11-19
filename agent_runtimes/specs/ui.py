@@ -2979,6 +2979,31 @@ TRIP_ITINERARY_UI_0_0_1 = UISpec(
     components=[],
 )
 
+TRIP_MAP_UI_0_0_1 = UISpec(
+    id="trip-map",
+    version="0.0.1",
+    name="Trip map",
+    description="The places of each trip option on a map — numbered by day, one option at a time — over Overture Maps' open basemap, with its attribution (show_trip_map). The map library loads only when the card is drawn.",
+    emoji="🗺️",
+    octicon="location",
+    plugin="@datalayer/loop-plugin-trip-map",
+    folder="trip-map",
+    per=None,
+    contributions=UiContributionsSpec(
+        slots=[],
+        points=["reactor.ui.renderer", "reactor.ui.toolBinding"],
+        commands=[],
+    ),
+    contribution_points=[],
+    settings={},
+    renderers=[],
+    placements=["message"],
+    header=None,
+    supersedes=[],
+    catalog="",
+    components=[],
+)
+
 TRIP_OPTIONS_UI_0_0_1 = UISpec(
     id="trip-options",
     version="0.0.1",
@@ -3197,6 +3222,7 @@ UI_CATALOGUE: Dict[str, UISpec] = {
     "trip-budget": TRIP_BUDGET_UI_0_0_1,
     "trip-header": TRIP_HEADER_UI_0_0_1,
     "trip-itinerary": TRIP_ITINERARY_UI_0_0_1,
+    "trip-map": TRIP_MAP_UI_0_0_1,
     "trip-options": TRIP_OPTIONS_UI_0_0_1,
     "trip-summary": TRIP_SUMMARY_UI_0_0_1,
     "vat-summary": VAT_SUMMARY_UI_0_0_1,
