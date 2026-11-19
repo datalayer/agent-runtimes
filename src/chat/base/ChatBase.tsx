@@ -66,7 +66,11 @@ import {
   ToolCardSendContext,
   type ToolCardSend,
 } from '../../apps/toolCards/kit';
-import { generateMessageId, createUserMessage } from '../../types/messages';
+import {
+  generateMessageId,
+  generateSessionUid,
+  createUserMessage,
+} from '../../types/messages';
 import type { ProtocolConfig, ProtocolEvent } from '../../types/protocol';
 import type { BaseProtocolAdapter } from '../../protocols';
 import type {
@@ -2407,7 +2411,8 @@ function ChatBaseInner({
   const suppressAssistantTextForToolOnlyRef = useRef(false);
   const hideMessagesAfterToolUIRef = useRef(hideMessagesAfterToolUI);
   hideMessagesAfterToolUIRef.current = hideMessagesAfterToolUI;
-  const threadIdRef = useRef<string>(thread?.id || generateMessageId());
+  // A thread is its session: named by a session uid, never a message id.
+  const threadIdRef = useRef<string>(thread?.id || generateSessionUid());
   /*
    * The thread a host gave, kept as it was given at mount, and
    * told when a message is first sent on a thread: the host keeps it.
@@ -4632,7 +4637,7 @@ function ChatBaseInner({
     resetConversation();
     pendingToolExecutionsRef.current = 0;
     setInput('');
-    threadIdRef.current = generateMessageId();
+    threadIdRef.current = generateSessionUid();
     if (useStoreMode) clearStoreMessages();
     if (historyScopeId)
       useConversationStore.getState().clearMessages(historyScopeId);
