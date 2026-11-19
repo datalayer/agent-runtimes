@@ -2838,11 +2838,17 @@ class LiveSession:
             )
         # A run that only carries what the page's tools answered, for the
         # calls the last run made of it, is the turn under way: a visitor
-        # takes no turn for it. The same tool failing twice in a turn ends it
-        # in a sentence, for everybody (`page_tools`).
+        # takes no turn for it. The same tool failing twice in a turn, or a
+        # sixth such run for one message, ends it in a sentence, for
+        # everybody (`page_tools`).
         self._may_go_on()
         answered = self._page_calls.begin(messages, body.get("tools"))
-        stopped = self._page_calls.failed_twice(answered) if answered else ""
+        stopped = (
+            self._page_calls.failed_twice(answered)
+            or self._page_calls.too_many_rounds(answered)
+            if answered
+            else ""
+        )
         if stopped:
             return self._start_turn(
                 lambda: self._say_stopped(messages, stopped),

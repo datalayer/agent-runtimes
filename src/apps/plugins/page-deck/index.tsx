@@ -79,6 +79,10 @@ export function deckCallSays(
         '  ',
         ' ',
       );
+    case 'deck_add_slides': {
+      const count = Array.isArray(args.slides) ? args.slides.length : 0;
+      return `Added ${DECK_WORDS.slides(count)}`;
+    }
     case 'deck_update_slide':
       return `Replaced slide ${number(args.slide)}${named(args.title ?? args.statement)}`;
     case 'deck_move_slide':

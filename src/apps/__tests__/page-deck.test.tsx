@@ -136,7 +136,7 @@ afterEach(() => {
 });
 
 describe('the deck tools', () => {
-  it('are eight, typed, each with a handler', () => {
+  it('are nine, typed, each with a handler', () => {
     const { tools } = bound();
     expect(tools.map(tool => tool.name)).toEqual([...DECK_TOOL_NAMES]);
     for (const tool of tools) {

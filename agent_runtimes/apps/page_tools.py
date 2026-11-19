@@ -24,6 +24,11 @@ turn — a message, a result for a call the run before never made, the same
 result sent twice, a conversation changed before it — so that nothing passes
 for free that a person said.
 
+**Five rounds a message.** A person's message takes five runs of the
+page's answers at most, for everybody: the sixth ends the turn in a
+sentence, the agent not run again (:data:`TOO_MANY_ROUNDS`). A deck's
+outline goes in one or two calls (``deck_add_slides``), not a run a slide.
+
 **A tool failing twice ends the turn.** The same page tool answering with an
 error twice in one turn (an AG-UI tool message's ``error``) ends it in a
 sentence that names the tool and what failed, rather than running the agent
@@ -41,6 +46,8 @@ from pydantic import TypeAdapter, ValidationError
 __all__ = [
     "FAILED_TWICE",
     "PageCalls",
+    "ROUNDS_A_MESSAGE",
+    "TOO_MANY_ROUNDS",
     "leave_run_frontend_tools",
     "page_tools_of",
     "run_frontend_tools",
@@ -50,6 +57,17 @@ __all__ = [
 
 #: What ends a turn whose page tool failed twice: the tool, and what it said.
 FAILED_TWICE = "`{tool}` failed twice in this turn, so it was not run again: {error}"
+
+#: The rounds of the page's tools a person's message takes at most: runs
+#: that carry what the page's tools answered. The next ends the turn.
+ROUNDS_A_MESSAGE = 5
+
+#: What ends a turn past its rounds: how many, and the tool not called again.
+TOO_MANY_ROUNDS = (
+    "The page's tools have run in {rounds} rounds for this message, the most "
+    "one message takes, so the turn ends here and `{tool}` is not called "
+    "again. Send a message to go on."
+)
 
 #: How often the same page tool may fail in a turn before the turn ends.
 FAILURES_A_TURN = 2
@@ -197,6 +215,9 @@ class PageCalls:
     failures: Dict[str, int] = field(default_factory=dict)
     """How often each page tool failed in the turn under way."""
 
+    rounds: int = 0
+    """The runs of the turn under way that carried the page's answers."""
+
     def begin(self, raw: Sequence[Any], tools: Any) -> Optional[Answered]:
         """Begin a run: what it carries of the page's answers, or ``None`` for a turn.
 
@@ -213,6 +234,9 @@ class PageCalls:
         answered = self._answered(messages, asked, done, said)
         if answered is None:
             self.failures = {}
+            self.rounds = 0
+        else:
+            self.rounds += 1
         return answered
 
     @staticmethod
@@ -275,6 +299,15 @@ class PageCalls:
             content = event.get("content")
             if isinstance(content, str):
                 self.done[call] = content
+
+    def too_many_rounds(self, answered: Answered) -> str:
+        """The sentence that ends the turn past its rounds of page tools, or ``""``."""
+        if self.rounds <= ROUNDS_A_MESSAGE:
+            return ""
+        tools = list(dict.fromkeys(tool for _, tool, _ in answered.results))
+        return TOO_MANY_ROUNDS.format(
+            rounds=ROUNDS_A_MESSAGE, tool="`, `".join(tools) or "the page's tool"
+        )
 
     def failed_twice(self, answered: Answered) -> str:
         """The sentence that ends the turn when a page tool failed twice in it, or ``""``."""

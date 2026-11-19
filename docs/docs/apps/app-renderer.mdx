@@ -365,7 +365,7 @@ and answers the model.
 
 | UI | Tools | Drawn by |
 | --- | --- | --- |
-| `page-deck` | `deck_create`, `deck_set_title`, `deck_add_slide`, `deck_update_slide`, `deck_move_slide`, `deck_delete_slide`, `deck_set_theme`, `deck_read` | Datalayer Decks' `DeckView`: the slides, **Notes**, **Present** for the full screen. |
+| `page-deck` | `deck_create`, `deck_set_title`, `deck_add_slide`, `deck_add_slides` (several slides in one call, refused whole on one bad slide), `deck_update_slide`, `deck_move_slide`, `deck_delete_slide`, `deck_set_theme`, `deck_read` | Datalayer Decks' `DeckView`: the slides, **Notes**, **Present** for the full screen. |
 | `page-sheet` | `sheet_create`, `sheet_write_range`, `sheet_read_range`, `sheet_format_range`, `sheet_freeze`, `sheet_add_tab`, `sheet_show_tab`, `sheet_insert_chart` | Datalayer Cells' `Spreadsheet`, with its formula bar and tabs, editable; **Export CSV** through Cells' own writer. |
 
 Each is a tool card plugin (`defineToolCardPlugin`) that also takes `frontendTools`: the kit

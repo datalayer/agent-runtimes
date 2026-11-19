@@ -52,6 +52,8 @@ from agent_runtimes.apps.enforcement import AppRuleBlockedError, AppRulesCapabil
 from agent_runtimes.apps.loading import load_app
 from agent_runtimes.apps.page_tools import (
     FAILED_TWICE,
+    ROUNDS_A_MESSAGE,
+    TOO_MANY_ROUNDS,
     leave_run_frontend_tools,
     page_tools_of,
     use_run_frontend_tools,
@@ -634,6 +636,225 @@ def test_server_results_the_runtime_did_not_give_take_a_turn(
         )
     )
     assert visitors.TURNS._taken["tab-ada-0001"] == 4
+
+
+# --- how many rounds of the page's tools a message takes ---------------------------
+
+
+class LoopingModel:
+    """A model that calls the page's header tool again whatever it answered."""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def stream(
+        self, messages: List[ModelMessage], info: AgentInfo
+    ) -> AsyncIterator[Any]:
+        self.calls += 1
+        yield {
+            0: DeltaToolCall(
+                name=HEADER.name,
+                json_args=json.dumps({"basket": {"value": self.calls}}),
+                tool_call_id=f"loop-{self.calls}",
+            )
+        }
+
+    def __call__(self, messages: List[ModelMessage], info: AgentInfo) -> Any:
+        raise AssertionError("The chat streams.")
+
+
+DECK_CREATE = Tool(
+    name="deck_create",
+    description="Start a new deck in the page under a title.",
+    parameters={"type": "object", "properties": {"title": {"type": "string"}}},
+)
+DECK_ADD_SLIDES = Tool(
+    name="deck_add_slides",
+    description="Add several slides at once, in order.",
+    parameters={"type": "object", "properties": {"slides": {"type": "array"}}},
+)
+
+
+class DeckModel:
+    """The Marketer laying a ten-slide deck out: the deck, then its outline
+    in one call, then a word on what it holds."""
+
+    def __init__(self) -> None:
+        self.calls: List[str] = []
+
+    async def stream(
+        self, messages: List[ModelMessage], info: AgentInfo
+    ) -> AsyncIterator[Any]:
+        done = [
+            part.tool_name
+            for message in messages
+            for part in (message.parts if isinstance(message, ModelRequest) else [])
+            if isinstance(part, ToolReturnPart)
+        ]
+        if "deck_add_slides" in done:
+            yield "The deck holds ten slides; Present shows it full screen."
+            return
+        name, args = (
+            (
+                "deck_add_slides",
+                {
+                    "slides": [
+                        {"type": "section", "title": f"Part {n}"} for n in range(1, 11)
+                    ]
+                },
+            )
+            if "deck_create" in done
+            else ("deck_create", {"title": "Spring launch"})
+        )
+        self.calls.append(name)
+        yield {
+            0: DeltaToolCall(
+                name=name, json_args=json.dumps(args), tool_call_id=f"{name}-1"
+            )
+        }
+
+    def __call__(self, messages: List[ModelMessage], info: AgentInfo) -> Any:
+        raise AssertionError("The chat streams.")
+
+
+def make_agent_on(runtime: Runtime, model: Any, instance: Dict[str, Any]) -> Any:
+    """The example's agent, as `make_page_agent` makes it, on another model."""
+    from agent_runtimes.adapters.pydantic_ai_adapter import PydanticAIAdapter
+    from agent_runtimes.transports import AGUITransport
+
+    agent_id = "notes-assistant"
+    app = load_app(ASSISTANT)
+    plugins.register_app(app)
+    recorder = AppRecorder(
+        app=app, app_uid="", deployment_uid="", version=0, send=runtime.send
+    )
+    agent = Agent(
+        FunctionModel(model, stream_function=model.stream),
+        capabilities=app_capabilities(app, recorder=recorder, agent_id=agent_id),
+    )
+    register_agui_agent(
+        agent_id,
+        AGUITransport(PydanticAIAdapter(agent, agent_id=agent_id), agent_id=agent_id),
+    )
+    agents._agentspecs[agent_id] = {"app_spec": ASSISTANT, "app_instance": instance}
+    keep_agent_recorder(agent_id, recorder)
+    runtime.models[agent_id] = model
+    return model
+
+
+def page_answers(events: List[Dict[str, Any]], tools: List[str]) -> List[Any]:
+    """The continuation the chat sends for the page's calls of a run."""
+    calls = {
+        str(event["toolCallId"]): {"name": str(event["toolCallName"]), "args": ""}
+        for event in events
+        if event.get("type") == "TOOL_CALL_START" and event.get("toolCallName") in tools
+    }
+    for event in events:
+        if event.get("type") == "TOOL_CALL_ARGS" and event.get("toolCallId") in calls:
+            calls[str(event["toolCallId"])]["args"] += str(event.get("delta") or "")
+    return [
+        AssistantMessage(
+            id=f"a-{'-'.join(calls)}",
+            tool_calls=[
+                ToolCall(
+                    id=call_id,
+                    function=FunctionCall(name=call["name"], arguments=call["args"]),
+                )
+                for call_id, call in calls.items()
+            ],
+        ),
+        *(
+            ToolMessage(id=f"t-{call_id}", tool_call_id=call_id, content='{"ok": true}')
+            for call_id in calls
+        ),
+    ]
+
+
+def test_a_ten_slide_deck_laid_out_in_one_call_takes_two_rounds(
+    runtime: Runtime, visitors_runtime: TestClient
+) -> None:
+    model = make_agent_on(runtime, DeckModel(), {"visitor_app": "notes-assistant"})
+    tools = [DECK_CREATE, DECK_ADD_SLIDES]
+    names = [tool.name for tool in tools]
+
+    def run(run_id: str, history: List[Any]) -> List[Dict[str, Any]]:
+        body = {
+            **run_of("thread-deck", run_id, history),
+            "tools": [tool.model_dump(mode="json", by_alias=True) for tool in tools],
+        }
+        return events_of(
+            visitors_runtime.post(AGUI, headers=as_visitor("tab-ada-0001"), json=body)
+        )
+
+    history: List[Any] = [UserMessage(id="u1", content="A deck of our spring launch.")]
+    events = run("r1", history)
+    rounds = 0
+    while not answer_of(events):
+        rounds += 1
+        history = [*history, *page_answers(events, names)]
+        events = run(f"r{rounds + 1}", history)
+    assert rounds == 2
+    assert model.calls == ["deck_create", "deck_add_slides"]
+    assert (
+        answer_of(events) == "The deck holds ten slides; Present shows it full screen."
+    )
+    assert visitors.TURNS._taken["tab-ada-0001"] == 1
+
+
+def _rounds(
+    client: TestClient, headers: Dict[str, str], thread: str
+) -> List[List[Dict[str, Any]]]:
+    history: List[Any] = [UserMessage(id="u1", content="Show the basket.")]
+    events = events_of(
+        client.post(AGUI, headers=headers, json=run_of(thread, "r1", history))
+    )
+    said = [events]
+    for round_ in range(1, ROUNDS_A_MESSAGE + 2):
+        history = [*history, *page_answers(events, [HEADER.name])]
+        events = events_of(
+            client.post(
+                AGUI, headers=headers, json=run_of(thread, f"r{round_ + 1}", history)
+            )
+        )
+        said.append(events)
+    return said
+
+
+def test_the_sixth_round_of_page_tools_ends_a_visitors_turn(
+    runtime: Runtime, visitors_runtime: TestClient
+) -> None:
+    model = make_agent_on(runtime, LoopingModel(), {"visitor_app": "notes-assistant"})
+    said = _rounds(visitors_runtime, as_visitor("tab-ada-0001"), "thread-rounds-v")
+    # The person's run, then five rounds that each ask the page again.
+    assert all(asked_of_the_page(events) for events in said[: ROUNDS_A_MESSAGE + 1])
+    ended = said[ROUNDS_A_MESSAGE + 1]
+    assert asked_of_the_page(ended) == []
+    assert answer_of(ended) == TOO_MANY_ROUNDS.format(
+        rounds=ROUNDS_A_MESSAGE, tool=HEADER.name
+    )
+    assert model.calls == ROUNDS_A_MESSAGE + 1
+    assert visitors.TURNS._taken["tab-ada-0001"] == 1
+
+
+def test_the_sixth_round_of_page_tools_ends_a_signed_in_turn(
+    runtime: Runtime, remote: TestClient
+) -> None:
+    async def token(deployment: str, bearer: str) -> Dict[str, Any]:
+        return {"access_token": "p-token", "expires_in": 3600, "principal_uid": "p-7"}
+
+    principal.use_asker(token)
+    principal.forget_principal_token("dep-1")
+    model = make_agent_on(
+        runtime,
+        LoopingModel(),
+        {"app_uid": "app-1", "deployment_uid": "dep-1", "version": 2},
+    )
+    said = _rounds(remote, as_("ada"), "thread-rounds-p")
+    assert asked_of_the_page(said[ROUNDS_A_MESSAGE]) == [f"loop-{ROUNDS_A_MESSAGE + 1}"]
+    assert answer_of(said[ROUNDS_A_MESSAGE + 1]) == TOO_MANY_ROUNDS.format(
+        rounds=ROUNDS_A_MESSAGE, tool=HEADER.name
+    )
+    assert model.calls == ROUNDS_A_MESSAGE + 1
 
 
 @pytest.fixture(autouse=True)

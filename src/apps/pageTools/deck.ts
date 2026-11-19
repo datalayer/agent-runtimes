@@ -407,6 +407,55 @@ export const withSlide = (
   };
 };
 
+/**
+ * Several slides added at once, at the end or before the slide numbered
+ * `at`: a deck's outline in one call. Each is checked as one slide is, and
+ * one refused refuses them all: nothing is added. The first added is shown.
+ */
+export const withSlides = (
+  state: DeckState,
+  batch: unknown,
+  at?: number,
+  check: (args: DeckSlideArgs) => DeckSlideArgs = args => args,
+): DeckState => {
+  if (!Array.isArray(batch) || batch.length === 0) {
+    throw new Error(
+      'The slides are an array of one slide at least, each as deck_add_slide takes one.',
+    );
+  }
+  const slides = state.spec.slides;
+  if (slides.length + batch.length > DECK_LIMITS.slides) {
+    throw new Error(
+      `A deck holds ${DECK_LIMITS.slides} slides at most: it has ${slides.length}, and these are ${batch.length}. Nothing was added.`,
+    );
+  }
+  const added = batch.map((each, index) => {
+    try {
+      if (!each || typeof each !== 'object' || Array.isArray(each)) {
+        throw new Error('A slide is an object, as deck_add_slide takes one.');
+      }
+      return slideOf(check(each as DeckSlideArgs));
+    } catch (error) {
+      throw new Error(
+        `Slide ${index + 1} of the batch: ${(error as Error).message} Nothing was added.`,
+        { cause: error },
+      );
+    }
+  });
+  const index =
+    at === undefined || at === null
+      ? slides.length
+      : placeOf(at, slides.length + 1, 'The place');
+  return {
+    spec: {
+      ...state.spec,
+      slides: [...slides.slice(0, index), ...added, ...slides.slice(index)],
+    },
+    moves: state.moves + 1,
+    shown: index + 1,
+  };
+};
+
 /** The slide numbered `slide` replaced by another, whole. */
 export const withSlideReplaced = (
   state: DeckState,
@@ -557,6 +606,7 @@ export const DECK_TOOL_NAMES = [
   'deck_create',
   'deck_set_title',
   'deck_add_slide',
+  'deck_add_slides',
   'deck_update_slide',
   'deck_move_slide',
   'deck_delete_slide',
@@ -776,6 +826,43 @@ export function deckTools(
       },
     },
     {
+      name: 'deck_add_slides',
+      description: `Add several slides at once, in order, at the end of the deck or before the slide numbered \`at\`: the deck's outline in one or two calls. Each slide is as deck_add_slide takes one (${kinds.join(', ')}); one refused refuses them all, and nothing is added. A deck holds ${DECK_LIMITS.slides} slides at most.`,
+      parameters: {
+        type: 'object',
+        properties: {
+          slides: {
+            type: 'array',
+            minItems: 1,
+            maxItems: DECK_LIMITS.slides,
+            description:
+              'The slides, in order: each as deck_add_slide takes one.',
+            items: {
+              type: 'object',
+              properties: slideProperties(kinds),
+              required: ['type'],
+            },
+          },
+          at: {
+            ...SLIDE_NUMBER,
+            description:
+              'Add them before this slide; at the end when left out.',
+          },
+        },
+        required: ['slides'],
+        additionalProperties: false,
+      },
+      handler: async (args: Record<string, unknown>) => {
+        only(args, ['slides', 'at'], 'A batch of slides');
+        const at = args.at as number | undefined;
+        const count = Array.isArray(args.slides) ? args.slides.length : 0;
+        const state = handle.change(previous =>
+          withSlides(previous, args.slides, at, slide),
+        );
+        return answer(state, { added: count });
+      },
+    },
+    {
       name: 'deck_update_slide',
       description: `Replace a slide of the deck, whole, by its number: give every field the new slide has, as for a new one (${kinds.join(', ')}).`,
       parameters: {
@@ -902,6 +989,8 @@ export function applyDeckCall(
         slideArgs(args, ['at']),
         args.at as number | undefined,
       );
+    case 'deck_add_slides':
+      return withSlides(state, args.slides, args.at as number | undefined);
     case 'deck_update_slide':
       return withSlideReplaced(
         state,
