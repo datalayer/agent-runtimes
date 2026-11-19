@@ -115,6 +115,8 @@ class AgentHost:
                 503, f"{self.addressed.app.name}'s A2A card is not served yet."
             )
         card = answered.json()
+        # The constructor refuses an agent without its hosts.
+        assert self.addressed.hosts is not None
         card["url"] = f"{self.addressed.hosts.agent}/a2a/"
         return card
 

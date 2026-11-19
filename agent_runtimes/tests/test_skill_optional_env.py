@@ -12,7 +12,7 @@ offered — and the agent is told which keys would set it up.
 from __future__ import annotations
 
 import asyncio
-from typing import Iterable
+from typing import Any, Iterable
 
 import pytest
 
@@ -111,7 +111,7 @@ def test_declarations_merge():
 
 
 def _create(monkeypatch: pytest.MonkeyPatch, creation_spy: dict) -> tuple[list, str]:  # noqa: F811
-    seen: dict[str, object] = {}
+    seen: dict[str, Any] = {}
     from agent_runtimes.routes import agents as agents_route
 
     monkeypatch.setattr(

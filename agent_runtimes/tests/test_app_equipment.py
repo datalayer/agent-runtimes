@@ -47,6 +47,7 @@ def _by_id(rows: list[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
 
 def test_every_server_and_skill_the_spec_declares_is_listed_in_its_order() -> None:
     spec = get_agent_spec("worker-marketer")
+    assert spec is not None
     said = _marketer(set())
     assert [row["id"] for row in said["mcp_servers"]] == [
         s.id for s in spec.mcp_servers

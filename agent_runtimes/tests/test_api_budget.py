@@ -51,7 +51,9 @@ def x_budget(spec: Any) -> dict[str, Any]:
     raise AssertionError("worker-marketer declares no x-api-budget guardrail")
 
 
-MARKETER = get_agent_spec("worker-marketer")
+_MARKETER = get_agent_spec("worker-marketer")
+assert _MARKETER is not None
+MARKETER = _MARKETER
 X = x_budget(MARKETER)
 
 
@@ -105,7 +107,7 @@ async def call(
     capability: ApiBudgetCapability, name: str, args: dict[str, Any], tool: Tool
 ) -> Any:
     return await capability.wrap_tool_execute(
-        None,  # type: ignore[arg-type]
+        None,
         call=ToolCallPart(tool_name=name, args=args),
         tool_def=ToolDefinition(name=name),
         args=args,
@@ -564,7 +566,7 @@ class TestBeforeTheApproval:
         budget = guardrail(store, Clock(NOON), daily=0.01)
         with pytest.raises(SkipToolExecution) as skipped:
             await budget.before_tool_execute(
-                None,  # type: ignore[arg-type]
+                None,
                 call=ToolCallPart(tool_name="post_to_x", args={"text": "hi"}),
                 tool_def=ToolDefinition(name="post_to_x"),
                 args={"text": "hi"},
@@ -579,7 +581,7 @@ class TestBeforeTheApproval:
     ) -> None:
         budget = guardrail(store, Clock(NOON))
         args = await budget.before_tool_execute(
-            None,  # type: ignore[arg-type]
+            None,
             call=ToolCallPart(
                 tool_name="read_x", args={"what": "search", "query": "q", "limit": 100}
             ),
@@ -591,7 +593,7 @@ class TestBeforeTheApproval:
         untouched = {"text": "x"}
         assert (
             await budget.before_tool_execute(
-                None,  # type: ignore[arg-type]
+                None,
                 call=ToolCallPart(tool_name="post_to_bluesky", args=untouched),
                 tool_def=ToolDefinition(name="post_to_bluesky"),
                 args=untouched,
@@ -647,7 +649,7 @@ class TestADeferredCall:
             tool_name="post_to_bluesky", args={"text": "hi"}, tool_call_id="b1"
         )
         answered = await budget.handle_deferred_tool_calls(
-            None,  # type: ignore[arg-type]
+            None,
             requests=DeferredToolRequests(approvals=[post, other]),
         )
         assert answered is not None
@@ -659,7 +661,7 @@ class TestADeferredCall:
         roomy = guardrail(store, Clock(NOON))
         assert (
             await roomy.handle_deferred_tool_calls(
-                None,  # type: ignore[arg-type]
+                None,
                 requests=DeferredToolRequests(approvals=[post]),
             )
             is None
@@ -681,7 +683,7 @@ class TestADeferredCall:
         class Approver(AbstractCapability[Any]):
             asked: list[str] = field(default_factory=list)
 
-            async def handle_deferred_tool_calls(self, ctx, *, requests):  # type: ignore[override]
+            async def handle_deferred_tool_calls(self, ctx, *, requests):
                 self.asked += [call.tool_name for call in requests.approvals]
                 return DeferredToolResults(
                     approvals={call.tool_call_id: True for call in requests.approvals}

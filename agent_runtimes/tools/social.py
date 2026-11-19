@@ -868,7 +868,9 @@ async def _subject(post: str) -> Dict[str, Any] | str:
     if not isinstance(view, dict) or not view.get("uri") or not view.get("cid"):
         return "That Bluesky post could not be found."
     subject = {"uri": view["uri"], "cid": view["cid"]}
-    record = view.get("record") if isinstance(view.get("record"), dict) else {}
+    record: Dict[str, Any] = (
+        view["record"] if isinstance(view.get("record"), dict) else {}
+    )
     root = (
         ((record.get("reply") or {}).get("root"))
         if isinstance(record.get("reply"), dict)

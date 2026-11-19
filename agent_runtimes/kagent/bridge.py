@@ -462,7 +462,7 @@ class DatalayerRuntime:
                 launched = await self.runner(
                     self.mode, ["launch-runtime", "--agent", self.mode.agent_uid]
                 )
-                state = {
+                state: dict[str, Any] = {
                     "uid": str(launched["uid"]),
                     "url": str(launched["url"]),
                     "expired_at": float(launched.get("expired_at") or 0),
@@ -840,7 +840,7 @@ async def serve() -> int:
     for sig in (signal.SIGTERM, signal.SIGINT):
         loop.add_signal_handler(sig, stop.set)
     stopper = asyncio.create_task(stop.wait())
-    waited = {stopper}
+    waited: set[asyncio.Task[Any]] = {stopper}
     if child is not None:
         waited.add(asyncio.create_task(child.wait()))
     await asyncio.wait(waited, return_when=asyncio.FIRST_COMPLETED)

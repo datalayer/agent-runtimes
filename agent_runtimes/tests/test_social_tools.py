@@ -152,7 +152,7 @@ class FakeIam:
         return {}
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
-        body = json.loads(request.content) if request.content else None
+        body: Any = json.loads(request.content) if request.content else None
         self.calls.append(
             (
                 request.method,

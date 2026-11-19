@@ -910,9 +910,11 @@ class MCPLifecycleManager:
                 )
 
         except Exception as e:
-            error = f"Failed to create MCP server: {e}"
-            logger.error(redact(f"✗ MCP server '{server_id}' creation failed: {error}"))
-            self._failed_servers[server_id] = error
+            failure = f"Failed to create MCP server: {e}"
+            logger.error(
+                redact(f"✗ MCP server '{server_id}' creation failed: {failure}")
+            )
+            self._failed_servers[server_id] = failure
             return None
 
         # Start the server

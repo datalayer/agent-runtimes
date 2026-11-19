@@ -406,7 +406,7 @@ def test_executor_relays_the_upstream_task() -> None:
     async def call(body: Any, target: Any) -> Any:
         return next(answers)
 
-    forward._call = call  # type: ignore[method-assign]
+    forward._call = call
     queue = Queue()
     asyncio.run(forward.execute(Context(), queue))
     assert queue.events[-2].artifact.parts[0].text == "hello"

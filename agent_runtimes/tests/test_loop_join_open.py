@@ -30,7 +30,7 @@ from agent_runtimes.loop.picker import why_not
 
 
 def _open(**fields: Any) -> Paused:
-    given = {
+    given: dict[str, Any] = {
         "uid": "01M78A",
         "kind": "application",
         "agent": "worker-steward-aws",
@@ -172,7 +172,7 @@ def test_a_joined_runtime_is_left_running_and_nobody_asked() -> None:
         raise AssertionError("Nobody is asked to stop a joined runtime.")
 
     launch.finish_cloud(joined, can_ask=True, ask=never, say=said.append)
-    assert joined.relay.stopped  # type: ignore[attr-defined]
+    assert joined.relay.stopped
     assert said == [
         "Left pool-runtime-7: it keeps running its session, as it was before you joined."
     ]
@@ -224,7 +224,7 @@ def test_an_applications_open_session_is_joined_with_no_launch(
         "decide", "01M78A", cloud=True, runtime="pool-runtime-7"
     )
     assert ran and ran[0][2:] == ("01M78A", "pool-runtime-7")
-    assert joined.relay.stopped  # type: ignore[attr-defined]
+    assert joined.relay.stopped
 
 
 def test_loop_stops_before_any_launch_when_it_cannot_join(

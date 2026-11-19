@@ -53,8 +53,19 @@ class FakeBrowser:
         self.opened.append(url)
         return PageSeen(url=url, title="LinkedIn Login", text="")
 
+    async def read(self) -> PageSeen:
+        return PageSeen(url=self.opened[-1], title="", text="")
+
     async def screenshot(self) -> bytes:
         return b"\x89PNG"
+
+    async def click(self, selector: str) -> PageSeen:
+        self.steps.append(("click", selector))
+        return PageSeen(url=self.opened[-1], title="", text="")
+
+    async def type(self, selector: str, text: str, submit: bool = False) -> PageSeen:
+        self.steps.append(("type", selector, text, submit))
+        return PageSeen(url=self.opened[-1], title="", text="")
 
     async def click_at(self, x: float, y: float) -> PageSeen:
         self.steps.append(("click", x, y))

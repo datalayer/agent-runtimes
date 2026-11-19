@@ -516,7 +516,7 @@ async def addressed_in_runtime(
         access=access,
         agent_source=runtime_agent_source(agent_id),
         hosts=hosts,
-        role=role,  # type: ignore[arg-type]
+        role=role,
         acts_for=acts_for,
         calls=calls,
         mcp_clients=mcp_clients and role == "company" and hosts is not None,

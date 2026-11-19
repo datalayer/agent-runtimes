@@ -107,7 +107,7 @@ def _call(
         return await rules.before_tool_execute(
             _ctx(),
             call=ToolCallPart(name, args),
-            tool_def=ToolDefinition(name=name, kind=kind),  # type: ignore[arg-type]
+            tool_def=ToolDefinition(name=name, kind=kind),
             args=args,
         )
 

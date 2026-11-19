@@ -15,7 +15,7 @@ from __future__ import annotations
 import asyncio
 import threading
 import time
-from typing import Any
+from typing import Any, Iterator
 
 import pytest
 from code_sandboxes.sandboxes.eval.eval import EvalSandbox
@@ -52,7 +52,7 @@ class _SlowSandbox(EvalSandbox):
 
 
 @pytest.fixture
-def manager(monkeypatch: pytest.MonkeyPatch) -> CodeSandboxManager:
+def manager(monkeypatch: pytest.MonkeyPatch) -> Iterator[CodeSandboxManager]:
     """A fresh real manager whose sandboxes are slow to start.
 
     Yields
@@ -132,7 +132,7 @@ async def test_first_async_runs_start_the_sandbox_once_off_the_loop(
     proxy = manager.get_agent_managed_sandbox("a1", variant="jupyter-server")
     assert manager.get_agent_sandbox("a1") is None
 
-    async def two_first_runs() -> list[Any]:
+    async def two_first_runs() -> tuple[Any, Any]:
         return await asyncio.gather(
             proxy.run_code_async("x = 1"),
             proxy.run_code_async("y = 2"),
@@ -183,9 +183,12 @@ def test_a_proxy_makes_the_sandbox_of_the_agent_variant(
     manager: CodeSandboxManager,
 ) -> None:
     made: list[str | None] = []
-    manager._create_sandbox = (  # type: ignore[method-assign]
-        lambda variant=None: made.append(variant) or _SlowSandbox()
-    )
+
+    def create(variant: str | None = None) -> _SlowSandbox:
+        made.append(variant)
+        return _SlowSandbox()
+
+    manager._create_sandbox = create  # type: ignore[method-assign]
     manager.configure(variant="eval")
     proxy = manager.get_agent_managed_sandbox("a4", variant="jupyter-server")
 

@@ -488,7 +488,9 @@ def test_page_and_home_and_end_keys_in_a_terminal(no_terminal: None) -> None:
             keys.send_text(keys_sent + "\r")
             chosen = picker.pick(Picker(rows), input=keys, output=DummyOutput())
         assert chosen is not None and chosen[0] == "resume"
-        return chosen[1].uid
+        row = chosen[1]
+        assert row is not None
+        return row.uid
 
     assert pressed("\x1b[6~") == "there-7"  # Page Down
     assert pressed("\x1b[6~\x1b[6~\x1b[6~") == "there-19"
