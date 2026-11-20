@@ -63,6 +63,16 @@ const CHARACTERS = ['wizard', 'cat', 'eyes', 'owl'] as const;
 async function show(page: Page, query: string): Promise<void> {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(String(error)));
+  page.on('console', message => {
+    if (message.type() === 'error') {
+      errors.push(`console: ${message.text()}`);
+    }
+  });
+  page.on('requestfailed', request =>
+    errors.push(
+      `request failed: ${request.url()} ${request.failure()?.errorText ?? ''}`,
+    ),
+  );
   await page.goto(`/html/pictures.html?${query}`, {
     waitUntil: 'commit',
     timeout: 240_000,
@@ -79,7 +89,14 @@ async function show(page: Page, query: string): Promise<void> {
       description: errors.join('\n') || 'no page error',
     });
     await page.reload({ waitUntil: 'commit' });
-    await ready.waitFor({ state: 'attached', timeout: 120_000 });
+    try {
+      await ready.waitFor({ state: 'attached', timeout: 120_000 });
+    } catch {
+      // Said in the failure itself, so the job's log carries why.
+      throw new Error(
+        `the pictures page never said it was ready (${query}):\n${errors.join('\n') || 'no page error, console error or failed request'}`,
+      );
+    }
   }
   if (process.env.PICTURES_CSS) {
     await page.addStyleTag({ content: process.env.PICTURES_CSS });
