@@ -181,6 +181,7 @@ def test_two_threads_first_runs_start_one_sandbox(
 
 def test_a_proxy_makes_the_sandbox_of_the_agent_variant(
     manager: CodeSandboxManager,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     made: list[str | None] = []
 
@@ -188,7 +189,7 @@ def test_a_proxy_makes_the_sandbox_of_the_agent_variant(
         made.append(variant)
         return _SlowSandbox()
 
-    manager._create_sandbox = create  # type: ignore[method-assign]
+    monkeypatch.setattr(manager, "_create_sandbox", create)
     manager.configure(variant="eval")
     proxy = manager.get_agent_managed_sandbox("a4", variant="jupyter-server")
 

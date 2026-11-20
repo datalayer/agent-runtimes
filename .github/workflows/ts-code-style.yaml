@@ -48,5 +48,8 @@ jobs:
       build-command: ''  # Skip build for code style checks
       run-format-check: true
       run-lint: true
+      # Type checking and the tests run in build.yaml's TypeScript Build & Test:
+      # its `tsc -b` checks the package, then each workspace's type-check, then
+      # the tests, so a pull request does not install and build twice for them.
       run-type-check: false
       run-tests: false

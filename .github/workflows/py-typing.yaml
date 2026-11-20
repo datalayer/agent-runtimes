@@ -53,4 +53,4 @@ jobs:
           uv pip install types-requests
       - name: Run mypy
         run: |
-          mypy agent_runtimes
+          mypy agent_runtimes tests

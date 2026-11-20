@@ -15,7 +15,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 import pytest
-from datalayer_core.orchestration import Budget, ErrorCode
+from datalayer_core.orchestration import Budget, ErrorCode, Execution
 from pydantic_ai.exceptions import UsageLimitExceeded
 
 from agent_runtimes.context.delegation import delegated_budget, refusal_meta
@@ -33,7 +33,7 @@ from agent_runtimes.orchestration.budget import (
 from agent_runtimes.tests.orchestration_records import an_execution
 
 
-def _with_budget(**limits):
+def _with_budget(**limits: object) -> Execution:
     execution = an_execution(references=())
     return execution.model_copy(
         update={
@@ -107,7 +107,9 @@ class TestTheWorkerAppliesItToTheRun:
             ),
         ),
     )
-    def test_a_limit_reached_names_the_limit(self, message, limit, stop) -> None:
+    def test_a_limit_reached_names_the_limit(
+        self, message: str, limit: str, stop: str
+    ) -> None:
         said = reached(UsageLimitExceeded(message))
         # pydantic-ai adds a pointer to its docs after its own words.
         assert isinstance(said, ModelBudgetReached) and str(said).startswith(message)
