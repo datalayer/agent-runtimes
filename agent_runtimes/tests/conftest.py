@@ -44,6 +44,44 @@ from typing import Any, Dict, Optional  # noqa: E402
 import pytest  # noqa: E402
 
 
+def _rehearsal_records() -> Dict[str, int]:
+    """The installed agentspecs' kept rehearsals, by path: their modification times."""
+    try:
+        import agentspecs
+    except ImportError:  # pragma: no cover - agentspecs is a dependency
+        return {}
+    from pathlib import Path
+
+    scenes = Path(agentspecs.__file__).parent / "scenes"
+    return {
+        str(path): path.stat().st_mtime_ns for path in scenes.glob("*/rehearsal.json")
+    }
+
+
+@pytest.fixture(autouse=True)
+def _no_test_writes_a_scene_s_rehearsal() -> Iterator[None]:
+    """No test writes a scene's kept rehearsal in the installed agentspecs (20 November 2026).
+
+    A test run wrote its fake model's transcript into the agentspecs checkout
+    beside this one as sales-and-accounting's last rehearsal three times (17
+    to 19 November), and it was committed as the scene's verdict. Checked by
+    the files themselves, so a test whose patch misses (a module reloaded, a
+    second import) still fails here.
+
+    Yields
+    ------
+    None
+        Control to the test; after it, the records are compared.
+    """
+    before = _rehearsal_records()
+    yield
+    after = _rehearsal_records()
+    written = sorted(path for path, mtime in after.items() if before.get(path) != mtime)
+    assert not written, (
+        f"a test wrote a scene's kept rehearsal in agentspecs: {written}"
+    )
+
+
 @pytest.fixture(autouse=True)
 def _a_ui_hub_per_test(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """Each test starts with the sessions' ui hub empty (RU-W).
