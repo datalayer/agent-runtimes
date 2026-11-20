@@ -14,7 +14,6 @@
  */
 
 import type { Agentspec, CogSpec } from '../types';
-import { isAgentspecComponentOptional } from '../../types/agentspecs';
 import { TAVILY_MCP_SERVER_0_0_1 } from './mcpServers';
 import {
   CRAWL_SKILL_SPEC_0_0_1,

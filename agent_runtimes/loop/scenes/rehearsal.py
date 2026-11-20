@@ -121,9 +121,11 @@ ToolFits = Callable[[Expected, str], bool]
 
 
 def tool_fits_of(scene: Any, beat_id: str) -> ToolFits:
-    """agentspecs' `tool_line_fits` for one beat: a tool the line's pattern names
-    fits only when its class is the move's (`does: read` takes the system's reads
-    alone, 20 November 2026)."""
+    """Return agentspecs' `tool_line_fits` for one beat.
+
+    A tool the line's pattern names fits only when its class is the move's
+    (`does: read` takes the system's reads alone, 20 November 2026).
+    """
     from agentspecs.scenes import tool_line_fits
 
     def fits(expected: Expected, tool: str) -> bool:
