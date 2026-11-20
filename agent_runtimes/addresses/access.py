@@ -183,7 +183,8 @@ class DeploymentPolicy:
     @property
     def current(self) -> AddressPolicy:
         """The policy to admit by now: the last read's, or its owner's alone when a
-        private deployment's record has not been read for longer than the grace."""
+        private deployment's record has not been read for longer than the grace.
+        """
         policy = self.policy
         if (
             policy.visibility == "private"
@@ -232,7 +233,8 @@ class DeploymentPolicy:
 
 def lost_access(before: AddressPolicy, after: AddressPolicy) -> bool:
     """Whether somebody ``before`` admitted is not admitted ``after``: anybody, when a
-    public deployment turned private; somebody removed, else."""
+    public deployment turned private; somebody removed, else.
+    """
     if after.visibility == "public":
         return False
     if before.visibility == "public":
@@ -247,7 +249,8 @@ class AddressAccess:
 
     Its policy is the configuration's, fixed; or a deployment's, read again from
     ai-agents (``source``, a :class:`DeploymentPolicy`): every check asks
-    :meth:`current_policy`, never a copy kept from before."""
+    :meth:`current_policy`, never a copy kept from before.
+    """
 
     def __init__(
         self,
@@ -381,7 +384,8 @@ def policy_of_deployment(
     deployment: Mapping[str, Any], rate_per_minute: int = DEFAULT_RATE_PER_MINUTE
 ) -> AddressPolicy:
     """Who may call, from ai-agents' record of the deployment
-    (``GET /apps/internal/addresses/{slug}``'s ``deployment``)."""
+    (``GET /apps/internal/addresses/{slug}``'s ``deployment``).
+    """
     return AddressPolicy(
         visibility=str(deployment["visibility"]),  # type: ignore[arg-type]
         owner_uid=str((deployment.get("owner") or {}).get("uid") or ""),
@@ -395,13 +399,14 @@ def policy_of_deployment(
 
 
 class AddressRecordUnread(RuntimeError):
-    """ai-agents did not say the deployment's record."""
+    """The ai-agents service did not say the deployment's record."""
 
 
 async def read_deployment_record(slug: str) -> dict[str, Any]:
     """The record of the deployment this runtime was launched for, at ``slug``, from
     ai-agents (``GET /api/ai-agents/v1/apps/internal/addresses/{slug}``), asked with
-    this runtime's proof."""
+    this runtime's proof.
+    """
     import httpx
     from datalayer_core.utils.urls import DatalayerURLs
 
@@ -440,7 +445,8 @@ async def read_deployment_record(slug: str) -> dict[str, Any]:
 
 def iam_key_checker(iam_url: str) -> KeyChecker:
     """Whose a Datalayer API key is, asked of IAM (``GET /api/iam/v1/whoami``): a
-    Datalayer API key is a token IAM reads as a bearer, whatever header it came in."""
+    Datalayer API key is a token IAM reads as a bearer, whatever header it came in.
+    """
 
     async def check(key: str) -> Optional[str]:
         import httpx

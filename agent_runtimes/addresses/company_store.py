@@ -176,7 +176,8 @@ class DatalayerCompanyStore:
 
 class DatalayerReplayCache:
     """``pap.company.replayCache``: a proof or an assertion is seen once, across restarts
-    and Datalayer's own company service alike — a create-only record until it expires."""
+    and Datalayer's own company service alike — a create-only record until it expires.
+    """
 
     def __init__(self, store: DatalayerCompanyStore) -> None:
         self.store = store

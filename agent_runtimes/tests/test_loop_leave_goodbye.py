@@ -63,16 +63,16 @@ def test_the_prompt_binds_ctrl_z_to_leave() -> None:
     import agent_runtimes.chat.tux as tux_module
 
     original = tux_module.PromptSession
-    tux_module.PromptSession = capture  # type: ignore[assignment,misc]
+    tux_module.PromptSession = capture
     try:
         with pytest.raises(_Stop):
             asyncio.run(tux.show_prompt())
     finally:
-        tux_module.PromptSession = original  # type: ignore[misc]
+        tux_module.PromptSession = original
     keys = [
         tuple(str(key) for key in binding.keys)
         for binding in made["key_bindings"].bindings
-    ]  # type: ignore[attr-defined]
+    ]
     assert ("Keys.ControlZ",) in keys
 
 

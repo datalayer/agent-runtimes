@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""datalayer-social: posting to X, Bluesky and LinkedIn on the person's linked accounts, through IAM.
+"""The datalayer-social tools: posting to X, Bluesky and LinkedIn on the person's linked accounts, through IAM.
 
 The runtime holds a social token the companion gives it (decided 14 November
 2026), renews it with itself ahead of its expiry, and calls IAM's social routes
@@ -152,7 +152,7 @@ class FakeIam:
         return {}
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
-        body = json.loads(request.content) if request.content else None
+        body: Any = json.loads(request.content) if request.content else None
         self.calls.append(
             (
                 request.method,

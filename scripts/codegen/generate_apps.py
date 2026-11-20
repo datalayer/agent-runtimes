@@ -405,7 +405,10 @@ def generate_typescript_code(
         "",
     ]
     for spec in specs:
-        body = json.dumps(_typescript_value(spec), indent=2, ensure_ascii=False)
+        # What TypeScript reads only when it is said: an application's presentation,
+        # as the Appspec's readers leave an empty one out.
+        said = {k: v for k, v in spec.items() if k != "presentation" or v}
+        body = json.dumps(_typescript_value(said), indent=2, ensure_ascii=False)
         lines.extend([f"export const {_const_name(spec)}: AppSpec = {body};", ""])
     lines.append("export const APP_CATALOGUE: Record<string, AppSpec> = {")
     for spec in specs:

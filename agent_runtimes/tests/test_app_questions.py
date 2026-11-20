@@ -3,7 +3,6 @@
 
 """What an application's code asks is a display; a press of it answers it.
 
-
 ``session.ask(...)`` says the question in words in the conversation and
 shows a ``QuestionShown`` display under them with an ``ask`` op on the
 session's ui socket — its choices as buttons, its words as a field, a form as

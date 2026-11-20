@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""datalayer-social: post to X, Bluesky and LinkedIn on the person's linked accounts, through IAM.
+"""The datalayer-social tools: post to X, Bluesky and LinkedIn on the person's linked accounts, through IAM.
 
 The person links X, Bluesky and LinkedIn in Datalayer's Settings; IAM keeps the
 accounts' tokens — X's grant, which it refreshes, the Bluesky session bound to a
@@ -377,7 +377,7 @@ _LINK = re.compile(r"https?://[^\s<>\"']+")
 
 
 def _link_facets(text: str) -> List[Dict[str, Any]]:
-    """Bluesky's facets for each link of a post, by byte offsets, so they are links."""
+    """The Bluesky facets for each link of a post, by byte offsets, so they are links."""
     facets = []
     for match in _LINK.finditer(text):
         url = match.group(0).rstrip(".,;:!?)")
@@ -698,7 +698,7 @@ def _profile(view: Any) -> Dict[str, Any]:
 
 
 def _shorten(what: str, answer: Dict[str, Any]) -> Dict[str, Any]:
-    """Bluesky's answer, kept to what the agent reads."""
+    """The Bluesky answer, kept to what the agent reads."""
     cursor = {"cursor": answer["cursor"]} if answer.get("cursor") else {}
     if what in {"timeline", "author-feed"}:
         items = []
@@ -868,7 +868,9 @@ async def _subject(post: str) -> Dict[str, Any] | str:
     if not isinstance(view, dict) or not view.get("uri") or not view.get("cid"):
         return "That Bluesky post could not be found."
     subject = {"uri": view["uri"], "cid": view["cid"]}
-    record = view.get("record") if isinstance(view.get("record"), dict) else {}
+    record: Dict[str, Any] = (
+        view["record"] if isinstance(view.get("record"), dict) else {}
+    )
     root = (
         ((record.get("reply") or {}).get("root"))
         if isinstance(record.get("reply"), dict)

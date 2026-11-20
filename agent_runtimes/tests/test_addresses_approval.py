@@ -67,7 +67,8 @@ ORDER = {"total": 9.5}
 
 def _shop() -> Dict[str, Any]:
     """The company: `quote` needs no approval; `order` (POST /orders) is one a person
-    approves, under `orders:write`."""
+    approves, under `orders:write`.
+    """
     document = json.loads(json.dumps(OPENAPI))
     document["paths"]["/orders"] = json.loads(json.dumps(document["paths"]["/quote"]))
     order = document["paths"]["/orders"]["post"]
@@ -107,7 +108,7 @@ def _agent(policy: AddressPolicy | None = None) -> Any:
         key_checker=_uid_of,
         token_checker=_uid_of,
     )
-    agent.model = model  # type: ignore[attr-defined]
+    agent.model = model
     return agent
 
 
@@ -282,7 +283,7 @@ def test_the_url_handed_to_the_company_is_the_one_the_agent_called() -> None:
     class Local:
         url = "http://127.0.0.1:8767/orders"
 
-    assert called_url(agent, Local()) == "http://127.0.0.1:8767/orders"  # type: ignore[arg-type]
+    assert called_url(agent, Local()) == "http://127.0.0.1:8767/orders"
 
 
 # --- a personal agent, in its Session: approved, performed once, repeated ----------
@@ -357,6 +358,7 @@ async def test_a_personal_agent_gets_the_operation_approves_it_and_it_is_done_on
     )
     try:
         started = await pap.sign_in(DOMAIN, user_id="ada")
+        assert started.code is not None
         await company.approve_device(started.code, account_id="acct_ada")
         clock.advance(10)
         assert (await pap.sign_in_status(DOMAIN, user_id="ada")).status == "signed_in"

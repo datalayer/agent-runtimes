@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""kagent (https://kagent.dev): agent-runtimes as a kagent BYO Harness.
+"""Kagent (https://kagent.dev): agent-runtimes as a kagent BYO Harness.
 
 - :mod:`.settings` — what ``agent-runtimes serve --target kagent`` is started
   with: the agentspec, and the model and MCP servers of kagent's configuration.

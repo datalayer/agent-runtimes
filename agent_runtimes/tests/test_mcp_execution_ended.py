@@ -184,7 +184,7 @@ TOOL = SimpleNamespace(tool_def=SimpleNamespace(metadata={}))
 
 
 async def _call(toolset: DisplayMCPToolset, a: int, b: int) -> Any:
-    return await toolset.call_tool("add", {"a": a, "b": b}, None, TOOL)  # type: ignore[arg-type]
+    return await toolset.call_tool("add", {"a": a, "b": b}, None, TOOL)
 
 
 @pytest.mark.asyncio

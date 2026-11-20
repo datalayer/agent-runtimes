@@ -32,6 +32,7 @@ const SELLER = process.env.ACP_SELLER ?? '';
 const TOKEN = 'spt_test_shared_payment_token';
 const BEARER = 'acp_test_agent_key';
 
+// Skipped unless ACP_SELLER names a running test seller: CI starts none.
 describe.skipIf(!SELLER)(
   'ACP: the TypeScript buyer at the Python seller',
   () => {

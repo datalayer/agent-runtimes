@@ -658,8 +658,8 @@ def test_an_operations_call_runs_on_the_agents_own_model() -> None:
 
     answer = asyncio.run(
         call_operation(
-            OperationAgent(agent=Agent()),  # type: ignore[arg-type]
-            Operation(),  # type: ignore[arg-type]
+            OperationAgent(agent=Agent()),
+            Operation(),
             {"model": OPUS},
         )
     )

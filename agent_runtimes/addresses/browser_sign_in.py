@@ -29,7 +29,7 @@ import json
 import os
 import secrets
 import time
-from typing import Any, Mapping, Optional
+from typing import Any, Mapping, Optional, Sequence
 from urllib.parse import parse_qsl, urlencode
 
 #: The paths this answers, under one prefix no other server of the agent uses.
@@ -51,7 +51,7 @@ _SECRET = secrets.token_bytes(32)
 
 
 def iam_public_url() -> str:
-    """Datalayer's authorization server, as a browser reaches it."""
+    """The Datalayer authorization server, as a browser reaches it."""
     from datalayer_core.utils.urls import DatalayerURLs
 
     url = (os.environ.get("DATALAYER_IAM_PUBLIC_URL") or "").strip() or (
@@ -134,7 +134,7 @@ async def _respond(
     await send({"type": "http.response.body", "body": body})
 
 
-async def redirect(send: Any, location: str, cookies: list[str] = ()) -> None:
+async def redirect(send: Any, location: str, cookies: Sequence[str] = ()) -> None:
     await _respond(
         send,
         303,
@@ -205,7 +205,7 @@ async def answer(scope: dict, receive: Any, send: Any, *, host: str, name: str) 
             .decode()
             .rstrip("=")
         )
-        pending = _sign(
+        signed = _sign(
             {
                 "state": state,
                 "verifier": verifier,
@@ -228,16 +228,16 @@ async def answer(scope: dict, receive: Any, send: Any, *, host: str, name: str) 
             send,
             location,
             [
-                f"{PENDING_COOKIE}={pending}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age={PENDING_SECONDS}"
+                f"{PENDING_COOKIE}={signed}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age={PENDING_SECONDS}"
             ],
         )
         return True
     if path == CALLBACK_PATH:
-        pending = _unsign(cookie_of(headers_of(scope), PENDING_COOKIE))
+        held = _unsign(cookie_of(headers_of(scope), PENDING_COOKIE))
         if (
-            pending is None
+            held is None
             or not query.get("code")
-            or not hmac.compare_digest(str(query.get("state") or ""), pending["state"])
+            or not hmac.compare_digest(str(query.get("state") or ""), held["state"])
         ):
             await answer_json(
                 send,
@@ -247,7 +247,7 @@ async def answer(scope: dict, receive: Any, send: Any, *, host: str, name: str) 
             return True
         try:
             said = await exchange(
-                iam_public_url(), host, query["code"], pending["verifier"]
+                iam_public_url(), host, query["code"], held["verifier"]
             )
         except PermissionError as error:
             await answer_json(send, 401, {"detail": str(error)})
@@ -255,7 +255,7 @@ async def answer(scope: dict, receive: Any, send: Any, *, host: str, name: str) 
         age = int(said.get("expires_in") or 3600)
         await redirect(
             send,
-            pending["next"],
+            held["next"],
             [
                 f"{COOKIE}={said['access_token']}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age={age}",
                 f"{PENDING_COOKIE}=; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=0",
@@ -273,7 +273,8 @@ async def answer(scope: dict, receive: Any, send: Any, *, host: str, name: str) 
 
 def iam_userinfo_checker(iam_url: str) -> Any:
     """Whose an access token Datalayer's authorization server issued is
-    (``/oauth/userinfo``, its ``sub``)."""
+    (``/oauth/userinfo``, its ``sub``).
+    """
 
     async def check(token: str) -> Optional[str]:
         import httpx

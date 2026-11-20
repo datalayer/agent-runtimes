@@ -110,7 +110,8 @@ def _output_schema(operation: OpenApiOperation) -> tuple[dict[str, Any], bool]:
 
 def operation_prompt(operation: OpenApiOperation, inputs: Mapping[str, Any]) -> str:
     """What the agent is told: the operation's instruction, its inputs as JSON, and the
-    JSON it answers."""
+    JSON it answers.
+    """
     return "\n\n".join(
         [
             operation.instruction,

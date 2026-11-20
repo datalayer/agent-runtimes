@@ -105,7 +105,8 @@ class AddressedAgent:
         verified their approval of its exact terms: then its executor calls it, as the
         ``agent`` interface (``pap.company.OpenApiOperationExecutor``). Called from
         any address — its API, its MCP server, its web page — by anybody, a key of its
-        owner's included, it is refused ``403 approval_required`` and nothing is done."""
+        owner's included, it is refused ``403 approval_required`` and nothing is done.
+        """
         elapsed = timed()
         usage: Dict[str, int] = {}
         status = 200
@@ -137,7 +138,7 @@ class AddressedAgent:
                 )
 
     def published_document(self) -> Dict[str, Any]:
-        """Its ``openapi`` as its API publishes it: served from its API host."""
+        """The ``openapi`` as its API publishes it: served from its API host."""
         document = copy.deepcopy(self.document)
         if self.hosts is not None:
             document["servers"] = [{"url": self.hosts.api}]
@@ -151,7 +152,8 @@ def role_of(app: AppSpec) -> Role:
 
 def app_from(reference: str) -> AppSpec:
     """An application by path (a YAML Appspec, its ``openapi`` read beside it) or by
-    catalogue id."""
+    catalogue id.
+    """
     from agentspecs import apps as spec
 
     from agent_runtimes.apps.loading import load_app

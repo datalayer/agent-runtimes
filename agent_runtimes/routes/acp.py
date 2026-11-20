@@ -997,7 +997,8 @@ async def _handle_new_session(
 
 async def _run_model_refusal(session_id: str, model: Any) -> str | None:
     """Why a turn of this session may not run on ``model``, or ``None``: one
-    its agent offers (`offered.run_model_refusal`)."""
+    its agent offers (`offered.run_model_refusal`).
+    """
     from ..models.offered import run_model_refusal
 
     session = await sessions.load_session(session_id) if session_id else None

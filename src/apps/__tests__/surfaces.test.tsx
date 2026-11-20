@@ -127,6 +127,8 @@ describe('the jupyter-react fallback', () => {
     }
   })();
 
+  // Runs only where jupyter-ui is checked out beside this repository (the monorepo):
+  // it reads JupyterReactState.ts from there; this repository's CI has no such checkout.
   it.runIf(source)('prefers a published manager over building one', () => {
     // Seeded from the store, so a component mounting after the sandbox is up
     // never renders a frame without it...

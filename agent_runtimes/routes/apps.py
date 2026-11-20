@@ -29,7 +29,6 @@ the visitors' runtime, makes the agent a visitor's token names when it is not
 made yet — an application at its address — and says it and the application
 it runs: what a visitor's page asks before it follows the application here.
 
-
 Every route checks who is calling before anything else
 (`agent_runtimes.apps.callers`): a person for `configure`; for the
 others, a person or an embed token for the application — and a browser only

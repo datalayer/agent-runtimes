@@ -58,11 +58,12 @@ class _AccessEnded(Exception):
 async def while_admitted(
     app: Any, scope: dict, receive: Any, send: Any, access: Any, uid: str
 ) -> None:
-    """``app``'s answer; a streamed one (a conversation's events) ends before its next
+    """The answer of ``app``; a streamed one (a conversation's events) ends before its next
     chunk once ``access`` (an ``AddressAccess``) no longer admits ``uid`` — somebody
     removed from "People I invite", anybody nobody names once it turned private. The
     policy is asked as at every request (read again at most every
-    ``POLICY_READ_SECONDS``): the stream closes, and asking again is refused."""
+    ``POLICY_READ_SECONDS``): the stream closes, and asking again is refused.
+    """
 
     async def checked(message: dict) -> None:
         if message.get("type") == "http.response.body" and message.get("more_body"):
@@ -89,7 +90,8 @@ def guarded(
     """``app``, answered only for a caller the agent's access check admits (not counted:
     the handlers count each call). ``open_paths`` answer anybody; one ending in ``/``
     opens every path under it. A browser asking for a page it may not open yet, at an
-    agent with addresses, is sent to sign in (`browser_sign_in`)."""
+    agent with addresses, is sent to sign in (`browser_sign_in`).
+    """
     opened = frozenset(open_paths)
 
     async def guard(scope: dict, receive: Any, send: Any) -> None:

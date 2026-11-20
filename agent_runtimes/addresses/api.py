@@ -61,7 +61,8 @@ async def approved_through_the_company(
     """A personal agent's call of an operation a person approves, answered by the
     company's own service (``PapCompanyCapability.api_call``): the request as it came,
     its answer as it is — the operation to approve, what the approved action came to,
-    or the SDK's refusal with its challenge."""
+    or the SDK's refusal with its challenge.
+    """
     from agent_runtimes.addresses.access import client_address
 
     assert addressed.company is not None
@@ -88,7 +89,8 @@ async def approved_through_the_company(
 
 def coerced(value: str, schema: Dict[str, Any]) -> Any:
     """A path or query value as its schema types it; left as written when it does not parse
-    (the schema check then says why)."""
+    (the schema check then says why).
+    """
     kind = schema.get("type")
     try:
         if kind == "integer":

@@ -141,7 +141,8 @@ class OperationsExtension(McpExtension):
 
     def on_server(self, server: Any) -> None:
         """Each tool's schemas are its operation's: the input schema the client is
-        given, and the output schema of its ``200``."""
+        given, and the output schema of its ``200``.
+        """
         for operation in self.addressed.operations:
             tool = server._tool_manager.get_tool(operation.operation_id)
             tool.parameters = operation.input_schema
@@ -153,7 +154,7 @@ class OperationsExtension(McpExtension):
 
 
 def _output_schema(schema: Dict[str, Any]) -> Dict[str, Any]:
-    """MCP's output schema is an object: an answer of another type is under ``result``."""
+    """The output schema MCP takes is an object: an answer of another type is under ``result``."""
     if schema.get("type") == "object":
         return schema
     return {"type": "object", "properties": {"result": schema}, "required": ["result"]}
@@ -179,7 +180,8 @@ MCP_CLIENT_CLAIM = "datalayer.ai/mcp_client"
 async def mcp_client_token(addressed: AddressedAgent, token: str) -> Any:
     """The SDK's record of ``token`` when it is another MCP client's (a public client's)
     issued for this MCP server and still good, else ``None``: asked of the company each
-    time, so a sign-in its owner ended, or a switch turned off, stops it at once."""
+    time, so a sign-in its owner ended, or a switch turned off, stops it at once.
+    """
     company, hosts = addressed.company, addressed.hosts
     if company is None or hosts is None or not token:
         return None
@@ -192,7 +194,8 @@ async def mcp_client_caller(
 ) -> Optional[Caller]:
     """Who calls, when the request's bearer is another MCP client's token: the person
     who allowed it, who must still be somebody its owner lets in. ``None`` for any other
-    request, which the access check identifies as before."""
+    request, which the access check identifies as before.
+    """
     authorization = next(
         (
             str(value)
@@ -219,7 +222,8 @@ def operation_scopes(addressed: AddressedAgent) -> Dict[str, tuple[str, ...]]:
     """The scopes each operation of a company requires, from its ``openapi``: an
     operation's ``security`` naming one requirement lists them (OpenAPI 3.1 §4.8.30),
     those the company offers. An operation that says none, or offers alternatives,
-    requires none here: its agent decides what the caller's scopes allow."""
+    requires none here: its agent decides what the caller's scopes allow.
+    """
     offered = set(_offered_scopes(addressed))
     found: Dict[str, tuple[str, ...]] = {}
     for item in (addressed.document.get("paths") or {}).values():
@@ -360,7 +364,8 @@ def mcp_app(addressed: AddressedAgent) -> Any:
     """The agent's MCP server, at ``/mcp``, behind its access check.
 
     A company at its addresses is an OAuth protected resource
-    (:func:`company_oauth`); any other agent keeps its access check in front."""
+    (:func:`company_oauth`); any other agent keeps its access check in front.
+    """
     options = {
         "name": addressed.app.name,
         "instructions": addressed.app.description,
@@ -386,7 +391,8 @@ def mcp_app(addressed: AddressedAgent) -> Any:
 def _app_options(addressed: AddressedAgent) -> Dict[str, Any]:
     """The SDK's transport security: its DNS rebinding protection admits the agent's own
     MCP host (``{name}.mcp.<domain>``, behind the ingress) besides the loopback, which
-    alone it admits by default — every request at the agent's address was 421."""
+    alone it admits by default — every request at the agent's address was 421.
+    """
     from mcp.server.transport_security import TransportSecuritySettings
 
     hosts = ["127.0.0.1", "127.0.0.1:*", "localhost", "localhost:*", "[::1]:*"]

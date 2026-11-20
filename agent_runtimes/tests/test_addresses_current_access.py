@@ -53,7 +53,7 @@ ACCEPT = {**AT_ITS_HOST, "Accept": "application/json, text/event-stream"}
 
 
 class _Deployment:
-    """ai-agents' record of a deployment, as its runtime reads it, and the clock."""
+    """The ai-agents record of a deployment, as its runtime reads it, and the clock."""
 
     def __init__(self, visibility: str = "private", allowed: tuple = ("friend",)):
         self.record: Dict[str, Any] = {
@@ -106,7 +106,8 @@ def _app_agent(deployment: _Deployment) -> AddressedAgent:
 
 def _company(deployment: _Deployment, spec: Dict[str, Any] = COMPANY) -> Any:
     """A company deployed, a personal agent's token taken at its addresses
-    (``servers.company_of``)."""
+    (``servers.company_of``).
+    """
     from agent_runtimes.addresses.servers import pap_token_checker
 
     agent = _deployed(

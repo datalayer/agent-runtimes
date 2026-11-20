@@ -39,6 +39,8 @@ beforeAll(async () => {
   debugLog('Token available:', !!DATALAYER_API_KEY);
 });
 
+// Skipped unless DATALAYER_TEST_RUN_EXTERNAL_INTEGRATION=true and an API key is set: it calls
+// the live Runtimes API, which this repository's CI does not (no external calls on a pull request).
 describe.skipIf(skipTests || !runExternalIntegration)(
   'Runtimes Environments Integration Tests',
   () => {

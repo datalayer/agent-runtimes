@@ -1366,7 +1366,8 @@ def run_prompts(
 def _goodbye_on_interrupt(command: Any) -> Any:
     """Ctrl-C or Ctrl-Z anywhere in ``loop`` — a picker before the session
     starts included — stops the server and leaves with the goodbye; click
-    would otherwise swallow the interrupt as "Aborted"."""
+    would otherwise swallow the interrupt as "Aborted".
+    """
     import functools
 
     @functools.wraps(command)

@@ -1170,7 +1170,8 @@ def _deployment_renewal(
     deployment_uid: str, bearer: Optional[str]
 ) -> Callable[[], Awaitable[None]]:
     """A deployment's runtime's: asked with the token the run's request carries. A
-    token not renewed is left held, as the keeper's renewal reads it."""
+    token not renewed is left held, as the keeper's renewal reads it.
+    """
 
     async def ask_fresh() -> None:
         if not bearer:

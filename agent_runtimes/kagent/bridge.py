@@ -339,7 +339,7 @@ Runner = Callable[[DatalayerMode, list[str]], Awaitable[dict[str, Any]]]
 
 
 async def run_agent_runtimes(mode: DatalayerMode, args: list[str]) -> dict[str, Any]:
-    """``agent-runtimes kagent <args>`` in agent-runtimes' environment.
+    """Run ``agent-runtimes kagent <args>`` in agent-runtimes' environment.
 
     The key reaches that process in its environment only (never on its
     command line); a failure raises its sentence from stderr.
@@ -462,7 +462,7 @@ class DatalayerRuntime:
                 launched = await self.runner(
                     self.mode, ["launch-runtime", "--agent", self.mode.agent_uid]
                 )
-                state = {
+                state: dict[str, Any] = {
                     "uid": str(launched["uid"]),
                     "url": str(launched["url"]),
                     "expired_at": float(launched.get("expired_at") or 0),
@@ -714,7 +714,7 @@ def executor(
 
 
 def request_handler(card: Any, forward: Any, local: bool) -> Any:
-    """kagent-core's request handler: the controller's task store, or memory when local."""
+    """The kagent-core request handler: the controller's task store, or memory when local."""
     from kagent.core.a2a import KAgentRequestContextBuilder, TelemetryRequestHandler
 
     if local:
@@ -840,7 +840,7 @@ async def serve() -> int:
     for sig in (signal.SIGTERM, signal.SIGINT):
         loop.add_signal_handler(sig, stop.set)
     stopper = asyncio.create_task(stop.wait())
-    waited = {stopper}
+    waited: set[asyncio.Task[Any]] = {stopper}
     if child is not None:
         waited.add(asyncio.create_task(child.wait()))
     await asyncio.wait(waited, return_when=asyncio.FIRST_COMPLETED)

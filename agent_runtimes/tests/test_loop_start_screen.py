@@ -127,8 +127,9 @@ def test_enter_on_a_launch_row_starts_and_a_sessions_key_says_why_not(
 def test_filtering_highlights_the_first_session_that_matches(tmp_path: Path) -> None:
     start = Picker(_rows(), launch=_launch(tmp_path), now=NOW)
     start.type("marketer")
-    assert start.highlighted() is not None
-    assert start.highlighted().uid == "72a52412b51f401ab91555394f4ef82c"
+    highlighted = start.highlighted()
+    assert highlighted is not None
+    assert highlighted.uid == "72a52412b51f401ab91555394f4ef82c"
     start.erase()
     for _ in "markete":
         start.erase()
