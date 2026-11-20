@@ -14,6 +14,7 @@
  */
 
 import type { Agentspec, CogSpec } from '../types';
+import { isAgentspecComponentOptional } from '../../types/agentspecs';
 import { TAVILY_MCP_SERVER_0_0_1 } from './mcpServers';
 import {
   CRAWL_SKILL_SPEC_0_0_1,
@@ -495,8 +496,9 @@ const COG_SALES_PIPELINE_BOARD_REPORT_AGENTSPEC_0_0_1: Agentspec = {
   ],
   domain: 'market-analyst',
   enabled: false,
-  listed: true,
+  listed: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  modelAdditionals: ['alibaba:qwen-max'],
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']

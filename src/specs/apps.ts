@@ -7395,9 +7395,7 @@ export const SALES_APP_0_0_3: AppSpec = {
   emoji: '💼',
   avatar: '',
   banner: '',
-  setup: [
-    "The agent 'worker-sales-pipeline-board-report:0.0.1' is not enabled.",
-  ],
+  setup: [],
 };
 
 export const SHEET_MAKER_APP_0_0_1: AppSpec = {

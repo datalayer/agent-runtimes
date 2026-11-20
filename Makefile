@@ -202,6 +202,9 @@ RUFF_TARGETS = \
 	agent_runtimes/specs/triggers.py \
 	agent_runtimes/specs/outputs.py \
 	agent_runtimes/specs/notifications.py \
+	agent_runtimes/specs/battles.py \
+	agent_runtimes/specs/stages.py \
+	agent_runtimes/specs/identities.py \
 	agent_runtimes/mcp/catalog_mcp_servers.py \
 	agent_runtimes/mcp/__init__.py
 

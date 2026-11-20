@@ -6704,9 +6704,7 @@ SALES_APP_0_0_3 = AppSpec.model_validate(
         "avatar": "",
         "banner": "",
         "presentation": "",
-        "setup": [
-            "The agent 'worker-sales-pipeline-board-report:0.0.1' is not enabled."
-        ],
+        "setup": [],
     }
 )
 
