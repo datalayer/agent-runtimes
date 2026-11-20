@@ -85,7 +85,7 @@ describe('the turns a visitor has', () => {
 
   it('says the visitor’s words', () => {
     expect(ANONYMOUS_WORDS.someDisabled).toBe('Some features are disabled.');
-    expect(ANONYMOUS_WORDS.anonymous).toBe('Anonymous');
+    expect('anonymous' in ANONYMOUS_WORDS).toBe(false);
   });
 });
 

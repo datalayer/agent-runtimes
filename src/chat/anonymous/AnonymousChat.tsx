@@ -11,7 +11,6 @@
  *   held full until the first question, counting the conversation's minutes
  *   after it; beside the limited-preview indicator when the chat draws no
  *   header;
- * - **Anonymous** in the composer's footer;
  * - **Sign in to use <tool>** under a tool call refused for want of an
  *   account.
  *
@@ -36,8 +35,7 @@ import {
   type JSX,
   type ReactNode,
 } from 'react';
-import { Button, Label } from '@primer/react';
-import { PersonIcon } from '@primer/octicons-react';
+import { Button } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 /* By file, not through the barrel: the barrel reaches the sign-in form. */
 import { AnonymousKeyTimer } from '@datalayer/core/lib/components/anonymous/AnonymousKeyTimer';
@@ -189,18 +187,6 @@ export function AnonymousKeyClock({
         label={ANONYMOUS_WORDS.trialKey(state.name)}
       />
     </Box>
-  );
-}
-
-/** *Anonymous*, in the composer's footer. */
-export function AnonymousFooterLabel(): JSX.Element {
-  return (
-    <Label variant="attention" data-anonymous-footer="">
-      <Box as="span" display="inline-flex" alignItems="center" gap={1}>
-        <PersonIcon size={12} />
-        {ANONYMOUS_WORDS.anonymous}
-      </Box>
-    </Label>
   );
 }
 

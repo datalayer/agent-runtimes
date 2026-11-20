@@ -119,7 +119,6 @@ import {
 } from '../../../chat/anonymous/anonymousMode';
 import {
   AnonymousChatProvider,
-  AnonymousFooterLabel,
   AnonymousKeyClock,
   useAnonymousSignIn,
   useAnonymousTurns,
@@ -2418,12 +2417,10 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         <ReactorSlot slot={LoopSlots.inpromptMenu} props={{ workspace }} />
       ) : undefined,
     footerExtras:
-      anonymousConfig ||
-      promptActions.length > 0 ||
-      (voice && voice.input !== 'off') ? (
+      // No Anonymous label: a visitor's limited-preview indicator is in the
+      // `promptAction` slot (the user, 20 November 2026).
+      promptActions.length > 0 || (voice && voice.input !== 'off') ? (
         <>
-          {/* Who is talking: nobody signed in (the user, 15 November 2026). */}
-          {anonymousConfig ? <AnonymousFooterLabel /> : null}
           {promptActions.length > 0 ? (
             <ReactorSlot slot={LoopSlots.promptAction} props={{ workspace }} />
           ) : null}

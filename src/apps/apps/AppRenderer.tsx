@@ -396,7 +396,8 @@ export function appLayoutOptions(
 /** What a kind of application is drawn with: its plugins, and its workspace. */
 export type AppPreset = {
   plugins: PluginRef[];
-  workspace: AppLayoutOptions & Pick<LoopPresetOptions, 'conversation'>;
+  workspace: AppLayoutOptions &
+    Pick<LoopPresetOptions, 'conversation' | 'disabledUi'>;
 };
 
 /**
@@ -480,6 +481,18 @@ export function appPreset(
   const off = new Set((options.pluginsOff ?? []).map(canvasBlocksPluginName));
   const blocks = CANVAS_BLOCK_PLUGINS.filter(plugin => !off.has(plugin.name));
   const visitor = options.visitor ?? options.kept?.visitor ?? false;
+  /*
+   * What its agent would bring that needs a visitor's own connection — its
+   * spec's `ui` and every MCP server's and skill's, optional ones too,
+   * whatever it runs. The workspace allocates a bootstrap spec, not this
+   * one: the application's agent is named here.
+   */
+  const keptFromVisitor = visitor
+    ? [
+        ...(app.ui ?? []),
+        ...(app.agent ? agentUiChoicesOf(agentIdOf(app)) : []),
+      ]
+    : [];
   return {
     plugins: [
       defineAppPlugin(app, shown, { agentOnRuntime: options.agentOnRuntime }),
@@ -527,20 +540,17 @@ export function appPreset(
       // post previews, the Shopper's basket…): to a visitor, only those
       // that need no connection of theirs.
       ...agentUiPluginsFor(app.ui, { anonymous: visitor }),
-      // To a visitor, what its agent would bring that needs their own
-      // connection — its spec's `ui` and every MCP server's and skill's,
-      // optional ones too, whatever it runs — locked in the title bar, each
-      // signing them in (the user, 15 November 2026: the Marketer's
-      // *Sign in to LinkedIn*). The workspace allocates a bootstrap spec,
-      // not this one: the application's agent is named here.
-      ...(visitor
-        ? lockedUiPluginsFor([
-            ...(app.ui ?? []),
-            ...(app.agent ? agentUiChoicesOf(agentIdOf(app)) : []),
-          ])
-        : []),
+      // To a visitor, what of it needs their own connection, locked in the
+      // title bar, each signing them in (the user, 15 November 2026: the
+      // Marketer's *Sign in to LinkedIn*).
+      ...(visitor ? lockedUiPluginsFor(keptFromVisitor) : []),
     ],
-    workspace: appLayoutOptions(app),
+    workspace: {
+      ...appLayoutOptions(app),
+      // And named by the limited-preview indicator as disabled (the user,
+      // 20 November 2026): the application's own, not the bootstrap spec's.
+      ...(visitor ? { disabledUi: keptFromVisitor } : {}),
+    },
   };
 }
 

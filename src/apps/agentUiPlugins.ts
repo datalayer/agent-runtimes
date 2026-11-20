@@ -68,7 +68,6 @@ import {
 } from './plugins/linkedin-link';
 import { LinkedInPostPreviewPlugin } from './plugins/linkedin-post-preview';
 import { lockedUiPlugin } from './plugins/locked-ui';
-import { limitedPreviewPlugin } from './plugins/limited-preview';
 import { notebookHeaderPlugin } from './plugins/notebook-header';
 import { analysisHeaderPlugin } from './plugins/analysis-header';
 import { OdooContextChip, odooContextPlugin } from './plugins/odoo-context';
@@ -470,13 +469,6 @@ export function disabledUiOf(
     }
   }
   return names;
-}
-
-/** For a visitor, the limited-preview plugin naming what these UIs keep from them. */
-export function limitedPreviewPluginFor(
-  given: ReadonlyArray<string | UiChoice | AgentUiChoice> | undefined,
-): PluginRef {
-  return limitedPreviewPlugin(disabledUiOf(given));
 }
 
 /** The plugin of a UI at its default placement: what its UI spec says it registers. */

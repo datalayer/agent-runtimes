@@ -65,8 +65,6 @@ export const ANONYMOUS_WORDS = {
   /** What a visitor cannot use. */
   someDisabled: 'Some features are disabled.',
   signIn: 'Sign in',
-  /** The footer's word. */
-  anonymous: 'Anonymous',
   /** The temporary key's clock, in the header. */
   trialKey: (name: string) => (name ? `${name}'s trial key` : 'Trial key'),
   /** While the temporary key is asked for and checked. */

@@ -73,9 +73,11 @@ import {
 import {
   agentUiChoicesOf,
   agentUiPluginsFor,
-  limitedPreviewPluginFor,
+  disabledUiOf,
   lockedUiPluginsFor,
 } from './agentUiPlugins';
+import type { AgentUiChoice } from './agentUiChoices';
+import { limitedPreviewPlugin } from './plugins/limited-preview';
 import type { UiChoice } from '../types/agentspecs';
 
 export type LoopPresetOptions = {
@@ -314,7 +316,34 @@ export type LoopPresetOptions = {
    * (`lockedUiPluginsFor`).
    */
   uiPlugins?: ReadonlyArray<string | UiChoice>;
+  /**
+   * What the limited preview names as disabled for an anonymous visitor:
+   * the UIs that keep from them what needs their own connection, by these
+   * choices (`disabledUiOf`). An application passes its own `ui` and its
+   * agent's (`appPreset`'s `workspace.disabledUi`), its workspace's spec
+   * being the bootstrap one; unsaid, the agent's UI (`uiPlugins`, else the
+   * spec's).
+   */
+  disabledUi?: ReadonlyArray<string | UiChoice | AgentUiChoice>;
 };
+
+/**
+ * What the limited-preview indicator names as disabled (the user, 20
+ * November 2026): the application's own UI when the host passes it
+ * (`disabledUi`), else the agent's.
+ */
+export function limitedPreviewDisabled(
+  options: Pick<
+    LoopPresetOptions,
+    'disabledUi' | 'uiPlugins' | 'datalayerAgentSpecId' | 'localAgentSpec'
+  >,
+): string[] {
+  return disabledUiOf(
+    options.disabledUi ??
+      options.uiPlugins ??
+      agentUiChoicesOf(options.datalayerAgentSpecId ?? options.localAgentSpec),
+  );
+}
 
 /**
  * The standard set, with the options a host usually varies.
@@ -461,7 +490,9 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     // To an anonymous visitor, the limited preview beside the composer —
     // the turns left today, what signing in keeps, what is disabled — with
     // the page tools that read and mark it.
-    ...(runAsAnonymous ? [limitedPreviewPluginFor(agentUi)] : []),
+    ...(runAsAnonymous
+      ? [limitedPreviewPlugin(limitedPreviewDisabled(options))]
+      : []),
     // An XLSX the agent gives, read-only in Cells in its message: the
     // renderer loads Cells when a workbook is drawn, so it costs a chat
     // with none nothing.

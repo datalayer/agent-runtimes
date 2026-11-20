@@ -5,7 +5,7 @@
 
 /**
  * What an anonymous visitor's conversation draws (the user, 15 November
- * 2026): Anonymous in the footer and Sign in to use a refused tool. The
+ * 2026): Sign in to use a refused tool. The
  * limited preview is an indicator beside the composer, no box on top (20
  * November 2026; `apps/plugins/limited-preview`). Its MCP servers and skills
  * are listed as the runtime says them, in the same overlays as anyone's
@@ -19,7 +19,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { BaseStyles, ThemeProvider } from '@primer/react';
 import {
   AnonymousChatProvider,
-  AnonymousFooterLabel,
   AnonymousToolSignIn,
   type AnonymousChatState,
 } from '../AnonymousChat';
@@ -48,13 +47,6 @@ const themed = (node: React.ReactNode) =>
       <BaseStyles>{node}</BaseStyles>
     </ThemeProvider>,
   );
-
-describe('the footer', () => {
-  it('says Anonymous', () => {
-    themed(<AnonymousFooterLabel />);
-    expect(screen.getByText('Anonymous')).toBeTruthy();
-  });
-});
 
 describe('a tool refused for want of an account', () => {
   const refused = {
