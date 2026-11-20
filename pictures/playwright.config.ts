@@ -30,10 +30,10 @@ export default defineConfig({
   workers: 1,
   fullyParallel: false,
   retries: 0,
-  // A page that never renders fails every picture the same way, four minutes
-  // each: two failures say it, rather than the job's limit cancelling a run
-  // that says nothing (every run from 2 to 20 November 2026).
-  maxFailures: 2,
+  // A page that never renders fails the first picture with what it saw, and
+  // every picture after it at once (show() in pictures.spec.ts), rather than
+  // four minutes each until the job's limit cancels the run; a picture that
+  // differs fails alone, so a run lists every difference.
   timeout: 300_000,
   // The github reporter prints each failure's message and annotations in the
   // job's log, where the list reporter shows only the test's name.
