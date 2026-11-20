@@ -60,3 +60,32 @@ describe('overlays at full screen', () => {
     workspace.remove();
   });
 });
+
+describe('an overlay still open when full screen ends', () => {
+  it('moves out with its root into the page’s, where it is seen', () => {
+    const workspace = document.createElement('div');
+    document.body.appendChild(workspace);
+    const release = holdOverlaysInside(workspace);
+    const open = render(
+      <ThemeProvider>
+        <Menu />
+      </ThemeProvider>,
+    );
+    const menu = open.getByTestId('menu');
+    expect(workspace.contains(menu)).toBe(true);
+
+    act(() => release());
+    expect(workspace.contains(menu)).toBe(false);
+    expect(document.body.contains(menu)).toBe(true);
+    expect(menu.closest('#__primerPortalRoot__')).toBeTruthy();
+
+    open.unmount();
+    // The next hold clears the node its overlay left empty.
+    const again = holdOverlaysInside(workspace);
+    expect(
+      document.querySelectorAll(`.${FULL_SCREEN_PORTAL_CLASS}`).length,
+    ).toBe(1);
+    act(() => again());
+    workspace.remove();
+  });
+});
