@@ -111,7 +111,11 @@ export default defineConfig(({ mode, command }) => {
   const plugins = [
     react(),
     wasm(),
-    treatAsCommonjs(),
+    // Real UMD files under node_modules only: Vite's own pre-bundled chunks
+    // (node_modules/.vite*) are ESM already, and the plugin's `var define = false;`
+    // beside a bundled `function define` (d3-color, under mermaid) is a
+    // SyntaxError that stopped every page loading them (Pictures, since 2 November 2026).
+    treatAsCommonjs({ exclude: [/node_modules\/\.vite/] }),
     // JupyterLite asks the page for `/lite-service-worker.js` — the worker that
     // keeps a Pyodide kernel's filesystem and the JupyterLite contents in step.
     // `@datalayer/jupyter-react` ships it as TypeScript (`dist/lite-service-worker.ts`),

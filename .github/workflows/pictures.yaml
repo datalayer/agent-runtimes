@@ -13,8 +13,9 @@ name: Pictures
 # On a pull request that changes what is pictured, and by hand. The first CI
 # run (15 Oct 2026) failed 104 of 118 pictures: CI installed the published
 # @datalayer/primer-addons 1.0.39 while the baselines were taken against the
-# monorepo's unreleased loop theme. primer-addons 1.0.40 carries that theme and
-# is pinned here; the baselines are CI's own, taken on ubuntu-latest's Chrome
+# monorepo's unreleased loop theme. Since 1.0.40 the published primer-addons
+# carries that theme; package.json asks for the latest (nothing older is pinned
+# here). The baselines are CI's own, taken on ubuntu-latest's Chrome
 # (a laptop's fonts rasterize differently: accept in CI, not locally).
 on:
   pull_request:
