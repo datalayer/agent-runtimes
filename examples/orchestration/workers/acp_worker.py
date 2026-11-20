@@ -9,7 +9,6 @@ call ``notebook_analysis.analyse``, stream what is happening as session updates,
 end the turn. The analysis is the module next door, shared with the A2A
 worker, so the two cannot disagree about the notebook.
 
-
 Why this is not ``agent_runtimes.routes.acp``: that route serves an agent
 that runs a model, so it needs credentials and gives a different answer every
 time, and neither is a thing an example should need. This is a real ACP

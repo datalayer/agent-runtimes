@@ -282,7 +282,8 @@ class PageCalls:
 
     def heard(self, event: Mapping[str, Any]) -> None:
         """An event of the run: its calls of the page's tools, and what the
-        server's own answered, are remembered."""
+        server's own answered, are remembered.
+        """
         kind = event.get("type")
         call = event.get("toolCallId")
         if not isinstance(call, str):

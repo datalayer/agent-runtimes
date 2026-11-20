@@ -50,8 +50,9 @@ DEVICE_PATH = "/pap/device"
 
 
 def device_redirect(addressed: AddressedAgent, scope: dict) -> str:
-    """Studio's device page for this company, with the code from the link and nothing
-    else of its query; the name is the host's, never the request's."""
+    """The Studio device page for this company, with the code from the link and nothing
+    else of its query; the name is the host's, never the request's.
+    """
     from urllib.parse import parse_qsl, urlencode
 
     query = (scope.get("query_string") or b"").decode("latin-1")
@@ -114,6 +115,8 @@ class AgentHost:
                 503, f"{self.addressed.app.name}'s A2A card is not served yet."
             )
         card = answered.json()
+        # The constructor refuses an agent without its hosts.
+        assert self.addressed.hosts is not None
         card["url"] = f"{self.addressed.hosts.agent}/a2a/"
         return card
 

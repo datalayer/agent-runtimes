@@ -21,6 +21,7 @@ import { McpClient } from './client';
 
 const SERVER = process.env.MCP_FIXTURE_SERVER ?? '';
 
+// Skipped unless MCP_FIXTURE_SERVER names a running MCP fixture server: CI starts none.
 describe.skipIf(!SERVER)(
   'MCP: the TypeScript client at the Python server',
   () => {

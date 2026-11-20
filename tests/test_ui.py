@@ -15,7 +15,8 @@ def test_the_catalogue_lists_every_plugin_and_whether_it_is_enabled() -> None:
     assert {"a2ui", "mcp-apps", "mcp-ui"} <= set(UI_CATALOGUE)
     for plugin in list_ui():
         assert plugin.name and plugin.docs_url.startswith("https://")
-    assert get_ui("a2ui").enabled is True
+    a2ui = get_ui("a2ui")
+    assert a2ui is not None and a2ui.enabled is True
     assert get_ui("nope") is None
 
 

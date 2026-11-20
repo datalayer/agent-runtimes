@@ -1003,7 +1003,7 @@ def serve(
             logger.error(str(error))
             raise typer.Exit(1)
         asyncio.run(
-            serve_mode(addressed, mode, host=host, port=None if port == 8000 else port)  # type: ignore[arg-type]
+            serve_mode(addressed, mode, host=host, port=None if port == 8000 else port)
         )
         return
     if app_reference or address_name:

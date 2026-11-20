@@ -174,7 +174,7 @@ def owners_secret_servers(connections: object) -> frozenset[str]:
     (:func:`owners_secrets_of`): never the process's environment.
     """
     found = set()
-    for connection in connections or ():  # type: ignore[attr-defined]
+    for connection in connections or ():
         server = _base(str(_said(connection, "server") or ""))
         if (
             server
@@ -202,7 +202,7 @@ def remember_owners_servers(agent_id: str, connections: object) -> None:
             _OWNERS_SECRET_SERVERS.pop(agent_id, None)
     servers = frozenset(
         _base(str(getattr(connection, "server", "") or ""))
-        for connection in (connections or ())  # type: ignore[attr-defined]
+        for connection in (connections or ())
         if _word(getattr(connection, "access", None), "read") == "read"
         and _word(getattr(connection, "acts_as", None), "owner") == "owner"
         and _is_gateway_server(_base(str(getattr(connection, "server", "") or "")))

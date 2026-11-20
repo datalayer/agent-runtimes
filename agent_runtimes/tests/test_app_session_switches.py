@@ -146,7 +146,13 @@ def test_what_the_runtime_does_not_offer_is_refused_in_a_sentence(
 
 @pytest.fixture()
 def agent_state(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    """Two agents, each everything on, nothing approved."""
+    """Two agents, each everything on, nothing approved.
+
+    Yields
+    ------
+    None
+        The state stays set for the test, and is cleared after it.
+    """
     monkeypatch.setattr(
         loop,
         "_build_default_mcp_enabled_tools_by_server",

@@ -221,7 +221,8 @@ MCP_INIT_TIMEOUT = 30.0
 
 class ConnectionNotRenewed(RuntimeError):
     """A call the gateway refused because its token's execution has ended, and
-    no new token reached it: what the tool returns, in a sentence."""
+    no new token reached it: what the tool returns, in a sentence.
+    """
 
     def __init__(self, tool: str) -> None:
         super().__init__(

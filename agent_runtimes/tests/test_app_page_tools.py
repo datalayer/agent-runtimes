@@ -107,7 +107,7 @@ def _call(
         return await rules.before_tool_execute(
             _ctx(),
             call=ToolCallPart(name, args),
-            tool_def=ToolDefinition(name=name, kind=kind),  # type: ignore[arg-type]
+            tool_def=ToolDefinition(name=name, kind=kind),
             args=args,
         )
 
@@ -429,7 +429,8 @@ SHOPPER = {
 
 class ShopperModel:
     """The Shopper as it looped: it prices the basket whenever it cannot see
-    its quote, shows it in the title bar, and answers once it sees both."""
+    its quote, shows it in the title bar, and answers once it sees both.
+    """
 
     def __init__(self) -> None:
         self.quotes = 0
@@ -525,7 +526,8 @@ def continued(
     header: str, done: List[Dict[str, str]], content: Optional[str] = None
 ) -> List[Any]:
     """The continuation the chat sends: the run's calls, the server's and the
-    page's, then their results, the server's as the run gave them."""
+    page's, then their results, the server's as the run gave them.
+    """
     page = answered(header)
     return [
         AssistantMessage(
@@ -677,7 +679,8 @@ DECK_ADD_SLIDES = Tool(
 
 class DeckModel:
     """The Marketer laying a ten-slide deck out: the deck, then its outline
-    in one call, then a word on what it holds."""
+    in one call, then a word on what it holds.
+    """
 
     def __init__(self) -> None:
         self.calls: List[str] = []

@@ -72,6 +72,7 @@ async function example(path: string, body: unknown): Promise<void> {
   }
 }
 
+// Skipped unless PACT_PROVIDER names a running PACT provider: CI starts none.
 describe.skipIf(!PROVIDER)(
   'PACT 1.0: the TypeScript personal agent at the Python Provider',
   () => {

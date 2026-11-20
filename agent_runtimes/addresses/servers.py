@@ -99,7 +99,8 @@ class _Server(uvicorn.Server):
 
 class _Lifespan:
     """An ASGI application's lifespan, run beside its requests (the MCP server's session
-    manager starts there)."""
+    manager starts there).
+    """
 
     def __init__(self, app: Any) -> None:
         self.app = app
@@ -225,7 +226,8 @@ class RuntimeAddresses:
         app_instance: Optional[Dict[str, Any]] = None,
     ) -> bool:
         """The runtime made an agent: its addresses answer for it when it is the one they
-        are for. Whether they do."""
+        are for. Whether they do.
+        """
         wanted = (os.environ.get(AGENT_VARIABLE) or "").strip()
         if self.addressed is not None or (wanted and wanted != agent_id):
             return False
@@ -269,10 +271,11 @@ class RuntimeAddresses:
 
 
 def take_address(name: str, *, acts_for: str = "", owner_uid: str = "") -> None:
-    """This runtime's agent's name at its four addresses, as the platform routed them —
+    """Take this runtime's agent's name at its four addresses, as the platform routed them —
     a person's own agent's (``{agent}-{account ulid}``), with the account of the person
     it acts for and its owner, who alone may call it unless they allow others. Said
-    once: a name is never changed, and another is refused (``ValueError``)."""
+    once: a name is never changed, and another is refused (``ValueError``).
+    """
     AddressHosts.of(name)
     held = (os.environ.get(NAME_VARIABLE) or "").strip()
     if held and held != name:
@@ -289,7 +292,8 @@ def take_address(name: str, *, acts_for: str = "", owner_uid: str = "") -> None:
 def _launched_address() -> str:
     """The name at its four addresses of the deployment this runtime was launched
     for, as ai-agents said it with what it runs (``address``, when its addresses are
-    on); ``""`` otherwise."""
+    on); ``""`` otherwise.
+    """
     from agent_runtimes.apps.principal import launched_app
 
     instance = launched_app()[1] or {}
@@ -298,7 +302,8 @@ def _launched_address() -> str:
 
 def _answer_over_a2a(agent_id: str, addressed: AddressedAgent) -> None:
     """The agent answers over A2A, its card at its agent host, when it was made for
-    another transport (a person's own agent made from its spec for the chat)."""
+    another transport (a person's own agent made from its spec for the chat).
+    """
     from agent_runtimes.routes.a2a import (
         A2AAgentCard,
         _a2a_agents,
@@ -368,7 +373,8 @@ def pap_token_checker(addressed: AddressedAgent) -> Any:
 def mcp_clients_of(record: Dict[str, Any], policy: AddressPolicy) -> bool:
     """Whether the deployment lets other MCP clients sign in: its owner turned it on
     (``mcp_clients``), and it is private — a public one is open at its MCP address
-    already, to anybody, and has no such switch."""
+    already, to anybody, and has no such switch.
+    """
     return record.get("mcp_clients") is True and policy.visibility == "private"
 
 
@@ -430,7 +436,8 @@ class CompanyAsDeployed:
 
 async def end_sign_ins_not_admitted(company: Any, policy: AddressPolicy) -> set[str]:
     """End every sign-in at ``company`` of an account ``policy`` does not admit, each
-    agent's as its Disconnect does; the accounts whose sign-ins ended."""
+    agent's as its Disconnect does; the accounts whose sign-ins ended.
+    """
     if company is None:
         return set()
     service = company.service
@@ -452,7 +459,8 @@ async def addressed_in_runtime(
     description: str = "",
 ) -> AddressedAgent:
     """The runtime's agent at its addresses: its application, or an agent of its own
-    wrapped as one (a person's own agent)."""
+    wrapped as one (a person's own agent).
+    """
     from agent_runtimes.apps.loading import load_app
     from agent_runtimes.apps.principal import launched_app, launched_for
     from agent_runtimes.types import AppSpec
@@ -508,7 +516,7 @@ async def addressed_in_runtime(
         access=access,
         agent_source=runtime_agent_source(agent_id),
         hosts=hosts,
-        role=role,  # type: ignore[arg-type]
+        role=role,
         acts_for=acts_for,
         calls=calls,
         mcp_clients=mcp_clients and role == "company" and hosts is not None,
@@ -519,7 +527,8 @@ class UnsignedRequestsCap:
     """``pap.company.rateLimit`` for what the SDK asks before it knows who calls: a
     client registering itself (``registration:{address}``) and a token or revocation
     request without a client assertion (``public:{address}``), each so many a minute
-    for an address. A personal agent's requests are counted elsewhere, not here."""
+    for an address. A personal agent's requests are counted elsewhere, not here.
+    """
 
     def __init__(self, per_minute: int, clock: Any = None) -> None:
         import time
@@ -536,7 +545,8 @@ class UnsignedRequestsCap:
 
 def build_company_of(addressed: AddressedAgent, agent_id: str) -> Any:
     """The PAP company of an agent that is one, at its agent host (the SDK's, as
-    :class:`PapCompanyCapability` assembles it), its turns asked over its own A2A route."""
+    :class:`PapCompanyCapability` assembles it), its turns asked over its own A2A route.
+    """
     import httpx
     from reactor import PluginManifest
 

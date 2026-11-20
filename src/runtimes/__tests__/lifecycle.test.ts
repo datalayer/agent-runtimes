@@ -57,6 +57,9 @@ function pythonOperations(): Record<string, string> {
   return operations;
 }
 
+// Skipped where code-sandboxes is not checked out beside this repository (this
+// repository's CI): the vocabulary is compared with its lifecycle.py, which only the
+// monorepo has.
 describe.skipIf(!existsSync(PYTHON_LIFECYCLE))('the vocabulary', () => {
   it('names the same verbs as the Python module', () => {
     expect(Object.keys(LIFECYCLE_OPERATIONS).sort()).toEqual(

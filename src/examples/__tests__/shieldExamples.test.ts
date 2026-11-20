@@ -64,6 +64,8 @@ describe('the Shield examples', () => {
   });
 });
 
+// Skipped where @datalayer/agent-shield cannot be loaded from the sibling checkout
+// (this repository's CI): the page is drawn from that package's own policy.
 describe.skipIf(shield === null)(
   'the policy page, on @datalayer/agent-shield from the sibling checkout',
   () => {

@@ -235,7 +235,7 @@ async def test_a_server_erring_on_optional_requests_starts_and_answers(
             "add",
             {"a": 2, "b": 3},
             None,
-            TOOL,  # type: ignore[arg-type]
+            TOOL,
         )
         assert said == 5
     finally:

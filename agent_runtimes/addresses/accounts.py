@@ -47,7 +47,8 @@ class DatalayerAccounts:
 
         The last record *read* decides, not the owner-only policy a private deployment
         falls back to when ai-agents does not answer: an outage refuses the people
-        allowed at its addresses for a while, it never ends their sign-ins."""
+        allowed at its addresses for a while, it never ends their sign-ins.
+        """
         access = self.access
         if access is None or getattr(access, "source", None) is None:
             return None

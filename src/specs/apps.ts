@@ -182,7 +182,6 @@ export const ACCOUNTING_APP_0_0_2: AppSpec = {
   emoji: '🧾',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: [],
 };
 
@@ -415,7 +414,6 @@ export const AWS_STEWARD_AGENT_APP_0_0_1: AppSpec = {
   emoji: '☁️',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: [],
 };
 
@@ -629,7 +627,6 @@ export const BOOKKEEPING_DESK_APP_0_0_3: AppSpec = {
   emoji: '🗂️',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: [],
 };
 
@@ -808,7 +805,6 @@ export const CHANGE_DETECTION_APP_0_0_2: AppSpec = {
   emoji: '🔍',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: ["The agent 'worker-change-detection:0.0.1' is not enabled."],
 };
 
@@ -958,7 +954,6 @@ export const CODE_EXPLAINER_APP_0_0_1: AppSpec = {
   emoji: '🔦',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: ["The agent 'example-harness-opencode:0.0.1' is not enabled."],
 };
 
@@ -1141,7 +1136,6 @@ export const CROP_MONITORING_APP_0_0_2: AppSpec = {
   emoji: '🌾',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: ["The agent 'worker-crop-monitoring:0.0.1' is not enabled."],
 };
 
@@ -1395,7 +1389,6 @@ export const CUSTOMER_INTERVIEW_APP_0_0_3: AppSpec = {
   emoji: '🎙️',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: [],
 };
 
@@ -1603,7 +1596,6 @@ export const DATA_QUALITY_APP_0_0_3: AppSpec = {
   emoji: '🧹',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: [],
 };
 
@@ -1749,7 +1741,6 @@ export const DECIDE_APP_0_0_2: AppSpec = {
   emoji: '⚖️',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: [],
 };
 
@@ -1857,7 +1848,6 @@ export const DECK_MAKER_APP_0_0_1: AppSpec = {
   emoji: '🎞️',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: ["The agent 'example-decks:0.0.1' is not enabled."],
 };
 
@@ -3229,7 +3219,6 @@ export const DEMO_SHOP_APP_0_0_1: AppSpec = {
   emoji: '🛍️',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: [],
 };
 
@@ -3935,7 +3924,6 @@ export const DISASTER_ASSESSMENT_APP_0_0_2: AppSpec = {
   emoji: '🌊',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: ["The agent 'worker-disaster-assessment:0.0.1' is not enabled."],
 };
 
@@ -4083,7 +4071,6 @@ export const ERRAND_RUNNER_APP_0_0_2: AppSpec = {
   emoji: '🏃',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: [],
 };
 
@@ -4241,7 +4228,6 @@ export const EVENT_RESPONSE_APP_0_0_3: AppSpec = {
   emoji: '🛡️',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: ["The agent 'worker-event-response:0.0.1' is not enabled."],
 };
 
@@ -4498,7 +4484,6 @@ export const EXCHANGE_DESK_APP_0_0_3: AppSpec = {
   emoji: '🏪',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: [],
 };
 
@@ -4653,7 +4638,6 @@ export const GUEST_DESK_APP_0_0_2: AppSpec = {
   emoji: '🏨',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: [],
 };
 
@@ -4872,7 +4856,6 @@ export const INBOX_TRIAGE_APP_0_0_2: AppSpec = {
   emoji: '📬',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: ["The agent 'worker-mail-triage:0.0.1' is not enabled."],
 };
 
@@ -5053,7 +5036,6 @@ export const LIVE_SHOP_CHAT_APP_0_0_2: AppSpec = {
   emoji: '💬',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: [],
 };
 
@@ -5252,7 +5234,6 @@ export const MARKETER_APP_0_0_1: AppSpec = {
   emoji: '📣',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: [],
 };
 
@@ -5512,7 +5493,6 @@ export const MODEL_CHOICE_APP_0_0_3: AppSpec = {
   emoji: '🧠',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: [],
 };
 
@@ -5693,7 +5673,6 @@ export const MONTH_END_CLOSE_APP_0_0_2: AppSpec = {
   emoji: '🗓️',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: ["The agent 'worker-month-end-close:0.0.1' is not enabled."],
 };
 
@@ -5883,7 +5862,6 @@ export const ORDER_DESK_APP_0_0_2: AppSpec = {
   emoji: '📦',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: [],
 };
 
@@ -6067,7 +6045,6 @@ export const ORDER_TRACKER_APP_0_0_2: AppSpec = {
   emoji: '🔖',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: [],
 };
 
@@ -6386,7 +6363,6 @@ export const PIPELINE_REPORT_APP_0_0_2: AppSpec = {
   emoji: '📈',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: ["The agent 'cog-sales-pipeline-board-report:0.0.1' is not enabled."],
 };
 
@@ -6494,7 +6470,6 @@ export const PLAYER_APP_0_0_1: AppSpec = {
   emoji: '🏓',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: ["The agent 'example-player:0.0.1' is not enabled."],
 };
 
@@ -6785,7 +6760,6 @@ export const QUOTE_CALCULATOR_APP_0_0_6: AppSpec = {
   emoji: '🧮',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: [],
 };
 
@@ -7081,7 +7055,6 @@ export const REPORT_FROM_A_FILE_APP_0_0_5: AppSpec = {
   emoji: '📑',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: [],
 };
 
@@ -7274,7 +7247,6 @@ export const RETURNS_DESK_APP_0_0_2: AppSpec = {
   emoji: '↩️',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: [],
 };
 
@@ -7423,7 +7395,6 @@ export const SALES_APP_0_0_3: AppSpec = {
   emoji: '💼',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: [
     "The agent 'worker-sales-pipeline-board-report:0.0.1' is not enabled.",
   ],
@@ -7533,7 +7504,6 @@ export const SHEET_MAKER_APP_0_0_1: AppSpec = {
   emoji: '📊',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: [
     "The agent 'example-analyze-excel-spreadsheet:0.0.1' is not enabled.",
   ],
@@ -7764,7 +7734,6 @@ export const SHIP_OR_FIX_APP_0_0_3: AppSpec = {
   emoji: '🚢',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: [],
 };
 
@@ -7947,7 +7916,6 @@ export const SHOP_CONCIERGE_APP_0_0_2: AppSpec = {
   emoji: '🛎️',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: [],
 };
 
@@ -8079,7 +8047,6 @@ export const SHOPPER_APP_0_0_2: AppSpec = {
   emoji: '🧺',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: [],
 };
 
@@ -8260,7 +8227,6 @@ export const SHOPPING_DESK_APP_0_0_2: AppSpec = {
   emoji: '🛍️',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: [],
 };
 
@@ -8442,7 +8408,6 @@ export const SIGN_IN_DESK_APP_0_0_2: AppSpec = {
   emoji: '🔐',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: [],
 };
 
@@ -8592,7 +8557,6 @@ export const SIGNED_READER_APP_0_0_2: AppSpec = {
   emoji: '🔏',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: [],
 };
 
@@ -8810,7 +8774,6 @@ export const SUPPLIER_COMPARISON_APP_0_0_3: AppSpec = {
   emoji: '🚚',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: [],
 };
 
@@ -9155,7 +9118,6 @@ export const SUPPORT_DESK_APP_0_0_5: AppSpec = {
   emoji: '🛟',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: ["The agent 'worker-document-qa:0.0.1' is not enabled."],
 };
 
@@ -9319,7 +9281,6 @@ export const TRAVEL_DESK_APP_0_0_2: AppSpec = {
   emoji: '✈️',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: [],
 };
 
@@ -9479,7 +9440,6 @@ export const WEB_RESEARCH_APP_0_0_2: AppSpec = {
   emoji: '🔎',
   avatar: '',
   banner: '',
-  presentation: '',
   setup: [],
 };
 

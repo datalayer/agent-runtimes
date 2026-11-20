@@ -133,7 +133,7 @@ APP = {
     "openapi": OPENAPI,
 }
 
-COMPANY = {
+COMPANY: dict[str, Any] = {
     **APP,
     "protocols": ["pap"],
     "pap": {
@@ -991,14 +991,14 @@ async def test_a_pap_operation_is_performed_through_the_call_contract() -> None:
         terms = {"items": [4]}
 
     executor = OpenApiOperationExecutor(Declared(), "quote", agent)
-    done = await executor.perform(Approved(), "u-1")  # type: ignore[arg-type]
+    done = await executor.perform(Approved(), "u-1")
     assert done.data == {"total": 9.5}
 
     class Wrong:
         terms = {"items": "four"}
 
     with pytest.raises(OperationFailed):
-        await executor.perform(Wrong(), "u-1")  # type: ignore[arg-type]
+        await executor.perform(Wrong(), "u-1")
 
 
 def test_a_private_page_sends_a_browser_to_sign_in_with_datalayer(
@@ -1199,7 +1199,8 @@ class _IssuedHere:
     """A company whose issuer issued tokens: one for its MCP server and one default, to
     a personal agent; and one for its MCP server to another MCP client (the SDK's
     public clients), whose account is ``mcp_client_account``. Each is the SDK's own
-    record of an access token."""
+    record of an access token.
+    """
 
     def __init__(
         self,
@@ -1515,7 +1516,7 @@ def test_a_company_offers_other_mcp_clients_nothing_unless_its_owner_said_so() -
 
     agent = _company_agent(PRIVATE)
     assert agent.mcp_clients is False
-    said = {
+    said: dict[str, Any] = {
         "name": agent.app.name,
         "domain": agent.hosts.host("agent"),  # type: ignore[union-attr]
         "company": agent.app.pap.company,
