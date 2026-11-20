@@ -138,12 +138,13 @@ export type ChatPluginConfig = {
    */
   presence?: ChatPresence;
   /**
-   * Run as an anonymous visitor (the user, 15 November 2026): the box on
-   * top with the turns left and *Sign in*, the temporary key's clock in the
-   * header, *Anonymous* in the footer, the MCP servers and skills listed
-   * disabled, *Sign in to use* a tool refused for want of an account, and the
+   * Run as an anonymous visitor (the user, 15 November 2026): the temporary
+   * key's clock in the header, *Sign in to use* a tool refused for want of an
+   * account, and the
    * prompt closed while the key is checked and once the turns or the minutes
-   * are spent. Set from `runAsAnonymous` (`loopPlugins`).
+   * are spent. The limited preview itself (the turns left, *Sign in*) is the
+   * limited-preview plugin's indicator beside the composer, mounted by the
+   * preset (20 November 2026). Set from `runAsAnonymous` (`loopPlugins`).
    */
   anonymous?: ChatAnonymous;
   /**

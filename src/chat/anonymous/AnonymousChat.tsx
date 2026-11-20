@@ -7,21 +7,21 @@
  * What an anonymous visitor's conversation draws (the user, 15 November
  * 2026), so that every host that runs one gets it without drawing it:
  *
- * - **the box on top**: *Limited preview: sign in to save your work. N of M
- *   turns left today. Some features are disabled*, with *Sign in* — or the
- *   host's own sentence and button (`callToAction`) for a viewer who has no
- *   reason to sign in; a skeleton while the temporary key is asked for and
- *   checked; the reason once no turn is left;
  * - **the temporary key's clock** in the header (core's `AnonymousKeyTimer`):
  *   held full until the first question, counting the conversation's minutes
- *   after it; in the box when the chat draws no header;
- * - **Anonymous** in the composer's footer;
+ *   after it; beside the limited-preview indicator when the chat draws no
+ *   header;
  * - **Sign in to use <tool>** under a tool call refused for want of an
  *   account.
  *
+ * The limited preview itself — *Limited preview · N/M turns today*, what
+ * signing in keeps, what is disabled, *Sign in* or the host's call to action
+ * — is no box on top any more but an indicator beside the composer, a plugin
+ * of its own (`apps/plugins/limited-preview`, the user, 20 November 2026).
+ *
  * The conversation's state is held by the chat (`useAnonymousTurns`) and
  * handed down through {@link AnonymousChatProvider}, which the tool cards
- * deep in the transcript read.
+ * deep in the transcript and the limited-preview indicator read.
  *
  * @module chat/anonymous/AnonymousChat
  */
@@ -35,9 +35,7 @@ import {
   type JSX,
   type ReactNode,
 } from 'react';
-import { Button, Flash, Label, Text } from '@primer/react';
-import { SkeletonText } from '@primer/react/experimental';
-import { PersonIcon } from '@primer/octicons-react';
+import { Button } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 /* By file, not through the barrel: the barrel reaches the sign-in form. */
 import { AnonymousKeyTimer } from '@datalayer/core/lib/components/anonymous/AnonymousKeyTimer';
@@ -49,7 +47,6 @@ import {
   readTurns,
   signInTarget,
   takeTurn,
-  turnsLeft,
   turnsToday,
   writeTurns,
   type ChatAnonymous,
@@ -190,108 +187,6 @@ export function AnonymousKeyClock({
         label={ANONYMOUS_WORDS.trialKey(state.name)}
       />
     </Box>
-  );
-}
-
-/** *Anonymous*, in the composer's footer. */
-export function AnonymousFooterLabel(): JSX.Element {
-  return (
-    <Label variant="attention" data-anonymous-footer="">
-      <Box as="span" display="inline-flex" alignItems="center" gap={1}>
-        <PersonIcon size={12} />
-        {ANONYMOUS_WORDS.anonymous}
-      </Box>
-    </Label>
-  );
-}
-
-/**
- * The box on top of the conversation: the limited preview, the turns left
- * and what is disabled, with *Sign in* — or, when the host gives one, its
- * call to action's sentence and button in their place; a skeleton while the
- * key is checked; the reason once no turn is left.
- */
-export function AnonymousPreviewBox({
-  state,
-}: {
-  state: AnonymousChatState;
-}): JSX.Element {
-  const max = state.config.maxTurns;
-  const cta = state.config.callToAction;
-  const details = [
-    max !== undefined
-      ? ANONYMOUS_WORDS.turnsLeft(turnsLeft(state.taken, max), max)
-      : null,
-    ANONYMOUS_WORDS.someDisabled,
-  ]
-    .filter(Boolean)
-    .join(' ');
-  return (
-    <Flash
-      variant={state.refused ? 'danger' : 'warning'}
-      data-anonymous-preview={
-        state.validating ? 'validating' : state.refused ? 'reached' : 'open'
-      }
-      sx={{
-        borderRadius: 0,
-        borderLeft: 0,
-        borderRight: 0,
-        borderTop: 0,
-        py: 2,
-        px: 3,
-      }}
-    >
-      <Box display="flex" alignItems="center" gap={3} flexWrap="wrap">
-        <Box
-          flex="1 1 220px"
-          minWidth={0}
-          display="flex"
-          flexDirection="column"
-          gap={1}
-        >
-          {state.validating ? (
-            <Box aria-busy="true" aria-label={ANONYMOUS_WORDS.validating}>
-              <SkeletonText lines={2} />
-            </Box>
-          ) : (
-            <>
-              <Text
-                sx={{ fontWeight: 'semibold', fontSize: 1 }}
-                role={state.refused ? 'alert' : undefined}
-              >
-                {state.refused || cta?.says || ANONYMOUS_WORDS.preview}
-              </Text>
-              <Text sx={{ fontSize: 0 }} data-anonymous-turns="">
-                {details}
-              </Text>
-            </>
-          )}
-        </Box>
-        <Box display="flex" alignItems="center" gap={2}>
-          {/* The clock goes here when there is no header to hold it. */}
-          {state.headerShown || state.validating || state.refused ? null : (
-            <AnonymousKeyClock state={state} />
-          )}
-          {cta ? (
-            <Button
-              size="small"
-              onClick={cta.onAction}
-              data-anonymous-call-to-action=""
-            >
-              {cta.label}
-            </Button>
-          ) : (
-            <Button
-              size="small"
-              onClick={state.signIn}
-              data-anonymous-sign-in=""
-            >
-              {ANONYMOUS_WORDS.signIn}
-            </Button>
-          )}
-        </Box>
-      </Box>
-    </Flash>
   );
 }
 

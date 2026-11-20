@@ -71,7 +71,6 @@ export { ChatBase } from './base/ChatBase';
 // A conversation run as an anonymous visitor (`runAsAnonymous`, `maxTurns`).
 export { ANONYMOUS_WORDS, type ChatAnonymous } from './anonymous/anonymousMode';
 export {
-  AnonymousPreviewBox,
   AnonymousKeyClock,
   type AnonymousChatState,
 } from './anonymous/AnonymousChat';

@@ -63,7 +63,7 @@ export const EMBED_ATTRIBUTES = {
   'user-token':
     'A token your server signed with the deployment’s secret, naming your user (HS256: sub, name, exp at most an hour away): what an application that says user: signed opens its session with.',
   anonymous:
-    'true or false: whether a public application talked to without an account shows the limited preview — the box with the turns left and Sign in, the temporary key’s clock, Anonymous in the footer, its MCP servers and skills listed disabled; true by default.',
+    'true or false: whether a public application talked to without an account shows the limited preview — the indicator beside the composer with the turns left and Sign in, and the temporary key’s clock; true by default.',
   'max-turns':
     'The turns a visitor without an account has today, as the preview counts and shows them (10 for Datalayer’s demos); unsaid, the preview counts none and only Datalayer’s own limits apply.',
   'sign-in':

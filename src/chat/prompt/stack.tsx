@@ -71,6 +71,15 @@ export type PromptStack = {
   /** What the band shows. A band with nothing in it is not rendered. */
   content?: ReactNode;
   /**
+   * What stays usable while the band is disabled, at its trailing end:
+   * never dimmed, never inert. For a status that explains why the region
+   * is closed and offers the way out — a visitor's limited preview, whose
+   * turns are spent: its refusal and *Sign in* must still be reached
+   * (Copilot's review of #146, the user, 20 November 2026). Only the
+   * band's `content` is dimmed and made inert.
+   */
+  live?: ReactNode;
+  /**
    * Reserve this height even when the band is empty.
    *
    * For content that arrives late and would otherwise make the layout jump —
@@ -140,7 +149,9 @@ export type PromptStacksProps = {
  * whole reason it is there.
  */
 function isRendered(stack: PromptStack): boolean {
-  return Boolean(stack.content) || Boolean(stack.minHeight);
+  return (
+    Boolean(stack.content) || Boolean(stack.live) || Boolean(stack.minHeight)
+  );
 }
 
 /** Render a region's bands, skipping the ones with nothing to show. */
@@ -164,7 +175,7 @@ export function PromptStacks({
           <Box
             key={stack.id}
             data-prompt-stack={stack.id}
-            aria-disabled={isDisabled || undefined}
+            aria-disabled={(isDisabled && !stack.live) || undefined}
             px={px}
             data-clears-assistant={stack.clearsAssistant ? '' : undefined}
             sx={
@@ -186,10 +197,40 @@ export function PromptStacks({
             borderTop={stack.bordered ? '1px solid' : undefined}
             borderColor={stack.bordered ? 'border.default' : undefined}
             bg={stack.subtle ? 'canvas.subtle' : undefined}
-            opacity={isDisabled ? 0.5 : undefined}
-            pointerEvents={isDisabled ? 'none' : undefined}
+            // With something live in it, the band stays reachable and only
+            // its content is closed: an inert ancestor would take the live
+            // part with it.
+            opacity={isDisabled && !stack.live ? 0.5 : undefined}
+            pointerEvents={isDisabled && !stack.live ? 'none' : undefined}
           >
-            {stack.content}
+            {stack.live ? (
+              <>
+                <Box
+                  data-prompt-stack-content=""
+                  aria-disabled={isDisabled || undefined}
+                  flex="1 1 auto"
+                  minWidth={0}
+                  display={stack.layout === 'block' ? undefined : 'flex'}
+                  alignItems={stack.layout === 'block' ? undefined : 'center'}
+                  gap={stack.layout === 'block' ? undefined : (stack.gap ?? 2)}
+                  opacity={isDisabled ? 0.5 : undefined}
+                  pointerEvents={isDisabled ? 'none' : undefined}
+                >
+                  {stack.content}
+                </Box>
+                <Box
+                  data-prompt-stack-live=""
+                  flex="0 0 auto"
+                  display="inline-flex"
+                  alignItems="center"
+                  gap={1}
+                >
+                  {stack.live}
+                </Box>
+              </>
+            ) : (
+              stack.content
+            )}
           </Box>
         );
       })}

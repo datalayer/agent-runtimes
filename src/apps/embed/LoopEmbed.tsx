@@ -174,6 +174,8 @@ export function LoopEmbed({
       preset.datalayerKept?.url,
       // The agent's own UI plugins, by their ids.
       JSON.stringify(preset.uiPlugins ?? []),
+      // What the limited preview names as disabled, by content.
+      JSON.stringify(preset.disabledUi ?? []),
       preset.embedToken,
       preset.defaultEditor,
       preset.showViewSelector,

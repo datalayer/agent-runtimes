@@ -448,6 +448,29 @@ export function lockedUiPluginsFor(
   return labels.length > 0 ? [lockedUiPlugin(labels)] : [];
 }
 
+/**
+ * What a visitor does not get of these UIs, by their UI specs' names, each
+ * once, in the order named (the user, 20 November 2026): each that needs the
+ * person's own connection, wherever it goes — what the limited-preview
+ * indicator names as disabled (`apps/plugins/limited-preview`).
+ */
+export function disabledUiOf(
+  given: ReadonlyArray<string | UiChoice | AgentUiChoice> | undefined,
+): string[] {
+  const names: string[] = [];
+  for (const choice of (given ?? []).map(asChoice)) {
+    const entry = AGENT_UI_PLUGINS[choice.plugin];
+    const kept = entry
+      ? entry.needsConnection
+      : choice.plugin in PRESET_UI_LOCKED;
+    const name = kept ? UI_CATALOGUE[choice.plugin]?.name : undefined;
+    if (name && !names.includes(name)) {
+      names.push(name);
+    }
+  }
+  return names;
+}
+
 /** The plugin of a UI at its default placement: what its UI spec says it registers. */
 export function defaultPluginOf(id: string): PluginRef | undefined {
   return agentUiPluginsFor([id])[0];

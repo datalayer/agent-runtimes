@@ -5,10 +5,11 @@
 
 /**
  * What an anonymous visitor's conversation draws (the user, 15 November
- * 2026): the box on top, its skeleton while the key is checked, the key's
- * clock where there is no header, and Sign in to use a refused tool. Its MCP
- * servers and skills are listed as the runtime says them, in the same
- * overlays as anyone's (equipment-menus.test).
+ * 2026): Sign in to use a refused tool. The
+ * limited preview is an indicator beside the composer, no box on top (20
+ * November 2026; `apps/plugins/limited-preview`). Its MCP servers and skills
+ * are listed as the runtime says them, in the same overlays as anyone's
+ * (equipment-menus.test).
  */
 
 // @vitest-environment jsdom
@@ -18,8 +19,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { BaseStyles, ThemeProvider } from '@primer/react';
 import {
   AnonymousChatProvider,
-  AnonymousFooterLabel,
-  AnonymousPreviewBox,
   AnonymousToolSignIn,
   type AnonymousChatState,
 } from '../AnonymousChat';
@@ -48,102 +47,6 @@ const themed = (node: React.ReactNode) =>
       <BaseStyles>{node}</BaseStyles>
     </ThemeProvider>,
   );
-
-describe('the box on top', () => {
-  it('says the limited preview, the turns left and what is disabled', () => {
-    const signIn = vi.fn();
-    themed(<AnonymousPreviewBox state={state({ taken: 3, signIn })} />);
-    expect(
-      screen.getByText('Limited preview: sign in to save your work.'),
-    ).toBeTruthy();
-    expect(
-      screen.getByText('7 of 10 turns left today. Some features are disabled.'),
-    ).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
-    expect(signIn).toHaveBeenCalledOnce();
-  });
-
-  it('says the host’s call to action in place of Sign in, for a viewer who need not sign in', () => {
-    const signIn = vi.fn();
-    const onAction = vi.fn();
-    themed(
-      <AnonymousPreviewBox
-        state={state({
-          taken: 3,
-          signIn,
-          config: {
-            maxTurns: 10,
-            callToAction: {
-              says: 'Make it yours: open your own Shopper.',
-              label: 'Open your own Shopper',
-              onAction,
-            },
-          },
-        })}
-      />,
-    );
-    expect(
-      screen.getByText('Make it yours: open your own Shopper.'),
-    ).toBeTruthy();
-    // The turns are still counted: the demo runs on the visitors' runtime.
-    expect(
-      screen.getByText('7 of 10 turns left today. Some features are disabled.'),
-    ).toBeTruthy();
-    expect(screen.queryByText(/sign in/i)).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Sign in' })).toBeNull();
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Open your own Shopper' }),
-    );
-    expect(onAction).toHaveBeenCalledOnce();
-    expect(signIn).not.toHaveBeenCalled();
-  });
-
-  it('counts no turns when the host gives no maxTurns', () => {
-    themed(<AnonymousPreviewBox state={state({ config: {} })} />);
-    expect(screen.getByText('Some features are disabled.')).toBeTruthy();
-    expect(screen.queryByText(/turns left/)).toBeNull();
-  });
-
-  it('is a skeleton while the key is checked', () => {
-    const { container } = themed(
-      <AnonymousPreviewBox state={state({ validating: true })} />,
-    );
-    expect(
-      container.querySelector('[data-anonymous-preview="validating"]'),
-    ).toBeTruthy();
-    expect(screen.getByLabelText('Getting a visitor’s key…')).toBeTruthy();
-    expect(screen.queryByText(/Limited preview/)).toBeNull();
-  });
-
-  it('says why once no turn is left', () => {
-    themed(
-      <AnonymousPreviewBox state={state({ refused: 'No turn is left.' })} />,
-    );
-    expect(screen.getByRole('alert').textContent).toBe('No turn is left.');
-  });
-
-  it('holds the key’s clock when the chat draws no header', () => {
-    const { container, rerender } = themed(
-      <AnonymousPreviewBox state={state({ headerShown: true })} />,
-    );
-    expect(container.querySelector('[data-anonymous-key-clock]')).toBeNull();
-    rerender(
-      <ThemeProvider>
-        <BaseStyles>
-          <AnonymousPreviewBox state={state({ headerShown: false })} />
-        </BaseStyles>
-      </ThemeProvider>,
-    );
-    expect(
-      container.querySelector('[data-anonymous-key-clock="waiting"]'),
-    ).toBeTruthy();
-  });
-
-  it('says Anonymous in the footer', () => {
-    themed(<AnonymousFooterLabel />);
-    expect(screen.getByText('Anonymous')).toBeTruthy();
-  });
-});
 
 describe('a tool refused for want of an account', () => {
   const refused = {

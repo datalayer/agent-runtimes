@@ -103,7 +103,9 @@ describe('the selectors bar', () => {
     expect(PROMPT).toContain('const stillLoading =');
     expect(PROMPT).toContain('configLoading');
     // And draws no bar at all when there is nothing to put in it.
-    expect(PROMPT).toContain(
+    // Read with its whitespace collapsed: the condition is wrapped once it
+    // names more than these two (the footer's extras and live area).
+    expect(PROMPT.replace(/\s+/g, ' ')).toContain(
       'const showSelectorsBar = anyOffered || stillLoading',
     );
   });

@@ -146,9 +146,9 @@ export type AppEmbedProps = {
   visitors?: DatalayerVisitors;
   /**
    * With `visitors`, run as an anonymous visitor (the user, 15 November
-   * 2026): the chat draws the limited preview — the box with the turns left
-   * and *Sign in*, the temporary key's clock, *Anonymous* in the footer, the
-   * MCP servers and skills listed disabled. What the element gives a public
+   * 2026): the chat draws the limited preview — the indicator beside the
+   * composer with the turns left and *Sign in*, and the temporary key's
+   * clock. What the element gives a public
    * application unless its host writes `anonymous="false"`.
    */
   runAsAnonymous?: boolean;

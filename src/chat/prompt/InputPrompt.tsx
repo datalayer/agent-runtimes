@@ -123,6 +123,13 @@ export interface InputPromptProps {
    */
   footerExtras?: ReactNode;
   /**
+   * What stays usable in the footer while the prompt is disabled, at its
+   * trailing end: never dimmed, never inert (`PromptStack.live`). A
+   * visitor's limited preview stands here, so that once their turns are
+   * spent its refusal and *Sign in* are still reached.
+   */
+  footerLive?: ReactNode;
+  /**
    * The words in the box are still being heard by the microphone:
    * shown greyed, in italics, until they are final.
    */
@@ -372,6 +379,7 @@ export function InputPrompt({
   draggable = false,
   container,
   footerExtras,
+  footerLive,
   interim = false,
   leadingPanel,
   trailingPanel,
@@ -547,7 +555,9 @@ export function InputPrompt({
 
   // No bar at all when there is nothing to put in it and nothing on its way:
   // an empty bordered strip is worse than no strip.
-  const showSelectorsBar = anyOffered || stillLoading || extrasOffered;
+  const liveOffered = Boolean(footerLive);
+  const showSelectorsBar =
+    anyOffered || stillLoading || extrasOffered || liveOffered;
   /*
    * The agents are in hand the moment the bar renders — they come from the
    * team the workspace was opened with, not from a query — so a bar that
@@ -706,9 +716,13 @@ export function InputPrompt({
                   minHeight: 36,
                   bordered: true,
                   subtle: true,
+                  live: footerLive,
                   content: (
                     <>
-                      {anyOffered || extrasOffered || suggestionsOffered ? (
+                      {anyOffered ||
+                      extrasOffered ||
+                      suggestionsOffered ||
+                      liveOffered ? (
                         <>
                           {/* Agents Menu */}
                           {agentsOffered && (
