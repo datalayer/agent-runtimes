@@ -21,7 +21,7 @@ import { getAgentspecs, listAgentspecs } from '../agents';
 const SEED = [
   'jupyter-data-analyst',
   'worker-accountant',
-  'worker-analyst',
+  'worker-functional-analyst',
   'worker-marketer',
   'worker-shopper',
   'worker-steward-aws',

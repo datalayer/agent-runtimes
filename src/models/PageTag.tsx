@@ -3,10 +3,19 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-import { CardIconColors } from '@primer/react-brand';
 import { Icon, CopilotIcon, ZapIcon } from '@primer/octicons-react';
 
-type CardIconColorsType = (typeof CardIconColors)[number];
+type CardIconColorsType =
+  | 'blue'
+  | 'coral'
+  | 'gray'
+  | 'green'
+  | 'lemon'
+  | 'lime'
+  | 'orange'
+  | 'pink'
+  | 'purple'
+  | 'teal';
 
 export type PageTagMetadata = {
   fillColor: React.CSSProperties['backgroundColor'];

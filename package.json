@@ -1,6 +1,6 @@
 {
   "name": "@datalayer/agent-runtimes",
-  "version": "1.6.99",
+  "version": "1.6.100",
   "type": "module",
   "workspaces": [
     ".",
@@ -197,12 +197,10 @@
     "@modelcontextprotocol/ext-apps": "^0.2.2",
     "@modelcontextprotocol/sdk": "^1.32.1",
     "@primer/behaviors": "^1.8.4",
-    "@primer/brand-primitives": "^0.51.0",
     "@primer/css": "^21.5.1",
     "@primer/octicons-react": "^19.42.0",
     "@primer/primitives": "^10.7.0",
     "@primer/react": "^37.31.0",
-    "@primer/react-brand": "^0.58.0",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-aspect-ratio": "^1.1.8",

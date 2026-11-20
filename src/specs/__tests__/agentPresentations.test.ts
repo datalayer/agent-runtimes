@@ -20,7 +20,7 @@ describe('the agents’ presentations', () => {
     expect(Object.keys(AGENT_PRESENTATIONS).sort()).toEqual([
       'jupyter-data-analyst',
       'worker-accountant',
-      'worker-analyst',
+      'worker-functional-analyst',
       'worker-marketer',
       'worker-shopper',
       'worker-steward-aws',

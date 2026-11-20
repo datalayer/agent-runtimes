@@ -167,8 +167,8 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
         "demo-aws-steward",
         # The seventh seed agent's demo (agentspecs 0.0.215).
         "demo-jupyter-data-analyst",
-        # The eighth seed agent's demo, the Analyst (agentspecs 0.1.4).
-        "demo-analyst",
+        # The eighth seed agent's demo, the Functional Analyst (agentspecs 0.1.4).
+        "demo-functional-analyst",
         # The Demo Shop, a company of DummyJSON's products (agentspecs 0.0.204).
         "demo-shop",
     }

@@ -244,7 +244,7 @@ export const AGENT_UI_PLUGINS: Readonly<Record<string, AgentUiPlugin>> = {
     message: PageSheetPlugin,
     side: pageSheetSidePlugin,
   },
-  // The Analyst's canvas and diagrams (19 November 2026): the tools of
+  // The Functional Analyst's canvas and diagrams (19 November 2026): the tools of
   // @datalayer/reactor-excalidraw and @datalayer/reactor-mermaid, in the page.
   'page-excalidraw': {
     needsConnection: false,
