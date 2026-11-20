@@ -60,7 +60,16 @@ const ASSISTANT = [
 // contributes; the paper clip's is `assistant-idle`.
 const CHARACTERS = ['wizard', 'cat', 'eyes', 'owl'] as const;
 
+// Set when a page never said it was ready: the worker runs the pictures one
+// after the other, and every later one would wait the same four minutes.
+let neverRendered = '';
+
 async function show(page: Page, query: string): Promise<void> {
+  if (neverRendered) {
+    throw new Error(
+      `not taken: an earlier page never rendered (${neverRendered})`,
+    );
+  }
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(String(error)));
   page.on('console', message => {
@@ -93,6 +102,7 @@ async function show(page: Page, query: string): Promise<void> {
       await ready.waitFor({ state: 'attached', timeout: 120_000 });
     } catch {
       // Said in the failure itself, so the job's log carries why.
+      neverRendered = query;
       throw new Error(
         `the pictures page never said it was ready (${query}):\n${errors.join('\n') || 'no page error, console error or failed request'}`,
       );
