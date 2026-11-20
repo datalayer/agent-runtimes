@@ -28,6 +28,7 @@ import {
   forwardRef,
   useEffect,
   useId,
+  useState,
   type ComponentPropsWithoutRef,
   type JSX,
   type ReactNode,
@@ -36,6 +37,7 @@ import {
   ActionList,
   ActionMenu,
   Button,
+  Link,
   Text,
   ToggleSwitch,
   Tooltip,
@@ -195,9 +197,39 @@ function RowHead({
   );
 }
 
-/** A muted line under a name: its reason, its note, or its description. */
+/** A line longer than this is cut at a word, with "more…" to read the rest (the user, 20 November 2026). */
+export const LINE_FOLD_CHARS = 140;
+
+/** Where a long line is cut: the last space before the limit, else the limit. */
+export function foldLine(text: string, limit = LINE_FOLD_CHARS): string | null {
+  if (text.length <= limit) {
+    return null;
+  }
+  const cut = text.lastIndexOf(' ', limit);
+  return text.slice(0, cut > limit / 2 ? cut : limit).trimEnd();
+}
+
+/**
+ * A muted line under a name: its reason, its note, or its description. A long
+ * one (a tool's description can run to a page) shows its start and "more…";
+ * a click shows the rest, and "less" folds it again. The click stays in the
+ * line: the row's switch is not touched, and the menu stays open.
+ */
 function Line({ children }: { children: ReactNode }): JSX.Element | null {
-  return children ? (
+  const [open, setOpen] = useState(false);
+  if (!children) {
+    return null;
+  }
+  const folded = typeof children === 'string' ? foldLine(children) : null;
+  const toggle = (event: {
+    preventDefault(): void;
+    stopPropagation(): void;
+  }) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setOpen(value => !value);
+  };
+  return (
     <Text
       sx={{
         display: 'block',
@@ -205,11 +237,28 @@ function Line({ children }: { children: ReactNode }): JSX.Element | null {
         color: 'fg.muted',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
+        whiteSpace: folded && open ? 'pre-wrap' : undefined,
+        overflowWrap: 'anywhere',
       }}
     >
-      {children}
+      {folded && !open ? `${folded}… ` : children}
+      {folded ? (
+        <>
+          {open ? ' ' : null}
+          <Link
+            as="button"
+            type="button"
+            onClick={toggle}
+            aria-expanded={open}
+            sx={{ fontSize: 0, verticalAlign: 'baseline' }}
+            data-equipment-more=""
+          >
+            {open ? 'less' : 'more…'}
+          </Link>
+        </>
+      ) : null}
     </Text>
-  ) : null;
+  );
 }
 
 const ROW_SX = {

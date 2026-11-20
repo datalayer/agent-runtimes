@@ -42,6 +42,8 @@ import {
 import {
   EquipmentMenu,
   EquipmentModelMenu,
+  LINE_FOLD_CHARS,
+  foldLine,
   type EquipmentSwitches,
 } from '../prompt/menus/EquipmentMenus';
 
@@ -788,5 +790,44 @@ describe('useEquipment', () => {
       />,
     );
     expect(fetched).not.toHaveBeenCalled();
+  });
+});
+
+describe('a long line', () => {
+  const LONG =
+    'Search for products across multiple Shopify stores in the global catalog. Use this tool when buyers are searching for products without specifying a particular store. Prices are integers in minor units.';
+
+  it('is cut at a word under the limit, and a short one is not cut', () => {
+    const cut = foldLine(LONG) as string;
+    expect(cut.length).toBeLessThanOrEqual(LINE_FOLD_CHARS);
+    expect(LONG.startsWith(cut)).toBe(true);
+    expect(LONG[cut.length]).toBe(' ');
+    expect(foldLine('A short description.')).toBeNull();
+  });
+
+  it('shows its start and "more…", the rest on a click, and folds again on "less"', () => {
+    render(
+      <ThemeProvider>
+        <EquipmentMenu
+          kind="skills"
+          trigger="button"
+          lists={equipmentLists({
+            equipment: {
+              ...(ANSWER as unknown as Equipment),
+              skills: [{ ...ANSWER.skills[0], description: LONG }],
+            } as Equipment,
+          })}
+          switches={switches()}
+        />
+      </ThemeProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^Skills — / }));
+    expect(screen.queryByText(LONG, { exact: false })).toBeNull();
+    const more = screen.getByRole('button', { name: 'more…' });
+    expect(more.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(more);
+    expect(screen.getByText(LONG, { exact: false })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'less' }));
+    expect(screen.getByRole('button', { name: 'more…' })).toBeTruthy();
   });
 });

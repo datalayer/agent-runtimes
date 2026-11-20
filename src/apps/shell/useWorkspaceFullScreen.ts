@@ -29,6 +29,11 @@
 
 import type { RefObject } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { registerPortalRoot } from '@primer/react';
+import {
+  getPrimerPortalRoot,
+  setupPrimerPortals,
+} from '@datalayer/primer-addons';
 
 export type WorkspaceFullScreen = {
   /** Whether the workspace is at full screen, by either door. */
@@ -100,6 +105,67 @@ export type WorkspaceFullScreenOptions = {
    */
   topOffset?: number | string;
 };
+
+/** The class of the portal root put inside an element while the browser holds it at full screen. */
+export const FULL_SCREEN_PORTAL_CLASS = 'datalayer-fullscreen-portal';
+
+/**
+ * Overlays at full screen. The browser paints only the full-screen element's
+ * own subtree, and Primer draws menus, dialogs and tooltips in a portal under
+ * `<body>`: at full screen they opened, unseen (the composer's footer menus,
+ * the user, 20 November 2026). While the element is held, Primer's default
+ * portal root is a node inside it, where the overlays are seen and wear its
+ * theme. `fixed` at the viewport's origin: inside a promoted element the
+ * viewport is the containing block, so the coordinates Primer measures from an
+ * anchor land where they should (the Stages' box, `StageBox`, found this first).
+ *
+ * The release hands the page's root back: the embed's
+ * (`.datalayer-app-portal`) when the element is in one, else the page's
+ * (`setupPrimerPortals` makes it when there is none yet). What is still open
+ * at that moment — a dialog Escape did not close, the browser having taken the
+ * Escape — moves out with the node into the page's root, where it is seen and
+ * can be closed; an empty node goes. Any landing for any element.
+ */
+export function holdOverlaysInside(node: HTMLElement): () => void {
+  // An earlier hold's node, emptied since its overlays closed: gone now.
+  (node.getRootNode() as Document | ShadowRoot)
+    .querySelectorAll?.(`.${FULL_SCREEN_PORTAL_CLASS}`)
+    .forEach(left => {
+      if (left.childElementCount === 0) {
+        left.remove();
+      }
+    });
+  const root = document.createElement('div');
+  root.className = FULL_SCREEN_PORTAL_CLASS;
+  Object.assign(root.style, {
+    position: 'fixed',
+    top: '0',
+    left: '0',
+    width: '100%',
+    zIndex: '9999',
+  });
+  node.appendChild(root);
+  registerPortalRoot(root);
+  return () => {
+    const scope = node.getRootNode() as Document | ShadowRoot;
+    const pageRoot = (): HTMLElement | null =>
+      (scope.querySelector?.('.datalayer-app-portal') as HTMLElement | null) ??
+      getPrimerPortalRoot();
+    const page = pageRoot();
+    if (page) {
+      registerPortalRoot(page);
+    } else {
+      setupPrimerPortals();
+    }
+    const back = pageRoot();
+    if (back && root.childElementCount > 0) {
+      root.style.position = 'absolute';
+      back.appendChild(root);
+    } else {
+      root.remove();
+    }
+  };
+}
 
 /**
  * What full screen promotes, found from the control that asked.
@@ -272,6 +338,19 @@ export function useWorkspaceFullScreen(
     window.addEventListener('keydown', leave);
     return () => window.removeEventListener('keydown', leave);
   }, [fullScreen]);
+
+  /*
+   * The overlays, inside the workspace while the browser holds it at full
+   * screen (`holdOverlaysInside`). The CSS overlay needs none of this: the
+   * page is still all there.
+   */
+  useEffect(() => {
+    if (!fullScreen || !usingApi.current) {
+      return undefined;
+    }
+    const node = fullScreenNode(anchorRef.current);
+    return node ? holdOverlaysInside(node) : undefined;
+  }, [anchorRef, fullScreen]);
 
   return { fullScreen, usingApi, toggle, topOffsetPx };
 }

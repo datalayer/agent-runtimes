@@ -30,7 +30,7 @@ from __future__ import annotations
 import re
 from dataclasses import asdict, dataclass, field
 from fnmatch import fnmatchcase
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence
 
 from agent_runtimes.apps.own import FAILED, NOT_RUN, PASSED
 from agent_runtimes.loop.scenes.stage import Played, kind_of_words
@@ -97,6 +97,8 @@ class Expected:
     detail: str = ""
     text: str = ""
     """The line as written."""
+    parsed: Any = field(default=None, compare=False, repr=False)
+    """agentspecs' own line, for `tool_line_fits`."""
 
     @property
     def is_answer(self) -> bool:
@@ -110,14 +112,37 @@ def expected_of(lines: Sequence[str]) -> List[Expected]:
     parsed: List[Expected] = []
     for text in lines:
         line = parse_line(text)
-        parsed.append(Expected(line.who, line.whom, line.detail, text))
+        parsed.append(Expected(line.who, line.whom, line.detail, text, line))
     return parsed
 
 
+#: Whether a tool called fits a tool line's move beyond its pattern: its class (`tool_line_fits`).
+ToolFits = Callable[[Expected, str], bool]
+
+
+def tool_fits_of(scene: Any, beat_id: str) -> ToolFits:
+    """Return agentspecs' `tool_line_fits` for one beat.
+
+    A tool the line's pattern names fits only when its class is the move's
+    (`does: read` takes the system's reads alone, 20 November 2026).
+    """
+    from agentspecs.scenes import tool_line_fits
+
+    def fits(expected: Expected, tool: str) -> bool:
+        if expected.parsed is None:
+            return True
+        return bool(tool_line_fits(scene, beat_id, expected.parsed, tool))
+
+    return fits
+
+
 def line_fits(
-    expected: Expected, line: TranscriptLine, names: Mapping[str, str]
+    expected: Expected,
+    line: TranscriptLine,
+    names: Mapping[str, str],
+    tool_fits: Optional[ToolFits] = None,
 ) -> bool:
-    """Whether a transcript line is the expected one."""
+    """Whether a transcript line is the expected one; a tool called, also of the move's class."""
     if expected.is_answer:
         if line.kind != SAID or not _same(expected.who, line.who, names):
             return False
@@ -133,13 +158,18 @@ def line_fits(
         expected.whom, line.to, names
     ):
         return False
-    return _words_match(expected.detail, line.text)
+    if not _words_match(expected.detail, line.text):
+        return False
+    if line.kind == CALLED and tool_fits is not None and "*" in expected.detail:
+        return tool_fits(expected, line.text.strip())
+    return True
 
 
 def shape_differences(
     expected: Sequence[Expected],
     lines: Sequence[TranscriptLine],
     names: Mapping[str, str],
+    tool_fits: Optional[ToolFits] = None,
 ) -> List[str]:
     """What differs between the expected shape and the transcript, in sentences; none when it fits."""
     cursor = 0
@@ -147,7 +177,7 @@ def shape_differences(
     for want in expected:
         found = None
         for index in range(cursor, len(lines)):
-            if line_fits(want, lines[index], names):
+            if line_fits(want, lines[index], names, tool_fits):
                 found = index
                 break
         if found is None:
@@ -214,6 +244,7 @@ def verdict_of(
     beat: Any,
     played: Played,
     names: Mapping[str, str],
+    tool_fits: Optional[ToolFits] = None,
 ) -> BeatVerdict:
     """A played beat compared to what its rehearsal expects."""
     lines = [line_text(line) for line in played.lines]
@@ -222,7 +253,9 @@ def verdict_of(
         return BeatVerdict(
             beat.beat, played.cue, NOT_RUN, played.error, lines, played.seconds, kept
         )
-    differences = shape_differences(expected_of(beat.lines), played.lines, names)
+    differences = shape_differences(
+        expected_of(beat.lines), played.lines, names, tool_fits
+    )
     differences += answer_differences(played.answer, beat.must_say, beat.must_not_say)
     differences += time_difference(played.seconds, beat.within)
     if differences:
@@ -415,7 +448,9 @@ async def rehearse(
             played = await stage.play(
                 cue, members_needed(scene, rehearsed.beat, stage.entry)
             )
-            judged = verdict_of(rehearsed, played, names)
+            judged = verdict_of(
+                rehearsed, played, names, tool_fits_of(scene, rehearsed.beat)
+            )
         verdict.beats.append(judged)
         if told is not None:
             told(judged)

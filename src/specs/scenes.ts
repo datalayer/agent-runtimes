@@ -2733,7 +2733,7 @@ export const SALES_AND_ACCOUNTING_SCENE_0_0_1: SceneSpec = {
         lines: [
           'You → Sales',
           'Sales → Accounting',
-          'Accounting → Odoo: odoo_accounting_aged_balance',
+          'Accounting → Odoo: odoo_accounting_*',
           'Accounting: an approval',
           'Sales: words',
         ],
@@ -2768,11 +2768,9 @@ export const SALES_AND_ACCOUNTING_SCENE_0_0_1: SceneSpec = {
   actors: [],
   lines: [],
   live: '',
-  setup: [
-    "The agent 'worker-sales-pipeline-board-report:0.0.1' is not enabled.",
-  ],
+  setup: [],
   played: {
-    at: '2026-10-29T14:00:28+00:00',
+    at: '2026-11-20T14:20:26+00:00',
     where: 'on Datalayer',
     passed: true,
     says: 'Rehearsal: 4 of 4 beats passed. The scene is Live.',
@@ -2781,28 +2779,28 @@ export const SALES_AND_ACCOUNTING_SCENE_0_0_1: SceneSpec = {
         beat: 'open-invoices',
         state: 'passed',
         says: '',
-        seconds: 22.688269627997215,
+        seconds: 30.08045318699442,
       },
       {
         beat: 'aged-receivables',
         state: 'passed',
         says: '',
-        seconds: 21.642744607997884,
+        seconds: 21.18978968495503,
       },
       {
         beat: 'largest-balance',
         state: 'passed',
         says: '',
-        seconds: 26.706618044998322,
+        seconds: 23.029962921049446,
       },
       {
         beat: 'payment-reminders',
         state: 'passed',
         says: '',
-        seconds: 19.099125767999794,
+        seconds: 27.56617304496467,
       },
     ],
-    runtime: '1.5.80',
+    runtime: '1.6.100',
   },
 };
 

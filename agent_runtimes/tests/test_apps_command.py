@@ -193,10 +193,9 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
     assert reports["inbox-triage"].setup == [
         "The agent 'worker-mail-triage:0.0.1' is not enabled."
     ]
-    # The team over A2A: each ready, its setup what is not enabled today.
-    assert reports["sales"].setup == [
-        "The agent 'worker-sales-pipeline-board-report:0.0.1' is not enabled."
-    ]
+    # The team over A2A: each ready; worker-sales-pipeline-board-report is enabled (and kept
+    # out of the pickers) since agentspecs 0.1.6, so the sales team asks no setup.
+    assert reports["sales"].setup == []
     # odoo-accounting is enabled since agentspecs 0.0.162: it is no setup step any more.
     assert not any("odoo-accounting" in step for step in reports["accounting"].setup)
 

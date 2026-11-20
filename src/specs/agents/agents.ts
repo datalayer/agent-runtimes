@@ -14803,9 +14803,10 @@ export const WORKER_SALES_PIPELINE_BOARD_REPORT_AGENTSPEC_0_0_1: Agentspec = {
   description: `Build a board-ready sales pipeline report with stage conversion, weighted forecast, and regional performance insights.`,
   tags: ['market-analyst', 'agent-worker', 'sales', 'pipeline', 'reporting'],
   domain: 'market-analyst',
-  enabled: false,
-  listed: true,
+  enabled: true,
+  listed: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  modelAdditionals: ['alibaba:qwen-max'],
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
