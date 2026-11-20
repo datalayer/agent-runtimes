@@ -45,6 +45,7 @@ from agent_runtimes.loop.scenes.rehearsal import (  # noqa: E402
     seconds_of,
     shape_differences,
     time_difference,
+    tool_fits_of,
     verdict_of,
 )
 from agent_runtimes.loop.scenes.stage import (  # noqa: E402
@@ -1074,3 +1075,25 @@ class _Beat:
     must_say: List[str] = []
     must_not_say: List[str] = []
     within = ""
+
+
+def test_a_tool_line_takes_only_the_moves_class(scene: Any) -> None:
+    """`does: read` under *Accounting → Odoo: odoo_accounting_\**: a write the
+    pattern also names fails the line (agentspecs' tool_line_fits, 20 November 2026)."""
+    from dataclasses import replace
+
+    from agent_runtimes.loop.scenes.transcript import CALLED
+
+    names = scene_names(scene)
+    beat = scene.rehearsal.beats[0]
+    played = asyncio.run(stage_of(scene, cast()).play(scene.script[0].cue.text))
+    read = next(line for line in played.lines if line.kind == CALLED)
+    assert read.text == "odoo_accounting_list_invoices"
+    write = replace(read, text="odoo_accounting_create_draft_invoice")
+    want = expected_of(["Accounting → Odoo: odoo_accounting_*"])
+    fits = tool_fits_of(scene, beat.beat)
+
+    assert shape_differences(want, [read], names, fits) == []
+    assert shape_differences(want, [write], names, fits) != []
+    # Without the class check, the pattern alone takes both.
+    assert shape_differences(want, [write], names) == []
