@@ -171,6 +171,8 @@ export const NOT_UI: Record<string, string> = {
   'pap-example': 'A page of the PAP examples, cast per example.',
   'locked-ui':
     'What a visitor sees locked of the UI an agent brings (each its own UI spec), cast per agent with their words.',
+  'limited-preview':
+    'An anonymous visitor’s limited preview beside the composer, with its page tools: mounted by the preset for a visitor, cast per agent with what it keeps from them, never chosen by an application.',
   'agent-a2a':
     'An agent capability (which agent answers, and its openers), not a part of the interface.',
   'agent-a2ui':

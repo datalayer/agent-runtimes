@@ -73,6 +73,7 @@ import {
 import {
   agentUiChoicesOf,
   agentUiPluginsFor,
+  limitedPreviewPluginFor,
   lockedUiPluginsFor,
 } from './agentUiPlugins';
 import type { UiChoice } from '../types/agentspecs';
@@ -457,6 +458,10 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     // To a visitor, what of it needs their own connection, locked in the
     // title bar: *Sign in to LinkedIn*, *Sign in to post on X*…
     ...(visitorUi ? lockedUiPluginsFor(agentUi) : []),
+    // To an anonymous visitor, the limited preview beside the composer —
+    // the turns left today, what signing in keeps, what is disabled — with
+    // the page tools that read and mark it.
+    ...(runAsAnonymous ? [limitedPreviewPluginFor(agentUi)] : []),
     // An XLSX the agent gives, read-only in Cells in its message: the
     // renderer loads Cells when a workbook is drawn, so it costs a chat
     // with none nothing.

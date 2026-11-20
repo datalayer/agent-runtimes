@@ -31,18 +31,19 @@ export type ChatAnonymous = {
   /** What *Sign in* does, in place of going to `signInUrl`. */
   onSignIn?: () => void;
   /**
-   * The box's call to action in the host's words, for a viewer who has no
-   * reason to sign in (a signed-in person trying a demo on the visitors'
-   * runtime): its sentence in place of *Limited preview: sign in to save
-   * your work.*, its button's word in place of *Sign in*, and what the
-   * button does. The turns left and the rest of the box stay.
+   * The limited preview's call to action in the host's words, for a viewer
+   * who has no reason to sign in (a signed-in person trying a demo on the
+   * visitors' runtime): its sentence in place of *Sign in to save your
+   * work.*, its button's word in place of *Sign in*, and what the button
+   * does — in the limited-preview indicator's overlay
+   * (`apps/plugins/limited-preview`). The turns left and the rest stay.
    */
   callToAction?: ChatCallToAction;
 };
 
-/** A host's call to action, in the box on top of a visitor's conversation. */
+/** A host's call to action, in a visitor's limited-preview indicator. */
 export type ChatCallToAction = {
-  /** The box's first sentence: *Make it yours: open your own Shopper.* */
+  /** Its first sentence: *Make it yours: open your own Shopper.* */
   says: string;
   /** Its button's word: *Open your own Shopper*. */
   label: string;
@@ -61,11 +62,6 @@ export const DATALAYER_SIGN_IN = 'https://datalayer.ai/signin';
 
 /** What the chat says to an anonymous visitor, in the platform's words. */
 export const ANONYMOUS_WORDS = {
-  /** The box's first sentence. */
-  preview: 'Limited preview: sign in to save your work.',
-  /** The turns left today, when the host counts them. */
-  turnsLeft: (left: number, max: number) =>
-    `${left} of ${max} turns left today.`,
   /** What a visitor cannot use. */
   someDisabled: 'Some features are disabled.',
   signIn: 'Sign in',

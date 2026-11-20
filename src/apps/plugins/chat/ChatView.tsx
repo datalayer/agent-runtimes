@@ -121,7 +121,6 @@ import {
   AnonymousChatProvider,
   AnonymousFooterLabel,
   AnonymousKeyClock,
-  AnonymousPreviewBox,
   useAnonymousSignIn,
   useAnonymousTurns,
   type AnonymousChatState,
@@ -3316,12 +3315,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             : null),
         }}
       >
-        {/* The limited preview, on top (the user, 15 November 2026). */}
-        {anonymousState ? (
-          <Box flex="0 0 auto">
-            <AnonymousPreviewBox state={anonymousState} />
-          </Box>
-        ) : null}
+        {/* No box on top: the limited preview is an indicator beside the
+            composer (`limited-preview`, the user, 20 November 2026). */}
         {layout ? (
           <layout.Component
             workspace={workspace}

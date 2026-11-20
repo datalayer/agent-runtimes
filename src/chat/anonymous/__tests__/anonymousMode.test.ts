@@ -83,13 +83,7 @@ describe('the turns a visitor has', () => {
     ).toBe(ANONYMOUS_WORDS.minutesSpent());
   });
 
-  it('says the box in the user’s words', () => {
-    expect(ANONYMOUS_WORDS.preview).toBe(
-      'Limited preview: sign in to save your work.',
-    );
-    expect(ANONYMOUS_WORDS.turnsLeft(10, 10)).toBe(
-      '10 of 10 turns left today.',
-    );
+  it('says the visitor’s words', () => {
     expect(ANONYMOUS_WORDS.someDisabled).toBe('Some features are disabled.');
     expect(ANONYMOUS_WORDS.anonymous).toBe('Anonymous');
   });
