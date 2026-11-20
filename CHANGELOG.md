@@ -9,6 +9,8 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
+- **1.6.101** (20 November 2026), with agentspecs 0.1.6: a rehearsal's tool line takes only its move's class (agentspecs' `tool_line_fits`, `agentspecs>=0.1.6`): under a pattern such as `odoo_accounting_*`, a move that says it reads takes the system's reads alone, and a write the pattern also names fails the beat; the specs regenerated from agentspecs 0.1.6 (worker-sales-pipeline-board-report enabled and kept out of the pickers); the equipment menus fold a long description to its first 140 characters, with 'more…' and 'less'; full screen shows Primer's menus and dialogs again, inside the full-screen element (`holdOverlaysInside`, for any element); the docs' Primer colour mode follows Docusaurus'.
+
 - **1.6.98** (19 November 2026), with agentspecs 0.1.4: the MCP and skills dots open the same overlay as the footer's menus, with the switches back; a conversation's switches on the session API, also where no monitoring stream is open.
 
 - **1.6.97** (19 November 2026), with agentspecs 0.1.4: everything below that says "not released yet" — the Analyst, the eighth seed agent (its Excalidraw and Mermaid panels, @datalayer/reactor-excalidraw and @datalayer/reactor-mermaid ^1.3.11).
