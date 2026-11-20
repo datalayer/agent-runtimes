@@ -39,7 +39,7 @@ os.environ["AGENT_RUNTIMES_SESSIONS_PATH"] = os.path.join(
 os.environ.pop("DATALAYER_MAGIC_API_KEY", None)
 
 from collections.abc import Iterator, Mapping  # noqa: E402
-from typing import Any, Dict, Optional  # noqa: E402
+from typing import Any, Dict, List, Optional  # noqa: E402
 
 import pytest  # noqa: E402
 
@@ -56,6 +56,13 @@ def _rehearsal_records() -> Dict[str, int]:
     return {
         str(path): path.stat().st_mtime_ns for path in scenes.glob("*/rehearsal.json")
     }
+
+
+def _records_changed(before: Dict[str, int], after: Dict[str, int]) -> List[str]:
+    """The records written, removed or changed between two readings: every path of either."""
+    return sorted(
+        path for path in set(before) | set(after) if before.get(path) != after.get(path)
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -76,9 +83,9 @@ def _no_test_writes_a_scene_s_rehearsal() -> Iterator[None]:
     before = _rehearsal_records()
     yield
     after = _rehearsal_records()
-    written = sorted(path for path, mtime in after.items() if before.get(path) != mtime)
-    assert not written, (
-        f"a test wrote a scene's kept rehearsal in agentspecs: {written}"
+    changed = _records_changed(before, after)
+    assert not changed, (
+        f"a test wrote, removed or changed a scene's kept rehearsal in agentspecs: {changed}"
     )
 
 
