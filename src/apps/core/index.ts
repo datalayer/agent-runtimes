@@ -1330,6 +1330,13 @@ export const LoopSlots = {
   /** Buttons beside the prompt. */
   promptAction: 'loop.promptAction',
   /**
+   * A status beside the prompt's buttons that stays usable while the prompt
+   * is closed — never dimmed, never inert: a visitor's limited preview,
+   * whose refusal and *Sign in* must be reached once their turns are spent
+   * (the user, 20 November 2026). Empty, nothing drawn.
+   */
+  promptStatus: 'loop.promptStatus',
+  /**
    * The strip inside the prompt, above where the typing goes.
    *
    * Kept and rendered, and nothing contributes to it today: the controls that

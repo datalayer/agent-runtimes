@@ -14,8 +14,12 @@
  * says why. When the chat draws no header, the key's clock stands beside it.
  *
  * Drawn only inside an anonymous visitor's chat (`useAnonymousChat`): a
- * signed-in person never sees it. It publishes the preview to the page's
+ * signed-in person never sees it. It publishes the preview to its plugin's
  * board for the page tools (`preview_status`), and withdraws it when it goes.
+ *
+ * It stands in `LoopSlots.promptStatus`, outside the composer's disabled
+ * region: once no turn is left the composer closes, and the indicator still
+ * opens onto the refusal and *Sign in*.
  *
  * @module apps/plugins/limited-preview/LimitedPreviewIndicator
  */
@@ -37,7 +41,6 @@ import {
 } from '../../../chat/anonymous/AnonymousChat';
 import { ToolResultsContext } from '../../toolCards/toolResults';
 import {
-  LIMITED_PREVIEW,
   LIMITED_PREVIEW_WORDS,
   previewStatusOf,
   type PreviewBoard,
@@ -51,11 +54,12 @@ const FEW_TURNS = 2;
 
 export function LimitedPreviewIndicator({
   disabled,
-  board = LIMITED_PREVIEW,
+  board,
 }: {
   /** What a visitor does not get of the agent's UI, by name. */
   disabled: readonly string[];
-  board?: PreviewBoard;
+  /** This chat's limited preview, its plugin's own. */
+  board: PreviewBoard;
 }): JSX.Element | null {
   const state = useAnonymousChat();
   const status = state ? previewStatusOf(state, disabled) : null;

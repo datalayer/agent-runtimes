@@ -1676,6 +1676,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   // whether anyone contributed before anything is drawn, for the same reason
   // as the in-prompt menu: an empty slot is still an element.
   const promptActions = useSlotComponents(LoopSlots.promptAction);
+  // What stays usable while the prompt is closed: a visitor's limited preview.
+  const promptStatus = useSlotComponents(LoopSlots.promptStatus);
   // Same question for the chat's own title bar, which plugins may add to.
   const chatHeaderItems = useSlotComponents(LoopSlots.chatHeader);
   // And for the band above the conversation (an agent's `banner` UI).
@@ -2416,9 +2418,15 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       inpromptMenu.length > 0 ? (
         <ReactorSlot slot={LoopSlots.inpromptMenu} props={{ workspace }} />
       ) : undefined,
+    // Outside the footer's disabled region: once a visitor's turns are spent,
+    // the limited preview still opens onto the refusal and Sign in.
+    footerLive:
+      promptStatus.length > 0 ? (
+        <ReactorSlot slot={LoopSlots.promptStatus} props={{ workspace }} />
+      ) : undefined,
     footerExtras:
       // No Anonymous label: a visitor's limited-preview indicator is in the
-      // `promptAction` slot (the user, 20 November 2026).
+      // `promptStatus` slot (the user, 20 November 2026).
       promptActions.length > 0 || (voice && voice.input !== 'off') ? (
         <>
           {promptActions.length > 0 ? (

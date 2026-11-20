@@ -11,12 +11,16 @@
  * add an indicator on the number of remaining turns … make sure the
  * agent/app has frontend tools to update the indicator").
  *
- * - The indicator (`LoopSlots.promptAction`, the composer's footer):
+ * - The indicator (`LoopSlots.promptStatus`, the composer's footer, usable
+ *   while the composer is closed):
  *   *Limited preview · 7/10 turns today*, opening onto what signing in keeps,
  *   what is disabled, and *Sign in* (`LimitedPreviewIndicator`).
  * - Two frontend tools, offered with the chat's extras like every page tool
  *   (`preview_status`, `preview_indicator_update`; `preview`): the runtime
  *   sees them as `external`, so a visitor's agent may call them.
+ *
+ * Each plugin holds its own board (`PreviewBoard`), handed to its indicator
+ * and its tools: nothing of it is the page's.
  *
  * Mounted by the preset for a visitor only (`runAsAnonymous`), with the
  * names of what the visitor does not get of the agent's UI (`disabledUiOf`).
@@ -36,6 +40,7 @@ import {
   LIMITED_PREVIEW_TOOL_NAMES,
   LIMITED_PREVIEW_WORDS,
   PREVIEW_STATUS,
+  PreviewBoard,
   limitedPreviewTools,
 } from './preview';
 
@@ -69,8 +74,10 @@ export function LimitedPreviewCallCard({
 /** The plugin, for a visitor: the indicator naming what is disabled, and its tools. */
 export function limitedPreviewPlugin(disabled: readonly string[]): PluginRef {
   const named = [...disabled];
+  // This chat's own: two anonymous embeds on a page never share a preview.
+  const board = new PreviewBoard();
   function Indicator(): JSX.Element | null {
-    return <LimitedPreviewIndicator disabled={named} />;
+    return <LimitedPreviewIndicator disabled={named} board={board} />;
   }
   return defineToolCardPlugin({
     id: 'limited-preview',
@@ -81,10 +88,12 @@ export function limitedPreviewPlugin(disabled: readonly string[]): PluginRef {
     emoji: '\u{1F441}\u{FE0F}',
     tools: LIMITED_PREVIEW_TOOL_NAMES,
     Card: LimitedPreviewCallCard,
-    frontendTools: limitedPreviewTools(),
+    frontendTools: limitedPreviewTools(board),
     components: [
       {
-        slot: LoopSlots.promptAction,
+        // Beside the composer's controls, outside its disabled region: once
+        // no turn is left, it still opens onto the refusal and Sign in.
+        slot: LoopSlots.promptStatus,
         id: 'limited-preview-indicator',
         Component: Indicator as never,
       },

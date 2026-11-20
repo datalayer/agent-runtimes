@@ -121,7 +121,11 @@ export function previewStatusOf(
   };
 }
 
-/** The limited preview on the page: what the indicator publishes, what the agent marks. */
+/**
+ * One chat's limited preview: what its indicator publishes, what its agent
+ * marks. One per plugin (`limitedPreviewPlugin`), never one per page: two
+ * anonymous embeds on a page keep their own.
+ */
 export class PreviewBoard {
   status: PreviewStatus | null = null;
   mark: PreviewMark = { note: '', flash: 0 };
@@ -167,9 +171,6 @@ export class PreviewBoard {
   }
 }
 
-/** The page's limited preview. */
-export const LIMITED_PREVIEW = new PreviewBoard();
-
 /** What `preview_indicator_update` was given, checked; throws a sentence. */
 function readUpdate(args: Record<string, unknown>): {
   note?: string;
@@ -200,9 +201,9 @@ function readUpdate(args: Record<string, unknown>): {
   return { ...(note !== undefined ? { note } : {}), flash };
 }
 
-/** The two tools, over the page's limited preview. */
+/** The two tools, over one chat's limited preview. */
 export function limitedPreviewTools(
-  board: PreviewBoard = LIMITED_PREVIEW,
+  board: PreviewBoard,
 ): FrontendToolDefinition[] {
   return [
     {
