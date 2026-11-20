@@ -225,12 +225,7 @@ describe('the prompt component', () => {
     // They were private sub-components of one 1100-line file, which made the
     // file hard to read and each menu hard to find.
     const menus = join(__dirname, '..', '..', 'chat', 'prompt', 'menus');
-    for (const name of [
-      'AgentsMenu',
-      'ToolsMenu',
-      'SkillsMenu',
-      'ModelSelector',
-    ]) {
+    for (const name of ['AgentsMenu', 'ToolsMenu', 'ModelSelector']) {
       expect(readFileSync(join(menus, `${name}.tsx`), 'utf8')).toContain(
         `export function ${name}(`,
       );

@@ -61,6 +61,28 @@ export type SessionStart = {
   session?: string;
 };
 
+/**
+ * One switch of a conversation, as the session API takes it
+ * (`PUT /api/v1/apps/sessions/{uid}/switches`): for that conversation alone.
+ */
+export type ConversationSwitch =
+  | { kind: 'server'; server: string; enabled: boolean }
+  | { kind: 'tool'; server: string; tool: string; enabled: boolean }
+  | { kind: 'tool_approval'; server: string; tool: string; approved: boolean }
+  | { kind: 'skill'; skill: string; enabled: boolean }
+  | { kind: 'skills'; skills: string[]; enabled: boolean }
+  | { kind: 'skill_approval'; skill: string; approved: boolean };
+
+/** What a conversation switched: only that, the rest as its agent has it. */
+export type ConversationSwitchesState = {
+  /** The tools on, by server, for the servers it switched. */
+  mcp_tools: Record<string, string[]>;
+  /** The tools approved, by server, for the servers whose approvals it switched. */
+  mcp_approved: Record<string, string[]>;
+  skills: Record<string, boolean>;
+  skills_approved: Record<string, boolean>;
+};
+
 function clientOf({
   baseUrl,
   getAccessToken,
@@ -245,6 +267,22 @@ export function appSessionsClient(options: RuntimeClientOptions) {
     /** Archive it (hidden from the list unless asked for), or bring it back. */
     archive: (uid: string, archived: boolean) =>
       json(`${at(uid)}/archived`, 'PUT', { archived }),
+    /** What the conversation switched of its agent's MCP tools and skills. */
+    switches: async (uid: string): Promise<ConversationSwitchesState> =>
+      (await json(`${at(uid)}/switches`)) as ConversationSwitchesState,
+    /**
+     * One switch, for this conversation alone; a `RuntimeRefusal` with the
+     * runtime's sentence for what it does not offer. Answers its switches.
+     */
+    switchIn: async (
+      uid: string,
+      said: ConversationSwitch,
+    ): Promise<ConversationSwitchesState> =>
+      (await json(
+        `${at(uid)}/switches`,
+        'PUT',
+        said,
+      )) as ConversationSwitchesState,
     /** Its conversation as a person reads it (`messagesOfThread`). */
     messages: async (uid: string): Promise<ChatMessage[]> =>
       messagesOfThread((await json(`${at(uid)}/messages`)).messages),

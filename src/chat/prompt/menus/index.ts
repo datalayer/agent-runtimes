@@ -16,6 +16,12 @@
 export { AgentsMenu } from './AgentsMenu';
 export { InlineAgentsMenu } from './InlineAgentsMenu';
 export { ToolsMenu } from './ToolsMenu';
-export { SkillsMenu } from './SkillsMenu';
+export {
+  EquipmentMenu,
+  EquipmentModelMenu,
+  EquipmentPanel,
+  type EquipmentSwitches,
+} from './EquipmentMenus';
+export { equipmentLists, summaryOf, EQUIPMENT_WORDS } from './equipmentRows';
 export { ModelSelector } from './ModelSelector';
 export { SuggestionsMenu } from './SuggestionsMenu';

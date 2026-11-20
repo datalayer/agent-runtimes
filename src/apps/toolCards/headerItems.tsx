@@ -33,6 +33,7 @@ import { ActionList, ActionMenu, Button } from '@primer/react';
 import {
   BroadcastIcon,
   CalendarIcon,
+  CheckCircleIcon,
   CloudIcon,
   CreditCardIcon,
   DotFillIcon,
@@ -43,6 +44,7 @@ import {
   ListUnorderedIcon,
   MeterIcon,
   PackageIcon,
+  PaintbrushIcon,
   PaperAirplaneIcon,
   PencilIcon,
   PeopleIcon,
@@ -50,6 +52,7 @@ import {
   SearchIcon,
   ShieldCheckIcon,
   TableIcon,
+  WorkflowIcon,
   type Icon,
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
@@ -100,6 +103,7 @@ export const HEADER_PART_HEIGHT = 28;
 export const HEADER_ICONS: Readonly<Record<string, Icon>> = {
   broadcast: BroadcastIcon,
   calendar: CalendarIcon,
+  'check-circle': CheckCircleIcon,
   cloud: CloudIcon,
   'credit-card': CreditCardIcon,
   file: FileIcon,
@@ -109,6 +113,7 @@ export const HEADER_ICONS: Readonly<Record<string, Icon>> = {
   'list-unordered': ListUnorderedIcon,
   meter: MeterIcon,
   package: PackageIcon,
+  paintbrush: PaintbrushIcon,
   'paper-airplane': PaperAirplaneIcon,
   pencil: PencilIcon,
   people: PeopleIcon,
@@ -116,6 +121,7 @@ export const HEADER_ICONS: Readonly<Record<string, Icon>> = {
   search: SearchIcon,
   'shield-check': ShieldCheckIcon,
   table: TableIcon,
+  workflow: WorkflowIcon,
 };
 
 /** A tone's colours, as the theme names them. */

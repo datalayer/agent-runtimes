@@ -358,7 +358,8 @@ has them: they need no connection of the person's.
 
 ## In its conversation: a deck and a sheet the agent builds
 
-An application's `ui` may name a **page UI** — `page-deck`, `page-sheet` — and its agent then has a
+An application's `ui` may name a **page UI** — `page-deck`, `page-sheet`, `page-excalidraw`,
+`page-mermaid` — and its agent then has a
 set of frontend tools that run in the page, on a deck or a workbook kept there for the conversation
 (`apps/pageTools`). Nothing reaches the runtime: the page checks each call, changes what it keeps,
 and answers the model.
@@ -372,6 +373,12 @@ header — and a deck's outline in one `deck_add_slides` call.
 | --- | --- | --- |
 | `page-deck` | `deck_create`, `deck_set_title`, `deck_add_slide`, `deck_add_slides` (several slides in one call, refused whole on one bad slide), `deck_update_slide`, `deck_move_slide`, `deck_delete_slide`, `deck_set_theme`, `deck_read` | Datalayer Decks' `DeckView`: the slides, **Notes**, **Present** for the full screen. |
 | `page-sheet` | `sheet_create`, `sheet_write_range`, `sheet_read_range`, `sheet_format_range`, `sheet_freeze`, `sheet_add_tab`, `sheet_show_tab`, `sheet_insert_chart` | Datalayer Cells' `Spreadsheet`, with its formula bar and tabs, editable; **Export CSV** through Cells' own writer. |
+| `page-excalidraw` | The eleven tools of `@datalayer/reactor-excalidraw`: `datalayer_excalidrawInsertNode`, `datalayer_excalidrawFromMermaid`, `datalayer_excalidrawListDrawings`, `datalayer_excalidrawReadScene`, `datalayer_excalidrawAddElements`, `datalayer_excalidrawUpdateElements`, `datalayer_excalidrawConnectElements`, `datalayer_excalidrawDeleteElements`, `datalayer_excalidrawSetAppState`, `datalayer_excalidrawResize`, `datalayer_excalidrawClearScene` | Excalidraw itself: the drawing a call touched last, editable; what the person draws is written back, so the agent reads it. |
+| `page-mermaid` | The six tools of `@datalayer/reactor-mermaid`: `datalayer_mermaidSetDiagram` (refuses a source Mermaid does not parse, with its line), `datalayer_mermaidReadDiagram`, `datalayer_mermaidListDiagrams`, `datalayer_mermaidValidate`, `datalayer_mermaidRenderSvg`, `datalayer_mermaidListDiagramTypes` | Mermaid: each diagram under its title, the one written last first, its source a click away. |
+
+The last two run a reactor plugin's tools in the page (`apps/pageTools/reactorTools`): each
+definition's operation validates the call, over a host the page keeps for the conversation, and the
+answer is `{ ok: true, … }` or `{ ok: false, error }` as for the deck and the sheet.
 
 Each is a tool card plugin (`defineToolCardPlugin`) that also takes `frontendTools`: the kit
 contributes them through `LoopChatExtras`, so they reach the agent wherever it runs — in the page,
@@ -419,32 +426,40 @@ call. Placed `message`, the last call that changed it draws it in the conversati
 
 ## Under its composer: what it runs with
 
-An application's composer lists what its agent runs with, in three menus beside its other
-controls: its **MCP servers**, its **skills** and its **model** (`EquipmentBar`,
-`chat/prompt/menus/EquipmentMenus`). Each lists everything the agent declares, on or off, and
-each trigger counts what is on: `1/2` servers running, `3/5` skills active, the model's name (its
-icon alone on a phone).
+An application's composer lists what its agent runs with: its **MCP servers** and its **skills**,
+each in one overlay (`EquipmentMenu`, `chat/prompt/menus/EquipmentMenus`) opened from either of
+two places — the dot beside the send button, or the menu in the footer. Both triggers show the same
+rows and say the same summary: the dot by its colour (green when some are on, red when a server
+failed, amber while one starts, grey when none is on) and its tooltip, the footer by its icon and
+a count, `2/3`. Its **model** is listed apart in the footer, to read. An agent's own chat uses the
+same two overlays.
 
-| Menu | A row says |
+| Overlay | A row says |
 |------|-----------|
-| MCP servers | **Running** (with how many tools), **Starting**, **Failed** (with the reason its start gave), **Not started**, or **Off**: an optional server whose secrets are not set up, with what it needs, such as `needs DISCORD_BOT_TOKEN, DISCORD_GUILD_ID`. |
-| Skills | **Active**, or **Not activated** with what it needs: `needs TAVILY_API_KEY`, or `needs one of PEXELS_API_KEY, UNSPLASH_ACCESS_KEY` for a skill that one key among several sets up. |
+| MCP servers | **Running** (with how many of its tools are on), **Starting**, **Failed** (with the reason its start gave), **Not started**, or **Off**: an optional server whose secrets are not set up, with what it needs, such as `needs DISCORD_BOT_TOKEN, DISCORD_GUILD_ID`. |
+| Skills | **Active** (or **Loaded**, **Enabled**, **Off** as the conversation has it), or **Not activated** with what it needs: `needs TAVILY_API_KEY`, or `needs one of PEXELS_API_KEY, UNSPLASH_ACCESS_KEY` for a skill that one key among several sets up. The Datalayer skills (`datalayer-memory-*`) are listed and counted like any other. |
 | Model | **In use**, **Available**, or **Not available** with the runtime's reason. |
 
 What is said of a secret is the *name* of its variable, never its value.
 
-**They are read, not chosen.** A person using an application chooses none of these: its builder
-did, in its spec. A row is a menu item a keyboard reaches and a screen reader reads whole (its
-name, its state, why); choosing one does nothing and leaves the menu open, and each menu says so
-at its foot. Nothing is switched from here, and no model is sent with a run. This holds for
-everybody: a visitor at a demo, somebody signed in at a deployment's page, and its builder in the
-Preview. An agent's own chat keeps its selectors, which do switch.
+**The switches.** Each overlay has the conversation's switches: a server's tools all at once
+(**Enable all**) or one by one, each tool's approval, each skill, all the skills, each skill's
+approval, and **Codemode** where the chat offers it. Over the runtime's monitoring stream where
+it is open; otherwise — the visitors' runtime, a deployment's — through the session API,
+`PUT /api/v1/apps/sessions/{uid}/switches` ([the session API](./session-api.mdx)), for that
+conversation alone, with the visitor's token or the person's: never the deployment's agent nor
+anybody else's conversation. They can be used once the conversation has started (its first
+message opens its session). A switch that cannot be used is drawn disabled, with why: a server that
+is not running, or not set up (its reason), or a conversation not started yet. A switch the
+runtime refuses is said in the overlay, in its words. Nothing says "disabled without an account"
+for what the runtime does offer a visitor. The model is the application's, the same for everyone: it
+is read, never chosen, and no model is sent with a run.
 
 **Where it is read.** The servers and the skills come from the runtime the application runs on,
 `GET /api/v1/apps/agents/{agent}/equipment` ([the session API](./session-api.mdx)), asked with
 the caller's token and again every half minute; the models from the chat's read of them,
 `GET /api/v1/configure/models`. Both are answered wherever an application runs: the visitors'
-runtime and a deployment's included. Until the runtime answers, the menus list what the agent's
+runtime and a deployment's included. Until the runtime answers, the overlays list what the agent's
 spec declares, with no state, and say **Declared**; they stay so on a runtime that does not have
 the route, and for models when the runtime calls none of them usable (the visitors' runtime
 calls the model with each visitor's own token).
@@ -461,7 +476,7 @@ spec that lists `left` or `right` among its placements may be placed in either:
 
 | Placed there | What it draws | In the conversation |
 | --- | --- | --- |
-| `page-deck`, `page-sheet` | The deck or the sheet, live (`defineToolCardPlugin(options, side)`, its `Panel`) | A line per call (`useCardSide`, `cardRole`) |
+| `page-deck`, `page-sheet`, `page-excalidraw`, `page-mermaid` | The deck, the sheet, the canvas or the diagrams, live (`defineToolCardPlugin(options, side)`, its `Panel`); two placed on one side are drawn one above the other | A line per call (`useCardSide`, `cardRole`) |
 | A header UI | Its items stacked under its name (`defineHeaderPlugin(...)(side)`) | Nothing |
 | A chrome UI | Its component (`defineChromePlugin`) | Nothing |
 

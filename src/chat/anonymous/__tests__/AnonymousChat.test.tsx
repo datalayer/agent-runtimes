@@ -6,8 +6,9 @@
 /**
  * What an anonymous visitor's conversation draws (the user, 15 November
  * 2026): the box on top, its skeleton while the key is checked, the key's
- * clock where there is no header, Sign in to use a refused tool, and the MCP
- * servers and skills listed disabled.
+ * clock where there is no header, and Sign in to use a refused tool. Its MCP
+ * servers and skills are listed as the runtime says them, in the same
+ * overlays as anyone's (equipment-menus.test).
  */
 
 // @vitest-environment jsdom
@@ -22,8 +23,6 @@ import {
   AnonymousToolSignIn,
   type AnonymousChatState,
 } from '../AnonymousChat';
-import { McpStatusIndicator } from '../../indicators/McpStatusIndicator';
-import { SkillsStatusIndicator } from '../../indicators/SkillsStatusIndicator';
 
 afterEach(cleanup);
 
@@ -38,8 +37,6 @@ function state(over: Partial<AnonymousChatState> = {}): AnonymousChatState {
     validating: false,
     headerShown: true,
     minutes: 15,
-    disabledMcpServers: [],
-    disabledSkills: [],
     signIn: vi.fn(),
     ...over,
   };
@@ -180,36 +177,5 @@ describe('a tool refused for want of an account', () => {
       </AnonymousChatProvider>,
     );
     expect(screen.queryByRole('button')).toBeNull();
-  });
-});
-
-describe('the MCP and skills indicators, anonymous', () => {
-  it('list each server and skill as disabled, in the warning colour', () => {
-    const { container } = themed(
-      <>
-        <McpStatusIndicator disabled={['X', 'Bluesky']} />
-        <SkillsStatusIndicator
-          skillsCount={0}
-          enabledCount={0}
-          disabled={['crawl']}
-        />
-      </>,
-    );
-    const mcp = container.querySelector('[data-disabled-indicator="mcp"]');
-    expect(mcp?.getAttribute('aria-label')).toBe(
-      'MCP servers are disabled without an account',
-    );
-    fireEvent.click(mcp as Element);
-    expect(screen.getByText('X')).toBeTruthy();
-    expect(screen.getByText('Bluesky')).toBeTruthy();
-    expect(screen.getAllByText('Disabled')).toHaveLength(2);
-    expect(
-      container.querySelector('[data-disabled-indicator="skills"]'),
-    ).toBeTruthy();
-  });
-
-  it('draws nothing when the agent has none', () => {
-    const { container } = themed(<McpStatusIndicator disabled={[]} />);
-    expect(container.querySelector('button')).toBeNull();
   });
 });

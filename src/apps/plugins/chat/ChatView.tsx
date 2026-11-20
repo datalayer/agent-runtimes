@@ -103,11 +103,15 @@ import {
 import {
   agentRuntimeStore,
   useAgentRuntimeContextSnapshot,
+  useAgentRuntimeMcpStatus,
+  useAgentRuntimeWsState,
 } from '../../../stores';
 import { useIAMStore } from '../../../state';
 import { useVisitorToken } from '../../apps/visitorToken';
 import { useEquipment } from '../../../hooks/useEquipment';
-import { EquipmentBar } from '../../../chat/prompt/menus/EquipmentMenus';
+import { useMcpToolSwitches } from '../../../hooks/useMcpToolSwitches';
+import { useConversationSwitches } from '../../../hooks/useConversationSwitches';
+import { EQUIPMENT_WORDS } from '../../../chat/prompt/menus/equipmentRows';
 import {
   ANONYMOUS_MINUTES,
   ANONYMOUS_WORDS,
@@ -1768,11 +1772,11 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    */
   const ownRoutesOnly = Boolean(deploymentUid || visitors);
   /*
-   * What an application runs with, for its composer to list: its agent's
-   * MCP servers, skills and models, each with its state, read from its
-   * runtime (`/api/v1/apps/agents/{agent}/equipment`, the models' own read),
-   * its spec until the runtime answers. To read only: nothing is switched
-   * from it, and no model is sent with a run.
+   * What an application runs with, for its composer's dots and menus: its
+   * agent's MCP servers, skills and models, each with its state, read from
+   * its runtime (`/api/v1/apps/agents/{agent}/equipment`, the models' own
+   * read), its spec until the runtime answers. Its servers and skills are
+   * switched in the conversation; its model is the application's, read only.
    */
   const equipmentShown = Boolean(presence) && runsApp && !inPage;
   const equipment = useEquipment({
@@ -2112,6 +2116,23 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   );
   const skillsQuery = useSkills(true);
   const skillActions = useSkillActions(agentId);
+  /*
+   * The MCP servers' live status and the conversation's switches, over the
+   * runtime's monitoring stream (opened by `ChatBase`): the host's status
+   * when it feeds one. Without that stream — a runtime held to the
+   * application's own routes opens none — an application's switches go
+   * through its session API instead (`conversationSwitches`, below).
+   */
+  const storeMcpStatus = useAgentRuntimeMcpStatus();
+  const mcpStatus = chatExtras.mcpStatusData ?? storeMcpStatus ?? undefined;
+  const wsState = useAgentRuntimeWsState();
+  const mcpSwitches = useMcpToolSwitches({
+    agentId,
+    status: mcpStatus,
+    servers: configQuery.data?.mcpServers ?? [],
+  });
+  const viaStream = wsState === 'connected';
+  const viaSessionApi = !viaStream && runsApp && Boolean(agentServerUrl);
   // `undefined` until the runtime answers: its answer is then the list.
   const [catalogModels, setCatalogModels] = useState<ModelConfig[] | undefined>(
     undefined,
@@ -2232,6 +2253,40 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       ),
     [skillsQuery.data],
   );
+  /* Which skills run without asking, as the runtime last reported them. */
+  const approvedSkills = useMemo(
+    () =>
+      new Set<string>(
+        (skillsQuery.data?.skills ?? [])
+          .filter(skill => skill.approved === true)
+          .map(skill => skill.id),
+      ),
+    [skillsQuery.data],
+  );
+  /*
+   * An application's switches through its session API (the user, 19
+   * November 2026), where no monitoring stream is open — the visitors'
+   * runtime, a deployment's: for this conversation alone, read once its
+   * session is held and again after each turn, a refused one said.
+   */
+  const conversationSwitches = useConversationSwitches({
+    client: viaSessionApi ? sessionsClient : undefined,
+    uid: threadUid,
+    held,
+    refresh: busy,
+    skillOn: skillId =>
+      enabledSkills.has(skillId) ||
+      equipment.skills.some(
+        skill => skill.id === skillId && skill.state === 'active',
+      ),
+  });
+  const switchesLocked = viaStream
+    ? undefined
+    : viaSessionApi
+      ? conversationSwitches.started
+        ? undefined
+        : EQUIPMENT_WORDS.locked.notStarted
+      : EQUIPMENT_WORDS.locked.notConnected;
 
   /*
    * Taken here first, then told to the server.
@@ -2296,20 +2351,6 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    */
   const HeaderComponent = headerEntries[0]?.value.Component;
   const headerShown = !config?.hideHeader && !!HeaderComponent;
-  /*
-   * What the agent has that a visitor cannot use (the user, 15 November
-   * 2026): its MCP servers and skills, as its spec declares them — the
-   * visitors' runtime starts none of them, allowing no connection.
-   */
-  const anonymousDisabled = useMemo(
-    () => ({
-      mcpServers: (spec?.mcpServers ?? []).map(
-        server => server.name || server.id,
-      ),
-      skills: (spec?.skills ?? []).map(skill => skill.name || skill.id),
-    }),
-    [spec],
-  );
   const anonymousState: AnonymousChatState | null = anonymousConfig
     ? {
         ...anonymousTurns,
@@ -2319,8 +2360,6 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         validating: anonymousValidating,
         headerShown,
         minutes: ANONYMOUS_MINUTES,
-        disabledMcpServers: anonymousDisabled.mcpServers,
-        disabledSkills: anonymousDisabled.skills,
         signIn: signInAnonymous,
       }
     : null;
@@ -2381,15 +2420,11 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       ) : undefined,
     footerExtras:
       anonymousConfig ||
-      equipmentShown ||
       promptActions.length > 0 ||
       (voice && voice.input !== 'off') ? (
         <>
           {/* Who is talking: nobody signed in (the user, 15 November 2026). */}
           {anonymousConfig ? <AnonymousFooterLabel /> : null}
-          {/* What an application runs with, to read: its MCP servers, its
-              skills and its model, each with its state (18 November 2026). */}
-          {equipmentShown ? <EquipmentBar equipment={equipment} /> : null}
           {promptActions.length > 0 ? (
             <ReactorSlot slot={LoopSlots.promptAction} props={{ workspace }} />
           ) : null}
@@ -2435,12 +2470,12 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         </>
       ) : undefined,
     /*
-      An application's conversation keeps none of the session's controls
-      under its composer — the agents, the model, the tools and their servers,
-      the skills: a person using an application is not
-      choosing them, and its builder chose them in its spec. An agent's chat
-      keeps them. An application shows them to read instead (`EquipmentBar`,
-      in `footerExtras`): every server, skill and model, with its state.
+      An application's conversation keeps no agent chooser, no model
+      chooser and no tools list under its composer: its builder chose them
+      in its spec, and its model is listed to read (`equipment`). Its MCP
+      servers and skills are listed and switched like an agent's chat's, in
+      the overlays the dots beside the send button open too, every server
+      and skill with its state and why one is off (19 November 2026).
     */
     showAgentsMenu: !presence,
     showInlineAgentsMenu: false,
@@ -2462,30 +2497,58 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     availableTools: offeredTools.runtime,
     availableFrontendTools: offeredTools.frontend,
     mcpServers: configQuery.data?.mcpServers ?? [],
-    // Live from the host example, when one feeds it: the footer's MCP status
-    // indicator. (Codemode surfaces through the toggle below, not a blob.)
-    mcpStatusData: chatExtras.mcpStatusData ?? undefined,
-    showSkillsMenu: !presence,
+    mcpStatusData: mcpStatus,
+    showMcpMenu: true,
+    showSkillsMenu: true,
     skills: skillsQuery.data?.skills ?? [],
     skillsLoading: skillsQuery.isLoading,
     enabledSkills,
-    onToggleSkill: skillId =>
-      enabledSkills.has(skillId)
-        ? skillActions.disableSkill(skillId)
-        : skillActions.enableSkill(skillId),
-    onToggleAllSkills: (skillIds, enable) =>
-      skillIds.forEach(skillId =>
-        enable
-          ? skillActions.enableSkill(skillId)
-          : skillActions.disableSkill(skillId),
-      ),
+    ...(viaSessionApi
+      ? {
+          // This conversation's own switches, kept by its runtime.
+          enabledMcpTools: conversationSwitches.enabledMcpTools,
+          approvedMcpTools: conversationSwitches.approvedMcpTools,
+          onToggleMcpTool: conversationSwitches.onToggleMcpTool,
+          onToggleAllMcpServerTools:
+            conversationSwitches.onToggleAllMcpServerTools,
+          onToggleMcpToolApproval: conversationSwitches.onToggleMcpToolApproval,
+          skillsSwitched: conversationSwitches.skillsSwitched,
+          approvedSkills: conversationSwitches.approvedSkills,
+          onToggleSkill: conversationSwitches.onToggleSkill,
+          onToggleAllSkills: conversationSwitches.onToggleAllSkills,
+          onToggleSkillApproval: conversationSwitches.onToggleSkillApproval,
+          switchRefusal: conversationSwitches.refusal,
+        }
+      : {
+          enabledMcpTools: mcpSwitches.enabledMcpTools,
+          approvedMcpTools: mcpSwitches.approvedMcpTools,
+          onToggleMcpTool: mcpSwitches.onToggleMcpTool,
+          onToggleAllMcpServerTools: mcpSwitches.onToggleAllMcpServerTools,
+          onToggleMcpToolApproval: mcpSwitches.onToggleMcpToolApproval,
+          approvedSkills,
+          onToggleSkill: skillId =>
+            enabledSkills.has(skillId)
+              ? skillActions.disableSkill(skillId)
+              : skillActions.enableSkill(skillId),
+          onToggleAllSkills: (skillIds, enable) =>
+            skillIds.forEach(skillId =>
+              enable
+                ? skillActions.enableSkill(skillId)
+                : skillActions.disableSkill(skillId),
+            ),
+          onToggleSkillApproval: skillId =>
+            approvedSkills.has(skillId)
+              ? skillActions.unapproveSkill(skillId)
+              : skillActions.approveSkill(skillId),
+        }),
     codemodeEnabled: chatExtras.codemodeEnabled ?? false,
     onToggleCodemode: chatExtras.onToggleCodemode,
     isA2AProtocol: false,
     hasConfigData: !!configQuery.data,
     hasSkillsData: !!skillsQuery.data,
-    // What a visitor cannot use, listed disabled in the warning colour.
-    ...(anonymousConfig ? { anonymousDisabled } : {}),
+    // An application's equipment, as its runtime says it.
+    ...(equipmentShown ? { equipment } : {}),
+    switchesLocked,
   };
   const ComposerComponent = composerEntries[0]?.value.Component;
   const prompt = ComposerComponent ? (

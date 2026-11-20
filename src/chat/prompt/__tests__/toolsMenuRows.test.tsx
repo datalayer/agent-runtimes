@@ -33,14 +33,6 @@ describe('the tools menu’s frontend tools', () => {
       <ThemeProvider>
         <BaseStyles>
           <ToolsMenu
-            codemodeEnabled={false}
-            mcpServers={[]}
-            enabledMcpTools={new Map()}
-            enabledMcpToolCount={0}
-            onToggleMcpTool={() => undefined}
-            onToggleAllMcpServerTools={() => undefined}
-            approvedMcpTools={new Map()}
-            onToggleMcpToolApproval={() => undefined}
             availableTools={[]}
             availableFrontendTools={[{ id: name, name } as never]}
           />

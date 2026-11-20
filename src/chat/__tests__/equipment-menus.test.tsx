@@ -4,9 +4,10 @@
  */
 
 /**
- * What an application runs with, under its composer (the user, 18 November
- * 2026): its MCP servers, its skills and its model, each listed whole — on
- * or off — with its state and why, to read and not to change.
+ * The MCP servers and skills of a conversation (the user, 18 and 19 November
+ * 2026): each listed whole — on or off — with its state and why, in one
+ * overlay opened from the dot beside the send button or the footer's menu,
+ * with the conversation's switches; an application's model, to read.
  */
 
 import React from 'react';
@@ -30,11 +31,18 @@ import {
 } from '../../hooks/useEquipment';
 import {
   EQUIPMENT_WORDS,
-  EquipmentBar,
+  equipmentLists,
   modelRow,
   rowWords,
   serverRow,
   skillRow,
+  summaryOf,
+  type EquipmentSources,
+} from '../prompt/menus/equipmentRows';
+import {
+  EquipmentMenu,
+  EquipmentModelMenu,
+  type EquipmentSwitches,
 } from '../prompt/menus/EquipmentMenus';
 
 /** What the runtime answers for the Marketer with GITHUB_TOKEN alone set up. */
@@ -109,6 +117,21 @@ const live = (): Equipment => ({
   ...readEquipment(ANSWER),
   models: readEquipmentModels(MODELS, undefined),
 });
+
+/** Switches that record what they were asked. */
+function switches(asked: string[] = []): EquipmentSwitches {
+  return {
+    onToggleMcpTool: (server, tool) => asked.push(`tool ${server} ${tool}`),
+    onToggleAllMcpServerTools: (server, tools, enable) =>
+      asked.push(`server ${server} ${tools.join(',')} ${enable}`),
+    onToggleMcpToolApproval: (server, tool) =>
+      asked.push(`approve ${server} ${tool}`),
+    onToggleSkill: skill => asked.push(`skill ${skill}`),
+    onToggleAllSkills: (skills, enable) =>
+      asked.push(`skills ${skills.join(',')} ${enable}`),
+    onToggleSkillApproval: skill => asked.push(`approve-skill ${skill}`),
+  };
+}
 
 afterEach(() => {
   cleanup();
@@ -186,20 +209,30 @@ describe('before the runtime answers', () => {
     });
   });
 
-  it('says so on its triggers and in its menus', () => {
+  it('says so on its triggers and in its overlays', () => {
     render(
       <ThemeProvider>
-        <EquipmentBar equipment={declaredEquipment('worker-marketer')} />
+        <EquipmentMenu
+          kind="servers"
+          trigger="button"
+          lists={equipmentLists({
+            equipment: declaredEquipment('worker-marketer'),
+          })}
+          switches={switches()}
+        />
       </ThemeProvider>,
     );
     const servers = screen.getByRole('button', { name: /^MCP servers — / });
     expect(servers.getAttribute('aria-label')).toMatch(/\d+ declared$/);
     expect(servers.getAttribute('data-equipment-source')).toBe('declared');
     fireEvent.click(servers);
-    expect(screen.getByText(EQUIPMENT_WORDS.declared)).toBeTruthy();
     expect(
-      screen.getAllByRole('menuitem')[0].getAttribute('aria-label'),
-    ).toContain(EQUIPMENT_WORDS.declaredState);
+      screen.getAllByText(EQUIPMENT_WORDS.declared).length,
+    ).toBeGreaterThan(0);
+    const row = document.querySelector('[data-equipment-row]');
+    expect(row?.getAttribute('aria-label')).toContain(
+      EQUIPMENT_WORDS.declaredState,
+    );
   });
 });
 
@@ -228,26 +261,377 @@ describe('the rows', () => {
   });
 });
 
-describe('the three menus under the composer', () => {
-  it('count what is on, of all there is', () => {
+/** What the visitors' runtime answers for the Traveller's demo. */
+const TRAVELLER = readEquipment({
+  mcp_servers: [
+    { id: 'kiwi', name: 'Kiwi.com', state: 'started', tools: 1 },
+    { id: 'overture', name: 'Overture', state: 'started', tools: 3 },
+    {
+      id: 'booking-com',
+      name: 'Booking.com',
+      optional: true,
+      state: 'left_out',
+      reason: 'needs BOOKING_COM_API_KEY',
+    },
+  ],
+  skills: [
+    { id: 'travel-planning', name: 'Travel planning', state: 'active' },
+    { id: 'datalayer-memory-add', name: 'Memory add', state: 'active' },
+    {
+      id: 'crawl',
+      name: 'Crawl',
+      optional: true,
+      state: 'not_activated',
+      reason: 'needs TAVILY_API_KEY',
+    },
+  ],
+});
+
+const traveller = (more: Partial<EquipmentSources> = {}) =>
+  equipmentLists({
+    equipment: { source: 'live', ...TRAVELLER },
+    locked: EQUIPMENT_WORDS.locked.notStarted,
+    ...more,
+  });
+
+/** What a status from the monitoring stream says of two servers. */
+const STATUS = {
+  initialized: true,
+  ready_count: 1,
+  failed_count: 0,
+  ready_servers: ['kiwi'],
+  failed_servers: {},
+  servers: [
+    {
+      id: 'kiwi',
+      status: 'started' as const,
+      tools: [{ name: 'search-flight' }, { name: 'feedback' }],
+    },
+    {
+      id: 'tavily',
+      status: 'failed' as const,
+      error: 'Connection closed',
+      reason: 'tavily could not start: the runtime cannot reach npm.',
+    },
+  ],
+};
+
+describe('the rows, from every source', () => {
+  it('list what the runtime offers a visitor, the Datalayer skills counted, and nothing "disabled without an account"', () => {
+    const lists = traveller();
+    expect(lists.servers.map(row => [row.id, row.state, row.on])).toEqual([
+      ['kiwi', 'Running', true],
+      ['overture', 'Running', true],
+      ['booking-com', 'Off', false],
+    ]);
+    expect(lists.skills.map(row => [row.id, row.on])).toEqual([
+      ['travel-planning', true],
+      ['datalayer-memory-add', true],
+      ['crawl', false],
+    ]);
+    expect(summaryOf('servers', lists.servers, false).summary).toBe(
+      '2 of 3 on',
+    );
+    expect(summaryOf('skills', lists.skills, false)).toMatchObject({
+      status: 'on',
+      count: '2/3',
+    });
+    // Off for a reason of its own, or for the runtime's.
+    expect(lists.servers[2].locked).toBe('needs BOOKING_COM_API_KEY');
+    // Switched whole, its tools listed or not: the runtime knows them.
+    expect(lists.servers[0].locked).toBe(EQUIPMENT_WORDS.locked.notStarted);
+    expect(lists.skills[2].locked).toBe('needs TAVILY_API_KEY');
+    expect(lists.skills[0].locked).toBe(EQUIPMENT_WORDS.locked.notStarted);
+    expect(JSON.stringify(lists)).not.toMatch(/without an account/);
+  });
+
+  it('take the live status, the tools and what the conversation switched on', () => {
+    const lists = equipmentLists({
+      mcpServers: [],
+      mcpStatus: STATUS,
+      enabledMcpTools: new Map([['kiwi', new Set(['search-flight'])]]),
+      approvedMcpTools: new Map([['kiwi', new Set(['feedback'])]]),
+      skills: [
+        { id: 'github', name: 'GitHub', status: 'loaded' },
+        { id: 'pdf', name: 'PDF', status: 'available' },
+      ],
+      enabledSkills: new Set(['github']),
+      approvedSkills: new Set(['pdf']),
+    });
+    const [kiwi, tavily] = lists.servers;
+    expect(kiwi).toMatchObject({ on: true, note: '1/2 tools on' });
+    expect(kiwi.locked).toBeUndefined();
+    expect(kiwi.tools).toEqual([
+      { name: 'search-flight', enabled: true, approved: false },
+      { name: 'feedback', enabled: false, approved: true },
+    ]);
+    // A failed server says the runtime's sentence, not its raw error.
+    expect(tavily).toMatchObject({
+      state: 'Failed',
+      reason: 'tavily could not start: the runtime cannot reach npm.',
+      locked: 'tavily could not start: the runtime cannot reach npm.',
+    });
+    expect(summaryOf('servers', lists.servers, false).status).toBe('failed');
+    expect(
+      lists.skills.map(row => [row.state, row.enabled, row.approved]),
+    ).toEqual([
+      ['Loaded', true, false],
+      ['Off', false, true],
+    ]);
+  });
+
+  it('take what the conversation switched over the agent’s word: a skill, a server without its tools listed', () => {
+    const lists = traveller({
+      locked: undefined,
+      enabledMcpTools: new Map([['kiwi', new Set<string>()]]),
+      skillsSwitched: { 'travel-planning': false, crawl: true },
+    });
+    expect(lists.servers[0]).toMatchObject({ on: false, state: 'Running' });
+    expect(lists.servers[1].on).toBe(true);
+    expect(lists.skills.map(row => [row.id, row.on, row.state])).toEqual([
+      ['travel-planning', false, 'Off'],
+      ['datalayer-memory-add', true, 'Active'],
+      // Not activated stays off, whatever is sent.
+      ['crawl', false, 'Not activated'],
+    ]);
+  });
+
+  it('count a server whose tools the conversation switched off as off, and all on before any switch', () => {
+    const off = equipmentLists({
+      mcpStatus: STATUS,
+      enabledMcpTools: new Map([['kiwi', new Set<string>()]]),
+    });
+    expect(off.servers[0]).toMatchObject({ on: false, note: '0/2 tools on' });
+    const untouched = equipmentLists({ mcpStatus: STATUS });
+    expect(untouched.servers[0].note).toBe('2/2 tools on');
+  });
+});
+
+/** The rows and switches an open overlay shows, as words. */
+function shown(): string[] {
+  const panel = document.querySelector('[data-equipment-panel]');
+  expect(panel).toBeTruthy();
+  return Array.from(
+    (panel as Element).querySelectorAll(
+      '[data-equipment-row], [data-equipment-switch]',
+    ),
+  ).map(each =>
+    each.hasAttribute('data-equipment-row')
+      ? `row ${each.getAttribute('aria-label')}`
+      : `switch ${each.getAttribute('data-equipment-switch')} ${each.getAttribute('data-equipment-checked')} ${each.getAttribute('data-equipment-locked')}`,
+  );
+}
+
+describe('one overlay, from the dot or the footer', () => {
+  const lists = () =>
+    equipmentLists({
+      equipment: { source: 'live', ...TRAVELLER },
+      mcpStatus: STATUS,
+    });
+
+  for (const kind of ['servers', 'skills'] as const) {
+    it(`shows the same ${kind} rows and switches from either trigger`, () => {
+      const draw = (trigger: 'dot' | 'button') =>
+        render(
+          <ThemeProvider>
+            <EquipmentMenu
+              kind={kind}
+              trigger={trigger}
+              lists={lists()}
+              switches={switches()}
+            />
+          </ThemeProvider>,
+        );
+      draw('dot');
+      const dot = document.querySelector(
+        `[data-equipment-dot="${kind}"]`,
+      ) as HTMLElement;
+      fireEvent.click(dot);
+      const fromDot = shown();
+      const dotLabel = dot.getAttribute('aria-label');
+      cleanup();
+      draw('button');
+      const button = document.querySelector(
+        `[data-equipment-menu="${kind}"]`,
+      ) as HTMLElement;
+      fireEvent.click(button);
+      expect(shown()).toEqual(fromDot);
+      expect(fromDot.length).toBeGreaterThan(2);
+      // The same summary, said by both.
+      expect(button.getAttribute('aria-label')).toBe(dotLabel);
+    });
+  }
+
+  it('colours the dot by the rows, and draws none when there are none', () => {
     render(
       <ThemeProvider>
-        <EquipmentBar equipment={live()} />
+        <EquipmentMenu
+          kind="servers"
+          trigger="dot"
+          lists={traveller()}
+          switches={switches()}
+        />
+        <EquipmentMenu
+          kind="skills"
+          trigger="dot"
+          lists={equipmentLists({})}
+          switches={switches()}
+        />
       </ThemeProvider>,
     );
-    const group = screen.getByRole('group', {
-      name: 'What this application runs with',
+    const dot = screen.getByRole('button', {
+      name: 'MCP servers — 2 of 3 on',
     });
-    expect(group.getAttribute('data-equipment-bar')).toBe('live');
+    expect(dot.getAttribute('data-equipment-status')).toBe('on');
+    expect(document.querySelector('[data-equipment-dot="skills"]')).toBeNull();
+  });
+
+  it('says that a conversation with no server uses none, in the footer', () => {
+    render(
+      <ThemeProvider>
+        <EquipmentMenu
+          kind="servers"
+          trigger="button"
+          lists={equipmentLists({})}
+          switches={switches()}
+        />
+      </ThemeProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'MCP servers — none' }));
+    expect(screen.getByText(EQUIPMENT_WORDS.none.servers)).toBeTruthy();
+  });
+});
+
+describe('the switches', () => {
+  it('call the conversation’s handlers, and a locked one calls nothing', () => {
+    const asked: string[] = [];
+    render(
+      <ThemeProvider>
+        <EquipmentMenu
+          kind="servers"
+          trigger="button"
+          lists={equipmentLists({
+            equipment: { source: 'live', ...TRAVELLER },
+            mcpStatus: STATUS,
+          })}
+          switches={{
+            ...switches(asked),
+            codemode: { enabled: false },
+          }}
+        />
+      </ThemeProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^MCP servers — / }));
+    const press = (name: string) =>
+      fireEvent.click(
+        document.querySelector(
+          `[data-equipment-switch="${name}"] button`,
+        ) as Element,
+      );
+    press('server:kiwi');
+    press('tool:kiwi:feedback');
+    press('tool-approval:kiwi:search-flight');
+    // Left out, and codemode without a handler: drawn, disabled.
+    press('server:booking-com');
+    press('codemode');
+    expect(asked).toEqual([
+      'server kiwi search-flight,feedback false',
+      'tool kiwi feedback',
+      'approve kiwi search-flight',
+    ]);
     expect(
-      screen.getByRole('button', {
-        name: 'MCP servers — 1 of 3 running',
-      }).textContent,
-    ).toBe('1/3');
+      document
+        .querySelector('[data-equipment-switch="codemode"]')
+        ?.getAttribute('title'),
+    ).toBe(EQUIPMENT_WORDS.codemodeLocked);
+  });
+
+  it('switch a skill, all the skills one may, and a skill’s approval', () => {
+    const asked: string[] = [];
+    render(
+      <ThemeProvider>
+        <EquipmentMenu
+          kind="skills"
+          trigger="dot"
+          lists={traveller({ locked: undefined })}
+          switches={switches(asked)}
+        />
+      </ThemeProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^Skills — / }));
+    const press = (name: string) =>
+      fireEvent.click(
+        document.querySelector(
+          `[data-equipment-switch="${name}"] button`,
+        ) as Element,
+      );
+    press('skill:travel-planning');
+    press('skill-approval:datalayer-memory-add');
+    press('skill:crawl');
+    press('all-skills');
+    expect(asked).toEqual([
+      'skill travel-planning',
+      'approve-skill datalayer-memory-add',
+      'skills travel-planning,datalayer-memory-add false',
+    ]);
     expect(
-      screen.getByRole('button', { name: 'Skills — 1 of 2 active' })
-        .textContent,
-    ).toBe('1/2');
+      document
+        .querySelector('[data-equipment-switch="skill:crawl"]')
+        ?.getAttribute('title'),
+    ).toBe('needs TAVILY_API_KEY');
+  });
+});
+
+describe('a refused switch', () => {
+  it('is said in the overlay, in the runtime’s words', () => {
+    render(
+      <ThemeProvider>
+        <EquipmentMenu
+          kind="servers"
+          trigger="dot"
+          lists={traveller({ locked: undefined })}
+          switches={{
+            ...switches(),
+            refusal: 'kiwi has no tool book.',
+          }}
+        />
+      </ThemeProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^MCP servers — / }));
+    expect(screen.getByRole('alert').textContent).toBe(
+      'kiwi has no tool book.',
+    );
+  });
+
+  it('a server without its tools listed is still switched whole', () => {
+    const asked: string[] = [];
+    render(
+      <ThemeProvider>
+        <EquipmentMenu
+          kind="servers"
+          trigger="button"
+          lists={traveller({ locked: undefined })}
+          switches={switches(asked)}
+        />
+      </ThemeProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^MCP servers — / }));
+    fireEvent.click(
+      document.querySelector(
+        '[data-equipment-switch="server:kiwi"] button',
+      ) as Element,
+    );
+    expect(asked).toEqual(['server kiwi  false']);
+  });
+});
+
+describe('an application’s model, to read', () => {
+  it('names the one in use, of all it may run on', () => {
+    render(
+      <ThemeProvider>
+        <EquipmentModelMenu equipment={live()} />
+      </ThemeProvider>,
+    );
     expect(
       screen.getByRole('button', {
         name: 'Model — Claude Sonnet, of 2 it may run on',
@@ -255,34 +639,14 @@ describe('the three menus under the composer', () => {
     ).toBe('Claude Sonnet');
   });
 
-  it('list everything, on or off, each a menu item that says its state', () => {
+  it('changes nothing when a row is chosen: the menu stays open', () => {
     render(
       <ThemeProvider>
-        <EquipmentBar equipment={live()} />
-      </ThemeProvider>,
-    );
-    const trigger = screen.getByRole('button', { name: /^Skills — / });
-    expect(trigger.getAttribute('aria-haspopup')).toBe('true');
-    fireEvent.click(trigger);
-    const items = screen.getAllByRole('menuitem');
-    expect(items.map(item => item.getAttribute('aria-label'))).toEqual([
-      'GitHub Skill, Active, optional',
-      'Stock Image Skill, Not activated, needs one of PEXELS_API_KEY, UNSPLASH_ACCESS_KEY, optional',
-    ]);
-    expect(items[1].getAttribute('data-equipment-on')).toBe('false');
-    // It is said to be read only.
-    expect(screen.getByText(EQUIPMENT_WORDS.readOnly)).toBeTruthy();
-  });
-
-  it('change nothing when a row is chosen: the menu stays open', () => {
-    render(
-      <ThemeProvider>
-        <EquipmentBar equipment={live()} />
+        <EquipmentModelMenu equipment={live()} />
       </ThemeProvider>,
     );
     fireEvent.click(screen.getByRole('button', { name: /^Model — / }));
-    const off = screen.getByRole('menuitem', { name: /^Qwen Max/ });
-    fireEvent.click(off);
+    fireEvent.click(screen.getByRole('menuitem', { name: /^Qwen Max/ }));
     expect(
       screen
         .getAllByRole('menuitem')
@@ -291,19 +655,15 @@ describe('the three menus under the composer', () => {
       'Claude Sonnet, In use',
       'Qwen Max, Not available, Not served to visitors.',
     ]);
+    expect(screen.getByText(EQUIPMENT_WORDS.modelChosen)).toBeTruthy();
   });
 
-  it('say that an application with no server uses none', () => {
+  it('is not drawn when no model is known', () => {
     render(
       <ThemeProvider>
-        <EquipmentBar
-          equipment={{ ...live(), servers: [], skills: [], models: [] }}
-        />
+        <EquipmentModelMenu equipment={{ ...live(), models: [] }} />
       </ThemeProvider>,
     );
-    fireEvent.click(screen.getByRole('button', { name: 'MCP servers — none' }));
-    expect(screen.getByText(EQUIPMENT_WORDS.none.servers)).toBeTruthy();
-    // No model known: no model menu, rather than an empty one.
     expect(screen.queryByRole('button', { name: /^Model — / })).toBeNull();
   });
 });

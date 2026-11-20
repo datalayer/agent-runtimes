@@ -866,26 +866,27 @@ def test_the_agentspecs_offered_on_datalayer_are_the_enabled_ones() -> None:
         launch.choose_agentspec(specs, can_ask=True, ask=lambda *a: None)
 
 
-def test_loop_offers_the_seven_agents_the_catalogue_enables() -> None:
+def test_loop_offers_the_eight_agents_the_catalogue_enables() -> None:
     """agentspecs 0.0.187 (the user, 14 November 2026): the cloud picker and the
-    local one offer the agents the catalogue enables and lists, the seven seed
+    local one offer the agents the catalogue enables and lists, the eight seed
     agents (the Traveller since 15 November 2026, the Jupyter Data Analyst since
-    18 November 2026); example-simple, enabled and not listed, stays the neutral
-    default."""
+    18 November 2026, the Analyst since 19 November 2026); example-simple,
+    enabled and not listed, stays the neutral default."""
     from agent_runtimes.chat import cli
     from agent_runtimes.specs.agents import get_agent_spec, list_agentspecs
 
-    seven = [
+    seed = [
         "jupyter-data-analyst",
         "worker-accountant",
+        "worker-analyst",
         "worker-marketer",
         "worker-shopper",
         "worker-steward-aws",
         "worker-terra",
         "worker-traveller",
     ]
-    assert [value for _, value in launch.agentspec_choices(list_agentspecs())] == seven
-    assert cli.offered_agentspec_ids() == seven
+    assert [value for _, value in launch.agentspec_choices(list_agentspecs())] == seed
+    assert cli.offered_agentspec_ids() == seed
     simple = get_agent_spec("example-simple")
     assert simple is not None and simple.enabled and not simple.listed
     assert launch.choose_agentspec(list_agentspecs(), can_ask=False) == "example-simple"
