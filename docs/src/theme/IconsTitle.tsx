@@ -4,7 +4,7 @@
  */
 
 import React from "react";
-import { Box } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
 
 type Props = {
   icon1: JSX.Element,

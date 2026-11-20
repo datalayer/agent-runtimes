@@ -25,6 +25,7 @@
     "@docusaurus/theme-mermaid": "^3.10.2",
     "@mdx-js/react": "^3.0.1",
     "@primer/octicons-react": "^19.42.0",
+    "@primer/primitives": "^10.7.0",
     "@primer/react": "^37.31.0",
     "clsx": "^2.1.1",
     "docusaurus-lunr-search": "^3.5.0",
@@ -33,6 +34,7 @@
     "react-calendly": "^4.1.0",
     "react-dom": "18.3.1",
     "react-modal-image": "^2.5.0",
+    "styled-components": "^5.3.10",
     "yaml": "^2.9.0"
   },
   "devDependencies": {
