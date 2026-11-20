@@ -70,6 +70,7 @@ class TestTheWorkerAppliesItToTheRun:
         limits = usage_limits_for(
             {"inputTokens": 1000, "outputTokens": 100, "cost": 0.5, "currency": "USD"}
         )
+        assert limits is not None
         assert (
             limits.input_tokens_limit,
             limits.output_tokens_limit,
