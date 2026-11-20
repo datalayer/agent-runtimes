@@ -86,7 +86,7 @@ const SEED: Record<string, [string, string]> = {
   'worker-terra': ['demo-terra', 'earth-header'],
   'worker-steward-aws': ['demo-aws-steward', 'aws-header'],
   'jupyter-data-analyst': ['demo-jupyter-data-analyst', 'notebook-header'],
-  'worker-analyst': ['demo-analyst', 'analysis-header'],
+  'worker-functional-analyst': ['demo-functional-analyst', 'analysis-header'],
 };
 
 const item = (ui: string, id: string): UiHeaderItemSpec =>

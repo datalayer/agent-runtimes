@@ -6,7 +6,7 @@
 /**
  * `@datalayer/loop-plugin-page-excalidraw` — drawings the agent makes in the
  * conversation, on an Excalidraw canvas, with frontend tools run in the page
- * (the user, 19 November 2026: the Analyst's Excalidraw tools).
+ * (the user, 19 November 2026: the Functional Analyst's Excalidraw tools).
  *
  * The tools are `@datalayer/reactor-excalidraw`'s eleven, bound to the
  * conversation's drawings: insert a drawing, read it, add, change, connect

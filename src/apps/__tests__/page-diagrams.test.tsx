@@ -4,8 +4,8 @@
  */
 
 /**
- * The Analyst's canvas and diagrams, drawn in the page with frontend tools
- * (the user, 19 November 2026: the Analyst's Excalidraw and Mermaid tools).
+ * The Functional Analyst's canvas and diagrams, drawn in the page with frontend tools
+ * (the user, 19 November 2026: the Functional Analyst's Excalidraw and Mermaid tools).
  *
  * - the tools are @datalayer/reactor-excalidraw's and
  *   @datalayer/reactor-mermaid's, named as the packages name them, each with

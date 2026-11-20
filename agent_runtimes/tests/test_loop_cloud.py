@@ -870,7 +870,7 @@ def test_loop_offers_the_eight_agents_the_catalogue_enables() -> None:
     """agentspecs 0.0.187 (the user, 14 November 2026): the cloud picker and the
     local one offer the agents the catalogue enables and lists, the eight seed
     agents (the Traveller since 15 November 2026, the Jupyter Data Analyst since
-    18 November 2026, the Analyst since 19 November 2026); example-simple,
+    18 November 2026, the Functional Analyst since 19 November 2026); example-simple,
     enabled and not listed, stays the neutral default."""
     from agent_runtimes.chat import cli
     from agent_runtimes.specs.agents import get_agent_spec, list_agentspecs
@@ -878,7 +878,7 @@ def test_loop_offers_the_eight_agents_the_catalogue_enables() -> None:
     seed = [
         "jupyter-data-analyst",
         "worker-accountant",
-        "worker-analyst",
+        "worker-functional-analyst",
         "worker-marketer",
         "worker-shopper",
         "worker-steward-aws",

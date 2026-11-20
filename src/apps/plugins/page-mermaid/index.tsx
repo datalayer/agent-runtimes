@@ -6,7 +6,7 @@
 /**
  * `@datalayer/loop-plugin-page-mermaid` — Mermaid diagrams the agent writes
  * in the conversation, with frontend tools run in the page (the user, 19
- * November 2026: the Analyst's Mermaid tools).
+ * November 2026: the Functional Analyst's Mermaid tools).
  *
  * The tools are `@datalayer/reactor-mermaid`'s six: write a diagram (checked
  * with Mermaid's parser first), read it back, list them, check a source,

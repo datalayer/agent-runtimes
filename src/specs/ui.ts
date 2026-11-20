@@ -1154,7 +1154,7 @@ export const ANALYSIS_HEADER_UI_0_0_1: UISpec = {
   version: '0.0.1',
   name: 'Analysis header',
   description:
-    "The Analyst's title bar: what is being analysed, whether its diagrams parse, and a button that asks for it on the canvas.",
+    "The Functional Analyst's title bar: what is being analysed, whether its diagrams parse, and a button that asks for it on the canvas.",
   emoji: '📐',
   octicon: 'workflow',
   plugin: '@datalayer/loop-plugin-analysis-header',

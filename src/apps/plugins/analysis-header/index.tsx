@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-analysis-header` — the Analyst's title bar: what
+ * `@datalayer/loop-plugin-analysis-header` — the Functional Analyst's title bar: what
  * is being analysed, whether its diagrams parse (said by the agent from what
  * Mermaid's parser answered), and a Draw on the canvas button.
  *
