@@ -1017,6 +1017,9 @@ def test_a_cloud_rehearsal_of_a_catalogue_scene_is_kept_as_its_last(
 
     monkeypatch.setattr(scenes, "write_played", write_played)
     monkeypatch.setattr(scenes, "scene_played", lambda _id: None)
+    # The command keeps a verdict through the scenes module it resolves: the one
+    # patched here, whatever another test reloaded.
+    monkeypatch.setattr(scenes_command, "_require_scenes", lambda: scenes)
 
     def stage_in_cloud(scene: Any, **kwargs: Any) -> Any:
         members, entry = members_of(scene)
