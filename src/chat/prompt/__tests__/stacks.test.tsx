@@ -171,6 +171,33 @@ describe('how a band lays out', () => {
 
     await act(async () => root.unmount());
   });
+
+  it('wraps a band with a live part, so the two never overlap', async () => {
+    const { container, root } = await render(
+      <BelowPromptFooter
+        stacks={[
+          {
+            id: 'session-controls',
+            content: <span>Bedrock Claude Sonnet 4.6</span>,
+            live: <span>Limited preview 9/10 turns today</span>,
+          },
+        ]}
+      />,
+    );
+
+    // Beside a panel the chat is narrow: the live part goes to a line of its
+    // own instead of being drawn over the model's name (20 November 2026).
+    const band = container.querySelector<HTMLElement>(
+      '[data-prompt-stack="session-controls"]',
+    )!;
+    expect(window.getComputedStyle(band).flexWrap).toBe('wrap');
+    const content = band.querySelector<HTMLElement>(
+      '[data-prompt-stack-content]',
+    )!;
+    expect(window.getComputedStyle(content).minWidth).not.toBe('0px');
+
+    await act(async () => root.unmount());
+  });
 });
 
 describe('a band clear of the floating assistant', () => {
