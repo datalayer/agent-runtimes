@@ -210,7 +210,9 @@ def generate_typescript_code(specs: list[dict[str, Any]], specs_dir: Path) -> st
     # The agent registry's helper stays behind with the registry cut above:
     # nothing left in the head reads it.
     head = head.replace(
-        "import { isAgentspecComponentOptional } from '../../types/agentspecs';\n", "", 1
+        "import { isAgentspecComponentOptional } from '../../types/agentspecs';\n",
+        "",
+        1,
     )
     head = re.sub(
         r"from '\.\./(mcpServers|skills|backendTools|frontendTools)'",
