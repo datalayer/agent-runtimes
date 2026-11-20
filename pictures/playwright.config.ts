@@ -30,8 +30,14 @@ export default defineConfig({
   workers: 1,
   fullyParallel: false,
   retries: 0,
+  // A page that never renders fails every picture the same way, four minutes
+  // each: two failures say it, rather than the job's limit cancelling a run
+  // that says nothing (every run from 2 to 20 November 2026).
+  maxFailures: 2,
   timeout: 300_000,
-  reporter: [['list']],
+  // The github reporter prints each failure's message and annotations in the
+  // job's log, where the list reporter shows only the test's name.
+  reporter: [['list'], ['github']],
   expect: {
     toHaveScreenshot: {
       // A pixel counts as different past this colour distance (0 to 1),
@@ -61,6 +67,9 @@ export default defineConfig({
     reducedMotion: 'reduce',
     locale: 'en-US',
     timezoneId: 'UTC',
+    // What a failed picture saw, uploaded with the differences.
+    trace: 'retain-on-failure',
+    screenshot: 'only-on-failure',
   },
   webServer: {
     command: 'npx vite --config vite.pictures.config.ts',
@@ -68,7 +77,8 @@ export default defineConfig({
     url: `http://127.0.0.1:${PORT}/html/pictures.html`,
     reuseExistingServer: false,
     timeout: 300_000,
-    stdout: 'ignore',
+    // The dev server's own words: an import it cannot resolve shows here.
+    stdout: 'pipe',
     stderr: 'pipe',
   },
 });
