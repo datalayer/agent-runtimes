@@ -100,13 +100,11 @@ jobs:
       if: inputs.run-format-check
       run: npm run format:check
       working-directory: ${{ inputs.working-directory }}
-      continue-on-error: true
 
     - name: Check code formatting (all workspaces)
       if: inputs.run-format-check
       run: npm run format:check:all
       working-directory: ${{ inputs.working-directory }}
-      continue-on-error: true
 
     - name: Run ESLint
       if: inputs.run-lint

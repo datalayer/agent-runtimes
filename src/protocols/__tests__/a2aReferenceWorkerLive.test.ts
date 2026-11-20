@@ -71,6 +71,8 @@ async function waitForReady(baseUrl: string, timeoutMs: number): Promise<void> {
 
 const available = await canRunReferenceWorker();
 
+// Skipped where agent-teams' reference worker is not importable by python3 (this
+// repository's CI installs no agent-teams): the test talks to that live worker.
 describe.skipIf(!available)(
   'A2AAdapter against a live reference-worker process',
   () => {

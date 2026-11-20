@@ -29,6 +29,7 @@ const MERCHANT = process.env.UCP_MERCHANT ?? '';
 /** A local test token: the store accepts any; it is never shown. */
 const TOKEN = 'tok_test_4242_never_shown';
 
+// Skipped unless UCP_MERCHANT names a running test merchant: CI starts none.
 describe.skipIf(!MERCHANT)(
   'UCP: the TypeScript client at the Python store',
   () => {
