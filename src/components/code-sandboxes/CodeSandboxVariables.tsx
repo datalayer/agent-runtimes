@@ -219,11 +219,6 @@ export function CodeSandboxVariables(
               ? trans.__('Deselect all')
               : trans.__('Select all')
           }
-          title={
-            selectedVariables.length === nRows
-              ? trans.__('Deselect all')
-              : trans.__('Select all')
-          }
           icon={
             selectedVariables.length === nRows
               ? checkIcon.react
@@ -246,11 +241,6 @@ export function CodeSandboxVariables(
         return (
           <IconButton
             aria-label={
-              isSelected
-                ? trans.__('Deselect: %1', row.name)
-                : trans.__('Select: %1', row.name)
-            }
-            title={
               isSelected
                 ? trans.__('Deselect: %1', row.name)
                 : trans.__('Select: %1', row.name)

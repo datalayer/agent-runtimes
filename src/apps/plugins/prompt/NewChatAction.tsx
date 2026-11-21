@@ -34,7 +34,6 @@ export function NewChatAction({
     <IconButton
       icon={PlusIcon}
       aria-label="New conversation"
-      title="New conversation"
       variant="invisible"
       size="small"
       onClick={() => void workspace.submit('/new')}
