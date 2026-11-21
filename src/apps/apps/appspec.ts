@@ -266,22 +266,39 @@ export function uiFor(kind: AppKind, facts: AppUiFacts = {}): UiChoice[] {
 export const COMPOSER_PORTAL = 'composer-portal';
 
 /**
+ * The UI plugin every application has in its chat's footer, listed in its
+ * `ui` or not (the user, 21 November 2026: "all our apps should render with
+ * that plugin"): the plug button opening Reactor's plugins manager — unless
+ * its spec leaves it out (`interface.plugin_manager_disabled`). agentspecs'
+ * `PLUGIN_MANAGER`.
+ */
+export const PLUGIN_MANAGER = 'plugin-manager';
+
+/**
  * The UI plugins an application's chat mounts: its `ui` as written, then the
- * Composer button when it does not list it and does not leave it out. A
- * decision has no chat: its `ui` alone. What `appPreset` draws; its document
- * keeps only what it says.
+ * Composer button and the plugins manager's button, each when it does not
+ * list it and does not leave it out. A decision has no chat: its `ui` alone.
+ * What `appPreset` draws; its document keeps only what it says.
  */
 export function drawnUiOf(
   app: Pick<AppSpec, 'kind' | 'ui' | 'interface'>,
 ): UiChoice[] {
-  if (
-    app.kind === 'decision' ||
-    app.interface.composerPortalDisabled === true ||
-    app.ui.some(choice => choice.plugin === COMPOSER_PORTAL)
-  ) {
-    return [...app.ui];
+  const drawn = [...app.ui];
+  if (app.kind === 'decision') {
+    return drawn;
   }
-  return [...app.ui, { plugin: COMPOSER_PORTAL }];
+  const lists = (plugin: string) =>
+    app.ui.some(choice => choice.plugin === plugin);
+  if (
+    app.interface.composerPortalDisabled !== true &&
+    !lists(COMPOSER_PORTAL)
+  ) {
+    drawn.push({ plugin: COMPOSER_PORTAL });
+  }
+  if (app.interface.pluginManagerDisabled !== true && !lists(PLUGIN_MANAGER)) {
+    drawn.push({ plugin: PLUGIN_MANAGER });
+  }
+  return drawn;
 }
 
 /** The UI plugins an application is drawn with, by what its spec says (`uiFor`). */
@@ -1343,6 +1360,10 @@ function parseInterface(data: Data, kind: AppKind): AppInterfaceSpec {
   if (data.composer_portal_disabled === true) {
     parsed.composerPortalDisabled = true;
   }
+  // It leaves the plugins manager's button out: said only when it does.
+  if (data.plugin_manager_disabled === true) {
+    parsed.pluginManagerDisabled = true;
+  }
   return parsed;
 }
 
@@ -1688,7 +1709,10 @@ export function parseAppspec(document: unknown): ParsedAppspec {
  */
 export function uiProblems(
   app: Pick<AppSpec, 'ui' | 'enabled'> & {
-    interface?: Pick<AppSpec['interface'], 'composerPortalDisabled'>;
+    interface?: Pick<
+      AppSpec['interface'],
+      'composerPortalDisabled' | 'pluginManagerDisabled'
+    >;
   },
 ): string[] {
   const problems: string[] = [];
@@ -1699,6 +1723,15 @@ export function uiProblems(
   ) {
     problems.push(
       `It lists the UI plugin '${COMPOSER_PORTAL}' and leaves it out (\`interface.composer_portal_disabled\`): say one.`,
+    );
+  }
+  // So is the plugins manager's button: never both.
+  if (
+    app.interface?.pluginManagerDisabled === true &&
+    app.ui.some(choice => choice.plugin === PLUGIN_MANAGER)
+  ) {
+    problems.push(
+      `It lists the UI plugin '${PLUGIN_MANAGER}' and leaves it out (\`interface.plugin_manager_disabled\`): say one.`,
     );
   }
   const seen: string[] = [];
@@ -2100,6 +2133,9 @@ function dumpInterface(spec: AppInterfaceSpec, kind: AppKind): Data {
   writer.list('outputs', spec.outputs ?? []);
   if (spec.composerPortalDisabled === true) {
     writer.data.composer_portal_disabled = true;
+  }
+  if (spec.pluginManagerDisabled === true) {
+    writer.data.plugin_manager_disabled = true;
   }
   return writer.data;
 }

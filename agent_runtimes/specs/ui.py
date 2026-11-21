@@ -14,6 +14,7 @@ from typing import Any, Callable, Dict, List, Literal, Mapping, Optional, Union
 from agent_runtimes.types import (
     ComponentBindingsSpec,
     ComponentSpec,
+    UiBackendImplementationSpec,
     UiContributionsSpec,
     UiImplementationSpec,
     UISpec,
@@ -2908,6 +2909,37 @@ PAP_SIGN_IN_UI_0_0_1 = UISpec(
     components=[],
 )
 
+PLUGIN_MANAGER_UI_0_0_1 = UISpec(
+    id="plugin-manager",
+    version="0.0.1",
+    name="Plugins",
+    description="A plug button in the chat's footer that opens the plugins manager in a dialog over the page: every plugin of the application's platform, filtered by name, each with a switch to turn it off and back on while the application runs. Every application has it, listed in its `ui` or not, unless its spec leaves it out (`interface.plugin_manager_disabled: true`). Needs no connection: an anonymous visitor has it.",
+    emoji="🔌",
+    octicon="plug",
+    plugin="@datalayer/loop-plugin-plugin-manager",
+    folder="plugin-manager",
+    implementation=UiImplementationSpec(
+        package="@datalayer/agent-runtimes",
+        module="lib/apps/plugins/plugin-manager",
+        export="pluginManagerPlugin",
+        kind="factory",
+    ),
+    per=None,
+    contributions=UiContributionsSpec(
+        slots=["loop.status"],
+        points=[],
+        commands=[],
+    ),
+    contribution_points=[],
+    settings={},
+    renderers=[],
+    placements=["footer", "header"],
+    header=None,
+    supersedes=[],
+    catalog="",
+    components=[],
+)
+
 PRODUCT_CARDS_UI_0_0_1 = UISpec(
     id="product-cards",
     version="0.0.1",
@@ -3778,6 +3810,7 @@ UI_CATALOGUE: Dict[str, UISpec] = {
     "page-sheet": PAGE_SHEET_UI_0_0_1,
     "pap-purchase": PAP_PURCHASE_UI_0_0_1,
     "pap-sign-in": PAP_SIGN_IN_UI_0_0_1,
+    "plugin-manager": PLUGIN_MANAGER_UI_0_0_1,
     "product-cards": PRODUCT_CARDS_UI_0_0_1,
     "product-comparison": PRODUCT_COMPARISON_UI_0_0_1,
     "prompt": PROMPT_UI_0_0_1,

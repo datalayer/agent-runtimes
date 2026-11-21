@@ -1,6 +1,6 @@
 {
   "name": "@datalayer/agent-runtimes",
-  "version": "1.7.2",
+  "version": "1.7.3",
   "type": "module",
   "workspaces": [
     ".",
@@ -67,6 +67,8 @@
     "check:pack": "node scripts/check-npm-pack.mjs",
     "check": "npm run format:check && npm run lint:all && npm run type-check:all && npm run typedoc",
     "check:environments-generated": "python scripts/generate-environments-types.py --check",
+    "check:plugin-manifests": "python scripts/codegen/export_plugin_manifests.py --check --json-output src/specs/pluginManifests.generated.json --typescript-output src/specs/pluginManifests.generated.ts",
+    "specs:manifests": "python scripts/codegen/export_plugin_manifests.py --json-output src/specs/pluginManifests.generated.json --typescript-output src/specs/pluginManifests.generated.ts",
     "check:fix": "npm run format:all && npm run lint:fix && npm run type-check:all",
     "clean": "rimraf lib dist build tsconfig.tsbuildinfo",
     "clean:cache": "rimraf node_modules/.vite",

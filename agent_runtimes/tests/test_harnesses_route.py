@@ -49,7 +49,7 @@ def test_the_catalogue_is_listed_with_terms_register_and_capabilities(
     assert claude["terms"]["served_to_third_parties"] == "api_key_only"
     assert claude["capabilities"]["resume"] in {"none", "load", "native"}
     assert claude["acp"]["command"] == "npx"
-    assert claude["contributed_by"] == "agent-runtimes.sessions"
+    assert claude["contributed_by"] == "agent-runtimes.harnesses.claude-code"
 
 
 def test_one_harness_is_answered_and_an_unknown_one_refused_in_a_sentence(

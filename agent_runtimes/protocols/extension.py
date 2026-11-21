@@ -8,6 +8,11 @@ it has no lifecycle, contributes nothing and cannot be enabled. Advertised
 under ``datalayer.reactor.extensions``, so a Reactor host that discovers
 extensions gets every protocol plugin; :func:`build_protocols_reactor`
 registers it directly.
+
+Every protocol of the agentspecs catalogue is a plugin here, its manifest
+filled from its spec (:mod:`.manifest`); A2UI, AG-UI and TAP, implemented
+outside a protocol plugin, are listed by plugins that contribute nothing
+(:mod:`.listed`).
 """
 
 from __future__ import annotations
@@ -22,6 +27,7 @@ def extension() -> ReactorExtension:
     from . import core_plugin
     from .a2a.plugin import plugin as a2a
     from .agentic_commerce.plugin import plugin as agentic_commerce
+    from .listed import listed_plugins
     from .mcp import plugin as mcp
     from .pact.plugin import plugin as pact
     from .pap import plugin as pap
@@ -33,7 +39,7 @@ def extension() -> ReactorExtension:
             name=EXTENSION,
             version="1.0.0",
             display_name="Agent protocols",
-            description="MCP, A2A, Web Bot Auth, UCP, the Agentic Commerce Protocol, PACT and PAP, each a plugin; their extensions its contribution points.",
+            description="MCP, A2A, Web Bot Auth, UCP, the Agentic Commerce Protocol, PACT and PAP, each a plugin; their extensions its contribution points. A2UI, AG-UI and TAP, implemented elsewhere, listed by a plugin of their own.",
             octicon="plug",
         ),
         plugins=[
@@ -45,6 +51,7 @@ def extension() -> ReactorExtension:
             agentic_commerce(),
             pact(),
             pap(),
+            *listed_plugins(),
         ],
     )
 

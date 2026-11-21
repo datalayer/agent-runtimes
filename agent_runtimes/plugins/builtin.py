@@ -4,13 +4,14 @@
 """What agent-runtimes contributes to the session's points.
 
 One function, :func:`contribute_builtins`, called by the built-in plugin's
-``provide_contributions``: the harness catalogue to ``harness``,
-the stores to ``session.store``, ``datalayer-session/1`` to
+``provide_contributions``: the stores to ``session.store``, ``datalayer-session/1`` to
 ``session.format``, the default policy to ``session.carry``,
 the audit rows and the OTEL spans to ``session.hook``,
 the ``agentcore`` target to ``runtime.target``, and the
 ``datalayer`` and ``agentcore`` providers to ``identity.provider``.
-Each lands here as its box does; nothing is contributed twice.
+Each lands here as its box does; nothing is contributed twice. The
+harnesses of the catalogue are each a plugin of their own
+(:mod:`agent_runtimes.plugins.harnesses`), whose manifest is its spec.
 """
 
 from __future__ import annotations
@@ -18,36 +19,19 @@ from __future__ import annotations
 from typing import Any
 
 from agent_runtimes.plugins.points import (
-    HARNESSES,
     IDENTITY_PROVIDERS,
     RUNTIME_TARGETS,
     SESSION_CARRY,
     SESSION_FORMATS,
     SESSION_HOOKS,
     SESSION_STORES,
-    HarnessContribution,
 )
-
-
-def catalogue_harnesses() -> list[HarnessContribution]:
-    """The catalogue's harnesses, each with the ACP adapter that drives it."""
-    from agent_runtimes.adapters.acp_agent import acp_harness_agent
-    from agent_runtimes.specs.harnesses import HARNESS_CATALOGUE
-
-    return [
-        HarnessContribution(spec=spec, adapter=acp_harness_agent)
-        for spec in HARNESS_CATALOGUE.values()
-    ]
 
 
 def contribute_builtins(contributions: Any, *, order: int = 0) -> None:
     """Contribute today's implementations, as the built-in plugin."""
     from agent_runtimes.apps.session_store import FILE_STORE, RECORD_STORE
 
-    for harness in catalogue_harnesses():
-        contributions.contribute(
-            HARNESSES, harness, contribution_id=harness.id, order=order
-        )
     for store in (RECORD_STORE, FILE_STORE):
         contributions.contribute(
             SESSION_STORES, store, contribution_id=store.name, order=order
@@ -85,4 +69,4 @@ def contribute_builtins(contributions: Any, *, order: int = 0) -> None:
         )
 
 
-__all__ = ["catalogue_harnesses", "contribute_builtins"]
+__all__ = ["contribute_builtins"]

@@ -20,11 +20,13 @@ Points it declares:
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from reactor import PluginManifest, PluginPlatform, define_contribution_point, hookimpl
 
 from .. import DEFAULT_ORDER, DESCRIPTIONS, ProtocolDescription, first_contribution
+from ..manifest import protocol_manifest, protocol_roles
 from .client import (
     DEVICE_CODE_GRANT,
     PACT_VERSION,
@@ -55,7 +57,7 @@ DESCRIPTION = ProtocolDescription(
     name="Personal Agent Consent & Trust",
     layer="consent",
     version=PACT_VERSION,
-    roles=("personal-agent", "provider"),
+    roles=protocol_roles("pact"),
     status="partial",
     specification="https://github.com/openpactprotocol/openpactprotocol/blob/main/docs/spec.md",
     plugin=PLUGIN,
@@ -96,12 +98,11 @@ class PactPlugin:
 def plugin() -> tuple[PluginManifest, PactPlugin]:
     """The PACT plugin, as the ``agent-protocols`` Extension delivers it."""
     return (
-        PluginManifest(
+        protocol_manifest(
+            "pact",
             name=PLUGIN,
-            version="1.0.0",
-            description=f"PACT {PACT_VERSION}: a personal agent at a business, and what the person let it do.",
-            tags=["agent-protocols", "consent"],
             contribution_points=[point.id for point in POINTS],
+            points_file=Path(__file__).with_name("reactor-points.json"),
         ),
         PactPlugin(),
     )

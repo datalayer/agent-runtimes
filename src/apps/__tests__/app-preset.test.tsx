@@ -73,6 +73,9 @@ describe('the preset per kind', () => {
       // The Composer's button, every application's unless it leaves it out
       // (21 November 2026).
       '@datalayer/loop-plugin-composer-portal',
+      // The plugins manager's button, every application's unless it leaves
+      // it out (21 November 2026).
+      '@datalayer/loop-plugin-plugin-manager',
     ]);
     expect(preset.workspace).toEqual({
       editors: false,

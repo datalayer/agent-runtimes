@@ -23,12 +23,14 @@ Points it declares:
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from reactor import PluginManifest, PluginPlatform, define_contribution_point, hookimpl
 
 from .. import DEFAULT_ORDER, DESCRIPTIONS, ProtocolDescription, first_contribution
 from ..commerce import CheckoutApprover, InMemoryProposalStore, ProposalStore
+from ..manifest import protocol_manifest, protocol_roles
 from .client import AGENTIC_COMMERCE_VERSION, PaymentData, SellerCredentials
 
 PLUGIN = "agent-runtimes.protocols.agentic-commerce"
@@ -54,7 +56,7 @@ DESCRIPTION = ProtocolDescription(
     name="Agentic Commerce Protocol",
     layer="commerce",
     version=AGENTIC_COMMERCE_VERSION,
-    roles=("buyer",),
+    roles=protocol_roles("acp"),
     status="partial",
     specification="https://github.com/agentic-commerce-protocol/agentic-commerce-protocol/tree/main/spec/2026-04-17",
     plugin=PLUGIN,
@@ -86,12 +88,11 @@ class AgenticCommercePlugin:
 def plugin() -> tuple[PluginManifest, AgenticCommercePlugin]:
     """The plugin, as the ``agent-protocols`` Extension delivers it."""
     return (
-        PluginManifest(
+        protocol_manifest(
+            "acp",
             name=PLUGIN,
-            version="1.0.0",
-            description=f"Agentic Commerce Protocol {AGENTIC_COMMERCE_VERSION}: buy once approved.",
-            tags=["agent-protocols", "commerce"],
             contribution_points=[point.id for point in POINTS],
+            points_file=Path(__file__).with_name("reactor-points.json"),
         ),
         AgenticCommercePlugin(),
     )

@@ -59,6 +59,7 @@ import {
   ComposerPortalButton,
   composerPortalPlugin,
 } from './plugins/composer-portal';
+import { pluginManagerPlugin } from './plugins/plugin-manager';
 import { BasketTotalChip, basketTotalPlugin } from './plugins/basket-total';
 import { booksHeaderPlugin } from './plugins/books-header';
 import { BlueskyPostPreviewPlugin } from './plugins/bluesky-post-preview';
@@ -278,6 +279,14 @@ export const AGENT_UI_PLUGINS: Readonly<Record<string, AgentUiPlugin>> = {
     chrome: composerPortalPlugin,
     Chrome: ComposerPortalButton,
   },
+  /*
+   * The plugins of the page, from a button in the footer (the user,
+   * 21 November 2026): Reactor's plugins manager in a dialog. A Loop
+   * workspace's only — it lists the workspace's platform; a `Chat` outside
+   * one has no platform of the page's to list, so no `Chrome`. Nothing needs
+   * a connection: a visitor has it.
+   */
+  'plugin-manager': { needsConnection: false, chrome: pluginManagerPlugin },
   // Stripe (test mode).
   'stripe-checkout': { needsConnection: true, message: StripeCheckoutPlugin },
 };

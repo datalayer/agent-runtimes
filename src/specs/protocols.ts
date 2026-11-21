@@ -26,6 +26,7 @@ export const A2A_PROTOCOL_0_0_1: ProtocolSpec = {
   specVersion: '1.0',
   status: 'shipped',
   connects: 'Other agents, each at its address with its Agent Card',
+  roles: ['client', 'server'],
   packages: {
     python: ['fasta2a', 'a2a-sdk'],
     typescript: ['@a2a-js/sdk'],
@@ -46,6 +47,7 @@ export const A2UI_PROTOCOL_0_0_1: ProtocolSpec = {
   specVersion: '0.9',
   status: 'shipped',
   connects: 'The person, through components an answer draws',
+  roles: ['agent', 'renderer'],
   packages: {
     python: ['agent-runtimes'],
     typescript: ['@a2ui/react', '@a2ui/web_core'],
@@ -66,6 +68,7 @@ export const ACP_PROTOCOL_0_0_1: ProtocolSpec = {
   specVersion: '2026-04-17',
   status: 'shipped',
   connects: 'Sellers, to check out with a delegated payment',
+  roles: ['buyer'],
   packages: {
     python: ['agent-runtimes'],
     typescript: ['@datalayer/agent-runtimes'],
@@ -85,6 +88,7 @@ export const AG_UI_PROTOCOL_0_0_1: ProtocolSpec = {
   specVersion: '0.0.57 (@ag-ui/core)',
   status: 'shipped',
   connects: 'The page a person talks to the agent on',
+  roles: ['server', 'client'],
   packages: {
     python: ['ag-ui-protocol'],
     typescript: ['@ag-ui/client', '@ag-ui/core'],
@@ -104,6 +108,7 @@ export const MCP_PROTOCOL_0_0_1: ProtocolSpec = {
   specVersion: '2026-07-28 (Python), 2025-11-25 (TypeScript)',
   status: 'shipped',
   connects: 'Tools, resources and prompts served by MCP servers',
+  roles: ['client', 'server'],
   packages: {
     python: ['mcp'],
     typescript: ['@modelcontextprotocol/sdk', '@mcp-ui/client'],
@@ -123,6 +128,7 @@ export const PACT_PROTOCOL_0_0_1: ProtocolSpec = {
   specVersion: '1.0',
   status: 'shipped',
   connects: "Businesses' agents, asked for a person with their delegation",
+  roles: ['personal-agent', 'provider'],
   packages: {
     python: ['agent-runtimes'],
     typescript: ['@datalayer/agent-runtimes'],
@@ -143,6 +149,7 @@ export const PAP_PROTOCOL_0_0_1: ProtocolSpec = {
   specVersion: 'draft 1.0',
   status: 'shipped',
   connects: "Companies, as a person's agent there, or being one",
+  roles: ['personal-agent', 'company'],
   packages: {
     python: ['personal-agent-protocol'],
     typescript: ['@datalayer/personal-agent-protocol'],
@@ -164,6 +171,7 @@ export const TAP_PROTOCOL_0_0_1: ProtocolSpec = {
   specVersion: 'draft (Merchant Specifications, read 2026-10-13)',
   status: 'shipped',
   connects: 'Merchants that recognise an agent by its signature',
+  roles: ['signer', 'verifier'],
   packages: {
     python: ['agent-runtimes'],
     typescript: ['@datalayer/agent-runtimes', 'http-message-sig'],
@@ -183,6 +191,7 @@ export const UCP_PROTOCOL_0_0_1: ProtocolSpec = {
   specVersion: '2026-08-25',
   status: 'shipped',
   connects: 'Merchants, to search, check out and follow orders',
+  roles: ['shopper'],
   packages: {
     python: ['ucp-sdk', 'agent-runtimes'],
     typescript: ['@ucp-js/sdk', '@datalayer/agent-runtimes'],
@@ -204,6 +213,7 @@ export const WEB_BOT_AUTH_PROTOCOL_0_0_1: ProtocolSpec = {
   status: 'shipped',
   connects:
     "Websites, which can tell the application's requests from someone pretending",
+  roles: ['signer', 'verifier', 'directory'],
   packages: {
     python: ['agent-runtimes'],
     typescript: ['@datalayer/agent-runtimes', 'web-bot-auth'],

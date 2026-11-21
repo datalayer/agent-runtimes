@@ -38,6 +38,7 @@ export * from './gates';
 export * from './tracks';
 export * from './ops';
 export * from './apps';
+export * from './pluginManifests';
 export * from './scenes';
 export * from './actions';
 export * from './appspecSchema';

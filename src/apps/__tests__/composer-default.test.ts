@@ -14,6 +14,7 @@ import { describe, expect, it } from 'vitest';
 import { appPreset } from '../apps/AppRenderer';
 import {
   COMPOSER_PORTAL,
+  PLUGIN_MANAGER,
   drawnUiOf,
   dumpAppspec,
   emptyAppspec,
@@ -39,7 +40,11 @@ describe('the Composer’s button, every application’s', () => {
   it('is drawn for an application that does not list it, last', () => {
     const app = research();
     expect(app.ui.map(choice => choice.plugin)).not.toContain(COMPOSER_PORTAL);
-    expect(drawnUiOf(app)).toEqual([...app.ui, { plugin: COMPOSER_PORTAL }]);
+    expect(drawnUiOf(app)).toEqual([
+      ...app.ui,
+      { plugin: COMPOSER_PORTAL },
+      { plugin: PLUGIN_MANAGER },
+    ]);
     for (const visitor of [false, true]) {
       expect(names(appPreset(app, { visitor }).plugins)).toContain(
         COMPOSER_PORTAL_PLUGIN_NAME,
@@ -49,7 +54,7 @@ describe('the Composer’s button, every application’s', () => {
 
   it('is drawn once for an application that lists it, where it lists it', () => {
     const app = APP_CATALOGUE['demo-accountant'];
-    expect(drawnUiOf(app)).toEqual(app.ui);
+    expect(drawnUiOf(app)).toEqual([...app.ui, { plugin: PLUGIN_MANAGER }]);
     expect(
       names(appPreset(app).plugins).filter(
         name => name === COMPOSER_PORTAL_PLUGIN_NAME,
@@ -59,7 +64,7 @@ describe('the Composer’s button, every application’s', () => {
 
   it('is left out by `interface.composer_portal_disabled`', () => {
     const app = leftOut(research());
-    expect(drawnUiOf(app)).toEqual(app.ui);
+    expect(drawnUiOf(app)).toEqual([...app.ui, { plugin: PLUGIN_MANAGER }]);
     for (const visitor of [false, true]) {
       expect(names(appPreset(app, { visitor }).plugins)).not.toContain(
         COMPOSER_PORTAL_PLUGIN_NAME,

@@ -21,11 +21,13 @@ The agent's surfaces are the capabilities of :mod:`agent_runtimes.pap`.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 from reactor import PluginManifest, define_contribution_point, hookimpl
 
 from .. import DEFAULT_ORDER, DESCRIPTIONS, ProtocolDescription
+from ..manifest import protocol_manifest, protocol_roles
 
 PLUGIN = "agent-runtimes.protocols.pap"
 
@@ -100,7 +102,7 @@ class PapPlugin:
                 name="Personal Agent Protocol",
                 layer="consent",
                 version=_version(),
-                roles=("personal-agent", "company"),
+                roles=protocol_roles("pap"),
                 status="implemented",
                 specification="https://personalagentprotocol.org/docs/spec",
                 plugin=PLUGIN,
@@ -121,12 +123,11 @@ class PapPlugin:
 def plugin() -> tuple[PluginManifest, PapPlugin]:
     """The PAP plugin, as the ``agent-protocols`` Extension delivers it."""
     return (
-        PluginManifest(
+        protocol_manifest(
+            "pap",
             name=PLUGIN,
-            version="1.0.0",
-            description="Personal Agent Protocol: a person's agent at companies, and an application as a company, over the PAP SDK.",
-            tags=["agent-protocols", "consent"],
             contribution_points=list(POINTS),
+            points_file=Path(__file__).with_name("reactor-points.json"),
         ),
         PapPlugin(),
     )
