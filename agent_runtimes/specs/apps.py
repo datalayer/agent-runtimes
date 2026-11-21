@@ -2850,7 +2850,7 @@ DEMO_SHOP_APP_0_0_1 = AppSpec.model_validate(
             "verified": {
                 "live": [],
                 "recorded": [
-                    "Its tools are tested in process in agent-runtimes against the bundled catalogue: the products, a quote summed by the tool, a test order charging nothing."
+                    "Tested on the Datalayer test bench against the bundled catalogue: the products, a quote it sums itself, a test order charging nothing."
                 ],
                 "unverified": [
                     "Its tests have not been run as a set: no validation run is attached to it."
@@ -4152,7 +4152,7 @@ GUEST_DESK_APP_0_0_2 = AppSpec.model_validate(
             ],
             "verified": {
                 "live": [
-                    "Tried live on Datalayer as a pair on 13 October 2026: two clones joined as the Studio joins them, the business shipped at its own domain with the cloning account as its Brand; asked by Errand Runner's copy as itself, it named nobody; once the person signed in by device code and granted profile:read, it named them by their Datalayer account, with a verified receipt."
+                    "Tried live on Datalayer as a pair on 13 October 2026: two clones joined as the Studio joins them, the business shipped at its own domain with the cloning account as its Brand; asked by Errand Runner's clone as itself, it named nobody; once the person signed in by device code and granted profile:read, it named them by their Datalayer account, with a verified receipt."
                 ],
                 "recorded": [
                     "A shipped business at its own domain was tried on Datalayer on 13 October 2026: its card naming Datalayer the Provider, a registered personal agent answered alone and for a person who signed in by device code, a stranger refused."
@@ -4726,7 +4726,7 @@ MARKETER_APP_0_0_1 = AppSpec.model_validate(
                 "live": [],
                 "recorded": [],
                 "unverified": [
-                    "Not played live yet: posting to X, Bluesky and LinkedIn on the linked accounts waits for the runtime image that carries the posting tools; Discord's runs in Docker."
+                    "Not played live yet: posting to X, Bluesky and LinkedIn on the linked accounts waits for the update that carries the posting connections; Discord's runs in Docker."
                 ],
             },
         },

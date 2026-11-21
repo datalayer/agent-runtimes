@@ -24,6 +24,7 @@ import type { IRemoteServicesManager } from '../../runtimes';
 import type { RunResponseError } from '@datalayer/core/lib/api/DatalayerApi';
 import type { ICodeSandboxSnapshot, IRuntimeDesc } from '../../models';
 import { isCodeSandboxProviderAvailable } from './codeSandboxProviders';
+import { launchFailureReason } from './launchFailure';
 import {
   CodeSandboxVariant,
   codeSandboxVariantOf,
@@ -582,7 +583,19 @@ export function CodeSandboxLauncher(
             // Close the connection as we are not using it.
             connection.dispose();
           } catch (error) {
-            let msg = <Text>Failed to create the remote runtime…</Text>;
+            /*
+             * Saying what failed, not only that it did: the bare sentence
+             * stood over a launch the browser had cut while the platform
+             * created the runtime, and nothing told the two apart (the user,
+             * 21 November 2026).
+             */
+            const reason = launchFailureReason(error);
+            let msg = (
+              <Text>
+                Failed to create the remote runtime
+                {reason ? `: ${reason}` : '…'}
+              </Text>
+            );
             let level: 'danger' | 'warning' = 'danger';
             let retry = false;
             if ((error as RunResponseError).response?.status === 503) {
@@ -617,7 +630,10 @@ export function CodeSandboxLauncher(
               );
             }
             setFlashLevel(level);
-            console.error(msg, error);
+            console.error(
+              `Failed to create the remote runtime of ${selection}.`,
+              error,
+            );
             setError(msg);
             if (retry) {
               await sleep(retryDelay);
