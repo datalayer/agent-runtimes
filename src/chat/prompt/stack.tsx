@@ -192,6 +192,14 @@ export function PromptStacks({
             display={stack.layout === 'block' ? undefined : 'flex'}
             alignItems={stack.layout === 'block' ? undefined : 'center'}
             gap={stack.layout === 'block' ? undefined : (stack.gap ?? 2)}
+            // With something live, the band wraps: where the two do not fit
+            // side by side (a narrow chat beside a panel), the live part goes
+            // to a line of its own rather than under the content (the model's
+            // name drawn over *Limited preview*, 20 November 2026).
+            flexWrap={
+              stack.live && stack.layout !== 'block' ? 'wrap' : undefined
+            }
+            rowGap={stack.live && stack.layout !== 'block' ? 1 : undefined}
             pt={stack.pt === undefined ? undefined : stack.pt}
             pb={stack.pb === undefined ? undefined : stack.pb}
             borderTop={stack.bordered ? '1px solid' : undefined}
@@ -208,8 +216,8 @@ export function PromptStacks({
                 <Box
                   data-prompt-stack-content=""
                   aria-disabled={isDisabled || undefined}
+                  // Never narrower than what it holds: the band wraps instead.
                   flex="1 1 auto"
-                  minWidth={0}
                   display={stack.layout === 'block' ? undefined : 'flex'}
                   alignItems={stack.layout === 'block' ? undefined : 'center'}
                   gap={stack.layout === 'block' ? undefined : (stack.gap ?? 2)}
@@ -221,6 +229,7 @@ export function PromptStacks({
                 <Box
                   data-prompt-stack-live=""
                   flex="0 0 auto"
+                  ml="auto"
                   display="inline-flex"
                   alignItems="center"
                   gap={1}
