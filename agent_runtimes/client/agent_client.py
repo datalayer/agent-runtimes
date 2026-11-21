@@ -1180,7 +1180,7 @@ class AgentClient(
                     f"{self._available_environments_names}"
                 )
             environment = publication.environment_uid
-            burning_rate = publication.burning_rate
+            burning_rate = publication.burning_rate or 0.0
             size_class = publication.snapshot.size_class
         # A class nothing prices is refused rather than reserved at zero,
         # which would ask the platform for a runtime it will not start.
