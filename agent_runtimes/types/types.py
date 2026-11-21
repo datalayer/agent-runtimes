@@ -533,6 +533,10 @@ class ProtocolSpec(BaseModel):
     spec_version: str = Field(default="", description="The version implemented")
     status: str = Field(..., description="shipped, or planned")
     connects: str = Field(default="", description="What it connects an agent to")
+    roles: List[str] = Field(
+        ...,
+        description="What a runtime can be in it: client, server, signer, verifier…",
+    )
     packages: ProtocolPackagesSpec = Field(default_factory=ProtocolPackagesSpec)
     protocol_tools: List[str] = Field(
         default_factory=list, description="Its tools' action-class tables"
@@ -3695,6 +3699,13 @@ class AppInterfaceSpec(BaseModel):
         description=(
             "Whether its chat leaves out the Composer button (`composer-portal`), "
             "which every application's chat has in its toolbar otherwise"
+        ),
+    )
+    plugin_manager_disabled: bool = Field(
+        default=False,
+        description=(
+            "Whether it leaves out the plugins manager's button (`plugin-manager`), "
+            "which every application has in its chat's footer otherwise"
         ),
     )
 

@@ -306,6 +306,8 @@ export interface ProtocolSpec {
   status: 'shipped' | 'planned';
   /** What it connects an agent to. */
   connects: string;
+  /** What a runtime can be in it: client, server, signer, verifier… */
+  roles: string[];
   /** The packages implementing it, by language. */
   packages: { python: string[]; typescript: string[] };
   /** Its tools' action-class tables (`agentspecs/protocol-tools`). */
@@ -1742,6 +1744,12 @@ export interface AppInterfaceSpec {
    * 2026). Said only when true.
    */
   composerPortalDisabled?: boolean;
+  /**
+   * It leaves out the plugins manager's button (`plugin-manager`), which
+   * every application has in its chat's footer otherwise (the user,
+   * 21 November 2026). Said only when true.
+   */
+  pluginManagerDisabled?: boolean;
 }
 
 /** A text file a test gives with what it asks, as a person gives one on its page. */

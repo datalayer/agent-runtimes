@@ -2446,7 +2446,7 @@ def harnesses() -> None:
             f"vendor session id {spec.acp.native_session}, "
             f"runs unasked {len(table.auto_run)} command families"
         )
-        if contribution.plugin != "agent-runtimes.sessions":
+        if contribution.plugin != f"agent-runtimes.harnesses.{spec.id}":
             print(f"    {GRAY}Contributed by:{RESET} {contribution.plugin}")
         print()
     for spec in not_offered:

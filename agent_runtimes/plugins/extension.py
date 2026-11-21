@@ -13,7 +13,10 @@ platform (:func:`agent_runtimes.plugins.host.session_platform`). The
 built-in plugin, ``agent-runtimes.sessions``, contributes at ``order=0``,
 first: the seam keeps one contribution per id — the earliest as the registry
 orders them — and refuses a second by name (a plugin does not replace the
-catalogue's ``claude-code``; it contributes ``aider``).
+catalogue's ``claude-code``; it contributes ``aider``). Each harness of the
+catalogue is a plugin of its own, ``agent-runtimes.harnesses.<id>``, also at
+``order=0`` and registered right after it, its manifest its harness spec
+(:mod:`agent_runtimes.plugins.harnesses`).
 """
 
 from __future__ import annotations
@@ -30,7 +33,7 @@ DEFAULT_ORDER = 0
 
 
 class SessionsPlugin:
-    """Contributes the harness catalogue, the stores, the format, the carry
+    """Contributes the stores, the format, the carry
     policy, the hooks, the ``agentcore`` target and the ``datalayer`` and
     ``agentcore`` identity providers agent-runtimes ships (:mod:`.builtin`).
     """
@@ -63,6 +66,7 @@ def plugin() -> tuple[PluginManifest, SessionsPlugin]:
 def extension() -> ReactorExtension:
     """The entry point (``datalayer.reactor.extensions``)."""
     from agent_runtimes.guardrails.organization_harnesses import organization_plugin
+    from agent_runtimes.plugins.harnesses import harness_plugins
 
     return ReactorExtension(
         manifest=ExtensionManifest(
@@ -76,7 +80,7 @@ def extension() -> ReactorExtension:
             ),
             octicon="versions",
         ),
-        plugins=[plugin(), organization_plugin()],
+        plugins=[plugin(), *harness_plugins(), organization_plugin()],
     )
 
 

@@ -16,11 +16,13 @@ What a client reads from a server's answers, the same in both languages, is
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from reactor import PluginManifest, hookimpl
 
 from .. import DEFAULT_ORDER, DESCRIPTIONS, ProtocolDescription
+from ..manifest import protocol_manifest, protocol_roles
 
 PLUGIN = "agent-runtimes.protocols.mcp"
 POINTS: tuple = ()
@@ -44,7 +46,7 @@ class McpPlugin:
                 name="Model Context Protocol",
                 layer="transport",
                 version=_version(),
-                roles=("client", "server"),
+                roles=protocol_roles("mcp"),
                 status="implemented",
                 specification="https://modelcontextprotocol.io/specification",
                 plugin=PLUGIN,
@@ -59,12 +61,11 @@ class McpPlugin:
 def plugin() -> tuple[PluginManifest, McpPlugin]:
     """The MCP plugin, as the ``agent-protocols`` Extension delivers it."""
     return (
-        PluginManifest(
+        protocol_manifest(
+            "mcp",
             name=PLUGIN,
-            version="1.0.0",
-            description="Model Context Protocol: tools, resources and prompts over the mcp SDK.",
-            tags=["agent-protocols", "transport"],
             contribution_points=[],
+            points_file=Path(__file__).with_name("reactor-points.json"),
         ),
         McpPlugin(),
     )

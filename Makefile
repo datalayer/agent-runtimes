@@ -11,7 +11,7 @@ SHELL=/bin/bash
 	examples examples\:prod examples-local agent agent-node agent-node-local agent-node-dist agent-notebook agent-document dev-notebook dev-document jupyter-server agent-serve \
 	docker-build docker-push docker-release agent-runtime-docker-build agent-runtime-docker-push agent-runtime-docker-release node-agent-artifact-build node-agent-docker-build agent-node-docker-build agent-node-docker-push agent-node-docker-start agent-node-docker-stop agent-node-docker-logs \
 	agents list-specs specs specs-clone specs-generate specs-format \
-	specs-sandbox-variants \
+	specs-sandbox-variants specs-manifests specs-manifests-check \
 	loop loop-simple loop-data-acquisition loop-financial loop-demo loop-example-nocodemode
 
 AGENTSPECS_REPO ?= https://github.com/datalayer/agentspecs.git
@@ -438,7 +438,18 @@ loop-demo-nocodemode: # loop-demo-nocodemode
 list-specs: # list specs
 	agent-runtimes list-specs
 
-specs: specs-clone specs-sandbox-variants specs-generate specs-format ## generate Python and TypeScript code from YAML specifications (agents, teams, scenes, frames, cogs, ops, guards, gates, tracks, battles, stages, identities, applications, MCP servers, skills, envvars)
+specs: specs-clone specs-sandbox-variants specs-generate specs-format specs-manifests ## generate Python and TypeScript code from YAML specifications (agents, teams, scenes, frames, cogs, ops, guards, gates, tracks, battles, stages, identities, applications, MCP servers, skills, envvars)
+
+PLUGIN_MANIFESTS_ARGS = \
+	--json-output src/specs/pluginManifests.generated.json \
+	--typescript-output src/specs/pluginManifests.generated.ts
+
+specs-manifests: ## export the protocol and harness plugins' Reactor manifests, filled from the generated specs, for the npm package
+	$(call step,Exporting the protocol and harness plugin manifests)
+	python scripts/codegen/export_plugin_manifests.py $(PLUGIN_MANIFESTS_ARGS)
+
+specs-manifests-check: ## fail when the exported plugin manifests are not what the specs give
+	python scripts/codegen/export_plugin_manifests.py --check $(PLUGIN_MANIFESTS_ARGS)
 
 specs-sandbox-variants: ## scaffold sandbox example agent specs for all supported sandbox variants
 	$(call step,Generating sandbox variant example agents)

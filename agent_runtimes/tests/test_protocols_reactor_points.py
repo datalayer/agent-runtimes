@@ -30,6 +30,7 @@ from agent_runtimes.protocols import (
     list_protocols,
 )
 from agent_runtimes.protocols.extension import EXTENSION, extension
+from agent_runtimes.protocols.listed import LISTED_PLUGINS
 
 ROOT = Path(__file__).parents[1] / "protocols"
 FILES = sorted(ROOT.glob("**/reactor-points.json"))
@@ -73,8 +74,10 @@ def test_one_file_per_protocol_plugin():
 def test_the_extension_delivers_every_plugin_and_decides_nothing():
     platform = _platform()
     [delivered] = [e for e in platform.list_extensions() if e["name"] == EXTENSION]
+    # A protocol implemented outside a protocol plugin is listed by one that
+    # declares no point (``listed``): it has no reactor-points.json.
     expected = {data["plugin"]["python"] for data in INVENTORY.values()}
-    assert set(delivered["plugins"]) == expected
+    assert set(delivered["plugins"]) == expected | set(LISTED_PLUGINS.values())
     assert [manifest.name for manifest, _ in extension().plugins] == delivered[
         "plugins"
     ]

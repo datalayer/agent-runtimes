@@ -20,11 +20,13 @@ Points it declares:
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Mapping
 
 from reactor import PluginManifest, PluginPlatform, define_contribution_point, hookimpl
 
 from .. import DEFAULT_ORDER, DESCRIPTIONS, ProtocolDescription, first_contribution
+from ..manifest import protocol_manifest, protocol_roles
 from .client import (
     CHECKOUT_CAPABILITY,
     UCP_VERSION,
@@ -64,7 +66,7 @@ DESCRIPTION = ProtocolDescription(
     name="Universal Commerce Protocol",
     layer="commerce",
     version=UCP_VERSION,
-    roles=("shopper",),
+    roles=protocol_roles("ucp"),
     status="partial",
     specification=f"https://ucp.dev/{UCP_VERSION}/specification/overview",
     plugin=PLUGIN,
@@ -93,12 +95,11 @@ class UcpPlugin:
 def plugin() -> tuple[PluginManifest, UcpPlugin]:
     """The UCP plugin, as the ``agent-protocols`` Extension delivers it."""
     return (
-        PluginManifest(
+        protocol_manifest(
+            "ucp",
             name=PLUGIN,
-            version="1.0.0",
-            description=f"Universal Commerce Protocol {UCP_VERSION}: shop, propose, buy once approved.",
-            tags=["agent-protocols", "commerce"],
             contribution_points=[point.id for point in POINTS],
+            points_file=Path(__file__).with_name("reactor-points.json"),
         ),
         UcpPlugin(),
     )

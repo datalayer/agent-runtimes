@@ -20,11 +20,13 @@ Points it declares:
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from reactor import PluginManifest, PluginPlatform, define_contribution_point, hookimpl
 
 from .. import DEFAULT_ORDER, DESCRIPTIONS, ProtocolDescription, first_contribution
+from ..manifest import protocol_manifest, protocol_roles
 from .keys import HttpSigner
 from .sign import DISCOVERY_TYPES
 from .verify import (
@@ -56,7 +58,7 @@ DESCRIPTION = ProtocolDescription(
     name="Web Bot Auth (HTTP Message Signatures for automated traffic)",
     layer="identity",
     version=SPECIFICATION,
-    roles=("signer", "verifier", "directory"),
+    roles=protocol_roles("web-bot-auth"),
     status="implemented",
     specification="https://datatracker.ietf.org/doc/draft-ietf-webbotauth-httpsig-protocol/",
     plugin=PLUGIN,
@@ -100,12 +102,11 @@ class WebBotAuthPlugin:
 def plugin() -> tuple[PluginManifest, WebBotAuthPlugin]:
     """The entry point (``agent_runtimes.protocols``)."""
     return (
-        PluginManifest(
+        protocol_manifest(
+            "web-bot-auth",
             name=PLUGIN,
-            version="1.0.0",
-            description=f"Web Bot Auth ({SPECIFICATION}): sign an agent's requests, verify an agent's.",
-            tags=["agent-protocols", "identity"],
             contribution_points=[point.id for point in POINTS],
+            points_file=Path(__file__).with_name("reactor-points.json"),
         ),
         WebBotAuthPlugin(),
     )

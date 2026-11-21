@@ -25,11 +25,13 @@ Points:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Iterable, Mapping, Optional, Protocol, runtime_checkable
 
 from reactor import PluginManifest, PluginPlatform, define_contribution_point, hookimpl
 
 from .. import DEFAULT_ORDER, DESCRIPTIONS, ProtocolDescription
+from ..manifest import protocol_manifest, protocol_roles
 from .extensions import (
     CardExtension,
     extensions_of,
@@ -113,7 +115,7 @@ DESCRIPTION = ProtocolDescription(
     name="Agent2Agent",
     layer="transport",
     version=SPECIFICATION,
-    roles=("client", "server"),
+    roles=protocol_roles("a2a"),
     status="implemented",
     specification="https://a2a-protocol.org/latest/specification/",
     plugin=PLUGIN,
@@ -145,12 +147,11 @@ class A2APlugin:
 def plugin() -> tuple[PluginManifest, A2APlugin]:
     """The A2A plugin, as the ``agent-protocols`` Extension delivers it."""
     return (
-        PluginManifest(
+        protocol_manifest(
+            "a2a",
             name=PLUGIN,
-            version="1.0.0",
-            description="Agent2Agent 1.0: the extensions an agent card publishes and a client negotiates.",
-            tags=["agent-protocols", "transport"],
             contribution_points=[point.id for point in POINTS],
+            points_file=Path(__file__).with_name("reactor-points.json"),
         ),
         A2APlugin(),
     )

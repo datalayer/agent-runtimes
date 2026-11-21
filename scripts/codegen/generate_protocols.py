@@ -42,6 +42,9 @@ def load_protocol_specs(specs_dir: Path) -> list[dict[str, Any]]:
             raise ValueError(
                 f"{yaml_file.name}: layer one of {LAYERS}, status one of {STATUSES}"
             )
+        roles = spec.get("roles") or []
+        if not roles or len(set(roles)) != len(roles):
+            raise ValueError(f"{yaml_file.name}: roles, each said once, at least one")
         if spec.get("appspec_block") not in (None, *BLOCKS):
             raise ValueError(f"{yaml_file.name}: appspec_block one of {BLOCKS}")
         specs.append(spec)
@@ -93,6 +96,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             f"    spec_version={_s(spec.get('spec_version'))},",
             f"    status={_s(spec['status'])},",
             f"    connects={_s(spec.get('connects'))},",
+            f"    roles={json.dumps(list(spec['roles']))},",
             "    packages=ProtocolPackagesSpec(",
             f"        python={json.dumps(list(packages.get('python') or []))},",
             f"        typescript={json.dumps(list(packages.get('typescript') or []))},",
@@ -160,6 +164,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
             f"  specVersion: {_t(spec.get('spec_version'))},",
             f"  status: {_t(spec['status'])},",
             f"  connects: {_t(spec.get('connects'))},",
+            f"  roles: {json.dumps(list(spec['roles']))},",
             "  packages: {",
             f"    python: {json.dumps(list(packages.get('python') or []))},",
             f"    typescript: {json.dumps(list(packages.get('typescript') or []))},",
