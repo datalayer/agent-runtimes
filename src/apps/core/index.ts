@@ -1401,6 +1401,13 @@ export const LoopSlots = {
    * the page around the workspace.
    */
   viewOverlay: 'loop.viewOverlay',
+  /**
+   * Inside the Composer's full-screen portal (`apps/plugins/composer-portal`):
+   * how the application is built, drawn by its host — the Studio's Canvas,
+   * its spec and its Python, read only. Given `{ app }`, the Appspec shown.
+   * Empty, the portal draws its own spec and Python (`ComposerSource`).
+   */
+  composerView: 'loop.composerView',
 } as const;
 
 /**

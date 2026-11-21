@@ -71,7 +71,14 @@ export const isChromePlacement = (
 ): placement is ChromePlacement =>
   CHROME_PLACEMENTS.includes(placement as ChromePlacement);
 
-export type ChromeComponentProps = { placement: ChromePlacement };
+export type ChromeComponentProps = {
+  placement: ChromePlacement;
+  /**
+   * The agent spec of the chat, where no workspace says its application
+   * (`Chat`'s `uiAgentSpecId`): what a chrome UI reads of the agent then.
+   */
+  agentSpecId?: string;
+};
 
 export type ChromePluginOptions = {
   id: string;

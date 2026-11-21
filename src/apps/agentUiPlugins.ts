@@ -55,6 +55,10 @@ import {
   awsSavingsBadgePlugin,
 } from './plugins/aws-savings-badge';
 import { BankReconciliationPlugin } from './plugins/bank-reconciliation';
+import {
+  ComposerPortalButton,
+  composerPortalPlugin,
+} from './plugins/composer-portal';
 import { BasketTotalChip, basketTotalPlugin } from './plugins/basket-total';
 import { booksHeaderPlugin } from './plugins/books-header';
 import { BlueskyPostPreviewPlugin } from './plugins/bluesky-post-preview';
@@ -263,6 +267,17 @@ export const AGENT_UI_PLUGINS: Readonly<Record<string, AgentUiPlugin>> = {
    */
   'side-panels': { needsConnection: false, message: SidePanelsPlugin },
   notices: { needsConnection: false, message: NoticesPlugin },
+  /*
+   * How the application is built, from its chat (the user, 21 November
+   * 2026): a button in the toolbar opening its Composer full screen — its
+   * Canvas, its spec and its Python, read only. Nothing needs a connection:
+   * a visitor has it.
+   */
+  'composer-portal': {
+    needsConnection: false,
+    chrome: composerPortalPlugin,
+    Chrome: ComposerPortalButton,
+  },
   // Stripe (test mode).
   'stripe-checkout': { needsConnection: true, message: StripeCheckoutPlugin },
 };

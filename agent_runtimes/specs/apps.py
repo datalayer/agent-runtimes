@@ -1708,11 +1708,11 @@ DECK_MAKER_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-DEMO_ACCOUNTANT_APP_0_0_8 = AppSpec.model_validate(
+DEMO_ACCOUNTANT_APP_0_0_9 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "demo-accountant",
-        "version": "0.0.8",
+        "version": "0.0.9",
         "name": "Accountant",
         "kind": "chat",
         "description": "Answers questions on a set of books, such as open invoices, aged receivables, payments to match or a trial balance: a demo that reads Datalayer's demo Odoo books and changes nothing.",
@@ -1742,6 +1742,7 @@ DEMO_ACCOUNTANT_APP_0_0_8 = AppSpec.model_validate(
             {"plugin": "page-sheet", "renderer": None, "placement": "right"},
             {"plugin": "side-panels", "renderer": None, "placement": None},
             {"plugin": "notices", "renderer": None, "placement": None},
+            {"plugin": "composer-portal", "renderer": None, "placement": None},
         ],
         "pair": None,
         "rules": [
@@ -1858,11 +1859,11 @@ DEMO_ACCOUNTANT_APP_0_0_8 = AppSpec.model_validate(
     }
 )
 
-DEMO_AWS_STEWARD_APP_0_0_9 = AppSpec.model_validate(
+DEMO_AWS_STEWARD_APP_0_0_10 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "demo-aws-steward",
-        "version": "0.0.9",
+        "version": "0.0.10",
         "name": "Steward for AWS",
         "kind": "chat",
         "description": "Recommends savings on an AWS account, each with the evidence it read, the estimated monthly saving and the fix to review: a demo over findings recorded from an example account, reading no AWS.",
@@ -1884,6 +1885,7 @@ DEMO_AWS_STEWARD_APP_0_0_9 = AppSpec.model_validate(
             {"plugin": "notices", "renderer": None, "placement": None},
             {"plugin": "page-sheet", "renderer": None, "placement": "right"},
             {"plugin": "side-panels", "renderer": None, "placement": None},
+            {"plugin": "composer-portal", "renderer": None, "placement": None},
         ],
         "pair": None,
         "rules": [],
@@ -1993,11 +1995,11 @@ DEMO_AWS_STEWARD_APP_0_0_9 = AppSpec.model_validate(
     }
 )
 
-DEMO_FUNCTIONAL_ANALYST_APP_0_0_1 = AppSpec.model_validate(
+DEMO_FUNCTIONAL_ANALYST_APP_0_0_2 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "demo-functional-analyst",
-        "version": "0.0.1",
+        "version": "0.0.2",
         "name": "Functional Analyst",
         "kind": "chat",
         "description": "Works out how a system, a process or a plan fits together and draws it, as Mermaid diagrams and on an Excalidraw canvas in the page: a demo on an example system or one the visitor describes.",
@@ -2020,6 +2022,7 @@ DEMO_FUNCTIONAL_ANALYST_APP_0_0_1 = AppSpec.model_validate(
             {"plugin": "page-excalidraw", "renderer": None, "placement": "right"},
             {"plugin": "page-mermaid", "renderer": None, "placement": "right"},
             {"plugin": "side-panels", "renderer": None, "placement": None},
+            {"plugin": "composer-portal", "renderer": None, "placement": None},
         ],
         "pair": None,
         "rules": [],
@@ -2133,11 +2136,11 @@ DEMO_FUNCTIONAL_ANALYST_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-DEMO_JUPYTER_DATA_ANALYST_APP_0_0_5 = AppSpec.model_validate(
+DEMO_JUPYTER_DATA_ANALYST_APP_0_0_6 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "demo-jupyter-data-analyst",
-        "version": "0.0.5",
+        "version": "0.0.6",
         "name": "Jupyter Data Analyst",
         "kind": "chat",
         "description": "Explains a dataset, plans its analysis and reads its results, with the cell it would write for each: a demo on an example file of orders with results computed beforehand, which runs no code and opens no notebook.",
@@ -2159,6 +2162,7 @@ DEMO_JUPYTER_DATA_ANALYST_APP_0_0_5 = AppSpec.model_validate(
             {"plugin": "notices", "renderer": None, "placement": None},
             {"plugin": "page-sheet", "renderer": None, "placement": "right"},
             {"plugin": "side-panels", "renderer": None, "placement": None},
+            {"plugin": "composer-portal", "renderer": None, "placement": None},
         ],
         "pair": None,
         "rules": [],
@@ -2272,11 +2276,11 @@ DEMO_JUPYTER_DATA_ANALYST_APP_0_0_5 = AppSpec.model_validate(
     }
 )
 
-DEMO_MARKETER_APP_0_0_7 = AppSpec.model_validate(
+DEMO_MARKETER_APP_0_0_8 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "demo-marketer",
-        "version": "0.0.7",
+        "version": "0.0.8",
         "name": "Marketer",
         "kind": "chat",
         "description": "Plans a campaign and drafts the posts for X, Bluesky, LinkedIn and Discord in a brand's voice, and reads what came back: a demo on an example brand that posts nothing.",
@@ -2298,6 +2302,7 @@ DEMO_MARKETER_APP_0_0_7 = AppSpec.model_validate(
             {"plugin": "page-deck", "renderer": None, "placement": "right"},
             {"plugin": "side-panels", "renderer": None, "placement": None},
             {"plugin": "notices", "renderer": None, "placement": None},
+            {"plugin": "composer-portal", "renderer": None, "placement": None},
         ],
         "pair": None,
         "rules": [],
@@ -2886,11 +2891,11 @@ DEMO_SHOP_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-DEMO_SHOPPER_APP_0_0_12 = AppSpec.model_validate(
+DEMO_SHOPPER_APP_0_0_13 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "demo-shopper",
-        "version": "0.0.12",
+        "version": "0.0.13",
         "name": "Shopper",
         "kind": "chat",
         "description": "Finds products with their photos, compares them, builds a basket with its total and places a test order at Datalayer's Demo Shop: nothing is charged and nothing ships.",
@@ -2919,6 +2924,7 @@ DEMO_SHOPPER_APP_0_0_12 = AppSpec.model_validate(
             {"plugin": "pap-sign-in", "renderer": None, "placement": None},
             {"plugin": "shop-header", "renderer": None, "placement": None},
             {"plugin": "notices", "renderer": None, "placement": None},
+            {"plugin": "composer-portal", "renderer": None, "placement": None},
         ],
         "pap": {
             "profile": "draft-01",
@@ -3074,11 +3080,11 @@ DEMO_SHOPPER_APP_0_0_12 = AppSpec.model_validate(
     }
 )
 
-DEMO_TERRA_APP_0_0_7 = AppSpec.model_validate(
+DEMO_TERRA_APP_0_0_8 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "demo-terra",
-        "version": "0.0.7",
+        "version": "0.0.8",
         "name": "Terra",
         "kind": "chat",
         "description": "Finds satellite scenes in NASA Earthdata, compares them and explains what their figures show: a demo that searches the live catalogue and reads its figures from an example, downloading no imagery.",
@@ -3106,6 +3112,7 @@ DEMO_TERRA_APP_0_0_7 = AppSpec.model_validate(
             {"plugin": "chat", "renderer": None, "placement": None},
             {"plugin": "earth-header", "renderer": None, "placement": None},
             {"plugin": "notices", "renderer": None, "placement": None},
+            {"plugin": "composer-portal", "renderer": None, "placement": None},
         ],
         "pair": None,
         "rules": [],
@@ -3215,11 +3222,11 @@ DEMO_TERRA_APP_0_0_7 = AppSpec.model_validate(
     }
 )
 
-DEMO_TRAVELLER_APP_0_0_7 = AppSpec.model_validate(
+DEMO_TRAVELLER_APP_0_0_8 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "demo-traveller",
-        "version": "0.0.7",
+        "version": "0.0.8",
         "name": "Traveller",
         "kind": "chat",
         "description": "Plans a trip in three options with flights, a stay, a day-by-day plan and the budget: a demo that searches real flights on Kiwi.com and real restaurants and sights in Overture Maps' open data, takes its stays from an example, and books nothing.",
@@ -3261,6 +3268,7 @@ DEMO_TRAVELLER_APP_0_0_7 = AppSpec.model_validate(
             {"plugin": "chat", "renderer": None, "placement": None},
             {"plugin": "trip-header", "renderer": None, "placement": None},
             {"plugin": "notices", "renderer": None, "placement": None},
+            {"plugin": "composer-portal", "renderer": None, "placement": None},
         ],
         "pair": None,
         "rules": [],
@@ -8632,15 +8640,15 @@ APP_CATALOGUE: Dict[str, AppSpec] = {
     "data-quality": DATA_QUALITY_APP_0_0_3,
     "decide": DECIDE_APP_0_0_2,
     "deck-maker": DECK_MAKER_APP_0_0_1,
-    "demo-accountant": DEMO_ACCOUNTANT_APP_0_0_8,
-    "demo-aws-steward": DEMO_AWS_STEWARD_APP_0_0_9,
-    "demo-functional-analyst": DEMO_FUNCTIONAL_ANALYST_APP_0_0_1,
-    "demo-jupyter-data-analyst": DEMO_JUPYTER_DATA_ANALYST_APP_0_0_5,
-    "demo-marketer": DEMO_MARKETER_APP_0_0_7,
+    "demo-accountant": DEMO_ACCOUNTANT_APP_0_0_9,
+    "demo-aws-steward": DEMO_AWS_STEWARD_APP_0_0_10,
+    "demo-functional-analyst": DEMO_FUNCTIONAL_ANALYST_APP_0_0_2,
+    "demo-jupyter-data-analyst": DEMO_JUPYTER_DATA_ANALYST_APP_0_0_6,
+    "demo-marketer": DEMO_MARKETER_APP_0_0_8,
     "demo-shop": DEMO_SHOP_APP_0_0_1,
-    "demo-shopper": DEMO_SHOPPER_APP_0_0_12,
-    "demo-terra": DEMO_TERRA_APP_0_0_7,
-    "demo-traveller": DEMO_TRAVELLER_APP_0_0_7,
+    "demo-shopper": DEMO_SHOPPER_APP_0_0_13,
+    "demo-terra": DEMO_TERRA_APP_0_0_8,
+    "demo-traveller": DEMO_TRAVELLER_APP_0_0_8,
     "disaster-assessment": DISASTER_ASSESSMENT_APP_0_0_2,
     "errand-runner": ERRAND_RUNNER_APP_0_0_2,
     "event-response": EVENT_RESPONSE_APP_0_0_3,

@@ -861,7 +861,13 @@ export function Chat({
       >
         {ids.map(id => {
           const Chrome = AGENT_UI_PLUGINS[id]?.Chrome;
-          return Chrome ? <Chrome key={id} placement={placement} /> : null;
+          return Chrome ? (
+            <Chrome
+              key={id}
+              placement={placement}
+              agentSpecId={uiAgentSpecId}
+            />
+          ) : null;
         })}
       </Box>
     ) : null;
