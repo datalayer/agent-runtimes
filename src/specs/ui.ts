@@ -1900,6 +1900,29 @@ export const COMMANDS_UI_0_0_1: UISpec = {
   components: [],
 };
 
+export const COMPOSER_PORTAL_UI_0_0_1: UISpec = {
+  id: 'composer-portal',
+  version: '0.0.1',
+  name: 'Composer',
+  description:
+    "A button in the chat's toolbar that opens the application's Composer full screen: its Canvas, its spec and its Python, read only. Needs no connection: an anonymous visitor has it.",
+  emoji: '🧱',
+  octicon: 'stack',
+  plugin: '@datalayer/loop-plugin-composer-portal',
+  folder: 'composer-portal',
+  contributions: {
+    slots: ['loop.promptAction'],
+    points: [],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  placements: ['toolbar', 'header'],
+  catalog: '',
+  components: [],
+};
+
 export const DOCUMENT_TOOLBAR_UI_0_0_1: UISpec = {
   id: 'document-toolbar',
   version: '0.0.1',
@@ -3315,6 +3338,7 @@ export const UI_CATALOGUE: Record<string, UISpec> = {
   'chat-view': CHAT_VIEW_UI_0_0_1,
   chat: CHAT_UI_0_0_1,
   commands: COMMANDS_UI_0_0_1,
+  'composer-portal': COMPOSER_PORTAL_UI_0_0_1,
   'document-toolbar': DOCUMENT_TOOLBAR_UI_0_0_1,
   'document-view': DOCUMENT_VIEW_UI_0_0_1,
   document: DOCUMENT_UI_0_0_1,

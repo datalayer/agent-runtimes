@@ -21,8 +21,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import jsonschema
-
 __all__ = [
     "EVALSET_SPEC_SCHEMA",
     "EvalsetSpecError",
@@ -92,6 +90,11 @@ def validate_evalset_spec(spec: Any, *, source: str = "spec") -> dict[str, Any]:
     """
     if not isinstance(spec, dict):
         raise EvalsetSpecError(f"{source}: an evalset spec is a JSON object")
+    # Imported here, where a spec is validated: jsonschema loads its format
+    # grammars when imported (0.7 s), and this module is imported by the
+    # `evals` command group every `datalayer` command registers at start.
+    import jsonschema
+
     validator = jsonschema.Draft202012Validator(EVALSET_SPEC_SCHEMA)
     errors = sorted(
         validator.iter_errors(spec), key=lambda error: list(error.absolute_path)

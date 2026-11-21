@@ -5,9 +5,7 @@
 
 import logging
 import os
-from typing import Any, Mapping, Sequence
-
-from pydantic_ai.settings import ModelSettings
+from typing import TYPE_CHECKING, Any, Mapping, Sequence
 
 from agent_runtimes.models.local import (
     LOCAL_PROVIDERS,
@@ -19,7 +17,25 @@ from agent_runtimes.specs.models import (
 )
 from agent_runtimes.types import AIModelRuntime
 
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from pydantic_ai.settings import ModelSettings
+
 logger = logging.getLogger(__name__)
+
+
+def _deterministic_settings() -> "ModelSettings":
+    """The settings every model made here runs with: one tool call at a time, temperature 0.
+
+    pydantic_ai is imported here, where a model is made, not when this module
+    is: importing `pydantic_ai.settings` loads the whole of pydantic_ai (its
+    agent, its MCP client, fastmcp), over a second, and this module is
+    imported by `agent_runtimes.client`, which every `datalayer` command
+    group loads at start — `datalayer sandboxes create` paid it before its
+    first request.
+    """
+    from pydantic_ai.settings import ModelSettings
+
+    return ModelSettings(parallel_tool_calls=False, temperature=0)
 
 
 #: What a provider needs **in this process** when the runtime calls it itself.
@@ -405,7 +421,7 @@ def create_model_with_provider(
         return OpenAIChatModel(
             model_name,
             provider=azure_provider_with_timeout,
-            settings=ModelSettings(parallel_tool_calls=False, temperature=0),
+            settings=_deterministic_settings(),
         )
     elif model_provider.lower() == "anthropic":
         from anthropic import AsyncAnthropic
@@ -427,7 +443,7 @@ def create_model_with_provider(
         return AnthropicModel(
             model_name,
             provider=anthropic_provider,
-            settings=ModelSettings(parallel_tool_calls=False, temperature=0),
+            settings=_deterministic_settings(),
         )
     elif model_provider.lower() in ["openai", "github-copilot"]:
         from pydantic_ai.models.openai import OpenAIChatModel
@@ -449,7 +465,7 @@ def create_model_with_provider(
         return OpenAIChatModel(
             model_name,
             provider=openai_provider,
-            settings=ModelSettings(parallel_tool_calls=False, temperature=0),
+            settings=_deterministic_settings(),
         )
     elif model_provider.lower() == "cloudflare":
         # Workers AI speaks the OpenAI wire format: an OpenAI model over the
@@ -468,7 +484,7 @@ def create_model_with_provider(
         return OpenAIChatModel(
             name,
             provider=provider,
-            settings=ModelSettings(parallel_tool_calls=False, temperature=0),
+            settings=_deterministic_settings(),
         )
     elif model_provider.lower() == "openrouter":
         # OpenRouter speaks the OpenAI wire format at its own address, with the
@@ -493,7 +509,7 @@ def create_model_with_provider(
         return OpenAIChatModel(
             model_name,
             provider=provider,
-            settings=ModelSettings(parallel_tool_calls=False, temperature=0),
+            settings=_deterministic_settings(),
         )
     elif model_provider.lower() in LOCAL_PROVIDERS:
         # Ollama, LM Studio, vLLM and llama.cpp all speak OpenAI-compatible
@@ -629,7 +645,7 @@ def resolve_model_for_inference_provider(
     return OpenAIChatModel(
         model,
         provider=provider,
-        settings=ModelSettings(parallel_tool_calls=False, temperature=0),
+        settings=_deterministic_settings(),
     )
 
 

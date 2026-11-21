@@ -14,7 +14,6 @@ import requests
 from code_sandboxes import CodeSandboxClient
 from datalayer_core.utils.date import timestamp_to_local_date
 from datalayer_core.utils.urls import DatalayerURLs
-from jupyter_server.utils import url_path_join
 
 from agent_runtimes.client import AgentClient
 from agent_runtimes.displays.runtimes import display_runtimes
@@ -101,6 +100,10 @@ class RuntimeManager:
         Optional[str]
             The kernel URL if available, None otherwise.
         """
+        # Imported here: at the top it loaded jupyter_server for every
+        # `datalayer` command, each command group being registered at start.
+        from jupyter_server.utils import url_path_join
+
         if self.kernel:
             kernel_id = self.kernel["id"]
             return url_path_join(self.server_url, "api/kernels", kernel_id)

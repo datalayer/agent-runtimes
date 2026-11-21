@@ -29,6 +29,7 @@ from datalayer_core.utils.defaults import (
 )
 from datalayer_core.utils.types import Minutes
 
+from agent_runtimes.client import environment_prices
 from agent_runtimes.mixins.environments import EnvironmentsMixin
 from agent_runtimes.mixins.evals import EvalsMixin
 from agent_runtimes.mixins.events import EventsMixin
@@ -1041,6 +1042,8 @@ class AgentClient(
                     metadata=env_data,
                 )
             )
+        if unfiltered:
+            environment_prices.remember(self._urls.runtimes_url, env_objs)
         return env_objs
 
     def _publication_to_launch(
@@ -1151,13 +1154,20 @@ class AgentClient(
         Runtime
             A runtime object for code execution.
         """
-        envs = self.list_environments()
-        entry = next((env for env in envs if env.name == environment), None)
-        if entry is not None:
-            # What a second costs is READ FROM THE LISTING, never written
-            # here: a platform entry carries its pool's rate, and a user
-            # environment the rate of the size class its promoted version
-            # names.
+        # What a second costs is READ FROM THE LISTING, never written here: a
+        # platform entry carries its pool's rate, and a user environment the
+        # rate of the size class its promoted version names. A listing of the
+        # last hour is as good (`environment_prices`): the create does not
+        # list again, and the platform's answer to it says whether the
+        # environment can be launched.
+        recalled = environment_prices.recall(self._urls.runtimes_url, environment)
+        entry = None
+        if recalled is None:
+            envs = self.list_environments()
+            entry = next((env for env in envs if env.name == environment), None)
+        if recalled is not None:
+            burning_rate, size_class = recalled
+        elif entry is not None:
             burning_rate, size_class = entry.burning_rate, entry.size_class
         else:
             # Somebody else's published version is in nobody's listing but
@@ -1170,7 +1180,7 @@ class AgentClient(
                     f"{self._available_environments_names}"
                 )
             environment = publication.environment_uid
-            burning_rate = publication.burning_rate
+            burning_rate = publication.burning_rate or 0.0
             size_class = publication.snapshot.size_class
         # A class nothing prices is refused rather than reserved at zero,
         # which would ask the platform for a runtime it will not start.
@@ -1248,6 +1258,10 @@ class AgentClient(
 
         # Process the response and create RuntimesService object
         if not response.get("success", True):
+            if recalled is not None:
+                # Priced from a remembered listing and refused: the next
+                # create lists again rather than trusting it.
+                environment_prices.forget(self._urls.runtimes_url)
             message = response.get("message", "Unknown error")
             context_parts = [f"environment='{environment}'"]
             if agent_spec_id:

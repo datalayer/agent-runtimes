@@ -69,12 +69,15 @@ describe('the UI plugins an application is drawn with (R8)', () => {
     id => {
       // A header UI is the application's own addition (its agent's title
       // bar), beside what its kind is drawn with; so is a page UI, which
-      // hands its agent the frontend tool set of its own id (a deck, a sheet).
+      // hands its agent the frontend tool set of its own id (a deck, a sheet),
+      // and the Composer's button, which a demo adds to show how it is built
+      // (21 November 2026).
       expect(
         APP_CATALOGUE[id].ui.filter(
           choice =>
             !UI_CATALOGUE[choice.plugin]?.header &&
-            !getFrontendToolSpec(choice.plugin),
+            !getFrontendToolSpec(choice.plugin) &&
+            choice.plugin !== 'composer-portal',
         ),
       ).toEqual(uiOf(APP_CATALOGUE[id]));
     },

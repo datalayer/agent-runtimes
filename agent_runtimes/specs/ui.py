@@ -1862,6 +1862,31 @@ COMMANDS_UI_0_0_1 = UISpec(
     components=[],
 )
 
+COMPOSER_PORTAL_UI_0_0_1 = UISpec(
+    id="composer-portal",
+    version="0.0.1",
+    name="Composer",
+    description="A button in the chat's toolbar that opens the application's Composer full screen: its Canvas, its spec and its Python, read only. Needs no connection: an anonymous visitor has it.",
+    emoji="🧱",
+    octicon="stack",
+    plugin="@datalayer/loop-plugin-composer-portal",
+    folder="composer-portal",
+    per=None,
+    contributions=UiContributionsSpec(
+        slots=["loop.promptAction"],
+        points=[],
+        commands=[],
+    ),
+    contribution_points=[],
+    settings={},
+    renderers=[],
+    placements=["toolbar", "header"],
+    header=None,
+    supersedes=[],
+    catalog="",
+    components=[],
+)
+
 DOCUMENT_TOOLBAR_UI_0_0_1 = UISpec(
     id="document-toolbar",
     version="0.0.1",
@@ -3289,6 +3314,7 @@ UI_CATALOGUE: Dict[str, UISpec] = {
     "chat-view": CHAT_VIEW_UI_0_0_1,
     "chat": CHAT_UI_0_0_1,
     "commands": COMMANDS_UI_0_0_1,
+    "composer-portal": COMPOSER_PORTAL_UI_0_0_1,
     "document-toolbar": DOCUMENT_TOOLBAR_UI_0_0_1,
     "document-view": DOCUMENT_VIEW_UI_0_0_1,
     "document": DOCUMENT_UI_0_0_1,

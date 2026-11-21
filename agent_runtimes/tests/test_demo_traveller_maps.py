@@ -35,6 +35,7 @@ from agent_runtimes.tests.test_agents_create_integration import (  # noqa: F401
     _DummyRequest,
     creation_spy,
 )
+from agent_runtimes.tests.test_apps_deployment_spec_pinned import _NoSandbox
 
 DEMO_TRAVELLER = (
     Path(__file__).resolve().parents[2]
@@ -101,6 +102,13 @@ def visitors(monkeypatch: pytest.MonkeyPatch):
     use_secrets_reader(reader)
     lifecycle = _Lifecycle()
     monkeypatch.setattr(agents_route, "get_mcp_lifecycle_manager", lambda: lifecycle)
+    # The worker's spec asks for a jupyter-server sandbox: the real manager started
+    # a Jupyter server and a kernel connection that nothing stopped, and the kernel
+    # client's thread kept the test process alive after its last test.
+    monkeypatch.setattr(
+        "agent_runtimes.services.code_sandbox_manager.get_code_sandbox_manager",
+        lambda: _NoSandbox(),
+    )
     yield SimpleNamespace(held=held, read_with=read_with, lifecycle=lifecycle)
     use_secrets_reader(None)
     battle_books.forget_books_key()
