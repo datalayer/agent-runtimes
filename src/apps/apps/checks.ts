@@ -1161,6 +1161,11 @@ export function documentShapeProblems(document: unknown): string[] {
       typeof ui.composer_portal_disabled !== 'boolean'
     )
       at('interface.composer_portal_disabled', 'is true or false');
+    if (
+      ui.plugin_manager_disabled !== undefined &&
+      typeof ui.plugin_manager_disabled !== 'boolean'
+    )
+      at('interface.plugin_manager_disabled', 'is true or false');
     texts(ui.components, 'interface.components');
     const starter = (item: Raw, where: string) => {
       required(item, 'label', where);

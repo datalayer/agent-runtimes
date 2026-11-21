@@ -878,6 +878,13 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           title: 'Composer Portal Disabled',
           type: 'boolean',
         },
+        plugin_manager_disabled: {
+          default: false,
+          description:
+            "Whether it leaves out the plugins manager's button (the `plugin-manager` UI plugin), which every application has in its chat's footer otherwise, without listing it in `ui`: its plugins are then not listed nor switched on and off from its page. An application that sets it does not list `plugin-manager` in `ui`",
+          title: 'Plugin Manager Disabled',
+          type: 'boolean',
+        },
       },
       title: 'AppInterface',
       type: 'object',
@@ -3020,7 +3027,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     },
     ui: {
       description:
-        'Its UI plugins, each `{plugin, renderer}`: a plugin of `agentspecs/ui`, each once, and the renderer of `agentspecs/ui-renderers` it is exposed through, when it is — one the plugin may be exposed through, and one that is not enabled only while the application is not offered. Its chat has the Composer button (`composer-portal`) in its toolbar besides, listed or not, unless `interface.composer_portal_disabled` leaves it out',
+        "Its UI plugins, each `{plugin, renderer}`: a plugin of `agentspecs/ui`, each once, and the renderer of `agentspecs/ui-renderers` it is exposed through, when it is — one the plugin may be exposed through, and one that is not enabled only while the application is not offered. Its chat has the Composer button (`composer-portal`) in its toolbar besides, listed or not, unless `interface.composer_portal_disabled` leaves it out; and the plugins manager's button (`plugin-manager`) in its footer, listed or not, unless `interface.plugin_manager_disabled` leaves it out",
       items: {
         $ref: '#/$defs/UiChoice',
       },

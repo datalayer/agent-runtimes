@@ -56,6 +56,7 @@ CAMEL = {
     "backend_tools": "backendTools",
     "avatar_alone": "avatarAlone",
     "composer_portal_disabled": "composerPortalDisabled",
+    "plugin_manager_disabled": "pluginManagerDisabled",
     "settings_ui": "settingsUi",
     "custom_components": "customComponents",
     # Personal Agent Protocol (pap.connections[], pap.company, its operations).
@@ -138,6 +139,9 @@ def load_specs(specs_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         # The Composer button is every chat's: only an application leaving it out says so.
         if spec["interface"].get("composer_portal_disabled") is False:
             del spec["interface"]["composer_portal_disabled"]
+        # So is the plugins manager's button: only an application leaving it out says so.
+        if spec["interface"].get("plugin_manager_disabled") is False:
+            del spec["interface"]["plugin_manager_disabled"]
         behaviours[identity] = {
             tool: behaviour.value
             for tool, behaviour in sorted(apps_module.tool_behaviours(app).items())

@@ -7,7 +7,7 @@
  * The UI plugins as a Reactor lists them, before any of their code is
  * fetched: one lazy plugin per UI spec on a platform that is never started,
  * so a host reads each plugin's manifest (`getManifest`) — what the
- * Agentspecs pages show — without loading the 73 plugin modules.
+ * Agentspecs pages show — without loading the 74 plugin modules.
  *
  * A lazy plugin's reference *is* its manifest, and its `load` the entry
  * point: each reference here spreads the same `uiManifestOfSpec` its plugin
@@ -96,6 +96,7 @@ export const UI_PLUGIN_MODULES: Record<
   'page-sheet': () => import('./plugins/page-sheet'),
   'pap-purchase': () => import('./plugins/pap-purchase'),
   'pap-sign-in': () => import('./plugins/pap-sign-in'),
+  'plugin-manager': () => import('./plugins/plugin-manager'),
   'product-cards': () => import('./plugins/product-cards'),
   'product-comparison': () => import('./plugins/product-comparison'),
   prompt: () => import('./plugins/prompt'),
