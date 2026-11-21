@@ -11,13 +11,14 @@
  * `<body>`, so that no card the chat sits in holds it.
  *
  * What fills it is its host's (`LoopSlots.composerView`, given the Appspec)
- * when the host has contributed one, otherwise `ComposerSource`.
+ * when the host has contributed one, else the view its host handed through
+ * `ComposerViewProvider`, otherwise `ComposerSource`.
  *
  * @module apps/plugins/composer-portal/ComposerPortal
  */
 
 import type { JSX, RefObject } from 'react';
-import { useMemo } from 'react';
+import { useContext, useMemo } from 'react';
 import { Dialog } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { useOptionalSlotComponents } from '@datalayer/reactor/react';
@@ -26,6 +27,7 @@ import type { AppSpec } from '../../../types/agentspecs';
 import { agentAppspec } from '../../Application';
 import { LoopSlots } from '../../core';
 import { COMPOSER_PORTAL_WORDS } from './words';
+import { ComposerViewContext } from './context';
 import { ComposerSource } from './ComposerSource';
 
 /** The application shown: the workspace's, else the chat's agent as an application. */
@@ -68,6 +70,8 @@ export function ComposerPortal({
   );
   // The host's own Composer, when it contributed one (a Loop workspace's).
   const views = useOptionalSlotComponents(LoopSlots.composerView);
+  // Else the one its host handed through the context (a `Chat` outside a workspace).
+  const HostView = useContext(ComposerViewContext);
   if (!app) {
     return null;
   }
@@ -88,6 +92,8 @@ export function ComposerPortal({
             }) => JSX.Element | null;
             return <View key={`${entry.slot}:${entry.id}`} app={app} />;
           })
+        ) : HostView ? (
+          <HostView app={app} />
         ) : (
           <ComposerSource app={app} />
         )}

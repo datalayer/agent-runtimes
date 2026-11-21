@@ -45,6 +45,7 @@ import {
   COMPOSER_PORTAL_PLUGIN_NAME,
   COMPOSER_PORTAL_WORDS,
   ComposerPortalButton,
+  ComposerViewProvider,
 } from '../plugins/composer-portal';
 import {
   ComposerSource,
@@ -184,6 +185,27 @@ describe('the Composer’s button', () => {
     );
     expect(dialog.querySelector('[data-composer-canvas]')).toBeNull();
     expect(hosted).toContain('demo-terra');
+  });
+
+  it('shows the view its host hands through the context where no workspace hosts the chat', async () => {
+    const HostView = ({ app }: { app: AppSpec }) => (
+      <p data-context-composer="">{app.agent}</p>
+    );
+    render(
+      themed(
+        <ComposerViewProvider value={HostView}>
+          <ComposerPortalButton agentSpecId="worker-terra" />
+        </ComposerViewProvider>,
+      ),
+    );
+    act(() =>
+      screen.getByRole('button', { name: COMPOSER_PORTAL_WORDS.open }).click(),
+    );
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog.querySelector('[data-context-composer]')?.textContent).toBe(
+      'worker-terra',
+    );
+    expect(dialog.querySelector('[data-composer-canvas]')).toBeNull();
   });
 
   it('closes with its close button', async () => {

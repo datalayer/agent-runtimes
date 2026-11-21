@@ -47,6 +47,11 @@ import {
 import { COMPOSER_PORTAL_WORDS } from './words';
 
 export { COMPOSER_PORTAL_WORDS } from './words';
+export {
+  ComposerViewContext,
+  ComposerViewProvider,
+  type ComposerViewComponent,
+} from './context';
 
 export const COMPOSER_PORTAL_PLUGIN_NAME =
   '@datalayer/loop-plugin-composer-portal';
