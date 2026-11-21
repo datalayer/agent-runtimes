@@ -1905,7 +1905,7 @@ export const COMPOSER_PORTAL_UI_0_0_1: UISpec = {
   version: '0.0.1',
   name: 'Composer',
   description:
-    "A button in the chat's toolbar that opens the application's Composer full screen: its Canvas, its spec and its Python, read only. Needs no connection: an anonymous visitor has it.",
+    "A button in the chat's toolbar that opens the application's Composer full screen: its Canvas, its spec and its Python, read only. Every application's chat has it, listed in its `ui` or not, unless its spec leaves it out (`interface.composer_portal_disabled: true`). Needs no connection: an anonymous visitor has it.",
   emoji: '🧱',
   octicon: 'stack',
   plugin: '@datalayer/loop-plugin-composer-portal',

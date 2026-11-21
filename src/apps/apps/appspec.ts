@@ -257,6 +257,33 @@ export function uiFor(kind: AppKind, facts: AppUiFacts = {}): UiChoice[] {
   return drawn;
 }
 
+/**
+ * The UI plugin every application's chat has in its toolbar, listed in its
+ * `ui` or not (the user, 21 November 2026): the Composer button, how it is
+ * built, read only — unless its spec leaves it out
+ * (`interface.composer_portal_disabled`). agentspecs' `COMPOSER_PORTAL`.
+ */
+export const COMPOSER_PORTAL = 'composer-portal';
+
+/**
+ * The UI plugins an application's chat mounts: its `ui` as written, then the
+ * Composer button when it does not list it and does not leave it out. A
+ * decision has no chat: its `ui` alone. What `appPreset` draws; its document
+ * keeps only what it says.
+ */
+export function drawnUiOf(
+  app: Pick<AppSpec, 'kind' | 'ui' | 'interface'>,
+): UiChoice[] {
+  if (
+    app.kind === 'decision' ||
+    app.interface.composerPortalDisabled === true ||
+    app.ui.some(choice => choice.plugin === COMPOSER_PORTAL)
+  ) {
+    return [...app.ui];
+  }
+  return [...app.ui, { plugin: COMPOSER_PORTAL }];
+}
+
 /** The UI plugins an application is drawn with, by what its spec says (`uiFor`). */
 export function uiOf(
   app: Pick<AppSpec, 'kind' | 'interface' | 'pap'>,
@@ -1312,6 +1339,10 @@ function parseInterface(data: Data, kind: AppKind): AppInterfaceSpec {
       parsed.theme.mode = data.theme.mode as AppThemeMode;
     }
   }
+  // It leaves the Composer button out: said only when it does.
+  if (data.composer_portal_disabled === true) {
+    parsed.composerPortalDisabled = true;
+  }
   return parsed;
 }
 
@@ -1655,8 +1686,21 @@ export function parseAppspec(document: unknown): ParsedAppspec {
  * refused —, a renderer the catalogue does not have or the plugin may not be
  * exposed through, and one not enabled while the application is offered.
  */
-export function uiProblems(app: Pick<AppSpec, 'ui' | 'enabled'>): string[] {
+export function uiProblems(
+  app: Pick<AppSpec, 'ui' | 'enabled'> & {
+    interface?: Pick<AppSpec['interface'], 'composerPortalDisabled'>;
+  },
+): string[] {
   const problems: string[] = [];
+  // The Composer button is every chat's unless it is left out: never both.
+  if (
+    app.interface?.composerPortalDisabled === true &&
+    app.ui.some(choice => choice.plugin === COMPOSER_PORTAL)
+  ) {
+    problems.push(
+      `It lists the UI plugin '${COMPOSER_PORTAL}' and leaves it out (\`interface.composer_portal_disabled\`): say one.`,
+    );
+  }
   const seen: string[] = [];
   for (const choice of app.ui) {
     const id = choice.plugin;
@@ -2054,6 +2098,9 @@ function dumpInterface(spec: AppInterfaceSpec, kind: AppKind): Data {
   }
   // The formats its answers come in, words first, when it says any.
   writer.list('outputs', spec.outputs ?? []);
+  if (spec.composerPortalDisabled === true) {
+    writer.data.composer_portal_disabled = true;
+  }
   return writer.data;
 }
 

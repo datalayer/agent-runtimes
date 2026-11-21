@@ -1712,6 +1712,12 @@ export interface AppInterfaceSpec {
    * Over A2A, its agent card's output modes. Empty: plain text alone.
    */
   outputs: string[];
+  /**
+   * Its chat leaves out the Composer button (`composer-portal`), which every
+   * application's chat has in its toolbar otherwise (the user, 21 November
+   * 2026). Said only when true.
+   */
+  composerPortalDisabled?: boolean;
 }
 
 /** A text file a test gives with what it asks, as a person gives one on its page. */

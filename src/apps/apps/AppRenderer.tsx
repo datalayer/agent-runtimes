@@ -82,7 +82,7 @@ import {
   agentUiPluginsFor,
   lockedUiPluginsFor,
 } from '../agentUiPlugins';
-import { dumpAppspec } from './appspec';
+import { drawnUiOf, dumpAppspec } from './appspec';
 import { defineAppActivityPlugin } from '../plugins/app-activity';
 import { AppElementsPlugin } from '../plugins/app-elements';
 import {
@@ -539,7 +539,9 @@ export function appPreset(
       // Its agent's own UI plugins, as its `ui` names them (the Marketer's
       // post previews, the Shopper's basket…): to a visitor, only those
       // that need no connection of theirs.
-      ...agentUiPluginsFor(app.ui, { anonymous: visitor }),
+      // The Composer button besides, every chat's unless it leaves it out
+      // (`drawnUiOf`, the user, 21 November 2026).
+      ...agentUiPluginsFor(drawnUiOf(app), { anonymous: visitor }),
       // To a visitor, what of it needs their own connection, locked in the
       // title bar, each signing them in (the user, 15 November 2026: the
       // Marketer's *Sign in to LinkedIn*).

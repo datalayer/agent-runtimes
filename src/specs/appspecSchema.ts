@@ -871,6 +871,13 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           type: 'array',
           uniqueItems: true,
         },
+        composer_portal_disabled: {
+          default: false,
+          description:
+            "Whether its chat leaves out the Composer button (the `composer-portal` UI plugin), which every application's chat has in its toolbar otherwise, without listing it in `ui`: how it is built (its Canvas, its spec, its Python) is then not shown from its chat. An application that sets it does not list `composer-portal` in `ui`",
+          title: 'Composer Portal Disabled',
+          type: 'boolean',
+        },
       },
       title: 'AppInterface',
       type: 'object',
@@ -3013,7 +3020,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     },
     ui: {
       description:
-        'Its UI plugins, each `{plugin, renderer}`: a plugin of `agentspecs/ui`, each once, and the renderer of `agentspecs/ui-renderers` it is exposed through, when it is — one the plugin may be exposed through, and one that is not enabled only while the application is not offered',
+        'Its UI plugins, each `{plugin, renderer}`: a plugin of `agentspecs/ui`, each once, and the renderer of `agentspecs/ui-renderers` it is exposed through, when it is — one the plugin may be exposed through, and one that is not enabled only while the application is not offered. Its chat has the Composer button (`composer-portal`) in its toolbar besides, listed or not, unless `interface.composer_portal_disabled` leaves it out',
       items: {
         $ref: '#/$defs/UiChoice',
       },

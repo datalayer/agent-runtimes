@@ -3661,6 +3661,13 @@ class AppInterfaceSpec(BaseModel):
             "alone when empty"
         ),
     )
+    composer_portal_disabled: bool = Field(
+        default=False,
+        description=(
+            "Whether its chat leaves out the Composer button (`composer-portal`), "
+            "which every application's chat has in its toolbar otherwise"
+        ),
+    )
 
 
 class AppTestFileSpec(BaseModel):

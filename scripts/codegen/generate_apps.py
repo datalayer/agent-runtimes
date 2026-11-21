@@ -55,6 +55,7 @@ CAMEL = {
     "decision_model": "decisionModel",
     "backend_tools": "backendTools",
     "avatar_alone": "avatarAlone",
+    "composer_portal_disabled": "composerPortalDisabled",
     "settings_ui": "settingsUi",
     "custom_components": "customComponents",
     # Personal Agent Protocol (pap.connections[], pap.company, its operations).
@@ -134,6 +135,9 @@ def load_specs(specs_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
             del deployment["hosted"]["avatar_alone"]
         if deployment.get("embedded") and deployment["embedded"].get("host") is None:
             del deployment["embedded"]["host"]
+        # The Composer button is every chat's: only an application leaving it out says so.
+        if spec["interface"].get("composer_portal_disabled") is False:
+            del spec["interface"]["composer_portal_disabled"]
         behaviours[identity] = {
             tool: behaviour.value
             for tool, behaviour in sorted(apps_module.tool_behaviours(app).items())
