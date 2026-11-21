@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Optional
 
 import typer
-from datalayer_core.base.serverapplication import launch_new_instance
 from datalayer_core.utils.urls import DatalayerURLs
 from rich.console import Console
 
@@ -172,7 +171,11 @@ def benchmarks_web(
         console.print(f"Datalayer IAM URL: {urls.iam_url}")
         console.print("[yellow]Press Ctrl+C to stop the server[/yellow]")
 
-        # Launch the Jupyter server
+        # Launch the Jupyter server. Imported here, where it runs: at the top
+        # of this module it loaded jupyter_server (about a second) for every
+        # `datalayer` command, since every command group is registered at start.
+        from datalayer_core.base.serverapplication import launch_new_instance
+
         launch_new_instance()
 
     except KeyboardInterrupt:

@@ -66,6 +66,23 @@ def _records_changed(before: Dict[str, int], after: Dict[str, int]) -> List[str]
 
 
 @pytest.fixture(autouse=True)
+def _environment_prices_of_the_test_s_own(tmp_path: Any, monkeypatch: Any) -> None:
+    """Each test keeps the environment prices it lists in a file of its own (21 November 2026).
+
+    `AgentClient.create_runtime` prices a launch from a listing of the last
+    hour, kept under the user's cache directory: a test must neither read the
+    person's prices nor be priced by another test's listing.
+    """
+    from agent_runtimes.client import environment_prices
+
+    monkeypatch.setattr(
+        environment_prices,
+        "prices_path",
+        lambda: tmp_path / "environment-prices.json",
+    )
+
+
+@pytest.fixture(autouse=True)
 def _no_test_writes_a_scene_s_rehearsal() -> Iterator[None]:
     """No test writes a scene's kept rehearsal in the installed agentspecs (20 November 2026).
 
