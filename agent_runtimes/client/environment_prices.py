@@ -74,13 +74,18 @@ def remember(runtimes_url: str, environments: Iterable[Any]) -> None:
     _write(data)
 
 
-def recall(runtimes_url: str, environment: str) -> Optional[tuple[float, Optional[str]]]:
+def recall(
+    runtimes_url: str, environment: str
+) -> Optional[tuple[float, Optional[str]]]:
     """The burning rate and size class listed for that environment within the hour, or `None`."""
     entry = _read().get(runtimes_url)
     if not isinstance(entry, dict):
         return None
     at = entry.get("at")
-    if not isinstance(at, (int, float)) or not 0 <= time.time() - at < PRICES_TTL_SECONDS:
+    if (
+        not isinstance(at, (int, float))
+        or not 0 <= time.time() - at < PRICES_TTL_SECONDS
+    ):
         return None
     price = (entry.get("environments") or {}).get(environment)
     if not isinstance(price, dict):

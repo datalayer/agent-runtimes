@@ -67,7 +67,9 @@ class _Runtimes:
         return self.answer
 
 
-def a_client(answer: dict[str, Any] | None = None) -> tuple[AgentClient, list[int], _Runtimes]:
+def a_client(
+    answer: dict[str, Any] | None = None,
+) -> tuple[AgentClient, list[int], _Runtimes]:
     """A client on `RUNTIMES_URL`: its listings counted, its creates recorded."""
     client = AgentClient.__new__(AgentClient)
     listings: list[int] = []
@@ -86,7 +88,9 @@ def a_client(answer: dict[str, Any] | None = None) -> tuple[AgentClient, list[in
 
 def test_the_first_create_lists_and_remembers_the_prices() -> None:
     client, listings, runtimes = a_client()
-    client.create_runtime(name="speed", environment="ai-agents-env", time_reservation=10)
+    client.create_runtime(
+        name="speed", environment="ai-agents-env", time_reservation=10
+    )
     assert len(listings) == 1
     assert runtimes.created[0]["credits_limit"] == pytest.approx(0.01 * 60 * 10)
     assert environment_prices.recall(RUNTIMES_URL, "python-cpu-env") == (0.02, None)
@@ -98,20 +102,26 @@ def test_a_create_within_the_hour_does_not_list() -> None:
 
     # Another command: a new process, a new client.
     client, listings, runtimes = a_client()
-    client.create_runtime(name="speed", environment="python-cpu-env", time_reservation=5)
+    client.create_runtime(
+        name="speed", environment="python-cpu-env", time_reservation=5
+    )
     assert listings == []
     assert runtimes.created[0]["environment_name"] == "python-cpu-env"
     assert runtimes.created[0]["credits_limit"] == pytest.approx(0.02 * 60 * 5)
 
 
-def test_prices_older_than_the_hour_are_listed_again(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_prices_older_than_the_hour_are_listed_again(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     first, _, _ = a_client()
     first.create_runtime(name="speed", environment="ai-agents-env", time_reservation=10)
 
     later = time.time() + environment_prices.PRICES_TTL_SECONDS + 1
     monkeypatch.setattr(environment_prices.time, "time", lambda: later)
     client, listings, _ = a_client()
-    client.create_runtime(name="speed", environment="ai-agents-env", time_reservation=10)
+    client.create_runtime(
+        name="speed", environment="ai-agents-env", time_reservation=10
+    )
     assert len(listings) == 1
 
 
@@ -121,7 +131,9 @@ def test_an_environment_not_remembered_is_listed() -> None:
 
     client, listings, _ = a_client()
     with pytest.raises(ValueError, match="not found"):
-        client.create_runtime(name="speed", environment="no-such-env", time_reservation=10)
+        client.create_runtime(
+            name="speed", environment="no-such-env", time_reservation=10
+        )
     assert len(listings) == 1
 
 
@@ -131,7 +143,9 @@ def test_a_refused_create_forgets_the_prices() -> None:
 
     client, listings, _ = a_client({"success": False, "message": "No such environment"})
     with pytest.raises(RuntimeError, match="No such environment"):
-        client.create_runtime(name="speed", environment="ai-agents-env", time_reservation=10)
+        client.create_runtime(
+            name="speed", environment="ai-agents-env", time_reservation=10
+        )
     assert listings == []
     assert environment_prices.recall(RUNTIMES_URL, "ai-agents-env") is None
 
@@ -139,7 +153,9 @@ def test_a_refused_create_forgets_the_prices() -> None:
 def test_prices_are_kept_per_runtimes_address() -> None:
     first, _, _ = a_client()
     first.create_runtime(name="speed", environment="ai-agents-env", time_reservation=10)
-    assert environment_prices.recall("https://prod1.example.test", "ai-agents-env") is None
+    assert (
+        environment_prices.recall("https://prod1.example.test", "ai-agents-env") is None
+    )
 
 
 def test_an_unreadable_prices_file_means_listing() -> None:
@@ -147,14 +163,18 @@ def test_an_unreadable_prices_file_means_listing() -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("{not json")
     client, listings, _ = a_client()
-    client.create_runtime(name="speed", environment="ai-agents-env", time_reservation=10)
+    client.create_runtime(
+        name="speed", environment="ai-agents-env", time_reservation=10
+    )
     assert len(listings) == 1
     assert environment_prices.recall(RUNTIMES_URL, "ai-agents-env") == (0.01, None)
 
 
 def test_the_prices_file_holds_names_and_prices_only() -> None:
     client, _, _ = a_client()
-    client.create_runtime(name="speed", environment="ai-agents-env", time_reservation=10)
+    client.create_runtime(
+        name="speed", environment="ai-agents-env", time_reservation=10
+    )
     text = environment_prices.prices_path().read_text()
     assert "api-key" not in text
     assert "jupyter-token" not in text

@@ -39,7 +39,9 @@ def test_registering_the_command_groups_loads_none_of_them() -> None:
 
 
 def test_the_agent_client_loads_without_pydantic_ai() -> None:
-    probe = "import sys\nimport agent_runtimes.client\nprint('pydantic_ai' in sys.modules)"
+    probe = (
+        "import sys\nimport agent_runtimes.client\nprint('pydantic_ai' in sys.modules)"
+    )
     answer = subprocess.run(
         [sys.executable, "-c", probe],
         capture_output=True,
