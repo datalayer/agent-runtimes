@@ -29,10 +29,12 @@ vi.mock('../plugins/notebook-toolbar/items', () => ({
 
 import { listUI } from '../../specs/ui';
 import { UI_RENDERER_CATALOGUE } from '../../specs/uiRenderers';
+import { uiManifestMetadataOf, uiManifestOfSpec } from '../uiManifest';
 import {
   FIXTURE_APP,
-  HOW_TO_MOUNT,
   NOT_UI,
+  PACKAGE_NAME,
+  mountOf,
   registrationOf,
 } from './fixtures/uiPluginRegistrations';
 
@@ -57,7 +59,16 @@ describe('the UI specs and the plugin folders', () => {
     for (const folder of [...specified, ...Object.keys(NOT_UI)]) {
       expect(folders, `no plugin folder ${folder}`).toContain(folder);
     }
-    expect(sorted(Object.keys(HOW_TO_MOUNT))).toEqual(sorted(specified));
+  });
+
+  it('say where each plugin is: this package, the module of its folder, an export', () => {
+    for (const spec of listUI()) {
+      expect(spec.implementation.package, spec.id).toBe(PACKAGE_NAME);
+      expect(spec.implementation.module, spec.id).toBe(
+        `lib/apps/plugins/${spec.folder}`,
+      );
+      expect(spec.implementation.export, spec.id).toMatch(/^[A-Za-z_$][\w$]*$/);
+    }
   });
 
   it('name only renderers of the catalogue', () => {
@@ -76,7 +87,7 @@ describe.each(listUI().map(spec => [spec.id, spec] as const))(
   'the UI spec %s',
   (_id, spec) => {
     it('is its plugin as the reactor registers it', async () => {
-      const registration = await registrationOf(HOW_TO_MOUNT[spec.folder]);
+      const registration = await registrationOf(await mountOf(spec));
       if (spec.per === undefined) {
         expect(registration.names).toEqual([spec.plugin]);
       } else {
@@ -108,6 +119,45 @@ describe.each(listUI().map(spec => [spec.id, spec] as const))(
       for (const [key, value] of Object.entries(registration.settings)) {
         expect(properties[key].default, `${spec.id}.${key}`).toEqual(value);
       }
+    });
+    it("is what its export's manifest says", async () => {
+      const registration = await registrationOf(await mountOf(spec));
+      const expected = uiManifestOfSpec(spec);
+      expect(registration.manifests.length).toBeGreaterThan(0);
+      for (const manifest of registration.manifests) {
+        const name = manifest.name;
+        expect(manifest.package, name).toBe(spec.implementation.package);
+        expect(uiManifestMetadataOf(manifest), name).toEqual(
+          uiManifestMetadataOf(expected),
+        );
+        expect(sorted(manifest.slots), name).toEqual(
+          sorted(spec.contributions.slots),
+        );
+        expect(sorted(manifest.contributesTo), name).toEqual(
+          sorted(spec.contributions.points),
+        );
+        expect(sorted(manifest.commands), name).toEqual(
+          sorted(spec.contributions.commands),
+        );
+        expect(manifest.configSchema, name).toEqual(expected.configSchema);
+        // A plugin registered per instance presents itself by its instance.
+        if (spec.per === undefined) {
+          expect(manifest.displayName, name).toBe(spec.name);
+          expect(manifest.description, name).toBe(spec.description);
+          expect(manifest.emoji, name).toBe(spec.emoji);
+          if (spec.octicon) {
+            expect(manifest.octicon, name).toBe(spec.octicon);
+          }
+        }
+      }
+      // What it declares is what it registers.
+      const declared = (key: 'slots' | 'contributesTo' | 'commands') =>
+        sorted([
+          ...new Set(registration.manifests.flatMap(manifest => manifest[key])),
+        ]);
+      expect(declared('slots')).toEqual(registration.slots);
+      expect(declared('contributesTo')).toEqual(registration.points);
+      expect(declared('commands')).toEqual(registration.commands);
     });
   },
 );

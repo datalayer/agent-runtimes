@@ -1156,6 +1156,11 @@ export function documentShapeProblems(document: unknown): string[] {
       oneOf(voice.where, ENUMS.voiceWhere, 'interface.voice.where');
     });
     text(ui.welcome, 'interface.welcome');
+    if (
+      ui.composer_portal_disabled !== undefined &&
+      typeof ui.composer_portal_disabled !== 'boolean'
+    )
+      at('interface.composer_portal_disabled', 'is true or false');
     texts(ui.components, 'interface.components');
     const starter = (item: Raw, where: string) => {
       required(item, 'label', where);

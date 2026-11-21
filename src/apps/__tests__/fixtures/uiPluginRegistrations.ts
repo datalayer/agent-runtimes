@@ -11,54 +11,25 @@
  * settings it takes. Read from the plugin as the reactor registers it, never
  * written down a second time.
  *
- * `HOW_TO_MOUNT` is how a test mounts each plugin folder that has a UI spec:
- * the plugin itself, or its factory called with an application of the
- * catalogue. `NOT_UI` is each other folder, and why it has no UI spec.
+ * `mountOf` mounts a UI spec's plugin from the spec alone — its
+ * `implementation`, the package, module and export that are it: the plugin
+ * itself, its instances, or its factory called with an application of the
+ * catalogue or its placement. `NOT_UI` is each plugin folder without a UI
+ * spec, and why.
  *
  * @module apps/__tests__/fixtures/uiPluginRegistrations
  */
 
 import {
   buildReactorFromPlugins,
+  type PluginManifest,
   type PluginRef,
   type ReactorPlugin,
 } from '@datalayer/reactor';
 import { APP_CATALOGUE } from '../../../specs/apps';
-import type { AppSpec } from '../../../types/agentspecs';
+import type { AppSpec, UISpec } from '../../../types/agentspecs';
 import { LoopCommand } from '../../core';
-import { A2uiPlugin } from '../../plugins/a2ui';
-import { A2uiSurfacePlugin } from '../../plugins/a2ui-surface';
-import { AgentspecsPlugin } from '../../plugins/agentspecs';
-import { defineAppActivityPlugin } from '../../plugins/app-activity';
-import { defineAppComponentsPlugin } from '../../plugins/app-components';
-import { defineAppComputerPlugin } from '../../plugins/app-computer';
-import { AppElementsPlugin } from '../../plugins/app-elements';
-import { defineAppPagePlugin } from '../../plugins/app-page';
-import { defineAppRulesPlugin } from '../../plugins/app-rules';
-import { CANVAS_BLOCK_PLUGINS } from '../../plugins/canvas-blocks';
-import { CANVAS_PART_PLUGINS } from '../../plugins/canvas-parts';
-import { ChatPlugin } from '../../plugins/chat';
-import { createChatExtrasPlugin } from '../../plugins/chat-extras';
-import { ChatHeaderPlugin } from '../../plugins/chat-header';
-import { ChatViewPlugin } from '../../plugins/chat-view';
-import { LoopCommandsPlugin } from '../../plugins/commands';
-import { DocumentPlugin } from '../../plugins/document';
-import { DocumentToolbarPlugin } from '../../plugins/document-toolbar';
-import { DocumentViewPlugin } from '../../plugins/document-view';
-import { InputPromptPlugin } from '../../plugins/input-prompt';
-import { ModelsPlugin } from '../../plugins/models';
-import { NotebookPlugin } from '../../plugins/notebook';
-import { NotebookToolbarPlugin } from '../../plugins/notebook-toolbar';
-import { NotebookViewPlugin } from '../../plugins/notebook-view';
-import { LoopPageLayoutPlugin } from '../../plugins/page-layout';
-import { PapSignInPlugin } from '../../plugins/pap-sign-in';
-import { BrowserSessionPlugin } from '../../plugins/browser-session';
-import { PromptPlugin } from '../../plugins/prompt';
-import { SpreadsheetPlugin } from '../../plugins/spreadsheet';
-import { SpreadsheetViewPlugin } from '../../plugins/spreadsheet-view';
-import { SubagentActivityPlugin } from '../../plugins/subagent-activity';
-import { WindowFramePlugin } from '../../plugins/window-frame';
-import { AGENT_UI_PLUGINS, defaultPluginOf } from '../../agentUiPlugins';
+import { CHROME_SLOTS } from '../../toolCards/chrome';
 
 /** An application of the catalogue with a page, and a component of its developer's. */
 export const FIXTURE_APP: AppSpec = (() => {
@@ -94,51 +65,63 @@ export const FIXTURE_APP: AppSpec = (() => {
 /** How one UI spec's plugin is mounted: one plugin, or one per instance. */
 export type Mount = () => PluginRef[];
 
+/** The package the UI specs of the catalogue name: this one. */
+export const PACKAGE_NAME = '@datalayer/agent-runtimes';
+
 /**
- * Each plugin folder that has a UI spec, by the spec's id (the folder's
- * name): the plugins it registers. A factory is called with the fixture
- * application; a plugin cast per source (`canvas-parts`) or per UI spec
- * (`canvas-blocks`) is mounted as every instance it has.
+ * What a UI spec's implementation exports (`import { <export> } from
+ * '<package>/<module>'`), read from this package's sources: a module of
+ * `lib/` is its file under `src/`.
  */
-export const HOW_TO_MOUNT: Record<string, Mount> = {
-  a2ui: () => [A2uiPlugin],
-  'a2ui-surface': () => [A2uiSurfacePlugin],
-  agentspecs: () => [AgentspecsPlugin],
-  'app-activity': () => [defineAppActivityPlugin(FIXTURE_APP)],
-  'app-components': () => [defineAppComponentsPlugin(FIXTURE_APP)],
-  'app-computer': () => [defineAppComputerPlugin(FIXTURE_APP)],
-  'app-elements': () => [AppElementsPlugin],
-  'app-page': () => [defineAppPagePlugin(FIXTURE_APP)],
-  'app-rules': () => [defineAppRulesPlugin(FIXTURE_APP)],
-  'canvas-blocks': () => CANVAS_BLOCK_PLUGINS,
-  'canvas-parts': () => CANVAS_PART_PLUGINS,
-  chat: () => [ChatPlugin],
-  'chat-extras': () => [createChatExtrasPlugin().plugin],
-  'chat-header': () => [ChatHeaderPlugin],
-  'chat-view': () => [ChatViewPlugin],
-  commands: () => [LoopCommandsPlugin],
-  document: () => [DocumentPlugin],
-  'document-toolbar': () => [DocumentToolbarPlugin as never],
-  'document-view': () => [DocumentViewPlugin],
-  'input-prompt': () => [InputPromptPlugin],
-  models: () => [ModelsPlugin],
-  notebook: () => [NotebookPlugin],
-  'notebook-toolbar': () => [NotebookToolbarPlugin as never],
-  'notebook-view': () => [NotebookViewPlugin],
-  'page-layout': () => [LoopPageLayoutPlugin],
-  'pap-sign-in': () => [PapSignInPlugin],
-  'browser-session': () => [BrowserSessionPlugin],
-  prompt: () => [PromptPlugin],
-  spreadsheet: () => [SpreadsheetPlugin],
-  'spreadsheet-view': () => [SpreadsheetViewPlugin],
-  'subagent-activity': () => [SubagentActivityPlugin],
-  'window-frame': () => [WindowFramePlugin],
-  // The UI the agents, their MCP servers, skills and tools bring (15
-  // November 2026): each its own plugin, by its UI spec's id.
-  ...Object.fromEntries(
-    Object.keys(AGENT_UI_PLUGINS).map(id => [id, () => [defaultPluginOf(id)!]]),
-  ),
-};
+export async function exportOf(spec: UISpec): Promise<unknown> {
+  const { package: name, module, export: exported } = spec.implementation;
+  if (name !== PACKAGE_NAME) {
+    throw new Error(`${spec.id}: its package ${name} is not ${PACKAGE_NAME}`);
+  }
+  if (!module.startsWith('lib/')) {
+    throw new Error(`${spec.id}: its module ${module} is not under lib/`);
+  }
+  const loaded = (await import(
+    /* @vite-ignore */ `../../../${module.slice('lib/'.length)}`
+  )) as Record<string, unknown>;
+  if (!(exported in loaded)) {
+    throw new Error(`${spec.id}: ${module} exports no ${exported}`);
+  }
+  return loaded[exported];
+}
+
+/** A factory's result: the plugin, or a handle holding it (`{ plugin, … }`). */
+const asRef = (made: unknown): PluginRef =>
+  made && typeof made === 'object' && 'plugin' in made && !('name' in made)
+    ? ((made as { plugin: PluginRef }).plugin as PluginRef)
+    : (made as PluginRef);
+
+/**
+ * How a UI spec's plugin is mounted, from its implementation alone: the
+ * plugin; its instances; or its factory called with the fixture application
+ * (`per: application`), with its first placement when that is in the chat's
+ * chrome or a side panel, or with nothing.
+ */
+export async function mountOf(spec: UISpec): Promise<Mount> {
+  const exported = await exportOf(spec);
+  switch (spec.implementation.kind) {
+    case 'plugin':
+      return () => [exported as PluginRef];
+    case 'plugins':
+      return () => [...(exported as PluginRef[])];
+    case 'factory': {
+      const factory = exported as (...args: unknown[]) => unknown;
+      const placement = spec.placements?.[0];
+      const args =
+        spec.per === 'application'
+          ? [FIXTURE_APP]
+          : placement && placement !== 'message' && placement in CHROME_SLOTS
+            ? [placement]
+            : [];
+      return () => [asRef(factory(...args))];
+    }
+  }
+}
 
 /**
  * The plugin folders without a UI spec, and why: none is a part of an
@@ -238,6 +221,8 @@ export type Registration = {
   contributionPoints: string[];
   /** Its settings, as its configuration's defaults. */
   settings: Record<string, unknown>;
+  /** The manifest of each plugin it registers, in order. */
+  manifests: PluginManifest[];
   /** Its name, description and faces, as it presents itself. */
   displayName?: string;
   description?: string;
@@ -321,6 +306,7 @@ export async function registrationOf(mount: Mount): Promise<Registration> {
         .map(entry => entry.value.name),
     ]),
     contributionPoints: sorted(contributionPoints),
+    manifests: names.map(name => reactor.getManifest(name)!),
     settings: loaded === false ? {} : { ...(config ?? {}) },
     displayName: presented.displayName,
     description: presented.description,

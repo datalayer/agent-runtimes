@@ -60,6 +60,7 @@ import {
   encodeFormSubmission,
   type FormSubmission,
 } from '../../chat/messages/formSubmission';
+import { uiManifestOf } from '../uiManifest';
 
 /** Sends a turn as the person; false when the chat could not. */
 export type ToolCardSend = (message: string) => boolean;
@@ -473,6 +474,8 @@ export function defineToolCardPlugin(
     description: options.description,
     octicon: options.octicon,
     emoji: options.emoji,
+    // What its UI spec says, when it is one: the catalogue's facts on its manifest.
+    ...uiManifestOf(options.id),
     contributes: [
       contribution(Renderers, defineRenderer({ type, component: Rendered }), {
         id: options.id,

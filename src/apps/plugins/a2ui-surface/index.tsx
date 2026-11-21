@@ -50,6 +50,7 @@ import {
   type SurfaceRendered,
   type SurfaceSubmitted,
 } from './SurfaceToolResult';
+import { uiManifestOf } from '../../uiManifest';
 
 export const A2UI_SURFACE_PLUGIN_NAME = '@datalayer/loop-plugin-a2ui-surface';
 
@@ -169,11 +170,7 @@ export function createA2uiSurfacePlugin(
       counter === 1
         ? A2UI_SURFACE_PLUGIN_NAME
         : `${A2UI_SURFACE_PLUGIN_NAME}-${id}`,
-    displayName: 'A2UI surfaces',
-    description:
-      'Generated surfaces drawn in the transcript, and submitted back to the agent.',
-    octicon: 'browser',
-    emoji: '\u{1FA9F}',
+    ...uiManifestOf('a2ui-surface'),
     contributes: [
       contribution(
         Renderers,

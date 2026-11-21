@@ -138,6 +138,8 @@ export interface UISpec {
   plugin: string;
   /** Its folder under `src/apps/plugins`. */
   folder: string;
+  /** Where its plugin is: `import { <export> } from '<package>/<module>'`. */
+  implementation: UiImplementationSpec;
   /** Registered once per application, source or UI spec, as `<plugin>-<its id>`. */
   per?: 'application' | 'source' | 'ui';
   /** Its Contributions, as the reactor registers them. */
@@ -174,6 +176,28 @@ export interface UISpec {
   catalog: string;
   /** The visual components it renders. */
   components: ComponentSpec[];
+}
+
+/**
+ * Where a UI spec's Reactor plugin is (agentspecs 0.1.10): the package, the
+ * module and the export that are it, and its backend part, if any.
+ */
+export interface UiImplementationSpec {
+  /** The npm package that ships the plugin: `@datalayer/agent-runtimes`. */
+  package: string;
+  /** The module of the package that exports it, from its root: `lib/apps/plugins/chat`. */
+  module: string;
+  /** The name it is exported under: `ChatPlugin`. */
+  export: string;
+  /**
+   * What the export is: the plugin; a list of plugins, one per instance
+   * (`per: source`, `per: ui`); or a factory, called with the application
+   * for a plugin `per: application`, with its placement for one whose first
+   * placement is in the chat's chrome or a side panel, with nothing otherwise.
+   */
+  kind: 'plugin' | 'plugins' | 'factory';
+  /** Its backend (Python) Reactor plugin, when it has a server side. */
+  backend?: { package: string; entryPoint: string };
 }
 
 /** What an indicator's colour says, in the theme's own tokens. */
@@ -1712,6 +1736,12 @@ export interface AppInterfaceSpec {
    * Over A2A, its agent card's output modes. Empty: plain text alone.
    */
   outputs: string[];
+  /**
+   * Its chat leaves out the Composer button (`composer-portal`), which every
+   * application's chat has in its toolbar otherwise (the user, 21 November
+   * 2026). Said only when true.
+   */
+  composerPortalDisabled?: boolean;
 }
 
 /** A text file a test gives with what it asks, as a person gives one on its page. */

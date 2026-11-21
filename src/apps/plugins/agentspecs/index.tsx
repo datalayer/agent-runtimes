@@ -16,6 +16,7 @@ import { contribution, definePlugin } from '@datalayer/reactor';
 import type { ReactorSlotComponent } from '@datalayer/reactor/react';
 import { LoopCommand, LoopSlots } from '../../core';
 import { AgentspecPicker } from './AgentspecPicker';
+import { uiManifestOf } from '../../uiManifest';
 
 export const AGENTSPECS_PLUGIN_NAME = '@datalayer/loop-plugin-agentspecs';
 
@@ -25,10 +26,7 @@ export const AgentspecsPlugin = definePlugin<
   { components: ReactorSlotComponent[] }
 >({
   name: AGENTSPECS_PLUGIN_NAME,
-  displayName: 'Agentspecs',
-  description: 'Pick the agentspec this session runs.',
-  octicon: 'people',
-  emoji: '\u{1F916}',
+  ...uiManifestOf('agentspecs'),
   build() {
     return {
       components: [

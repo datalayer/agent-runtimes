@@ -75,6 +75,7 @@ import {
 } from '../../core';
 import { TurnPanel, type TurnPanelFooter } from './TurnPanel';
 import { SplitLayout } from './SplitLayout';
+import { uiManifestOf } from '../../uiManifest';
 
 /*
  * The layout's state is primer-addons', re-exported under the names the
@@ -296,6 +297,7 @@ function ConversationToggle(): JSX.Element | null {
 
 export const LoopPageLayoutPlugin = definePlugin<LoopPageLayoutConfig>({
   name: LOOP_PAGE_LAYOUT_PLUGIN_NAME,
+  ...uiManifestOf('page-layout'),
   config: {
     arrangement: 'page',
     turnPanel: 'below',
@@ -304,11 +306,6 @@ export const LoopPageLayoutPlugin = definePlugin<LoopPageLayoutConfig>({
     promptAnchor: 'top',
     pageSize: undefined,
   },
-  displayName: 'Page layout',
-  description:
-    'The editor — or, in the chat view, the conversation — on a centred sheet, the prompt docked above it at the same width or floating over it as a draggable card, the current turn under the prompt, the conversation in a side panel; or, split, the conversation and the work side by side with a hairline to drag.',
-  octicon: 'file',
-  emoji: '\u{1F4C4}',
   build: ({ config, ...ctx }) => {
     if (config.arrangement === 'split') {
       // The conversation is on screen: the composer docked under it, and

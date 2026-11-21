@@ -39,6 +39,7 @@ import type { PresenceState } from '../../../chat/presence/presenceStatus';
 import type { AssistantSaying } from '../../../chat/assistant/state';
 import type { ResumedThread, ThemeOverrides } from '../../../types/chat';
 import type { ChatVoice } from '../../../voice';
+import { uiManifestOf } from '../../uiManifest';
 
 /**
  * An editor toolbar button that asks an agent to do something.
@@ -304,6 +305,7 @@ export const CHAT_PLUGIN_NAME = '@datalayer/loop-plugin-chat';
 
 export const ChatPlugin = definePlugin<ChatPluginConfig>({
   name: CHAT_PLUGIN_NAME,
+  ...uiManifestOf('chat'),
   config: {
     // The chat's own words, in the person's language (`chat/words`).
     placeholder: '',
@@ -319,10 +321,6 @@ export const ChatPlugin = definePlugin<ChatPluginConfig>({
     suggestionLabels: true,
     fullScreenTopOffset: 0,
   },
-  displayName: 'Chat',
-  description: 'The conversation, the prompt, and the point editors plug into.',
-  octicon: 'comment-discussion',
-  emoji: '\u{1F4AC}',
   // Declared, not merely used: the registry knows who contributed to a point,
   // it cannot know who opened it, and a point nobody has filled yet is exactly
   // when knowing it exists is most useful. `LoopFrontendTool` is the chat's

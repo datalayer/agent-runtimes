@@ -93,6 +93,49 @@ def _py_component(component: dict[str, Any]) -> str:
     )
 
 
+def _py_implementation(implementation: dict[str, Any]) -> list[str]:
+    """Where a spec's plugin is, as the Python that builds it."""
+    backend = implementation.get("backend")
+    return [
+        "    implementation=UiImplementationSpec(",
+        f"        package={_py(implementation['package'])},",
+        f"        module={_py(implementation['module'])},",
+        f"        export={_py(implementation['export'])},",
+        f"        kind={_py(implementation.get('kind') or 'plugin')},",
+        *(
+            [
+                "        backend=UiBackendImplementationSpec(",
+                f"            package={_py(backend['package'])},",
+                f"            entry_point={_py(backend['entry_point'])},",
+                "        ),",
+            ]
+            if backend
+            else []
+        ),
+        "    ),",
+    ]
+
+
+def _ts_implementation(implementation: dict[str, Any]) -> list[str]:
+    """Where a spec's plugin is, as the TypeScript that builds it."""
+    backend = implementation.get("backend")
+    return [
+        "  implementation: {",
+        f"    package: {_ts(implementation['package'])},",
+        f"    module: {_ts(implementation['module'])},",
+        f"    export: {_ts(implementation['export'])},",
+        f"    kind: {_ts(implementation.get('kind') or 'plugin')},",
+        *(
+            [
+                f"    backend: {{ package: {_ts(backend['package'])}, entryPoint: {_ts(backend['entry_point'])} }},"
+            ]
+            if backend
+            else []
+        ),
+        "  },",
+    ]
+
+
 def call_name(component_id: str) -> str:
     """The Python call of a component: ``Table`` → ``table``, ``TextField`` → ``text_field``."""
     return re.sub(r"(?<!^)(?=[A-Z])", "_", component_id).lower()
@@ -231,7 +274,9 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         "from agent_runtimes.types import (",
         "    ComponentBindingsSpec,",
         "    ComponentSpec,",
+        "    UiBackendImplementationSpec,",
         "    UiContributionsSpec,",
+        "    UiImplementationSpec,",
         "    UISpec,",
         ")",
         "",
@@ -253,6 +298,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 f"    octicon={_py(spec['octicon']) if spec.get('octicon') else 'None'},",
                 f"    plugin={_py(spec['plugin'])},",
                 f"    folder={_py(spec['folder'])},",
+                *_py_implementation(spec["implementation"]),
                 f"    per={_py(spec['per']) if spec.get('per') else 'None'},",
                 "    contributions=UiContributionsSpec(",
                 f"        slots={list((spec.get('contributions') or {}).get('slots') or [])!r},",
@@ -361,6 +407,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 ),
                 f"  plugin: {_ts(spec['plugin'])},",
                 f"  folder: {_ts(spec['folder'])},",
+                *_ts_implementation(spec["implementation"]),
                 *([f"  per: {_ts(spec['per'])},"] if spec.get("per") else []),
                 "  contributions: {",
                 f"    slots: {json.dumps(list((spec.get('contributions') or {}).get('slots') or []))},",

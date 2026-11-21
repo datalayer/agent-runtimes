@@ -28,6 +28,7 @@ import { Label } from '@primer/react';
 import { definePlugin } from '@datalayer/reactor';
 import type { ReactorPlugin } from '@datalayer/reactor';
 import { LoopSlots } from '../core';
+import { uiManifestOf } from '../uiManifest';
 
 export type UiPlacement =
   'header' | 'toolbar' | 'footer' | 'banner' | 'left' | 'right' | 'message';
@@ -111,6 +112,8 @@ export function defineChromePlugin(
       description: options.description,
       octicon: options.octicon,
       emoji: options.emoji,
+      // What its UI spec says, when it is one: the catalogue's facts on its manifest.
+      ...uiManifestOf(options.id),
       build() {
         return {
           components: slot

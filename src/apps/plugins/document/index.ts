@@ -23,15 +23,13 @@ import {
   LoopOpeningDocument,
 } from '../../core';
 import { AgentsPlugin } from '../agents';
+import { uiManifestOf } from '../../uiManifest';
 
 export const DOCUMENT_PLUGIN_NAME = '@datalayer/loop-plugin-document';
 
 export const DocumentPlugin = definePlugin({
   name: DOCUMENT_PLUGIN_NAME,
-  displayName: 'Document editor',
-  description: 'A rich-text document beside the chat, driven by the agent.',
-  octicon: 'file',
-  emoji: '\u{1F4C4}',
+  ...uiManifestOf('document'),
   // The sandbox is a hard dependency; the shell and the chat are extended
   // through their points instead — see the notebook plugin for why.
   dependencies: [AgentsPlugin],

@@ -70,6 +70,9 @@ describe('the preset per kind', () => {
       '@datalayer/loop-plugin-app-browser-sandbox-web-research',
       '@datalayer/loop-plugin-app-feedback-web-research',
       '@datalayer/loop-plugin-app-elements',
+      // The Composer's button, every application's unless it leaves it out
+      // (21 November 2026).
+      '@datalayer/loop-plugin-composer-portal',
     ]);
     expect(preset.workspace).toEqual({
       editors: false,

@@ -24,17 +24,14 @@ import { definePlugin } from '@datalayer/reactor';
 import type { ReactorPlugin } from '@datalayer/reactor';
 import { LoopSlots } from '../../core';
 import { BrowserSessionSlot } from './BrowserSessionButton';
+import { uiManifestOf } from '../../uiManifest';
 
 export const BROWSER_SESSION_PLUGIN_NAME =
   '@datalayer/loop-plugin-browser-session';
 
 export const BrowserSessionPlugin = definePlugin({
   name: BROWSER_SESSION_PLUGIN_NAME,
-  displayName: 'Browser sessions',
-  description:
-    'Sign in to LinkedIn in your runtime’s own browser, so that its MCP server reads and acts through your session.',
-  octicon: 'browser',
-  emoji: '\u{1F310}',
+  ...uiManifestOf('browser-session'),
   build() {
     return {
       components: [

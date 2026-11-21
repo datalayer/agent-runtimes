@@ -1,6 +1,6 @@
 {
   "name": "@datalayer/agent-runtimes",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "type": "module",
   "workspaces": [
     ".",
@@ -165,7 +165,7 @@
     "@datalayer/primer-addons": "^1.0.53",
     "@datalayer/primer-rjsf": "^1.0.3",
     "@datalayer/personal-agent-protocol": ">=1.0.0 <1.1",
-    "@datalayer/reactor": "^1.3.5",
+    "@datalayer/reactor": "^1.4.0",
     "@datalayer/reactor-excalidraw": "^1.3.11",
     "@datalayer/reactor-commands": "^1.0.4",
     "@datalayer/reactor-manager": "^1.0.4",

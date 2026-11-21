@@ -31,16 +31,14 @@ import { clearLoopElements } from '../../../chat/base/loopElement';
 import { LoopSlots } from '../../core';
 import { AppElements } from './AppElements';
 import { QUESTION_DISPLAY_TYPE, QuestionView } from './QuestionView';
+import { uiManifestOf } from '../../uiManifest';
 
 export const APP_ELEMENTS_PLUGIN_NAME = '@datalayer/loop-plugin-app-elements';
 
 /** The plugin that draws an application's side panel and pages. */
 export const AppElementsPlugin = definePlugin({
   name: APP_ELEMENTS_PLUGIN_NAME,
-  displayName: 'Side panel and pages',
-  description:
-    'What an application opens beside the conversation: a side panel, or a page of its own.',
-  octicon: 'sidebar-expand',
+  ...uiManifestOf('app-elements'),
   contributes: [
     contribution(
       Renderers,

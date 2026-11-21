@@ -376,6 +376,31 @@ class UiContributionsSpec(BaseModel):
     )
 
 
+class UiBackendImplementationSpec(BaseModel):
+    """The backend (Python) Reactor plugin of a UI, when it has a server side."""
+
+    package: str = Field(..., description="The PyPI distribution that ships it")
+    entry_point: str = Field(
+        ..., description="Its entry point, as `module.path:attribute`"
+    )
+
+
+class UiImplementationSpec(BaseModel):
+    """Where a UI spec's Reactor plugin is: ``import { <export> } from '<package>/<module>'``."""
+
+    package: str = Field(..., description="The npm package that ships the plugin")
+    module: str = Field(..., description="The module of the package that exports it")
+    export: str = Field(..., description="The name it is exported under")
+    kind: str = Field(
+        default="plugin",
+        description="What the export is: `plugin`, `plugins` (one per instance) or `factory`",
+    )
+    backend: Optional[UiBackendImplementationSpec] = Field(
+        default=None,
+        description="Its backend Reactor plugin, when it has a server side",
+    )
+
+
 class UISpec(BaseModel):
     """A UI plugin (`agentspecs/ui`, R8): one Reactor plugin of
     agent-runtimes a Maker composes an interface with, and the UI renderers it
@@ -393,6 +418,10 @@ class UISpec(BaseModel):
     octicon: Optional[str] = Field(default=None, description="Its Octicon")
     plugin: str = Field(..., description="The name the Reactor plugin registers under")
     folder: str = Field(..., description="Its folder under src/apps/plugins")
+    implementation: UiImplementationSpec = Field(
+        ...,
+        description="Where its plugin is: the npm package, the module and the export",
+    )
     per: Optional[str] = Field(
         default=None,
         description="Registered once per application, source or UI spec, as `<plugin>-<its id>`",
@@ -3659,6 +3688,13 @@ class AppInterfaceSpec(BaseModel):
             "(`text/markdown`, then `application/x-ipynb+json` for a Jupyter "
             "notebook): over A2A, its agent card's output modes; plain text "
             "alone when empty"
+        ),
+    )
+    composer_portal_disabled: bool = Field(
+        default=False,
+        description=(
+            "Whether its chat leaves out the Composer button (`composer-portal`), "
+            "which every application's chat has in its toolbar otherwise"
         ),
     )
 

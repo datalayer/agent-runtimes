@@ -12,10 +12,9 @@ whole of pydantic_ai, its MCP client and fastmcp: over a second) and
 `datalayer sandboxes create` sent its first request. Each is imported where
 it is used.
 
-The test names the module whose import statement first loads each of the
-three, and fails only when that module is this package's: datalayer-core
-imports jupyter_server (and jsonschema under it) at its own top up to
-1.2.30, which is datalayer-core's to drop, not this package's.
+None of the three is loaded by anything at all, datalayer-core included: it
+imports jupyter_server (and jsonschema under it) at its own top up to 1.2.30,
+not from 1.2.31 (`datalayer-core>=1.2.31`).
 """
 
 from __future__ import annotations
@@ -25,30 +24,10 @@ import sys
 
 _REGISTER = """
 import sys
-
-HEAVY = ("pydantic_ai", "jupyter_server", "jsonschema")
-importers = {}
-
-
-class _Importer:
-    # Asked first for every module not loaded yet; finds nothing itself, it
-    # only notes which module's import statement asked for a heavy one.
-    def find_spec(self, fullname, path=None, target=None):
-        if fullname in HEAVY and fullname not in importers:
-            frame = sys._getframe(1)
-            while frame is not None and frame.f_globals.get("__name__", "").startswith(
-                ("importlib", "_frozen_importlib")
-            ):
-                frame = frame.f_back
-            importers[fullname] = frame.f_globals.get("__name__", "") if frame else ""
-        return None
-
-
-sys.meta_path.insert(0, _Importer())
 import typer
 from agent_runtimes.reactor_extension import AgentRuntimesCliExtension
 AgentRuntimesCliExtension().provide_cli(typer.Typer())
-print(sorted(f"{m} by {by}" for m, by in importers.items() if by.split(".")[0] == "agent_runtimes"))
+print(sorted(m for m in ("pydantic_ai", "jupyter_server", "jsonschema") if m in sys.modules))
 """
 
 

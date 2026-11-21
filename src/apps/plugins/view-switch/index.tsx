@@ -36,6 +36,7 @@ import {
   subscribeEditorChoice,
 } from '../shell/editorChoice';
 import { InputPromptPlugin } from '../input-prompt';
+import { uiManifestOf } from '../../uiManifest';
 
 export type ViewPluginOptions = {
   /** Short slug: `chat`, `notebook`, … names the plugin `…-<key>-view`. */
@@ -125,6 +126,8 @@ export function defineViewPlugin(options: ViewPluginOptions) {
     description,
     octicon: options.octicon ?? 'eye',
     emoji: options.emoji,
+    // What its UI spec (`<key>-view`) says: the catalogue's facts on its manifest.
+    ...uiManifestOf(`${key}-view`),
     // The footer the icon sits in is the input-prompt plugin's: a view
     // plugin without it would be a control with nowhere to exist, so this is
     // a hard dependency — the composer mounts with it, and disabling the

@@ -40,6 +40,7 @@ import {
   LoopCanvasPart,
   type CanvasPartContribution,
 } from '../../core/canvasParts';
+import { uiManifestOf } from '../../uiManifest';
 
 type PartsReader = {
   getContributions: (
@@ -77,6 +78,7 @@ const partsPlugin = (
 ): ReactorPlugin<Record<string, never>, unknown, unknown> =>
   definePlugin({
     name: canvasPartsPluginName(source),
+    ...uiManifestOf('canvas-parts'),
     displayName,
     description: `${displayName} in the agent's toolbox on the Canvas.`,
     octicon: 'package',

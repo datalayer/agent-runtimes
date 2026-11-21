@@ -23,6 +23,7 @@ import type { JSX } from 'react';
 import { Suspense, lazy } from 'react';
 import { contribution, definePlugin } from '@datalayer/reactor';
 import { LoopChatHeader, type LoopChatHeaderProps } from '../../core';
+import { uiManifestOf } from '../../uiManifest';
 
 export const CHAT_HEADER_PLUGIN_NAME = '@datalayer/loop-plugin-chat-header';
 
@@ -39,10 +40,7 @@ function HeaderView(props: LoopChatHeaderProps): JSX.Element {
 
 export const ChatHeaderPlugin = definePlugin({
   name: CHAT_HEADER_PLUGIN_NAME,
-  displayName: 'Chat Header',
-  description: 'The conversation’s title bar: agent, kernel, actions.',
-  octicon: 'rows',
-  emoji: '\u{1F3F7}\u{FE0F}',
+  ...uiManifestOf('chat-header'),
   contributes: [
     contribution(
       LoopChatHeader,

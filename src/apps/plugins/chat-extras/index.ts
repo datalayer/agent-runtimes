@@ -27,6 +27,7 @@
 import { contribution, definePlugin, signal } from '@datalayer/reactor';
 import type { ReactorPlugin } from '@datalayer/reactor';
 import { LoopChatExtras, type LoopChatExtrasValue } from '../../core';
+import { uiManifestOf } from '../../uiManifest';
 
 export const CHAT_EXTRAS_PLUGIN_NAME = '@datalayer/loop-plugin-chat-extras';
 
@@ -47,10 +48,7 @@ export function createChatExtrasPlugin(): ChatExtrasHandle {
   const extras = signal<LoopChatExtrasValue>({});
   const plugin = definePlugin({
     name: CHAT_EXTRAS_PLUGIN_NAME,
-    displayName: 'Chat Extras',
-    description: 'A host example’s live banner and footer status.',
-    octicon: 'megaphone',
-    emoji: '\u{1F4E3}',
+    ...uiManifestOf('chat-extras'),
     contributes: [contribution(LoopChatExtras, { id, extras }, { id })],
   });
   return {

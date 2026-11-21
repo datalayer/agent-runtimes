@@ -35,6 +35,7 @@ import type { ToolCallRenderContext } from '../../../types/chat';
 import { LoopSlots, type LoopWorkspaceContext } from '../../core';
 import { PapSignInCard } from './PapSignInCard';
 import { PAP_SIGN_IN_TOOL } from './signIn';
+import { uiManifestOf } from '../../uiManifest';
 
 export const PAP_SIGN_IN_PLUGIN_NAME = '@datalayer/loop-plugin-pap-sign-in';
 
@@ -110,11 +111,7 @@ export function createPapSignInPlugin(): ReactorPlugin<
 
   const plugin = definePlugin({
     name: PAP_SIGN_IN_PLUGIN_NAME,
-    displayName: 'Sign in at a company',
-    description:
-      'The company’s page, the code and until when, where the agent asks the person to sign in.',
-    octicon: 'sign-in',
-    emoji: '\u{1F511}',
+    ...uiManifestOf('pap-sign-in'),
     contributes: [
       contribution(
         Renderers,

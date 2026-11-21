@@ -17,6 +17,7 @@ import { ShieldCheckIcon } from '@primer/octicons-react';
 import type { AppSpec } from '../../../types/agentspecs';
 import { LoopSlots, type LoopWorkspaceContext } from '../../core';
 import { AppRulesCard } from './AppRulesCard';
+import { uiManifestOf } from '../../uiManifest';
 
 export const APP_RULES_PLUGIN_NAME = '@datalayer/loop-plugin-app-rules';
 
@@ -30,6 +31,7 @@ export function defineAppRulesPlugin(
   }
   const plugin = definePlugin({
     name: `${APP_RULES_PLUGIN_NAME}-${app.id}`,
+    ...uiManifestOf('app-rules'),
     displayName: `${app.name}: rules and approvals`,
     description: `When ${app.name} acts alone, when it asks, and what waits for your yes.`,
     octicon: 'shield-check',
