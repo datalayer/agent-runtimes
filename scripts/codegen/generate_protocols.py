@@ -42,9 +42,18 @@ def load_protocol_specs(specs_dir: Path) -> list[dict[str, Any]]:
             raise ValueError(
                 f"{yaml_file.name}: layer one of {LAYERS}, status one of {STATUSES}"
             )
-        roles = spec.get("roles") or []
-        if not roles or len(set(roles)) != len(roles):
-            raise ValueError(f"{yaml_file.name}: roles, each said once, at least one")
+        roles = spec.get("roles")
+        # A list of non-empty strings: `roles: client` is a string, iterable, and would become its letters.
+        if (
+            not isinstance(roles, list)
+            or not roles
+            or not all(isinstance(r, str) and r for r in roles)
+        ):
+            raise ValueError(
+                f"{yaml_file.name}: roles is a list of non-empty strings, at least one"
+            )
+        if len(set(roles)) != len(roles):
+            raise ValueError(f"{yaml_file.name}: roles, each said once")
         if spec.get("appspec_block") not in (None, *BLOCKS):
             raise ValueError(f"{yaml_file.name}: appspec_block one of {BLOCKS}")
         specs.append(spec)

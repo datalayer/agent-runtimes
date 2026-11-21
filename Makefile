@@ -438,7 +438,9 @@ loop-demo-nocodemode: # loop-demo-nocodemode
 list-specs: # list specs
 	agent-runtimes list-specs
 
-specs: specs-clone specs-sandbox-variants specs-generate specs-format specs-manifests ## generate Python and TypeScript code from YAML specifications (agents, teams, scenes, frames, cogs, ops, guards, gates, tracks, battles, stages, identities, applications, MCP servers, skills, envvars)
+specs: specs-clone specs-sandbox-variants specs-generate specs-format ## generate Python and TypeScript code from YAML specifications (agents, teams, scenes, frames, cogs, ops, guards, gates, tracks, battles, stages, identities, applications, MCP servers, skills, envvars)
+	# After its prerequisites, not beside them: with make -j the export would read half-written specs.
+	$(MAKE) specs-manifests
 
 PLUGIN_MANIFESTS_ARGS = \
 	--json-output src/specs/pluginManifests.generated.json \
