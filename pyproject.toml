@@ -180,7 +180,9 @@ dependencies = [
     # 1.2.8 sends a secret's value as it is, with no marker and nothing to
     # decode: one representation end to end, which is what
     # `datalayer secrets create` writes with.
-    "datalayer-core>=1.2.12",
+    # 1.2.31 imports jupyter_server (and jsonschema) only where used: the CLI starts
+    # without them (test_cli_start_imports).
+    "datalayer-core>=1.2.31",
     "fastapi",
     "filelock>=3.20.3",
     "httpx",
