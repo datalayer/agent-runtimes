@@ -13,15 +13,13 @@ import { BrowserIcon } from '@primer/octicons-react';
 import { contribution, definePlugin } from '@datalayer/reactor';
 import { LoopCommand, LoopViewType } from '../../core';
 import { AgentsPlugin } from '../agents';
+import { uiManifestOf } from '../../uiManifest';
 
 export const A2UI_PLUGIN_NAME = '@datalayer/loop-plugin-a2ui';
 
 export const A2uiPlugin = definePlugin({
   name: A2UI_PLUGIN_NAME,
-  displayName: 'A2UI surfaces',
-  description: 'The last execution, rendered as a surface rather than dumped.',
-  octicon: 'browser',
-  emoji: '\u{1F5BC}',
+  ...uiManifestOf('a2ui-view'),
   dependencies: [AgentsPlugin],
   contributes: [
     contribution(

@@ -28,15 +28,13 @@ import {
   LoopNotebookToolbar,
 } from '../../core';
 import { AgentsPlugin } from '../agents';
+import { uiManifestOf } from '../../uiManifest';
 
 export const NOTEBOOK_PLUGIN_NAME = '@datalayer/loop-plugin-notebook';
 
 export const NotebookPlugin = definePlugin({
   name: NOTEBOOK_PLUGIN_NAME,
-  displayName: 'Notebook editor',
-  description: 'A notebook beside the chat, on the session\u2019s kernel.',
-  octicon: 'rows',
-  emoji: '\u{1F4D3}',
+  ...uiManifestOf('notebook'),
   // The sandbox is a hard dependency: a notebook with no kernel is a text
   // file. The shell and the chat are extended through their points instead —
   // a dependency would take this plugin down with them, and unticking the

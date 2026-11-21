@@ -39,6 +39,7 @@ import {
 } from '../../core';
 import { AppPage } from './AppPage';
 import { APP_PAGE_SURFACE } from './appPageModel';
+import { uiManifestOf } from '../../uiManifest';
 
 export const APP_PAGE_PLUGIN_NAME = '@datalayer/loop-plugin-app-page';
 
@@ -52,6 +53,7 @@ export function defineAppPagePlugin(
   }
   const plugin = definePlugin({
     name: `${APP_PAGE_PLUGIN_NAME}-${app.id}`,
+    ...uiManifestOf('app-page'),
     displayName: `${app.name}: its page`,
     description: `The page of ${app.name}, drawn beside its conversation.`,
     octicon: 'browser',
@@ -107,6 +109,7 @@ export function defineAppHostPagePlugin(
   }
   const plugin = definePlugin({
     name: `${APP_PAGE_PLUGIN_NAME}-${app.id}`,
+    ...uiManifestOf('app-page'),
     displayName: `${app.name}: its page`,
     description: `The page of ${app.name}, drawn by its host.`,
     octicon: 'browser',

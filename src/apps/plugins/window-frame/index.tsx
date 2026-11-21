@@ -38,6 +38,7 @@ import { Box } from '@datalayer/primer-addons';
 import { LoopSlots } from '../../core';
 import { WorkspaceFullScreenAction } from '../../shell/WorkspaceFullScreenAction';
 import { WINDOW_CONTROLS_SLOT } from './slots';
+import { uiManifestOf } from '../../uiManifest';
 
 export { WindowFrame, type WindowFrameProps } from './WindowFrame';
 export { WINDOW_ACTIONS_SLOT, WINDOW_CONTROLS_SLOT } from './slots';
@@ -76,11 +77,7 @@ export const WindowFramePlugin = definePlugin<
   ReactorReactOutput
 >({
   name: WINDOW_FRAME_PLUGIN_NAME,
-  displayName: 'Window frame',
-  description:
-    'Draws Loop as a window, and opens its title bar to controls and actions.',
-  octicon: 'browser',
-  emoji: '\u{1FA9F}',
+  ...uiManifestOf('window-frame'),
   build: () => ({
     components: [
       {

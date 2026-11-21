@@ -24,6 +24,12 @@ export const A2UI_SURFACE_UI_0_0_1: UISpec = {
   octicon: 'browser',
   plugin: '@datalayer/loop-plugin-a2ui-surface',
   folder: 'a2ui-surface',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/a2ui-surface',
+    export: 'A2uiSurfacePlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: ['loop.chatHeader'],
     points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
@@ -1114,6 +1120,12 @@ export const A2UI_VIEW_UI_0_0_1: UISpec = {
   octicon: 'browser',
   plugin: '@datalayer/loop-plugin-a2ui',
   folder: 'a2ui',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/a2ui',
+    export: 'A2uiPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: [],
     points: ['loop.command', 'loop.viewType'],
@@ -1136,6 +1148,12 @@ export const AGENTSPECS_UI_0_0_1: UISpec = {
   octicon: 'people',
   plugin: '@datalayer/loop-plugin-agentspecs',
   folder: 'agentspecs',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/agentspecs',
+    export: 'AgentspecsPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: ['loop.header'],
     points: ['loop.command'],
@@ -1159,6 +1177,12 @@ export const ANALYSIS_HEADER_UI_0_0_1: UISpec = {
   octicon: 'workflow',
   plugin: '@datalayer/loop-plugin-analysis-header',
   folder: 'analysis-header',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/analysis-header',
+    export: 'analysisHeaderPlugin',
+    kind: 'factory',
+  },
   contributions: {
     slots: ['loop.chatHeader'],
     points: ['loop.chat.extras'],
@@ -1215,6 +1239,12 @@ export const APP_ACTIVITY_UI_0_0_1: UISpec = {
   octicon: 'pulse',
   plugin: '@datalayer/loop-plugin-app-activity',
   folder: 'app-activity',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/app-activity',
+    export: 'defineAppActivityPlugin',
+    kind: 'factory',
+  },
   per: 'application',
   contributions: {
     slots: ['loop.sidebar'],
@@ -1239,6 +1269,12 @@ export const APP_COMPONENTS_UI_0_0_1: UISpec = {
   octicon: 'apps',
   plugin: '@datalayer/loop-plugin-app-components',
   folder: 'app-components',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/app-components',
+    export: 'defineAppComponentsPlugin',
+    kind: 'factory',
+  },
   per: 'application',
   contributions: {
     slots: [],
@@ -1263,6 +1299,12 @@ export const APP_COMPUTER_UI_0_0_1: UISpec = {
   octicon: 'device-desktop',
   plugin: '@datalayer/loop-plugin-app-computer',
   folder: 'app-computer',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/app-computer',
+    export: 'defineAppComputerPlugin',
+    kind: 'factory',
+  },
   per: 'application',
   contributions: {
     slots: ['loop.sidebar'],
@@ -1287,6 +1329,12 @@ export const APP_ELEMENTS_UI_0_0_1: UISpec = {
   octicon: 'sidebar-expand',
   plugin: '@datalayer/loop-plugin-app-elements',
   folder: 'app-elements',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/app-elements',
+    export: 'AppElementsPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: ['root'],
     points: ['reactor.ui.renderer'],
@@ -1309,6 +1357,12 @@ export const APP_PAGE_UI_0_0_1: UISpec = {
   octicon: 'browser',
   plugin: '@datalayer/loop-plugin-app-page',
   folder: 'app-page',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/app-page',
+    export: 'defineAppPagePlugin',
+    kind: 'factory',
+  },
   per: 'application',
   contributions: {
     slots: [],
@@ -1333,6 +1387,12 @@ export const APP_RULES_UI_0_0_1: UISpec = {
   octicon: 'shield-check',
   plugin: '@datalayer/loop-plugin-app-rules',
   folder: 'app-rules',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/app-rules',
+    export: 'defineAppRulesPlugin',
+    kind: 'factory',
+  },
   per: 'application',
   contributions: {
     slots: ['loop.sidebar'],
@@ -1357,6 +1417,12 @@ export const AWS_HEADER_UI_0_0_1: UISpec = {
   octicon: 'graph',
   plugin: '@datalayer/loop-plugin-aws-header',
   folder: 'aws-header',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/aws-header',
+    export: 'awsHeaderPlugin',
+    kind: 'factory',
+  },
   contributions: {
     slots: ['loop.chatHeader'],
     points: ['loop.chat.extras', 'loop.runProps'],
@@ -1439,6 +1505,12 @@ export const AWS_SAVINGS_BADGE_UI_0_0_1: UISpec = {
   octicon: 'graph',
   plugin: '@datalayer/loop-plugin-aws-savings-badge',
   folder: 'aws-savings-badge',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/aws-savings-badge',
+    export: 'awsSavingsBadgePlugin',
+    kind: 'factory',
+  },
   contributions: {
     slots: ['loop.chatHeader'],
     points: [],
@@ -1462,6 +1534,12 @@ export const AWS_SAVINGS_UI_0_0_1: UISpec = {
   octicon: 'list-ordered',
   plugin: '@datalayer/loop-plugin-aws-savings',
   folder: 'aws-savings',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/aws-savings',
+    export: 'AwsSavingsPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: [],
     points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
@@ -1485,6 +1563,12 @@ export const BANK_RECONCILIATION_UI_0_0_1: UISpec = {
   octicon: 'git-compare',
   plugin: '@datalayer/loop-plugin-bank-reconciliation',
   folder: 'bank-reconciliation',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/bank-reconciliation',
+    export: 'BankReconciliationPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: [],
     points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
@@ -1508,6 +1592,12 @@ export const BASKET_TOTAL_UI_0_0_1: UISpec = {
   octicon: 'package',
   plugin: '@datalayer/loop-plugin-basket-total',
   folder: 'basket-total',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/basket-total',
+    export: 'basketTotalPlugin',
+    kind: 'factory',
+  },
   contributions: {
     slots: ['loop.chatHeader'],
     points: [],
@@ -1531,6 +1621,12 @@ export const BLUESKY_POST_PREVIEW_UI_0_0_1: UISpec = {
   octicon: 'megaphone',
   plugin: '@datalayer/loop-plugin-bluesky-post-preview',
   folder: 'bluesky-post-preview',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/bluesky-post-preview',
+    export: 'BlueskyPostPreviewPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: [],
     points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
@@ -1554,6 +1650,12 @@ export const BOOKS_HEADER_UI_0_0_1: UISpec = {
   octicon: 'book',
   plugin: '@datalayer/loop-plugin-books-header',
   folder: 'books-header',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/books-header',
+    export: 'booksHeaderPlugin',
+    kind: 'factory',
+  },
   contributions: {
     slots: ['loop.chatHeader'],
     points: ['loop.chat.extras', 'loop.runProps'],
@@ -1628,6 +1730,12 @@ export const BROWSER_SESSION_UI_0_0_1: UISpec = {
   octicon: 'browser',
   plugin: '@datalayer/loop-plugin-browser-session',
   folder: 'browser-session',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/browser-session',
+    export: 'BrowserSessionPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: ['loop.chatHeader'],
     points: [],
@@ -1651,6 +1759,12 @@ export const CANVAS_BLOCKS_UI_0_0_1: UISpec = {
   octicon: 'apps',
   plugin: '@datalayer/loop-plugin-ui',
   folder: 'canvas-blocks',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/canvas-blocks',
+    export: 'CANVAS_BLOCK_PLUGINS',
+    kind: 'plugins',
+  },
   per: 'ui',
   contributions: {
     slots: [],
@@ -1675,6 +1789,12 @@ export const CANVAS_PARTS_UI_0_0_1: UISpec = {
   octicon: 'package',
   plugin: '@datalayer/loop-plugin-parts',
   folder: 'canvas-parts',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/canvas-parts',
+    export: 'CANVAS_PART_PLUGINS',
+    kind: 'plugins',
+  },
   per: 'source',
   contributions: {
     slots: [],
@@ -1699,6 +1819,12 @@ export const CHAT_EXTRAS_UI_0_0_1: UISpec = {
   octicon: 'megaphone',
   plugin: '@datalayer/loop-plugin-chat-extras',
   folder: 'chat-extras',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/chat-extras',
+    export: 'createChatExtrasPlugin',
+    kind: 'factory',
+  },
   contributions: {
     slots: [],
     points: ['loop.chat.extras'],
@@ -1722,6 +1848,12 @@ export const CHAT_HEADER_UI_0_0_1: UISpec = {
   octicon: 'rows',
   plugin: '@datalayer/loop-plugin-chat-header',
   folder: 'chat-header',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/chat-header',
+    export: 'ChatHeaderPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: [],
     points: ['loop.chat.header'],
@@ -1744,6 +1876,12 @@ export const CHAT_VIEW_UI_0_0_1: UISpec = {
   octicon: 'comment-discussion',
   plugin: '@datalayer/loop-plugin-chat-view',
   folder: 'chat-view',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/chat-view',
+    export: 'ChatViewPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: ['loop.promptAction'],
     points: [],
@@ -1767,6 +1905,12 @@ export const CHAT_UI_0_0_1: UISpec = {
   octicon: 'comment-discussion',
   plugin: '@datalayer/loop-plugin-chat',
   folder: 'chat',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/chat',
+    export: 'ChatPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: [],
     points: [
@@ -1887,6 +2031,12 @@ export const COMMANDS_UI_0_0_1: UISpec = {
   octicon: 'command-palette',
   plugin: '@datalayer/loop-plugin-commands',
   folder: 'commands',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/commands',
+    export: 'LoopCommandsPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: ['loop.status'],
     points: [],
@@ -1910,6 +2060,12 @@ export const COMPOSER_PORTAL_UI_0_0_1: UISpec = {
   octicon: 'stack',
   plugin: '@datalayer/loop-plugin-composer-portal',
   folder: 'composer-portal',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/composer-portal',
+    export: 'composerPortalPlugin',
+    kind: 'factory',
+  },
   contributions: {
     slots: ['loop.promptAction'],
     points: [],
@@ -1932,6 +2088,12 @@ export const DOCUMENT_TOOLBAR_UI_0_0_1: UISpec = {
   octicon: 'circle',
   plugin: '@datalayer/loop-plugin-document-toolbar',
   folder: 'document-toolbar',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/document-toolbar',
+    export: 'DocumentToolbarPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: [],
     points: ['loop.document.toolbar'],
@@ -1954,6 +2116,12 @@ export const DOCUMENT_VIEW_UI_0_0_1: UISpec = {
   octicon: 'file',
   plugin: '@datalayer/loop-plugin-document-view',
   folder: 'document-view',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/document-view',
+    export: 'DocumentViewPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: ['loop.promptAction'],
     points: [],
@@ -1976,6 +2144,12 @@ export const DOCUMENT_UI_0_0_1: UISpec = {
   octicon: 'file',
   plugin: '@datalayer/loop-plugin-document',
   folder: 'document',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/document',
+    export: 'DocumentPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: [],
     points: ['loop.chat.surface', 'loop.command'],
@@ -1999,6 +2173,12 @@ export const EARTH_AREA_UI_0_0_1: UISpec = {
   octicon: 'location',
   plugin: '@datalayer/loop-plugin-earth-area',
   folder: 'earth-area',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/earth-area',
+    export: 'earthAreaPlugin',
+    kind: 'factory',
+  },
   contributions: {
     slots: ['loop.chatHeader'],
     points: [],
@@ -2022,6 +2202,12 @@ export const EARTH_HEADER_UI_0_0_1: UISpec = {
   octicon: 'globe',
   plugin: '@datalayer/loop-plugin-earth-header',
   folder: 'earth-header',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/earth-header',
+    export: 'earthHeaderPlugin',
+    kind: 'factory',
+  },
   contributions: {
     slots: ['loop.chatHeader'],
     points: ['loop.chat.extras', 'loop.runProps'],
@@ -2086,6 +2272,12 @@ export const EARTH_INDEX_UI_0_0_1: UISpec = {
   octicon: 'graph',
   plugin: '@datalayer/loop-plugin-earth-index',
   folder: 'earth-index',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/earth-index',
+    export: 'EarthIndexPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: [],
     points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
@@ -2109,6 +2301,12 @@ export const EARTH_SCENES_UI_0_0_1: UISpec = {
   octicon: 'globe',
   plugin: '@datalayer/loop-plugin-earth-scenes',
   folder: 'earth-scenes',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/earth-scenes',
+    export: 'EarthScenesPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: [],
     points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
@@ -2131,6 +2329,12 @@ export const INPUT_PROMPT_UI_0_0_1: UISpec = {
   octicon: 'pencil',
   plugin: '@datalayer/loop-plugin-input-prompt',
   folder: 'input-prompt',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/input-prompt',
+    export: 'InputPromptPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: [],
     points: ['loop.chat.composer'],
@@ -2154,6 +2358,12 @@ export const LINKEDIN_LINK_UI_0_0_1: UISpec = {
   octicon: 'link',
   plugin: '@datalayer/loop-plugin-linkedin-link',
   folder: 'linkedin-link',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/linkedin-link',
+    export: 'linkedInLinkPlugin',
+    kind: 'factory',
+  },
   contributions: {
     slots: ['loop.chatBanner'],
     points: [],
@@ -2177,6 +2387,12 @@ export const LINKEDIN_POST_PREVIEW_UI_0_0_1: UISpec = {
   octicon: 'megaphone',
   plugin: '@datalayer/loop-plugin-linkedin-post-preview',
   folder: 'linkedin-post-preview',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/linkedin-post-preview',
+    export: 'LinkedInPostPreviewPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: [],
     points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
@@ -2199,6 +2415,12 @@ export const MODELS_UI_0_0_1: UISpec = {
   octicon: 'cpu',
   plugin: '@datalayer/loop-plugin-models',
   folder: 'models',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/models',
+    export: 'ModelsPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: [],
     points: ['loop.command'],
@@ -2222,6 +2444,12 @@ export const NOTEBOOK_HEADER_UI_0_0_1: UISpec = {
   octicon: 'table',
   plugin: '@datalayer/loop-plugin-notebook-header',
   folder: 'notebook-header',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/notebook-header',
+    export: 'notebookHeaderPlugin',
+    kind: 'factory',
+  },
   contributions: {
     slots: ['loop.chatHeader'],
     points: ['loop.chat.extras'],
@@ -2277,6 +2505,12 @@ export const NOTEBOOK_TOOLBAR_UI_0_0_1: UISpec = {
   octicon: 'circle',
   plugin: '@datalayer/loop-plugin-notebook-toolbar',
   folder: 'notebook-toolbar',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/notebook-toolbar',
+    export: 'NotebookToolbarPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: [],
     points: ['loop.notebook.toolbar'],
@@ -2299,6 +2533,12 @@ export const NOTEBOOK_VIEW_UI_0_0_1: UISpec = {
   octicon: 'rows',
   plugin: '@datalayer/loop-plugin-notebook-view',
   folder: 'notebook-view',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/notebook-view',
+    export: 'NotebookViewPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: ['loop.promptAction'],
     points: [],
@@ -2321,6 +2561,12 @@ export const NOTEBOOK_UI_0_0_1: UISpec = {
   octicon: 'rows',
   plugin: '@datalayer/loop-plugin-notebook',
   folder: 'notebook',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/notebook',
+    export: 'NotebookPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: [],
     points: ['loop.chat.surface', 'loop.command'],
@@ -2344,6 +2590,12 @@ export const NOTICES_UI_0_0_1: UISpec = {
   octicon: 'bell',
   plugin: '@datalayer/loop-plugin-notices',
   folder: 'notices',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/notices',
+    export: 'NoticesPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: ['loop.viewOverlay'],
     points: [
@@ -2371,6 +2623,12 @@ export const ODOO_CONTEXT_UI_0_0_1: UISpec = {
   octicon: 'briefcase',
   plugin: '@datalayer/loop-plugin-odoo-context',
   folder: 'odoo-context',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/odoo-context',
+    export: 'odooContextPlugin',
+    kind: 'factory',
+  },
   contributions: {
     slots: ['loop.chatHeader'],
     points: [],
@@ -2394,6 +2652,12 @@ export const PAGE_DECK_UI_0_0_1: UISpec = {
   octicon: 'project',
   plugin: '@datalayer/loop-plugin-page-deck',
   folder: 'page-deck',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/page-deck',
+    export: 'PageDeckPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: [],
     points: [
@@ -2421,6 +2685,12 @@ export const PAGE_EXCALIDRAW_UI_0_0_1: UISpec = {
   octicon: 'paintbrush',
   plugin: '@datalayer/loop-plugin-page-excalidraw',
   folder: 'page-excalidraw',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/page-excalidraw',
+    export: 'PageExcalidrawPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: [],
     points: [
@@ -2448,6 +2718,12 @@ export const PAGE_LAYOUT_UI_0_0_1: UISpec = {
   octicon: 'file',
   plugin: '@datalayer/loop-plugin-page-layout',
   folder: 'page-layout',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/page-layout',
+    export: 'LoopPageLayoutPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: ['loop.header'],
     points: ['loop.chat.layout', 'loop.prompt.panel'],
@@ -2538,6 +2814,12 @@ export const PAGE_MERMAID_UI_0_0_1: UISpec = {
   octicon: 'workflow',
   plugin: '@datalayer/loop-plugin-page-mermaid',
   folder: 'page-mermaid',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/page-mermaid',
+    export: 'PageMermaidPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: [],
     points: [
@@ -2565,6 +2847,12 @@ export const PAGE_SHEET_UI_0_0_1: UISpec = {
   octicon: 'table',
   plugin: '@datalayer/loop-plugin-page-sheet',
   folder: 'page-sheet',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/page-sheet',
+    export: 'PageSheetPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: [],
     points: [
@@ -2592,6 +2880,12 @@ export const PAP_PURCHASE_UI_0_0_1: UISpec = {
   octicon: 'credit-card',
   plugin: '@datalayer/loop-plugin-pap-purchase',
   folder: 'pap-purchase',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/pap-purchase',
+    export: 'PapPurchasePlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: [],
     points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
@@ -2615,6 +2909,12 @@ export const PAP_SIGN_IN_UI_0_0_1: UISpec = {
   octicon: 'sign-in',
   plugin: '@datalayer/loop-plugin-pap-sign-in',
   folder: 'pap-sign-in',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/pap-sign-in',
+    export: 'PapSignInPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: ['loop.chatHeader'],
     points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
@@ -2638,6 +2938,12 @@ export const PRODUCT_CARDS_UI_0_0_1: UISpec = {
   octicon: 'apps',
   plugin: '@datalayer/loop-plugin-product-cards',
   folder: 'product-cards',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/product-cards',
+    export: 'ProductCardsPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: [],
     points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
@@ -2661,6 +2967,12 @@ export const PRODUCT_COMPARISON_UI_0_0_1: UISpec = {
   octicon: 'table',
   plugin: '@datalayer/loop-plugin-product-comparison',
   folder: 'product-comparison',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/product-comparison',
+    export: 'ProductComparisonPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: [],
     points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
@@ -2684,6 +2996,12 @@ export const PROMPT_UI_0_0_1: UISpec = {
   octicon: 'paper-airplane',
   plugin: '@datalayer/loop-plugin-prompt',
   folder: 'prompt',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/prompt',
+    export: 'PromptPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: ['loop.promptAction'],
     points: ['loop.command'],
@@ -2707,6 +3025,12 @@ export const SHOP_HEADER_UI_0_0_1: UISpec = {
   octicon: 'package',
   plugin: '@datalayer/loop-plugin-shop-header',
   folder: 'shop-header',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/shop-header',
+    export: 'shopHeaderPlugin',
+    kind: 'factory',
+  },
   contributions: {
     slots: ['loop.chatHeader'],
     points: ['loop.chat.extras', 'loop.runProps'],
@@ -2783,6 +3107,12 @@ export const SHOPPING_BASKET_UI_0_0_1: UISpec = {
   octicon: 'package',
   plugin: '@datalayer/loop-plugin-shopping-basket',
   folder: 'shopping-basket',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/shopping-basket',
+    export: 'ShoppingBasketPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: [],
     points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
@@ -2806,6 +3136,12 @@ export const SIDE_PANELS_UI_0_0_1: UISpec = {
   octicon: 'sidebar-expand',
   plugin: '@datalayer/loop-plugin-side-panels',
   folder: 'side-panels',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/side-panels',
+    export: 'SidePanelsPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: [],
     points: [
@@ -2833,6 +3169,12 @@ export const SOCIAL_ACCOUNTS_UI_0_0_1: UISpec = {
   octicon: 'person',
   plugin: '@datalayer/loop-plugin-social-accounts',
   folder: 'social-accounts',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/social-accounts',
+    export: 'socialAccountsPlugin',
+    kind: 'factory',
+  },
   contributions: {
     slots: ['loop.chatHeader'],
     points: [],
@@ -2856,6 +3198,12 @@ export const SOCIAL_HEADER_UI_0_0_1: UISpec = {
   octicon: 'megaphone',
   plugin: '@datalayer/loop-plugin-social-header',
   folder: 'social-header',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/social-header',
+    export: 'socialHeaderPlugin',
+    kind: 'factory',
+  },
   contributions: {
     slots: ['loop.chatHeader'],
     points: ['loop.chat.extras', 'loop.runProps'],
@@ -2926,6 +3274,12 @@ export const SPREADSHEET_VIEW_UI_0_0_1: UISpec = {
   octicon: 'table',
   plugin: '@datalayer/loop-plugin-spreadsheet-view',
   folder: 'spreadsheet-view',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/spreadsheet-view',
+    export: 'SpreadsheetViewPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: ['loop.promptAction'],
     points: [],
@@ -2948,6 +3302,12 @@ export const SPREADSHEET_UI_0_0_1: UISpec = {
   octicon: 'table',
   plugin: '@datalayer/loop-plugin-spreadsheet',
   folder: 'spreadsheet',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/spreadsheet',
+    export: 'SpreadsheetPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: [],
     points: ['loop.chat.surface', 'loop.command'],
@@ -2971,6 +3331,12 @@ export const STRIPE_CHECKOUT_UI_0_0_1: UISpec = {
   octicon: 'credit-card',
   plugin: '@datalayer/loop-plugin-stripe-checkout',
   folder: 'stripe-checkout',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/stripe-checkout',
+    export: 'StripeCheckoutPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: [],
     points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
@@ -2994,6 +3360,12 @@ export const SUBAGENT_ACTIVITY_UI_0_0_1: UISpec = {
   octicon: 'people',
   plugin: '@datalayer/loop-plugin-subagent-activity',
   folder: 'subagent-activity',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/subagent-activity',
+    export: 'SubagentActivityPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: ['loop.inpromptMenu'],
     points: [],
@@ -3017,6 +3389,12 @@ export const TRIAL_BALANCE_UI_0_0_1: UISpec = {
   octicon: 'law',
   plugin: '@datalayer/loop-plugin-trial-balance',
   folder: 'trial-balance',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/trial-balance',
+    export: 'TrialBalancePlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: [],
     points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
@@ -3040,6 +3418,12 @@ export const TRIP_BUDGET_UI_0_0_1: UISpec = {
   octicon: 'credit-card',
   plugin: '@datalayer/loop-plugin-trip-budget',
   folder: 'trip-budget',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/trip-budget',
+    export: 'TripBudgetPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: [],
     points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
@@ -3063,6 +3447,12 @@ export const TRIP_HEADER_UI_0_0_1: UISpec = {
   octicon: 'paper-airplane',
   plugin: '@datalayer/loop-plugin-trip-header',
   folder: 'trip-header',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/trip-header',
+    export: 'tripHeaderPlugin',
+    kind: 'factory',
+  },
   contributions: {
     slots: ['loop.chatHeader'],
     points: ['loop.chat.extras', 'loop.runProps'],
@@ -3138,6 +3528,12 @@ export const TRIP_ITINERARY_UI_0_0_1: UISpec = {
   octicon: 'calendar',
   plugin: '@datalayer/loop-plugin-trip-itinerary',
   folder: 'trip-itinerary',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/trip-itinerary',
+    export: 'TripItineraryPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: [],
     points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
@@ -3161,6 +3557,12 @@ export const TRIP_MAP_UI_0_0_1: UISpec = {
   octicon: 'location',
   plugin: '@datalayer/loop-plugin-trip-map',
   folder: 'trip-map',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/trip-map',
+    export: 'TripMapPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: [],
     points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
@@ -3184,6 +3586,12 @@ export const TRIP_OPTIONS_UI_0_0_1: UISpec = {
   octicon: 'briefcase',
   plugin: '@datalayer/loop-plugin-trip-options',
   folder: 'trip-options',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/trip-options',
+    export: 'TripOptionsPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: [],
     points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
@@ -3207,6 +3615,12 @@ export const TRIP_SUMMARY_UI_0_0_1: UISpec = {
   octicon: 'paper-airplane',
   plugin: '@datalayer/loop-plugin-trip-summary',
   folder: 'trip-summary',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/trip-summary',
+    export: 'tripSummaryPlugin',
+    kind: 'factory',
+  },
   contributions: {
     slots: ['loop.chatHeader'],
     points: [],
@@ -3230,6 +3644,12 @@ export const VAT_SUMMARY_UI_0_0_1: UISpec = {
   octicon: 'checklist',
   plugin: '@datalayer/loop-plugin-vat-summary',
   folder: 'vat-summary',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/vat-summary',
+    export: 'VatSummaryPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: [],
     points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
@@ -3253,6 +3673,12 @@ export const WINDOW_FRAME_UI_0_0_1: UISpec = {
   octicon: 'browser',
   plugin: '@datalayer/loop-plugin-window-frame',
   folder: 'window-frame',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/window-frame',
+    export: 'WindowFramePlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: ['loop.header', 'loop.window.controls'],
     points: [],
@@ -3276,6 +3702,12 @@ export const X_BUDGET_UI_0_0_1: UISpec = {
   octicon: 'meter',
   plugin: '@datalayer/loop-plugin-x-budget',
   folder: 'x-budget',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/x-budget',
+    export: 'xBudgetPlugin',
+    kind: 'factory',
+  },
   contributions: {
     slots: ['loop.chatHeader'],
     points: [],
@@ -3299,6 +3731,12 @@ export const X_POST_PREVIEW_UI_0_0_1: UISpec = {
   octicon: 'megaphone',
   plugin: '@datalayer/loop-plugin-x-post-preview',
   folder: 'x-post-preview',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/x-post-preview',
+    export: 'XPostPreviewPlugin',
+    kind: 'plugin',
+  },
   contributions: {
     slots: [],
     points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],

@@ -14,12 +14,14 @@ import type { ToolbarItem } from '@datalayer/primer-addons';
 import { LoopDocumentToolbar } from '../../core';
 import { SandboxStatusItem } from './SandboxStatusItem';
 import { DOCUMENT_TOOLBAR_PLUGIN_NAME } from './names';
+import { uiManifestOf } from '../../uiManifest';
 
 /** Trailing edge, past whatever the Lexical toolbar puts there itself. */
 const STATUS_ORDER = 1000;
 
 export const DocumentToolbarPlugin = definePlugin({
   name: DOCUMENT_TOOLBAR_PLUGIN_NAME,
+  ...uiManifestOf('document-toolbar'),
   contributes: [
     contribution(
       LoopDocumentToolbar,

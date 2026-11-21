@@ -11,6 +11,7 @@
 
 import { contribution, definePlugin } from '@datalayer/reactor';
 import { LoopCommand } from '../../core';
+import { uiManifestOf } from '../../uiManifest';
 
 export const MODELS_PLUGIN_NAME = '@datalayer/loop-plugin-models';
 
@@ -25,10 +26,7 @@ export const MODELS_PLUGIN_NAME = '@datalayer/loop-plugin-models';
  */
 export const ModelsPlugin = definePlugin({
   name: MODELS_PLUGIN_NAME,
-  displayName: 'Models',
-  description: 'Which model answers, from the agentspecs catalog.',
-  octicon: 'cpu',
-  emoji: '\u{1F9E0}',
+  ...uiManifestOf('models'),
   contributes: [
     contribution(
       LoopCommand,

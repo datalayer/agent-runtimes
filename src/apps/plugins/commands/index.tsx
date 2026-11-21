@@ -39,6 +39,7 @@ import {
   type CommandContribution,
   type LoopWorkspaceContext,
 } from '../../core';
+import { uiManifestOf } from '../../uiManifest';
 
 export const COMMANDS_PLUGIN_NAME = '@datalayer/loop-plugin-commands';
 
@@ -92,11 +93,7 @@ export const LoopCommandsPlugin = definePlugin<
   ReactorReactOutput
 >({
   name: COMMANDS_PLUGIN_NAME,
-  displayName: 'Command palette',
-  description:
-    'Puts the workspace commands in a Ctrl-K palette, beside every plugin that registers one.',
-  octicon: 'command-palette',
-  emoji: '\u{2318}',
+  ...uiManifestOf('commands'),
   // The generic palette is pulled in rather than assumed: mounting this one is
   // enough, whether or not the host remembered the other. The theme plugin
   // rides along for the same reason: it is what creates the themed portal

@@ -95,6 +95,7 @@ import {
   isSidePlacement,
   type ChromePlacement,
 } from './chrome';
+import { uiManifestOf } from '../uiManifest';
 
 /** The height of every header part: Primer's small control. */
 export const HEADER_PART_HEIGHT = 28;
@@ -664,10 +665,8 @@ export function defineHeaderPlugin(
 
     return definePlugin({
       name: `@datalayer/loop-plugin-${id}`,
-      displayName: spec.name,
-      description: spec.description,
-      octicon: spec.octicon ?? 'rows',
-      emoji: spec.emoji,
+      octicon: 'rows',
+      ...uiManifestOf(id),
       contributes: [
         contribution(
           LoopChatExtras,

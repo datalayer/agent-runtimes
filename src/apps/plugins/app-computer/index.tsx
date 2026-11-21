@@ -18,6 +18,7 @@ import { DeviceDesktopIcon } from '@primer/octicons-react';
 import type { AppSpec } from '../../../types/agentspecs';
 import { LoopSlots, type LoopWorkspaceContext } from '../../core';
 import { AppComputer } from './AppComputer';
+import { uiManifestOf } from '../../uiManifest';
 
 export const APP_COMPUTER_PLUGIN_NAME = '@datalayer/loop-plugin-app-computer';
 
@@ -35,6 +36,7 @@ export function defineAppComputerPlugin(
   }
   const plugin = definePlugin({
     name: `${APP_COMPUTER_PLUGIN_NAME}-${app.id}`,
+    ...uiManifestOf('app-computer'),
     displayName: `${app.name}: computer`,
     description: `The computer ${app.name} runs on: what ran on it, its files, and taking it over.`,
     octicon: 'device-desktop',

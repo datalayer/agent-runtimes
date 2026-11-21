@@ -19,17 +19,14 @@ import { definePlugin } from '@datalayer/reactor';
 import { LoopSlots } from '../../core';
 import { InputPromptPlugin } from '../input-prompt';
 import { SubagentPulse } from './SubagentPulse';
+import { uiManifestOf } from '../../uiManifest';
 
 export const SUBAGENT_ACTIVITY_PLUGIN_NAME =
   '@datalayer/loop-plugin-subagent-activity';
 
 export const SubagentActivityPlugin = definePlugin({
   name: SUBAGENT_ACTIVITY_PLUGIN_NAME,
-  displayName: 'Subagent activity',
-  description:
-    "A delegated agent's icon, pulsing in the prompt's header while it works.",
-  octicon: 'people',
-  emoji: '\u{1F465}',
+  ...uiManifestOf('subagent-activity'),
   // The band it pulses in is the composer's: no composer, nowhere to be.
   dependencies: [InputPromptPlugin],
   build: () => ({

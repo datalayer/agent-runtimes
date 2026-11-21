@@ -39,6 +39,7 @@ import {
   LoopPromptPanel,
   type LoopChatComposerProps,
 } from '../../core';
+import { uiManifestOf } from '../../uiManifest';
 
 export const INPUT_PROMPT_PLUGIN_NAME = '@datalayer/loop-plugin-input-prompt';
 
@@ -78,11 +79,8 @@ function ComposerView(props: LoopChatComposerProps): JSX.Element {
 
 export const InputPromptPlugin = definePlugin<InputPromptPluginConfig>({
   name: INPUT_PROMPT_PLUGIN_NAME,
+  ...uiManifestOf('input-prompt'),
   config: {},
-  displayName: 'Input Prompt',
-  description: 'The composer under (or over) the conversation.',
-  octicon: 'pencil',
-  emoji: '\u{270F}\u{FE0F}',
   // The composer's own opening: panels hung above or below it, inside its
   // card. Declared here so the graph shows the point before anything fills
   // it; the page layout's current-turn panel is what normally does.

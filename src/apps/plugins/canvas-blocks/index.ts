@@ -31,6 +31,7 @@ import {
   LoopCanvasBlock,
   type CanvasBlockContribution,
 } from '../../core/canvasBlocks';
+import { uiManifestOf } from '../../uiManifest';
 
 /** What is read of a reactor here: its contributions to the point, and who is enabled. */
 type BlocksReader = {
@@ -49,6 +50,7 @@ export function uiPluginBlocks(
 ): ReactorPlugin<Record<string, never>, unknown, unknown> {
   return definePlugin({
     name: canvasBlocksPluginName(ui.id),
+    ...uiManifestOf('canvas-blocks'),
     displayName: ui.name,
     description: `The blocks of ${ui.name} on the Canvas: ${ui.components.map(component => component.name).join(', ')}.`,
     octicon: 'apps',

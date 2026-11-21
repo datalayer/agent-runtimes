@@ -27,6 +27,7 @@ import { customImplementation } from '../../../components/a2ui/custom';
 import { customComponentEntry } from '../../apps/customComponents';
 import { LoopA2uiComponent } from '../../core/a2uiComponents';
 import { LoopCanvasBlock } from '../../core/canvasBlocks';
+import { uiManifestOf } from '../../uiManifest';
 
 /** The name of the plugin that contributes an application's own components. */
 export const appComponentsPluginName = (appId: string): string =>
@@ -51,6 +52,7 @@ export function defineAppComponentsPlugin(
   }
   return definePlugin({
     name: appComponentsPluginName(app.id),
+    ...uiManifestOf('app-components'),
     displayName: `${app.name}'s components`,
     description: `The components ${app.name}'s developer wrote: ${own.map(component => component.name).join(', ')}.`,
     octicon: 'apps',

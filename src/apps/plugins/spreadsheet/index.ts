@@ -21,6 +21,7 @@
 import { TableIcon } from '@primer/octicons-react';
 import { contribution, definePlugin } from '@datalayer/reactor';
 import { LoopCommand, LoopEditorView, requestSurface } from '../../core';
+import { uiManifestOf } from '../../uiManifest';
 
 export const SPREADSHEET_PLUGIN_NAME = '@datalayer/loop-plugin-spreadsheet';
 
@@ -29,10 +30,7 @@ export const SPREADSHEET_SURFACE_ID = 'spreadsheet';
 
 export const SpreadsheetPlugin = definePlugin({
   name: SPREADSHEET_PLUGIN_NAME,
-  displayName: 'Spreadsheet editor',
-  description: 'A workbook beside the chat, drawn by Datalayer Cells.',
-  octicon: 'table',
-  emoji: '\u{1F9EE}',
+  ...uiManifestOf('spreadsheet'),
   contributes: [
     contribution(
       LoopEditorView,

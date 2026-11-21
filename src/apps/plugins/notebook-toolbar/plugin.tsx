@@ -17,9 +17,11 @@ import { contribution, definePlugin } from '@datalayer/reactor';
 import { LoopNotebookToolbar } from '../../core';
 import { notebookToolbarItems } from './items';
 import { NOTEBOOK_TOOLBAR_PLUGIN_NAME } from './names';
+import { uiManifestOf } from '../../uiManifest';
 
 export const NotebookToolbarPlugin = definePlugin({
   name: NOTEBOOK_TOOLBAR_PLUGIN_NAME,
+  ...uiManifestOf('notebook-toolbar'),
   contributes: [
     contribution(
       LoopNotebookToolbar,

@@ -27,15 +27,13 @@
 import { contribution, definePlugin } from '@datalayer/reactor';
 import { LoopCommand, LoopSlots, focusPrompt } from '../../core';
 import { NewChatAction } from './NewChatAction';
+import { uiManifestOf } from '../../uiManifest';
 
 export const PROMPT_PLUGIN_NAME = '@datalayer/loop-plugin-prompt';
 
 export const PromptPlugin = definePlugin({
   name: PROMPT_PLUGIN_NAME,
-  displayName: 'Prompt',
-  description: 'Prompt commands: focus the composer, start over, and the +.',
-  octicon: 'paper-airplane',
-  emoji: '\u{1FAB6}',
+  ...uiManifestOf('prompt'),
   contributes: [
     contribution(
       LoopCommand,

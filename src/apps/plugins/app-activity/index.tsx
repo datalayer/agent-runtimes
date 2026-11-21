@@ -17,6 +17,7 @@ import { PulseIcon } from '@primer/octicons-react';
 import type { AppSpec } from '../../../types/agentspecs';
 import { LoopSlots } from '../../core';
 import { AppActivity } from './AppActivity';
+import { uiManifestOf } from '../../uiManifest';
 
 export const APP_ACTIVITY_PLUGIN_NAME = '@datalayer/loop-plugin-app-activity';
 
@@ -35,6 +36,7 @@ export function defineAppActivityPlugin(
   }
   const plugin = definePlugin({
     name: `${APP_ACTIVITY_PLUGIN_NAME}-${app.id}`,
+    ...uiManifestOf('app-activity'),
     displayName: `${app.name}: activity`,
     description: `What ${app.name} did, session by session, from its record.`,
     octicon: 'pulse',
