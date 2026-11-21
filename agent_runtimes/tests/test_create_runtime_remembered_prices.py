@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import time
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -79,8 +79,8 @@ def a_client(answer: dict[str, Any] | None = None) -> tuple[AgentClient, list[in
 
     client._urls = SimpleNamespace(runtimes_url=RUNTIMES_URL, iam_url=RUNTIMES_URL)
     client._list_environments = _list_environments  # type: ignore[method-assign]
-    client._get_api_key = lambda: "api-key"  # type: ignore[method-assign]
-    client._runtimes_client = runtimes
+    client._get_api_key = lambda: "api-key"
+    client._runtimes_client = cast(Any, runtimes)
     return client, listings, runtimes
 
 
