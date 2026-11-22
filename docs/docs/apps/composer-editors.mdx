@@ -55,9 +55,14 @@ each kind of part: model, MCP, protocols, skills, rules, UI, tests, events,
 guards, gates and track. On the right is a **Toolbox** of the parts the
 enabled plugins contribute. A part is dragged onto the node of its kind (any
 other place refuses it), or added with a click where there is no pointer. It
-arrives with its example filled in. The **Properties** of the selected part
-are drawn from the Appspec's JSON Schema, and the **Events** say what happens
-when, and what it does. A switch above the graph shows the other surfaces
+arrives with its example filled in. A part clicked on the graph, or chosen
+with the keyboard, opens its kind's section of the Controls (a skill opens
+*Skills*, an MCP server *MCP*, the agent *Agents*): the entry it was placed
+from is marked, and the part's properties, drawn from the Appspec's JSON
+Schema, unfold right under it, scrolled to and focused. A kind whose section
+is not offered (its plugin turned off by the organization) is set in the
+**Properties** panel instead. The **Events** say what happens when, and what
+it does. A switch above the graph shows the other surfaces
 the host gives: *Configuration* (the layout), *Flow*, *Python* and *Preview*.
 
 ```tsx
