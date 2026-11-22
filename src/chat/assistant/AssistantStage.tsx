@@ -885,8 +885,14 @@ export function AssistantStage({
       ? pixels(place.right)
       : undefined;
   const cornerBottom = pixels(place.bottom);
+  // Kept while it steps aside for the pointer: the line under the prompt
+  // keeps its place under a press. Dropped on that press, the line's right
+  // padding shrank before the button went up, its controls moved out from
+  // under the pointer and the click landed on the line instead (the plugins
+  // button opened nothing, 22 November 2026).
+  const obstructed = aside === 'obstacle';
   useEffect(() => {
-    if (aside || cornerRight === undefined || cornerBottom === undefined) {
+    if (obstructed || cornerRight === undefined || cornerBottom === undefined) {
       return;
     }
     const root = document.documentElement;
@@ -894,7 +900,7 @@ export function AssistantStage({
     return () => {
       root.style.removeProperty(ASSISTANT_CLEARANCE_VAR);
     };
-  }, [aside, cornerRight, cornerBottom, size]);
+  }, [obstructed, cornerRight, cornerBottom, size]);
   useMouth(stageRef, mouthLevel, state === 'speaking');
   // A decision being asked, or its answer, keeps the balloon up.
   const [deciding, setDeciding] = useState(false);

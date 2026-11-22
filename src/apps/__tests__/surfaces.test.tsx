@@ -91,23 +91,20 @@ describe('the in-page sandbox', () => {
     'utf8',
   );
 
-  it('publishes its manager to the store other components fall back to', () => {
-    // A Jupyter cell dropped into the document reaches `useJupyter()` with no
-    // manager of its own. Without this it built a second one from the page's
-    // configured server URL and polled a host nobody asked for — the CORS
-    // failures came from there, while the cell ran fine on the kernel here.
-    expect(source).toContain('jupyterReactStore');
-    expect(source).toContain('setServiceManager(manager)');
+  it('keeps its manager to itself, never publishing it as the page’s', () => {
+    // Every component on the page with no manager of its own adopts the
+    // published one (below). Published, the in-page kernel's manager took
+    // over the site's headless JupyterLab, whose settings and sessions then
+    // asked the site itself (22 November 2026). The views that want it take
+    // it from `getServiceManager()`.
+    expect(source).not.toContain('setServiceManager(');
   });
 });
 
 /**
- * The other half of the same fix, in the library.
- *
- * Publishing to the store only helps if the store is what an unaccompanied
- * component actually falls back to. It was not: the hook seeded its state from
- * the props alone, and its effect built a manager from the configured server
- * URL without ever looking at what the page had already published.
+ * Why the sandbox must not publish: in the library, a component with no
+ * manager of its own adopts whatever the page has published rather than
+ * building one for the configured server.
  *
  * Skipped when jupyter-react is not checked out beside this repository — an
  * install from the registry has no source to read.

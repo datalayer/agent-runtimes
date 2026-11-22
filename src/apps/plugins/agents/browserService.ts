@@ -23,6 +23,7 @@
 import { computed, signal, type Signal } from '@datalayer/reactor';
 import { PageConfig } from '@jupyterlab/coreutils';
 import type { Kernel, ServiceManager } from '@jupyterlab/services';
+import type * as JupyterReact from '@datalayer/jupyter-react';
 import type { SandboxSnapshot, SandboxState } from '../../core';
 import type {
   SandboxExecution,
@@ -98,11 +99,9 @@ export type ServiceManagerSource = {
   /** Produce the services. Called once, on first connect. */
   acquire: () => Promise<ServiceManager.IManager>;
   /**
-   * Undo whatever `acquire` did to state outside itself.
-   *
-   * Optional, because most sources take nothing: only the in-page one has to
-   * repoint the page's shared Jupyter configuration at this origin, and only
-   * it has anything to give back.
+   * Undo whatever `acquire` did to state outside itself, on disconnect.
+   * Optional, because most sources take nothing; the in-page one gives the
+   * page's Jupyter configuration back as soon as its manager is built.
    */
   release?: () => void;
   /** Whether this sandbox owns the manager and should dispose it on stop. */
@@ -111,70 +110,96 @@ export type ServiceManagerSource = {
 
 /** A sandbox on a JupyterLite kernel in this page. */
 export function browserSource(): ServiceManagerSource {
-  /** Where the page was pointed before this sandbox repointed it. */
-  let pointedAt: { baseUrl: string; wsUrl: string } | undefined;
-
   return {
     variant: 'pyodide',
     // Dynamic: JupyterLite and the Pyodide kernel are megabytes, and a
     // workspace that never opens a browser sandbox should never pay for them.
     acquire: async () => {
-      const { createLiteServiceManager, jupyterReactStore, loadJupyterConfig } =
-        await import('@datalayer/jupyter-react');
-
+      const jupyterReact = await import('@datalayer/jupyter-react');
       /*
-       * Point Jupyter at this page before building the kernel that lives in it.
+       * Point Jupyter at this page while the kernel that lives in it is built,
+       * and only then.
        *
        * A JupyterLite service manager takes its `serverSettings` from
-       * `PageConfig` at the moment it is created, and JupyterLab's kernel
-       * connection then opens a socket at `wsUrl`. So whatever set that option
-       * last decides where an *in-page* kernel looks for itself: on a host
-       * configured for a remote Jupyter — which any signed-in Datalayer page
-       * is — the browser sandbox started a WebSocket to that remote host, was
-       * refused, and every cell ran into silence. No error, no output, nothing
-       * to act on; the kernel was fine and nobody was talking to it.
+       * `PageConfig` when it is created, and JupyterLite's kernels take their
+       * socket address from it when their module loads, which is during that
+       * creation. On a host configured for a remote Jupyter, which any
+       * signed-in Datalayer page is, a kernel built without this opened its
+       * WebSocket to that remote host, was refused, and every cell ran into
+       * silence. `loadJupyterConfig({ lite: true })` is jupyter-react's own
+       * way of saying "the page is the server".
        *
-       * `loadJupyterConfig({ lite: true })` is jupyter-react's own way of
-       * saying "the page is the server": it points the base and socket URLs at
-       * this origin, where JupyterLite's service worker is listening. It also
-       * initialises the config, which the plain setter refuses to do — and a
-       * workspace can start a sandbox before any Jupyter component has mounted
-       * to load one.
+       * Once built, the manager holds its own settings, and the page's are put
+       * back. `PageConfig` and jupyter-react's configuration are singletons
+       * the whole page shares, and a sandbox is a component on somebody's
+       * page: left pointed at this origin, every Jupyter client started after
+       * it (the site's headless JupyterLab and its extensions) asked the site
+       * itself for `/api/sessions`, `/api/kernelspecs`, `/datalayer/config`
+       * and the rest, and parsed its HTML as JSON (the Studio's application
+       * page, its Preview in the browser kept mounted, 22 November 2026).
        */
-      pointedAt = pointedAt ?? {
-        baseUrl: PageConfig.getOption('baseUrl'),
-        wsUrl: PageConfig.getOption('wsUrl'),
-      };
-      loadJupyterConfig({ lite: true });
-
-      const manager = await createLiteServiceManager();
-      // Publish it to jupyter-react's store, which is what any component
-      // reached through `useJupyter()` without a manager of its own falls back
-      // to. Without this, a Jupyter cell dropped into the document built a
-      // second manager from the page's configured Jupyter URL and polled a
-      // server nobody asked for — the CORS failures came from there, while the
-      // cell itself ran perfectly on the kernel in this page.
-      jupyterReactStore.getState().setServiceManager(manager);
-      return manager;
-    },
-    /*
-     * Put the page back the way it was found.
-     *
-     * `PageConfig` is a singleton the whole page shares, and a workspace is a
-     * component on somebody's page rather than the page itself. Leaving it
-     * pointed at this origin after the reader moves the sandbox elsewhere
-     * would break the next thing to read it — which, in the app, is a notebook
-     * that belongs to a runtime somewhere else.
-     */
-    release: () => {
-      if (!pointedAt) {
-        return;
+      const restore = borrowPageJupyterConfig(jupyterReact);
+      try {
+        jupyterReact.loadJupyterConfig({ lite: true });
+        // Kept to this sandbox, never published as the page's manager
+        // (jupyter-react's store): whatever else on the page uses Jupyter
+        // adopts a published manager, and would have run on this in-page
+        // kernel, its settings and its sessions, instead of the configured
+        // server. The notebook and document views take it from
+        // `getServiceManager()`.
+        return await jupyterReact.createLiteServiceManager();
+      } finally {
+        restore();
       }
-      PageConfig.setOption('baseUrl', pointedAt.baseUrl);
-      PageConfig.setOption('wsUrl', pointedAt.wsUrl);
-      pointedAt = undefined;
     },
     owned: true,
+  };
+}
+
+/** What `borrowPageJupyterConfig` needs of jupyter-react. */
+type JupyterConfigAccess = Pick<
+  typeof JupyterReact,
+  | 'getJupyterServerToken'
+  | 'getJupyterServerUrl'
+  | 'resetJupyterConfig'
+  | 'setJupyterServerToken'
+  | 'setJupyterServerUrl'
+>;
+
+/**
+ * Note the page's Jupyter configuration — `PageConfig`'s `baseUrl`, `wsUrl`
+ * and `token`, and jupyter-react's own, loaded or not — and return what puts
+ * it back as it was.
+ */
+export function borrowPageJupyterConfig(
+  jupyterReact: JupyterConfigAccess,
+): () => void {
+  const page = {
+    baseUrl: PageConfig.getOption('baseUrl'),
+    wsUrl: PageConfig.getOption('wsUrl'),
+    token: PageConfig.getOption('token'),
+  };
+  let loaded: { url: string; token: string } | undefined;
+  try {
+    loaded = {
+      url: jupyterReact.getJupyterServerUrl(),
+      token: jupyterReact.getJupyterServerToken(),
+    };
+  } catch {
+    // Not loaded yet: put back as not loaded, for the next reader to load.
+    loaded = undefined;
+  }
+  return () => {
+    if (loaded) {
+      jupyterReact.setJupyterServerUrl(loaded.url);
+      jupyterReact.setJupyterServerToken(loaded.token);
+    } else {
+      jupyterReact.resetJupyterConfig();
+    }
+    // Last: the setters above derive `wsUrl` from the URL, the page may not.
+    PageConfig.setOption('baseUrl', page.baseUrl);
+    PageConfig.setOption('wsUrl', page.wsUrl);
+    PageConfig.setOption('token', page.token);
   };
 }
 

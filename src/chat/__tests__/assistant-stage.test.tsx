@@ -72,6 +72,44 @@ describe('the floating assistant', () => {
     expect(root.style.getPropertyValue(ASSISTANT_CLEARANCE_VAR)).toBe('');
   });
 
+  it('keeps what it covers while it steps aside for a press beside it, so the line under the prompt does not move under the pointer', async () => {
+    vi.useFakeTimers();
+    try {
+      const root = document.documentElement;
+      const { container } = await render({
+        place: { right: '24px', bottom: '24px' },
+        size: 88,
+      });
+      const stage = container.querySelector(
+        '[data-assistant-state]',
+      ) as HTMLElement;
+      placeAt(stage, STAGE);
+      expect(root.style.getPropertyValue(ASSISTANT_CLEARANCE_VAR)).toBe(
+        '112px',
+      );
+      // A press on a control just beside it (the plugins button at the end
+      // of the line under the prompt).
+      const control = document.createElement('button');
+      document.body.appendChild(control);
+      await act(async () => {
+        control.dispatchEvent(
+          new MouseEvent('pointerdown', {
+            bubbles: true,
+            clientX: 990,
+            clientY: 620,
+            buttons: 1,
+          }),
+        );
+      });
+      expect(stage.getAttribute('data-assistant-aside')).toBe('pointer');
+      expect(root.style.getPropertyValue(ASSISTANT_CLEARANCE_VAR)).toBe(
+        '112px',
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('acts out its state, drawn as the chosen character', async () => {
     const { container } = await render({ state: 'working' });
     expect(
