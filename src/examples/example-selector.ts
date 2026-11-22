@@ -29,6 +29,7 @@ const DISPLAY_NAME_EXCEPTIONS: [RegExp, string][] = [
   [/\bA2 Ui\b/g, 'A2UI'],
   [/\bA2 A\b/g, 'A2A'],
   [/\bPap\b/g, 'PAP'],
+  [/\bUcp\b/g, 'UCP'],
   [/\bCopilot Kit\b/g, 'CopilotKit'],
   [/\bGen Ui\b/g, 'Gen UI'],
   [/\bM C P\b/g, 'MCP'],

@@ -18,7 +18,8 @@ export const EXAMPLE_GROUP_ORDER = [
   'A2UI',
   'A2A',
   'Personal Agent Protocol',
-  'Agent protocols',
+  'Web Bot Auth',
+  'UCP',
   'Shield',
   'AG-UI',
   'Chat',
@@ -57,8 +58,10 @@ export const getExampleGroup = (id: string): string => {
   // Agents reached over the A2A protocol: their own category, after A2UI.
   if (id.startsWith('AgentA2A')) return 'A2A';
   if (id.startsWith('Pap')) return 'Personal Agent Protocol';
-  // The other agent protocols' examples: signed requests, commerce.
-  if (id.startsWith('Protocol')) return 'Agent protocols';
+  // The other agent protocols' examples, a group per protocol (the user,
+  // 22 November 2026): signed requests, a UCP checkout.
+  if (id === 'ProtocolSignedRequestsExample') return 'Web Bot Auth';
+  if (id === 'ProtocolUcpCheckoutExample') return 'UCP';
   // The Shield: a coding agent behind it, and its policy.
   if (id.startsWith('Shield')) return 'Shield';
   if (id.startsWith('AgUi')) return 'AG-UI';

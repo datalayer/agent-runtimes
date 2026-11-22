@@ -13,7 +13,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { EXAMPLES, getExampleEntries } from '../example-selector';
-import { getExampleGroup } from '../exampleGroups';
+import { EXAMPLE_GROUP_ORDER, getExampleGroup } from '../exampleGroups';
 import { signedRequestDemo } from '../protocols/signedRequestsDemo';
 import {
   TEST_TOKEN,
@@ -92,17 +92,32 @@ describe('UCP checkout', () => {
 });
 
 describe('the gallery', () => {
-  it('lists both under Agent protocols', () => {
-    for (const id of [
-      'ProtocolSignedRequestsExample',
-      'ProtocolUcpCheckoutExample',
-    ]) {
+  it('lists each under its protocol: Web Bot Auth and UCP, after PAP', () => {
+    const groups: Record<string, string> = {
+      ProtocolSignedRequestsExample: 'Web Bot Auth',
+      ProtocolUcpCheckoutExample: 'UCP',
+    };
+    for (const [id, group] of Object.entries(groups)) {
       expect(
         getExampleEntries().some(entry => entry.id === id),
         id,
       ).toBe(true);
       expect(EXAMPLES[id], id).toBeTypeOf('function');
-      expect(getExampleGroup(id)).toBe('Agent protocols');
+      expect(getExampleGroup(id)).toBe(group);
     }
+    const pap = EXAMPLE_GROUP_ORDER.indexOf('Personal Agent Protocol');
+    expect(EXAMPLE_GROUP_ORDER.slice(pap + 1, pap + 3)).toEqual([
+      'Web Bot Auth',
+      'UCP',
+    ]);
+    expect(EXAMPLE_GROUP_ORDER).not.toContain('Agent protocols');
+  });
+
+  it('says UCP in capitals: Protocol UCP Checkout', () => {
+    expect(
+      getExampleEntries().find(
+        entry => entry.id === 'ProtocolUcpCheckoutExample',
+      )?.title,
+    ).toBe('Protocol UCP Checkout');
   });
 });
