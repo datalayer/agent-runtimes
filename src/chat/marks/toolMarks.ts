@@ -78,7 +78,9 @@ function frontendTools(): Map<string, { id: string } & Marks> {
   if (!frontendIndex) {
     frontendIndex = new Map();
     for (const spec of Object.values(FRONTEND_TOOL_CATALOG)) {
-      for (const name of spec.toolset ?? []) {
+      // A set whose toolset is 'all' lists no names: iterating the string gave its letters.
+      // Its tools are registered by its adapter when it builds them (registerFrontendToolset).
+      for (const name of Array.isArray(spec.toolset) ? spec.toolset : []) {
         if (!frontendIndex.has(name)) {
           frontendIndex.set(name, { id: spec.id, ...marksOf(spec) });
         }
@@ -117,6 +119,32 @@ export function marksOfMcpServer(server: {
 /** A skill's marks, from the catalogue, by its id with or without a version. */
 export function marksOfSkill(skillId: string): Marks {
   return marksOf(SKILLS_CATALOG[skillId.split(':', 1)[0] || skillId]);
+}
+
+/**
+ * The tools of a frontend set, recorded with the set's marks when its adapter
+ * builds them: a set whose toolset is `'all'` (Jupyter Notebook, Lexical
+ * Document) names no tools in its spec, so a call to one of them — `deleteCells`,
+ * in no narrower set — showed no icon. Both the tool's name and the reference
+ * name a chat calls it by are recorded; a name a narrower set already has keeps
+ * that set's marks.
+ */
+export function registerFrontendToolset(
+  specId: string,
+  definitions: Iterable<{ name: string; toolReferenceName?: string }>,
+): void {
+  const spec = FRONTEND_TOOL_CATALOG[specId];
+  if (!spec) {
+    throw new Error(`No frontend tool set "${specId}" in the catalogue`);
+  }
+  const index = frontendTools();
+  for (const definition of definitions) {
+    for (const name of [definition.toolReferenceName, definition.name]) {
+      if (name && !index.has(name)) {
+        index.set(name, { id: spec.id, ...marksOf(spec) });
+      }
+    }
+  }
 }
 
 /** A frontend tool's marks, by its name. */

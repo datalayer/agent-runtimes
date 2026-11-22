@@ -128,7 +128,7 @@ vi.mock('@datalayer/jupyter-react', () => ({
   CellSidebarButton: () => null,
   notebookStore: { getState: () => ({}) },
   DefaultExecutor: class DefaultExecutor {},
-  notebookToolDefinitions: {},
+  notebookToolDefinitions: [],
   notebookToolOperations: {},
   CollaborationProviderBase: class CollaborationProviderBase {},
   CollaborationStatus: {

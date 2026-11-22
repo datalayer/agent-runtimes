@@ -19,7 +19,11 @@ import {
   notebookToolOperations,
 } from '@datalayer/jupyter-react';
 import { createAllAgentRuntimesTools } from './AgentRuntimesToolAdapter';
+import { registerFrontendToolset } from '../../../chat/marks/toolMarks';
 import type { FrontendToolDefinition } from '../../../types/tools';
+
+// Their calls take the Jupyter Notebook set's marks (its toolset is 'all').
+registerFrontendToolset('jupyter-notebook', notebookToolDefinitions);
 
 // Hook wrapper to get notebook store state
 const useNotebookStore = () => notebookStore.getState();

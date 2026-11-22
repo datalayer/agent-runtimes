@@ -30,6 +30,7 @@ import {
   useLexicalToolBundle,
 } from '@datalayer/jupyter-lexical';
 import { createAllAgentRuntimesTools } from './AgentRuntimesToolAdapter';
+import { registerFrontendToolset } from '../../../chat/marks/toolMarks';
 import type { FrontendToolDefinition } from '../../../types/tools';
 
 /**
@@ -82,6 +83,7 @@ export function createLexicalTools(
   // A snapshot: whichever plugins have mounted by now. The React hook below
   // is the one that keeps up as they come and go.
   const { definitions, operations } = getLexicalTools(documentId);
+  registerFrontendToolset('lexical-document', definitions);
   return createAllAgentRuntimesTools(definitions, operations, {
     documentId,
     executor,
@@ -130,15 +132,15 @@ export function useLexicalTools(
   const bundle = useLexicalToolBundle(documentId);
 
   // Create and return tools (stable reference)
-  return useMemo(
-    () =>
-      createAllAgentRuntimesTools(
-        bundle.definitions,
-        bundle.operations,
-        context,
-      ),
-    [bundle, context],
-  );
+  return useMemo(() => {
+    // The document's tools take the Lexical Document set's marks (its toolset is 'all').
+    registerFrontendToolset('lexical-document', bundle.definitions);
+    return createAllAgentRuntimesTools(
+      bundle.definitions,
+      bundle.operations,
+      context,
+    );
+  }, [bundle, context]);
 }
 
 export type { FrontendToolDefinition };
