@@ -47,6 +47,9 @@ import {
   PluginManagerPlugin,
   pluginManagerPlugin,
 } from '../plugins/plugin-manager';
+import { AssistantStage } from '../../chat/assistant/AssistantStage';
+import { ASSISTANT_CLEARANCE_VAR } from '../../chat/assistant/clearance';
+import { PromptStacks } from '../../chat/prompt/stack';
 import {
   PLUGIN_MANAGER_DEFAULT_WIDTH,
   pluginManagerDialogWidth,
@@ -201,6 +204,85 @@ describe('the plugins manager’s button', () => {
     act(() => within(reopened).getByRole('button', { name: 'Close' }).click());
     expect(screen.queryByRole('dialog')).toBeNull();
     await waitFor(() => expect(document.activeElement).toBe(button));
+  });
+});
+
+describe('the plugins manager’s button beside the floating assistant (a click on datalayer.ai opened nothing, 22 November 2026)', () => {
+  afterEach(() => {
+    document.documentElement.style.removeProperty(ASSISTANT_CLEARANCE_VAR);
+  });
+
+  it('keeps its place under a press beside the assistant, and the click opens the dialog', async () => {
+    withPlatform([PluginManagerPlugin, DemoPlugin]);
+    const root = document.documentElement;
+    const stageRef = React.createRef<HTMLDivElement>();
+    render(
+      themed(
+        <>
+          {/* The line under the prompt: the button at its live end, its
+              right padding the assistant's clearance. */}
+          <PromptStacks
+            stacks={[
+              {
+                id: 'session-controls',
+                clearsAssistant: true,
+                content: <span>Model</span>,
+                live: <PluginManagerButton placement="footer" />,
+              },
+            ]}
+          />
+          <AssistantStage
+            character="paperclip"
+            state="idle"
+            place={{ right: '24px', bottom: '24px' }}
+            size={88}
+            stageRef={stageRef}
+            onDragStart={() => {}}
+            open={false}
+            onToggle={() => {}}
+            onDismiss={() => {}}
+          />
+        </>,
+      ),
+    );
+    const stage = document.querySelector(
+      '[data-assistant-state]',
+    ) as HTMLElement;
+    stage.getBoundingClientRect = () =>
+      ({
+        left: 1000,
+        top: 600,
+        right: 1088,
+        bottom: 688,
+        width: 88,
+        height: 88,
+        x: 1000,
+        y: 600,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    expect(root.style.getPropertyValue(ASSISTANT_CLEARANCE_VAR)).toBe('112px');
+    const button = screen.getByRole('button', {
+      name: PLUGIN_MANAGER_WORDS.open,
+    });
+    // The press, just beside the assistant: it steps aside, and the line's
+    // padding, hence the button's place, stays as it was until the button
+    // goes up. Dropped, the button moved from under the pointer and the
+    // click went to the line.
+    act(() => {
+      button.dispatchEvent(
+        new MouseEvent('pointerdown', {
+          bubbles: true,
+          clientX: 990,
+          clientY: 620,
+          buttons: 1,
+        }),
+      );
+    });
+    expect(stage.getAttribute('data-assistant-aside')).toBe('pointer');
+    expect(root.style.getPropertyValue(ASSISTANT_CLEARANCE_VAR)).toBe('112px');
+    act(() => button.click());
+    expect(button.getAttribute('aria-expanded')).toBe('true');
+    expect(await screen.findByRole('dialog')).toBeTruthy();
   });
 });
 
