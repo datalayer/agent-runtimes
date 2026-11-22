@@ -36,7 +36,7 @@ import type { JSX } from 'react';
 import { lazy, Suspense, useMemo, useRef, useState } from 'react';
 import { useSyncExternalStore } from 'react';
 import { IconButton } from '@primer/react';
-import { StackIcon } from '@primer/octicons-react';
+import { PencilIcon } from '@primer/octicons-react';
 import { useOptionalReactorPlatform } from '@datalayer/reactor/react';
 import type { AppSpec } from '../../../types/agentspecs';
 import { LoopApplication } from '../../core';
@@ -96,7 +96,7 @@ export function ComposerPortalButton({
     <>
       <IconButton
         ref={button}
-        icon={StackIcon}
+        icon={PencilIcon}
         aria-label={COMPOSER_PORTAL_WORDS.open}
         aria-haspopup="dialog"
         aria-expanded={open}
@@ -125,7 +125,7 @@ export const composerPortalPlugin = defineChromePlugin({
   displayName: 'Composer',
   description:
     'A button in the chat’s toolbar that opens the application’s Composer full screen: its Canvas, its spec and its Python, read only.',
-  octicon: 'stack',
+  octicon: 'pencil',
   emoji: '\u{1F9F1}',
   Component: ComposerPortalButton,
 });
