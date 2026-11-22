@@ -31,7 +31,6 @@ import { DEFAULT_MODEL } from '../specs';
 import type { LibraryAgentspec } from '../config/AgentConfiguration';
 import type { OAuthProvider, Identity } from '../identity';
 import { useIdentity } from '../identity';
-import { useAgentsStore } from './utils/examplesStore';
 import { ThemedProvider } from './utils/themedProvider';
 import {
   isSpecSelection,
@@ -39,7 +38,7 @@ import {
   isCloudSpecSelection,
   getCloudSpecId,
 } from '../config/AgentConfiguration';
-import { MockFileBrowser, MainContent, Header } from './components';
+import { MainContent, Header } from './components';
 import { useChatStore } from '../stores';
 import { useExampleAgentRuntimes as useAgentRuntimes } from './hooks/useExampleAgentRuntimes';
 import {
@@ -780,27 +779,11 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
 
   // UI state
   const [activeSession, setActiveSession] = useState('session-1');
-  const [codemode, _] = useState(false);
   const [showContextTree, setShowContextTree] = useState(false);
   const [leftPaneVisible, setLeftPaneVisible] = useState(false);
   const [rightPaneVisible, setRightPaneVisible] = useState(true);
   const [isCreatingAgent, setIsCreatingAgent] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
-
-  // Get agents and current agent from store
-  const agents = useAgentsStore(state => state.agents);
-  const currentAgent = useAgentsStore(state =>
-    state.getAgentById(selectedAgentId),
-  );
-  const toggleAgentStatus = useAgentsStore(state => state.toggleAgentStatus);
-
-  // Initialize transport from selected agent on mount
-  useEffect(() => {
-    if (currentAgent) {
-      setTransport(currentAgent.protocol);
-      setAgentName(currentAgent.id);
-    }
-  }, [currentAgent]);
 
   // Auto-select MCP servers for codemode when requested
   useEffect(() => {
@@ -1094,14 +1077,6 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
       } else {
         setSelectedCloudSpec(null);
       }
-    } else {
-      setSelectedLibrarySpec(null);
-      setSelectedCloudSpec(null);
-      const agent = agents.find(a => a.id === agentId);
-      if (agent) {
-        setAgentName(agent.id);
-        setTransport(agent.protocol);
-      }
     }
   };
 
@@ -1269,21 +1244,13 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
     prevMcpServersRef.current = selectedMcpServers;
   }, [selectedMcpServers]);
 
-  // True when creating a new agent (blank or from a library spec)
-  const isNewMode =
-    selectedAgentId === 'new-agent' ||
-    isSpecSelection(selectedAgentId) ||
-    isCloudSpecSelection(selectedAgentId);
-
   const effectiveBaseUrl =
     isCloudMode && cloudRuntime?.agentBaseUrl
       ? cloudRuntime.agentBaseUrl
       : baseUrl;
   const effectiveAgentId =
-    isCloudMode && cloudRuntime?.agentId
-      ? cloudRuntime.agentId
-      : currentAgent?.id || agentName;
-  const effectiveProtocol = currentAgent?.protocol || transport;
+    isCloudMode && cloudRuntime?.agentId ? cloudRuntime.agentId : agentName;
+  const effectiveProtocol = transport;
   const launchStatus = useMemo(() => {
     if (createError) {
       return 'error';
@@ -1304,17 +1271,6 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
   ]);
 
   const handleConnect = async () => {
-    // For existing agents (not new-agent or spec), ensure transport and agentName are set
-    if (!isNewMode) {
-      const agent = agents.find(a => a.id === selectedAgentId);
-      if (agent) {
-        setTransport(agent.protocol);
-        setAgentName(agent.id);
-      }
-      setIsConfigured(true);
-      return;
-    }
-
     if (isCloudMode) {
       try {
         const connection = await launchCloudRuntime();
@@ -1385,19 +1341,11 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
           {/* Header - empty content for new agent */}
           <Header
             activeSession={activeSession}
-            agentName={isNewMode ? undefined : currentAgent?.name}
-            agentDescription={isNewMode ? undefined : currentAgent?.description}
-            agentStatus={currentAgent?.status}
             showContextTree={showContextTree}
-            isNewAgent={isNewMode}
+            isNewAgent
             isConfigured={isConfigured}
             onSessionChange={setActiveSession}
             onToggleContextTree={() => setShowContextTree(!showContextTree)}
-            onToggleStatus={
-              currentAgent
-                ? () => toggleAgentStatus(currentAgent.id)
-                : undefined
-            }
           />
 
           {/* Pane - Left Panel (File Browser or Blankslate) */}
@@ -1431,21 +1379,17 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
                 sticky
                 width={{ min: '250px', default: '300px', max: '1200px' }}
               >
-                {isNewMode ? (
-                  <Blankslate border spacious narrow>
-                    <Blankslate.Visual>
-                      <AiAgentIcon colored size={48} />
-                    </Blankslate.Visual>
-                    <Blankslate.Heading>Agent Runtimes</Blankslate.Heading>
-                    <Box textAlign="center">
-                      <Blankslate.Description>
-                        Expose AI Agents through multiple protocols.
-                      </Blankslate.Description>
-                    </Box>
-                  </Blankslate>
-                ) : (
-                  <MockFileBrowser codemode={codemode} />
-                )}
+                <Blankslate border spacious narrow>
+                  <Blankslate.Visual>
+                    <AiAgentIcon colored size={48} />
+                  </Blankslate.Visual>
+                  <Blankslate.Heading>Agent Runtimes</Blankslate.Heading>
+                  <Box textAlign="center">
+                    <Blankslate.Description>
+                      Expose AI Agents through multiple protocols.
+                    </Blankslate.Description>
+                  </Box>
+                </Blankslate>
               </PageLayout.Pane>
             </>
           ) : (
@@ -1526,7 +1470,7 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
                   {!isConfigured ? (
                     <AgentConfiguration
                       agentLibrary={agentLibrary}
-                      protocol={currentAgent?.protocol || transport}
+                      protocol={transport}
                       extensions={extensions}
                       wsUrl={wsUrl}
                       baseUrl={serviceBaseUrlForSelection}
@@ -1538,7 +1482,6 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
                       systemPromptCodemodeAddons={systemPromptCodemodeAddons}
                       tools={tools}
                       sandboxVariant={sandboxVariant}
-                      agents={agents}
                       selectedAgentId={selectedAgentId}
                       isCreatingAgent={isCreatingAgent}
                       createError={createError}
@@ -1602,8 +1545,7 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
                           wsUrl: wsUrl,
                           baseUrl: effectiveBaseUrl,
                           agentId: effectiveAgentId,
-                          title:
-                            currentAgent?.name || agentName || 'AI Assistant',
+                          title: agentName || 'AI Assistant',
                           brandIcon: <AgentIcon size={16} />,
                           kernelIndicatorPlacement: 'right',
                           autoConnect: true,

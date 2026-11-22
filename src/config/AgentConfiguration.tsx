@@ -26,7 +26,7 @@ import {
 } from '@primer/octicons-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
-import type { ExampleAgent, MCPServerConfig } from '../types';
+import type { MCPServerConfig } from '../types';
 import { getSkillSpec, getSkillSpecs } from '../specs/skills';
 import type { OAuthProvider, OAuthProviderConfig, Identity } from '../identity';
 import { IdentityCard, IdentityConnect, useIdentity } from '../identity';
@@ -536,7 +536,6 @@ export interface AgentConfigurationProps {
   systemPromptCodemodeAddons: string;
   tools: string[];
   sandboxVariant: string;
-  agents: readonly ExampleAgent[];
   selectedAgentId: string;
   isCreatingAgent?: boolean;
   createError?: string | null;
@@ -620,7 +619,6 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
   systemPromptCodemodeAddons,
   tools,
   sandboxVariant,
-  agents,
   selectedAgentId,
   isCreatingAgent = false,
   createError = null,
@@ -722,18 +720,12 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
     return cloudLibrarySpecs.find(s => s.id === specId) || null;
   }, [selectedAgentId, cloudLibrarySpecs]);
 
-  // When a spec is selected, form behaves like new-agent but with pre-filled values
-  const isNewAgentMode =
-    selectedAgentId === 'new-agent' ||
-    isSpecSelection(selectedAgentId) ||
-    isCloudSpecSelection(selectedAgentId);
-
   // True when a library spec is selected (fields locked down except Name, URL, Library, Model, Transport, Extensions)
   const isSpecMode =
     isSpecSelection(selectedAgentId) || isCloudSpecSelection(selectedAgentId);
 
-  // Entire form is read-only for existing agents and library spec selections.
-  const isFormReadOnly = !isNewAgentMode || isSpecMode;
+  // Entire form is read-only for library spec selections.
+  const isFormReadOnly = isSpecMode;
 
   // Fetch skills from the backend (always available, independent of codemode)
   const skillsQuery = useQuery<{ skills: SkillOption[]; total: number }>({
@@ -1087,12 +1079,11 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
     }
   };
 
-  // MCP servers are disabled for existing agents and when a spec is selected
-  const mcpServersDisabled = !isNewAgentMode || isSpecMode;
+  // MCP servers are disabled when a spec is selected
+  const mcpServersDisabled = isSpecMode;
 
   // Determine which extensions are enabled based on transport
   const isExtensionEnabled = (ext: Extension): boolean => {
-    if (!isNewAgentMode) return false;
     if (transport === 'ag-ui') return true; // Both mcp-ui and a2ui enabled
     if (transport === 'a2a') return ext === 'a2ui'; // Only a2ui enabled
     return false; // All others disabled
@@ -1187,12 +1178,6 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
                 </Select.Option>
               );
             })}
-            {agents.map(agent => (
-              <Select.Option key={agent.id} value={agent.id} disabled>
-                [Persona] {agent.status === 'running' && '● '}
-                {agent.name}
-              </Select.Option>
-            ))}
           </optgroup>
           <optgroup label="Cloud Agents">
             {cloudLibraryLoading && (
@@ -1224,11 +1209,9 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           </optgroup>
         </Select>
         <FormControl.Caption>
-          {isNewAgentMode
-            ? selectedSpec || selectedCloudSpec
-              ? `Creating from spec: ${(selectedSpec || selectedCloudSpec)?.name} — capabilities are locked`
-              : 'Configure a new custom agent'
-            : 'Selected agent - form fields below are disabled'}
+          {selectedSpec || selectedCloudSpec
+            ? `Creating from spec: ${(selectedSpec || selectedCloudSpec)?.name} — capabilities are locked`
+            : 'Configure a new custom agent'}
           {cloudLibraryError ? ` Cloud fetch error: ${cloudLibraryError}` : ''}
         </FormControl.Caption>
       </FormControl>
@@ -1528,7 +1511,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
         {/* Show connected identities with token status and connect buttons for unconnected providers */}
         <IdentityConnectWithStatus
           identityProviders={identityProviders}
-          disabled={!isNewAgentMode || isSpecMode}
+          disabled={isSpecMode}
           onConnect={onIdentityConnect}
           onDisconnect={onIdentityDisconnect}
         />
@@ -1564,7 +1547,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           <Box display="flex" alignItems="center" gap={2}>
             <Checkbox
               checked={enableCodemode}
-              disabled={!isNewAgentMode || isSpecMode}
+              disabled={isSpecMode}
               onChange={e => onEnableCodemodeChange?.(e.target.checked)}
             />
             <Box>
@@ -1595,7 +1578,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
             <Box display="flex" alignItems="center" gap={2}>
               <Checkbox
                 checked={allowDirectToolCalls}
-                disabled={!isNewAgentMode || isSpecMode}
+                disabled={isSpecMode}
                 onChange={e => onAllowDirectToolCallsChange?.(e.target.checked)}
               />
               <Box>
@@ -1608,7 +1591,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
             <Box display="flex" alignItems="center" gap={2}>
               <Checkbox
                 checked={enableToolReranker}
-                disabled={!isNewAgentMode || isSpecMode}
+                disabled={isSpecMode}
                 onChange={e => onEnableToolRerankerChange?.(e.target.checked)}
               />
               <Box>
@@ -1621,7 +1604,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
             <Box display="flex" alignItems="center" gap={2}>
               <Checkbox
                 checked={useJupyterSandbox}
-                disabled={!isNewAgentMode || isSpecMode}
+                disabled={isSpecMode}
                 onChange={e => onUseJupyterSandboxChange?.(e.target.checked)}
               />
               <Box>
@@ -1712,11 +1695,11 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
                 padding={2}
                 borderRadius={1}
                 backgroundColor="canvas.subtle"
-                opacity={!isNewAgentMode || isSpecMode ? 0.6 : 1}
+                opacity={isSpecMode ? 0.6 : 1}
               >
                 <Checkbox
                   checked={selectedSkills.includes(skill.id)}
-                  disabled={!isNewAgentMode || isSpecMode}
+                  disabled={isSpecMode}
                   onChange={e => handleSkillChange(skill.id, e.target.checked)}
                 />
                 <Box display="flex" flexDirection="column" gap={1}>
@@ -2075,16 +2058,10 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
             <Spinner size="small" />
             <span>Creating Agent...</span>
           </Box>
-        ) : isNewAgentMode ? (
-          selectedSpec ? (
-            `Create from "${selectedSpec.name}"`
-          ) : (
-            'Create the Agent'
-          )
-        ) : agents.find(a => a.id === selectedAgentId)?.status === 'running' ? (
-          'Connect to the Agent'
+        ) : selectedSpec ? (
+          `Create from "${selectedSpec.name}"`
         ) : (
-          'Start and Connect to the Agent'
+          'Create the Agent'
         )}
       </Button>
     </Box>

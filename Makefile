@@ -700,15 +700,6 @@ specs-generate: ## generate all Python and TypeScript specs from YAML
 	python scripts/codegen/generate_voices.py \
 	  --python-output agent_runtimes/specs/voices.py \
 	  --typescript-output src/specs/voices.ts
-	$(call step,Generating persona specifications)
-	@if [ -d "$(AGENTSPECS_DIR)/agentspecs/personas" ]; then \
-	  python scripts/codegen/generate_personas.py \
-	    --specs-dir $(AGENTSPECS_DIR)/agentspecs/personas \
-	    --python-output agent_runtimes/specs/personas.py \
-	    --typescript-output src/specs/personas.ts; \
-	else \
-	  echo "Skipping persona specifications: $(AGENTSPECS_DIR)/agentspecs/personas not found"; \
-	fi
 	$(call step,Post-processing generated Python with ruff)
 	ruff check --select I --fix $(RUFF_TARGETS)
 	ruff format $(RUFF_TARGETS)
