@@ -105,8 +105,6 @@ export default defineConfig(({ mode, command }) => {
 
   const isShowcaseVercelAiElements = target === 'showcase-vercel-ai-elements';
   const isExamples = target === 'examples';
-  const isExamples2 = target === 'examples2';
-  const isExamplesTarget = isExamples || isExamples2;
 
   const plugins = [
     react(),
@@ -279,7 +277,7 @@ export default defineConfig(({ mode, command }) => {
     },
   ];
 
-  if (isExamplesTarget) {
+  if (isExamples) {
     plugins.unshift({
       name: 'html-transform',
       transformIndexHtml: {
@@ -383,10 +381,10 @@ export default defineConfig(({ mode, command }) => {
         open: '/html/index-showcase-vercel-ai-elements.html',
         fs: { strict: false, allow: ['..', '../..', '../../..'] },
       }
-    : isExamplesTarget
+    : isExamples
       ? {
           port: 3000,
-          open: isExamples2 ? '/html/examples2.html' : '/html/examples.html',
+          open: '/html/examples.html',
           fs: { strict: false, allow: ['..', '../..', '../../..'] },
         }
       : {
@@ -440,11 +438,8 @@ export default defineConfig(({ mode, command }) => {
       __dirname,
       'html/index-showcase-vercel-ai-elements.html',
     );
-  } else if (isExamplesTarget) {
-    build.rollupOptions.input = path.resolve(
-      __dirname,
-      isExamples2 ? 'html/examples2.html' : 'html/examples.html',
-    );
+  } else if (isExamples) {
+    build.rollupOptions.input = path.resolve(__dirname, 'html/examples.html');
   } else {
     build.rollupOptions.input = {
       main: path.resolve(__dirname, 'html/index.html'),
@@ -603,15 +598,13 @@ export default defineConfig(({ mode, command }) => {
   // In dev mode (vite serve), use '/' so pages are accessible without the prefix.
   const isServe = command === 'serve';
   const base =
-    isShowcaseVercelAiElements || isExamplesTarget || isServe
-      ? '/'
-      : '/static/';
+    isShowcaseVercelAiElements || isExamples || isServe ? '/' : '/static/';
 
   return {
     base,
     plugins,
     root: '.',
-    publicDir: isExamplesTarget ? false : 'public',
+    publicDir: isExamples ? false : 'public',
     define: {
       global: 'globalThis',
       __webpack_public_path__: '""',

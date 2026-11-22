@@ -153,7 +153,7 @@ export type AppEmbedProps = {
    */
   runAsAnonymous?: boolean;
   /**
-   * A person's own agent, already on a runtime of theirs (`Application`'s
+   * A person's own agent, already on a runtime of theirs (`AIApplication`'s
    * runtime mode): the runtime's agent-runtimes address (`url`) and its
    * name, the agent by its name there (`agentId`), spoken to with the
    * person's own token. Nothing is launched or made.
@@ -164,7 +164,7 @@ export type AppEmbedProps = {
   /** The conversation to go on with: a session the runtime holds or resumed (`fromRuntime`). */
   thread?: ResumedThread;
   /**
-   * Drawn in the host's own page and theme (a React host's `Application`):
+   * Drawn in the host's own page and theme (a React host's `AIApplication`):
    * no theme of its own around it unless its Appspec names one
    * (`interface.theme`) or the host says a mode or a face — the page's
    * primer-addons theme, the application's accent over it in its
@@ -225,7 +225,7 @@ export type AppEmbedProps = {
  * workspace (cards, panels, actions of its menus), the UI plugins its
  * organization turned off, its computer or its builder's sidebar beside its
  * page, whether its composer takes the caret — Datalayer's own page at an
- * application's address passes these (`Application`'s `renderer`).
+ * application's address passes these (`AIApplication`'s `renderer`).
  */
 export type AppRendererExtras = Partial<
   Pick<
@@ -861,7 +861,7 @@ export function AppEmbed({
     host,
   });
   const system = useSystemMode();
-  // In the host's theme (a React host's `Application`): the page's, unless
+  // In the host's theme (a React host's `AIApplication`): the page's, unless
   // the application names one or the host says a mode or a face.
   const hostThemed = followHost && !app.interface.theme && !colorMode && !font;
   // The theme the application names, `loop` when none; its mode

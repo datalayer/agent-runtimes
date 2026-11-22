@@ -356,21 +356,39 @@ export { LoopEmbed, type LoopEmbedProps } from './embed/LoopEmbed';
 // An application as a React component of the host's own page, in visitor,
 // runtime, server or Datalayer mode: what `<datalayer-app>` wraps.
 export {
-  Application,
-  ApplicationSkeleton,
+  AIApplication,
+  AIApplicationSkeleton,
   agentAppspec,
-  resolveApplication,
+  resolveAIApplication,
   resolvedSpec,
   visitorApiOf,
   visitorInferenceOf,
-  type ApplicationDatalayer,
-  type ApplicationProps,
-  type ApplicationRunsOn,
-  type ApplicationRuntime,
-  type ApplicationServer,
-  type ApplicationVisitor,
-  type ResolvedApplication,
-} from './Application';
+  type AIApplicationDatalayer,
+  type AIApplicationProps,
+  type AIApplicationRunsOn,
+  type AIApplicationRuntime,
+  type AIApplicationServer,
+  type AIApplicationVisitor,
+  type ResolvedAIApplication,
+} from './AIApplication';
+// What an application is, from its spec's `presentation`, in the left panel:
+// a host's plugin, added to the application it shows.
+export {
+  AgentPresentationPlugin,
+  AGENT_PRESENTATION_PLUGIN_NAME,
+  agentPresentationPlugin,
+  presentationLabel,
+  presentationOf,
+  type PresentationLinks,
+} from './plugins/agent-presentation';
+// The agent that answers on a runtime, and the session it holds.
+export {
+  readRuntimeSessions,
+  runtimeAgentAnswering,
+  useRuntimeAgent,
+  type RuntimeAgentFound,
+  type RuntimeSessions,
+} from './runtimeAgent';
 // An application in another product's page: the React component, the
 // `<datalayer-app>` element, and the snippet a host pastes.
 export {

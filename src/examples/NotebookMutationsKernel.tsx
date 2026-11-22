@@ -4,7 +4,6 @@
  */
 
 import { useState } from 'react';
-import { createRoot } from 'react-dom/client';
 import { Box } from '@datalayer/primer-addons';
 import { SegmentedControl, Label, Text } from '@primer/react';
 import { INotebookContent } from '@jupyterlab/nbformat';
@@ -27,7 +26,7 @@ import {
 import { useCoreStore } from '../state';
 import { createDatalayerServiceManager } from '../services/DatalayerServiceManager';
 
-import nbformatExample from './notebooks/NotebookExample1.ipynb.json';
+import nbformatExample from './utils/notebooks/NotebookExample1.ipynb.json';
 
 const NOTEBOOK_ID = 'notebook-mutations-id';
 const LOCAL_JUPYTER_SERVER_URL = 'http://0.0.0.0:8888/api/jupyter-server';
@@ -211,11 +210,3 @@ const NotebookMutationsKernel = () => {
 };
 
 export default NotebookMutationsKernel;
-
-// For standalone testing
-if (typeof window !== 'undefined' && window.location.pathname === '/test') {
-  const div = document.createElement('div');
-  document.body.appendChild(div);
-  const root = createRoot(div);
-  root.render(<NotebookMutationsKernel />);
-}

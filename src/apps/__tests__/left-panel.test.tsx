@@ -37,7 +37,7 @@ import {
   type LoopLeftPanelProps,
 } from '../shell/LeftPanel';
 import { appExtension, applicationPlugin } from '../apps/AppRenderer';
-import { agentAppspec } from '../Application';
+import { agentAppspec } from '../AIApplication';
 import { emptyAppspec, parseAppspec, dumpAppspec } from '../apps/appspec';
 import type { AppSpec } from '../../types/agentspecs';
 

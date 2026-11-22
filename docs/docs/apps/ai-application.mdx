@@ -1,21 +1,27 @@
 ---
 sidebar_position: 2.8
-title: The Application component
+title: The AIApplication component
 ---
 
-# The Application component
+# The AIApplication component
 
-`Application` puts an application in a React page as a component of the page
+`AIApplication` puts an application in a React page as a component of the page
 itself: no custom element, no script to load, the page's own theme. It is what
 the [`<datalayer-app>` element](./embedding.mdx) draws in its shadow root, so a
 page that mounts the component and a page that pastes the snippet get the same
 application, drawn by the same code.
 
 ```tsx
-import { Application } from '@datalayer/agent-runtimes/lib/apps/Application';
+import { AIApplication } from '@datalayer/agent-runtimes/lib/apps/AIApplication';
 ```
 
 It is also exported from `@datalayer/agent-runtimes/lib/apps`.
+
+`AIApplication` is the React side of an application; the Python side is
+[`Application`](./python-applications.mdx), which declares an application and
+the code that reacts to its sessions. Both live in this package: an
+application written in Python is drawn in a React page by `AIApplication`, as
+any Appspec is.
 
 ## Two examples
 
@@ -24,7 +30,7 @@ Marketer demo at its address, with ten turns in the preview:
 
 ```tsx
 <div style={{ height: 560 }}>
-  <Application
+  <AIApplication
     app="demo-marketer"
     runsOn={{ kind: 'visitor', maxTurns: 10, onSignIn: () => goToSignIn() }}
   />
@@ -35,11 +41,11 @@ A person's own agent, already running on one of their runtimes:
 
 ```tsx
 import {
-  Application,
+  AIApplication,
   agentAppspec,
-} from '@datalayer/agent-runtimes/lib/apps/Application';
+} from '@datalayer/agent-runtimes/lib/apps/AIApplication';
 
-<Application
+<AIApplication
   app={agentAppspec(spec)} // its agentspec, as a chat
   runsOn={{
     kind: 'runtime',
@@ -129,6 +135,30 @@ The chat sends each turn through the runtime's session API
 that can be listed, paused and resumed. It authenticates with the signed-in
 person's token from core's IAM store.
 
+Before it draws one, a host asks the runtime which agent answers there and
+which session it holds, and guesses nothing. `useRuntimeAgent` asks both, again
+while the runtime is still coming up, and says the agent and the session to go
+on with, or in one sentence why there is none:
+
+```tsx
+import { useRuntimeAgent } from '@datalayer/agent-runtimes/lib/apps/runtimeAgent';
+
+const found = useRuntimeAgent({
+  url, // the runtime's agent-runtimes address
+  token, // the signed-in person's token
+  recordAgentId, // the agent your record names, if any
+  resumed: () => keptSessionUid, // a session to go on with in place of the one held
+});
+if (found && 'error' in found) return <Flash variant="danger">{found.error}</Flash>;
+const runsOn = found && { kind: 'runtime', url, agentId: found.agentId, thread: found.thread };
+```
+
+It reads `GET …/api/v1/agents` (the record's agent, else `default`, else the
+first: `runtimeAgentAnswering`), then `GET …/api/v1/runtime/status` and, on a
+runtime that says `agent_sessions`, `GET …/api/v1/apps/sessions?held=true`
+(`readRuntimeSessions`). A runtime that keeps no agent session is said, in
+your words (`olderRuntime`) or its own, not talked to.
+
 `agentAppspec(spec)` turns an agentspec into the Appspec of a chat: the agent's
 name, emoji, welcome, suggestions as starters, and the UI of the agent and its
 MCP servers and skills.
@@ -140,10 +170,75 @@ the visit's embed token (`embedToken`) when it has one. `datalayer` launches
 it on a Datalayer runtime with the signed-in person's credentials; its
 `thread` continues a conversation opened from the person's history.
 
+## Extending it
+
+What a host adds to the application's workspace goes in `renderer.plugins`:
+Reactor plugins (`definePlugin` from `@datalayer/reactor`) whose components
+fill the workspace's slots (`LoopSlots` from `@datalayer/agent-runtimes/lib/apps/core`):
+the chat's title bar (`chatHeader`), its toolbar (`promptAction`), the left and
+right panels (`leftPanel`, `rightPanel`), a banner, the status line. Make the
+plugins once, outside a render: a new plugin restarts the workspace.
+
+```tsx
+import { definePlugin } from '@datalayer/reactor';
+import { LoopSlots } from '@datalayer/agent-runtimes/lib/apps/core';
+import { AgentPresentationPlugin } from '@datalayer/agent-runtimes/lib/apps/plugins/agent-presentation';
+import { useWorkspaceApplication } from '@datalayer/agent-runtimes/lib/apps/plugins/composer-portal';
+
+function Anatomy() {
+  const application = useWorkspaceApplication(); // the Appspec the workspace draws
+  return <p>{application?.name} has {application?.interface.starters?.length ?? 0} starters.</p>;
+}
+
+const AnatomyPlugin = definePlugin({
+  name: 'my-host-anatomy',
+  build: () => ({
+    components: [
+      { slot: LoopSlots.rightPanel, id: 'anatomy', Component: Anatomy, panel: { label: 'What it is made of' } },
+    ],
+  }),
+});
+
+const RENDERER = { plugins: [AgentPresentationPlugin, AnatomyPlugin] };
+
+<AIApplication app={appspec} runsOn={{ kind: 'server', url: 'http://localhost:8765' }} renderer={RENDERER} />;
+```
+
+### The presentation plugin
+
+`AgentPresentationPlugin` (`lib/apps/plugins/agent-presentation`) fills the
+[left panel](./app-renderer#the-left-panel-what-a-host-says-about-it) with what
+the application is, from its own spec: its emoji and name, then its
+`presentation`, one Markdown document (a paragraph; a bullet list, drawn with a
+check mark before each item; a note wholly in emphasis, drawn quieter; a
+paragraph of links, drawn as actions, the one in bold the main button). An
+application whose spec has no presentation has no toggle and no panel. The
+panel draws its own Close cross.
+
+An address of the site (`/…`) is navigated to with core's `useNavigate`, an
+address elsewhere opens in a new tab. A host that opens some addresses its own
+way, or puts an icon before a link, makes its own instance once:
+
+```tsx
+import { PlayIcon } from '@primer/octicons-react';
+import { agentPresentationPlugin, isSiteLink } from '@datalayer/agent-runtimes/lib/apps/plugins/agent-presentation';
+
+export const PresentationPlugin = agentPresentationPlugin({
+  // true: the host opened it (here, its docs in a panel); false: navigated to.
+  open: href => href.startsWith('/docs/') && (openDocsPanel(href), true),
+  visual: href => (isSiteLink(href) && !href.startsWith('/docs/') ? PlayIcon : undefined),
+});
+```
+
+The *AI Application* example (`src/examples/AIApplicationExample.tsx`, see
+[the examples](./examples.mdx)) puts all of it together.
+
 ## Where Datalayer uses it
 
-- The six agent demos on datalayer.ai's home page: visitor mode.
-- A Personal agent's page: runtime mode, on the person's own runtime.
+- The agent demos on datalayer.ai's home page: visitor mode, with the
+  presentation plugin (its documentation links open in the site's docs panel).
+- An agent's page in the Agents shell: runtime mode, on the person's own
+  runtime, the agent and its session found with `useRuntimeAgent`.
 - An application at its address, `/apps/<slug>`, and its run page in the
   Studio: visitor mode signed out, runtime mode when it is always on,
   `datalayer` otherwise; `mode: 'assistant'` when it is shipped as its avatar
@@ -161,12 +256,12 @@ always use their own theme.
 ## What the element adds
 
 `<datalayer-app>` reads what only an element can be given and draws
-`Application` with `theme: 'own'` and `ownPortal`:
+`AIApplication` with `theme: 'own'` and `ownPortal`:
 
 - an Appspec written inside it, or one at an address (`spec`);
 - an application read with its embed token;
 - its attributes and CSS variables;
 - its shadow root, which keeps the page's styles and the application's apart.
 
-A name with no token is read with `resolveApplication`, the same function
-`Application` uses.
+A name with no token is read with `resolveAIApplication`, the same function
+`AIApplication` uses.

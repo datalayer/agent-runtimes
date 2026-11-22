@@ -263,6 +263,12 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     ['example', 'agent', 'inference', 'provider', 'runtime'],
   ),
   makeEntry(
+    'AIApplicationExample',
+    () => import('./AIApplicationExample'),
+    'An extensible AI application: AIApplication with an Appspec written in the page or named from the catalogue, run on the local server or on Datalayer, extended with the presentation plugin and a plugin of its own in the title bar and the right panel.',
+    ['example', 'app', 'ai-application', 'plugins', 'extensible'],
+  ),
+  makeEntry(
     'LoopWorkspaceExample',
     () => import('./LoopWorkspaceExample'),
     'The LOOP workspace: a blank shell, with the chat, the editors and the plugin list all contributed as plugins.',
@@ -489,6 +495,36 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'NotebookCollaborationExample',
     () => import('./NotebookCollaborationExample'),
     'Notebook collaboration runtime integration example.',
+  ),
+  makeEntry(
+    'DatalayerNotebookExample',
+    () => import('./DatalayerNotebookExample'),
+    'A notebook on a Datalayer runtime: the Datalayer service manager, and real-time collaboration when it is switched on.',
+    ['example', 'notebook', 'datalayer', 'collaboration'],
+  ),
+  makeEntry(
+    'NotebookMutationsKernel',
+    () => import('./NotebookMutationsKernel'),
+    'One notebook moved between kernels: none, the browser (Lite), a Jupyter server, Datalayer CPU or GPU.',
+    ['example', 'notebook', 'kernel'],
+  ),
+  makeEntry(
+    'NotebookMutationsServiceManager',
+    () => import('./NotebookMutationsServiceManager'),
+    'One notebook moved between service managers, its content kept across each change.',
+    ['example', 'notebook', 'service-manager'],
+  ),
+  makeEntry(
+    'ReactRouterExample',
+    () => import('./ReactRouterExample'),
+    'Core’s navigation hooks (useNavigate, useLocation, useParams, useHistory) inside a React Router.',
+    ['example', 'navigation', 'react-router'],
+  ),
+  makeEntry(
+    'NativeNavigationExample',
+    () => import('./NativeNavigationExample'),
+    'Core’s navigation hooks without a router: they fall back to the browser’s own history.',
+    ['example', 'navigation'],
   ),
 ];
 

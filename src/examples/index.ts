@@ -75,3 +75,9 @@ export { default as LexicalAgentSidebarExample } from './LexicalAgentSidebarExam
 export { default as NotebookAgentExample } from './NotebookAgentExample';
 export { default as NotebookAgentSidebarExample } from './NotebookAgentSidebarExample';
 export { default as NotebookExample } from './NotebookExample';
+export { default as AIApplicationExample } from './AIApplicationExample';
+export { default as DatalayerNotebookExample } from './DatalayerNotebookExample';
+export { default as NotebookMutationsKernel } from './NotebookMutationsKernel';
+export { default as NotebookMutationsServiceManager } from './NotebookMutationsServiceManager';
+export { default as ReactRouterExample } from './ReactRouterExample';
+export { default as NativeNavigationExample } from './NativeNavigationExample';

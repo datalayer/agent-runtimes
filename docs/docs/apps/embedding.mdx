@@ -17,7 +17,7 @@ The element draws the application in the mode its Appspec gives, in the `loop`
 theme with the application's accent. The host page's styles do not reach the
 application, and the application's styles do not reach the page. A host that
 uses React mounts the component the element draws,
-[`Application`](./application.mdx), in its own page and theme; `AppEmbed`,
+[`AIApplication`](./ai-application.mdx), in its own page and theme; `AppEmbed`,
 beneath it, is [the renderer](#in-react) for an Appspec already in hand.
 
 ## The four modes
@@ -300,8 +300,8 @@ they contribute to `loop.assistant.character` are there beside Datalayer's
 four, so an Appspec may name one of them (`interface.avatar: owl`). The
 element takes no plugins, so an embedded application draws one of the four.
 
-`AppEmbed` is the renderer beneath [`Application`](./application.mdx), which
-the element draws; a React page usually mounts `Application`, which also reads
+`AppEmbed` is the renderer beneath [`AIApplication`](./ai-application.mdx), which
+the element draws; a React page usually mounts `AIApplication`, which also reads
 a name and runs it for a visitor or on a person's runtime. In a React host it uses
 Primer's portal root, and the styles go where the host's bundler puts them.
 Pass `ownPortal` only when the component is mounted in a root of its own.

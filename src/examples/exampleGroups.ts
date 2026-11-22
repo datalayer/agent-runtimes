@@ -26,6 +26,7 @@ export const EXAMPLE_GROUP_ORDER = [
   'Capabilities',
   'Cell',
   'CopilotKit',
+  'Navigation',
 ] as const;
 
 export const getExampleGroup = (id: string): string => {
@@ -34,6 +35,7 @@ export const getExampleGroup = (id: string): string => {
   if (
     id === 'AgentspecsExample' ||
     id === 'ScenesExample' ||
+    id === 'AIApplicationExample' ||
     id.startsWith('Loop') ||
     id === 'DecksAgent'
   ) {
@@ -58,6 +60,10 @@ export const getExampleGroup = (id: string): string => {
   // The document examples: the ones on the Lexical editor, and the page
   // with a document on it.
   if (id.startsWith('Lexical') || id.startsWith('Document')) return 'Document';
-  if (id.startsWith('Notebook')) return 'Notebook';
+  if (id.startsWith('Notebook') || id === 'DatalayerNotebookExample')
+    return 'Notebook';
+  // Core's navigation hooks, with a router and without one.
+  if (id === 'ReactRouterExample' || id === 'NativeNavigationExample')
+    return 'Navigation';
   return 'Cell';
 };

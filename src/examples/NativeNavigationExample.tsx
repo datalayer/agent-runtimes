@@ -6,7 +6,12 @@
 import React, { useState, useEffect } from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { Button, Heading, Text, Link as PrimerLink } from '@primer/react';
-import { useNavigate, useLocation, useParams, useHistory } from '../hooks';
+import {
+  useNavigate,
+  useLocation,
+  useParams,
+  useHistory,
+} from '@datalayer/core/lib/hooks';
 
 /**
  * Native Navigation Example

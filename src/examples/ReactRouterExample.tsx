@@ -15,7 +15,12 @@ import {
 } from 'react-router-dom';
 import { Box } from '@datalayer/primer-addons';
 import { Button, Heading, Text, TextInput } from '@primer/react';
-import { useNavigate, useLocation, useParams, useHistory } from '../hooks';
+import {
+  useNavigate,
+  useLocation,
+  useParams,
+  useHistory,
+} from '@datalayer/core/lib/hooks';
 
 /**
  * Navigation Logger Component - Shows all navigation events

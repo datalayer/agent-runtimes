@@ -128,6 +128,8 @@ export async function mountOf(spec: UISpec): Promise<Mount> {
  * application's interface a Maker chooses.
  */
 export const NOT_UI: Record<string, string> = {
+  'agent-presentation':
+    "A host's plugin: the page that shows an application adds it (`renderer.plugins`) to present the application from its spec's `presentation` in the left panel; no Appspec names it.",
   shell:
     'The workspace itself: it opens the Contribution Points every other plugin fills, in every workspace.',
   agents: 'The agent and the machine it runs on, not a part of the interface.',

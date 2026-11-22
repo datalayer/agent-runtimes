@@ -108,3 +108,24 @@ describe('the Personal Agent Protocol group', () => {
     expect(EXAMPLE_GROUP_ORDER[a2a + 1]).toBe('Personal Agent Protocol');
   });
 });
+
+describe('the examples merged from the second examples folder, and the AIApplication one', () => {
+  it('are registered once, each in its group', () => {
+    const ids = getExampleEntries().map(entry => entry.id);
+    for (const [id, group] of [
+      ['AIApplicationExample', 'Apps'],
+      ['DatalayerNotebookExample', 'Notebook'],
+      ['NotebookMutationsKernel', 'Notebook'],
+      ['NotebookMutationsServiceManager', 'Notebook'],
+      ['ReactRouterExample', 'Navigation'],
+      ['NativeNavigationExample', 'Navigation'],
+    ] as const) {
+      expect(
+        ids.filter(each => each === id),
+        id,
+      ).toHaveLength(1);
+      expect(getExampleGroup(id), id).toBe(group);
+      expect(EXAMPLE_GROUP_ORDER, id).toContain(group);
+    }
+  });
+});

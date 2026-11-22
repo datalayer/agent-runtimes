@@ -1,0 +1,66 @@
+---
+sidebar_position: 2.9
+title: The examples
+---
+
+# The examples
+
+`src/examples` is one gallery of React examples, each a page of its own, picked
+from the menu at the top or from the cards of the home example. They run in the
+examples' Vite server:
+
+```bash
+npm run examples        # the local agent-runtimes servers, a local Jupyter server, and the gallery on :3000
+make examples           # the same, with the local model keys
+npm run examples:vite   # the gallery alone, against servers already running
+```
+
+The page opens on `/html/examples.html`. An example is registered once, in
+`src/examples/example-selector.ts` (its id, a description for its card, its
+tags and a lazy import), and placed in a group of the menu by
+`src/examples/exampleGroups.ts`. The *Local* and *Datalayer* targets at the top
+of the page say where the examples' agents and kernels run.
+
+## Groups
+
+| Group | What it holds |
+| --- | --- |
+| Apps | Applications and their workspaces: the AI Application, the Agentspecs library, the Loop shells and workspace, an application beside its computer, the scenes, decks. |
+| Avatar | The floating assistant and the gallery of its characters. |
+| A2UI, A2A, Personal Agent Protocol, Agent protocols, Shield, AG-UI | One protocol each. |
+| Chat | The chat components, the voice chat. |
+| Document, Notebook, Cell | The editors with their agents; a notebook on a Datalayer runtime; one notebook moved between kernels and between service managers. |
+| Capabilities | One capability of the runtime each: checkpoints, hooks, memory, guardrails, MCP, skills, subagents… |
+| CopilotKit | CopilotKit beside the notebook and the document. |
+| Navigation | Core's navigation hooks (`useNavigate`, `useLocation`, `useParams`, `useHistory`) inside a React Router and without one. |
+
+## The AI Application example
+
+*AI Application* (`AIApplicationExample.tsx`) is an extensible application
+drawn by [`AIApplication`](./ai-application.mdx):
+
+- **what** it shows: an Appspec written in the page (Web Research of the
+  catalogue, renamed, with a presentation of its own), or the catalogue's
+  `web-research` by its id;
+- **where** it runs: the local agent-runtimes server (`runsOn: { kind: 'server' }`,
+  on :8765) or a runtime launched on Datalayer (`runsOn: { kind: 'datalayer' }`),
+  switched at the top of the page;
+- **what the page adds** (`renderer.plugins`, made once): the library's
+  presentation plugin in the left panel, and a plugin of the example's own,
+  written with Reactor's `definePlugin`, that puts a chip in the chat's title
+  bar and a right panel that reads the application from the workspace
+  (`useWorkspaceApplication`).
+
+Copy it to start an application of your own: change the Appspec, add your
+plugins to `RENDERER`, and pick where it runs.
+
+## One gallery
+
+The examples were once in two folders, `src/examples` and `src/examples2`,
+with two Vite targets. They are one now: the notebook on Datalayer
+(`DatalayerNotebookExample`), the two notebook mutations examples and the two
+navigation examples moved into `src/examples`, read the notebooks of
+`src/examples/utils/notebooks`, and are registered beside the others. The
+second folder's cell and notebook examples were older copies of
+`CellExample` and `NotebookExample`, and were dropped. `npm run examples2`,
+`make examples2` and `html/examples2.html` are gone.

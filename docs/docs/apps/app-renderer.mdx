@@ -352,7 +352,7 @@ header it has. A shared tool would take a free item name and an untyped value.
 
 ### Where it is drawn
 
-In a Loop workspace: an `Application`, and a chat mounted with the preset's `uiPlugins`. The
+In a Loop workspace: an `AIApplication`, and a chat mounted with the preset's `uiPlugins`. The
 plain `Chat` component does not draw header UIs yet: there the older chips stay. A visitor's demo
 has them: they need no connection of the person's.
 
@@ -523,7 +523,7 @@ politely (`role="status"`). Nothing is kept: a conversation opened again shows n
 A host may say something *about* the application on the leading edge of its
 workspace: its presentation, a guide. That is the left panel
 (`LoopSlots.leftPanel`), and any host fills it with a plugin of its own,
-handed to the application (`<Application renderer={{ plugins: [MyPlugin] }} />`,
+handed to the application (`<AIApplication renderer={{ plugins: [MyPlugin] }} />`,
 or `AppRenderer`'s `plugins`):
 
 ```tsx

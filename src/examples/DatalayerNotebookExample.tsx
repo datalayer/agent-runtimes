@@ -17,7 +17,7 @@ import { DatalayerCollaborationProvider } from '../collaboration/DatalayerCollab
 import { createDatalayerServiceManager } from '../services/DatalayerServiceManager';
 import { useCoreStore } from '../state';
 
-import nbformatExample from './notebooks/NotebookExample1.ipynb.json';
+import nbformatExample from './utils/notebooks/NotebookExample1.ipynb.json';
 
 // This corresponds to the notebook ID in the URL when you open an existing notbook in your library
 const NOTEBOOK_ID = '01JZQRQ35GG871QQCZW9TB1A8J';

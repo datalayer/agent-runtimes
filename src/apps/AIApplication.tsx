@@ -6,13 +6,14 @@
 /**
  * An application, as a React component of the host's own page (the user,
  * 16 November 2026: "make sure the Application is a first class React
- * component"): what `<datalayer-app>` draws in its shadow root, drawn here
+ * component"; named `AIApplication` on 22 November 2026, as the Python
+ * `Application` is the application written in Python): what `<datalayer-app>` draws in its shadow root, drawn here
  * in the page itself — no custom element, no script of its own to load —
  * and what the element is a thin wrapper around.
  *
- *   <Application app="demo-marketer" runsOn={{ kind: 'visitor', maxTurns: 10 }} />
+ *   <AIApplication app="demo-marketer" runsOn={{ kind: 'visitor', maxTurns: 10 }} />
  *
- *   <Application
+ *   <AIApplication
  *     app={agentAppspec(spec)}
  *     runsOn={{ kind: 'runtime', url, agentId: 'default', thread }}
  *   />
@@ -56,7 +57,7 @@
  * organization turned off, its computer, the caret (Datalayer's page at an
  * application's address, `/apps/<slug>`).
  *
- * @module apps/Application
+ * @module apps/AIApplication
  */
 
 import { useEffect, useMemo, useState } from 'react';
@@ -82,7 +83,7 @@ import {
 } from './embed/visitorApp';
 
 /** Signed out, on the visitors' runtime. */
-export type ApplicationVisitor = {
+export type AIApplicationVisitor = {
   kind: 'visitor';
   /**
    * ai-agents, where an address is read and beside which the visitors'
@@ -123,7 +124,7 @@ export type ApplicationVisitor = {
 };
 
 /** A person's own agent, already running on a runtime of theirs. */
-export type ApplicationRuntime = {
+export type AIApplicationRuntime = {
   kind: 'runtime';
   /** The runtime's agent-runtimes address (`…/agent-runtimes/<pool>/<name>`). */
   url: string;
@@ -140,7 +141,7 @@ export type ApplicationRuntime = {
 };
 
 /** An agent-runtimes server of the host's own. */
-export type ApplicationServer = {
+export type AIApplicationServer = {
   kind: 'server';
   url: string;
   /** The visit's embed token. */
@@ -148,20 +149,20 @@ export type ApplicationServer = {
 };
 
 /** Launched on a Datalayer runtime, with the signed-in person's credentials. */
-export type ApplicationDatalayer = {
+export type AIApplicationDatalayer = {
   kind: 'datalayer';
   /** A conversation to go on with, read from its runtime (`fromRuntime`): one opened from the person's history. */
   thread?: ResumedThread;
 };
 
-export type ApplicationRunsOn =
-  | ApplicationVisitor
-  | ApplicationRuntime
-  | ApplicationServer
-  | ApplicationDatalayer;
+export type AIApplicationRunsOn =
+  | AIApplicationVisitor
+  | AIApplicationRuntime
+  | AIApplicationServer
+  | AIApplicationDatalayer;
 
 /** What a name, or an Appspec, comes to where it runs. */
-export type ResolvedApplication =
+export type ResolvedAIApplication =
   /** An Appspec to draw; with `visitors`, on the visitors' runtime. */
   | { kind: 'spec'; app: AppSpec; visitors?: DatalayerVisitors }
   /** A decision: Datalayer's run page, framed. */
@@ -172,7 +173,9 @@ export type ResolvedApplication =
   | { kind: 'missing'; detail: string };
 
 /** ai-agents for a visitor: the host's, else the platform's, else the AI plane's. */
-export function visitorApiOf(runsOn: Pick<ApplicationVisitor, 'api'>): string {
+export function visitorApiOf(
+  runsOn: Pick<AIApplicationVisitor, 'api'>,
+): string {
   return (
     runsOn.api ||
     coreStore.getState().configuration?.aiAgentsUrl ||
@@ -186,7 +189,7 @@ export function visitorApiOf(runsOn: Pick<ApplicationVisitor, 'api'>): string {
  * the control plane, where none answers.
  */
 export function visitorInferenceOf(
-  runsOn: Pick<ApplicationVisitor, 'api' | 'inference'>,
+  runsOn: Pick<AIApplicationVisitor, 'api' | 'inference'>,
 ): string {
   return (
     runsOn.inference ||
@@ -205,8 +208,8 @@ const pageOrigin = (): string =>
  */
 export function resolvedSpec(
   app: AppSpec,
-  runsOn: ApplicationRunsOn,
-): ResolvedApplication {
+  runsOn: AIApplicationRunsOn,
+): ResolvedAIApplication {
   if (runsOn.kind !== 'visitor') {
     return { kind: 'spec', app };
   }
@@ -230,15 +233,15 @@ export function resolvedSpec(
  * to visitors, a decision framed, a refusal said); elsewhere, an
  * application of the catalogue by its id.
  */
-export async function resolveApplication({
+export async function resolveAIApplication({
   app,
   runsOn,
   fetcher,
 }: {
   app: AppSpec | string;
-  runsOn: ApplicationRunsOn;
+  runsOn: AIApplicationRunsOn;
   fetcher?: typeof fetch;
-}): Promise<ResolvedApplication> {
+}): Promise<ResolvedAIApplication> {
   if (typeof app !== 'string') {
     return resolvedSpec(app, runsOn);
   }
@@ -313,7 +316,7 @@ export function agentAppspec(
   return app;
 }
 
-export type ApplicationProps = Pick<
+export type AIApplicationProps = Pick<
   AppEmbedProps,
   | 'mode'
   | 'accent'
@@ -331,7 +334,7 @@ export type ApplicationProps = Pick<
   /** The application: an Appspec, a catalogue example's id, an address on Datalayer, or a decision's id. */
   app: AppSpec | string;
   /** Where it runs. */
-  runsOn: ApplicationRunsOn;
+  runsOn: AIApplicationRunsOn;
   /** In the host's primer-addons theme (the default), or in its own (the element's). */
   theme?: 'host' | 'own';
   /** Inline, its height: it fills its container (`100%`) unless given. */
@@ -341,7 +344,7 @@ export type ApplicationProps = Pick<
 };
 
 /** The skeleton of a conversation while its application is read. */
-export function ApplicationSkeleton({
+export function AIApplicationSkeleton({
   height = '100%',
 }: {
   height?: number | string;
@@ -375,7 +378,7 @@ export function ApplicationSkeleton({
  * prefix. The detail (which examples are kept for visitors, the embed
  * token) goes to the developer, in the console.
  */
-export function ApplicationMissing({
+export function AIApplicationMissing({
   height,
   detail,
 }: {
@@ -406,14 +409,14 @@ export function ApplicationMissing({
   );
 }
 
-export function Application({
+export function AIApplication({
   app,
   runsOn,
   theme = 'host',
   height = '100%',
   skeleton,
   ...look
-}: ApplicationProps): JSX.Element {
+}: AIApplicationProps): JSX.Element {
   // An Appspec is drawn at once; a name is read first.
   const given = typeof app === 'string' ? undefined : app;
   const named = typeof app === 'string' ? app : '';
@@ -426,7 +429,7 @@ export function Application({
   );
   const [read, setRead] = useState<{
     key: string;
-    resolved: ResolvedApplication;
+    resolved: ResolvedAIApplication;
   }>();
   const key = `${named}\n${where}`;
   useEffect(() => {
@@ -434,8 +437,8 @@ export function Application({
       return undefined;
     }
     let current = true;
-    resolveApplication({ app: named, runsOn })
-      .catch((error: unknown): ResolvedApplication => ({
+    resolveAIApplication({ app: named, runsOn })
+      .catch((error: unknown): ResolvedAIApplication => ({
         kind: 'said',
         text: error instanceof Error ? error.message : String(error),
       }))
@@ -451,10 +454,10 @@ export function Application({
   }, [key]);
   const resolved = atOnce ?? (read?.key === key ? read.resolved : undefined);
   if (!resolved) {
-    return <>{skeleton ?? <ApplicationSkeleton height={height} />}</>;
+    return <>{skeleton ?? <AIApplicationSkeleton height={height} />}</>;
   }
   if (resolved.kind === 'missing') {
-    return <ApplicationMissing height={height} detail={resolved.detail} />;
+    return <AIApplicationMissing height={height} detail={resolved.detail} />;
   }
   if (resolved.kind === 'said') {
     return (
@@ -517,4 +520,4 @@ export function Application({
   );
 }
 
-export default Application;
+export default AIApplication;

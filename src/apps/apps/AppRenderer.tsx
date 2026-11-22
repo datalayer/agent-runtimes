@@ -148,7 +148,7 @@ export function defineAppPlugin(
   }: {
     /**
      * Its agent is one already on a runtime, made there from its agentspec
-     * and not from the application (a person's own agent, `Application`'s
+     * and not from the application (a person's own agent, `AIApplication`'s
      * runtime mode): the runtime holds no plugin of the application, so the
      * page's requires none.
      */
@@ -339,7 +339,7 @@ export type AppRendererProps = Omit<LoopEmbedProps, 'agentId'> & {
   /**
    * The agent that answers, by its name on the runtime it already runs on
    * (`datalayerKept`): a person's own agent, launched from its agentspec
-   * (`Application`'s runtime mode). Its page plugin then requires nothing of
+   * (`AIApplication`'s runtime mode). Its page plugin then requires nothing of
    * that runtime, which holds no plugin of the application. Unsaid, the
    * application's own agent, made under its id.
    */

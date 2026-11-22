@@ -24,7 +24,7 @@ import { Box } from '@datalayer/primer-addons';
 import { useOptionalSlotComponents } from '@datalayer/reactor/react';
 import { getAgentspecs } from '../../../specs/agents';
 import type { AppSpec } from '../../../types/agentspecs';
-import { agentAppspec } from '../../Application';
+import { agentAppspec } from '../../AIApplication';
 import { LoopSlots } from '../../core';
 import { COMPOSER_PORTAL_WORDS } from './words';
 import { ComposerViewContext } from './context';

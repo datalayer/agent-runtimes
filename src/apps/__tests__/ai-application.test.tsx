@@ -4,7 +4,7 @@
  */
 
 /**
- * `Application`, the React component of the host's own page (the user,
+ * `AIApplication`, the React component of the host's own page (the user,
  * 16 November 2026): in visitor mode it reads a name as the element does —
  * `demo-marketer` at its address — and draws it on the visitors' runtime in
  * the anonymous preview, the Marketer's connections locked in its title
@@ -34,18 +34,22 @@ vi.mock('../embed/LoopEmbed', () => ({
   },
 }));
 
-vi.mock('../Application', async importOriginal => {
-  const actual = await importOriginal<typeof import('../Application')>();
+vi.mock('../AIApplication', async importOriginal => {
+  const actual = await importOriginal<typeof import('../AIApplication')>();
   return {
     ...actual,
-    Application: (props: Record<string, any>) => {
+    AIApplication: (props: Record<string, any>) => {
       seen.application.push(props);
-      return <actual.Application {...(props as any)} />;
+      return <actual.AIApplication {...(props as any)} />;
     },
   };
 });
 
-import { Application, agentAppspec, resolveApplication } from '../Application';
+import {
+  AIApplication,
+  agentAppspec,
+  resolveAIApplication,
+} from '../AIApplication';
 import { defineDatalayerAppElement } from '../embed/element';
 
 const settle = async () => {
@@ -110,7 +114,7 @@ afterEach(() => {
   document.body.replaceChildren();
 });
 
-describe('Application in visitor mode', () => {
+describe('AIApplication in visitor mode', () => {
   it('reads demo-marketer at its address, a skeleton meanwhile, and runs it on the visitors’ runtime in the anonymous preview, its connections locked', async () => {
     let release: () => void = () => undefined;
     const gate = new Promise<void>(resolve => {
@@ -126,7 +130,7 @@ describe('Application in visitor mode', () => {
     );
     const onSignIn = vi.fn();
     const { container, root } = await render(
-      <Application
+      <AIApplication
         app="demo-marketer"
         runsOn={{
           kind: 'visitor',
@@ -169,7 +173,7 @@ describe('Application in visitor mode', () => {
     vi.stubGlobal('fetch', atDemoMarketer());
     const onAction = vi.fn();
     const { root } = await render(
-      <Application
+      <AIApplication
         app="demo-marketer"
         runsOn={{
           kind: 'visitor',
@@ -213,7 +217,7 @@ describe('Application in visitor mode', () => {
       ),
     );
     const { container, root } = await render(
-      <Application
+      <AIApplication
         app="private-desk"
         runsOn={{ kind: 'visitor', api: 'https://r1.example' }}
       />,
@@ -235,7 +239,7 @@ describe('Application in visitor mode', () => {
   });
 
   it('frames a decision named by its id', async () => {
-    const resolved = await resolveApplication({
+    const resolved = await resolveAIApplication({
       app: '01M4DF584YAF36ACJRTYG341E5',
       runsOn: { kind: 'visitor', origin: 'https://datalayer.ai' },
     });
@@ -246,7 +250,7 @@ describe('Application in visitor mode', () => {
   });
 });
 
-describe('Application in runtime mode', () => {
+describe('AIApplication in runtime mode', () => {
   it('talks to the agent already on the person’s runtime, by its name there, and goes on with its session', async () => {
     iamStore.setState({ token: 'jwt' } as never);
     const spec = {
@@ -270,7 +274,7 @@ describe('Application in runtime mode', () => {
     });
     const thread = { id: 'session-1', messages: [], fromRuntime: true };
     const { container, root } = await render(
-      <Application
+      <AIApplication
         app={app}
         runsOn={{
           kind: 'runtime',
@@ -308,13 +312,13 @@ describe('Application in runtime mode', () => {
   });
 });
 
-describe('Application at an application’s address (/apps/<slug>)', () => {
+describe('AIApplication at an application’s address (/apps/<slug>)', () => {
   it('hands its renderer the page’s plugins, the UI plugins turned off and its computer, and runs a kept deployment as its own agent', async () => {
     iamStore.setState({ token: 'jwt' } as never);
     const own = { name: 'studio-cards-test', build: () => ({}) } as never;
     const app = getApp('month-end-close')!;
     const { root } = await render(
-      <Application
+      <AIApplication
         app={app}
         runsOn={{
           kind: 'runtime',
@@ -353,7 +357,7 @@ describe('the element', () => {
     scriptUrl: 'https://datalayer.app/embed/datalayer-app.js',
   });
 
-  it('draws through Application, in its own theme, in its shadow root', async () => {
+  it('draws through AIApplication, in its own theme, in its shadow root', async () => {
     iamStore.setState({ token: 'jwt' } as never);
     const element = document.createElement('datalayer-app');
     element.setAttribute('mode', 'inline');
@@ -377,7 +381,7 @@ describe('the element', () => {
     await act(async () => element.remove());
   });
 
-  it('hands a public name to Application’s visitor mode, the preview on', async () => {
+  it('hands a public name to AIApplication’s visitor mode, the preview on', async () => {
     const element = document.createElement('datalayer-app');
     element.setAttribute('app', 'web-research');
     element.setAttribute('api', 'https://r1.example');

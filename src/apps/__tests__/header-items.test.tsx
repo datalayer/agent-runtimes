@@ -63,7 +63,7 @@ import {
 import { PAGE_TOOL_RESULTS } from '../toolCards/toolResults';
 import { UI_CATALOGUE } from '../../specs/ui';
 import { AGENTSPECS } from '../../specs/agents';
-import { agentAppspec } from '../Application';
+import { agentAppspec } from '../AIApplication';
 import type { UiHeaderItemSpec } from '../../types/agentspecs';
 
 const HEADERS = [
