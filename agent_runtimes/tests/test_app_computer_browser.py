@@ -504,7 +504,7 @@ async def test_a_real_chromium_opens_reads_types_and_shows_a_page(
         field = await browser._call(centre, "q")
         await browser.click_at(*field)
         await browser.press("Backspace")
-        await browser.type_text("p!")
+        await browser.type_text("t!")
         button = await browser._call(centre, "go")
         assert (await browser.click_at(*button)).title == "Typed: agent!"
         # What a page fetches is let through where private pages are allowed.

@@ -243,7 +243,8 @@ def sign_in() -> tuple[str, dict]:
         data=json.dumps({"token": key}).encode(),
         headers={"Content-Type": "application/json"},
     )
-    resp = json.load(urllib.request.urlopen(req, timeout=30))
+    # The IAM address is https, from the environment or the default.
+    resp = json.load(urllib.request.urlopen(req, timeout=30))  # nosec B310
     return resp["token"], resp.get("user") or {}
 
 
@@ -351,8 +352,14 @@ async def main() -> int:
 
     if args.json:
         Path(args.json).write_text(json.dumps(all_results, indent=2))
-    failed = [ex for ex, r in all_results.items() if any(not v.get("pass") for v in r.values())]
-    print(f"\n{len(all_results) - len(failed)}/{len(all_results)} examples pass at every size.")
+    failed = [
+        ex
+        for ex, r in all_results.items()
+        if any(not v.get("pass") for v in r.values())
+    ]
+    print(
+        f"\n{len(all_results) - len(failed)}/{len(all_results)} examples pass at every size."
+    )
     return 1 if failed else 0
 
 
