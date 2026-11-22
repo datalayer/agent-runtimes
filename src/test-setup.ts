@@ -141,6 +141,13 @@ vi.mock('@datalayer/jupyter-react', () => ({
   // `AgentDocument` call it at module scope, so the mock has to answer even
   // for a test that never renders either.
   loadJupyterConfig: () => ({}),
+  // The browser sandbox borrows the page's Jupyter configuration while its
+  // JupyterLite manager is built, then puts it back (browserService).
+  getJupyterServerUrl: () => 'http://localhost:8888',
+  getJupyterServerToken: () => '',
+  setJupyterServerUrl: () => {},
+  setJupyterServerToken: () => {},
+  resetJupyterConfig: () => {},
   /*
    * What turns a tool definition into something callable.
    *
