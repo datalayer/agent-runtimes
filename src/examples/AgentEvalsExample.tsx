@@ -58,6 +58,7 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { useCoreStore } from '@datalayer/core';
 import { LoopEmbed } from '../apps';
 import { AgentEvalsPlugin } from '../apps/plugins/agent-evals';
+import { getAgentspecs } from '../specs/agents';
 import { useExampleAgentRuntimes as useAgentRuntimes } from './hooks/useExampleAgentRuntimes';
 
 const LOOP_PLUGINS_AGENTEVA = [AgentEvalsPlugin];
@@ -68,6 +69,15 @@ const queryClient = new QueryClient();
 
 const AGENT_NAME = 'eval-example-agent';
 const AGENTSPEC_ID = 'example-evals';
+
+/** The model the example's agentspec names; no spec or no model is an error. */
+const AGENTSPEC_MODEL = (() => {
+  const model = getAgentspecs(AGENTSPEC_ID)?.model;
+  if (!model) {
+    throw new Error(`Agentspec '${AGENTSPEC_ID}' names no model`);
+  }
+  return model;
+})();
 
 const normalizeHttpUrl = (value: unknown): string | null => {
   if (typeof value !== 'string') {
@@ -151,7 +161,7 @@ const AgentEvalsInner: React.FC<{
       executionTarget === 'local' ? localRuntimeBaseUrl : cloudRuntimeBaseUrl,
     agentConfig: {
       name: agentName,
-      model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+      model: AGENTSPEC_MODEL,
       protocol: 'ag-ui',
       description: 'Agent with evaluation and quality scoring',
     },

@@ -777,6 +777,66 @@ screen — do not apologise for it or offer to fix the code.
   identity: 'datalayer-acting-agent',
 };
 
+export const EXAMPLE_A2UI_RESTAURANT_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'example-a2ui-restaurant',
+  version: '0.0.1',
+  name: 'A2UI Restaurant Agent',
+  description: `Finds restaurants for the A2UI Restaurant example: a search such as "Top 5 Chinese restaurants in New York" runs its get_restaurants tool, and the places come back as an A2UI surface with a booking form for each.`,
+  tags: ['a2ui', 'example'],
+  domain: undefined,
+  enabled: false,
+  listed: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  mcpServers: [],
+  skills: [].filter(Boolean) as SkillSpec[],
+  backendTools: [],
+  frontendTools: [],
+  environmentName: 'ai-agents-env',
+  icon: 'browser',
+  emoji: '🍽️',
+  color: 'amber',
+  suggestions: [],
+  welcomeMessage: undefined,
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: undefined,
+  harness: 'pydantic-ai',
+  runtimeEngine: 'datalayer',
+  systemPrompt: `You are a helpful restaurant finding assistant.
+
+When users ask about restaurants, use the get_restaurants tool to search.
+When users want to book a restaurant, acknowledge their request.
+
+Keep your responses brief and friendly.
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  delegable: [],
+  protocol: undefined,
+  ui: [],
+  protocols: [],
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  checkpoints: undefined,
+  authorizationPolicy: undefined,
+  policy: { shield: { egress: ['*'] } },
+  notifications: undefined,
+  memory: 'ephemeral',
+  decisions: undefined,
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+  identity: 'datalayer-acting-agent',
+};
+
 export const EXAMPLE_A2UI_VIEWER_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-a2ui-viewer',
   version: '0.0.1',
@@ -16557,6 +16617,7 @@ export const AGENTSPECS: Record<string, Agentspec> = {
   'example-a2a': EXAMPLE_A2A_AGENTSPEC_0_0_1,
   'example-a2ui-agent': EXAMPLE_A2UI_AGENT_SPEC_0_0_1,
   'example-a2ui-jupyter-output': EXAMPLE_A2UI_JUPYTER_OUTPUT_AGENTSPEC_0_0_1,
+  'example-a2ui-restaurant': EXAMPLE_A2UI_RESTAURANT_AGENTSPEC_0_0_1,
   'example-a2ui-viewer': EXAMPLE_A2UI_VIEWER_AGENTSPEC_0_0_1,
   'example-agent-critic-loop-for-analysis':
     EXAMPLE_AGENT_CRITIC_LOOP_FOR_ANALYSIS_AGENTSPEC_0_0_1,

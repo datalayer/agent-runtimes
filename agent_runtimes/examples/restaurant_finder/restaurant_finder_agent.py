@@ -14,55 +14,39 @@ This implementation uses a hybrid approach:
 
 import logging
 import os
-from functools import lru_cache
 from typing import Any
 
-from a2ui.basic_catalog.provider import BasicCatalog
-from a2ui.inference_formats.direct_json import DirectJsonFormat
-from a2ui.schema.constants import VERSION_0_9
+from a2ui.core.basic_catalog import BasicCatalog
+from a2ui.core.exceptions import A2uiValidationError
+from a2ui.core.schema import ProtocolVersion
+from a2ui.utils import validate_payload
 from pydantic_ai import Agent, RunContext
+
+from agent_runtimes.specs.agents import get_agent_spec
 
 from .restaurant_data import get_restaurant_data
 
 logger = logging.getLogger(__name__)
 
+#: The agentspec this example's agent runs: its model and instructions. The
+#: environment variable AGENT_RUNTIMES_MODEL, when set, overrides its model.
+RESTAURANT_AGENTSPEC_ID = "example-a2ui-restaurant"
 
-@lru_cache(maxsize=1)
-def _get_a2ui_catalog() -> Any:
-    """Return the cached basic A2UI catalog from the a2ui-agent-sdk."""
-    direct_json = DirectJsonFormat(
-        version=VERSION_0_9,
-        catalogs=[BasicCatalog.get_config(version=VERSION_0_9)],
-    )
-    return direct_json.get_selected_catalog()
+
+#: The A2UI v0.9 basic catalog (`a2ui-core`), the one the client renderer registers.
+A2UI_BASIC_CATALOG = BasicCatalog(ProtocolVersion.V0_9)
 
 
 def _validate_a2ui_messages(messages: list[dict[str, Any]]) -> None:
-    """Validate A2UI messages against the SDK catalog, logging any issues.
+    """Check the payload as a renderer holding the basic catalog would.
 
-    Validation is best-effort and never blocks a response: malformed messages
-    are logged as warnings so the client still receives whatever was built.
+    Validation never blocks a response: a malformed payload is logged as a
+    warning so the client still receives whatever was built.
     """
     try:
-        catalog = _get_a2ui_catalog()
-    except Exception as exc:  # pragma: no cover - SDK/catalog load failure
-        logger.warning("--- A2UI: Unable to load catalog for validation: %s ---", exc)
-        return
-    for index, message in enumerate(messages):
-        try:
-            errors = catalog.validate_components(message)
-            if errors:
-                raise ValueError(
-                    "; ".join(f"{error.path}: {error.message}" for error in errors)
-                )
-        except Exception as exc:
-            command = next((k for k in message if k != "version"), "unknown")
-            logger.warning(
-                "--- A2UI: Message %d (%s) failed validation: %s ---",
-                index,
-                command,
-                exc,
-            )
+        validate_payload([A2UI_BASIC_CATALOG], messages)
+    except A2uiValidationError as exc:
+        logger.warning("--- A2UI: payload failed validation: %s ---", exc)
 
 
 # Agent state for storing context
@@ -74,9 +58,9 @@ class RestaurantDeps:
         self.last_restaurants: list[dict[str, Any]] = []
 
 
-# Authoritative basic catalog id, derived from the a2ui-agent-sdk so it always
-# matches the catalog the client renderer has registered.
-A2UI_BASIC_CATALOG_ID = BasicCatalog.get_catalog_id(VERSION_0_9)
+# Authoritative basic catalog id, read from a2ui-core's v0.9 basic catalog so it
+# always matches the catalog the client renderer has registered.
+A2UI_BASIC_CATALOG_ID = A2UI_BASIC_CATALOG.catalog_id
 
 
 def _create_surface_message(surface_id: str, primary_color: str) -> dict[str, Any]:
@@ -436,18 +420,31 @@ def _build_confirmation_a2ui(
 def create_restaurant_agent(base_url: str) -> Agent[RestaurantDeps, str]:
     """
     Create a new restaurant agent instance with the given base URL.
+
+    Its model and instructions are the agentspec ``example-a2ui-restaurant``'s;
+    ``AGENT_RUNTIMES_MODEL``, when set, overrides the model. With neither, it
+    raises rather than pick one.
     """
+    spec = get_agent_spec(RESTAURANT_AGENTSPEC_ID)
+    if spec is None:
+        raise ValueError(
+            f"Agentspec '{RESTAURANT_AGENTSPEC_ID}' is not in the catalogue"
+        )
+    # AGENT_RUNTIMES_MODEL overrides the spec's model, as for every spec-driven agent.
+    model = os.environ.get("AGENT_RUNTIMES_MODEL") or spec.model
+    if not model:
+        raise ValueError(
+            f"No model: AGENT_RUNTIMES_MODEL is unset and agentspec "
+            f"'{RESTAURANT_AGENTSPEC_ID}' names no model"
+        )
+    if not spec.system_prompt:
+        raise ValueError(
+            f"Agentspec '{RESTAURANT_AGENTSPEC_ID}' names no system_prompt"
+        )
     agent: Agent[RestaurantDeps, str] = Agent(
-        model=os.getenv(
-            "PYDANTIC_AI_MODEL", "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0"
-        ),
+        model=model,
         deps_type=RestaurantDeps,
-        instructions="""You are a helpful restaurant finding assistant.
-
-When users ask about restaurants, use the get_restaurants tool to search.
-When users want to book a restaurant, acknowledge their request.
-
-Keep your responses brief and friendly.""",
+        instructions=spec.system_prompt,
     )
 
     @agent.tool

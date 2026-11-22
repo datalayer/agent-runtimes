@@ -316,24 +316,19 @@ ui = [
     "agent-client-protocol>=0.7.1",
     "mcp-ui-server>=1.0.0,<1.1.0",
 ]
-# The A2UI reference SDK, opt-in — and out of `all` — because of what it costs
-# rather than what it does.
+# The A2UI reference packages: `a2ui-core` holds the protocol's catalogs (the
+# v0.9 basic catalog the renderer registers) and validation, `a2ui-agent-sdk`
+# the agent-side helpers on top of it (`a2ui.utils.validate_payload`). Since
+# 0.8.0 the SDK no longer requires google-adk, and with it the OTEL ceiling
+# that once kept this extra out of `all` and had it installed with --no-deps:
+# it resolves like any other extra now.
 #
-# It requires `google-adk`, and every google-adk release caps
-# `opentelemetry-api` and `-sdk` at `<=1.42.1`: not for itself, for the whole
-# environment. Left in `all` that made `agent-runtimes[all]` unsatisfiable
-# against the OTEL floor above — and pip does not report that as a conflict, it
-# backtracks through every version of google-adk, a2a-sdk and datalayer-core
-# hunting an escape that cannot exist.
-#
-# Nothing in the runtime needs it: the converter took one versioned
-# specification URL from it, which `agent_runtimes/a2ui/executions.py` now
-# carries as a literal it verifies against the SDK wherever the SDK is present.
-# What is left is the examples (and the A2UI routes and backend tool that load
-# them), which is what this extra is for. Against the OTEL floor above it does
-# not resolve at all: install `a2ui-agent-sdk` with `--no-deps` to run them.
+# The runtime's converter (`agent_runtimes/a2ui/executions.py`) carries the
+# catalog id as a literal, verified against `a2ui-core` in the tests; the
+# examples, the A2UI routes and the backend tool that load them import both.
 a2ui = [
-    "a2ui-agent-sdk>=0.7.0",
+    "a2ui-agent-sdk>=0.12.0,<0.13",
+    "a2ui-core>=0.7.0,<0.8",
 ]
 memory = [
     "mem0ai>=2.0.1",
@@ -406,7 +401,7 @@ llamaindex = [
     "llama-index-core>=0.14.0,<0.15",
 ]
 all = [
-    "agent_runtimes[a2a,acp,anthropic,aws,cli,durable,google,memory,openai,ui]",
+    "agent_runtimes[a2a,a2ui,acp,anthropic,aws,cli,durable,google,memory,openai,ui]",
 ]
 test = [
     # Several tests build agents from `openai:` model strings, and pydantic-ai
@@ -416,7 +411,7 @@ test = [
     # The A2A worker and protocol-state tests import fasta2a and a2a-sdk, and
     # the default agentspecs name `bedrock:` models, which need boto3; the memory
     # tests keep memories with mem0 itself, two of them in a real PostgreSQL.
-    "agent_runtimes[a2a,aws,cli,memory,openai]",
+    "agent_runtimes[a2a,a2ui,aws,cli,memory,openai]",
     # The app-memory tests keep their memories in mem0's FAISS store.
     "faiss-cpu>=1.8",
     # The Steward's CloudFormation templates are linted and read in tests.
