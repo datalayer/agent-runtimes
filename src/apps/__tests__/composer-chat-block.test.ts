@@ -394,8 +394,9 @@ describe('on the Canvas', () => {
       join(__dirname, '..', 'composer', 'AppLayoutEditor.tsx'),
       'utf8',
     );
-    expect(canvas).toContain(
-      "kind === 'chat' ? <CanvasChatBlock definition={definition} disabled={disabled} onChange={onChange} /> : null",
+    // Whitespace aside, as Prettier lays the JSX out over lines.
+    expect(canvas.replace(/\s+/g, ' ')).toContain(
+      "kind === 'chat' ? ( <CanvasChatBlock definition={definition} disabled={disabled} onChange={onChange} /> ) : null",
     );
     expect(canvas.match(/\{chatBlock\}/g)).toHaveLength(2);
   });

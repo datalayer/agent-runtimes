@@ -25,7 +25,7 @@ import {
   test,
   vi,
 } from 'vitest';
-import { act } from 'react';
+import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { dumpAppspec, emptyAppspec, parseAppspec } from '../apps/appspec';
 import type { AppSpec } from '../../types/agentspecs';
