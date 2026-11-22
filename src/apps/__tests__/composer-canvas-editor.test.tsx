@@ -726,6 +726,33 @@ describe('the Python surface', () => {
     );
   });
 
+  it('keeps one Preview, mounted once, through Agent, Preview and Python (22 November 2026)', () => {
+    const mounted = vi.fn();
+    const Preview = () => {
+      React.useEffect(() => {
+        mounted();
+      }, []);
+      return <div data-preview="" />;
+    };
+    const props = {
+      python: <div data-python-file="" />,
+      preview: <Preview />,
+    };
+    draw(props);
+    for (const surface of ['Preview', 'Python', 'Agent', 'Preview', 'Python']) {
+      fire(
+        $(`[data-surface="${surface}"]`),
+        new MouseEvent('click', { bubbles: true }),
+      );
+      draw(props);
+      expect([surface, host.querySelectorAll('[data-preview]').length]).toEqual(
+        [surface, 1],
+      );
+      expect($('[data-designer-python] [data-preview]')).toBeNull();
+    }
+    expect(mounted).toHaveBeenCalledTimes(1);
+  });
+
   it('is not in the switch when there is no file', () => {
     draw({ preview: <div data-preview="" /> });
     expect(

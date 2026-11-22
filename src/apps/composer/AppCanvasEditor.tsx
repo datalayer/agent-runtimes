@@ -1296,8 +1296,13 @@ function Designer({
   // The Preview stays mounted while another surface is shown, at the same place
   // in each: what was said to it is kept when the Maker comes back.
   // Hidden, neither is drawn again on a change: shown, it is.
+  // Keyed: the Agent's tree puts them one place further than the other
+  // surfaces' do, and unkeyed, a change between them handed the Preview's kept
+  // part to the Python's, which, hidden, went on holding a second, stale
+  // Preview (22 November 2026), and mounted the Preview again.
   const previewBody = preview ? (
     <KeptWhileHidden
+      key="preview"
       as="div"
       hidden={surface !== 'preview'}
       data-designer-preview=""
@@ -1308,6 +1313,7 @@ function Designer({
   // The Python file too: its editor keeps its place, its undo and its scroll.
   const pythonBody = python ? (
     <KeptWhileHidden
+      key="python"
       as="div"
       hidden={surface !== 'python'}
       data-designer-python=""
