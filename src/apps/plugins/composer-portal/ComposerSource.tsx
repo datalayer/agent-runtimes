@@ -120,7 +120,7 @@ export function ComposerCanvas({ app }: { app: AppSpec }): JSX.Element {
           {agent ? `${agent.emoji ?? ''} ${agent.name}`.trim() : agentId || '—'}
         </Text>
       </Part>
-      <Part title="Layout">
+      <Part title="Configuration">
         <Text as="p" sx={{ m: 0 }}>
           {`${app.kind}, ${app.interface?.layout ?? 'chat'}`}
         </Text>
