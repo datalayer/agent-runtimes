@@ -49,7 +49,10 @@ import {
   Text,
   TextInput,
 } from '@primer/react';
-import { AppearanceControls } from '@datalayer/primer-addons/lib/components/appearance';
+import {
+  AppearanceControls,
+  AppearanceMenuWithStore,
+} from '@datalayer/primer-addons/lib/components/appearance';
 import { coreStore, iamStore } from '@datalayer/core';
 import {
   DATALAYER_IAM_TOKEN_KEY,
@@ -81,6 +84,11 @@ import { useAgentSummaryStore } from './utils/agentSummaryStore';
 import { useExampleThemeStore } from './utils/themeStore';
 import HomeExample, { type HomeExampleCardEntry } from './HomeExample';
 import { ExampleWrapper } from './components/ExampleWrapper';
+import {
+  EXAMPLES_CONTENT_SX,
+  EXAMPLES_HEADER_SX,
+  EXAMPLES_SHELL_SX,
+} from './components/exampleFrame';
 import { ExampleRuntimeSelector } from './components/ExampleRuntimeSelector';
 import { ExampleErrorBoundary } from './components/ExampleErrorBoundary';
 import { createServiceManagerFromAgentSandbox } from '../hooks/useAgentRuntimes';
@@ -97,6 +105,19 @@ declare global {
     __agentRuntimesExamplesRoot?: ReturnType<typeof createRoot>;
   }
 }
+
+// The header's appearance controls: inline on a wide window, a menu button
+// on a narrower one (see the header).
+const APPEARANCE_WIDE = '@media (min-width: 1600px)';
+const APPEARANCE_INLINE_SX = {
+  display: 'none',
+  [APPEARANCE_WIDE]: { display: 'flex', alignItems: 'center' },
+};
+const APPEARANCE_MENU_SX = {
+  display: 'flex',
+  alignItems: 'center',
+  [APPEARANCE_WIDE]: { display: 'none' },
+};
 
 const DEFAULT_RUNTIMES_URL = 'https://r1.datalayer.run';
 const DEFAULT_LOCAL_JUPYTER_SERVER_URL =
@@ -138,7 +159,7 @@ const ANONYMOUS_EXAMPLES = new Set([
   'NotebookPageAgent',
   'DocumentPageAgent',
   // The decks plugin in a Loop; the agent and the decks both live in the page.
-  'DecksAgent',
+  'AgentDecksExample',
   // PAP protocol examples are deterministic browser views. They validate
   // fixtures and generate local Web Crypto material without allocating a
   // runtime or authenticating to Datalayer.
@@ -1475,7 +1496,7 @@ const ExampleAppThemed: React.FC<{
     }
     for (const [groupName, examples] of groups) {
       examples.sort((left, right) => {
-        if (groupName === 'Loop' || groupName === 'Applications') {
+        if (groupName === 'Loop' || groupName === 'Agents') {
           // The shells first, most naked first; then an application beside its
           // computer and the Loop Application; then the strategy that drives a
           // notebook; then the library of specs and the scenes behind them all.
@@ -1487,6 +1508,7 @@ const ExampleAppThemed: React.FC<{
             'LoopStrategyExample',
             'AgentspecsExample',
             'ScenesExample',
+            'AgentDecksExample',
           ];
           const loopOrder = (id: string) => {
             const index = LOOP_ORDER.indexOf(id);
@@ -1588,32 +1610,42 @@ const ExampleAppThemed: React.FC<{
       theme={cfg.primerTheme}
       themeStyles={cfg.themeStyles}
     >
+      {/*
+        The shell is the viewport, and the page never scrolls: pinned to the
+        window's four edges (not `100vw`/`100vh`, which count the scrollbars,
+        follow the large viewport on mobile and are scaled by a zoomed root),
+        a column of the header at its own height and the content area taking
+        what is left. See `components/ExampleWrapper` for the example's side
+        of the contract, and scripts/check-examples-viewport.py for the check.
+      */}
       <Box
-        width="100vw"
-        height="100vh"
-        overflow="hidden"
+        data-examples-shell=""
+        sx={EXAMPLES_SHELL_SX}
         bg="canvas.default"
         color="fg.default"
       >
         {/* ── Header bar ─────────────────────────────────── */}
         <Box
-          position="fixed"
-          top={0}
-          left={0}
-          right={0}
-          zIndex={100}
+          data-examples-header=""
+          sx={EXAMPLES_HEADER_SX}
           px={3}
           display="flex"
           alignItems="center"
           justifyContent="space-between"
           gap={3}
-          height="60px"
           bg="canvas.default"
           borderBottom="1px solid"
           borderColor="border.default"
         >
-          {/* Left: home button + example selector */}
-          <Box display="flex" alignItems="center" gap={2}>
+          {/* Left: home button + example selector. It gives way (clipped)
+              before the right side does, so a narrow window never pushes the
+              header past the viewport's right edge. */}
+          <Box
+            display="flex"
+            alignItems="center"
+            gap={2}
+            sx={{ flex: '1 1 auto', minWidth: 0, overflow: 'hidden' }}
+          >
             <Box
               as="button"
               onClick={() => {
@@ -1738,7 +1770,9 @@ const ExampleAppThemed: React.FC<{
               could not see — beside a header that described the real one.
             */}
             {!isHome && !shouldShowAuthScreen && !isLoopWorkspace && (
-              <AgentSummary summary={agentSummary} />
+              <Box sx={{ minWidth: 0, flexShrink: 1, overflow: 'hidden' }}>
+                <AgentSummary summary={agentSummary} />
+              </Box>
             )}
             {isChangingExample && (
               <Box as="span" color="fg.muted" fontSize={0}>
@@ -1748,11 +1782,19 @@ const ExampleAppThemed: React.FC<{
           </Box>
 
           {/* Right: theme picker + color mode + logo */}
-          <Box display="flex" alignItems="center" gap={3}>
-            <AppearanceControls
-              layout="inline"
-              useStore={useExampleThemeStore}
-            />
+          <Box display="flex" alignItems="center" gap={3} flexShrink={0}>
+            {/* The swatches in a row on a wide window; under 1600px, where
+                they would crowd out the runtime selector, the same choices
+                behind one button. */}
+            <Box sx={APPEARANCE_INLINE_SX}>
+              <AppearanceControls
+                layout="inline"
+                useStore={useExampleThemeStore}
+              />
+            </Box>
+            <Box sx={APPEARANCE_MENU_SX}>
+              <AppearanceMenuWithStore useStore={useExampleThemeStore} />
+            </Box>
             <Box display="flex" alignItems="center" gap={2}>
               {token ? (
                 <>
@@ -1811,7 +1853,7 @@ const ExampleAppThemed: React.FC<{
         </Box>
 
         {/* ── Content area ───────────────────────────────── */}
-        <Box marginTop="60px" height="calc(100vh - 60px)" overflow="hidden">
+        <Box data-examples-content="" sx={EXAMPLES_CONTENT_SX}>
           {shouldShowAuthScreen ? (
             /*
               Signing in, beside what can be seen without it.

@@ -36,7 +36,7 @@ export const ErrorView: React.FC<ErrorViewProps> = ({
       flexDirection="column"
       alignItems="center"
       justifyContent="center"
-      height="100vh"
+      height="100%"
       gap={3}
     >
       <AlertIcon size={48} />

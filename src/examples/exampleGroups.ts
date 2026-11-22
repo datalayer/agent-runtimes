@@ -13,7 +13,7 @@
 
 export const EXAMPLE_GROUP_ORDER = [
   'Loop',
-  'Applications',
+  'Agents',
   'Avatar',
   'A2UI',
   'A2A',
@@ -35,14 +35,14 @@ export const getExampleGroup = (id: string): string => {
   // shells, the workspace, an application beside its computer, the Loop
   // Application, the strategy.
   if (id.startsWith('Loop')) return 'Loop';
-  // The library of specs, the scenes of the catalogue and the decks: what is
-  // staged with the applications.
+  // The library of specs, the scenes of the catalogue and the decks: the
+  // Agents group (the user, 22 November 2026, renamed from Applications).
   if (
     id === 'AgentspecsExample' ||
     id === 'ScenesExample' ||
-    id === 'DecksAgent'
+    id === 'AgentDecksExample'
   ) {
-    return 'Applications';
+    return 'Agents';
   }
   if (id.startsWith('A2Ui')) return 'A2UI';
   // Agents reached over the A2A protocol: their own category, after A2UI.

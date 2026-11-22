@@ -181,8 +181,8 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'A document as a page: floating prompt on top, an agent writing in it.',
   ),
   makeEntry(
-    'DecksAgent',
-    () => import('./DecksAgent'),
+    'AgentDecksExample',
+    () => import('./AgentDecksExample'),
     'A deck beside the chat: the decks plugin in a Loop, and an agent that writes presentations as data.',
   ),
   makeEntry(

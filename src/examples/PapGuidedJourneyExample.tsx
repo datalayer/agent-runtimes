@@ -24,7 +24,7 @@ const PapGuidedJourneyExample: React.FC = () => {
   const plugins = useMemo(() => [PapJourneyPlugin], []);
   return (
     <ThemedProvider>
-      <Box height="100vh" minHeight={0}>
+      <Box height="100%" minHeight={0}>
         <LoopEmbed
           target="browser"
           agentId="loop-shell"

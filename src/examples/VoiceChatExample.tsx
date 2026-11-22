@@ -76,7 +76,7 @@ const VoiceChatExample: React.FC = () => {
   );
   return (
     <ThemedProvider>
-      <Box minHeight="100vh" bg="canvas.default" p={4}>
+      <Box minHeight="100%" bg="canvas.default" p={4}>
         <Box maxWidth={720} mx="auto">
           <Heading as="h1" sx={{ mb: 2 }}>
             Voice chat

@@ -192,7 +192,7 @@ describe('the Scenes example', () => {
     const entry = getExampleEntries().find(one => one.id === 'ScenesExample');
     expect(entry?.title).toBe('Agent Scenes');
     expect(EXAMPLES.ScenesExample).toBeTypeOf('function');
-    expect(getExampleGroup('ScenesExample')).toBe('Applications');
+    expect(getExampleGroup('ScenesExample')).toBe('Agents');
   });
 
   it('shows the catalogue’s scenes as tabs, each its face and name, and the first one drawn', async () => {

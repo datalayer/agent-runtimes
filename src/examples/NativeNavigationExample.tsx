@@ -149,7 +149,7 @@ export const NativeNavigationExample: React.FC = () => {
   };
 
   return (
-    <Box minHeight="100vh" p={4}>
+    <Box minHeight="100%" p={4}>
       <Box mb={4} p={3} bg="canvas.subtle" borderRadius={2}>
         <Heading as="h1" sx={{ mb: 2 }}>
           Native Browser Navigation Example

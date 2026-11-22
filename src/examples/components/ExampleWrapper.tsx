@@ -8,6 +8,7 @@ import { Box } from '@datalayer/primer-addons';
 import { useChatStore, useConversationStore } from '../../stores';
 import { ChatAvailabilityProvider } from '../../chat/base/ChatAvailability';
 import { useRuntimeTarget } from '../utils/runtimeTargetStore';
+import { EXAMPLE_FRAME_SX, EXAMPLE_ROOT_SX } from './exampleFrame';
 
 /**
  * ExampleWrapper
@@ -41,14 +42,9 @@ export const ExampleWrapper: React.FC<{ children: React.ReactNode }> = ({
       disableReason={hasAgent ? undefined : noAgentReason}
     >
       <Box
+        data-example-frame=""
         sx={{
-          position: 'relative',
-          height: '100%',
-          width: '100%',
-          minHeight: 0,
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
+          ...EXAMPLE_FRAME_SX,
           fontFamily:
             'var(--fontStack-sansSerif, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif)',
           lineHeight: 1.5,
@@ -57,20 +53,11 @@ export const ExampleWrapper: React.FC<{ children: React.ReactNode }> = ({
               fontFamily: 'inherit',
             },
           // Generic constraint: every example's root child fills the wrapper
-          // exactly and cannot exceed it. This neutralises stray `100vh`/
-          // `calc(100vh - Npx)` heights inside individual examples so the
-          // chat footer (or any bottom UI) always remains in the viewport.
-          '& > *': {
-            flex: '1 1 0',
-            minHeight: 0,
-            maxHeight: '100%',
-            width: '100%',
-            // Default scroll behaviour for plain content pages. Examples
-            // that manage their own internal scrollers can override this
-            // by setting `overflow: 'hidden'` (or another value) on their
-            // root element \u2014 the child rule wins on specificity.
-            overflow: 'auto',
-          },
+          // exactly and cannot exceed it, so the chat footer (or any bottom
+          // UI) always remains in the viewport. Examples size their root with
+          // `height: 100%`, never `100vh` (taller than this frame by the
+          // header): see ./exampleFrame.
+          '& > *': EXAMPLE_ROOT_SX,
         }}
       >
         {children}

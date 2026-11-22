@@ -72,7 +72,7 @@ const AgentDecideExample: React.FC = () => {
   );
   return (
     <ThemedProvider>
-      <Box height="100vh" minHeight={0} display="flex" bg="canvas.default">
+      <Box height="100%" minHeight={0} display="flex" bg="canvas.default">
         <Box flex={1} minWidth={0} minHeight={0}>
           <AppRenderer
             app={app}

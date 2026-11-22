@@ -170,6 +170,43 @@ const RIGHT_PANE_WIDTH = {
   max: '520px',
 } as unknown as React.ComponentProps<typeof PageLayout.Pane>['width'];
 
+/**
+ * Primer's PageLayout is made for a scrolling page: its panes are sticky with
+ * `max-height: 100vh`, taller than the examples' frame by the header, so the
+ * chat's composer ended below the window. Here it fills the frame instead: the
+ * header at its height, the row of panes and content under it taking the
+ * rest, each scrolling inside.
+ */
+const FILL_FRAME_PAGE_LAYOUT_SX = {
+  height: '100%',
+  minHeight: 0,
+  '& > div': { height: '100%', minHeight: 0 },
+  // The header, the panes and the content share one wrapping flex row in
+  // Primer; a grid puts the header across the top and the rest under it.
+  '& > div > div': {
+    display: 'grid',
+    gridTemplateColumns: 'auto minmax(0, 1fr) auto',
+    gridTemplateRows: 'auto minmax(0, 1fr)',
+    height: '100%',
+    minHeight: 0,
+  },
+  '& > div > div > header': { gridColumn: '1 / -1', gridRow: 1, mb: 0 },
+  '& > div > div > main': {
+    gridColumn: 2,
+    gridRow: 2,
+    minHeight: 0,
+    overflow: 'auto',
+  },
+  '& > div > div > [data-position]': {
+    gridRow: 2,
+    minHeight: 0,
+    position: 'static',
+    maxHeight: '100%',
+  },
+  '& > div > div > [data-position="start"]': { gridColumn: 1 },
+  '& > div > div > [data-position="end"]': { gridColumn: 3 },
+} as const;
+
 // GitHub OAuth client ID - set via environment variable for security
 // For development, you can create a GitHub OAuth App at:
 // https://github.com/settings/developers
@@ -1337,7 +1374,7 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
   return (
     <QueryClientProvider client={queryClient}>
       <ThemedProvider>
-        <PageLayout containerWidth="full">
+        <PageLayout containerWidth="full" sx={FILL_FRAME_PAGE_LAYOUT_SX}>
           {/* Header - empty content for new agent */}
           <Header
             activeSession={activeSession}
@@ -1551,7 +1588,7 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
                           autoConnect: true,
                           autoFocus: true,
                           placeholder: 'Type your message to the agent...',
-                          height: 'calc(100vh - 150px)',
+                          height: '100%',
                           showModelSelector: true,
                           showToolsMenu: true,
                           showSkillsMenu: true,

@@ -41,9 +41,9 @@ registerDeckComponents(exampleDeckComponents);
 // render of this component.
 const DECK_PLUGINS = [LoopDecksPlugin, DeckViewPlugin, GraphViewPlugin];
 
-const DecksAgent: React.FC = () => (
+const AgentDecksExample: React.FC = () => (
   <ThemedProvider>
-    <Box height="100vh" minHeight={0}>
+    <Box height="100%" minHeight={0}>
       <LoopEmbed
         target="browser"
         agentId="example-decks"
@@ -64,4 +64,4 @@ const DecksAgent: React.FC = () => (
   </ThemedProvider>
 );
 
-export default DecksAgent;
+export default AgentDecksExample;

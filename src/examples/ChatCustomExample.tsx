@@ -65,7 +65,7 @@ Be concise, helpful, and provide working code examples when appropriate.`,
         <Box
           display="flex"
           flexDirection="column"
-          height="100vh"
+          height="100%"
           backgroundColor="canvas.default"
         >
           <Box

@@ -55,7 +55,7 @@ const AgUiAgenticExample: React.FC = () => {
 
   return (
     <ThemedProvider>
-      <Box minHeight="100vh" backgroundColor="canvas.default" padding={4}>
+      <Box minHeight="100%" backgroundColor="canvas.default" padding={4}>
         {/* Page content */}
         <Box maxWidth="800px" margin="0 auto">
           <Text

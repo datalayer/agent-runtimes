@@ -197,8 +197,8 @@ const A2UiAgentExample: React.FC = () => {
     <ThemedProvider>
       <A2uiMarkdownProvider>
         <Box
-          minHeight="100vh"
-          height={['auto', 'auto', '100dvh']}
+          minHeight="100%"
+          height={['auto', 'auto', '100%']}
           boxSizing="border-box"
           overflow={['visible', 'visible', 'hidden']}
           display="grid"
@@ -383,7 +383,7 @@ const A2UiAgentExample: React.FC = () => {
             borderRadius={2}
             display="flex"
             flexDirection="column"
-            height={['auto', 'auto', 'calc(100vh - 48px)']}
+            height={['auto', 'auto', '100%']}
             minHeight={[420, 520, 0]}
             overflow="hidden"
             bg="canvas.default"

@@ -56,7 +56,7 @@ const ShieldHarnessExample: React.FC = () => {
   }, [reactor]);
   return (
     <ThemedProvider>
-      <Box display="flex" flexDirection="column" height="100vh" minHeight={0}>
+      <Box display="flex" flexDirection="column" height="100%" minHeight={0}>
         <Box p={3} borderBottom="1px solid" borderColor="border.default">
           <Text as="p" sx={{ m: 0, fontSize: 1, color: 'fg.muted' }}>
             Needs the local runtime with a harness:{' '}
