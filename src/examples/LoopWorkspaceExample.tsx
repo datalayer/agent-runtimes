@@ -51,7 +51,10 @@ import { internalQueryClient } from '../utils';
 import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { ThemedProvider } from './utils/themedProvider';
 import { agentSummaryStore } from './utils/agentSummaryStore';
-import { targetHasAgent } from './utils/runtimeTargetStore';
+import {
+  targetHasAgent,
+  useRuntimeTargetStore,
+} from './utils/runtimeTargetStore';
 
 export type LoopWorkspaceExampleProps = {
   /** Server backing the session. Defaults to this page's origin. */
@@ -375,4 +378,16 @@ export function LoopWorkspaceExample({
   );
 }
 
-export default LoopWorkspaceExample;
+/**
+ * The workspace in the examples' gallery: its sandbox on the header's target
+ * (the page remounts it when the target changes), its own switch left out —
+ * one control for the page (the user, 22 November 2026).
+ */
+export function LoopWorkspaceGalleryExample(): JSX.Element {
+  const target = useRuntimeTargetStore(state => state.target);
+  return (
+    <LoopWorkspaceExample initialTarget={target} showAgentVariants={false} />
+  );
+}
+
+export default LoopWorkspaceGalleryExample;

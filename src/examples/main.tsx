@@ -45,7 +45,6 @@ import {
   ActionList,
   ActionMenu,
   Button,
-  SegmentedControl,
   Spinner,
   Text,
   TextInput,
@@ -68,7 +67,6 @@ import {
 } from './example-selector';
 import { EXAMPLE_GROUP_ORDER, getExampleGroup } from './exampleGroups';
 import {
-  RUNTIME_TARGETS,
   runtimeTargetCapabilities,
   runtimeTargetStore,
   targetHasAgent,
@@ -83,6 +81,7 @@ import { useAgentSummaryStore } from './utils/agentSummaryStore';
 import { useExampleThemeStore } from './utils/themeStore';
 import HomeExample, { type HomeExampleCardEntry } from './HomeExample';
 import { ExampleWrapper } from './components/ExampleWrapper';
+import { ExampleRuntimeSelector } from './components/ExampleRuntimeSelector';
 import { ExampleErrorBoundary } from './components/ExampleErrorBoundary';
 import { createServiceManagerFromAgentSandbox } from '../hooks/useAgentRuntimes';
 import type { RuntimeEnvironmentDetails } from '../hooks/useAgentRuntimes';
@@ -115,9 +114,12 @@ const DEFAULT_CLOUD_RUNTIME_ENVIRONMENT = 'ai-agents-env';
  */
 const ANONYMOUS_EXAMPLES = new Set([
   'LoopWorkspaceExample',
+  // The Loop Application, on the local agent-runtimes server: nothing
+  // allocated on Datalayer, whose target waits for a sign-in in the header.
+  'LoopApplicationExample',
   // An application beside its computer, on the local agent-runtimes server:
   // nothing allocated on Datalayer, and the machine itself needs no token.
-  'LoopAppComputerExample',
+  'LoopComputerExample',
   // The Sales and Accounting team: Sales in the page on a visitor's trial
   // key, Accounting on the local server, which answers the machine itself.
   'AgentA2ATeamExample',
@@ -927,10 +929,19 @@ export const ExampleApp: React.FC = () => {
     });
   }, [searchQuery]);
 
+  /*
+   * The load asked last, the only one that may mount its example. An import
+   * is not instant (a cold one is seconds while Vite transforms its graph):
+   * an example picked while another was still loading must not be replaced
+   * by the earlier one when it lands — which mounted the Loop Application (then named AI Application)
+   * under the A2UI Agent's name (22 November 2026).
+   */
+  const loadRequest = useRef(0);
   const loadExample = async (
     exampleName: string,
     _manager: ServiceManager.IManager,
   ) => {
+    const request = ++loadRequest.current;
     try {
       setIsChangingExample(true);
       setError(null);
@@ -941,9 +952,15 @@ export const ExampleApp: React.FC = () => {
       }
 
       const module = await exampleLoader();
+      if (request !== loadRequest.current) {
+        return;
+      }
       setExampleComponent(() => module.default);
       setIsChangingExample(false);
     } catch (e) {
+      if (request !== loadRequest.current) {
+        return;
+      }
       console.error('Failed to load example:', e);
       showTopNotice(
         `Failed to load example: ${e instanceof Error ? e.message : String(e)}`,
@@ -1424,14 +1441,6 @@ const ExampleAppThemed: React.FC<{
   const { colorMode, theme: themeVariant } = useExampleThemeStore();
   const runtimeTarget = useRuntimeTargetStore(state => state.target);
   const agentSummary = useAgentSummaryStore(state => state.active);
-  // Some examples bring their own sandbox switch — the LOOP workspace has one
-  // in its header. Two controls for one sandbox is one too many, and the
-  // second would not agree with the first.
-  const exampleOwnsSandboxControl = Boolean(
-    availableExamples
-      .find(entry => entry.id === selectedExample)
-      ?.tags?.includes('owns-sandbox-control'),
-  );
   const isHome = selectedExample === 'HomeExample';
   // The one example that describes its own agent — see the header below.
   const isLoopWorkspace = selectedExample === 'LoopWorkspaceExample';
@@ -1466,14 +1475,16 @@ const ExampleAppThemed: React.FC<{
     }
     for (const [groupName, examples] of groups) {
       examples.sort((left, right) => {
-        if (groupName === 'Apps') {
-          // The shells first, most naked first; then the strategy that drives a
-          // notebook; then the library of specs behind them all.
+        if (groupName === 'Loop' || groupName === 'Applications') {
+          // The shells first, most naked first; then an application beside its
+          // computer and the Loop Application; then the strategy that drives a
+          // notebook; then the library of specs and the scenes behind them all.
           const LOOP_ORDER = [
             'LoopShellExample',
             'LoopWorkspaceExample',
+            'LoopComputerExample',
+            'LoopApplicationExample',
             'LoopStrategyExample',
-            'LoopAppComputerExample',
             'AgentspecsExample',
             'ScenesExample',
           ];
@@ -1702,46 +1713,20 @@ const ExampleAppThemed: React.FC<{
                 </ActionMenu.Overlay>
               </ActionMenu>
             )}
-            {!shouldShowAuthScreen && !exampleOwnsSandboxControl && (
-              <Box
-                aria-label="Where the example runs"
-                minWidth="320px"
-                opacity={isHome || isChangingExample ? 0.6 : 1}
-              >
-                <SegmentedControl
-                  aria-label="Where the example runs"
-                  fullWidth
-                  size="small"
-                >
-                  {RUNTIME_TARGETS.map(target => {
-                    const capabilities = runtimeTargetCapabilities(target);
-                    // Signing in is what the Datalayer target needs; saying so on
-                    // the button beats letting the switch fail and explaining
-                    // afterwards.
-                    const needsSignIn = capabilities.requiresAuth && !token;
-                    const unavailable = isHome || needsSignIn;
-                    return (
-                      <SegmentedControl.Button
-                        key={target}
-                        selected={runtimeTarget === target}
-                        disabled={unavailable}
-                        title={
-                          needsSignIn
-                            ? `${capabilities.hint} Sign in to use it.`
-                            : capabilities.hint
-                        }
-                        onClick={() => {
-                          if (!unavailable && !isChangingExample) {
-                            void onRuntimeTargetChange(target);
-                          }
-                        }}
-                      >
-                        {capabilities.label}
-                      </SegmentedControl.Button>
-                    );
-                  })}
-                </SegmentedControl>
-              </Box>
+            {/* On every example: one control for the page, which every example reads. */}
+            {!shouldShowAuthScreen && (
+              <ExampleRuntimeSelector
+                target={runtimeTarget}
+                signedIn={Boolean(token)}
+                unavailable={selectedExampleEntry?.unavailableTargets}
+                disabled={isHome || isChangingExample}
+                dimmed={isHome || isChangingExample}
+                onChange={target => {
+                  if (!isChangingExample) {
+                    void onRuntimeTargetChange(target);
+                  }
+                }}
+              />
             )}
             {/*
               Not for the Loop workspace, which draws its own.

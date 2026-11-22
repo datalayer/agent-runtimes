@@ -94,11 +94,19 @@ describe('the plugins manager’s plugin', () => {
     expect(agentUiChromeOf(['plugin-manager']).footer).toEqual([]);
   });
 
-  it('fills the status line under the prompt, or the title bar', async () => {
+  it('fills the chat’s footer row under the prompt, or the title bar', async () => {
     const footer = buildReactorFromPlugins([PluginManagerPlugin]);
     await footer.start();
+    // In the row under the prompt, beside its controls, usable while the
+    // prompt is closed — not a row of its own below it (22 November 2026).
     expect(footer.getManifest(PLUGIN_MANAGER_PLUGIN_NAME)?.slots).toEqual([
-      LoopSlots.status,
+      LoopSlots.promptStatus,
+    ]);
+    const drawn = footer.getOutput(PLUGIN_MANAGER_PLUGIN_NAME) as {
+      components: { slot: string }[];
+    };
+    expect(drawn.components.map(component => component.slot)).toEqual([
+      LoopSlots.promptStatus,
     ]);
     // The manifest says the spec's default; the header placement's component
     // goes in the title bar.

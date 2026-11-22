@@ -12,8 +12,9 @@
  * `None` by default, the notebook and the document on offer. Everything on
  * screen is a plugin; the example itself only picks them.
  *
- * The code runs in the browser sandbox — the in-page kernel reached through
- * the Jupyter service manager — so the page needs no server and no account.
+ * The code runs where the examples' header says — by default the browser
+ * sandbox, the in-page kernel reached through the Jupyter service manager,
+ * which needs no server and no account.
  * The agents are the `jupyter` team the landing page runs — Analyst,
  * Reviewer, Writer, Decks, Tutor and Compactor — with the Analyst at the
  * front door; `@` in the composer reaches the others, and the team picker in
@@ -35,7 +36,9 @@ import { buildLoopReactor, LoopWorkspace } from '../apps/shell';
 import { DeckViewPlugin, LoopDecksPlugin } from '../apps/plugins/decks';
 import { loopPlugins } from '../apps/presets';
 import { internalQueryClient } from '../utils';
+import type { SandboxTarget } from '../apps/plugins/agents';
 import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
+import { useRuntimeTargetStore } from './utils/runtimeTargetStore';
 import { ThemedProvider } from './utils/themedProvider';
 
 /** The team the landing page runs, and this example with it. */
@@ -63,9 +66,12 @@ export type LoopShellExampleProps = {
   defaultEditor?: 'none' | 'notebook' | 'document' | 'deck';
   /** Render without wrapping the shell in a theme provider. */
   inheritTheme?: boolean;
+  /** Where the code runs: the browser sandbox unless said. */
+  target?: SandboxTarget;
 };
 
 export function LoopShellExample({
+  target = 'browser',
   serverUrl = resolveExampleAgentRuntimesUrl('local'),
   agentId = FRONT_DOOR,
   defaultEditor = 'none',
@@ -77,9 +83,9 @@ export function LoopShellExample({
       buildLoopReactor([
         ...loopPlugins({
           serverUrl,
-          // The browser sandbox: the in-page kernel behind the Jupyter
-          // service manager, so nothing has to be installed or signed into.
-          target: 'browser',
+          // Where the code runs: the in-page kernel by default, so nothing
+          // has to be installed or signed into; in the gallery, the header's.
+          target,
           showAgentVariants: false,
           defaultEditor,
           // The two plugins this example exists to show: the draggable
@@ -104,7 +110,7 @@ export function LoopShellExample({
         LoopDecksPlugin,
         DeckViewPlugin,
       ]),
-    [serverUrl, defaultEditor],
+    [target, serverUrl, defaultEditor],
   );
 
   // Registered here rather than inside the workspace, because this component
@@ -137,4 +143,10 @@ export function LoopShellExample({
   return <ThemedProvider>{shell}</ThemedProvider>;
 }
 
-export default LoopShellExample;
+/** The shell in the examples' gallery: on the header's target, which remounts it. */
+export function LoopShellGalleryExample(): JSX.Element {
+  const target = useRuntimeTargetStore(state => state.target);
+  return <LoopShellExample target={target} />;
+}
+
+export default LoopShellGalleryExample;

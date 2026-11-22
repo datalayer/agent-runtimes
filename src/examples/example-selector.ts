@@ -5,6 +5,8 @@
 
 /// <reference types="vite/client" />
 
+import type { ExampleRuntimeTarget } from './utils/runtimeTargetStore';
+
 export type ExampleLoader = () => Promise<{ default: React.ComponentType }>;
 
 export interface ExampleEntry {
@@ -13,6 +15,13 @@ export interface ExampleEntry {
   description: string;
   tags: string[];
   loader: ExampleLoader;
+  /**
+   * The header's runtime targets this example cannot run on, each with why:
+   * shown disabled in the header's selector, the reason in its tooltip. The
+   * selector is on every example's header; none listed, every target is
+   * offered.
+   */
+  unavailableTargets?: Partial<Record<ExampleRuntimeTarget, string>>;
 }
 
 const DISPLAY_NAME_EXCEPTIONS: [RegExp, string][] = [
@@ -28,6 +37,8 @@ const DISPLAY_NAME_EXCEPTIONS: [RegExp, string][] = [
   // The document editor is Lexical underneath; the examples are about the
   // document.
   [/\bLexical\b/g, 'Document'],
+  // The scenes of the catalogue are agents at work together.
+  [/^Scenes$/, 'Agent Scenes'],
 ];
 
 function humanizeExampleName(name: string): string {
@@ -67,6 +78,7 @@ function makeEntry(
   loader: ExampleLoader,
   description: string,
   tags?: string[],
+  unavailableTargets?: ExampleEntry['unavailableTargets'],
 ): ExampleEntry {
   return {
     id,
@@ -74,8 +86,13 @@ function makeEntry(
     description,
     tags: tags ?? inferTags(id),
     loader,
+    ...(unavailableTargets ? { unavailableTargets } : {}),
   };
 }
+
+/** Why an `AIApplication` has no Browser or bare Jupyter target. */
+const AI_APPLICATION_RUNS_ON =
+  'An AIApplication runs on an agent-runtimes server (Local) or a Datalayer runtime.';
 
 /**
  * Central examples registry. Keep all example definitions in this list so
@@ -263,25 +280,30 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     ['example', 'agent', 'inference', 'provider', 'runtime'],
   ),
   makeEntry(
-    'AIApplicationExample',
-    () => import('./AIApplicationExample'),
-    'An extensible AI application: AIApplication with an Appspec written in the page or named from the catalogue, run on the local server or on Datalayer, extended with the presentation plugin and a plugin of its own in the title bar and the right panel.',
+    'LoopApplicationExample',
+    () => import('./LoopApplicationExample'),
+    'An extensible AI application: AIApplication with an Appspec written in the page or named from the catalogue, run where the header says (Local or Datalayer), composed of the chat, the plugins manager (the plug button in its footer, which lists every plugin it runs), the presentation plugin and a plugin of its own in the title bar and the right panel.',
     ['example', 'app', 'ai-application', 'plugins', 'extensible'],
+    { browser: AI_APPLICATION_RUNS_ON, jupyter: AI_APPLICATION_RUNS_ON },
   ),
   makeEntry(
     'LoopWorkspaceExample',
     () => import('./LoopWorkspaceExample'),
     'The LOOP workspace: a blank shell, with the chat, the editors and the plugin list all contributed as plugins.',
-    // `owns-sandbox-control`: this example brings its own sandbox switch, so
-    // the shell hides the one in its header rather than showing two controls
-    // for one sandbox — and a second one that would not agree with the first.
-    ['example', 'loop', 'workspace', 'sandbox', 'owns-sandbox-control'],
+    // Its sandbox follows the header's target: its own switch is left out.
+    ['example', 'loop', 'workspace', 'sandbox'],
   ),
   makeEntry(
-    'LoopAppComputerExample',
-    () => import('./LoopAppComputerExample'),
+    'LoopComputerExample',
+    () => import('./LoopComputerExample'),
     'An application beside its computer: what its agent ran on its sandbox, its files, and Take over and Hand back (R-23).',
-    ['example', 'loop', 'app', 'computer', 'sandbox', 'owns-sandbox-control'],
+    ['example', 'loop', 'app', 'computer', 'sandbox'],
+    {
+      browser:
+        'Its computer is a sandbox on a server: its browser, files and shell cannot run in this page.',
+      jupyter:
+        'An anonymous Jupyter server brings no agent, and an application needs one.',
+    },
   ),
   makeEntry(
     'ScenesExample',
@@ -293,9 +315,7 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'LoopShellExample',
     () => import('./LoopShellExample'),
     'The Loop shell at its most naked: a blank canvas, a floating draggable prompt, and an editor selector in the corner — none, notebook or document.',
-    // `owns-sandbox-control`: the shell is pinned to the browser sandbox, so
-    // the page's selector would offer three targets it cannot move to.
-    ['example', 'loop', 'shell', 'prompt', 'editors', 'owns-sandbox-control'],
+    ['example', 'loop', 'shell', 'prompt', 'editors'],
   ),
   makeEntry(
     'LoopStrategyExample',

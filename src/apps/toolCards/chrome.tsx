@@ -89,6 +89,11 @@ export type ChromePluginOptions = {
   emoji: string;
   /** What it draws; nothing when it has nothing true to say. */
   Component: ComponentType<ChromeComponentProps>;
+  /**
+   * A slot of its own for a placement, in place of `CHROME_SLOTS`' (the
+   * plugins manager's footer is the row under the prompt, `promptStatus`).
+   */
+  slots?: Partial<Record<ChromePlacement, string>>;
 };
 
 /**
@@ -102,7 +107,7 @@ export function defineChromePlugin(
 ) => ReactorPlugin<Record<string, never>, unknown, unknown> {
   const { Component } = options;
   return placement => {
-    const slot = CHROME_SLOTS[placement];
+    const slot = options.slots?.[placement] ?? CHROME_SLOTS[placement];
     function Slotted(): JSX.Element {
       return <Component placement={placement} />;
     }

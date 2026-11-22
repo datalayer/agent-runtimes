@@ -12,8 +12,9 @@
  *
  * A wrapper of Reactor's plugins manager (`@datalayer/reactor-manager`):
  * that plugin fills a `sidebar` slot, and a chat's footer is not one. This
- * one places a plug button in the chat's footer (`footer`, `loop.status` in
- * a Loop workspace; or its title bar, `header`) and, pressed, opens a dialog
+ * one places a plug button in the chat's footer (`footer`, the row under
+ * the prompt, `loop.promptStatus`, in a Loop workspace; or its title bar,
+ * `header`) and, pressed, opens a dialog
  * holding Reactor's own `PluginsManagerView` — the list is Reactor's. The
  * button and the dialog are exported besides, for a host to draw them
  * itself (Datalayer's sidebar footer does).
@@ -34,13 +35,13 @@
 import type { JSX, RefObject } from 'react';
 import { lazy, Suspense, useRef, useState } from 'react';
 import { IconButton } from '@primer/react';
-import { Box } from '@datalayer/primer-addons';
 import { PlugIcon } from '@primer/octicons-react';
 import { useOptionalReactorPlatform } from '@datalayer/reactor/react';
 import {
   defineChromePlugin,
   type ChromeComponentProps,
 } from '../../toolCards/chrome';
+import { LoopSlots } from '../../core';
 import { PLUGIN_MANAGER_WORDS } from './words';
 
 export {
@@ -77,16 +78,16 @@ export function PluginManagerOverlay(props: {
  * The plug button, and the dialog it opens. Nothing drawn where no platform
  * runs.
  */
-export function PluginManagerButton({
-  placement,
-}: Partial<ChromeComponentProps>): JSX.Element | null {
+export function PluginManagerButton(
+  _props: Partial<ChromeComponentProps>,
+): JSX.Element | null {
   const platform = useOptionalReactorPlatform();
   const [open, setOpen] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
   if (!platform) {
     return null;
   }
-  const control = (
+  return (
     <>
       <IconButton
         ref={button}
@@ -107,21 +108,6 @@ export function PluginManagerButton({
       ) : null}
     </>
   );
-  // In the footer, a row of its own: the status line stacks its items.
-  return placement === 'footer' ? (
-    <Box
-      display="flex"
-      justifyContent="flex-end"
-      alignItems="center"
-      px={2}
-      py={1}
-      data-plugin-manager-footer=""
-    >
-      {control}
-    </Box>
-  ) : (
-    control
-  );
 }
 
 /** The plugin for a placement: `footer` (its default) or `header`. */
@@ -133,6 +119,10 @@ export const pluginManagerPlugin = defineChromePlugin({
   octicon: 'plug',
   emoji: '\u{1F50C}',
   Component: PluginManagerButton,
+  // In the chat's footer row, under the prompt, beside its other controls,
+  // and usable while the prompt is closed (22 November 2026: it stood in a
+  // row of its own below the footer).
+  slots: { footer: LoopSlots.promptStatus },
 });
 
 export const PluginManagerPlugin = pluginManagerPlugin('footer');

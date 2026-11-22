@@ -37,7 +37,6 @@ import {
   SegmentedControl,
   Text,
   Textarea,
-  UnderlineNav,
 } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { AnonymousKeyExpired } from '@datalayer/core/lib/components/anonymous/AnonymousKeyExpired';
@@ -187,7 +186,7 @@ function Scene({
   backdrop,
 }: {
   scene: SceneSpec;
-  /** The backdrop chosen above the tabs; the scene's own when none is. */
+  /** The backdrop chosen above the scene; the scene's own when none is. */
   backdrop?: SceneBackdropId;
 }): JSX.Element {
   const stage = useMemo(() => sceneStageOf(scene), [scene]);
@@ -579,57 +578,93 @@ function Scenes(): JSX.Element {
   const [backdrop, setBackdrop] = useState<SceneBackdropId | undefined>();
   const shown = backdrop ?? stageBackdropOf(scene);
   return (
-    <Box p={4} maxWidth={1080} mx="auto">
-      <Heading as="h2" sx={{ fontSize: 4, mb: 1 }}>
-        Scenes
-      </Heading>
-      <Text as="p" sx={{ color: 'fg.muted', mt: 0 }}>
-        The catalogue&rsquo;s scenes, played against the local servers: each
-        member on a runtime is served over A2A by <code>serve_scenes.py</code>;
-        the entry in your browser asks on your token or a visitor&rsquo;s trial
-        key.
-      </Text>
-      <UnderlineNav aria-label="Scenes" sx={{ mb: 3 }}>
-        {scenes.map(one => (
-          <UnderlineNav.Item
-            key={one.id}
-            aria-current={one.id === scene?.id ? 'page' : undefined}
-            onSelect={event => {
-              event.preventDefault();
-              setSelected(one.id);
-            }}
-            data-scene-tab={one.id}
-          >
-            {one.emoji} {one.name}
-          </UnderlineNav.Item>
-        ))}
-      </UnderlineNav>
-      <Box display="flex" alignItems="center" gap={2} mb={3}>
-        <Text sx={{ fontSize: 1, color: 'fg.muted' }}>Backdrop</Text>
-        <SegmentedControl
-          aria-label="Backdrop"
-          size="small"
-          onChange={index => setBackdrop(SCENE_BACKDROP_CHOICES[index].id)}
-        >
-          {SCENE_BACKDROP_CHOICES.map(choice => (
-            <SegmentedControl.Button
-              key={choice.id}
-              selected={choice.id === shown}
-              data-scene-backdrop-choice={choice.id}
-            >
-              {choice.name}
-            </SegmentedControl.Button>
-          ))}
-        </SegmentedControl>
-        <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-          {
-            SCENE_BACKDROP_CHOICES.find(choice => choice.id === shown)
-              ?.description
-          }
+    // The scenes on the left, the one chosen on the right: side by side, each
+    // its own scroller, the two the viewport's height (22 November 2026).
+    <Box
+      height="100%"
+      minHeight={0}
+      overflow="hidden"
+      display="flex"
+      flexDirection={['column', 'column', 'row']}
+    >
+      <Box
+        as="nav"
+        aria-label="Agent scenes"
+        flex={['0 0 auto', '0 0 auto', '0 0 280px']}
+        minHeight={0}
+        overflowY="auto"
+        p={3}
+        borderRight={['none', 'none', '1px solid']}
+        borderBottom={['1px solid', '1px solid', 'none']}
+        borderColor="border.default"
+        bg="canvas.subtle"
+        data-scene-list=""
+      >
+        <Heading as="h2" sx={{ fontSize: 3, mb: 1 }}>
+          Agent Scenes
+        </Heading>
+        <Text as="p" sx={{ color: 'fg.muted', mt: 0, fontSize: 1 }}>
+          The catalogue&rsquo;s scenes, played against the local servers: each
+          member on a runtime is served over A2A by <code>serve_scenes.py</code>
+          ; the entry in your browser asks on your token or a visitor&rsquo;s
+          trial key.
         </Text>
+        <Box
+          as="ul"
+          m={0}
+          p={0}
+          sx={{ listStyle: 'none' }}
+          display="grid"
+          gap={1}
+        >
+          {scenes.map(one => {
+            const current = one.id === scene?.id;
+            return (
+              <li key={one.id}>
+                <Button
+                  block
+                  variant={current ? 'default' : 'invisible'}
+                  aria-current={current ? 'page' : undefined}
+                  alignContent="start"
+                  onClick={() => setSelected(one.id)}
+                  sx={{ fontWeight: current ? 'bold' : 'normal' }}
+                  data-scene-tab={one.id}
+                >
+                  {one.emoji} {one.name}
+                </Button>
+              </li>
+            );
+          })}
+        </Box>
       </Box>
-      {/* Mounted by its id: a tab switch unmounts the scene that ran, which stops its requests. */}
-      {scene && <Scene key={scene.id} scene={scene} backdrop={backdrop} />}
+      <Box flex="1 1 0" minWidth={0} minHeight={0} overflowY="auto" p={4}>
+        <Box display="flex" alignItems="center" gap={2} mb={3} flexWrap="wrap">
+          <Text sx={{ fontSize: 1, color: 'fg.muted' }}>Backdrop</Text>
+          <SegmentedControl
+            aria-label="Backdrop"
+            size="small"
+            onChange={index => setBackdrop(SCENE_BACKDROP_CHOICES[index].id)}
+          >
+            {SCENE_BACKDROP_CHOICES.map(choice => (
+              <SegmentedControl.Button
+                key={choice.id}
+                selected={choice.id === shown}
+                data-scene-backdrop-choice={choice.id}
+              >
+                {choice.name}
+              </SegmentedControl.Button>
+            ))}
+          </SegmentedControl>
+          <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+            {
+              SCENE_BACKDROP_CHOICES.find(choice => choice.id === shown)
+                ?.description
+            }
+          </Text>
+        </Box>
+        {/* Mounted by its id: another scene unmounts the one that ran, which stops its requests. */}
+        {scene && <Scene key={scene.id} scene={scene} backdrop={backdrop} />}
+      </Box>
     </Box>
   );
 }

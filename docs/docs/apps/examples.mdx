@@ -18,14 +18,23 @@ npm run examples:vite   # the gallery alone, against servers already running
 The page opens on `/html/examples.html`. An example is registered once, in
 `src/examples/example-selector.ts` (its id, a description for its card, its
 tags and a lazy import), and placed in a group of the menu by
-`src/examples/exampleGroups.ts`. The *Local* and *Datalayer* targets at the top
-of the page say where the examples' agents and kernels run.
+`src/examples/exampleGroups.ts`.
+
+Every example shows the runtime selector in the header — *Browser* (Python and
+the agent loop in the page), *Local* (the local agent-runtimes server and
+Jupyter server), *Jupyter* (an anonymous Jupyter server, no agent) and
+*Datalayer* (a runtime on Datalayer, once signed in) — and runs where it says:
+an example reads the choice (`useRuntimeTargetStore`) and brings no selector
+of its own. A target an example cannot run on stays in the selector, disabled,
+why in its tooltip (`unavailableTargets` in its registry entry): the *AI
+Application* and *Loop Computer* have no Browser or Jupyter target, since
+an application needs an agent-runtimes server or a Datalayer runtime.
 
 ## Groups
 
 | Group | What it holds |
 | --- | --- |
-| Apps | Applications and their workspaces: the AI Application, the Agentspecs library, the Loop shells and workspace, an application beside its computer, the scenes, decks. |
+| Applications | Applications and their workspaces: the Loop Application, the Agentspecs library, the Loop shells and workspace, an application beside its computer, Agent Scenes (the catalogue's scenes listed on the left, the one chosen on the right), decks. |
 | Avatar | The floating assistant and the gallery of its characters. |
 | A2UI, A2A, Personal Agent Protocol, Agent protocols, Shield, AG-UI | One protocol each. |
 | Chat | The chat components, the voice chat. |
@@ -34,25 +43,32 @@ of the page say where the examples' agents and kernels run.
 | CopilotKit | CopilotKit beside the notebook and the document. |
 | Navigation | Core's navigation hooks (`useNavigate`, `useLocation`, `useParams`, `useHistory`) inside a React Router and without one. |
 
-## The AI Application example
+## The Loop Application example
 
-*AI Application* (`AIApplicationExample.tsx`) is an extensible application
+*Loop Application* (`LoopApplicationExample.tsx`) is an extensible application
 drawn by [`AIApplication`](./ai-application.mdx):
 
 - **what** it shows: an Appspec written in the page (Web Research of the
   catalogue, renamed, with a presentation of its own), or the catalogue's
   `web-research` by its id;
-- **where** it runs: the local agent-runtimes server (`runsOn: { kind: 'server' }`,
-  on :8765) or a runtime launched on Datalayer (`runsOn: { kind: 'datalayer' }`),
-  switched at the top of the page;
-- **what the page adds** (`renderer.plugins`, made once): the library's
-  presentation plugin in the left panel, and a plugin of the example's own,
-  written with Reactor's `definePlugin`, that puts a chip in the chat's title
-  bar and a right panel that reads the application from the workspace
-  (`useWorkspaceApplication`).
+- **where** it runs: where the examples' header says, with no selector of
+  its own: *Local* is the local agent-runtimes server (`runsOn: { kind: 'server' }`,
+  on :8765), *Datalayer* a runtime launched on Datalayer
+  (`runsOn: { kind: 'datalayer' }`); `AIApplication` has no browser or bare
+  Jupyter mode, so on *Browser* or *Jupyter* the page asks for one of the two;
+- **what it is made of**, named at the top of the page: from its Appspec, the
+  chat and its UI plugins, the plugins manager and the Composer portal; added
+  by the page (`renderer.plugins`, made once), the library's presentation
+  plugin in the left panel and a plugin of the example's own, written with
+  Reactor's `definePlugin`, that puts a chip in the chat's title bar and a
+  right panel listing the plugins the workspace runs (`listPlugins`) and what
+  the application is made of (`useWorkspaceApplication`). The plug button in
+  the chat's footer is the plugins manager (`plugin-manager`, which every
+  application has unless its spec leaves it out): the same list, each plugin
+  with its switch.
 
 Copy it to start an application of your own: change the Appspec, add your
-plugins to `RENDERER`, and pick where it runs.
+plugins to `RENDERER`, and open the plugins manager to see them run.
 
 ## One gallery
 

@@ -113,7 +113,7 @@ describe('the examples merged from the second examples folder, and the AIApplica
   it('are registered once, each in its group', () => {
     const ids = getExampleEntries().map(entry => entry.id);
     for (const [id, group] of [
-      ['AIApplicationExample', 'Apps'],
+      ['LoopApplicationExample', 'Loop'],
       ['DatalayerNotebookExample', 'Notebook'],
       ['NotebookMutationsKernel', 'Notebook'],
       ['NotebookMutationsServiceManager', 'Notebook'],

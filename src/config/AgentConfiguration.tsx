@@ -15,6 +15,7 @@ import {
   Flash,
   Label,
   IconButton,
+  Textarea,
 } from '@primer/react';
 import {
   ToolsIcon,
@@ -25,7 +26,7 @@ import {
   LinkExternalIcon,
 } from '@primer/octicons-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Box } from '@datalayer/primer-addons';
+import { Box, Card } from '@datalayer/primer-addons';
 import type { MCPServerConfig } from '../types';
 import { getSkillSpec, getSkillSpecs } from '../specs/skills';
 import type { OAuthProvider, OAuthProviderConfig, Identity } from '../identity';
@@ -277,15 +278,12 @@ function IdentityConnectWithStatus({
       {hasUnconnectedToken && !disabled && (
         <Box display="flex" flexDirection="column" gap={2}>
           {unconnectedTokenProviders.map(tp => (
-            <Box
+            <Card
               key={tp.provider}
-              border="1px solid"
-              borderColor={
-                expandedTokenProvider === tp.provider
-                  ? tp.color
-                  : 'border.default'
-              }
-              borderRadius={2}
+              border
+              shadow="none"
+              // The provider opened: the theme's chosen card, an accent hairline.
+              selected={expandedTokenProvider === tp.provider}
               overflow="hidden"
             >
               {/* Provider header - clickable to expand */}
@@ -302,10 +300,11 @@ function IdentityConnectWithStatus({
                 alignItems="center"
                 gap={2}
                 padding={2}
-                backgroundColor="canvas.subtle"
+                bg="transparent"
+                color="fg.default"
                 border="none"
                 cursor="pointer"
-                hover={{ backgroundColor: 'canvas.inset' }}
+                hover={{ backgroundColor: 'canvas.subtle' }}
               >
                 {tp.iconUrl ? (
                   <img
@@ -329,7 +328,11 @@ function IdentityConnectWithStatus({
 
               {/* Expanded token input */}
               {expandedTokenProvider === tp.provider && (
-                <Box padding={3} backgroundColor="canvas.default">
+                <Box
+                  padding={3}
+                  borderTop="1px solid"
+                  borderColor="border.default"
+                >
                   <Box mb={2} display="flex" alignItems="center" gap={1}>
                     <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
                       {tp.helpText}
@@ -383,7 +386,7 @@ function IdentityConnectWithStatus({
                   </Box>
                 </Box>
               )}
-            </Box>
+            </Card>
           ))}
         </Box>
       )}
@@ -1099,13 +1102,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
   };
 
   return (
-    <Box
-      padding={3}
-      border="1px solid"
-      borderColor="border.default"
-      borderRadius={2}
-      backgroundColor="canvas.subtle"
-    >
+    <Card border shadow="none" variant="subtle" padding={3}>
       <Text
         sx={{
           fontSize: 2,
@@ -1128,14 +1125,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           </Label>
         </Box>
         {launchBaseUrl ? (
-          <Box
-            mb={2}
-            p={2}
-            border="1px solid"
-            borderColor="border.default"
-            borderRadius={2}
-            bg="canvas.default"
-          >
+          <Card border shadow="none" mb={2} p={2}>
             <Text sx={{ display: 'block', fontSize: 0, color: 'fg.muted' }}>
               Launch URL
             </Text>
@@ -1149,7 +1139,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
             >
               {launchBaseUrl}
             </Text>
-          </Box>
+          </Card>
         ) : null}
         <Select
           value={selectedAgentId}
@@ -1231,8 +1221,9 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
 
       <FormControl sx={{ marginBottom: 3 }} disabled={isFormReadOnly}>
         <FormControl.Label>Description</FormControl.Label>
-        <Box
-          as="textarea"
+        <Textarea
+          block
+          resize="vertical"
           value={description}
           onChange={e =>
             onDescriptionChange((e.target as HTMLTextAreaElement).value)
@@ -1241,45 +1232,22 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           disabled={isFormReadOnly}
           readOnly={isFormReadOnly}
           rows={3}
-          width="100%"
-          maxWidth="100%"
-          minHeight="88px"
-          resize="vertical"
-          border="1px solid"
-          borderColor="border.default"
-          borderRadius={2}
-          p={2}
-          fontSize={1}
-          whiteSpace="pre-wrap"
-          overflowWrap="anywhere"
-          bg={isFormReadOnly ? 'canvas.subtle' : 'canvas.default'}
-          color={isFormReadOnly ? 'fg.muted' : 'fg.default'}
+          sx={{ minHeight: '88px', fontSize: 1 }}
         />
       </FormControl>
 
       <FormControl sx={{ marginBottom: 3 }} disabled={isFormReadOnly}>
         <FormControl.Label>Goal</FormControl.Label>
-        <Box
-          as="textarea"
+        <Textarea
+          block
+          resize="vertical"
           value={goal}
           onChange={e => onGoalChange((e.target as HTMLTextAreaElement).value)}
           placeholder="User-facing objective"
           disabled={isFormReadOnly}
           readOnly={isFormReadOnly}
           rows={3}
-          width="100%"
-          maxWidth="100%"
-          minHeight="88px"
-          resize="vertical"
-          border="1px solid"
-          borderColor="border.default"
-          borderRadius={2}
-          p={2}
-          fontSize={1}
-          whiteSpace="pre-wrap"
-          overflowWrap="anywhere"
-          bg={isFormReadOnly ? 'canvas.subtle' : 'canvas.default'}
-          color={isFormReadOnly ? 'fg.muted' : 'fg.default'}
+          sx={{ minHeight: '88px', fontSize: 1 }}
         />
       </FormControl>
 
@@ -1393,8 +1361,9 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
 
       <FormControl sx={{ marginBottom: 3 }} disabled={isFormReadOnly}>
         <FormControl.Label>System Prompt</FormControl.Label>
-        <Box
-          as="textarea"
+        <Textarea
+          block
+          resize="vertical"
           value={systemPrompt}
           onChange={e =>
             onSystemPromptChange((e.target as HTMLTextAreaElement).value)
@@ -1403,29 +1372,15 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           disabled={isFormReadOnly}
           readOnly={isFormReadOnly}
           rows={5}
-          width="100%"
-          maxWidth="100%"
-          minHeight="120px"
-          resize="vertical"
-          border="1px solid"
-          borderColor="border.default"
-          borderRadius={2}
-          p={2}
-          fontFamily="mono"
-          fontSize={1}
-          whiteSpace="pre-wrap"
-          overflowWrap="anywhere"
-          bg={isFormReadOnly ? 'canvas.subtle' : 'canvas.default'}
-          color={isFormReadOnly ? 'fg.muted' : 'fg.default'}
-          userSelect={isFormReadOnly ? 'none' : 'text'}
-          cursor={isFormReadOnly ? 'not-allowed' : 'text'}
+          sx={{ minHeight: '120px', fontFamily: 'mono', fontSize: 1 }}
         />
       </FormControl>
 
       <FormControl sx={{ marginBottom: 3 }} disabled={isFormReadOnly}>
         <FormControl.Label>System Prompt Codemode Addons</FormControl.Label>
-        <Box
-          as="textarea"
+        <Textarea
+          block
+          resize="vertical"
           value={systemPromptCodemodeAddons}
           onChange={e =>
             onSystemPromptCodemodeAddonsChange(
@@ -1436,22 +1391,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           disabled={isFormReadOnly}
           readOnly={isFormReadOnly}
           rows={4}
-          width="100%"
-          maxWidth="100%"
-          minHeight="110px"
-          resize="vertical"
-          border="1px solid"
-          borderColor="border.default"
-          borderRadius={2}
-          p={2}
-          fontFamily="mono"
-          fontSize={1}
-          whiteSpace="pre-wrap"
-          overflowWrap="anywhere"
-          bg={isFormReadOnly ? 'canvas.subtle' : 'canvas.default'}
-          color={isFormReadOnly ? 'fg.muted' : 'fg.default'}
-          userSelect={isFormReadOnly ? 'none' : 'text'}
-          cursor={isFormReadOnly ? 'not-allowed' : 'text'}
+          sx={{ minHeight: '110px', fontFamily: 'mono', fontSize: 1 }}
         />
       </FormControl>
 
@@ -1488,13 +1428,11 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
       </Box>
 
       {/* Identity Providers Section - Always show since token-based providers (Kaggle) are always available */}
-      <Box
+      <Card
+        border
+        shadow="none"
         marginBottom={3}
         padding={3}
-        border="1px solid"
-        borderColor="border.default"
-        borderRadius={2}
-        backgroundColor="canvas.default"
         opacity={isSpecMode ? 0.6 : 1}
       >
         <Box display="flex" alignItems="center" gap={2} marginBottom={2}>
@@ -1515,16 +1453,14 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           onConnect={onIdentityConnect}
           onDisconnect={onIdentityDisconnect}
         />
-      </Box>
+      </Card>
 
       {/* Agent Capabilities Section */}
-      <Box
+      <Card
+        border
+        shadow="none"
         marginBottom={3}
         padding={3}
-        border="1px solid"
-        borderColor="border.default"
-        borderRadius={2}
-        backgroundColor="canvas.default"
         opacity={isSpecMode ? 0.6 : 1}
       >
         <Text sx={{ fontSize: 1, fontWeight: 'bold', display: 'block', mb: 2 }}>
@@ -1616,15 +1552,13 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
             </Box>
           </Box>
         )}
-      </Box>
+      </Card>
 
-      <Box
+      <Card
+        border
+        shadow="none"
         marginBottom={3}
         padding={3}
-        border="1px solid"
-        borderColor="border.default"
-        borderRadius={2}
-        backgroundColor="canvas.default"
         opacity={isSpecMode ? 0.6 : 1}
       >
         <Box display="flex" alignItems="center" gap={2} marginBottom={2}>
@@ -1687,14 +1621,15 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
         ) : (
           <Box display="flex" flexDirection="column" gap={2}>
             {displaySkills.map(skill => (
-              <Box
+              <Card
+                shadow="none"
+                variant="subtle"
                 key={skill.id}
                 display="flex"
+                flexDirection="row"
                 alignItems="center"
                 gap={2}
                 padding={2}
-                borderRadius={1}
-                backgroundColor="canvas.subtle"
                 opacity={isSpecMode ? 0.6 : 1}
               >
                 <Checkbox
@@ -1730,20 +1665,18 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
                     </Label>
                   )}
                 </Box>
-              </Box>
+              </Card>
             ))}
           </Box>
         )}
-      </Box>
+      </Card>
 
       {/* MCP Config Servers Section */}
-      <Box
+      <Card
+        border
+        shadow="none"
         marginBottom={3}
         padding={3}
-        border="1px solid"
-        borderColor="border.default"
-        borderRadius={2}
-        backgroundColor="canvas.default"
         opacity={isSpecMode ? 0.6 : 1}
       >
         <Box display="flex" alignItems="center" gap={2} marginBottom={2}>
@@ -1820,13 +1753,12 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
         )}
 
         {enableCodemode && (
-          <Box
+          <Card
+            border
+            shadow="none"
+            variant="subtle"
             marginBottom={2}
             padding={2}
-            borderRadius={1}
-            border="1px solid"
-            borderColor="border.default"
-            backgroundColor="canvas.subtle"
           >
             <Text
               sx={{ fontSize: 0, fontWeight: 'semibold', display: 'block' }}
@@ -1868,21 +1800,22 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
               Exposed meta-tools: list_tool_names, search_tools,
               get_tool_details, list_servers, execute_code, call_tool (optional)
             </Text>
-          </Box>
+          </Card>
         )}
 
         {/* Config Servers List */}
         {configServers.length > 0 && (
           <Box display="flex" flexDirection="column" gap={2}>
             {configServers.map(server => (
-              <Box
+              <Card
+                shadow="none"
+                variant="subtle"
                 key={server.id}
                 display="flex"
+                flexDirection="row"
                 alignItems="flex-start"
                 gap={2}
                 padding={2}
-                borderRadius={1}
-                backgroundColor="canvas.subtle"
                 opacity={mcpServersDisabled ? 0.6 : 1}
               >
                 <Checkbox
@@ -1905,21 +1838,19 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
                     </Text>
                   )}
                 </Box>
-              </Box>
+              </Card>
             ))}
           </Box>
         )}
-      </Box>
+      </Card>
 
       {/* MCP Catalog Servers Section */}
       {catalogServers.length > 0 && (
-        <Box
+        <Card
+          border
+          shadow="none"
           marginBottom={3}
           padding={3}
-          border="1px solid"
-          borderColor="border.default"
-          borderRadius={2}
-          backgroundColor="canvas.default"
           opacity={isSpecMode ? 0.6 : 1}
         >
           <Box display="flex" alignItems="center" gap={2} marginBottom={2}>
@@ -1951,14 +1882,15 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
               const isRunning = server.isRunning === true;
               const canSelect = envVarsAvailable || isRunning;
               return (
-                <Box
+                <Card
+                  shadow="none"
+                  variant="subtle"
                   key={server.id}
                   display="flex"
+                  flexDirection="row"
                   alignItems="flex-start"
                   gap={2}
                   padding={2}
-                  borderRadius={1}
-                  backgroundColor="canvas.subtle"
                   opacity={mcpServersDisabled || !canSelect ? 0.6 : 1}
                 >
                   <Checkbox
@@ -2025,11 +1957,11 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
                       </Text>
                     )}
                   </Box>
-                </Box>
+                </Card>
               );
             })}
           </Box>
-        </Box>
+        </Card>
       )}
 
       {createError && (
@@ -2064,7 +1996,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           'Create the Agent'
         )}
       </Button>
-    </Box>
+    </Card>
   );
 };
 

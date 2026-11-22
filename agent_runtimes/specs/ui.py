@@ -2913,7 +2913,7 @@ PLUGIN_MANAGER_UI_0_0_1 = UISpec(
     id="plugin-manager",
     version="0.0.1",
     name="Plugins",
-    description="A plug button in the chat's footer that opens the plugins manager in a dialog over the page: every plugin of the application's platform, filtered by name, each with a switch to turn it off and back on while the application runs. Every application has it, listed in its `ui` or not, unless its spec leaves it out (`interface.plugin_manager_disabled: true`). Needs no connection: an anonymous visitor has it.",
+    description="A plug button in the chat's footer, in its row under the prompt (`loop.promptStatus`, usable while the prompt is closed), that opens the plugins manager in a dialog over the page: every plugin of the application's platform, filtered by name, each with a switch to turn it off and back on while the application runs. Every application has it, listed in its `ui` or not, unless its spec leaves it out (`interface.plugin_manager_disabled: true`). Needs no connection: an anonymous visitor has it.",
     emoji="🔌",
     octicon="plug",
     plugin="@datalayer/loop-plugin-plugin-manager",
@@ -2926,7 +2926,7 @@ PLUGIN_MANAGER_UI_0_0_1 = UISpec(
     ),
     per=None,
     contributions=UiContributionsSpec(
-        slots=["loop.status"],
+        slots=["loop.promptStatus"],
         points=[],
         commands=[],
     ),
