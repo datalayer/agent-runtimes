@@ -57,7 +57,7 @@ describe('the turns a visitor has', () => {
       setItem: (key: string, value: string) => void kept.set(key, value),
     };
     writeTurns(storage, { day: '2026-11-15', taken: 2 });
-    expect(VISITOR_TURNS_KEY).toBe('datalayer-loop-visitor-turns');
+    expect(VISITOR_TURNS_KEY).toBe('datalayer-agent-visitor-turns');
     expect(readTurns(storage)).toEqual({ day: '2026-11-15', taken: 2 });
     expect(readTurns(undefined)).toBeNull();
   });

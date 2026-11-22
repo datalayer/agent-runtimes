@@ -38,7 +38,7 @@ import {
 } from '../embed/AppEmbed';
 import { EmbedAttributeError, resumeOf } from '../embed/embedConfig';
 import type { AppEmbedHost, WindowPost } from '../embed/hostBridge';
-import { tellLoopWindow } from '../../chat/base/loopWindow';
+import { tellAgentWindow } from '../../chat/base/agentWindow';
 import {
   WINDOW_NOT_YET,
   embedSessionKey,
@@ -470,8 +470,8 @@ describe('window messages, between the page and the application', () => {
     // What its code answers comes on the conversation's ui socket, which
     // the chat hands on (RU-W): raised as any window message.
     expect(events).toEqual([]);
-    await act(async () => tellLoopWindow({ seen: '/cart' }));
-    await act(async () => tellLoopWindow({ open: 'invoice' }));
+    await act(async () => tellAgentWindow({ seen: '/cart' }));
+    await act(async () => tellAgentWindow({ open: 'invoice' }));
     expect(events).toEqual([
       { type: 'window-message', detail: { data: { seen: '/cart' } } },
       { type: 'window-message', detail: { data: { open: 'invoice' } } },

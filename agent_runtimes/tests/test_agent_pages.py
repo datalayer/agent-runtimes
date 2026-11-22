@@ -5,12 +5,12 @@
 
 Locally the page is the local server's, with the local Jupyter server. On
 Datalayer — launched, attached with ``--runtime``, or gone back to with
-``loop connect`` — it is opened through the relay on this machine, which adds
+``agent connect`` — it is opened through the relay on this machine, which adds
 the person's token, with the runtime's Jupyter server at its ingress and the
 runtime's own token: never the person's token, never the pod's own address.
 
-The cloud cases run the real commands in the real session (``loop --prompt``)
-against the fake Datalayer API and runtime of ``test_loop_cloud``.
+The cloud cases run the real commands in the real session (``agent --prompt``)
+against the fake Datalayer API and runtime of ``test_agent_cloud``.
 """
 
 from __future__ import annotations
@@ -29,17 +29,17 @@ import pytest
 import typer
 from rich.console import Console
 
+from agent_runtimes.agent import launch
 from agent_runtimes.chat import cli
 from agent_runtimes.chat.commands import browser_document, browser_notebook
-from agent_runtimes.loop import launch
 
-from .test_loop_cloud import (  # noqa: F401
+from .test_agent_cloud import (  # noqa: F401
     FakeDatalayer,
     Running,
     cloud_runtime,
     datalayer,
 )
-from .test_loop_prompt import on_datalayer  # noqa: F401
+from .test_agent_prompt import on_datalayer  # noqa: F401
 
 #: What `FakeDatalayer` answers for a runtime: its ingress and Jupyter token.
 INGRESS = Running("x", "ai-agents-env").ingress
@@ -117,7 +117,7 @@ def test_an_attached_runtimes_page_goes_through_the_relay(
     _is_the_runtimes_page(opened[1], "agent-document.html")
 
 
-def test_loop_connect_to_a_datalayer_runtime_goes_back_as_runtime_does(
+def test_agent_connect_to_a_datalayer_runtime_goes_back_as_runtime_does(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     uid = "01k6xyzexampleruntimeuid0000"
@@ -130,7 +130,7 @@ def test_loop_connect_to_a_datalayer_runtime_goes_back_as_runtime_does(
         FakeDatalayer(),
         JUPYTER_TOKEN,
     )
-    # What `loop` prints for a kept runtime names it.
+    # What `agent` prints for a kept runtime names it.
     printed = launch.build_url(kept)
     assert printed == (
         f"https://r1.datalayer.run/agent-runtimes/ai-agents-pool/{uid}"
@@ -139,7 +139,7 @@ def test_loop_connect_to_a_datalayer_runtime_goes_back_as_runtime_does(
     assert launch.runtime_of_url(printed) == uid
     assert launch.runtime_of_url("http://localhost:8000/api/v1/ag-ui/chat/") is None
 
-    # `loop connect <that address>` is `loop --runtime <uid>`: the relay, the
+    # `agent connect <that address>` is `agent --runtime <uid>`: the relay, the
     # slash commands and the pages of the attached case above.
     invoked: List[Any] = []
     monkeypatch.setattr(cli, "app", lambda args: invoked.append(args))

@@ -8,12 +8,12 @@
  * renders (`semantic.ts`, version 1). A stream is read with `AgUiFrames` or
  * `readRunStream` (`agui.ts`); this says what each event means to a host.
  *
- * The runtime's `loop.turn` event says which turn a stream is and where it
+ * The runtime's `agent.turn` event says which turn a stream is and where it
  * stands (`running`, `finished`, `failed`: agent_runtimes/apps/
  * external_turns.py); a stopped session's stream ends without a run end,
  * so `stop` is never read from an event: the host that pressed Stop says it.
  * A question is read from `RUN_FINISHED.result.asking` only: the run stream
- * carries no `loop.ask` event (that is the record's word, `record.py`).
+ * carries no `agent.ask` event (that is the record's word, `record.py`).
  *
  * Moved from the Slack service.
  *
@@ -39,9 +39,9 @@ const stringOf = (value: unknown, fallback = ''): string =>
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 
-/** The turn a `loop.turn` event names, or `undefined` for any other event. */
+/** The turn a `agent.turn` event names, or `undefined` for any other event. */
 export function turnOf(event: AgUiEvent): TurnInfo | undefined {
-  if (event.type !== 'CUSTOM' || event.name !== 'loop.turn') {
+  if (event.type !== 'CUSTOM' || event.name !== 'agent.turn') {
     return undefined;
   }
   const value = isRecord(event.value) ? event.value : {};

@@ -59,7 +59,7 @@ import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 
 const queryClient = new QueryClient();
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { LoopEmbed } from '../apps';
+import { AgentEmbed } from '../apps';
 import { agentRuntimeStore } from '../stores';
 import { AgentGuardrailsPlugin } from '../apps/plugins/agent-guardrails';
 import { createChatExtrasPlugin } from '../apps/plugins/chat-extras';
@@ -309,7 +309,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
   const [totalTokens, setTotalTokens] = useState(0);
   const [otelRunCostUsd, setOtelRunCostUsd] = useState<number | null>(null);
 
-  // The chat column is the shared loop; the example's live over-budget banner
+  // The chat column is the shared Agent; the example's live over-budget banner
   // reaches it through the chat-extras channel. Declared here — above the
   // early returns below — so these hooks run in the same order every render,
   // and the banner is recomputed from the cost state the effect depends on.
@@ -386,7 +386,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
       setIsReconnectedAgent(false);
 
       try {
-        // The Loop creates the agent from the capacity plugin's blueprint as
+        // The Agent workspace creates the agent from the capacity plugin's blueprint as
         // it mounts; the page only waits until the server has it, so its own
         // sockets and reads address an agent that exists.
         const found = await waitForAgent(agentBaseUrl, agentName, {
@@ -744,11 +744,11 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
         </Flash>
       ))}
 
-      {/* Chat — the shared loop on the guardrails capacity plugin; the cost
+      {/* Chat — the shared Agent on the guardrails capacity plugin; the cost
           gauge and approval cards above are the example's own. The live
           over-budget banner rides the chat-extras channel. */}
       <Box flex={1} minHeight={0}>
-        <LoopEmbed
+        <AgentEmbed
           serverUrl={agentBaseUrl}
           target="local"
           showAgentVariants

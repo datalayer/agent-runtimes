@@ -7,7 +7,7 @@
  * What `ShieldHarnessExample` connects to and offers.
  *
  * `examples/shield/harness_on_the_runtime.py --serve` names the harness's
- * agent `chat`, as `loop --harness` does with `AGENT_RUNTIMES_AGENT_NAME`;
+ * agent `chat`, as `agent --harness` does with `AGENT_RUNTIMES_AGENT_NAME`;
  * the openers are the fake agent's words (its docstring says what each does).
  *
  * @module examples/shield/shieldHarness

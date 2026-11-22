@@ -27,7 +27,7 @@ that every script is named here and that what they import exists.
 
 ## A coding agent on the local runtime
 
-`harness_on_the_runtime.py` starts what `loop --harness <id>` starts: the
+`harness_on_the_runtime.py` starts what `agent --harness <id>` starts: the
 runtime's server on this machine, the harness made at startup through the
 create route, the workspace it guards. It sends one AG-UI turn over HTTP, as
 the terminal and the web chat do, and prints what the runtime streamed: the

@@ -8,7 +8,7 @@
  *
  * Multi-agent delegation with the in-repo subagents capability. The
  * orchestrator runs on the local agent-runtimes server, created there by the
- * Loop from the `example-subagents` blueprint; its researcher and writer are
+ * Agent from the `example-subagents` blueprint; its researcher and writer are
  * subagents inside its process, each run in an isolated child run.
  *
  * - The chat is the demonstration: no notebook or document beside it
@@ -25,7 +25,7 @@ import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
-import { LoopEmbed } from '../apps';
+import { AgentEmbed } from '../apps';
 import { AgentSubagentsPlugin } from '../apps/plugins/agent-subagents';
 import { SubagentChatPanel } from '../chat/messages/ChatMessageList';
 import {
@@ -35,7 +35,7 @@ import {
 import { getAgentspecs } from '../specs/agents';
 import type { SubAgentspecConfig } from '../types/agentspecs';
 
-const LOOP_PLUGINS_AGENTSUB = [AgentSubagentsPlugin];
+const AGENT_PLUGINS_AGENTSUB = [AgentSubagentsPlugin];
 
 const AGENT_NAME = 'subagents-example-agent';
 const AGENTSPEC_ID = 'example-subagents';
@@ -165,13 +165,13 @@ const AgentSubagentsExample: React.FC = () => {
 
         <Box flex={1} minHeight={0} display="flex">
           <Box flex={1} minWidth={0}>
-            {/* The Loop creates the orchestrator on the Local target from the
+            {/* The Agent workspace creates the orchestrator on the Local target from the
                 capacity plugin's blueprint, the way the hooks and A2A examples
                 do; an agent made by hand for another transport answers the
-                Loop's AG-UI calls with Not Found. The agent-target switch
-                stays visible: with it hidden the Loop pins the agent to the
+                Agent's AG-UI calls with Not Found. The agent-target switch
+                stays visible: with it hidden the Agent pins the agent to the
                 page, and delegation happens on the server. */}
-            <LoopEmbed
+            <AgentEmbed
               serverUrl={resolveExampleAgentRuntimesUrl('local')}
               target="local"
               showAgentVariants
@@ -180,7 +180,7 @@ const AgentSubagentsExample: React.FC = () => {
               // or a document beside it would only invite the wrong request.
               editors={false}
               showHeader
-              plugins={LOOP_PLUGINS_AGENTSUB}
+              plugins={AGENT_PLUGINS_AGENTSUB}
             />
           </Box>
 

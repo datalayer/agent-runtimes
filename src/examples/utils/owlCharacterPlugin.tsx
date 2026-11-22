@@ -4,7 +4,7 @@
  */
 
 /**
- * A plugin that contributes a character to the floating assistant: an owl, drawn here, contributed to `loop.assistant.character` as
+ * A plugin that contributes a character to the floating assistant: an owl, drawn here, contributed to `agent.assistant.character` as
  * any plugin would. The *Assistant* example enables it beside
  * Datalayer's own characters and lists what the enabled plugins contribute.
  *
@@ -17,7 +17,7 @@
 
 import type { JSX } from 'react';
 import { contribution, definePlugin } from '@datalayer/reactor';
-import { LoopAssistantCharacter } from '../../apps/core';
+import { AgentAssistantCharacter } from '../../apps/core';
 import type {
   AssistantCharacter,
   AssistantColorMode,
@@ -112,7 +112,7 @@ export const OwlCharacterPlugin = definePlugin({
   description: 'An owl for the floating assistant, contributed by a plugin.',
   contributes: [
     contribution(
-      LoopAssistantCharacter,
+      AgentAssistantCharacter,
       { id: OWL_CHARACTER.id, character: OWL_CHARACTER },
       { id: OWL_CHARACTER.id },
     ),

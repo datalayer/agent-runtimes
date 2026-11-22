@@ -4,7 +4,7 @@
  */
 
 /**
- * The LOOP workspace: contracts, shell, and the plugins that come with it.
+ * The Agent workspace: contracts, shell, and the plugins that come with it.
  *
  * A host embeds the workspace through this surface — never by deep import — so
  * what is public is a decision rather than an accident of file layout.
@@ -14,13 +14,13 @@
 
 // The contracts. A plugin depends on these and on the reactor, never on the shell.
 export {
-  LoopCommand,
-  LoopDocumentToolbar,
-  LoopMention,
-  LoopNotebookToolbar,
-  LoopRunProps,
-  LoopSlots,
-  LoopViewType,
+  AgentCommand,
+  AgentDocumentToolbar,
+  AgentMention,
+  AgentNotebookToolbar,
+  AgentRunProps,
+  AgentSlots,
+  AgentViewType,
   canOpenView,
   createPromptChannel,
   parseCommand,
@@ -30,10 +30,10 @@ export {
   type CommandResult,
   type EditorToolbarContext,
   type EditorToolbarContribution,
-  type LoopCommandContext,
-  type LoopViewProps,
-  type LoopWorkspaceContext,
-  type LoopChatViewModes,
+  type AgentCommandContext,
+  type AgentViewProps,
+  type AgentWorkspaceContext,
+  type AgentChatViewModes,
   type MentionCandidate,
   type MentionContribution,
   type PromptChannel,
@@ -42,24 +42,24 @@ export {
   type SandboxState,
   type ViewControls,
   type ViewTypeContribution,
-  useLoopPromptStore,
-  suggestLoopPrompt,
+  useAgentPromptStore,
+  suggestAgentPrompt,
   focusPrompt,
   onPromptFocusRequest,
-  type LoopPromptState,
+  type AgentPromptState,
   type SuggestedPrompt,
 } from './core';
 export { useEditorToolbar } from './core/toolbar';
 
 // The shell.
 export {
-  LoopWorkspace,
+  AgentWorkspace,
   PluginToggles,
   ViewSwitcher,
   WorkspaceFullScreenAction,
-  buildLoopReactor,
+  buildAgentReactor,
   useWorkspaceFullScreen,
-  type LoopWorkspaceProps,
+  type AgentWorkspaceProps,
   type PluginTogglesProps,
   type ViewSwitcherProps,
 } from './shell';
@@ -88,28 +88,28 @@ export {
 } from './plugins/chat-extras';
 // The live channels a host feeds the workspace through, and what it can
 // read back: the chat extras, the opening notebook, and who the team is
-// talking to. A page composing panels around a `LoopEmbed` needs all three.
+// talking to. A page composing panels around a `AgentEmbed` needs all three.
 export {
-  LoopChatExtras,
-  LoopChatLayout,
-  LoopChatTurn,
-  LoopOpeningDocument,
-  LoopOpeningNotebook,
-  LoopPromptPanel,
+  AgentChatExtras,
+  AgentChatLayout,
+  AgentChatTurn,
+  AgentOpeningDocument,
+  AgentOpeningNotebook,
+  AgentPromptPanel,
   type ChatLayoutContribution,
   type ChatLayoutParts,
   type ChatTurnContribution,
   type ConversationEntry,
   type ChatTurnSnapshot,
   type ChatTurnStatus,
-  type LoopChatExtrasValue,
+  type AgentChatExtrasValue,
   type OpeningDocumentContribution,
   type OpeningNotebookContribution,
   type PromptPanelContribution,
 } from './core';
 export {
-  LoopPageLayoutPlugin,
-  LOOP_PAGE_LAYOUT_PLUGIN_NAME,
+  AgentPageLayoutPlugin,
+  AGENT_PAGE_LAYOUT_PLUGIN_NAME,
   openConversationPanel,
   pageLayoutSheet,
   pageLayoutPanelOpen,
@@ -117,7 +117,7 @@ export {
   // panel, under what was said, and opens the panel to show it.
   setPageLayoutChatMode,
   SplitLayout,
-  type LoopPageLayoutConfig,
+  type AgentPageLayoutConfig,
 } from './plugins/page-layout';
 export { useOptionalTeamSelection } from './plugins/agents/useTeamSelection';
 export type { TeamMember, TeamSelection } from './plugins/agents/team';
@@ -339,7 +339,7 @@ export {
   NOTEBOOK_TOOLBAR_PLUGIN_NAME,
 } from './plugins/notebook-toolbar';
 
-// The window a page puts around Loop, and the slots that make its title bar
+// The window a page puts around Agent, and the slots that make its title bar
 // extensible.
 export {
   WindowFrame,
@@ -349,28 +349,46 @@ export {
   WINDOW_FRAME_PLUGIN_NAME,
   type WindowFrameProps,
 } from './plugins/window-frame';
-export { LoopCommandsPlugin, COMMANDS_PLUGIN_NAME } from './plugins/commands';
+export { AgentCommandsPlugin, COMMANDS_PLUGIN_NAME } from './plugins/commands';
 export { PromptPlugin, PROMPT_PLUGIN_NAME } from './plugins/prompt';
-// Loop, ready to drop into somebody else's page.
-export { LoopEmbed, type LoopEmbedProps } from './embed/LoopEmbed';
+// Agent, ready to drop into somebody else's page.
+export { AgentEmbed, type AgentEmbedProps } from './embed/AgentEmbed';
 // An application as a React component of the host's own page, in visitor,
 // runtime, server or Datalayer mode: what `<datalayer-app>` wraps.
 export {
-  Application,
-  ApplicationSkeleton,
+  AIApplication,
+  AIApplicationSkeleton,
   agentAppspec,
-  resolveApplication,
+  resolveAIApplication,
   resolvedSpec,
   visitorApiOf,
   visitorInferenceOf,
-  type ApplicationDatalayer,
-  type ApplicationProps,
-  type ApplicationRunsOn,
-  type ApplicationRuntime,
-  type ApplicationServer,
-  type ApplicationVisitor,
-  type ResolvedApplication,
-} from './Application';
+  type AIApplicationDatalayer,
+  type AIApplicationProps,
+  type AIApplicationRunsOn,
+  type AIApplicationRuntime,
+  type AIApplicationServer,
+  type AIApplicationVisitor,
+  type ResolvedAIApplication,
+} from './AIApplication';
+// What an application is, from its spec's `presentation`, in the left panel:
+// a host's plugin, added to the application it shows.
+export {
+  AgentPresentationPlugin,
+  AGENT_PRESENTATION_PLUGIN_NAME,
+  agentPresentationPlugin,
+  presentationLabel,
+  presentationOf,
+  type PresentationLinks,
+} from './plugins/agent-presentation';
+// The agent that answers on a runtime, and the session it holds.
+export {
+  readRuntimeSessions,
+  runtimeAgentAnswering,
+  useRuntimeAgent,
+  type RuntimeAgentFound,
+  type RuntimeSessions,
+} from './runtimeAgent';
 // An application in another product's page: the React component, the
 // `<datalayer-app>` element, and the snippet a host pastes.
 export {
@@ -433,9 +451,9 @@ export {
   SUBAGENT_ACTIVITY_PLUGIN_NAME,
 } from './plugins/subagent-activity';
 
-// The set a workspace normally has, so a host starts from a working Loop
+// The set a workspace normally has, so a host starts from a working Agent
 // rather than assembling one — and never from the example.
-export { loopPlugins, type LoopPresetOptions } from './presets';
+export { agentPlugins, type AgentPresetOptions } from './presets';
 
 // The extensions that group them, for hosts that would rather install a
 // capability than assemble one.

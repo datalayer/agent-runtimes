@@ -49,7 +49,7 @@ asked for), and the **WebSocket** channel, both over the official ``acp`` SDK
 0.7. An endpoint ``stdio:<command line>`` launches; a ``ws://`` or ``wss://``
 endpoint connects. The client this adapter was first built on
 (``transports/clients/acp_client.py``, whose ``connect()`` did not work
-against the installed SDK) is no longer under it; the ``loop connect -t acp``
+against the installed SDK) is no longer under it; the ``agent connect -t acp``
 command still uses that client and is its only caller.
 
 The trace goes on the connection's headers, because a

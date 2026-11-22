@@ -5,14 +5,14 @@
 
 /**
  * The left panel: the leading side of the workspace's side panels
- * (`apps/shell/SidePanel`, `LoopSlots.leftPanel`) — what a host says about
+ * (`apps/shell/SidePanel`, `AgentSlots.leftPanel`) — what a host says about
  * the work, its presentation of the application, and the agent's UI placed
  * `left`. The right one is the same panel on the trailing side
- * (`LoopSlots.rightPanel`).
+ * (`AgentSlots.rightPanel`).
  *
  * Its names here are those of the left side, which a host's plugin writes
- * (`LoopLeftPanelComponent`, `LoopLeftPanelProps`, the
- * `data-loop-left-panel-close` mark on its own Close control).
+ * (`AgentLeftPanelComponent`, `AgentLeftPanelProps`, the
+ * `data-agent-left-panel-close` mark on its own Close control).
  *
  * @module apps/shell/LeftPanel
  */
@@ -28,20 +28,20 @@ import {
   sidePanelShown,
   useNarrow,
   useSidePanel,
-  type LoopSidePanel,
-  type LoopSidePanelComponent,
-  type LoopSidePanelProps,
+  type AgentSidePanel,
+  type AgentSidePanelComponent,
+  type AgentSidePanelProps,
   type SidePanelState,
 } from './SidePanel';
 
-/** How a left panel's component shows (`LoopSidePanel`). */
-export type LoopLeftPanel = LoopSidePanel;
+/** How a left panel's component shows (`AgentSidePanel`). */
+export type AgentLeftPanel = AgentSidePanel;
 
-/** What a component of the left panel is rendered with (`LoopSidePanelProps`). */
-export type LoopLeftPanelProps = LoopSidePanelProps;
+/** What a component of the left panel is rendered with (`AgentSidePanelProps`). */
+export type AgentLeftPanelProps = AgentSidePanelProps;
 
-/** A component of the left panel's slot (`LoopSidePanelComponent`). */
-export type LoopLeftPanelComponent = LoopSidePanelComponent;
+/** A component of the left panel's slot (`AgentSidePanelComponent`). */
+export type AgentLeftPanelComponent = AgentSidePanelComponent;
 
 /** The left panel, as its shell keeps it. */
 export type LeftPanelState = SidePanelState;

@@ -80,7 +80,7 @@ dependencies = [
     # 1.6.70 with datalayer-skills 0.6.1: the email skill's unconfirmed delivery said as such.
     # datalayer-skills 0.7.0: the stock image skill (image-stock), every key optional, one enough.
     "datalayer-skills>=0.7.0",  # the Traveller's travel skills (travel-planning, fare-and-stay-comparison, dining)
-    # The Appspec and its checks (`loop apps validate`): one validation, the spec's own.
+    # The Appspec and its checks (`agent apps validate`): one validation, the spec's own.
     # The scene spec: agentspecs.scenes; components in answers.
     # An Appspec's `samples`: an older one refuses the field.
     # An Appspec's `a2a` extensions: an older one refuses the field.
@@ -98,7 +98,7 @@ dependencies = [
     # agentspecs 0.0.127: PAP draft 0.3 in the pap block (company scopes with descriptions and hints, excluded tasks, the web interface) and pap_feedback classed send.
     # agentspecs 0.0.128: Inbox triage offered — google-workspace, worker-mail-triage and inbox-triage enabled.
     # agentspecs 0.0.130 (0.0.129 unpublished): the catalogue offers four harnesses (Claude Code, Codex, OpenCode, Gemini CLI); a harness
-    # not offered says why (unavailable_because, offered_refusal), which the runtime, loop and the Studio say.
+    # not offered says why (unavailable_because, offered_refusal), which the runtime, `agent` and the Studio say.
     # agentspecs 0.0.132: the fourth harness is pi (pi-acp 0.0.34), Gemini CLI described and not offered; the
     # catalogue's Python applications import agent_runtimes.apps.
     # agentspecs 0.0.137: the coding-agent-behind-the-shield scene and code-explainer, scene recordings, stage.backdrop.
@@ -125,7 +125,7 @@ dependencies = [
     # 1.6.58 with agentspecs 0.0.194: X through the linked account, held to the x-api-budget guardrail.
     # 1.6.65 with agentspecs 0.0.199: datalayer-email, the Marketer's alerts.at.
     # agentspecs 0.0.203: the Appspec's openapi, the one source of an app's MCP tools, REST endpoints and PAP operations.
-    "agentspecs>=0.1.12",  # a protocol's roles (0.1.12); a UI spec's implementation (package, module, export, kind) and its backend entry point refusing empty dotted segments (0.1.10, 0.1.11); interface.composer_portal_disabled, the Composer on every application unless left out (0.1.9); the composer-portal UI on the public home's agents and demos (0.1.8); example pages in a Maker's words (0.1.7); a rehearsal tool line takes only its move's class, tool_line_fits (0.1.6); the Analyst renamed the Functional Analyst (worker-functional-analyst, demo-functional-analyst) (0.1.5); the Analyst, the eighth seed agent, its demo-analyst, the page-excalidraw and page-mermaid sets and the analysis-header; a fragment saying `tools` refused; the direct providers' keys required on a Datalayer runtime too (0.1.4); Overture Maps for the Traveller (0.1.3); the demos' own read connections and a sheet built a step a response (0.1.2); deck_add_slides and the Marketer's outline in one call (0.1.1); the chat's side panels and the agent's notices, teams on models the platform serves, the seven demo applications' new versions (0.1.0); header UIs and the page-deck and page-sheet frontend tools, with the seven demo applications that carry them (0.0.219); image-stock and a skill's any_of_env_vars (0.0.218); demo-shopper 0.0.9, which orders through an approval at the Demo Shop (0.0.217; 0.0.8 browsed only, 0.0.216); the Jupyter Data Analyst, the seventh seed agent, its demo-jupyter-data-analyst, and demo-shopper 0.0.7 on read, propose, confirm (0.0.215); the Appspec's presentation and the six demos that say theirs (0.0.214); the Traveller (worker-traveller, demo-traveller; 0.0.213); the Demo Shop: its bundled catalogue, read by agent_runtimes.tools.demo_shop (0.0.204); the Buy from a shop Stage (0.0.206); x-datalayer-gallery, OpenApiOperation.gallery (0.0.207); scope descriptions as the protocol's guide asks (0.0.208 to 0.0.210)
+    "agentspecs>=0.1.14",  # Loop is Agent: agent.app/v1, agent.scene/v1, agent.* slots (0.1.14); a protocol's roles (0.1.12); a UI spec's implementation (package, module, export, kind) and its backend entry point refusing empty dotted segments (0.1.10, 0.1.11); interface.composer_portal_disabled, the Composer on every application unless left out (0.1.9); the composer-portal UI on the public home's agents and demos (0.1.8); example pages in a Maker's words (0.1.7); a rehearsal tool line takes only its move's class, tool_line_fits (0.1.6); the Analyst renamed the Functional Analyst (worker-functional-analyst, demo-functional-analyst) (0.1.5); the Analyst, the eighth seed agent, its demo-analyst, the page-excalidraw and page-mermaid sets and the analysis-header; a fragment saying `tools` refused; the direct providers' keys required on a Datalayer runtime too (0.1.4); Overture Maps for the Traveller (0.1.3); the demos' own read connections and a sheet built a step a response (0.1.2); deck_add_slides and the Marketer's outline in one call (0.1.1); the chat's side panels and the agent's notices, teams on models the platform serves, the seven demo applications' new versions (0.1.0); header UIs and the page-deck and page-sheet frontend tools, with the seven demo applications that carry them (0.0.219); image-stock and a skill's any_of_env_vars (0.0.218); demo-shopper 0.0.9, which orders through an approval at the Demo Shop (0.0.217; 0.0.8 browsed only, 0.0.216); the Jupyter Data Analyst, the seventh seed agent, its demo-jupyter-data-analyst, and demo-shopper 0.0.7 on read, propose, confirm (0.0.215); the Appspec's presentation and the six demos that say theirs (0.0.214); the Traveller (worker-traveller, demo-traveller; 0.0.213); the Demo Shop: its bundled catalogue, read by agent_runtimes.tools.demo_shop (0.0.204); the Buy from a shop Stage (0.0.206); x-datalayer-gallery, OpenApiOperation.gallery (0.0.207); scope descriptions as the protocol's guide asks (0.0.208 to 0.0.210)
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than
@@ -160,7 +160,7 @@ dependencies = [
     # one subpackage per provider, and the typed Marimo kernel helper, in
     # 1.10.0 (the 1.9.x flat module paths are deprecated aliases there); the
     # agentcore variant (AgentCore Code Interpreter) in 1.12.0.
-    "code-sandboxes>=1.12.1",
+    "code-sandboxes>=1.12.4",
     "croniter",
     # Web Bot Auth's signature bases: RFC 9651
     # structured fields; the RFC 9421 library of PyPI ignores `;key=`.
@@ -301,7 +301,7 @@ acp = [
 # machine, faster-whisper to hear and Kokoro to say answers here; never a
 # default dependency. `python -m agent_runtimes.voice.store` fills the store
 # (whisper-small, kokoro-82m) from Datalayer's CDN, hash-checked; without it,
-# or when `loop` runs on Datalayer, the person's token hears and says on
+# or when `agent` runs on Datalayer, the person's token hears and says on
 # Datalayer's servers. kokoro-onnx brings eSpeak NG (GPL-3.0) through
 # espeakng-loader, and faster-whisper FFmpeg (LGPL) through av: installed by
 # the person on their own machine, never in a browser bundle
@@ -316,24 +316,19 @@ ui = [
     "agent-client-protocol>=0.7.1",
     "mcp-ui-server>=1.0.0,<1.1.0",
 ]
-# The A2UI reference SDK, opt-in — and out of `all` — because of what it costs
-# rather than what it does.
+# The A2UI reference packages: `a2ui-core` holds the protocol's catalogs (the
+# v0.9 basic catalog the renderer registers) and validation, `a2ui-agent-sdk`
+# the agent-side helpers on top of it (`a2ui.utils.validate_payload`). Since
+# 0.8.0 the SDK no longer requires google-adk, and with it the OTEL ceiling
+# that once kept this extra out of `all` and had it installed with --no-deps:
+# it resolves like any other extra now.
 #
-# It requires `google-adk`, and every google-adk release caps
-# `opentelemetry-api` and `-sdk` at `<=1.42.1`: not for itself, for the whole
-# environment. Left in `all` that made `agent-runtimes[all]` unsatisfiable
-# against the OTEL floor above — and pip does not report that as a conflict, it
-# backtracks through every version of google-adk, a2a-sdk and datalayer-core
-# hunting an escape that cannot exist.
-#
-# Nothing in the runtime needs it: the converter took one versioned
-# specification URL from it, which `agent_runtimes/a2ui/executions.py` now
-# carries as a literal it verifies against the SDK wherever the SDK is present.
-# What is left is the examples (and the A2UI routes and backend tool that load
-# them), which is what this extra is for. Against the OTEL floor above it does
-# not resolve at all: install `a2ui-agent-sdk` with `--no-deps` to run them.
+# The runtime's converter (`agent_runtimes/a2ui/executions.py`) carries the
+# catalog id as a literal, verified against `a2ui-core` in the tests; the
+# examples, the A2UI routes and the backend tool that load them import both.
 a2ui = [
-    "a2ui-agent-sdk>=0.7.0",
+    "a2ui-agent-sdk>=0.12.0,<0.13",
+    "a2ui-core>=0.7.0,<0.8",
 ]
 memory = [
     "mem0ai>=2.0.1",
@@ -375,7 +370,7 @@ cli = [
     "requests",
     "rich>=13.0.0",
     "textual",
-    # `loop apps package` builds an application's wheel.
+    # `agent apps package` builds an application's wheel.
     "build",
     "hatchling",
 ]
@@ -406,7 +401,7 @@ llamaindex = [
     "llama-index-core>=0.14.0,<0.15",
 ]
 all = [
-    "agent_runtimes[a2a,acp,anthropic,aws,cli,durable,google,memory,openai,ui]",
+    "agent_runtimes[a2a,a2ui,acp,anthropic,aws,cli,durable,google,memory,openai,ui]",
 ]
 test = [
     # Several tests build agents from `openai:` model strings, and pydantic-ai
@@ -416,7 +411,7 @@ test = [
     # The A2A worker and protocol-state tests import fasta2a and a2a-sdk, and
     # the default agentspecs name `bedrock:` models, which need boto3; the memory
     # tests keep memories with mem0 itself, two of them in a real PostgreSQL.
-    "agent_runtimes[a2a,aws,cli,memory,openai]",
+    "agent_runtimes[a2a,a2ui,aws,cli,memory,openai]",
     # The app-memory tests keep their memories in mem0's FAISS store.
     "faiss-cpu>=1.8",
     # The Steward's CloudFormation templates are linted and read in tests.
@@ -444,8 +439,8 @@ test = [
 [project.scripts]
 datalayer-agents = "agent_runtimes.main:main"
 agent-runtimes = "agent_runtimes.main:main"
-loop = "agent_runtimes.main:main"
-l = "agent_runtimes.main:main"
+agent = "agent_runtimes.main:main"
+a = "agent_runtimes.main:main"
 agent-runtimes-ate = "agent_runtimes.ate.cli:main"
 
 # The Datalayer CLI discovers its extensions through this group: installing

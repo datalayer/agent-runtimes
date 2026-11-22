@@ -9,7 +9,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { buildReactorFromPlugins } from '@datalayer/reactor';
-import { LoopCommand, LoopViewType } from '../core';
+import { AgentCommand, AgentViewType } from '../core';
 import { GRAPH_VIEW_TYPE, GraphViewPlugin } from '../plugins/graph';
 
 describe('the graph plugin', () => {
@@ -27,7 +27,7 @@ describe('the graph plugin', () => {
     reactor.start();
 
     const view = reactor
-      .getContributions(LoopViewType)
+      .getContributions(AgentViewType)
       .find(entry => entry.value.viewType === GRAPH_VIEW_TYPE);
 
     expect(view).toBeDefined();
@@ -41,7 +41,7 @@ describe('the graph plugin', () => {
 
     const opened: string[] = [];
     const command = reactor
-      .getContributions(LoopCommand)
+      .getContributions(AgentCommand)
       .find(entry => entry.value.name === 'graph')!;
 
     await command.value.run({
@@ -61,7 +61,7 @@ describe('the graph plugin', () => {
 
     expect(
       reactor
-        .getContributions(LoopViewType)
+        .getContributions(AgentViewType)
         .some(entry => entry.value.viewType === GRAPH_VIEW_TYPE),
     ).toBe(false);
   });

@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-graph` — the plugin graph, as a view.
+ * `@datalayer/agent-plugin-graph` — the plugin graph, as a view.
  *
  * A thin adapter over the reusable `@datalayer/reactor-graph`: that plugin
  * draws the graph into a `graph` slot, and this one gives the slot a place in
@@ -24,15 +24,15 @@ import type { ReactorReactOutput } from '@datalayer/reactor/react';
 import { GraphPlugin } from '@datalayer/reactor-graph';
 import { MANAGER_ACTIONS_SLOT } from '@datalayer/reactor-manager';
 import {
-  LoopCommand,
-  LoopViewType,
-  type LoopWorkspaceContext,
+  AgentCommand,
+  AgentViewType,
+  type AgentWorkspaceContext,
 } from '../../core';
 import GraphToggle from './GraphToggle';
 import { GRAPH_VIEW_TYPE } from './viewType';
 
 export { GRAPH_VIEW_TYPE } from './viewType';
-export const GRAPH_PLUGIN_NAME = '@datalayer/loop-plugin-graph';
+export const GRAPH_PLUGIN_NAME = '@datalayer/agent-plugin-graph';
 
 export const GraphViewPlugin = definePlugin<
   Record<string, never>,
@@ -70,7 +70,7 @@ export const GraphViewPlugin = definePlugin<
       {
         id: 'graph-toggle',
         slot: MANAGER_ACTIONS_SLOT,
-        Component: ({ workspace }: { workspace?: LoopWorkspaceContext }) => (
+        Component: ({ workspace }: { workspace?: AgentWorkspaceContext }) => (
           <GraphToggle workspace={workspace} />
         ),
       },
@@ -78,7 +78,7 @@ export const GraphViewPlugin = definePlugin<
   }),
   contributes: [
     contribution(
-      LoopViewType,
+      AgentViewType,
       {
         viewType: GRAPH_VIEW_TYPE,
         title: 'Plugin graph',
@@ -90,7 +90,7 @@ export const GraphViewPlugin = definePlugin<
       { id: 'graph', order: 900 },
     ),
     contribution(
-      LoopCommand,
+      AgentCommand,
       {
         name: 'graph',
         description: 'Show the plugin graph',

@@ -4,17 +4,17 @@
 """Slash command: /datalayer - Connect this agent to Datalayer Notebooks.
 
 Registers the hosted Jupyter MCP endpoint of Datalayer as a tool source for
-the running agent, so the loop can read, edit and execute notebooks that live
+the running agent, so the agent can read, edit and execute notebooks that live
 on the platform rather than only on this machine.
 
 The point of connecting to the hosted endpoint rather than a local Jupyter is
 that execution outlives the session: a cell started here keeps running on the
-server after the loop moves on or the process stops, and its outputs stay
+server after the agent moves on or the process stops, and its outputs stay
 attached to the notebook.
 
 Authentication uses the Datalayer token this environment already has —
 ``DATALAYER_TOKEN`` or ``DATALAYER_API_KEY`` — which is the same personal
-access token the CLI uses elsewhere. There is no browser flow here: a loop is
+access token the CLI uses elsewhere. There is no browser flow here: a terminal is
 not a browser, and asking one to open a window is how automation stalls.
 """
 

@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-agent-hooks` — lifecycle hooks, as a capacity.
+ * `@datalayer/agent-plugin-agent-hooks` — lifecycle hooks, as a capacity.
  *
  * Mounts the `example-hooks` agent: pre-hooks that ran before the loop (a
  * marker file, injected variables, a pip install), pydantic-style tool hooks
@@ -19,7 +19,7 @@
 
 import { defineAgentCapacityPlugin } from '../agent-capacity';
 
-export const AGENT_HOOKS_PLUGIN_NAME = '@datalayer/loop-plugin-agent-hooks';
+export const AGENT_HOOKS_PLUGIN_NAME = '@datalayer/agent-plugin-agent-hooks';
 
 export const AgentHooksPlugin = defineAgentCapacityPlugin({
   key: 'hooks',

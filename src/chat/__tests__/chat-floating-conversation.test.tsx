@@ -5,7 +5,7 @@
 
 /**
  * `ChatFloating` holding a conversation its host draws: the
- * embed's bubble, panel and assistant hold the LOOP workspace, and keep
+ * embed's bubble, panel and assistant hold the Agent workspace, and keep
  * their chrome — the window's header and close, the button's balloon and
  * blink on words not yet heard, the assistant acting what the host says the
  * conversation is doing and saying its words.

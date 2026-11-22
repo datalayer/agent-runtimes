@@ -1,12 +1,12 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The session's contribution points and `loop plugins`.
+"""The session's contribution points and `agent plugins`.
 
 The five points of the `agent-runtimes` reactor extension, the built-in
 plugin contributing today's implementations, a malformed or duplicate
 contribution refused at the seam naming the plugin while the host runs
-with the rest, and `loop plugins [<name>]` listing every extension, its
+with the rest, and `agent plugins [<name>]` listing every extension, its
 contributions and what was refused — one name given, that one alone, a
 failed entry point with its entry point and error.
 """
@@ -196,7 +196,7 @@ def broken(tmp_path: Path) -> Iterator[Path]:
         importlib.invalidate_caches()
 
 
-def test_loop_plugins_lists_extensions_contributions_and_what_was_refused(
+def test_agent_plugins_lists_extensions_contributions_and_what_was_refused(
     platform: PluginPlatform, broken: Path
 ) -> None:
     assert host.discover(platform, TEST_GROUP) == []
@@ -284,7 +284,7 @@ def test_a_contribution_is_its_extension_s_when_registered_through_it() -> None:
 # --- the catalogue behind the point ------------------------------------------
 
 
-def test_a_plugins_harness_is_listed_by_loop_harnesses_and_resolved_by_harness_agent(
+def test_a_plugins_harness_is_listed_by_agent_harnesses_and_resolved_by_harness_agent(
     platform: PluginPlatform,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
@@ -327,7 +327,7 @@ def test_a_plugins_harness_is_listed_by_loop_harnesses_and_resolved_by_harness_a
     out = re.sub(r"\x1b\[[0-9;]*m", "", capsys.readouterr().out)
     assert (
         "Aider" in out
-        and "loop --harness aider" in out
+        and "agent --harness aider" in out
         and "Contributed by: aider-harness" in out
     )
     assert (

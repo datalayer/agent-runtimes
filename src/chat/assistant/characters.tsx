@@ -5,8 +5,8 @@
 
 /**
  * Datalayer's own characters for the floating assistant: drawn
- * for LOOP and owned by Datalayer, in the spirit of the Office Assistant —
- * a paper clip of our own, a wizard, a cat and the L👀P eyes. The characters
+ * for Agent and owned by Datalayer, in the spirit of the Office Assistant —
+ * a paper clip of our own, a wizard, a cat and the Agent eyes. The characters
  * of Office are Microsoft's and are never bundled; a person loads
  * one they hold the rights to.
  *
@@ -15,15 +15,15 @@
  * `assistant-mouth` — so one set of motions serves every character.
  *
  * Each is drawn twice, for the chat's colour mode: a light drawing for the
- * light page and a dark one for the `loop` theme's dark page, by its dark
- * tokens (`loopColors.inkDark`, `grayDark`, `black`). Their edges and eyes
+ * light page and a dark one for the `agent` theme's dark page, by its dark
+ * tokens (`agentColors.inkDark`, `grayDark`, `black`). Their edges and eyes
  * are held to 3 to 1 against both pages by a test (`keyColours`).
  *
  * @module chat/assistant/characters
  */
 
 import type { JSX } from 'react';
-import { loopColors } from '@datalayer/primer-addons/lib/theme';
+import { agentColors } from '@datalayer/primer-addons/lib/theme';
 import type { AssistantState } from './state';
 
 /** The colour mode a character is drawn for: the chat's own. */
@@ -107,8 +107,8 @@ export interface AssistantCharacter {
   fetchedFrom?: string;
 }
 
-const INK = loopColors.ink;
-const INK_DARK = loopColors.inkDark;
+const INK = agentColors.ink;
+const INK_DARK = agentColors.inkDark;
 
 interface EyeColours {
   white: string;
@@ -201,7 +201,7 @@ function Eyes({
 
 /**
  * Each drawing's colours, light and dark. The dark ones are drawn for the
- * `loop` theme's dark page (near-black, `loopColors.black`) and not the light
+ * `agent` theme's dark page (near-black, `agentColors.black`) and not the light
  * drawing on black: lines that were ink turn to the dark mode's ink, the
  * steel and the violets go lighter, outlines that a light page needs give
  * way to the fill's own edge.
@@ -211,7 +211,7 @@ const PAPER_CLIP = {
     wire: '#7A808A',
     shine: '#E3E6EB',
     line: INK,
-    eye: { white: loopColors.white, ring: INK, pupil: INK, lid: '#B8BDC6' },
+    eye: { white: agentColors.white, ring: INK, pupil: INK, lid: '#B8BDC6' },
   },
   dark: {
     wire: '#C9CED6',
@@ -219,7 +219,7 @@ const PAPER_CLIP = {
     line: INK_DARK,
     eye: {
       white: INK_DARK,
-      ring: loopColors.grayDark,
+      ring: agentColors.grayDark,
       pupil: INK,
       lid: '#8D93A0',
     },
@@ -235,7 +235,7 @@ const WIZARD = {
     beard: '#F4F4F6',
     beardEdge: '#7A808A',
     star: '#F8D469',
-    eye: { white: loopColors.white, ring: INK, pupil: INK, lid: '#F2D3B3' },
+    eye: { white: agentColors.white, ring: INK, pupil: INK, lid: '#F2D3B3' },
   },
   dark: {
     hat: '#9C88F0',
@@ -243,7 +243,7 @@ const WIZARD = {
     robe: '#8F7CE8',
     face: '#E8C4A0',
     beard: '#E4E4EA',
-    beardEdge: loopColors.grayDark,
+    beardEdge: agentColors.grayDark,
     star: '#F8D469',
     eye: { white: INK_DARK, ring: INK, pupil: INK, lid: '#E8C4A0' },
   },
@@ -257,7 +257,7 @@ const CAT = {
     ear: '#F6A5C1',
     nose: '#B83A6B',
     whiskers: INK,
-    eye: { white: loopColors.white, ring: INK, pupil: INK, lid: '#F4A261' },
+    eye: { white: agentColors.white, ring: INK, pupil: INK, lid: '#F4A261' },
   },
   dark: {
     fur: '#F4A261',
@@ -270,16 +270,16 @@ const CAT = {
   },
 };
 
-const LOOP_EYES = {
+const AGENT_EYES = {
   light: {
-    eye: { white: loopColors.white, ring: INK, pupil: INK, lid: '#E3E6EB' },
+    eye: { white: agentColors.white, ring: INK, pupil: INK, lid: '#E3E6EB' },
   },
   dark: {
     eye: {
       white: INK_DARK,
       ring: INK_DARK,
-      pupil: loopColors.black,
-      lid: loopColors.grayDark,
+      pupil: agentColors.black,
+      lid: agentColors.grayDark,
     },
   },
 };
@@ -506,22 +506,22 @@ function Cat({
   );
 }
 
-/** The L👀P eyes: the product's own face, two eyes and nothing else. */
-function LoopEyes({
+/** The Agent eyes: the product's own face, two eyes and nothing else. */
+function AgentEyes({
   size,
   mode = 'light',
 }: {
   size: number;
   mode?: AssistantColorMode;
 }): JSX.Element {
-  const c = LOOP_EYES[mode];
+  const c = AGENT_EYES[mode];
   return (
     <svg
       width={size}
       height={size}
       viewBox="0 0 96 96"
       role="img"
-      aria-label="L👀P eyes"
+      aria-label="Agent eyes"
       data-assistant-mode={mode}
     >
       <g className="assistant-body">
@@ -606,16 +606,16 @@ export const ASSISTANT_CHARACTERS: readonly AssistantCharacter[] = [
   },
   {
     id: 'eyes',
-    name: 'L👀P eyes',
-    Drawing: LoopEyes,
+    name: 'Agent eyes',
+    Drawing: AgentEyes,
     keyColours: {
       light: {
-        edges: [LOOP_EYES.light.eye.ring],
-        eye: eyeOf(LOOP_EYES.light.eye, 'page'),
+        edges: [AGENT_EYES.light.eye.ring],
+        eye: eyeOf(AGENT_EYES.light.eye, 'page'),
       },
       dark: {
-        edges: [LOOP_EYES.dark.eye.white],
-        eye: eyeOf(LOOP_EYES.dark.eye, 'page'),
+        edges: [AGENT_EYES.dark.eye.white],
+        eye: eyeOf(AGENT_EYES.dark.eye, 'page'),
       },
     },
   },

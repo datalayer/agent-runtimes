@@ -5,8 +5,8 @@ title: Rendering an application
 
 # Rendering an application
 
-`AppRenderer` draws an application from its Appspec: the [Loop
-workspace](./index.mdx) configured for it, through `LoopEmbed`. It is the one
+`AppRenderer` draws an application from its Appspec: the [Agent
+workspace](./index.mdx) configured for it, through `AgentEmbed`. It is the one
 renderer of every place an application appears — the Studio's Preview, its
 hosted page, an [embed](./embedding.mdx), and the light home page of
 datalayer.ai — so that what a builder sees while building is what its users
@@ -31,7 +31,7 @@ export function WebResearch() {
 
 ## Its props
 
-`AppRenderer` takes every prop of `LoopEmbed` but `agentId` (the agent is the
+`AppRenderer` takes every prop of `AgentEmbed` but `agentId` (the agent is the
 application's own, created under its id), and nine of its own:
 
 | Prop         | What it says                                                                                                                                                                                                 |
@@ -46,9 +46,9 @@ application's own, created under its id), and nine of its own:
 | `pluginsOff` | The UI plugins its organization has turned off (`plugins_off`, catalogue ids such as `a2ui`): their blocks are off its page as they are off its Canvas's palette. |
 | `language`   | The language the person reads it in, as BCP 47 tags it (`fr`, `pt-BR`): its translation into it, and the chat's own words. The browser's languages (`navigator.languages`) when unsaid. See [In the person's language](#in-the-persons-language). |
 
-From the application, `AppRenderer` sets on `LoopEmbed`:
+From the application, `AppRenderer` sets on `AgentEmbed`:
 
-| `LoopEmbed` prop                                   | Set to                                                                                                                       |
+| `AgentEmbed` prop                                   | Set to                                                                                                                       |
 | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | `presence`                                         | `{ name, face, welcome, onPresence, onSaying }`: the application's name, its emoji, its welcome (or its description), `onPresence` and `onSaying`. See [An application's presence](../chat/presence.mdx). |
 | `showTokenUsage`                                   | `false`: no counters under the prompt — a person using an application is not asking about tokens.                           |
@@ -60,14 +60,14 @@ From the application, `AppRenderer` sets on `LoopEmbed`:
 | `datalayerVisitors`                                | `{url, app, inferenceUrl}`: without an account, the application already runs on the visitors' runtime at `url`; nothing is allocated or made, and the chat speaks to it with a visitor's token for `app` (an example's id, or `at:<slug>`), minted by ai-inference and minted again before it runs out (`useVisitorToken`). See *Visitors without an account* in [Session API](./session-api). |
 | `datalayerKept`                                    | `{url}`: an always-on deployment already has its agent on a runtime of its own, at `url`, made from its deployment record (`deployment_runtime_payload`; the runtime reads its version's `app.py` from the deployment when it is written in Python, which that agent's sessions run) as that runtime started; nothing is allocated or made, and the chat speaks to it with the person's own token. ai-agents names `url` at the deployment's address for a person it lets talk to it. |
 
-**A host wins over the application.** Every `LoopEmbed` prop a host passes is
+**A host wins over the application.** Every `AgentEmbed` prop a host passes is
 applied after these, and replaces them: `showTokenUsage` brings the counters
 back, `pageLayoutArrangement` or `editors` replace what the layout implies. A
 host that passes its own `presence` replaces the whole of it — `onPresence`
 included, so a host that does both puts its `onPresence` inside its
 `presence`.
 
-Other `LoopEmbed` props a host commonly passes: `target` (where the agent
+Other `AgentEmbed` props a host commonly passes: `target` (where the agent
 runs: `browser`, a local server, or `datalayer`), `serverUrl`,
 `hideChatHeader` (when the host draws the application's face and name
 itself), `autoFocusPrompt` (`false` when the application is one section of a
@@ -78,13 +78,13 @@ application's).
 
 Which plugins an application's kind needs, and how its workspace is laid
 out, is one function, `appPreset(app, { page, pluginsOff, sidebar, appUid, kept })` — the preset per kind, as
-`loopPlugins` is for the examples. `AppRenderer` mounts what it returns, then
+`agentPlugins` is for the examples. `AppRenderer` mounts what it returns, then
 the host's own `plugins`.
 
 | Kind                     | Plugins                                                                                                                                                                                                          | Workspace                                         |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
 | chat, widget, worker     | its agent (`defineAppPlugin`); with a page, the `app-page` plugin and the Canvas's block plugins (`CANVAS_BLOCK_PLUGINS`), whose blocks are what the page draws; feedback, when its record keeps it; what it keeps, with `kept`; with `sidebar`, the `app-rules` and `app-activity` plugins | as its layout says (`appLayoutOptions`)          |
-| decision                 | the host's page as the workspace's one view (`defineAppHostPagePlugin`, a `loop.viewType` contribution)                                                                                                           | `conversation: false`: no chat, no composer, no agent |
+| decision                 | the host's page as the workspace's one view (`defineAppHostPagePlugin`, a `agent.viewType` contribution)                                                                                                           | `conversation: false`: no chat, no composer, no agent |
 
 What cannot be drawn is said in a sentence where it would have been: a
 decision given no `page`, an application run by a team.
@@ -96,7 +96,7 @@ evidence on each, the typed criteria a decision model answers, the ranking by
 the weights, and the decision saved as a record. That page is its host's — in
 Datalayer, the Studio's run page, which is also what its hosted address and
 its embed show — and `AppRenderer` draws it as the one view of a workspace
-without a conversation (`loopPlugins({ conversation: false })`: the theme, the
+without a conversation (`agentPlugins({ conversation: false })`: the theme, the
 shell's points and the host's chrome, and nothing that launches an agent or
 fetches models).
 
@@ -120,7 +120,7 @@ context: the view is drawn inside the host's tree.
 
 ## One application, two plugins of one name
 
-An application is two [Reactor](/apps) plugins of one name, `loop-app-<id>`:
+An application is two [Reactor](/apps) plugins of one name, `agent-app-<id>`:
 the page's (`defineAppPlugin`) and its runtime's (`manifest_of` in
 `agent_runtimes.apps.plugins`). Whichever editor wrote it — a spec, the
 Canvas, an `app.py` — the pair is the same, and each half declares the other,
@@ -128,8 +128,8 @@ with Reactor's cross-tier declaration:
 
 | Tier    | The plugin       | Says it needs                                   | Delivered by     |
 | ------- | ---------------- | ----------------------------------------------- | ---------------- |
-| Page    | `loop-app-<id>`  | `requiredBackendPlugins: ['loop-app-<id>']`     | `loop-app-<id>`  |
-| Runtime | `loop-app-<id>`  | `frontend_dependencies=['loop-app-<id>']`       | `loop-app-<id>`  |
+| Page    | `agent-app-<id>`  | `requiredBackendPlugins: ['agent-app-<id>']`     | `agent-app-<id>`  |
+| Runtime | `agent-app-<id>`  | `frontend_dependencies=['agent-app-<id>']`       | `agent-app-<id>`  |
 
 `AppRenderer` delivers the page's plugins as one extension named so
 (`appExtension`), and the runtime's manifest names the same `extension`: in
@@ -170,16 +170,16 @@ browser's stream sends no token. A runtime from before this answers `404`,
 which the page reads as nothing said: nothing stands down.
 
 ```json
-{"revision": 3, "plugins": [{"name": "loop-app-web-research", "enabled": true,
+{"revision": 3, "plugins": [{"name": "agent-app-web-research", "enabled": true,
   "activated": true, "display_name": "Web Research", "emoji": "🔎",
-  "extension": "loop-app-web-research",
-  "frontend_dependencies": ["loop-app-web-research"]}]}
+  "extension": "agent-app-web-research",
+  "frontend_dependencies": ["agent-app-web-research"]}]}
 ```
 
 ## The blocks a page draws
 
 An application's page draws the blocks the workspace's plugins contribute to
-the Canvas's palette (`loop.canvas.block`), and nothing else: what the Canvas
+the Canvas's palette (`agent.canvas.block`), and nothing else: what the Canvas
 can place and what the page can draw are one list. The renderer is
 Datalayer's catalog narrowed to them (`catalogOfBlocks`). The blocks of a UI
 plugin its organization turned off (`pluginsOff`) are left out, as they are
@@ -191,7 +191,7 @@ the plugin that contributes it is on.*
 The components its developer wrote (`interface.custom_components`)
 are among them: the application's own plugin (`app-components`,
 `defineAppComponentsPlugin`), in its preset only, contributes each as a block
-(`loop.canvas.block`) and as a renderer (`loop.a2ui.component`), which its
+(`agent.canvas.block`) and as a renderer (`agent.a2ui.component`), which its
 page (`catalogOfBlocks(names, own)`), the elements its code shows and its
 answers (`catalogWithOwn`) draw with. Each is drawn in an
 `<iframe sandbox="allow-scripts">` — an origin of its own that is no one's,
@@ -249,7 +249,7 @@ page*).
 ## Beside its page: rules, approvals, activity, computer
 
 Asked for its `sidebar`, `AppRenderer` adds three plugins to the workspace's
-sidebar (`LoopSlots.sidebar`), so that a builder trying the application reads
+sidebar (`AgentSlots.sidebar`), so that a builder trying the application reads
 beside it what it is allowed to do and what it did:
 
 - **Rules and approvals** (`defineAppRulesPlugin`, `AppRulesCard`): each of
@@ -295,7 +295,7 @@ tokens (`apps/toolCards/headerItems`):
 | Part | What it is | How it talks with the chat |
 |------|------------|----------------------------|
 | `HeaderAction` | A button. | Pressing it says its message to the agent, as the person (`viewControls.send`). |
-| `HeaderChoice` | A drop-down: an `ActionMenu` whose button is named for what it is on (`Network: Bluesky`), its options `menuitemradio`. | The option it is on goes with **every run**: `forwardedProps.loop.header.<ui id>.<item id>`, contributed through `LoopRunProps`. The runtime tells the agent the sentence the UI spec declares for it, for that run only (`agent_runtimes.apps.header`). |
+| `HeaderChoice` | A drop-down: an `ActionMenu` whose button is named for what it is on (`Network: Bluesky`), its options `menuitemradio`. | The option it is on goes with **every run**: `forwardedProps.agent.header.<ui id>.<item id>`, contributed through `AgentRunProps`. The runtime tells the agent the sentence the UI spec declares for it, for that run only (`agent_runtimes.apps.header`). |
 | `HeaderIndicator` | What the agent shows: words (`label`), a number and its words (`counter`), a dot and its words (`status`) or a small bar (`meter`), in a tone (`neutral`, `accent`, `success`, `attention`, `danger`). A polite live region (`role="status"`, `aria-live="polite"`): a screen reader says it when it changes. | Set by the agent through the header's **frontend tool**. Nothing is drawn before the agent said it. |
 
 What a header holds is declared, not coded: its UI spec's `header` in agentspecs
@@ -309,14 +309,14 @@ import { defineHeaderPlugin } from '../../toolCards/headerItems';
 export const socialHeaderPlugin = defineHeaderPlugin({ id: 'social-header' });
 ```
 
-`defineHeaderPlugin` registers, under `@datalayer/loop-plugin-<id>`:
+`defineHeaderPlugin` registers, under `@datalayer/agent-plugin-<id>`:
 
-- **each item as its own entry of `LoopSlots.chatHeader`**, so that a narrow chat moves them into
+- **each item as its own entry of `AgentSlots.chatHeader`**, so that a narrow chat moves them into
   the title bar's "…" menu one by one, before the chat's own controls;
 - **the header's frontend tool**, `set_<id>` (`set_shop_header`), handed to the chat through
-  `LoopChatExtras`. The extras of several plugins now add up their `frontendTools`, each name once
+  `AgentChatExtras`. The extras of several plugins now add up their `frontendTools`, each name once
   (`mergeChatExtras`): a header's tool beside a host example's;
-- **its drop-downs' options with every run**, through `LoopRunProps`.
+- **its drop-downs' options with every run**, through `AgentRunProps`.
 
 ### The tool, and why one per header
 
@@ -352,7 +352,7 @@ header it has. A shared tool would take a free item name and an untyped value.
 
 ### Where it is drawn
 
-In a Loop workspace: an `Application`, and a chat mounted with the preset's `uiPlugins`. The
+In an Agent workspace: an `AIApplication`, and a chat mounted with the preset's `uiPlugins`. The
 plain `Chat` component does not draw header UIs yet: there the older chips stay. A visitor's demo
 has them: they need no connection of the person's.
 
@@ -381,7 +381,7 @@ definition's operation validates the call, over a host the page keeps for the co
 answer is `{ ok: true, … }` or `{ ok: false, error }` as for the deck and the sheet.
 
 Each is a tool card plugin (`defineToolCardPlugin`) that also takes `frontendTools`: the kit
-contributes them through `LoopChatExtras`, so they reach the agent wherever it runs — in the page,
+contributes them through `AgentChatExtras`, so they reach the agent wherever it runs — in the page,
 or on a runtime, where they are sent with each run and executed here when it calls one. The plugin
 binds every tool of its set to one card:
 
@@ -470,8 +470,8 @@ the page, which has no runtime to ask.
 ## Beside its conversation: the side panels
 
 The workspace has two side panels, one on each side of the view (`apps/shell/SidePanel`): the
-**left** one (`LoopSlots.leftPanel`), where a host says what the application is (next section),
-and the **right** one (`LoopSlots.rightPanel`), where the agent's UI placed `right` shows. A UI
+**left** one (`AgentSlots.leftPanel`), where a host says what the application is (next section),
+and the **right** one (`AgentSlots.rightPanel`), where the agent's UI placed `right` shows. A UI
 spec that lists `left` or `right` among its placements may be placed in either:
 
 | Placed there | What it draws | In the conversation |
@@ -510,7 +510,7 @@ The agent slides a short notice in from an edge of the conversation with one fro
 `show_notice({tone, title, text?, edge?, seconds?})`, of the `notices` UI (`apps/plugins/notices`):
 info, success, warning or error, a title of up to 80 characters and a line of up to 280, from the
 north (unsaid), east, south or west. It is primer-addons' `SlidingPanel`, `contained` in the
-conversation (`LoopSlots.viewOverlay`, between the chat's title bar and its composer,
+conversation (`AgentSlots.viewOverlay`, between the chat's title bar and its composer,
 `conversationInsets`): never over the page around the workspace, the application's controls or
 the person's typing. It says it comes from the agent, holds words only and no control but its
 Close, and goes after its seconds (8 for info and success, 12 for a warning; an error stays until
@@ -522,19 +522,19 @@ politely (`role="status"`). Nothing is kept: a conversation opened again shows n
 
 A host may say something *about* the application on the leading edge of its
 workspace: its presentation, a guide. That is the left panel
-(`LoopSlots.leftPanel`), and any host fills it with a plugin of its own,
-handed to the application (`<Application renderer={{ plugins: [MyPlugin] }} />`,
+(`AgentSlots.leftPanel`), and any host fills it with a plugin of its own,
+handed to the application (`<AIApplication renderer={{ plugins: [MyPlugin] }} />`,
 or `AppRenderer`'s `plugins`):
 
 ```tsx
 import { definePlugin } from '@datalayer/reactor';
 import type { ReactorReactOutput } from '@datalayer/reactor/react';
-import { LoopSlots } from '@datalayer/agent-runtimes/lib/apps/core';
-import type { LoopLeftPanelComponent } from '@datalayer/agent-runtimes/lib/apps/shell';
+import { AgentSlots } from '@datalayer/agent-runtimes/lib/apps/core';
+import type { AgentLeftPanelComponent } from '@datalayer/agent-runtimes/lib/apps/shell';
 
-const about: LoopLeftPanelComponent = {
+const about: AgentLeftPanelComponent = {
   id: 'about',
-  slot: LoopSlots.leftPanel,
+  slot: AgentSlots.leftPanel,
   // Rendered with the workspace and the application it draws.
   Component: ({ application }) => <About app={application} />,
   panel: {
@@ -571,7 +571,7 @@ outside the host's render: a new plugin restarts the workspace.
 ### Closing it from inside
 
 The shell keeps whether the panel is open, and hands it to each component of
-the slot (`LoopLeftPanelProps`), beside the workspace and the application:
+the slot (`AgentLeftPanelProps`), beside the workspace and the application:
 
 | Prop | Type | What it is |
 | --- | --- | --- |
@@ -585,35 +585,35 @@ There is always **one** Close control. Unless the component says otherwise,
 the shell draws it: an X icon button at the top of the panel, named
 *Close: …* after the toggle. A component that draws its own says so with
 `panel.closes: true`, and the shell draws none; mark that control with
-`data-loop-left-panel-close` and the focus goes to it when the panel opens:
+`data-agent-left-panel-close` and the focus goes to it when the panel opens:
 
 ```tsx
 import { IconButton } from '@primer/react';
 import { XIcon } from '@primer/octicons-react';
-import type { LoopLeftPanelComponent, LoopLeftPanelProps } from '@datalayer/agent-runtimes/lib/apps/shell';
+import type { AgentLeftPanelComponent, AgentLeftPanelProps } from '@datalayer/agent-runtimes/lib/apps/shell';
 
-function About({ application, close }: LoopLeftPanelProps) {
+function About({ application, close }: AgentLeftPanelProps) {
   return (
     <>
-      <IconButton icon={XIcon} aria-label="Close" onClick={close} data-loop-left-panel-close="" />
+      <IconButton icon={XIcon} aria-label="Close" onClick={close} data-agent-left-panel-close="" />
       <h3>{application?.name}</h3>
     </>
   );
 }
 
-const about: LoopLeftPanelComponent = {
+const about: AgentLeftPanelComponent = {
   id: 'about',
-  slot: LoopSlots.leftPanel,
-  Component: About as LoopLeftPanelComponent['Component'],
+  slot: AgentSlots.leftPanel,
+  Component: About as AgentLeftPanelComponent['Component'],
   panel: { label: application => `About ${application?.name}`, closes: true },
 };
 ```
 
 The application is said to the host's plugins by `AppRenderer` itself, as
-the `LoopApplication` contribution (`{ app }`, the Appspec in the words the
+the `AgentApplication` contribution (`{ app }`, the Appspec in the words the
 person reads): a host that names an application (`app="demo-marketer"`)
 has not read its spec, and its plugin reads it there
-(`useContributions(LoopApplication)`), or takes the `application` prop the
+(`useContributions(AgentApplication)`), or takes the `application` prop the
 left panel renders its components with.
 
 What an application says of itself for such a panel is its Appspec's
@@ -673,7 +673,7 @@ The computer view (`app-computer`) shows, beside its page:
   opened no page yet* before its first;
 - **What ran on it**: each call its agent made to a tool of its shell or of
   its files, the code or the path, and what came back — streamed from the
-  conversation's tool calls (`LoopChatTurn`'s `conversation`);
+  conversation's tool calls (`AgentChatTurn`'s `conversation`);
 - **Files**: its working directory, read-only, one directory at a time, each
   file to download; read again as each turn ends;
 - **Take over**: what runs on it is interrupted, and every call its agent
@@ -774,14 +774,14 @@ An application's Appspec may give its composer **commands** and **modes**
 as a plugin of their own (`defineAppComposerPlugin`), only for an application
 that has some:
 
-- each command is a workspace command (`LoopCommand`, `composer: true`):
+- each command is a workspace command (`AgentCommand`, `composer: true`):
   typing `/` in the composer lists it, with its description, before the
   prompt's own; picking it writes `/<name> `, and sending runs it — its
   `prompt` goes to the agent as if typed, the words written after the command
   in place of `{input}` (`commandPrompt`);
-- each mode is a menu beside the composer (`LoopSlots.promptAction`),
+- each mode is a menu beside the composer (`AgentSlots.promptAction`),
   *Depth: Quick*, on its `default` or its first option; the option picked goes
-  with every run as `forwardedProps.loop.modes` (`LoopRunProps`, merged under
+  with every run as `forwardedProps.agent.modes` (`AgentRunProps`, merged under
   what a page sends with its own message, `runForwardedProps`). The runtime
   tells the agent that option's `instructions` for the run and runs the
   `model` it names — see [the Session API](./session-api#over-ag-ui).
@@ -808,7 +808,7 @@ An agent turned in the page itself (the browser target) has no session, and
 applies its modes itself, as the runtime does: the application's blueprint
 carries `modeEffect` (agentspecs' `mode_effect`, said again in
 `apps/apps/composer`), and the in-page adapter (`BrowserAgentAdapter`) reads
-`forwardedProps.loop.modes` from each run, adds the options' `instructions`
+`forwardedProps.agent.modes` from each run, adds the options' `instructions`
 after the agent's for that run only, and asks the inference service for the
 `model` one names, over the one picked in the chat. What it cannot apply it
 refuses, in a sentence in the chat, rather than run without it: modes sent to
@@ -821,7 +821,7 @@ An application's Appspec may offer several **profiles** — assistants in one
 application, each with its instructions, its model and its starters
 (`interface.profiles`). The composer's plugin adds a picker beside
 the composer, *Profile: Support*, on the first unless another is picked; the
-profile picked goes with every run as `forwardedProps.loop.profile`, and the
+profile picked goes with every run as `forwardedProps.agent.profile`, and the
 runtime tells the agent its `instructions` before the modes' and runs its
 `model` unless a mode names one. Once the first message is sent, the
 conversation keeps its profile: the picker says it and picks no other (the
@@ -832,7 +832,7 @@ profile as it applies the modes (`modeEffect(app, modes, profile)`).
 it is shown under in the empty chat (`ChatSuggestionItem.group`), those
 without one first. With profiles, the empty chat offers the profile's
 starters — else the application's — and changes them when another profile is
-picked, through the chat's live extras (`LoopChatExtras.openers`), without
+picked, through the chat's live extras (`AgentChatExtras.openers`), without
 rebuilding the workspace.
 
 ## The nine inputs
@@ -912,9 +912,9 @@ kept with this conversation in its record, for its builder to read.* An
 application that keeps no feedback offers none.
 
 `AppRenderer` adds it as a plugin of its own (`defineAppFeedbackPlugin`, a
-`LoopPromptPanel` contribution above the prompt), so it is there in the
+`AgentPromptPanel` contribution above the prompt), so it is there in the
 Studio's Preview and on the hosted page alike. It reads the turn from
-`LoopChatTurn`, which now carries the conversation's AG-UI thread
+`AgentChatTurn`, which now carries the conversation's AG-UI thread
 (`thread`) — the id the runtime records the session under.
 
 What is sent, to the runtime the conversation runs on:
@@ -1000,7 +1000,7 @@ application alone — never a uid:
 
 ```json
 {
-  "saved_by": "loop.app",
+  "saved_by": "agent.app",
   "app": { "id": "inbox-triage", "uid": "…", "name": "Inbox Triage", "emoji": "📬" },
   "deployment": "…",
   "for": "<uid of the person who opened the session>",
@@ -1079,7 +1079,7 @@ a year.* To a visitor not signed in — the page passes `datalayerVisitors` — 
 says *Nothing of this conversation is kept: you are not signed in.*, since
 nothing is. Its builder's Preview says nothing: it is theirs.
 
-It is a plugin of its own (`defineAppKeptPlugin`, a `LoopPromptPanel`
+It is a plugin of its own (`defineAppKeptPlugin`, a `AgentPromptPanel`
 contribution below the prompt), drawn by the composer in every layout, and
 gone once the first message is sent (`beforeFirstMessage`). A retention that
 cannot be read is refused in the preset's sentence, as any problem of its

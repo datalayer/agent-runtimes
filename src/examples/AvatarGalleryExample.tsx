@@ -6,7 +6,7 @@
 /**
  * Every avatar of the floating assistant, as a gallery:
  * each one — Datalayer's four, the owl an example plugin
- * contributes to `loop.assistant.character`, a test sprite read through
+ * contributes to `agent.assistant.character`, a test sprite read through
  * the clippy.js reader, the 3D robot drawn with three.js, and, when asked,
  * the characters clippy.js publishes, fetched from jsDelivr — in each state
  * it acts, stepped aside, with its
@@ -66,10 +66,7 @@ import {
   stateOfPose,
   type GalleryPose,
 } from './utils/avatarGallery';
-import {
-  CLIPPY_JS_VERSION,
-  useClippyJsCharacters,
-} from './utils/clippyJsCharacters';
+import { useClippyJsCharacters } from './utils/clippyJsCharacters';
 
 type Modes = 'light' | 'dark' | 'both';
 type View = 'stage' | 'grid';
@@ -273,7 +270,7 @@ function InModes({
   children: (mode: 'light' | 'dark') => React.ReactNode;
 }): JSX.Element {
   const { theme } = useExampleThemeStore();
-  const config = themeConfigs[theme] ?? themeConfigs.loop;
+  const config = themeConfigs[theme] ?? themeConfigs.agent;
   const shown: ('light' | 'dark')[] =
     modes === 'both' ? ['light', 'dark'] : [modes];
   return (
@@ -394,28 +391,16 @@ const AvatarGalleryExample: React.FC = () => {
 
   return (
     <ThemedProvider>
-      <Box minHeight="100vh" bg="canvas.default" color="fg.default" p={4}>
+      <Box minHeight="100%" bg="canvas.default" color="fg.default" p={4}>
         <Box maxWidth={1200} mx="auto">
           <Heading as="h1" sx={{ mb: 2 }}>
             Avatar gallery
           </Heading>
           <Text as="p" sx={{ color: 'fg.muted', mb: 3, maxWidth: 760 }}>
-            Every character in every state the floating assistant acts, with its
-            balloon, in light and dark. Datalayer&rsquo;s four and the owl are
-            what the enabled plugins contribute to{' '}
-            <code>loop.assistant.character</code>; Pixel is a test sprite of our
-            own, read through the clippy.js reader; the robot is a 3D model
-            drawn with three.js, shown one at a time (each one drawn is a WebGL
-            context of its own). No agent is behind it: the words are a sample
-            conversation.
-          </Text>
-          <Text as="p" sx={{ color: 'fg.muted', mb: 3, maxWidth: 760 }}>
-            The characters clippy.js publishes — Clippy, Merlin, Links, Rover
-            and the others — are loaded on request from the{' '}
-            <code>clippyjs@{CLIPPY_JS_VERSION}</code> package on jsDelivr (about
-            15 MB) and read by the same reader. They are not in this repository:
-            clippy.js&rsquo;s licence covers its code only, and the characters
-            are Microsoft&rsquo;s.
+            Every assistant character in every state, with its balloon, in light
+            and dark, speaking a sample conversation. The clippy.js characters
+            (Clippy, Merlin and others) load on request from jsDelivr and are
+            Microsoft&rsquo;s, so they are not in this repository.
           </Text>
 
           <Box

@@ -5,7 +5,7 @@
 
 /**
  * An application's two plugins, named once: the page's
- * plugin is `loop-app-<id>`, as its runtime's is, and requires it; the page's
+ * plugin is `agent-app-<id>`, as its runtime's is, and requires it; the page's
  * plugins are delivered as one extension of that name; the page follows what
  * its runtime holds, and a run in the browser alone is never blank. Written
  * as a spec or round-tripped through the Canvas, an application is the same
@@ -38,7 +38,7 @@ import {
   appRuntimeOf,
 } from '../apps/pluginPair';
 import { readAppspecYaml, writeAppspecYaml } from '../apps/yaml';
-import { LoopAgentBlueprint, LoopChatSuggestion } from '../core';
+import { AgentBlueprint, AgentChatSuggestion } from '../core';
 import { AGENTS_PLUGIN_NAME } from '../plugins/agents/plugin';
 import { APP_CATALOGUE } from '../../specs/apps';
 import type { AppSpec } from '../../types/agentspecs';
@@ -48,7 +48,7 @@ import type { AppSpec } from '../../types/agentspecs';
 ).IS_REACT_ACT_ENVIRONMENT = true;
 
 const research = APP_CATALOGUE['web-research'];
-const NAME = 'loop-app-web-research';
+const NAME = 'agent-app-web-research';
 
 /** The pair the page's plugin of an application says. */
 const pagePairOf = (app: AppSpec) => {
@@ -109,11 +109,11 @@ describe('the pair, named once', () => {
     const reactor = buildReactorFromPlugins(appPreset(research).plugins);
     reactor.start();
     await reactor.whenReady();
-    const blueprints = () => reactor.getContributions(LoopAgentBlueprint);
+    const blueprints = () => reactor.getContributions(AgentBlueprint);
     expect(blueprints()).toHaveLength(1);
     await reactor.setBackendPlugins([]);
     expect(blueprints()).toHaveLength(0);
-    expect(reactor.getContributions(LoopChatSuggestion)).toHaveLength(0);
+    expect(reactor.getContributions(AgentChatSuggestion)).toHaveLength(0);
     // What tells it so is not stood down with it.
     expect(reactor.getManifest(APP_RUNTIME_PLUGIN_NAME)?.activated).toBe(true);
     await reactor.setBackendPlugins([NAME]);

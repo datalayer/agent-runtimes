@@ -20,12 +20,12 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { loopSurfaceId } from '../core';
+import { agentSurfaceId } from '../core';
 
-const LOOP = join(__dirname, '..');
+const AGENT = join(__dirname, '..');
 
 function read(...parts: string[]): string {
-  return readFileSync(join(LOOP, ...parts), 'utf8');
+  return readFileSync(join(AGENT, ...parts), 'utf8');
 }
 
 describe('the workspace owns which agent it talks to', () => {
@@ -36,7 +36,7 @@ describe('the workspace owns which agent it talks to', () => {
   it('holds it as state rather than passing the prop through', () => {
     // A prop straight through cannot be changed from inside, which is why the
     // picker had nowhere to put the new value.
-    const shell = read('shell', 'LoopWorkspace.tsx');
+    const shell = read('shell', 'AgentWorkspace.tsx');
     expect(shell).toContain('const [agentId, setAgentId] = useState(');
     expect(shell).toContain('setAgentId,');
   });
@@ -44,7 +44,7 @@ describe('the workspace owns which agent it talks to', () => {
   it('still follows the host when it re-mounts on another agent', () => {
     // The host's prop is the session it means to open; a stale in-page choice
     // must not outlive it.
-    expect(read('shell', 'LoopWorkspace.tsx')).toContain(
+    expect(read('shell', 'AgentWorkspace.tsx')).toContain(
       'setAgentId(initialAgentId)',
     );
   });
@@ -73,9 +73,9 @@ describe('what follows the agent', () => {
      * which made every switch a remount: you changed who you were talking to
      * and lost the work you were talking about.
      */
-    const shell = read('shell', 'LoopWorkspace.tsx');
+    const shell = read('shell', 'AgentWorkspace.tsx');
     expect(shell).toContain('const surfaceIdRef = useRef(');
-    expect(shell).not.toContain('loopSurfaceId(agentId)');
+    expect(shell).not.toContain('agentSurfaceId(agentId)');
   });
 
   it('connects the sandbox as the workspace’s agent', () => {
@@ -110,7 +110,7 @@ describe('the prompt', () => {
      * `mentionableAgents` compiles and renders and does nothing: the menu
      * lives in `InputPromptLexical`, so typing `@` produced no overlay.
      *
-     * `promptVariant` rather than `variant`: the loop renders the footer
+     * `promptVariant` rather than `variant`: the Agent workspace renders the footer
      * toolbar, which is chrome around the same prompt and forwards the choice
      * under that name.
      */
@@ -182,7 +182,7 @@ describe('a host that asked for no view chooser', () => {
     );
 
     const example = readFileSync(
-      join(__dirname, '..', '..', 'examples', 'LoopWorkspaceExample.tsx'),
+      join(__dirname, '..', '..', 'examples', 'AgentWorkspaceExample.tsx'),
       'utf8',
     );
     expect(example).toContain('showViewSelector={showViewSelector}');
@@ -260,13 +260,13 @@ describe('a host that asked for no header', () => {
      * bordered strip of nothing, and a mounted slot keeps every contributed
      * control on screen with only the switcher missing.
      */
-    const shell = read('shell', 'LoopWorkspace.tsx');
+    const shell = read('shell', 'AgentWorkspace.tsx');
     // The slot is part of the header's controls…
     const controls = shell.slice(
       shell.indexOf('const headerControls = ('),
       shell.indexOf('</>', shell.indexOf('const headerControls = (')),
     );
-    expect(controls).toContain('LoopSlots.header');
+    expect(controls).toContain('AgentSlots.header');
     // …which are rendered only behind `showHeader`: in the row, or in the
     // host's own bar (`headerContainer`), and nowhere else.
     const renders = [...shell.matchAll(/\{headerControls\}/g)].map(

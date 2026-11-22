@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-trip-options` — the Traveller's three options, as a
+ * `@datalayer/agent-plugin-trip-options` — the Traveller's three options, as a
  * message drawn by the A2UI renderer, one card each: the dates and nights,
  * the price, what stands out, a link to the offer, and **Choose this one**,
  * which sends the choice back as the person's next turn. Nothing is booked.
@@ -28,7 +28,7 @@ import {
 import { A2uiCard, type CardSpec } from '../../toolCards/a2uiCard';
 import { readTripOptions, type TripOption } from './read';
 
-export const TRIP_OPTIONS_PLUGIN_NAME = '@datalayer/loop-plugin-trip-options';
+export const TRIP_OPTIONS_PLUGIN_NAME = '@datalayer/agent-plugin-trip-options';
 
 export const TRIP_OPTIONS_WORDS = {
   label: 'Trip options',

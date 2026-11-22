@@ -19,7 +19,11 @@ import {
   notebookToolOperations,
 } from '@datalayer/jupyter-react';
 import { createAllAgentRuntimesTools } from './AgentRuntimesToolAdapter';
+import { registerFrontendToolset } from '../../../chat/marks/toolMarks';
 import type { FrontendToolDefinition } from '../../../types/tools';
+
+// Their calls take the Jupyter Notebook set's marks (its toolset is 'all').
+registerFrontendToolset('jupyter-notebook', notebookToolDefinitions);
 
 // Hook wrapper to get notebook store state
 const useNotebookStore = () => notebookStore.getState();
@@ -29,7 +33,7 @@ const useNotebookStore = () => notebookStore.getState();
  *
  * What `useNotebookTools` memoises, as a plain function — for callers that
  * are not components: a reactor plugin contributing the tools to the chat's
- * `LoopFrontendTool` point builds them here. The executor reads the store's
+ * `AgentFrontendTool` point builds them here. The executor reads the store's
  * live state through its methods, so nothing here needs reactivity.
  */
 export function createNotebookTools(

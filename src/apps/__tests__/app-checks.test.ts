@@ -4,7 +4,7 @@
  */
 
 /**
- * The instant checks of an application, as `loop apps
+ * The instant checks of an application, as `agent apps
  * validate` says them, computed in the page with no model call.
  */
 
@@ -44,7 +44,7 @@ vi.mock('../../specs/agents', async importOriginal => {
 });
 
 const BASE = {
-  schema: 'loop.app/v1',
+  schema: 'agent.app/v1',
   id: 'desk',
   name: 'Desk',
   kind: 'chat',
@@ -612,7 +612,7 @@ describe('the instant checks', () => {
     for (const theme of [
       { variant: 'earth' },
       { variant: 'matrix', mode: 'dark' },
-      { variant: 'loop', mode: 'auto' },
+      { variant: 'agent', mode: 'auto' },
     ] as const) {
       const app = parseAppspec({ ...BASE, interface: { theme } }).app;
       expect(app.interface.theme).toEqual(theme);
@@ -626,7 +626,7 @@ describe('the instant checks', () => {
     const said = (theme: unknown) =>
       checkAppspec({ ...BASE, interface: { theme } }).problems;
     expect(said({ variant: 'neon' })).toContain(
-      'interface.theme.variant: is one of datalayer, spatial, lovely, matrix, earth, sand, ivory, sun, loop, vscode.',
+      'interface.theme.variant: is one of datalayer, spatial, lovely, matrix, earth, sand, ivory, sun, agent, vscode.',
     );
     expect(said({ variant: 'sun', mode: 'night' })).toContain(
       'interface.theme.mode: is one of light, dark, auto.',

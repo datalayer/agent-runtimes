@@ -6,47 +6,28 @@
 from __future__ import annotations
 
 import logging
-from functools import lru_cache
 from typing import Any
 
-from a2ui.basic_catalog.provider import BasicCatalog
-from a2ui.inference_formats.direct_json import DirectJsonFormat
-from a2ui.schema.constants import VERSION_0_9
+from a2ui.core.basic_catalog import BasicCatalog
+from a2ui.core.exceptions import A2uiValidationError
+from a2ui.core.schema import ProtocolVersion
+from a2ui.utils import validate_payload
 
-A2UI_BASIC_CATALOG_ID = BasicCatalog.get_catalog_id(VERSION_0_9)
+#: The A2UI v0.9 basic catalog (`a2ui-core`), the one the client renderer registers.
+A2UI_BASIC_CATALOG = BasicCatalog(ProtocolVersion.V0_9)
+A2UI_BASIC_CATALOG_ID = A2UI_BASIC_CATALOG.catalog_id
 logger = logging.getLogger(__name__)
 
 
-@lru_cache(maxsize=1)
-def _get_a2ui_catalog() -> Any:
-    direct_json = DirectJsonFormat(
-        version=VERSION_0_9,
-        catalogs=[BasicCatalog.get_config(version=VERSION_0_9)],
-    )
-    return direct_json.get_selected_catalog()
-
-
 def _validate_a2ui_messages(messages: list[dict[str, Any]]) -> None:
+    """Check the payload as a renderer holding the basic catalog would.
+
+    A failure is logged, never raised: the client still receives what was built.
+    """
     try:
-        catalog = _get_a2ui_catalog()
-    except Exception as exc:  # pragma: no cover
-        logger.warning("A2UI support catalog unavailable for validation: %s", exc)
-        return
-    for index, message in enumerate(messages):
-        try:
-            errors = catalog.validate_components(message)
-            if errors:
-                raise ValueError(
-                    "; ".join(f"{error.path}: {error.message}" for error in errors)
-                )
-        except Exception as exc:
-            command = next((k for k in message if k != "version"), "unknown")
-            logger.warning(
-                "A2UI support message %d (%s) failed validation: %s",
-                index,
-                command,
-                exc,
-            )
+        validate_payload([A2UI_BASIC_CATALOG], messages)
+    except A2uiValidationError as exc:
+        logger.warning("A2UI support payload failed validation: %s", exc)
 
 
 def _create_surface(surface_id: str) -> dict[str, Any]:

@@ -29,7 +29,7 @@ import {
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { useContributions } from '@datalayer/reactor/react';
-import { LoopAgentBlueprint, type LoopWorkspaceContext } from '../../core';
+import { AgentBlueprint, type AgentWorkspaceContext } from '../../core';
 import { getAgentspecs } from '../../../specs/agents';
 import { SubagentChatPanel } from '../../../chat/messages/ChatMessageList';
 import { A2AAgentDialog } from '../../../chat/tools/A2AAgentDialog';
@@ -214,11 +214,11 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
 
 export interface A2ASidebarProps {
   /** Forwarded by the shell; unused, the sidebar reads the stores. */
-  workspace?: LoopWorkspaceContext;
+  workspace?: AgentWorkspaceContext;
 }
 
 export function A2ASidebar(_props: A2ASidebarProps): React.ReactElement {
-  const blueprints = useContributions(LoopAgentBlueprint);
+  const blueprints = useContributions(AgentBlueprint);
   const specId = blueprints[0]?.value.specId;
   const declared = useMemo<readonly SubAgentspecConfig[]>(
     () => (specId ? (getAgentspecs(specId)?.subagents?.subagents ?? []) : []),

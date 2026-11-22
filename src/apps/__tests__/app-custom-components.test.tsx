@@ -35,8 +35,8 @@ import {
   customComponentProblems,
 } from '../apps/customComponents';
 import { appPreset } from '../apps/AppRenderer';
-import { LoopA2uiComponent } from '../core/a2uiComponents';
-import { LoopCanvasBlock } from '../core/canvasBlocks';
+import { AgentA2uiComponent } from '../core/a2uiComponents';
+import { AgentCanvasBlock } from '../core/canvasBlocks';
 import {
   InlineSurface,
   SURFACE_CATALOG_ID,
@@ -67,7 +67,7 @@ const GAUGE = {
 };
 
 const BASE = {
-  schema: 'loop.app/v1',
+  schema: 'agent.app/v1',
   id: 'desk',
   name: 'Desk',
   kind: 'chat',
@@ -221,16 +221,18 @@ describe('its frame', () => {
     const other = {} as Window;
     const said = (data: unknown, source: Window = frame) =>
       fromFrame({ source, data } as MessageEvent, frame);
-    expect(said({ tag: 'loop.component', kind: 'ready' })).toEqual({
+    expect(said({ tag: 'agent.component', kind: 'ready' })).toEqual({
       kind: 'ready',
     });
     expect(
-      said({ tag: 'loop.component', kind: 'send', name: 'chosen', value: 3 }),
+      said({ tag: 'agent.component', kind: 'send', name: 'chosen', value: 3 }),
     ).toEqual({ kind: 'send', name: 'chosen', value: 3 });
-    expect(said({ tag: 'loop.component', kind: 'ready' }, other)).toBeNull();
+    expect(said({ tag: 'agent.component', kind: 'ready' }, other)).toBeNull();
     expect(said({ kind: 'ready' })).toBeNull();
-    expect(said({ tag: 'loop.component', kind: 'eval', code: 'x' })).toBeNull();
-    expect(said({ tag: 'loop.component', kind: 'send', name: 3 })).toBeNull();
+    expect(
+      said({ tag: 'agent.component', kind: 'eval', code: 'x' }),
+    ).toBeNull();
+    expect(said({ tag: 'agent.component', kind: 'send', name: 3 })).toBeNull();
   });
 
   it('fetches its module without credentials and draws only the one reviewed', async () => {
@@ -341,7 +343,7 @@ describe('on a surface', () => {
       act(async () => {
         window.dispatchEvent(
           new MessageEvent('message', {
-            data: { tag: 'loop.component', ...data },
+            data: { tag: 'agent.component', ...data },
             source: frame.contentWindow,
           }),
         );
@@ -350,12 +352,12 @@ describe('on a surface', () => {
     await say({ kind: 'ready' });
     expect(fetcher).toHaveBeenCalledTimes(1);
     expect(told).toContainEqual({
-      tag: 'loop.component',
+      tag: 'agent.component',
       kind: 'props',
       props: { label: 'Load', value: 42 },
     });
     expect(told).toContainEqual({
-      tag: 'loop.component',
+      tag: 'agent.component',
       kind: 'module',
       code,
     });
@@ -398,11 +400,11 @@ describe('as a contribution of its application', () => {
     const reactor = buildReactorFromPlugins([defineAppComponentsPlugin(app)]);
     reactor.start();
     expect(
-      reactor.getContributions(LoopCanvasBlock).map(entry => entry.value.id),
+      reactor.getContributions(AgentCanvasBlock).map(entry => entry.value.id),
     ).toEqual(['Gauge']);
     expect(
       reactor
-        .getContributions(LoopA2uiComponent)
+        .getContributions(AgentA2uiComponent)
         .map(entry => [entry.value.id, entry.value.app]),
     ).toEqual([['Gauge', 'desk']]);
     const names = (spec: typeof app) =>

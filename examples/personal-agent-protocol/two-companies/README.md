@@ -14,7 +14,7 @@ The tool returns summaries as the companies wrote them and who approved each
 payment. No token, code, or proof enters it.
 
 ```bash
-loop apps run examples/personal-agent-protocol/two-companies/app.py
+agent apps run examples/personal-agent-protocol/two-companies/app.py
 ```
 
 Read the [Operations guide](https://personalagentprotocol.org/docs/guides/operations)

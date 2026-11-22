@@ -11,9 +11,9 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  LoopAgentBlueprint,
-  LoopCommand,
-  LoopRunProps,
+  AgentBlueprint,
+  AgentCommand,
+  AgentRunProps,
   runForwardedProps,
 } from '../core';
 import { defineAppComposerPlugin } from '../apps/AppComposer';
@@ -28,7 +28,7 @@ import {
 } from '../apps/composer';
 
 const BASE = {
-  schema: 'loop.app/v1',
+  schema: 'agent.app/v1',
   id: 'desk',
   name: 'Desk',
   kind: 'chat',
@@ -199,7 +199,7 @@ describe('commands and modes in the composer', () => {
   it('are workspace commands listed in the menu, and modes sent with every run', async () => {
     const app = parseAppspec(DESK).app;
     const plugin = defineAppComposerPlugin(app);
-    const commands = contributed(plugin, LoopCommand).map(item => item.value);
+    const commands = contributed(plugin, AgentCommand).map(item => item.value);
     expect(commands.map(command => [command.name, command.composer])).toEqual([
       ['summarise', true],
       ['brief', true],
@@ -207,18 +207,18 @@ describe('commands and modes in the composer', () => {
     expect(await commands[0].run({ workspace: {}, argv: 'the call' })).toEqual({
       prompt: 'Summarise: the call',
     });
-    const [runProps] = contributed(plugin, LoopRunProps);
+    const [runProps] = contributed(plugin, AgentRunProps);
     expect(runProps.value.props()).toEqual({
-      loop: { modes: { depth: 'thorough' } },
+      agent: { modes: { depth: 'thorough' } },
     });
-    // What a page sends with its own message goes over it, `loop` key by key.
+    // What a page sends with its own message goes over it, `agent` key by key.
     expect(
       runForwardedProps([runProps.value as never], {
-        loop: { settings: { tone: 'Warm' } },
+        agent: { settings: { tone: 'Warm' } },
         voice: { said: true },
       }),
     ).toEqual({
-      loop: {
+      agent: {
         modes: { depth: 'thorough' },
         settings: { tone: 'Warm' },
       },
@@ -230,9 +230,9 @@ describe('commands and modes in the composer', () => {
       appPreset(parseAppspec(spec).app).plugins.map(
         item => (item as { name: string }).name,
       );
-    expect(names(DESK)).toContain('@datalayer/loop-plugin-app-composer-desk');
+    expect(names(DESK)).toContain('@datalayer/agent-plugin-app-composer-desk');
     expect(names(BASE)).not.toContain(
-      '@datalayer/loop-plugin-app-composer-desk',
+      '@datalayer/agent-plugin-app-composer-desk',
     );
   });
 
@@ -276,7 +276,7 @@ describe('commands and modes in the composer', () => {
       const [plugin] = appPreset(parseAppspec(spec).app).plugins as Array<{
         contributes?: Array<{ point?: unknown; value: Record<string, any> }>;
       }>;
-      return plugin.contributes?.find(item => item.point === LoopAgentBlueprint)
+      return plugin.contributes?.find(item => item.point === AgentBlueprint)
         ?.value;
     };
     const desk = blueprint(DESK);

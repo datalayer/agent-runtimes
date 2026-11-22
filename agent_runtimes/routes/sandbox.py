@@ -373,7 +373,7 @@ async def execute_sandbox_code(
     Resolution order for the target sandbox:
 
     1. The per-agent sandbox for ``request.agent_id`` (the agent's real
-       Jupyter sandbox when running in ``loop`` mode).
+       Jupyter sandbox when running in ``agent`` mode).
     2. The manager's currently active sandbox.
     3. The managed sandbox (respects the configured variant), created lazily.
     """

@@ -34,7 +34,7 @@ export const CUSTOM_FRAME_SANDBOX = 'allow-scripts';
 export const MAX_MODULE_BYTES = 2 * 1024 * 1024;
 
 /** The tag every message between the page and a frame carries. */
-export const FRAME_TAG = 'loop.component';
+export const FRAME_TAG = 'agent.component';
 
 /** What the page tells the frame. */
 export type ToFrame =

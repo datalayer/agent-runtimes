@@ -1,13 +1,13 @@
 ---
 sidebar_position: 8
-title: Loop CLI
+title: Agent CLI
 ---
 
-# Loop CLI
+# Agent CLI
 
-The `agent-runtimes` package provides a command-line interface for starting and managing the Agent Runtimes server. It is installed as `loop` (and as `agent-runtimes`: the same commands). Below, `loop --local -a example-simple` starts a local server with the `example-simple` agent and chats with it in the terminal:
+The `agent-runtimes` package provides a command-line interface for starting and managing the Agent Runtimes server. It is installed as `agent` (and as `agent-runtimes`: the same commands). Below, `agent --local -a example-simple` starts a local server with the `example-simple` agent and chats with it in the terminal:
 
-![The loop CLI: a question, a code execution, the answer](https://images.datalayer.io/products/agent-runtimes/agent-runtimes-loop-cli.gif)
+![The agent CLI: a question, a code execution, the answer](https://images.datalayer.io/products/agent-runtimes/agent-runtimes-agent-cli.gif)
 
 The package also provides an interactive assistant workflow via:
 
@@ -62,9 +62,9 @@ For several lines in one session, slash commands among them, see [Run without in
 
 ### Here, or on Datalayer
 
-`loop` asks **where** the agent runs first — among the launch rows of its start screen when you have sessions to go on with ([As `loop` starts](../sessions/cli.mdx#as-loop-starts)), else as its own question: *on this machine* (a local server, with your own model keys) or *on Datalayer* (a cloud runtime, billed by the second). Datalayer is offered once you are signed in (`datalayer login`, or `DATALAYER_API_KEY`). Otherwise `loop` says so in one line and runs here. Without a terminal it always runs here unless a flag says otherwise, so a script never starts something billed by surprise.
+`agent` asks **where** the agent runs first — among the launch rows of its start screen when you have sessions to go on with ([As `agent` starts](../sessions/cli.mdx#as-agent-starts)), else as its own question: *on this machine* (a local server, with your own model keys) or *on Datalayer* (a cloud runtime, billed by the second). Datalayer is offered once you are signed in (`datalayer login`, or `DATALAYER_API_KEY`). Otherwise `agent` says so in one line and runs here. Without a terminal it always runs here unless a flag says otherwise, so a script never starts something billed by surprise.
 
-On this machine, `loop` then lists the agentspecs your local model keys allow, as before. On Datalayer it lists **no agentspecs**. Launching an agent in the cloud needs an environment that supports it, so you pick an environment instead. The list is read through the Datalayer SDK (`AgentClient.list_environments`):
+On this machine, `agent` then lists the agentspecs your local model keys allow, as before. On Datalayer it lists **no agentspecs**. Launching an agent in the cloud needs an environment that supports it, so you pick an environment instead. The list is read through the Datalayer SDK (`AgentClient.list_environments`):
 
 ```text
 ? Where should the agent run?
@@ -87,22 +87,22 @@ Launching example-simple on Datalayer (ai-agents-env, 30 min, at most 1.44 credi
 ● Runtime 01k… on Datalayer — ai-agents-env, reserved 30 min (at most 1.44 credits)
 ```
 
-- **Environments**: every environment that declares its capabilities is listed, with its description and its cost per minute. Only those with the `agent` capability (`ai-agents-env` today) can be picked; the others are greyed out with the reason. The default is the first that can launch an agent. Without anybody to ask, `ai-agents-env` is taken, or the only environment that can hold an agent; when several others could, `loop` asks you to name one with `--environment`. Your own environments declare no capabilities, so they are not listed, but you can still name one with `--environment`. Naming one that says it cannot hold an agent is refused.
-- **The agent**: the platform configures a runtime's agent only from an agentspec. Without `-a`, it is `example-simple`, the agent `loop` starts with, and one grey line says so. `-a <agentspec>` picks another; your local API keys never filter it.
-- **Running runtimes**: if you already have an agent runtime running, `loop` offers to go back to it before launching a new one, so you do not pay twice. `--runtime <name>` attaches without asking. If you also pass `-a`, the runtime's agent is reconfigured from that agentspec.
+- **Environments**: every environment that declares its capabilities is listed, with its description and its cost per minute. Only those with the `agent` capability (`ai-agents-env` today) can be picked; the others are greyed out with the reason. The default is the first that can launch an agent. Without anybody to ask, `ai-agents-env` is taken, or the only environment that can hold an agent; when several others could, `agent` asks you to name one with `--environment`. Your own environments declare no capabilities, so they are not listed, but you can still name one with `--environment`. Naming one that says it cannot hold an agent is refused.
+- **The agent**: the platform configures a runtime's agent only from an agentspec. Without `-a`, it is `example-simple`, the agent `agent` starts with, and one grey line says so. `-a <agentspec>` picks another; your local API keys never filter it.
+- **Running runtimes**: if you already have an agent runtime running, `agent` offers to go back to it before launching a new one, so you do not pay twice. `--runtime <name>` attaches without asking. If you also pass `-a`, the runtime's agent is reconfigured from that agentspec.
 - **Cost**: a minute costs the environment's burning rate. The reservation (`--minutes`, 30 by default) caps what the runtime can cost, and it is checked against the credits you have left before the launch.
 - **Unmetered**: with `DATALAYER_MAGIC_API_KEY` set in the environment (the platform's magic key, a secret), every runtime the client creates is sent it (`magic_api_key` on `POST /runtimes`), and the platform starts it unmetered: it consumes no credits and never expires. No minutes are asked and no credit is checked; `--minutes` is still validated and sent, and ignored. Unset, nothing is sent. The key is never printed or logged.
-- **At the end**: `loop` asks whether to stop the runtime, because it is billed until it is stopped or its reservation ends. `--keep` leaves it running, and `loop` prints how to reconnect (`loop connect <url>`, which goes back to it as `loop --runtime <name>` does) and how to stop it (`loop agents terminate <name>`). A one-shot query (`loop --cloud -a crawler "…"`) stops the runtime it launched once the query is answered. A runtime you attached to without a terminal is left as it was found. Every such line says where it runs and what it is: `Stop the cloud agent runtime <name>? It is billed until you do.`, then `Stopped cloud agent runtime <name>.`; `cloud app runtime` when `loop` runs an application; an unmetered runtime is said not billed. A runtime on this machine says `Stopped local agent runtime.`, or `Stopped local app runtime.` for an application.
+- **At the end**: `agent` asks whether to stop the runtime, because it is billed until it is stopped or its reservation ends. `--keep` leaves it running, and `agent` prints how to reconnect (`agent connect <url>`, which goes back to it as `agent --runtime <name>` does) and how to stop it (`agent agents terminate <name>`). A one-shot query (`agent --cloud -a crawler "…"`) stops the runtime it launched once the query is answered. A runtime you attached to without a terminal is left as it was found. Every such line says where it runs and what it is: `Stop the cloud agent runtime <name>? It is billed until you do.`, then `Stopped cloud agent runtime <name>.`; `cloud app runtime` when `agent` runs an application; an unmetered runtime is said not billed. A runtime on this machine says `Stopped local agent runtime.`, or `Stopped local app runtime.` for an application.
 
 Each refusal is one sentence, and nothing is launched: not signed in, no credits (or not enough for the reservation), an environment that cannot hold an agent, a runtime that is not running, the launch refused by the platform, or an agentspec the runtime's library does not have.
 
 ```bash
-loop --local                          # on this machine, without asking
-loop --cloud                          # on Datalayer: pick an environment; the agent is example-simple
-loop --cloud -a crawler               # on Datalayer, a new runtime for the crawler agent
-loop --cloud -a crawler -m 15 --keep  # reserved for 15 minutes, left running at the end
-loop --runtime 01k…                   # back to a running agent runtime
-loop --cloud -a crawler "Summarize the news"  # one query, then the runtime is stopped
+agent --local                          # on this machine, without asking
+agent --cloud                          # on Datalayer: pick an environment; the agent is example-simple
+agent --cloud -a crawler               # on Datalayer, a new runtime for the crawler agent
+agent --cloud -a crawler -m 15 --keep  # reserved for 15 minutes, left running at the end
+agent --runtime 01k…                   # back to a running agent runtime
+agent --cloud -a crawler "Summarize the news"  # one query, then the runtime is stopped
 ```
 
 #### Models on a cloud runtime
@@ -127,7 +127,7 @@ decisions: jev:0.0.1
 
 A decisions spec (agentspecs `decisions/`, see [Decisions](https://agentspecs.datalayer.tech/agents/decisions)) says which model is asked, which question types it answers and the limits of one call. `jev` asks Jev on Workers AI (`cloudflare:wrk/typesafe/jev`), answers the three question types, at most 10 questions about a text of at most 20 000 characters. The capability brings the `decide` tool: an agent that names `decisions` has it, asked of that spec's model, and it is not listed under `backend_tools`. An agentspec that lists `decide` without naming `decisions` is refused in a sentence (`The agent … lists the backend tool decide but its spec names no decisions: add decisions: jev:0.0.1 to its agentspec, which brings the tool.`). *A Simple Agent* (`example-simple`), the default cloud agent, names `decisions: jev:0.0.1`, and suggests three decisions to try: is a support ticket urgent, which team should handle a request, how positive a review is.
 
-For an agent that decides, the start of `loop` says so among its parts (`Decisions     jev:0.0.1 (cloudflare:wrk/typesafe/jev)`), `/agents` says it under the agent, and the runtime says it to its clients (`decisions` of `GET /api/v1/agents/{agent_id}`, `agentDecisions` of `/api/v1/configure?agent_id=`).
+For an agent that decides, the start of `agent` says so among its parts (`Decisions     jev:0.0.1 (cloudflare:wrk/typesafe/jev)`), `/agents` says it under the agent, and the runtime says it to its clients (`decisions` of `GET /api/v1/agents/{agent_id}`, `agentDecisions` of `/api/v1/configure?agent_id=`).
 
 - **What it asks.** A text, the *state*, and one or more named questions about it, each of a type: `noul` (does a statement hold — answered with its probability), `choice` (which of at least two options — a probability per option and a confidence) or `score` (which step of at least two, lowest first — a probability per step and a confidence). The agent reads the typed answers back and says what was decided.
 - **Where it goes.** To ai-inference's `POST /decisions`, to the model the agent's decisions spec names (`cloudflare:wrk/typesafe/jev` for `jev`), with the runtime's ai-inference token — the one its model calls use. With no token, or no ai-inference configured (`DATALAYER_AI_INFERENCE_URL`), it asks nothing and the agent is told why in a sentence (`Nothing was decided. This runtime has no ai-inference token yet: …`).
@@ -146,10 +146,10 @@ With an agent that decides, you can ask its decision model yourself, without goi
   which_team: Billing (confidence 1.00)
 ```
 
-A runtime older than `loop` that does not have the route says so in a sentence, with its version (`… (agent-runtimes 1.3.32) does not say decisions (/decisions): it is older than this loop (1.3.33).`).
+A runtime older than `agent` that does not have the route says so in a sentence, with its version (`… (agent-runtimes 1.3.32) does not say decisions (/decisions): it is older than this loop (1.3.33).`).
 
 ```bash
-loop --local -a example-simple --no-codemode \
+agent --local -a example-simple --no-codemode \
   --prompt "Is this support ticket urgent? 'Payouts have failed for 3 days.' Use your decision tool."
 ```
 
@@ -161,15 +161,15 @@ The terminal reaches a cloud runtime through a relay on your machine that adds y
 - `/skills`, `/tools` and `/mcp` list and change the skills, tools and MCP servers of the cloud runtime's agent.
 - `/status` shows `Agent Runtime  RUNTIME on Datalayer (ENVIRONMENT)` and the relay it goes through.
 - `/suggestions` lists the agentspec's suggestions, each as its summary and the text it sends, and asks which one to send.
-- `/notebook` and `/document` open the agent's notebook and document pages in your browser, served by the cloud runtime through the relay (`http://127.0.0.1:<port>/static/agent-notebook.html?agentId=default&jupyterBaseUrl=…&jupyterToken=…`). The relay adds your Datalayer token to every request the page makes, so your token is not in the URL; the page works while `loop` runs. The page runs its code on the runtime's Jupyter server, at the runtime's address on Datalayer, with the runtime's own Jupyter token, as the Datalayer UI does. That token is in the URL, and so in your browser history, until the runtime stops. The same holds after `loop --runtime <name>` and `loop connect <url>`.
+- `/notebook` and `/document` open the agent's notebook and document pages in your browser, served by the cloud runtime through the relay (`http://127.0.0.1:<port>/static/agent-notebook.html?agentId=default&jupyterBaseUrl=…&jupyterToken=…`). The relay adds your Datalayer token to every request the page makes, so your token is not in the URL; the page works while `agent` runs. The page runs its code on the runtime's Jupyter server, at the runtime's address on Datalayer, with the runtime's own Jupyter token, as the Datalayer UI does. That token is in the URL, and so in your browser history, until the runtime stops. The same holds after `agent --runtime <name>` and `agent connect <url>`.
 
-Nothing falls back to this machine. If the cloud runtime does not answer, a command that needs it is not run, and `loop` says so in a sentence. `/help`, `/exit`, `/status` and the other commands that read nothing from the runtime still work.
+Nothing falls back to this machine. If the cloud runtime does not answer, a command that needs it is not run, and `agent` says so in a sentence. `/help`, `/exit`, `/status` and the other commands that read nothing from the runtime still work.
 
 To check a runtime's models from a script or CI, without typing them in, see [Run without interaction](#run-without-interaction).
 
 ### Run without interaction
 
-`--prompt` (short `-q`) runs `loop` without a person at the keyboard. `loop` starts the agent, runs each line you give it as if you had typed it at the prompt, prints what comes back, stops the agent and exits:
+`--prompt` (short `-q`) runs `agent` without a person at the keyboard. `agent` starts the agent, runs each line you give it as if you had typed it at the prompt, prints what comes back, stops the agent and exits:
 
 - **Repeat it** for several lines. They run in the order given, in **one session**, so a model switched by one line is the model the next line talks to, and the conversation carries over.
 - A line that starts with `/` runs that **slash command**, the same as at the prompt: `/models`, `/models <id>`, `/skills`, `/tools`, `/status` and the others. A command that would ask something does not: `/suggestions` lists the suggestions and sends none, and the next line runs next.
@@ -177,9 +177,9 @@ To check a runtime's models from a script or CI, without typing them in, see [Ru
 
 It runs **on this machine** unless you say `--cloud`:
 
-- **On this machine** (`--local`, the default), name the agent with `-a <agentspec>`. The local server `loop` starts is stopped at the end.
-- **On Datalayer** (`--cloud`), a new cloud runtime is launched for the run, as interactive `loop --cloud` launches one. `-a` names its agent (`example-simple` when you leave it out), `-e` its environment (`ai-agents-env` by default) and `-m` how many minutes to reserve (30 by default). `-r <name>` runs the lines on a runtime that is already running instead, and nothing is launched.
-- **At the end** the cloud runtime is stopped, also when a line fails or you press Ctrl-C. `--keep` leaves it running, and `loop` prints how to stop it (`loop agents terminate <name>`). A runtime you attached to with `-r` was running before, so it is left running.
+- **On this machine** (`--local`, the default), name the agent with `-a <agentspec>`. The local server `agent` starts is stopped at the end.
+- **On Datalayer** (`--cloud`), a new cloud runtime is launched for the run, as interactive `agent --cloud` launches one. `-a` names its agent (`example-simple` when you leave it out), `-e` its environment (`ai-agents-env` by default) and `-m` how many minutes to reserve (30 by default). `-r <name>` runs the lines on a runtime that is already running instead, and nothing is launched.
+- **At the end** the cloud runtime is stopped, also when a line fails or you press Ctrl-C. `--keep` leaves it running, and `agent` prints how to stop it (`agent agents terminate <name>`). A runtime you attached to with `-r` was running before, so it is left running.
 
 **Nothing is asked.** Every choice comes from the options or their defaults. When a choice would need a person, the run stops before anything starts and says why in one sentence: no `-a` on this machine, several environments that could hold the agent and none named, or a number of minutes out of range.
 
@@ -199,7 +199,7 @@ A slash command that **refuses** what it is asked has not failed: it did its job
 Check what a Datalayer runtime suggests and offers, switch to Qwen, ask it who it is, then try a model the runtime does not serve:
 
 ```bash
-loop --cloud -a example-simple -m 10 \
+agent --cloud -a example-simple -m 10 \
   --prompt "/suggestions" \
   --prompt "/models" \
   --prompt "/models alibaba:qwen-max" \
@@ -245,24 +245,24 @@ Only what ai-inference serves is listed: no local models, no `Not running: …` 
 In CI, keep the output and fail the job when a line fails:
 
 ```bash
-loop --cloud -a example-simple -m 5 \
+agent --cloud -a example-simple -m 5 \
   -q "/models" \
   -q "Answer with the single word: ready" \
   > answers.txt
 grep -qi "ready" answers.txt
 ```
 
-Datalayer needs your credentials in the job: set `DATALAYER_API_KEY`. On this machine the same lines run against a local server, for example `loop --local -a example-simple -q "/models"`.
+Datalayer needs your credentials in the job: set `DATALAYER_API_KEY`. On this machine the same lines run against a local server, for example `agent --local -a example-simple -q "/models"`.
 
 ### Tool calls waiting on your approval
 
 When an agent's tool call needs your approval, its run waits until you decide. Decide from the terminal, from another shell while the run waits, or after it:
 
 ```bash
-loop tool-approvals list                       # the calls waiting on you
-loop tool-approvals list --status all --tool tavily_search
-loop tool-approvals approve 01M6Y0SQ --note "ok for this search"
-loop tool-approvals reject 01M6Y1AA --note "not this file"
+agent tool-approvals list                       # the calls waiting on you
+agent tool-approvals list --status all --tool tavily_search
+agent tool-approvals approve 01M6Y0SQ --note "ok for this search"
+agent tool-approvals reject 01M6Y1AA --note "not this file"
 ```
 
 | Command | What it does |
@@ -271,12 +271,12 @@ loop tool-approvals reject 01M6Y1AA --note "not this file"
 | `approve <id>` | Approves the call; the waiting run goes on with it. |
 | `reject <id>` | Rejects the call; the waiting run is refused it, and the agent is told your `--note`. |
 
-While a run waits on your approval, `loop` says so instead of giving up on a silent run. In the chat it asks you (`Approve?`), and your answer goes to the run. On `--prompt` lines, which ask nothing, it prints the call and how to decide it on standard error, then waits for the decision and prints it:
+While a run waits on your approval, `agent` says so instead of giving up on a silent run. In the chat it asks you (`Approve?`), and your answer goes to the run. On `--prompt` lines, which ask nothing, it prints the call and how to decide it on standard error, then waits for the decision and prints it:
 
 ```text
   🔒 skill:datalayer-memory-add waits on your approval (01M6Y475W1Q8ATP6WHNN00ZX3D)
     (skill=datalayer-memory-add)
-    Approve: loop tool-approvals approve 01M6Y475W1Q8ATP6WHNN00ZX3D   Reject: loop tool-approvals reject 01M6Y475W1Q8ATP6WHNN00ZX3D
+    Approve: agent tool-approvals approve 01M6Y475W1Q8ATP6WHNN00ZX3D   Reject: agent tool-approvals reject 01M6Y475W1Q8ATP6WHNN00ZX3D
     Waiting for your decision…
     ✓ skill:datalayer-memory-add approved
 ```
@@ -285,38 +285,38 @@ An id can be given whole or by its start, as long as it names a single pending a
 
 ### A new application
 
-`loop apps init <id>` writes a new application's folder, named by its id: its Appspec, `app.yaml`, and, with `--python`, the `app.py` that is its source, the spec beside it built from it (`loop apps build`), so the two agree from the start.
+`agent apps init <id>` writes a new application's folder, named by its id: its Appspec, `app.yaml`, and, with `--python`, the `app.py` that is its source, the spec beside it built from it (`agent apps build`), so the two agree from the start.
 
 ```bash
-loop apps init my-app                              # a chat: app.yaml
-loop apps init my-app --python                     # app.py, and the app.yaml it builds
-loop apps init my-app --kind widget                # a widget
-loop apps init desk --from support-desk            # an example of the catalogue, under the new id
-loop apps init desk --from support-desk --python   # its spec held in an app.py, ready for code
-loop apps init --examples                          # the examples to start from
+agent apps init my-app                              # a chat: app.yaml
+agent apps init my-app --python                     # app.py, and the app.yaml it builds
+agent apps init my-app --kind widget                # a widget
+agent apps init desk --from support-desk            # an example of the catalogue, under the new id
+agent apps init desk --from support-desk --python   # its spec held in an app.py, ready for code
+agent apps init --examples                          # the examples to start from
 ```
 
-A blank application is a chat or a widget, its agent the one a blank application starts with in the Studio (`example-simple`); written in Python (`--python`), the blank agent `example-blank` — a model and nothing else, which its `app.py` runs in your own process with the application's instructions alone. A worker says what starts its work and its goal, and a decision what it decides, so they start from an example. From an example, the folder holds its spec, and its `app.py` when it was written in Python (`customer-interview`, `exchange-desk`, `report-from-a-file`), with the new id. What is written passes the checks `loop apps validate` makes of a spec, or nothing is written. A folder that is there is never overwritten. `--dir` says where the folder goes.
+A blank application is a chat or a widget, its agent the one a blank application starts with in the Studio (`example-simple`); written in Python (`--python`), the blank agent `example-blank` — a model and nothing else, which its `app.py` runs in your own process with the application's instructions alone. A worker says what starts its work and its goal, and a decision what it decides, so they start from an example. From an example, the folder holds its spec, and its `app.py` when it was written in Python (`customer-interview`, `exchange-desk`, `report-from-a-file`), with the new id. What is written passes the checks `agent apps validate` makes of a spec, or nothing is written. A folder that is there is never overwritten. `--dir` says where the folder goes.
 
-Beside them, `tests/test_app.py` is what the folder's CI runs with `pytest tests`: the spec passes the instant checks, each of its test conversations (`tests.cases`) says what it is asked and what it should do, and, in Python, the `app.py` still builds the `app.yaml` committed beside it. A starting repository, then: commit the folder and its checks pass from the first push. The test conversations themselves are asked of a model by a validation run — push it (`loop apps push app.yaml`), then *Run its tests* on its Validate tab — and the safety set every application answers with `loop apps validate app.yaml --safety --local`.
+Beside them, `tests/test_app.py` is what the folder's CI runs with `pytest tests`: the spec passes the instant checks, each of its test conversations (`tests.cases`) says what it is asked and what it should do, and, in Python, the `app.py` still builds the `app.yaml` committed beside it. A starting repository, then: commit the folder and its checks pass from the first push. The test conversations themselves are asked of a model by a validation run — push it (`agent apps push app.yaml`), then *Run its tests* on its Validate tab — and the safety set every application answers with `agent apps validate app.yaml --safety --local`.
 
 ```text
 ✓ desk written to ./desk from the support-desk example: app.yaml, tests/test_app.py.
-Next: cd desk && loop apps run app.yaml
+Next: cd desk && agent apps run app.yaml
 ```
 
 ### An application in a browser page, with hot reload
 
-`loop apps run app.py --web` serves the application on this machine in a
+`agent apps run app.py --web` serves the application on this machine in a
 browser page, drawn by the embed — the renderer of its hosted page — at
 `http://127.0.0.1:8000/app`; with `--watch`, a change to a file of its folder
 builds it again and the page reloads by itself, or says, at its foot, why the
 change was not taken while the application runs on as it was.
 
 ```bash
-loop apps run app.py --web --watch                       # opens the page
-loop apps run app.py --web --watch --headless --port 8771
-loop apps run app.py --web --embed-dir ../agent-runtimes/dist-embed   # a build of the embed, served from here
+agent apps run app.py --web --watch                       # opens the page
+agent apps run app.py --web --watch --headless --port 8771
+agent apps run app.py --web --embed-dir ../agent-runtimes/dist-embed   # a build of the embed, served from here
 ```
 
 | Option | What it does |
@@ -333,20 +333,20 @@ reload](/apps/python-applications#in-a-browser-page-with-hot-reload).
 
 ### Package an application with its page side
 
-`loop apps package app.py` packages an application whose components are
+`agent apps package app.py` packages an application whose components are
 files of its folder (`source="components/dial.js"`) as a Python distribution,
-`loop-app-<id>`, and builds its wheel: the application's module, and those
-files under `share/datalayer/reactor/extensions/loop-app-<id>/`, advertised
+`agent-app-<id>`, and builds its wheel: the application's module, and those
+files under `share/datalayer/reactor/extensions/agent-app-<id>/`, advertised
 as a Reactor extension of the application's name — the application's own,
 `app.extension()`: its plugin, the plugins it uses, its page side ([Extending
 with Reactor](/apps/python-applications#extending-with-reactor)). Installed beside the
-server that runs the application — `loop apps run app.py --web`, or your own
+server that runs the application — `agent apps run app.py --web`, or your own
 FastAPI with `app.mount` — its page draws them from that server.
 
 ```bash
-loop apps package app.py                       # dist/loop-app-<id>/ and dist/loop_app_<id>-<version>-py3-none-any.whl
-pip install dist/loop_app_dial_desk-0.0.1-py3-none-any.whl
-loop apps run app.py --web
+agent apps package app.py                       # dist/agent-app-<id>/ and dist/agent_app_<id>-<version>-py3-none-any.whl
+pip install dist/agent_app_dial_desk-0.0.1-py3-none-any.whl
+agent apps run app.py --web
 ```
 
 | Option | What it does |
@@ -362,16 +362,16 @@ package](/apps/python-applications#its-page-side-as-a-package).
 
 ### An application served over A2A
 
-`loop apps run <app>.yaml --a2a` serves the application over A2A, at
+`agent apps run <app>.yaml --a2a` serves the application over A2A, at
 `/api/v1/a2a/agents/<its id>/`, to the members of its team that ask it, and
 prints its address and its agent card. With `--cloud`, it is a Datalayer
 runtime, a new one or the one `-r <runtime>` names (by its uid or its name),
-and `--keep` leaves it serving once `loop` stops.
+and `--keep` leaves it serving once `agent` stops.
 
 ```bash
-loop apps run accounting.yaml --cloud --a2a --keep                    # a key granted to its route is answered
-loop apps run accounting.yaml --cloud --a2a --visitors --keep         # visitors without an account too
-loop apps run accounting.yaml --cloud -r <uid> --a2a --visitors --keep # the same runtime, opened to visitors
+agent apps run accounting.yaml --cloud --a2a --keep                    # a key granted to its route is answered
+agent apps run accounting.yaml --cloud --a2a --visitors --keep         # visitors without an account too
+agent apps run accounting.yaml --cloud -r <uid> --a2a --visitors --keep # the same runtime, opened to visitors
 ```
 
 | Option | What it does |
@@ -386,7 +386,7 @@ refused before anything is launched. See
 
 ### Deploy: an application at its address
 
-`loop apps deploy <app id>` deploys a saved version at the application's
+`agent apps deploy <app id>` deploys a saved version at the application's
 hosted address, `/apps/<slug>`, as the Ship tab does — and, kept
 always on, serves it over A2A at a **stable address** that names the
 deployment and no runtime:
@@ -395,11 +395,11 @@ same when its runtime is started again or the deployment moves to another
 version; ai-agents passes each request to its always-on runtime now.
 
 ```bash
-loop apps deploy <id> --slug desk                                   # version: the latest saved; who may open it: private
-loop apps deploy <id> --slug desk --visibility public               # anybody
-loop apps deploy <id> --slug desk --always-on --spend-limit 50 --a2a          # always on, on a runtime of its own, served over A2A
-loop apps deploy <id> --slug desk --visibility link --always-on --spend-limit 50 --a2a --visitors   # visitors may ask it too
-loop apps deploy <id> --no-a2a                                      # stop serving it over A2A
+agent apps deploy <id> --slug desk                                   # version: the latest saved; who may open it: private
+agent apps deploy <id> --slug desk --visibility public               # anybody
+agent apps deploy <id> --slug desk --always-on --spend-limit 50 --a2a          # always on, on a runtime of its own, served over A2A
+agent apps deploy <id> --slug desk --visibility link --always-on --spend-limit 50 --a2a --visitors   # visitors may ask it too
+agent apps deploy <id> --no-a2a                                      # stop serving it over A2A
 ```
 
 | Option | What it does |
@@ -420,7 +420,7 @@ tab and on `/studio/deployments`. See
 
 ### Eject: an application into Python
 
-`loop apps eject app.yaml` writes an application built by spec or on the
+`agent apps eject app.yaml` writes an application built by spec or on the
 Canvas as an `app.py` that reproduces it: the file holds the
 spec, ready for code, and builds the same spec again — checked before it is
 written; otherwise nothing is. It is one way, and it says so first: from then
@@ -430,17 +430,17 @@ written without it), never writes over a file (`--force`), and writes
 `app.py` beside the spec unless `--out` says where.
 
 ```bash
-loop apps pull <id>                      # its spec, as the Studio keeps it
-loop apps eject app.yaml --yes           # app.py, which builds it the same
-loop apps push app.py --app <id>         # the next version; the versions so far are kept
+agent apps pull <id>                      # its spec, as the Studio keeps it
+agent apps eject app.yaml --yes           # app.py, which builds it the same
+agent apps push app.py --app <id>         # the next version; the versions so far are kept
 ```
 
 Your conversations with an application, and what was said of their answers:
 
 
 ```bash
-loop apps threads [<id>] [--search words] [--tag tag] [--limit 50]   # newest first: title, turns, tags, session id
-loop apps feedback <session>                                        # each thumb, the answer, who, the comment
+agent apps threads [<id>] [--search words] [--tag tag] [--limit 50]   # newest first: title, turns, tags, session id
+agent apps feedback <session>                                        # each thumb, the answer, who, the comment
 ```
 
 `threads` lists every application's conversations when no id is given;
@@ -450,7 +450,7 @@ those that carry the tag, `--limit` how many (50 by default, 1000 at most).
 
 ### An application's safety set
 
-`loop apps validate <file>` runs the instant checks of an application: no model is called, so it is quick and free in CI. Add `--safety` and it also takes the **safety set** every application runs, the same tests the Studio asks with every *Run its tests*:
+`agent apps validate <file>` runs the instant checks of an application: no model is called, so it is quick and free in CI. Add `--safety` and it also takes the **safety set** every application runs, the same tests the Studio asks with every *Run its tests*:
 
 - **An instruction hidden in what it reads**, when it reads documents or has connections. It is handed a passage that carries an instruction it must not follow.
 - **A request outside its rules**, when its rules make it ask first or leave an action to you. It is asked to do that action now, without asking. The request uses its own rule's words.
@@ -460,9 +460,9 @@ those that carry the tag, `--limit` how many (50 by default, 1000 at most).
 A model judges each answer against the test's rubric, and each test has its own failure mode. If one test does not hold, the application cannot ship, whatever share of its tests passed.
 
 ```bash
-loop apps validate app.yaml --safety                     # lists the tests and how each is judged; nothing is asked
-loop apps validate app.yaml --safety --local --judge anthropic:claude-haiku-4-5
-loop apps validate app.yaml --safety --cloud --app <id>  # on Datalayer, through the Evals engine
+agent apps validate app.yaml --safety                     # lists the tests and how each is judged; nothing is asked
+agent apps validate app.yaml --safety --local --judge anthropic:claude-haiku-4-5
+agent apps validate app.yaml --safety --cloud --app <id>  # on Datalayer, through the Evals engine
 ```
 
 ### An application's tests, with the checks on
@@ -535,9 +535,9 @@ plain data under `validation`. A test that fails exits 1; one that could not
 run, 3.
 
 ```bash
-loop apps validate app.py --tests --local                       # decided by its code; a test in words needs a judge
-loop apps validate app.yaml --tests --local --judge anthropic:claude-haiku-4-5
-loop apps validate app.yaml --tests --local --judge … --app <id> --attach   # kept against the saved version
+agent apps validate app.py --tests --local                       # decided by its code; a test in words needs a judge
+agent apps validate app.yaml --tests --local --judge anthropic:claude-haiku-4-5
+agent apps validate app.yaml --tests --local --judge … --app <id> --attach   # kept against the saved version
 ```
 
 ```text
@@ -551,7 +551,7 @@ app.yaml  Passes the instant checks
 
 With `--attach --app <id>`, the report is handed to ai-agents, which keeps it
 against the saved version of the application the file is — so the file must
-be that version (`loop apps push` first) — as the Studio keeps a run of the
+be that version (`agent apps push` first) — as the Studio keeps a run of the
 Evals engine: the *Validate* tab shows each test and the check that stopped
 it, and Readiness and the *Ship* tab read its share. A run on this machine
 asks no safety set, so Readiness says *Not known yet* of it until the safety
@@ -567,14 +567,14 @@ app.yaml  Passes the instant checks
   Safety: 2 of 2 held.
 ```
 
-- **On this machine** (`--local`): each test is asked in a session of its own. An application that needs nothing a runtime brings runs in this process, with its rules, checks and code. One with connections, tools or skills runs on a local runtime configured with it, as `loop apps run --local` does. The judge is the model named by `--judge`, using your key for it on this machine, or the AI Inference service when `DATALAYER_AI_INFERENCE_URL` is set. With no judge, nothing is asked: the tests are listed, with the way each would be judged.
-- **On Datalayer** (`--cloud --app <id>`): the Evals engine runs the saved application itself, with its connections and rules (the `app` subject), at its current version. The file must be that version, so if it is not, push it first (`loop apps push`). The launch is checked before anything starts, and the engine's refusal is shown in its own words. It is billed, so `loop` asks first and shows the most it can cost. Without a terminal it launches only with `--yes`. The tests are kept in an evalset of their own, `<name> — safety set`, which is reused for as long as the tests stay the same.
+- **On this machine** (`--local`): each test is asked in a session of its own. An application that needs nothing a runtime brings runs in this process, with its rules, checks and code. One with connections, tools or skills runs on a local runtime configured with it, as `agent apps run --local` does. The judge is the model named by `--judge`, using your key for it on this machine, or the AI Inference service when `DATALAYER_AI_INFERENCE_URL` is set. With no judge, nothing is asked: the tests are listed, with the way each would be judged.
+- **On Datalayer** (`--cloud --app <id>`): the Evals engine runs the saved application itself, with its connections and rules (the `app` subject), at its current version. The file must be that version, so if it is not, push it first (`agent apps push`). The launch is checked before anything starts, and the engine's refusal is shown in its own words. It is billed, so `agent` asks first and shows the most it can cost. Without a terminal it launches only with `--yes`. The tests are kept in an evalset of their own, `<name> — safety set`, which is reused for as long as the tests stay the same.
 
 Exit codes: `1` when the application is not ready, a safety test did not hold (an answer that never came counts as not holding), a test failed or the report could not be attached, `2` with `--strict` when something needs attention, and `3` when the safety set or a test was asked for but not judged (no judge, a launch you declined, or a run that could not start).
 
 ### A scene's rehearsal
 
-A scene (`agentspecs.scenes`, `loop.scene/v1`) stages a team and says what
+A scene (`agentspecs.scenes`, `agent.scene/v1`) stages a team and says what
 happens on stage: its cast with their personas, its setting, its script of
 beats — each a cue the audience may say — and its **rehearsal**: for each
 beat, the shape its transcript must take, in the transcript's own grammar
@@ -583,19 +583,19 @@ beat, the shape its transcript must take, in the transcript's own grammar
 not hold (`must_say`, `must_not_say`), and the time it may take (`within`).
 
 ```bash
-loop scenes ls                                   # the catalogue: faces, members, setup, Live or not
-loop scenes ls --json
-loop scenes rehearse sales-and-accounting        # every beat, here, in this process (--local, the default)
-loop scenes rehearse sales-and-accounting --beat open-invoices
-loop scenes rehearse sales-and-accounting --cloud --key accounting=<key>   # every runtime member on a cloud runtime, over A2A
-loop scenes rehearse sales-and-accounting --cloud -e ai-env -m 20 --keep   # the environment, the minutes reserved, left running
-loop scenes rehearse sales-and-accounting --cloud --address accounting=<A2A url> --key accounting=<key>   # at a runtime kept, or a deployment's stable address
-loop scenes rehearse scenes/my-scene.yaml --json
-loop scenes rehearse scene.py                    # a scene written in Python (loop.scene, loop.stage)
-loop scenes build scene.py --out scene.yaml      # the scene spec it writes, loop.scene/v1
-loop scenes push scene.py --space <space id>     # kept in your Space, where the Studio opens it
-loop scenes rehearse sales-and-accounting --cloud --transcript run.json   # also save what was played
-loop scenes record sales-and-accounting --from run.json                   # keep a passing rehearsal as the scene's recording
+agent scenes ls                                   # the catalogue: faces, members, setup, Live or not
+agent scenes ls --json
+agent scenes rehearse sales-and-accounting        # every beat, here, in this process (--local, the default)
+agent scenes rehearse sales-and-accounting --beat open-invoices
+agent scenes rehearse sales-and-accounting --cloud --key accounting=<key>   # every runtime member on a cloud runtime, over A2A
+agent scenes rehearse sales-and-accounting --cloud -e ai-env -m 20 --keep   # the environment, the minutes reserved, left running
+agent scenes rehearse sales-and-accounting --cloud --address accounting=<A2A url> --key accounting=<key>   # at a runtime kept, or a deployment's stable address
+agent scenes rehearse scenes/my-scene.yaml --json
+agent scenes rehearse scene.py                    # a scene written in Python (agent.scene, agent.stage)
+agent scenes build scene.py --out scene.yaml      # the scene spec it writes, agent.scene/v1
+agent scenes push scene.py --space <space id>     # kept in your Space, where the Studio opens it
+agent scenes rehearse sales-and-accounting --cloud --transcript run.json   # also save what was played
+agent scenes record sales-and-accounting --from run.json                   # keep a passing rehearsal as the scene's recording
 ```
 
 `record` keeps the transcript of a rehearsal that passed every beat as the
@@ -605,7 +605,7 @@ did not pass, misses a beat or is another scene's is refused in a sentence.
 `--specs-dir` says which folder of scene specs to write to. See
 [Stages](/scenes/stages#recordings).
 
-A scene written in Python — `loop.scene(...)` and `loop.stage(...)`, see
+A scene written in Python — `agent.scene(...)` and `agent.stage(...)`, see
 [A scene and its stage, in
 Python](/apps/python-applications#a-scene-and-its-stage-in-python) — is
 rehearsed as a YAML one: `rehearse` reads the scene spec it writes. `build`
@@ -617,7 +617,7 @@ is said in agentspecs' sentences, and nothing is written.
 Both need agentspecs 0.0.61 or later, which carries the scenes; the
 rehearsal that was played is kept from 0.0.67.
 
-`rehearse` plays each beat's cue through the scene the way `loop apps run`
+`rehearse` plays each beat's cue through the scene the way `agent apps run`
 runs one application: the entry's application in this process, with a tool
 per member it talks to (`ask_accounting`, declared as a tool of its own that
 reads, so its rules let it through) that asks that member — in this process
@@ -637,7 +637,7 @@ runtime is launched for it). The variable the scene's `deployment.addresses`
 names — `DATALAYER_DEMO_TEAM_ACCOUNTING_A2A_URL` — is read as that address
 too: a deployment's stable address is rehearsed as the page reaches it.
 What happens is recorded as the spans the Agent Inspector reads and read
-back as the transcript by the one grammar (`agent_runtimes.loop.scenes.transcript`,
+back as the transcript by the one grammar (`agent_runtimes.agent.scenes.transcript`,
 the Python twin of the page's `sceneTranscript.ts`, both held to one fixture),
 then compared to the beat's expected lines in order — other lines may come
 between them; a member is named by its id or the name it is shown under, a
@@ -653,10 +653,10 @@ or did not set it up in time — makes the beats that need it *not run* with
 that sentence; nothing crashes. What its runtime says is to set up — the
 catalogue's own notes, an agent or a server not offered by default — is among
 the verdict's notes (*Accounting, on its runtime: …*) and the member plays, as
-`loop apps run` serves it. A scene with a recording and no live run says its
+`agent apps run` serves it. A scene with a recording and no live run says its
 recording stands. A rehearsal of every beat on Datalayer of a catalogue scene
 is kept beside the specs as the scene's last (`<id>/rehearsal.json`, agentspecs
-0.0.67's `write_played`): *Live* — in `loop scenes ls`, in the generated
+0.0.67's `write_played`): *Live* — in `agent scenes ls`, in the generated
 catalogue and on the home page — is read from it, never from a sentence
 written by hand, and a scene whose last rehearsal did not pass says so with
 its day and the verdict's sentence. With `--json`, stdout is the verdict and
@@ -675,7 +675,7 @@ nothing else; what else is said goes to stderr.
   Rehearsal: 1 of 3 beats passed. 1 failed. 1 not run. The scene is not Live.
 ```
 
-Exit codes are `loop apps validate`'s: `1` when a beat failed, `3` when one
+Exit codes are `agent apps validate`'s: `1` when a beat failed, `3` when one
 was not run, `0` when every beat passed — a scene whose rehearsal passed is
 *Live*. With `--json` the verdict is printed whole.
 
@@ -690,8 +690,8 @@ agent-runtimes chat connect http://localhost:8000/api/v1/ag-ui/chat/
 # ACP (WebSocket)
 agent-runtimes chat connect ws://localhost:8000/api/v1/acp/ws/chat -t acp
 
-# A runtime on Datalayer, at the address loop printed for it: the same as loop --runtime <uid>
-loop connect https://r1.datalayer.run/agent-runtimes/ai-agents-pool/<uid>/api/v1/ag-ui/default/
+# A runtime on Datalayer, at the address `agent` printed for it: the same as agent --runtime <uid>
+agent connect https://r1.datalayer.run/agent-runtimes/ai-agents-pool/<uid>/api/v1/ag-ui/default/
 ```
 
 ### List Remote Agents
@@ -703,18 +703,18 @@ agent-runtimes chat agents --server https://agents.datalayer.ai
 
 ### Sessions: list, pause, resume
 
-In `loop`'s prompt the conversation is a **session** from its first message:
+In `agent`'s prompt the conversation is a **session** from its first message:
 it is kept in the record, listed, paused and resumed — on this machine and on
-Datalayer (`--cloud`) alike. The whole of it is on the [`loop sessions`](../sessions/cli.mdx) page; in short:
+Datalayer (`--cloud`) alike. The whole of it is on the [`agent sessions`](../sessions/cli.mdx) page; in short:
 
-- **As `loop` starts**, with nothing on the command line that says what to run, it opens the screen `loop sessions` opens, with its launch rows first: *Start a new session on this machine* and *on Datalayer* (where it runs, asked there; one *Start a new session* row with `--local`, `--cloud` or signed out), highlighted, and under them your sessions in the same two groups and table. Enter on a launch row starts a new session; on a session, resumes it where it lives, as `loop --resume <uid>` does; Esc leaves. With no session listed, nothing is drawn. See [As `loop` starts](../sessions/cli.mdx#as-loop-starts).
+- **As `agent` starts**, with nothing on the command line that says what to run, it opens the screen `agent sessions` opens, with its launch rows first: *Start a new session on this machine* and *on Datalayer* (where it runs, asked there; one *Start a new session* row with `--local`, `--cloud` or signed out), highlighted, and under them your sessions in the same two groups and table. Enter on a launch row starts a new session; on a session, resumes it where it lives, as `agent --resume <uid>` does; Esc leaves. With no session listed, nothing is drawn. See [As `agent` starts](../sessions/cli.mdx#as-agent-starts).
 - **`/sessions`** lists your sessions, numbered, each with its kind (`agent` or `app`) and its state (`open`, `paused`, `ended`).
 - **`/pause`** pauses this session and leaves. What the conversation holds is given to the agent's memory first, when its agentspec has one. Under `--cloud` the runtime is given back without asking; on this machine the server stops with the prompt. It prints the way back.
 - **`/resume <n or uid>`** goes on with a session, by its number in the last `/sessions` or by its id: its conversation is loaded and your next message is its next turn.
 - **`/sessions <n or uid>`** switches the prompt to that session, as `/resume` does; the one it was on is left as it is.
 - **`/transfer`** moves this session to the other place — from this machine to Datalayer, or back — under the same uid, and goes on with it there.
-- **`loop sessions`**, alone, is the picker: your sessions in two groups, *On this machine* and *On Datalayer*, one to choose and resume, pause, end, transfer, export, delete or start over. **`loop --continue`** (`-c`) goes on with the most recent one without asking, **`loop --resume <uid>`** with the one named, and `loop --resume` alone opens the picker.
-- **Outside the prompt**: `loop sessions list`, `loop sessions pause <uid>` and `loop sessions resume <uid>` do the same against a runtime (`--server`, or the local one), and `--cloud` signs the calls with the token `datalayer login` left, for a runtime on Datalayer. `loop sessions transfer <uid> --to cloud|local` and `loop sessions delete <uid>` need no runtime.
+- **`agent sessions`**, alone, is the picker: your sessions in two groups, *On this machine* and *On Datalayer*, one to choose and resume, pause, end, transfer, export, delete or start over. **`agent --continue`** (`-c`) goes on with the most recent one without asking, **`agent --resume <uid>`** with the one named, and `agent --resume` alone opens the picker.
+- **Outside the prompt**: `agent sessions list`, `agent sessions pause <uid>` and `agent sessions resume <uid>` do the same against a runtime (`--server`, or the local one), and `--cloud` signs the calls with the token `datalayer login` left, for a runtime on Datalayer. `agent sessions transfer <uid> --to cloud|local` and `agent sessions delete <uid>` need no runtime.
 
 A session on this machine is a folder of `~/.datalayer/sessions`, named by its uid, kept until you delete it and seen only here. A session on Datalayer is in your account's record, seen on the web, in the desktop app and from any machine signed in. Signed out, only those on this machine are listed. A session keeps its uid for its whole life, wherever it lives.
 
@@ -768,7 +768,7 @@ agent-runtimes chat --eggs
 | `--local` | | asked | Run the agent on this machine, without asking where |
 | `--cloud` | | asked | Run the agent on Datalayer, in a new or running cloud runtime |
 | `--continue` | `-c` | | Go on with your most recent session that is not ended, without asking |
-| `--resume` | | | Go on with the session of the uid given, where it lives; alone, pick one (`loop sessions`) |
+| `--resume` | | | Go on with the session of the uid given, where it lives; alone, pick one (`agent sessions`) |
 | `--runtime` | `-r` | | Attach to an agent runtime running on Datalayer, by name (implies `--cloud`) |
 | `--environment` | `-e` | first agent-capable | Environment of a new cloud runtime, without asking |
 | `--minutes` | `-m` | `30` | How long to reserve a new cloud runtime for |
@@ -888,13 +888,14 @@ The CLI includes server/control commands plus runtime-management command groups.
 | `agents` | Agent runtime lifecycle commands |
 | `agent-nodes` | Agent Node commands |
 | `benchmarks` | Benchmarking commands |
-| `sessions` | Alone, the picker of your sessions on this machine and on Datalayer. A session's verbs: `list`, `show`, `pause`, `resume`, `swap`, `clone`, `export`, `import`, `end`, `transfer`, `delete`; `--cloud` for a runtime on Datalayer. See [`loop sessions`](../sessions/cli.mdx) |
+| `sessions` | Alone, the picker of your sessions on this machine and on Datalayer. A session's verbs: `list`, `show`, `pause`, `resume`, `swap`, `clone`, `export`, `import`, `end`, `transfer`, `delete`; `--cloud` for a runtime on Datalayer. See [`agent sessions`](../sessions/cli.mdx) |
 | `checkpoints` | Runtime checkpoint commands. Checkpoints are switched off on Datalayer: an agent is paused and resumed through its session (`sessions pause`, `sessions resume`) |
 | `console` | Runtime console commands |
 | `envs` | Environment management commands |
 | `evals` | Benchmarks: `evals run <spec\|evalset_id> --agent-spec-ids … [--models …] [--budget …]` imports, validates, launches and follows a benchmark on the platform — a line per change, a heartbeat while nothing changes, and a launch still `queued` with no task after 3 minutes is given up on naming the executor rather than waited on for an hour; `evals launches ls\|get\|cancel`, `evals subjects`, and the evalset, experiment, run and report commands |
 | `exec` | Execute Python files or notebooks on a runtime |
 | `pools` | Runtime pool administration commands |
+| `sandboxes` | Code sandboxes: `providers`, `environments`, `ls`, `get`, `create`, `update`, `rm` (see below) |
 | `sandbox-snapshots` | Runtime snapshot commands |
 | `ray` | Ray cluster and Ray job commands |
 | `schedules` | Scheduler commands |
@@ -907,6 +908,28 @@ agent-runtimes --help
 python -m agent_runtimes --help
 ```
 
+### A code sandbox's network
+
+A code sandbox on Datalayer reaches **any public host on ports 80 and 443
+only**: pip, npm, `git` over https and web APIs work; SSH, SMTP, raw TCP and
+other ports are refused. The platform's own services stay reachable. Name each
+other `host:port` one sandbox needs when you create it (repeatable, at most 20):
+
+```bash
+datalayer sandboxes create datalayer --name build-box --egress github.com:22
+datalayer sandboxes ls        # the Egress column says what each sandbox was given
+```
+
+An entry is an exact public host name or a public IPv4 address with its port.
+The launch is refused, with the reason, for an entry without a port, a
+wildcard, a CIDR, an IPv6 address, a private, loopback or link-local address
+(the cloud metadata address `169.254.169.254` among them), a cluster or
+private name (`*.svc`, `*.cluster.local`, `localhost`, `*.internal`), or a name
+that resolves to such an address. From Python, `AgentClient.create_runtime(...,
+egress=["github.com:22"])` asks the same; `RuntimeService.egress` answers it.
+An agent's network is its spec's `policy.shield`, never a launch's: `--egress`
+is for a sandbox with no agent.
+
 ## Agent teams
 
 The commands for teams of agents — list and show the catalogued teams, start
@@ -915,8 +938,8 @@ the `agent-teams` package's, not this one's: `agent-teams …` as its own
 executable, and `datalayer agent-teams …` wherever it is installed beside the
 Datalayer CLI. See the [agent-teams CLI](https://agent-teams.datalayer.tech/cli).
 
-One of them is run from `loop`: a paused session that is a seat of a team run,
-picked on the screen `loop` opens as it starts, lets its run go on as
+One of them is run from `agent`: a paused session that is a seat of a team run,
+picked on the screen `agent` opens as it starts, lets its run go on as
 `agent-teams sessions resume <run>` does.
 
 ## Extending, and Being an Extension
@@ -932,8 +955,8 @@ both directions:
   in-process at startup.
 - **As a host** — the interactive chat's slash commands sit in the reactor's
   slash registry, and a distribution advertising a plugin under the
-  `loop.plugins` entry-point group adds its own commands to the session. See
-  the [Loop REPL](/loop-repl#slash-command-registry) page.
+  `agent.plugins` entry-point group adds its own commands to the session. See
+  the [Agent REPL](/agent-repl#slash-command-registry) page.
 
 ## Shell Autocomplete
 

@@ -361,6 +361,151 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
 // Agent Specs
 // ============================================================================
 
+export const AGENT_SHELL_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'agent-shell',
+  version: '0.0.1',
+  name: 'Agent Shell',
+  description: `Drives the Agent Shell: ask from the floating prompt, and the answer lands as Jupyter outputs on the blank canvas.`,
+  tags: ['agent', 'shell', 'jupyter', 'output'],
+  domain: undefined,
+  enabled: false,
+  listed: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  mcpServers: [],
+  skills: [].filter(Boolean) as SkillSpec[],
+  backendTools: [],
+  frontendTools: [],
+  environmentName: 'ai-agents-env',
+  icon: 'browser',
+  emoji: '🪟',
+  color: 'blue',
+  suggestions: [
+    {
+      text: 'Print two rows of ten growing dots, one dot per second.',
+      summary: 'Growing dots',
+      emoji: '📜',
+    },
+    {
+      text: 'Plot a chart in the code sandbox and show me the image.',
+      summary: 'Plot a chart',
+      emoji: '📈',
+    },
+    {
+      text: 'Build a small DataFrame in the code sandbox and show it as a table.',
+      summary: 'DataFrame as a table',
+      emoji: '🧮',
+    },
+    {
+      text: 'Run something in the code sandbox that fails, so I can see the traceback.',
+      summary: 'Show a traceback',
+      emoji: '🐛',
+    },
+    {
+      text: 'Show me an interactive slider from the code sandbox.',
+      summary: 'Interactive slider',
+      emoji: '🎛️',
+    },
+  ],
+  welcomeMessage:
+    'This is the Agent Shell. Ask from the floating prompt and the outputs land right here; pick an editor in the top-right corner when you want a notebook or a document beside the conversation.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'browser',
+  harness: 'vercel-ai',
+  runtimeEngine: 'datalayer',
+  systemPrompt: `You operate the Agent Shell: a deliberately blank workspace. There is a
+floating prompt the person types into, an editor selector in the top-right
+corner (\`none\`, \`notebook\`, \`document\`), and nothing else. When no editor is
+shown — the default, and the state this shell is designed around — whatever
+you run in the code sandbox comes back as Jupyter outputs rendered straight
+onto the conversation, which is the whole canvas.
+
+The selector decides what is *visible*, and with it what you can change.
+The notebook and the document both exist and stay connected to you the
+whole time, so reading them always works — asked about cells or blocks,
+call the read tool and answer from what it returns. With an editor shown
+you also have its editing tools (insert, update, run, delete). With \`none\`
+shown you have \`executeCodeInNotebook\`, \`executeCodeInDocument\` and the
+read tools only: the person is
+looking at the conversation, so results belong on it, not in an editor
+they cannot see. Never tell somebody to switch the editor before you can
+answer; suggest the switch, after the answer, only when they want
+something kept in a cell or a block.
+
+Not every message is a request to run something. A greeting, a question
+about you or the workspace, small talk, or a follow-up about an earlier
+answer gets an ordinary written reply and **no tool call at all** — never
+run code the person did not ask for, and never re-run the previous
+demonstration because a new message arrived. The sandbox comes into it
+only when they ask you to run, execute, demonstrate or show something.
+
+Running code:
+
+- When somebody asks you to run something, or to show what some kind of
+  output looks like, call \`executeCodeInNotebook\` with real Python. Its outputs
+  stream onto the conversation live — printed lines appear as they are
+  printed — so long-running code (a progress loop, a slow computation) is
+  exactly what this canvas is for. One \`executeCodeInNotebook\` call per request; do
+  not insert a cell first when they only asked to run something.
+- When somebody wants code they can keep and re-run and the notebook is
+  shown, use \`insertCell\` and \`runCell\`: the cell lands in the notebook
+  and its outputs land on the conversation.
+- Prose and rich text belong in the document, through the document tools.
+
+Write ordinary Python for what was asked: matplotlib for a figure, pandas
+for a table, a raised exception for a traceback, ipywidgets for a slider
+or buttons. For streaming output, let short rows grow dot by dot in
+place — the reader watches each row fill up, never a new line per tick.
+When somebody asks for the dots demo, it is exactly this, two rows of
+ten — and only when they ask:
+
+    import time
+    for row in range(2):
+        for _ in range(10):
+            print(".", end="", flush=True)
+            time.sleep(1)
+        print()
+
+Only ever call the tools you have been given — never invent a tool name,
+and never write a tool call inside the Python you execute.
+
+A deliberate failure has succeeded when its traceback is on screen — do
+not apologise for it or offer to fix the code.
+
+After a tool returns, say in a sentence what was run and that its output
+is now on the conversation. When the person opens an editor, that is where
+the work moves: the notebook for code they want to keep and re-run, the
+document for prose. Slash commands reach the shell itself — \`/editor\`
+switches the editor, \`/help\` lists the rest.
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  delegable: [],
+  protocol: 'vercel-ai',
+  ui: [],
+  protocols: [],
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  checkpoints: undefined,
+  authorizationPolicy: undefined,
+  policy: { shield: { egress: ['*'] } },
+  notifications: undefined,
+  memory: 'ephemeral',
+  decisions: undefined,
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+  identity: 'datalayer-acting-agent',
+};
+
 export const EXAMPLE_A2A_RESEARCHER_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-a2a-researcher',
   version: '0.0.1',
@@ -777,12 +922,72 @@ screen — do not apologise for it or offer to fix the code.
   identity: 'datalayer-acting-agent',
 };
 
+export const EXAMPLE_A2UI_RESTAURANT_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'example-a2ui-restaurant',
+  version: '0.0.1',
+  name: 'A2UI Restaurant Agent',
+  description: `Finds restaurants for the A2UI Restaurant example: a search such as "Top 5 Chinese restaurants in New York" runs its get_restaurants tool, and the places come back as an A2UI surface with a booking form for each.`,
+  tags: ['a2ui', 'example'],
+  domain: undefined,
+  enabled: false,
+  listed: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  mcpServers: [],
+  skills: [].filter(Boolean) as SkillSpec[],
+  backendTools: [],
+  frontendTools: [],
+  environmentName: 'ai-agents-env',
+  icon: 'browser',
+  emoji: '🍽️',
+  color: 'amber',
+  suggestions: [],
+  welcomeMessage: undefined,
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: undefined,
+  harness: 'pydantic-ai',
+  runtimeEngine: 'datalayer',
+  systemPrompt: `You are a helpful restaurant finding assistant.
+
+When users ask about restaurants, use the get_restaurants tool to search.
+When users want to book a restaurant, acknowledge their request.
+
+Keep your responses brief and friendly.
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  delegable: [],
+  protocol: undefined,
+  ui: [],
+  protocols: [],
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  checkpoints: undefined,
+  authorizationPolicy: undefined,
+  policy: { shield: { egress: ['*'] } },
+  notifications: undefined,
+  memory: 'ephemeral',
+  decisions: undefined,
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+  identity: 'datalayer-acting-agent',
+};
+
 export const EXAMPLE_A2UI_VIEWER_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-a2ui-viewer',
   version: '0.0.1',
   name: 'A2UI Viewer Agent',
   description: `Answers beside the A2UI Viewer, whose scenes — a recipe card, a booking form, a sales snapshot and a shipping status — it renders on request as live A2UI surfaces, and runs code in the sandbox to show its outputs.`,
-  tags: ['a2ui', 'viewer', 'loop'],
+  tags: ['a2ui', 'viewer', 'agent'],
   domain: undefined,
   enabled: false,
   listed: true,
@@ -7174,151 +7379,6 @@ On execution: where you can run code, run it to show a result rather than assert
     },
   ],
   codemode: { enabled: true, token_reduction: '~70%', speedup: '~1.4x' },
-  output: undefined,
-  advanced: undefined,
-  checkpoints: undefined,
-  authorizationPolicy: undefined,
-  policy: { shield: { egress: ['*'] } },
-  notifications: undefined,
-  memory: 'ephemeral',
-  decisions: undefined,
-  preHooks: undefined,
-  postHooks: undefined,
-  toolHooks: undefined,
-  parameters: undefined,
-  subagents: undefined,
-  identity: 'datalayer-acting-agent',
-};
-
-export const LOOP_SHELL_AGENTSPEC_0_0_1: Agentspec = {
-  id: 'loop-shell',
-  version: '0.0.1',
-  name: 'Loop Shell Agent',
-  description: `Drives the Loop Shell: ask from the floating prompt, and the answer lands as Jupyter outputs on the blank canvas.`,
-  tags: ['loop', 'shell', 'jupyter', 'output'],
-  domain: undefined,
-  enabled: false,
-  listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
-  mcpServers: [],
-  skills: [].filter(Boolean) as SkillSpec[],
-  backendTools: [],
-  frontendTools: [],
-  environmentName: 'ai-agents-env',
-  icon: 'browser',
-  emoji: '🪟',
-  color: 'blue',
-  suggestions: [
-    {
-      text: 'Print two rows of ten growing dots, one dot per second.',
-      summary: 'Growing dots',
-      emoji: '📜',
-    },
-    {
-      text: 'Plot a chart in the code sandbox and show me the image.',
-      summary: 'Plot a chart',
-      emoji: '📈',
-    },
-    {
-      text: 'Build a small DataFrame in the code sandbox and show it as a table.',
-      summary: 'DataFrame as a table',
-      emoji: '🧮',
-    },
-    {
-      text: 'Run something in the code sandbox that fails, so I can see the traceback.',
-      summary: 'Show a traceback',
-      emoji: '🐛',
-    },
-    {
-      text: 'Show me an interactive slider from the code sandbox.',
-      summary: 'Interactive slider',
-      emoji: '🎛️',
-    },
-  ],
-  welcomeMessage:
-    'This is the Loop Shell. Ask from the floating prompt and the outputs land right here; pick an editor in the top-right corner when you want a notebook or a document beside the conversation.',
-  welcomeNotebook: undefined,
-  welcomeDocument: undefined,
-  sandboxVariant: 'browser',
-  harness: 'vercel-ai',
-  runtimeEngine: 'datalayer',
-  systemPrompt: `You operate the Loop Shell: a deliberately blank workspace. There is a
-floating prompt the person types into, an editor selector in the top-right
-corner (\`none\`, \`notebook\`, \`document\`), and nothing else. When no editor is
-shown — the default, and the state this shell is designed around — whatever
-you run in the code sandbox comes back as Jupyter outputs rendered straight
-onto the conversation, which is the whole canvas.
-
-The selector decides what is *visible*, and with it what you can change.
-The notebook and the document both exist and stay connected to you the
-whole time, so reading them always works — asked about cells or blocks,
-call the read tool and answer from what it returns. With an editor shown
-you also have its editing tools (insert, update, run, delete). With \`none\`
-shown you have \`executeCodeInNotebook\`, \`executeCodeInDocument\` and the
-read tools only: the person is
-looking at the conversation, so results belong on it, not in an editor
-they cannot see. Never tell somebody to switch the editor before you can
-answer; suggest the switch, after the answer, only when they want
-something kept in a cell or a block.
-
-Not every message is a request to run something. A greeting, a question
-about you or the workspace, small talk, or a follow-up about an earlier
-answer gets an ordinary written reply and **no tool call at all** — never
-run code the person did not ask for, and never re-run the previous
-demonstration because a new message arrived. The sandbox comes into it
-only when they ask you to run, execute, demonstrate or show something.
-
-Running code:
-
-- When somebody asks you to run something, or to show what some kind of
-  output looks like, call \`executeCodeInNotebook\` with real Python. Its outputs
-  stream onto the conversation live — printed lines appear as they are
-  printed — so long-running code (a progress loop, a slow computation) is
-  exactly what this canvas is for. One \`executeCodeInNotebook\` call per request; do
-  not insert a cell first when they only asked to run something.
-- When somebody wants code they can keep and re-run and the notebook is
-  shown, use \`insertCell\` and \`runCell\`: the cell lands in the notebook
-  and its outputs land on the conversation.
-- Prose and rich text belong in the document, through the document tools.
-
-Write ordinary Python for what was asked: matplotlib for a figure, pandas
-for a table, a raised exception for a traceback, ipywidgets for a slider
-or buttons. For streaming output, let short rows grow dot by dot in
-place — the reader watches each row fill up, never a new line per tick.
-When somebody asks for the dots demo, it is exactly this, two rows of
-ten — and only when they ask:
-
-    import time
-    for row in range(2):
-        for _ in range(10):
-            print(".", end="", flush=True)
-            time.sleep(1)
-        print()
-
-Only ever call the tools you have been given — never invent a tool name,
-and never write a tool call inside the Python you execute.
-
-A deliberate failure has succeeded when its traceback is on screen — do
-not apologise for it or offer to fix the code.
-
-After a tool returns, say in a sentence what was run and that its output
-is now on the conversation. When the person opens an editor, that is where
-the work moves: the notebook for code they want to keep and re-run, the
-document for prose. Slash commands reach the shell itself — \`/editor\`
-switches the editor, \`/help\` lists the rest.
-`,
-  systemPromptCodemodeAddons: undefined,
-  goal: undefined,
-  delegable: [],
-  protocol: 'vercel-ai',
-  ui: [],
-  protocols: [],
-  trigger: undefined,
-  modelConfig: undefined,
-  mcpServerTools: undefined,
-  guardrails: undefined,
-  evals: undefined,
-  codemode: undefined,
   output: undefined,
   advanced: undefined,
   checkpoints: undefined,
@@ -16552,11 +16612,13 @@ export const WORKER_WEEKLY_EXECUTIVE_BRIEFING_AGENTSPEC_0_0_1: Agentspec = {
 // ============================================================================
 
 export const AGENTSPECS: Record<string, Agentspec> = {
+  'agent-shell': AGENT_SHELL_AGENTSPEC_0_0_1,
   'example-a2a-researcher': EXAMPLE_A2A_RESEARCHER_AGENTSPEC_0_0_1,
   'example-a2a-writer': EXAMPLE_A2A_WRITER_AGENTSPEC_0_0_1,
   'example-a2a': EXAMPLE_A2A_AGENTSPEC_0_0_1,
   'example-a2ui-agent': EXAMPLE_A2UI_AGENT_SPEC_0_0_1,
   'example-a2ui-jupyter-output': EXAMPLE_A2UI_JUPYTER_OUTPUT_AGENTSPEC_0_0_1,
+  'example-a2ui-restaurant': EXAMPLE_A2UI_RESTAURANT_AGENTSPEC_0_0_1,
   'example-a2ui-viewer': EXAMPLE_A2UI_VIEWER_AGENTSPEC_0_0_1,
   'example-agent-critic-loop-for-analysis':
     EXAMPLE_AGENT_CRITIC_LOOP_FOR_ANALYSIS_AGENTSPEC_0_0_1,
@@ -16661,7 +16723,6 @@ export const AGENTSPECS: Record<string, Agentspec> = {
   'jupyter-notebook-reviewer': JUPYTER_NOTEBOOK_REVIEWER_AGENTSPEC_0_0_1,
   'jupyter-notebook-writer': JUPYTER_NOTEBOOK_WRITER_AGENTSPEC_0_0_1,
   'jupyter-tutor': JUPYTER_TUTOR_AGENTSPEC_0_0_1,
-  'loop-shell': LOOP_SHELL_AGENTSPEC_0_0_1,
   'worker-accountant': WORKER_ACCOUNTANT_AGENTSPEC_0_0_1,
   'worker-agent-reviews-sql': WORKER_AGENT_REVIEWS_SQL_AGENTSPEC_0_0_1,
   'worker-analyze-campaign-performance':

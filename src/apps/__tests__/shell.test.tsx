@@ -14,14 +14,14 @@ import {
   contribution,
   definePlugin,
 } from '@datalayer/reactor';
-import { buildLoopReactor, LoopWorkspace } from '../shell/LoopWorkspace';
+import { buildAgentReactor, AgentWorkspace } from '../shell/AgentWorkspace';
 import { PluginsPanelPlugin } from '../plugins/plugins-panel';
 import {
-  LoopCommand,
-  LoopViewType,
+  AgentCommand,
+  AgentViewType,
   createPromptChannel,
-  type LoopViewProps,
-  type LoopWorkspaceContext,
+  type AgentViewProps,
+  type AgentWorkspaceContext,
 } from '../core';
 
 let root: Root | null = null;
@@ -36,9 +36,9 @@ afterEach(() => {
   container?.remove();
 });
 
-const workspace: LoopWorkspaceContext = {
+const workspace: AgentWorkspaceContext = {
   serverUrl: 'http://server',
-  agentId: 'loop-shell',
+  agentId: 'agent-shell',
   sandbox: { state: 'idle' },
   activeViewType: 'chat',
   setActiveViewType: () => {},
@@ -50,10 +50,10 @@ const workspace: LoopWorkspaceContext = {
 describe('a plugin contributing to the workspace', () => {
   it('offers its view and its command through the reactor', () => {
     const Plugin = definePlugin({
-      name: '@tests/loop-plugin',
+      name: '@tests/agent-plugin',
       contributes: [
         contribution(
-          LoopViewType,
+          AgentViewType,
           {
             viewType: 'notebook',
             title: 'Notebook',
@@ -64,7 +64,7 @@ describe('a plugin contributing to the workspace', () => {
           { id: 'notebook', order: 5 },
         ),
         contribution(
-          LoopCommand,
+          AgentCommand,
           {
             name: 'notebook',
             description: 'Open the notebook',
@@ -75,14 +75,14 @@ describe('a plugin contributing to the workspace', () => {
       ],
     });
 
-    const reactor = buildLoopReactor([Plugin]);
+    const reactor = buildAgentReactor([Plugin]);
     reactor.start();
 
-    const views = reactor.getContributions(LoopViewType);
+    const views = reactor.getContributions(AgentViewType);
     expect(views.map(v => v.id)).toEqual(['notebook']);
     // The gate is the plugin's, evaluated against the live workspace.
     expect(views[0].value.canOpen?.(workspace)).toBe(false);
-    expect(reactor.getContributions(LoopCommand)[0].value.name).toBe(
+    expect(reactor.getContributions(AgentCommand)[0].value.name).toBe(
       'notebook',
     );
   });
@@ -92,7 +92,7 @@ describe('a plugin contributing to the workspace', () => {
       name: '@tests/removable',
       contributes: [
         contribution(
-          LoopViewType,
+          AgentViewType,
           {
             viewType: 'sandbox',
             title: 'Sandbox',
@@ -103,14 +103,14 @@ describe('a plugin contributing to the workspace', () => {
       ],
     });
 
-    const reactor = buildLoopReactor([Plugin]);
+    const reactor = buildAgentReactor([Plugin]);
     reactor.start();
-    expect(reactor.getContributions(LoopViewType)).toHaveLength(1);
+    expect(reactor.getContributions(AgentViewType)).toHaveLength(1);
 
     reactor.disable('@tests/removable');
 
     // The shell tracks nothing: the switcher is built from what is there.
-    expect(reactor.getContributions(LoopViewType)).toHaveLength(0);
+    expect(reactor.getContributions(AgentViewType)).toHaveLength(0);
   });
 
   it('orders views by their declared order', () => {
@@ -119,7 +119,7 @@ describe('a plugin contributing to the workspace', () => {
         name: `@tests/${id}`,
         contributes: [
           contribution(
-            LoopViewType,
+            AgentViewType,
             {
               viewType: id,
               title: id,
@@ -131,10 +131,10 @@ describe('a plugin contributing to the workspace', () => {
         ],
       });
 
-    const reactor = buildLoopReactor([make('later', 10), make('first', 0)]);
+    const reactor = buildAgentReactor([make('later', 10), make('first', 0)]);
     reactor.start();
 
-    expect(reactor.getContributions(LoopViewType).map(v => v.id)).toEqual([
+    expect(reactor.getContributions(AgentViewType).map(v => v.id)).toEqual([
       'first',
       'later',
     ]);
@@ -233,7 +233,7 @@ describe('slash dispatch', () => {
       name: '@tests/commands',
       contributes: [
         contribution(
-          LoopCommand,
+          AgentCommand,
           {
             name: 'models',
             aliases: ['model'],
@@ -247,10 +247,10 @@ describe('slash dispatch', () => {
       ],
     });
 
-    const reactor = buildLoopReactor([Plugin]);
+    const reactor = buildAgentReactor([Plugin]);
     reactor.start();
 
-    const commands = reactor.getContributions(LoopCommand);
+    const commands = reactor.getContributions(AgentCommand);
     const match = commands.find(
       c =>
         c.value.name === 'model' || (c.value.aliases ?? []).includes('model'),
@@ -292,10 +292,10 @@ describe('plugin toggles', () => {
   it('reflect the reactor rather than a copy of it', () => {
     const make = (id: string) =>
       definePlugin({
-        name: `@datalayer/loop-plugin-${id}`,
+        name: `@datalayer/agent-plugin-${id}`,
         contributes: [
           contribution(
-            LoopViewType,
+            AgentViewType,
             {
               viewType: id,
               title: id,
@@ -306,32 +306,32 @@ describe('plugin toggles', () => {
         ],
       });
 
-    const reactor = buildLoopReactor([make('one'), make('two')]);
+    const reactor = buildAgentReactor([make('one'), make('two')]);
     reactor.start();
 
     expect(reactor.listPlugins()).toHaveLength(2);
-    expect(reactor.isEnabled('@datalayer/loop-plugin-one')).toBe(true);
+    expect(reactor.isEnabled('@datalayer/agent-plugin-one')).toBe(true);
 
-    reactor.disable('@datalayer/loop-plugin-one');
+    reactor.disable('@datalayer/agent-plugin-one');
 
     // What the checkbox reads, and what the switcher reads, are the same facts.
-    expect(reactor.isEnabled('@datalayer/loop-plugin-one')).toBe(false);
-    expect(reactor.getContributions(LoopViewType).map(v => v.id)).toEqual([
+    expect(reactor.isEnabled('@datalayer/agent-plugin-one')).toBe(false);
+    expect(reactor.getContributions(AgentViewType).map(v => v.id)).toEqual([
       'two',
     ]);
 
-    reactor.enable('@datalayer/loop-plugin-one');
+    reactor.enable('@datalayer/agent-plugin-one');
     expect(
       reactor
-        .getContributions(LoopViewType)
+        .getContributions(AgentViewType)
         .map(v => v.id)
         .sort(),
     ).toEqual(['one', 'two']);
   });
 
   it('notifies subscribers on every toggle, so a checkbox list re-renders', () => {
-    const Plugin = definePlugin({ name: '@datalayer/loop-plugin-x' });
-    const reactor = buildLoopReactor([Plugin]);
+    const Plugin = definePlugin({ name: '@datalayer/agent-plugin-x' });
+    const reactor = buildAgentReactor([Plugin]);
     reactor.start();
 
     let notifications = 0;
@@ -339,8 +339,8 @@ describe('plugin toggles', () => {
       notifications += 1;
     });
 
-    reactor.disable('@datalayer/loop-plugin-x');
-    reactor.enable('@datalayer/loop-plugin-x');
+    reactor.disable('@datalayer/agent-plugin-x');
+    reactor.enable('@datalayer/agent-plugin-x');
 
     expect(notifications).toBe(2);
   });
@@ -357,7 +357,9 @@ describe('the blank base', () => {
     const root = createRoot(container);
 
     await act(async () => {
-      root.render(<LoopWorkspace serverUrl="" agentId="a" reactor={reactor} />);
+      root.render(
+        <AgentWorkspace serverUrl="" agentId="a" reactor={reactor} />,
+      );
     });
 
     expect(container.querySelector('textarea')).toBeNull();
@@ -374,7 +376,9 @@ describe('the blank base', () => {
     const root = createRoot(container);
 
     await act(async () => {
-      root.render(<LoopWorkspace serverUrl="" agentId="a" reactor={reactor} />);
+      root.render(
+        <AgentWorkspace serverUrl="" agentId="a" reactor={reactor} />,
+      );
     });
 
     // Chrome around nothing is still chrome.
@@ -391,7 +395,9 @@ describe('the blank base', () => {
     const root = createRoot(container);
 
     await act(async () => {
-      root.render(<LoopWorkspace serverUrl="" agentId="a" reactor={reactor} />);
+      root.render(
+        <AgentWorkspace serverUrl="" agentId="a" reactor={reactor} />,
+      );
     });
 
     expect(container.querySelector('aside')).not.toBeNull();
@@ -405,14 +411,14 @@ describe('dispatch', () => {
   it('stays with the workspace, so a plugin prompt can run any command', async () => {
     // No single plugin can see the others' commands, which is why `submit`
     // is the workspace's and not the chat's.
-    let submit: LoopWorkspaceContext['submit'] | undefined;
+    let submit: AgentWorkspaceContext['submit'] | undefined;
     const ran: string[] = [];
 
     const probe = definePlugin({
       name: 'probe',
       contributes: [
         contribution(
-          LoopCommand,
+          AgentCommand,
           {
             name: 'ping',
             description: 'ping',
@@ -423,12 +429,12 @@ describe('dispatch', () => {
           { id: 'ping' },
         ),
         contribution(
-          LoopViewType,
+          AgentViewType,
           {
             viewType: 'probe',
             title: 'Probe',
             load: async () => ({
-              default: ({ workspace }: LoopViewProps) => {
+              default: ({ workspace }: AgentViewProps) => {
                 submit = workspace.submit;
                 return <div />;
               },
@@ -445,7 +451,9 @@ describe('dispatch', () => {
     const root = createRoot(container);
 
     await act(async () => {
-      root.render(<LoopWorkspace serverUrl="" agentId="a" reactor={reactor} />);
+      root.render(
+        <AgentWorkspace serverUrl="" agentId="a" reactor={reactor} />,
+      );
     });
     await act(async () => {
       await Promise.resolve();
@@ -468,17 +476,17 @@ describe('dispatch', () => {
 
 describe('the thread', () => {
   it('is said by the chat and read by every plugin of the workspace', async () => {
-    let seen: LoopWorkspaceContext | undefined;
+    let seen: AgentWorkspaceContext | undefined;
     const probe = definePlugin({
       name: 'probe-thread',
       contributes: [
         contribution(
-          LoopViewType,
+          AgentViewType,
           {
             viewType: 'probe',
             title: 'Probe',
             load: async () => ({
-              default: ({ workspace }: LoopViewProps) => {
+              default: ({ workspace }: AgentViewProps) => {
                 seen = workspace;
                 return <div />;
               },
@@ -493,7 +501,9 @@ describe('the thread', () => {
     document.body.appendChild(container);
     const root = createRoot(container);
     await act(async () => {
-      root.render(<LoopWorkspace serverUrl="" agentId="a" reactor={reactor} />);
+      root.render(
+        <AgentWorkspace serverUrl="" agentId="a" reactor={reactor} />,
+      );
     });
     await act(async () => {
       await Promise.resolve();

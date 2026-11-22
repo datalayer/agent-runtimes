@@ -182,7 +182,7 @@ def agent_of(app_key: str) -> str:
 # --- what a visitor's turn calls its models with ---------------------------------
 
 #: The visitor's token, in the turn under way: what its model calls are made with.
-_TURN_TOKEN: ContextVar[str] = ContextVar("loop_visitor_turn_token", default="")
+_TURN_TOKEN: ContextVar[str] = ContextVar("agent_visitor_turn_token", default="")
 
 
 def use_turn_token(token: str) -> None:
@@ -193,7 +193,7 @@ def use_turn_token(token: str) -> None:
 #: A visitor's run of an application served to visitors over A2A, on its
 #: owner's runtime (`agent_runtimes.apps.a2a`): only reading, as on the
 #: visitors' runtime, while its models are the runtime's.
-_READ_ONLY_RUN: ContextVar[str] = ContextVar("loop_visitor_a2a_run", default="")
+_READ_ONLY_RUN: ContextVar[str] = ContextVar("agent_visitor_a2a_run", default="")
 
 #: Where the gate marks an A2A run as a visitor's: ``datalayer.visitor`` in the
 #: message's metadata, beside the credential (`datalayer.credential`).
@@ -215,7 +215,7 @@ A2A_BATTLE_FIELD = "battle"
 
 #: The catalogue Battle the run under way is played for, as the visitor's
 #: token names it at ai-inference: ``""`` for none (`battle_books`).
-_BATTLE_RUN: ContextVar[str] = ContextVar("loop_battle_run", default="")
+_BATTLE_RUN: ContextVar[str] = ContextVar("agent_battle_run", default="")
 
 
 def battle_of_a2a(meta: Any) -> str:

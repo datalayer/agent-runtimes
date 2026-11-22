@@ -150,10 +150,10 @@ describe('the host agent client', () => {
         Response.json(exchanged),
       [`POST ${exchanged.session_api.url}`]: () =>
         sse(
-          { type: 'CUSTOM', name: 'loop.session', value: { uid: session } },
+          { type: 'CUSTOM', name: 'agent.session', value: { uid: session } },
           {
             type: 'CUSTOM',
-            name: 'loop.turn',
+            name: 'agent.turn',
             value: { session, turn: 't1', replayed: false, state: 'running' },
           },
           { type: 'TOOL_CALL_START', toolCallId: 'c1', toolCallName: 'search' },
@@ -248,7 +248,7 @@ describe('the host agent client', () => {
         sse(
           {
             type: 'CUSTOM',
-            name: 'loop.turn',
+            name: 'agent.turn',
             value: {
               session: MINTED,
               turn: 't1',
@@ -301,7 +301,7 @@ describe('the host agent client', () => {
       [`POST ${thread}/messages`]: () =>
         sse({
           type: 'CUSTOM',
-          name: 'loop.turn',
+          name: 'agent.turn',
           value: {
             session: 'S1',
             turn: 't1',
@@ -343,7 +343,7 @@ describe('the host agent client', () => {
       [`POST ${exchanged.session_api.url}`]: () =>
         sse({
           type: 'CUSTOM',
-          name: 'loop.turn',
+          name: 'agent.turn',
           value: {
             session: MINTED,
             turn: 't1',

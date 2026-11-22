@@ -16,7 +16,7 @@ import { dumpAppspec, parseAppspec } from '../apps/appspec';
 import { readAppspecYaml, writeAppspecYaml } from '../apps/yaml';
 
 const FILE = `# The support desk of the Cloud product.
-schema: loop.app/v1
+schema: agent.app/v1
 id: support-desk
 name: Support Desk # shown in the header
 kind: chat
@@ -289,7 +289,7 @@ describe('what the first save settles', () => {
 describe('writing a file afresh', () => {
   it('writes the canonical document: the spec’s keys in the spec’s order', () => {
     const text = writeAppspecYaml(APP_CATALOGUE['web-research']);
-    expect(text.startsWith('schema: loop.app/v1\nid: web-research\n')).toBe(
+    expect(text.startsWith('schema: agent.app/v1\nid: web-research\n')).toBe(
       true,
     );
     expect(text.indexOf('\nkind:')).toBeLessThan(text.indexOf('\nagent:'));

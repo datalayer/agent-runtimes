@@ -4,20 +4,20 @@
  */
 
 /**
- * `LoopEmbed` starts the platform it builds.
+ * `AgentEmbed` starts the platform it builds.
  *
- * `LoopWorkspace` starts a reactor only when it is managing one, and the embed
+ * `AgentWorkspace` starts a reactor only when it is managing one, and the embed
  * tells it not to — the reactor is the embed's, and a shell that stopped it on
  * unmount would be stopping somebody else's. Registering without starting
  * leaves every plugin inactive, so nothing contributes a view and the
  * workspace draws "No view is available yet" — which is what a host embedding
- * Loop saw.
+ * Agent saw.
  */
 
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { describe, expect, it } from 'vitest';
-import { LoopEmbed } from '../embed/LoopEmbed';
+import { AgentEmbed } from '../embed/AgentEmbed';
 
 describe('the embed', () => {
   it('brings a view up rather than reporting none', async () => {
@@ -26,7 +26,7 @@ describe('the embed', () => {
     const root = createRoot(container);
 
     await act(async () => {
-      root.render(<LoopEmbed target="browser" agentId="a" />);
+      root.render(<AgentEmbed target="browser" agentId="a" />);
     });
     await act(async () => {
       await Promise.resolve();
@@ -44,7 +44,7 @@ describe('the palette, through the preset', () => {
     document.body.appendChild(container);
     const root = createRoot(container);
     await act(async () => {
-      root.render(<LoopEmbed target="browser" agentId="a" />);
+      root.render(<AgentEmbed target="browser" agentId="a" />);
     });
 
     await act(async () => {
@@ -70,14 +70,14 @@ describe('the palette, through the preset', () => {
     document.body.appendChild(container);
     const root = createRoot(container);
     await act(async () => {
-      root.render(<LoopEmbed target="browser" agentId="a" commandPalette />);
+      root.render(<AgentEmbed target="browser" agentId="a" commandPalette />);
     });
     await act(async () => {
       await Promise.resolve();
     });
 
     // The whole chain the landing page depends on: the preset mounts the
-    // loop's adapter, which pulls in the generic palette, which contributes to
+    // the Agent's adapter, which pulls in the generic palette, which contributes to
     // the `root` slot the shell renders. A break anywhere in it looks the
     // same from outside — the browser keeps the keystroke.
     await act(async () => {

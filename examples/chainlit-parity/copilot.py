@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """A copilot in a page — Chainlit's cookbook ``copilot`` and ``window-message``,
-rebuilt with LOOP's API.
+rebuilt with Agent's API.
 
 Chainlit's copilot is its widget mounted in a page of the developer's
 (``mountChainlitWidget``) by a script its server serves, answering
@@ -29,7 +29,7 @@ AGENT = "example-blank:0.0.1"
 
 app = Application.from_spec(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "copilot",
         "name": "Copilot",
         "kind": "chat",

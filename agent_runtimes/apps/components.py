@@ -309,7 +309,7 @@ def answer_text(title: str, nodes: Sequence[Mapping[str, Any]]) -> str:
 
 
 #: The display type of what an answer shows.
-ANSWER_DISPLAY_TYPE = "application/vnd.datalayer.loop.answer+json"
+ANSWER_DISPLAY_TYPE = "application/vnd.datalayer.agent.answer+json"
 
 
 @display_type(ANSWER_DISPLAY_TYPE, version=1)

@@ -8,7 +8,7 @@
  *
  * It should, nearly everywhere: a workspace exists to be typed into, and
  * making someone click the box first is a wasted step. The exception is a
- * host that embeds the loop as one section of a longer page — the browser
+ * host that embeds the Agent workspace as one section of a longer page — the browser
  * scrolls to whatever takes focus on mount, so a visitor who came for the top
  * of the page is thrown into the middle of it, and a screen reader goes with
  * them. That host asks for `autoFocusPrompt: false`.
@@ -17,10 +17,10 @@
 import { describe, expect, it } from 'vitest';
 import { buildReactorFromPlugins } from '@datalayer/reactor';
 import { CHAT_PLUGIN_NAME, type ChatPluginConfig } from '../plugins/chat';
-import { loopPlugins } from '../presets';
+import { agentPlugins } from '../presets';
 
 const chatConfig = (options = {}) =>
-  buildReactorFromPlugins(loopPlugins(options)).getConfig<ChatPluginConfig>(
+  buildReactorFromPlugins(agentPlugins(options)).getConfig<ChatPluginConfig>(
     CHAT_PLUGIN_NAME,
   );
 

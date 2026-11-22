@@ -45,12 +45,14 @@ import {
   ActionList,
   ActionMenu,
   Button,
-  SegmentedControl,
   Spinner,
   Text,
   TextInput,
 } from '@primer/react';
-import { AppearanceControls } from '@datalayer/primer-addons/lib/components/appearance';
+import {
+  AppearanceControls,
+  AppearanceMenuWithStore,
+} from '@datalayer/primer-addons/lib/components/appearance';
 import { coreStore, iamStore } from '@datalayer/core';
 import {
   DATALAYER_IAM_TOKEN_KEY,
@@ -68,7 +70,6 @@ import {
 } from './example-selector';
 import { EXAMPLE_GROUP_ORDER, getExampleGroup } from './exampleGroups';
 import {
-  RUNTIME_TARGETS,
   runtimeTargetCapabilities,
   runtimeTargetStore,
   targetHasAgent,
@@ -83,6 +84,12 @@ import { useAgentSummaryStore } from './utils/agentSummaryStore';
 import { useExampleThemeStore } from './utils/themeStore';
 import HomeExample, { type HomeExampleCardEntry } from './HomeExample';
 import { ExampleWrapper } from './components/ExampleWrapper';
+import {
+  EXAMPLES_CONTENT_SX,
+  EXAMPLES_HEADER_SX,
+  EXAMPLES_SHELL_SX,
+} from './components/exampleFrame';
+import { ExampleRuntimeSelector } from './components/ExampleRuntimeSelector';
 import { ExampleErrorBoundary } from './components/ExampleErrorBoundary';
 import { createServiceManagerFromAgentSandbox } from '../hooks/useAgentRuntimes';
 import type { RuntimeEnvironmentDetails } from '../hooks/useAgentRuntimes';
@@ -99,6 +106,19 @@ declare global {
   }
 }
 
+// The header's appearance controls: inline on a wide window, a menu button
+// on a narrower one (see the header).
+const APPEARANCE_WIDE = '@media (min-width: 1600px)';
+const APPEARANCE_INLINE_SX = {
+  display: 'none',
+  [APPEARANCE_WIDE]: { display: 'flex', alignItems: 'center' },
+};
+const APPEARANCE_MENU_SX = {
+  display: 'flex',
+  alignItems: 'center',
+  [APPEARANCE_WIDE]: { display: 'none' },
+};
+
 const DEFAULT_RUNTIMES_URL = 'https://r1.datalayer.run';
 const DEFAULT_LOCAL_JUPYTER_SERVER_URL =
   'http://localhost:8888/api/jupyter-server';
@@ -114,10 +134,13 @@ const DEFAULT_CLOUD_RUNTIME_ENVIRONMENT = 'ai-agents-env';
  * another is adding an id.
  */
 const ANONYMOUS_EXAMPLES = new Set([
-  'LoopWorkspaceExample',
+  'AgentWorkspaceExample',
+  // The Agent Application, on the local agent-runtimes server: nothing
+  // allocated on Datalayer, whose target waits for a sign-in in the header.
+  'AgentApplicationExample',
   // An application beside its computer, on the local agent-runtimes server:
   // nothing allocated on Datalayer, and the machine itself needs no token.
-  'LoopAppComputerExample',
+  'AgentComputerExample',
   // The Sales and Accounting team: Sales in the page on a visitor's trial
   // key, Accounting on the local server, which answers the machine itself.
   'AgentA2ATeamExample',
@@ -128,15 +151,15 @@ const ANONYMOUS_EXAMPLES = new Set([
   // through the server's ai-inference, with the server's own key.
   'AgentDecideExample',
   // Runs on the browser sandbox: nothing to allocate, nothing to sign into.
-  'LoopShellExample',
+  'AgentShellExample',
   // Temporarily anonymous so the Jupyter output surface can be driven and
   // debugged without a session. Remove once that work is finished.
   'A2UiJupyterOutputExample',
   // The two page layouts, on the browser sandbox like the shell.
   'NotebookPageAgent',
   'DocumentPageAgent',
-  // The decks plugin in a Loop; the agent and the decks both live in the page.
-  'DecksAgent',
+  // The decks plugin in the Agent workspace; the agent and the decks both live in the page.
+  'AgentDecksExample',
   // PAP protocol examples are deterministic browser views. They validate
   // fixtures and generate local Web Crypto material without allocating a
   // runtime or authenticating to Datalayer.
@@ -927,10 +950,19 @@ export const ExampleApp: React.FC = () => {
     });
   }, [searchQuery]);
 
+  /*
+   * The load asked last, the only one that may mount its example. An import
+   * is not instant (a cold one is seconds while Vite transforms its graph):
+   * an example picked while another was still loading must not be replaced
+   * by the earlier one when it lands — which mounted the Agent Application (then named AI Application)
+   * under the A2UI Agent's name (22 November 2026).
+   */
+  const loadRequest = useRef(0);
   const loadExample = async (
     exampleName: string,
     _manager: ServiceManager.IManager,
   ) => {
+    const request = ++loadRequest.current;
     try {
       setIsChangingExample(true);
       setError(null);
@@ -941,9 +973,15 @@ export const ExampleApp: React.FC = () => {
       }
 
       const module = await exampleLoader();
+      if (request !== loadRequest.current) {
+        return;
+      }
       setExampleComponent(() => module.default);
       setIsChangingExample(false);
     } catch (e) {
+      if (request !== loadRequest.current) {
+        return;
+      }
       console.error('Failed to load example:', e);
       showTopNotice(
         `Failed to load example: ${e instanceof Error ? e.message : String(e)}`,
@@ -1424,17 +1462,9 @@ const ExampleAppThemed: React.FC<{
   const { colorMode, theme: themeVariant } = useExampleThemeStore();
   const runtimeTarget = useRuntimeTargetStore(state => state.target);
   const agentSummary = useAgentSummaryStore(state => state.active);
-  // Some examples bring their own sandbox switch — the LOOP workspace has one
-  // in its header. Two controls for one sandbox is one too many, and the
-  // second would not agree with the first.
-  const exampleOwnsSandboxControl = Boolean(
-    availableExamples
-      .find(entry => entry.id === selectedExample)
-      ?.tags?.includes('owns-sandbox-control'),
-  );
   const isHome = selectedExample === 'HomeExample';
   // The one example that describes its own agent — see the header below.
-  const isLoopWorkspace = selectedExample === 'LoopWorkspaceExample';
+  const isAgentWorkspace = selectedExample === 'AgentWorkspaceExample';
   const cfg = themeConfigs[themeVariant];
   const logoColors = getLogoColors(themeVariant, colorMode);
   const { token, setAuth, clearAuth } = useSimpleAuthStore();
@@ -1443,7 +1473,7 @@ const ExampleAppThemed: React.FC<{
   /*
    * The sign-in screen stands aside for an example that needs no account.
    *
-   * Without this the screen offered the Loop workspace as a card and then
+   * Without this the screen offered the Agent workspace as a card and then
    * stayed put when it was chosen: the example *was* selected, and nothing
    * rendered it, because `showSignIn` knows only that nobody is signed in.
    * Offering a way through and then not taking it is worse than not offering
@@ -1466,22 +1496,25 @@ const ExampleAppThemed: React.FC<{
     }
     for (const [groupName, examples] of groups) {
       examples.sort((left, right) => {
-        if (groupName === 'Apps') {
-          // The shells first, most naked first; then the strategy that drives a
-          // notebook; then the library of specs behind them all.
-          const LOOP_ORDER = [
-            'LoopShellExample',
-            'LoopWorkspaceExample',
-            'LoopStrategyExample',
-            'LoopAppComputerExample',
+        if (groupName === 'Agent' || groupName === 'Agents') {
+          // The shells first, most naked first; then an application beside its
+          // computer and the Agent Application; then the strategy that drives a
+          // notebook; then the library of specs and the scenes behind them all.
+          const AGENT_ORDER = [
+            'AgentShellExample',
+            'AgentWorkspaceExample',
+            'AgentComputerExample',
+            'AgentApplicationExample',
+            'AgentStrategyExample',
             'AgentspecsExample',
             'ScenesExample',
+            'AgentDecksExample',
           ];
-          const loopOrder = (id: string) => {
-            const index = LOOP_ORDER.indexOf(id);
-            return index === -1 ? LOOP_ORDER.length : index;
+          const agentOrder = (id: string) => {
+            const index = AGENT_ORDER.indexOf(id);
+            return index === -1 ? AGENT_ORDER.length : index;
           };
-          const order = loopOrder(left.id) - loopOrder(right.id);
+          const order = agentOrder(left.id) - agentOrder(right.id);
           if (order !== 0) return order;
         }
         return left.title.localeCompare(right.title);
@@ -1577,32 +1610,42 @@ const ExampleAppThemed: React.FC<{
       theme={cfg.primerTheme}
       themeStyles={cfg.themeStyles}
     >
+      {/*
+        The shell is the viewport, and the page never scrolls: pinned to the
+        window's four edges (not `100vw`/`100vh`, which count the scrollbars,
+        follow the large viewport on mobile and are scaled by a zoomed root),
+        a column of the header at its own height and the content area taking
+        what is left. See `components/ExampleWrapper` for the example's side
+        of the contract, and scripts/check-examples-viewport.py for the check.
+      */}
       <Box
-        width="100vw"
-        height="100vh"
-        overflow="hidden"
+        data-examples-shell=""
+        sx={EXAMPLES_SHELL_SX}
         bg="canvas.default"
         color="fg.default"
       >
         {/* ── Header bar ─────────────────────────────────── */}
         <Box
-          position="fixed"
-          top={0}
-          left={0}
-          right={0}
-          zIndex={100}
+          data-examples-header=""
+          sx={EXAMPLES_HEADER_SX}
           px={3}
           display="flex"
           alignItems="center"
           justifyContent="space-between"
           gap={3}
-          height="60px"
           bg="canvas.default"
           borderBottom="1px solid"
           borderColor="border.default"
         >
-          {/* Left: home button + example selector */}
-          <Box display="flex" alignItems="center" gap={2}>
+          {/* Left: home button + example selector. It gives way (clipped)
+              before the right side does, so a narrow window never pushes the
+              header past the viewport's right edge. */}
+          <Box
+            display="flex"
+            alignItems="center"
+            gap={2}
+            sx={{ flex: '1 1 auto', minWidth: 0, overflow: 'hidden' }}
+          >
             <Box
               as="button"
               onClick={() => {
@@ -1702,49 +1745,23 @@ const ExampleAppThemed: React.FC<{
                 </ActionMenu.Overlay>
               </ActionMenu>
             )}
-            {!shouldShowAuthScreen && !exampleOwnsSandboxControl && (
-              <Box
-                aria-label="Where the example runs"
-                minWidth="320px"
-                opacity={isHome || isChangingExample ? 0.6 : 1}
-              >
-                <SegmentedControl
-                  aria-label="Where the example runs"
-                  fullWidth
-                  size="small"
-                >
-                  {RUNTIME_TARGETS.map(target => {
-                    const capabilities = runtimeTargetCapabilities(target);
-                    // Signing in is what the Datalayer target needs; saying so on
-                    // the button beats letting the switch fail and explaining
-                    // afterwards.
-                    const needsSignIn = capabilities.requiresAuth && !token;
-                    const unavailable = isHome || needsSignIn;
-                    return (
-                      <SegmentedControl.Button
-                        key={target}
-                        selected={runtimeTarget === target}
-                        disabled={unavailable}
-                        title={
-                          needsSignIn
-                            ? `${capabilities.hint} Sign in to use it.`
-                            : capabilities.hint
-                        }
-                        onClick={() => {
-                          if (!unavailable && !isChangingExample) {
-                            void onRuntimeTargetChange(target);
-                          }
-                        }}
-                      >
-                        {capabilities.label}
-                      </SegmentedControl.Button>
-                    );
-                  })}
-                </SegmentedControl>
-              </Box>
+            {/* On every example: one control for the page, which every example reads. */}
+            {!shouldShowAuthScreen && (
+              <ExampleRuntimeSelector
+                target={runtimeTarget}
+                signedIn={Boolean(token)}
+                unavailable={selectedExampleEntry?.unavailableTargets}
+                disabled={isHome || isChangingExample}
+                dimmed={isHome || isChangingExample}
+                onChange={target => {
+                  if (!isChangingExample) {
+                    void onRuntimeTargetChange(target);
+                  }
+                }}
+              />
             )}
             {/*
-              Not for the Loop workspace, which draws its own.
+              Not for the Agent workspace, which draws its own.
 
               This shell keeps one summary for the example on screen, which is
               right while an example *is* an agent. The workspace is not: the
@@ -1752,8 +1769,10 @@ const ExampleAppThemed: React.FC<{
               this page knowing, so the summary here described a session it
               could not see — beside a header that described the real one.
             */}
-            {!isHome && !shouldShowAuthScreen && !isLoopWorkspace && (
-              <AgentSummary summary={agentSummary} />
+            {!isHome && !shouldShowAuthScreen && !isAgentWorkspace && (
+              <Box sx={{ minWidth: 0, flexShrink: 1, overflow: 'hidden' }}>
+                <AgentSummary summary={agentSummary} />
+              </Box>
             )}
             {isChangingExample && (
               <Box as="span" color="fg.muted" fontSize={0}>
@@ -1763,11 +1782,19 @@ const ExampleAppThemed: React.FC<{
           </Box>
 
           {/* Right: theme picker + color mode + logo */}
-          <Box display="flex" alignItems="center" gap={3}>
-            <AppearanceControls
-              layout="inline"
-              useStore={useExampleThemeStore}
-            />
+          <Box display="flex" alignItems="center" gap={3} flexShrink={0}>
+            {/* The swatches in a row on a wide window; under 1600px, where
+                they would crowd out the runtime selector, the same choices
+                behind one button. */}
+            <Box sx={APPEARANCE_INLINE_SX}>
+              <AppearanceControls
+                layout="inline"
+                useStore={useExampleThemeStore}
+              />
+            </Box>
+            <Box sx={APPEARANCE_MENU_SX}>
+              <AppearanceMenuWithStore useStore={useExampleThemeStore} />
+            </Box>
             <Box display="flex" alignItems="center" gap={2}>
               {token ? (
                 <>
@@ -1826,14 +1853,14 @@ const ExampleAppThemed: React.FC<{
         </Box>
 
         {/* ── Content area ───────────────────────────────── */}
-        <Box marginTop="60px" height="calc(100vh - 60px)" overflow="hidden">
+        <Box data-examples-content="" sx={EXAMPLES_CONTENT_SX}>
           {shouldShowAuthScreen ? (
             /*
               Signing in, beside what can be seen without it.
               
               A sign-in screen on its own says only "not yet". Most of these
               examples do need an account — they allocate runtimes somebody
-              pays for — but the Loop workspace runs entirely in the page, so
+              pays for — but the Agent workspace runs entirely in the page, so
               putting it here turns a closed door into a choice: sign in for
               the rest, or try this one now.
             */

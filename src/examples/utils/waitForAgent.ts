@@ -4,10 +4,10 @@
  */
 
 /**
- * Wait for an agent the Loop is creating to exist on the server.
+ * Wait for an agent the Agent is creating to exist on the server.
  *
  * The examples used to create their agent by hand and gate their sidebars on
- * that request. Now the Loop creates the agent from the capacity plugin's
+ * that request. Now the Agent creates the agent from the capacity plugin's
  * blueprint when it mounts, so a page that wants to follow the agent over a
  * websocket or read its spec asks the server until the agent answers.
  *

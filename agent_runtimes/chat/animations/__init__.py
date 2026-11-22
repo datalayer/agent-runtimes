@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Animation modules forLoop TUX Easter eggs."""
+"""Animation modules for Agent TUX Easter eggs."""
 
 from .about import about_animation
 from .gif import gif_animation

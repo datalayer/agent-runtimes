@@ -49,7 +49,7 @@ import {
   useSidePanels,
 } from '../shell/SidePanel';
 import { agentUiPluginsFor } from '../agentUiPlugins';
-import { LoopChatExtras } from '../core';
+import { AgentChatExtras } from '../core';
 import { PAGE_TOOL_RESULTS } from '../toolCards/toolResults';
 import { CardSideContext } from '../toolCards/kit';
 import { PAGE_DECK } from '../plugins/page-deck/store';
@@ -225,9 +225,9 @@ const nameOf = (button: HTMLElement): string | null | undefined =>
     ?.textContent;
 
 const rightPanel = () =>
-  document.querySelector<HTMLElement>('[data-loop-right-panel]');
+  document.querySelector<HTMLElement>('[data-agent-right-panel]');
 const rightToggle = () =>
-  document.querySelector<HTMLButtonElement>('[data-loop-right-panel-toggle]');
+  document.querySelector<HTMLButtonElement>('[data-agent-right-panel-toggle]');
 
 describe('the deck placed in the right panel', () => {
   const placed = () =>
@@ -240,14 +240,14 @@ describe('the deck placed in the right panel', () => {
     const { reactor } = mount(placed());
     expect(rightPanel()).not.toBeNull();
     expect(rightPanel()!.hasAttribute('data-open')).toBe(false);
-    expect(document.querySelector('[data-loop-left-panel-toggle]')).toBeNull();
+    expect(document.querySelector('[data-agent-left-panel-toggle]')).toBeNull();
     const toggle = rightToggle()!;
     expect(nameOf(toggle)).toBe('Deck in the page');
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
     expect(toggle.getAttribute('aria-controls')).toBe(rightPanel()!.id);
     // The deck's tools and the panels' reach the agent with the chat's extras.
     const tools = reactor
-      .getContributions(LoopChatExtras)
+      .getContributions(AgentChatExtras)
       .flatMap(entry => entry.value.extras.value.frontendTools ?? [])
       .map(tool => tool.name);
     expect(tools).toEqual(
@@ -304,7 +304,7 @@ describe('the deck placed in the right panel', () => {
     mount(placed());
     recorded('deck_create', { title: 'Recap' });
     const close = document.querySelector<HTMLButtonElement>(
-      '[data-loop-right-panel-close]',
+      '[data-agent-right-panel-close]',
     )!;
     expect(nameOf(close)).toBe('Close: Deck in the page');
     act(() => close.click());
@@ -327,7 +327,7 @@ describe('the deck placed in the right panel', () => {
     expect(rightPanel()!.hasAttribute('data-open')).toBe(true);
     act(() =>
       document
-        .querySelector<HTMLButtonElement>('[data-loop-right-panel-close]')!
+        .querySelector<HTMLButtonElement>('[data-agent-right-panel-close]')!
         .click(),
     );
     expect(rightPanel()!.hasAttribute('data-open')).toBe(false);
@@ -377,7 +377,7 @@ describe('two panels beside a view too narrow for three', () => {
       },
     );
     const about = {
-      slot: 'loop.leftPanel',
+      slot: 'agent.leftPanel',
       id: 'about',
       Component: () => <p>About</p>,
       panel: { label: 'About the Marketer' },
@@ -390,13 +390,13 @@ describe('two panels beside a view too narrow for three', () => {
       }) as PluginRef,
     ]);
     const leftPanel = () =>
-      document.querySelector<HTMLElement>('[data-loop-left-panel]')!;
+      document.querySelector<HTMLElement>('[data-agent-left-panel]')!;
     // The deck opens the right one; the person then opens the left one.
     recorded('deck_create', { title: 'Recap' });
     expect(rightPanel()!.hasAttribute('data-open')).toBe(true);
     act(() =>
       document
-        .querySelector<HTMLButtonElement>('[data-loop-left-panel-toggle]')!
+        .querySelector<HTMLButtonElement>('[data-agent-left-panel-toggle]')!
         .click(),
     );
     expect(leftPanel().hasAttribute('data-open')).toBe(true);

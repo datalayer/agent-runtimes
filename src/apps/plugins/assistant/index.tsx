@@ -4,9 +4,9 @@
  */
 
 /**
- * The floating assistant in the LOOP workspace: the character a
+ * The floating assistant in the Agent workspace: the character a
  * page draws over its workspace, chosen from what the enabled plugins
- * contribute to `loop.assistant.character` — the application's own
+ * contribute to `agent.assistant.character` — the application's own
  * (`interface.avatar`) when its Appspec names one, else the person's
  * choice from their settings, else the paper clip. It acts out what the
  * application is doing as its chat says it — paused too, when its deployment
@@ -65,16 +65,16 @@ import { approvalsOfApp, ruleOfApproval } from '../app-rules/AppRulesCard';
 import type { PresenceState } from '../../../chat/presence/presenceStatus';
 import { useViewportDrag } from '../../../chat/useViewportDrag';
 import {
-  LoopAssistantCharacter,
-  LoopAssistantMenu,
-  LoopChatLayout,
-  LoopChatTurn,
-  LoopSlots,
+  AgentAssistantCharacter,
+  AgentAssistantMenu,
+  AgentChatLayout,
+  AgentChatTurn,
+  AgentSlots,
   IDLE_SANDBOX_SNAPSHOT_SIGNAL,
   IDLE_SANDBOX_TARGET_SIGNAL,
   type ChatTurnSnapshot,
   type ConversationEntry,
-  type LoopWorkspaceContext,
+  type AgentWorkspaceContext,
 } from '../../core';
 import type { DisplayItem } from '../../../types/chat';
 import { assistantCharacterFor } from '../assistant-characters';
@@ -92,9 +92,9 @@ import type {
 import { useChatWords } from '../../../chat/ChatLanguage';
 import { useChatAvailability } from '../../../chat/base/ChatAvailability';
 
-export const LOOP_ASSISTANT_PLUGIN_NAME = '@datalayer/loop-plugin-assistant';
+export const AGENT_ASSISTANT_PLUGIN_NAME = '@datalayer/agent-plugin-assistant';
 
-export type LoopAssistantConfig = {
+export type AgentAssistantConfig = {
   /** The avatar the application's Appspec names (an id, or a 3D model); it wins. */
   app?: AppAvatar;
   /** The character the person chose in their settings. */
@@ -124,7 +124,7 @@ export type LoopAssistantConfig = {
    * The workspace it is drawn over (the root slot's): its agent and
    * server, for *Agent Details…* and *Code Sandbox Details…*.
    */
-  workspace?: LoopWorkspaceContext;
+  workspace?: AgentWorkspaceContext;
 };
 
 /** The character's size, in pixels, as the chat's own assistant. */
@@ -383,27 +383,27 @@ function useComposerNotReady(stageRef: RefObject<HTMLElement | null>): boolean {
   return notReady;
 }
 
-export function LoopAssistant({
+export function AgentAssistant({
   app,
   person,
   appId,
   decisions,
   balloon: displayGiven = 'history',
   workspace,
-}: LoopAssistantConfig): JSX.Element | null {
+}: AgentAssistantConfig): JSX.Element | null {
   const chatText = useChatWords();
   // The balloon's display, as its menu chose it; the Appspec's until then.
   const [chosenDisplay, setChosenDisplay] = useState<BalloonDisplay>();
   const display = chosenDisplay ?? displayGiven;
-  const contributed = useContributions(LoopAssistantCharacter).map(
+  const contributed = useContributions(AgentAssistantCharacter).map(
     entry => entry.value,
   );
   const chosen = assistantCharacterFor(contributed, { app, person });
   // What the enabled plugins add to its menu.
-  const menuContributions = useContributions(LoopAssistantMenu).map(
+  const menuContributions = useContributions(AgentAssistantMenu).map(
     entry => entry.value,
   );
-  const turnEntries = useContributions(LoopChatTurn);
+  const turnEntries = useContributions(AgentChatTurn);
   const turn = useSignalValue(turnEntries[0]?.value.turn ?? NO_TURN);
   const presence = useSignalValue(
     turnEntries[0]?.value.presence ?? NO_PRESENCE,
@@ -415,7 +415,7 @@ export function LoopAssistant({
   const [approval, setApproval] = useState<BalloonApproval | undefined>();
   // On a page layout the conversation is its side panel; elsewhere it is
   // always on screen.
-  const onPageLayout = useContributions(LoopChatLayout).some(
+  const onPageLayout = useContributions(AgentChatLayout).some(
     entry => entry.value.id === 'page-layout',
   );
   const panelOpen = useSignalValue(pageLayoutPanelOpen);
@@ -695,8 +695,8 @@ export function LoopAssistant({
   );
 }
 
-export const LoopAssistantPlugin = definePlugin<LoopAssistantConfig>({
-  name: LOOP_ASSISTANT_PLUGIN_NAME,
+export const AgentAssistantPlugin = definePlugin<AgentAssistantConfig>({
+  name: AGENT_ASSISTANT_PLUGIN_NAME,
   config: {
     app: undefined,
     person: undefined,
@@ -712,9 +712,9 @@ export const LoopAssistantPlugin = definePlugin<LoopAssistantConfig>({
     const Configured = ({
       workspace,
     }: {
-      workspace?: LoopWorkspaceContext;
+      workspace?: AgentWorkspaceContext;
     }): JSX.Element | null => (
-      <LoopAssistant
+      <AgentAssistant
         workspace={workspace}
         app={config.app}
         person={config.person}
@@ -725,10 +725,10 @@ export const LoopAssistantPlugin = definePlugin<LoopAssistantConfig>({
     );
     return {
       components: [
-        { id: 'loop-assistant', slot: LoopSlots.root, Component: Configured },
+        { id: 'agent-assistant', slot: AgentSlots.root, Component: Configured },
       ],
     };
   },
 });
 
-export default LoopAssistantPlugin;
+export default AgentAssistantPlugin;

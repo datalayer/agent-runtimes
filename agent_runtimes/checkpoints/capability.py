@@ -81,7 +81,7 @@ def apply_rewind(agent_id: str | None, checkpoint: ConversationCheckpoint) -> in
         len(messages),
     )
     try:
-        from agent_runtimes.streams.loop import push_snapshot
+        from agent_runtimes.streams.pubsub import push_snapshot
 
         push_snapshot(agent_id)
     except Exception:  # noqa: BLE001 - the rewind stands without the push

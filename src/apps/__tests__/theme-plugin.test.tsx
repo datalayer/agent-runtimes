@@ -4,11 +4,11 @@
  */
 
 /**
- * The theme plugin rides with every Loop.
+ * The theme plugin rides with every Agent.
  *
  * The portal-root glue used to be an inline `setupPrimerPortals()` in the
  * palette's build — set up once, never following a theme change. The plugin
- * owns it now, and these pin the two facts Loop relies on: it is in the
+ * owns it now, and these pin the two facts Agent relies on: it is in the
  * preset, and its command actually turns the color mode.
  */
 
@@ -19,24 +19,24 @@ import {
   TOGGLE_COLOR_MODE_COMMAND,
 } from '@datalayer/primer-addons/lib/reactor';
 import { useThemeStore } from '@datalayer/primer-addons';
-import { loopPlugins } from '../presets';
-import { LoopCommandsPlugin } from '../plugins/commands';
+import { agentPlugins } from '../presets';
+import { AgentCommandsPlugin } from '../plugins/commands';
 
-describe('the theme plugin in Loop', () => {
+describe('the theme plugin in Agent', () => {
   it('is in the preset, palette or not', async () => {
-    const reactor = buildReactorFromPlugins(loopPlugins({}));
+    const reactor = buildReactorFromPlugins(agentPlugins({}));
     expect(reactor.hasPlugin(THEME_PLUGIN_NAME)).toBe(true);
   });
 
   it('rides along with the palette on its own', async () => {
     // A host that mounts only the palette still needs the themed portal
     // root the palette renders into.
-    const reactor = buildReactorFromPlugins([LoopCommandsPlugin]);
+    const reactor = buildReactorFromPlugins([AgentCommandsPlugin]);
     expect(reactor.hasPlugin(THEME_PLUGIN_NAME)).toBe(true);
   });
 
   it('sets the portal root up and turns the color mode by command', async () => {
-    const reactor = buildReactorFromPlugins(loopPlugins({}));
+    const reactor = buildReactorFromPlugins(agentPlugins({}));
     await reactor.start();
 
     // The root exists, stamped with the store's mode — what the inline call

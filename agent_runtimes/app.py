@@ -65,12 +65,12 @@ from .routes import (
     evals_router,
     get_a2a_mounts,
     get_agui_mounts,
+    handoff_router,
     harnesses_router,
     health_router,
     history_router,
     identity_router,
     inference_relay_router,
-    loop_router,
     mcp_auth_router,
     mcp_lent_router,
     mcp_proxy_router,
@@ -338,7 +338,7 @@ async def _create_and_register_cli_agent(
 
         # Initialize per-agent skills state in stream layer as the single
         # source of truth for skill enable/disable lifecycle.
-        from .streams.loop import (
+        from .streams.pubsub import (
             get_agent_enabled_skill_ids,
             get_agent_skills_snapshot,
             set_agent_enabled_skills,
@@ -1251,7 +1251,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         # Set app reference for dynamic A2A route mounting
         set_a2a_app(app, config.api_prefix)
 
-        # A harness named by `loop --harness`: its agent made
+        # A harness named by `agent --harness`: its agent made
         # at startup through the create route, as any agent is, so the
         # Shield decides its actions and a refusal is the route's sentence.
         harness_id = os.environ.get("AGENT_RUNTIMES_HARNESS")
@@ -1423,7 +1423,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                     sandbox_variant=sandbox_variant,
                 )
                 # Store startup info on app.state so the /health/startup
-                # endpoint can expose it to CLI consumers (e.g. loop).
+                # endpoint can expose it to CLI consumers (e.g. agent).
                 app.state.startup_info = startup_info
             else:
                 logger.warning(
@@ -1705,12 +1705,12 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     # the other end of a shared session did — both were getting a 404, since
     # the router existed and nothing mounted it.
     app.include_router(history_router, prefix=config.api_prefix)
-    app.include_router(loop_router, prefix=config.api_prefix)
+    app.include_router(handoff_router, prefix=config.api_prefix)
     # Which of an application's plugins this runtime holds, followed by the
     # page's plugin of the same name.
     app.include_router(app_plugins_router, prefix=config.api_prefix)
     app.include_router(apps_router, prefix=config.api_prefix)
-    # The harness catalogue, as `loop harnesses` prints it.
+    # The harness catalogue, as `agent harnesses` prints it.
     app.include_router(harnesses_router, prefix=config.api_prefix)
     # An application's computer, shown where the person is.
     app.include_router(computer_router, prefix=config.api_prefix)
@@ -1879,8 +1879,8 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
             "agent.html",
             "agent-notebook.html",
             "agent-document.html",
-            "loop.html",
-            "loop-example.html",
+            "agent-workspace.html",
+            "agent-example.html",
             "index.html",
         ):
             _page_handler = _make_page_handler(_page)
@@ -1897,12 +1897,12 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                 include_in_schema=False,
             )
 
-        # `/loop` is the workspace's own address: `/browser` hands a session
-        # over by opening `/loop?handoff=<code>`, and that URL should read like
+        # `/agent` is the workspace's own address: `/browser` hands a session
+        # over by opening `/agent?handoff=<code>`, and that URL should read like
         # a place rather than a file.
         app.add_api_route(
-            "/loop",
-            _make_page_handler("loop.html"),
+            "/agent",
+            _make_page_handler("agent-workspace.html"),
             methods=["GET"],
             include_in_schema=False,
         )

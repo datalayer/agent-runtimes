@@ -556,7 +556,7 @@ def test_a_visitors_page_has_its_address_made_before_it_follows_it(
     # The agent the token reaches, and the application the page follows.
     assert said.json() == {"agent": "at-notes", "app_id": "notes-assistant"}
     held = visitors_runtime.get(STATE).json()["plugins"]
-    assert [plugin["name"] for plugin in held] == ["loop-app-notes-assistant"]
+    assert [plugin["name"] for plugin in held] == ["agent-app-notes-assistant"]
     # Asked again, it is not made again.
     assert visitors_runtime.post(AGENT, headers=visitor).status_code == 200
     assert [name for name, body in made_address.made if body] == ["at-notes"]

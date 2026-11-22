@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-agent-parameters` — the capacity, as a plugin.
+ * `@datalayer/agent-plugin-agent-parameters` — the capacity, as a plugin.
  *
  * Mounts the `example-parameters` agent and offers what it is worth asking. Cast
  * from the shared capacity mould; see `apps/plugins/agent-capacity`.
@@ -17,7 +17,7 @@
 import { defineAgentCapacityPlugin } from '../agent-capacity';
 
 export const AGENT_PARAMETERS_PLUGIN_NAME =
-  '@datalayer/loop-plugin-agent-parameters';
+  '@datalayer/agent-plugin-agent-parameters';
 
 export const AgentParametersPlugin = defineAgentCapacityPlugin({
   key: 'parameters',

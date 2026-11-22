@@ -25,7 +25,7 @@ import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { LoopEmbed } from '../apps';
+import { AgentEmbed } from '../apps';
 import { createAgentInferencePlugin } from '../apps/plugins/agent-inference';
 import { useAIAgentsWebSocket } from '../hooks';
 
@@ -173,7 +173,7 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
             provider: nextProvider,
           },
         );
-        // A new agent for the provider: the Loop creates it from the
+        // A new agent for the provider: the Agent creates it from the
         // capacity plugin's blueprint, provider included, when it mounts.
         const nextAgentId = uniqueAgentId(`${AGENT_NAME}-${nextProvider}`);
         if (requestEpoch !== requestEpochRef.current) {
@@ -181,7 +181,7 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
         }
         currentAgentRef.current = nextAgentId;
         setAgentId(nextAgentId);
-        appendProviderEvent('agent.launched', 'Agent launched by the Loop', {
+        appendProviderEvent('agent.launched', 'Agent launched by the Agent', {
           agentId: nextAgentId,
           agentSpecId: AGENTSPEC_ID,
           inferenceProvider: nextProvider,
@@ -366,7 +366,7 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
             bg="canvas.default"
           >
             {agentId && !isLaunching ? (
-              <LoopEmbed
+              <AgentEmbed
                 key={agentId}
                 serverUrl={baseUrl}
                 target="local"

@@ -6,7 +6,7 @@
 /**
  * Datalayer's own characters for the floating assistant, contributed:
  * the orb (the design library's, in two tones), the paper
- * clip, the wizard, the cat and the L👀P eyes; and, in a plugin of their
+ * clip, the wizard, the cat and the Agent eyes; and, in a plugin of their
  * own, the characters clippy.js publishes — Microsoft's, fetched from
  * jsDelivr when one is drawn. Disabled, they leave the catalogue; another
  * plugin may contribute others.
@@ -38,19 +38,19 @@ import {
 } from '../../../chat/assistant/avatar3dModel';
 import type { AppAvatar } from '../../../types/agentspecs';
 import {
-  LoopAssistantCharacter,
+  AgentAssistantCharacter,
   type AssistantCharacterContribution,
 } from '../../core';
 
 /** What is read of a reactor here: its contributions to the point. */
 type ContributionsReader = {
   getContributions: (
-    point: typeof LoopAssistantCharacter,
+    point: typeof AgentAssistantCharacter,
   ) => ReadonlyArray<{ value: AssistantCharacterContribution }>;
 };
 
 export const ASSISTANT_CHARACTERS_PLUGIN_NAME =
-  '@datalayer/loop-plugin-assistant-characters';
+  '@datalayer/agent-plugin-assistant-characters';
 
 export const AssistantCharactersPlugin: ReactorPlugin<
   Record<string, never>,
@@ -60,12 +60,12 @@ export const AssistantCharactersPlugin: ReactorPlugin<
   name: ASSISTANT_CHARACTERS_PLUGIN_NAME,
   displayName: 'Assistant avatars',
   description:
-    "Datalayer's own avatars for the floating assistant: a paper clip, a wizard, a cat and the L👀P eyes, and the orb in two tones.",
+    "Datalayer's own avatars for the floating assistant: a paper clip, a wizard, a cat and the Agent eyes, and the orb in two tones.",
   octicon: 'paperclip',
   contributes: [...ASSISTANT_CHARACTERS, ...ASSISTANT_ORB_CHARACTERS].map(
     character =>
       contribution(
-        LoopAssistantCharacter,
+        AgentAssistantCharacter,
         { id: character.id, character },
         { id: character.id },
       ),
@@ -73,7 +73,7 @@ export const AssistantCharactersPlugin: ReactorPlugin<
 });
 
 export const CLIPPY_JS_CHARACTERS_PLUGIN_NAME =
-  '@datalayer/loop-plugin-assistant-characters-clippy-js';
+  '@datalayer/agent-plugin-assistant-characters-clippy-js';
 
 /**
  * The characters clippy.js publishes, one avatar each (`clippy-js-merlin`):
@@ -92,7 +92,7 @@ export const ClippyJsCharactersPlugin: ReactorPlugin<
   octicon: 'paperclip',
   contributes: CLIPPY_JS_ASSISTANT_CHARACTERS.map(character =>
     contribution(
-      LoopAssistantCharacter,
+      AgentAssistantCharacter,
       { id: character.id, character },
       { id: character.id },
     ),
@@ -121,7 +121,7 @@ export function defineAssistantCharacterPlugin(
     description: `${character.name}, an avatar for the floating assistant.`,
     octicon: 'paperclip',
     contributes: [
-      contribution(LoopAssistantCharacter, { id, character }, { id }),
+      contribution(AgentAssistantCharacter, { id, character }, { id }),
     ],
   });
 }
@@ -131,7 +131,7 @@ export function assistantCharactersOf(
   reactor: ContributionsReader,
 ): { id: string; character: AssistantCharacter | AssistantCharacterData }[] {
   return reactor
-    .getContributions(LoopAssistantCharacter)
+    .getContributions(AgentAssistantCharacter)
     .map(entry => entry.value);
 }
 

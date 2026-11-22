@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """An assistant with tools — Chainlit's cookbook ``anthropic-functions-streaming``,
-rebuilt with LOOP's API.
+rebuilt with Agent's API.
 
 Chainlit declares two tools to Claude — a hard-coded weather and a
 calculator — streams each answer, runs a tool in a ``tool`` step when the

@@ -169,7 +169,7 @@ def test_a_deployments_agent_is_not_made_without_its_principals_token():
         name="digest",
         transport="vercel-ai",
         app_spec={
-            "schema": "loop.app/v1",
+            "schema": "agent.app/v1",
             "id": "digest",
             "name": "Digest",
             "kind": "worker",

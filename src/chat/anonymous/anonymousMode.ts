@@ -111,7 +111,7 @@ export function signInTarget(signInUrl: string | undefined, page: string) {
 }
 
 /** Where the browser keeps the day's count: the landing's key, kept. */
-export const VISITOR_TURNS_KEY = 'datalayer-loop-visitor-turns';
+export const VISITOR_TURNS_KEY = 'datalayer-agent-visitor-turns';
 
 /** The day's count, as kept. */
 export type TurnsKept = { day: string; taken: number };

@@ -232,7 +232,7 @@ describe('Sales asks Accounting over A2A', () => {
     });
     const [request] = seen.filter(entry => entry.method === 'POST');
     expect(request.body.params.message.metadata).toEqual({
-      loop: { action: { name: 'Send them', payload: { does: 'send' } } },
+      agent: { action: { name: 'Send them', payload: { does: 'send' } } },
     });
   });
 

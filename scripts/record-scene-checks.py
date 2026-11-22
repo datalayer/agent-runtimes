@@ -2,10 +2,10 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Record what ``loop`` refuses of a scene, for every editor of a scene to be held to it.
+"""Record what ``agent`` refuses of a scene, for every editor of a scene to be held to it.
 
 One validation over the three — what the spec editor
-refuses, the stage refuses and ``loop`` refuses, in the same words. The
+refuses, the stage refuses and ``agent`` refuses, in the same words. The
 browser's half is ``src/apps/apps/sceneChecks.ts``; this script
 writes down what agentspecs itself says of the same scenes, and
 ``src/apps/__tests__/scene-checks.test.ts`` holds it to it sentence by
@@ -29,7 +29,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 #: A cast, a setting and a script that parse, as pieces the cases lay over.
-HEAD = """schema: loop.scene/v1
+HEAD = """schema: agent.scene/v1
 id: probe
 version: 0.0.1
 name: Probe
@@ -645,7 +645,7 @@ def main() -> int:
         recorded.append({"name": case["name"], "yaml": case["yaml"], "says": says})
 
     table = {
-        "says": "What `loop` refuses of a scene, recorded from agentspecs.",
+        "says": "What `agent` refuses of a scene, recorded from agentspecs.",
         "recordedWith": "scripts/record-scene-checks.py",
         "cases": recorded,
     }

@@ -11,7 +11,7 @@
  * going with the chat's run to the application's session.
  *
  * It draws the blocks the workspace's plugins contribute to the Canvas's
- * palette (`loop.canvas.block`) and nothing else, so that what the
+ * palette (`agent.canvas.block`) and nothing else, so that what the
  * Canvas can place and what the page can draw are one list: a page that
  * uses a block no enabled plugin contributes says so, in place of the page.
  * The components its developer wrote are among them, contributed
@@ -36,13 +36,13 @@ import type { AppSpec } from '../../../types/agentspecs';
 import { catalogOfBlocks } from '../../../components/a2ui';
 import { useChatWords } from '../../../chat/ChatLanguage';
 import {
-  LoopCanvasBlock,
-  LoopChatTurn,
+  AgentCanvasBlock,
+  AgentChatTurn,
   agentServerOf,
   noRuntimeSaid,
   type ChatTurnSnapshot,
   type ConversationEntry,
-  type LoopWorkspaceContext,
+  type AgentWorkspaceContext,
 } from '../../core';
 import {
   InlineSurface,
@@ -105,11 +105,11 @@ export function blocksMissing(
 
 export type AppPageProps = {
   app: AppSpec;
-  workspace: LoopWorkspaceContext;
+  workspace: AgentWorkspaceContext;
 };
 
 export function AppPage({ app, workspace }: AppPageProps): JSX.Element {
-  const entries = useContributions(LoopChatTurn);
+  const entries = useContributions(AgentChatTurn);
   const turn = useSignalValue(entries[0]?.value.turn ?? NO_TURN);
   const conversation = useSignalValue(
     entries[0]?.value.conversation ?? NO_CONVERSATION,
@@ -119,7 +119,7 @@ export function AppPage({ app, workspace }: AppPageProps): JSX.Element {
     [app],
   );
   // The blocks the enabled plugins contribute: what this page may draw.
-  const blocks = useContributions(LoopCanvasBlock);
+  const blocks = useContributions(AgentCanvasBlock);
   const contributed = [...new Set(blocks.map(entry => entry.value.id))].sort();
   const drawnWith = contributed.join(',');
   // The renderers of the components its developer wrote.
@@ -288,12 +288,12 @@ export function AppPage({ app, workspace }: AppPageProps): JSX.Element {
         // the prompt channel when the chat has not reported itself
         // yet, which carries words only.
         if (controls.send) {
-          const refused = controls.send(outcome.send, { loop: outcome.loop });
+          const refused = controls.send(outcome.send, { agent: outcome.agent });
           if (refused) {
             setRefusal(refused);
             return;
           }
-        } else if (outcome.loop.files) {
+        } else if (outcome.agent.files) {
           setRefusal(
             'The conversation is not ready for a file yet: try again.',
           );

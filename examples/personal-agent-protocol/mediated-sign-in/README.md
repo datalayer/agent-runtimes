@@ -12,7 +12,7 @@ The Agent Runtimes tool receives field labels, statuses, the company's masked
 `sent_to`, and granted scopes. Credentials, codes, and tokens never enter it.
 
 ```bash
-loop apps run examples/personal-agent-protocol/mediated-sign-in/app.py
+agent apps run examples/personal-agent-protocol/mediated-sign-in/app.py
 ```
 
 Read the [Mediated Sign-In guide](https://personalagentprotocol.org/docs/guides/mediated-sign-in)

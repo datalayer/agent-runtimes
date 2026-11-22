@@ -20,7 +20,7 @@
  * wants a different set of window controls can switch the plugin off and
  * contribute its own rather than fight the ones it was given.
  */
-export const WINDOW_CONTROLS_SLOT = 'loop.window.controls';
+export const WINDOW_CONTROLS_SLOT = 'agent.window.controls';
 
 /**
  * The trailing edge of the title bar.
@@ -30,4 +30,4 @@ export const WINDOW_CONTROLS_SLOT = 'loop.window.controls';
  * prompt — as opposed to what the workspace offers about the conversation,
  * which is the chat's own header.
  */
-export const WINDOW_ACTIONS_SLOT = 'loop.window.actions';
+export const WINDOW_ACTIONS_SLOT = 'agent.window.actions';

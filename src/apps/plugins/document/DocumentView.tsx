@@ -21,9 +21,9 @@ import { Box } from '@datalayer/primer-addons';
 import { Text } from '@primer/react';
 import { EphemeralDocument } from '../../../chat/document/EphemeralDocument';
 import {
-  LoopDocumentToolbar,
-  LoopDocumentToolbarItem,
-  LoopOpeningDocument,
+  AgentDocumentToolbar,
+  AgentDocumentToolbarItem,
+  AgentOpeningDocument,
   type ChatSurfaceProps,
 } from '../../core';
 import { useEditorToolbar } from '../../core/toolbar';
@@ -42,8 +42,8 @@ export default function DocumentView({
   // itself belongs to a plugin — switch that off and the document has no
   // toolbar rather than an empty one.
   const toolbar = useEditorToolbar(
-    LoopDocumentToolbar,
-    LoopDocumentToolbarItem,
+    AgentDocumentToolbar,
+    AgentDocumentToolbarItem,
     {
       workspace,
       editorId: documentId,
@@ -56,7 +56,7 @@ export default function DocumentView({
    * state `EphemeralDocument` loads exactly once, when it mounts — which is
    * below the early return, so the state is ready before the editor is.
    */
-  const openingEntries = useContributions(LoopOpeningDocument);
+  const openingEntries = useContributions(AgentOpeningDocument);
   const contributedOpening = openingEntries[0]?.value;
   const opening = useMemo(
     () => JSON.stringify((contributedOpening?.document ?? openingDocument)()),

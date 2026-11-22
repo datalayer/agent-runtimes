@@ -9,7 +9,7 @@ import { useDocsSidebar } from '@docusaurus/plugin-content-docs/client';
 
 # 🤖 🚀 Agent Runtimes
 
-**Agent Runtimes** runs AI agents and serves them over the protocols the agent world speaks. It is a Python server that hosts agents built from [agentspecs](https://agentspecs.datalayer.tech) (Pydantic AI by default), with their MCP tools, skills, code sandbox and guardrails. It is also a set of React components (chat, floating assistant, the Loop workspace) and a terminal, `loop`. It drives coding agents such as Claude Code as harnesses, behind the Shield. It runs on your machine with your own model keys, or on [Datalayer](https://datalayer.ai) runtimes.
+**Agent Runtimes** runs AI agents and serves them over the protocols the agent world speaks. It is a Python server that hosts agents built from [agentspecs](https://agentspecs.datalayer.tech) (Pydantic AI by default), with their MCP tools, skills, code sandbox and guardrails. It is also a set of React components (chat, floating assistant, the Agent workspace) and a terminal, `agent`. It drives coding agents such as Claude Code as harnesses, behind the Shield. It runs on your machine with your own model keys, or on [Datalayer](https://datalayer.ai) runtimes.
 
 ![An agent answering in the chat, its code execution shown](https://images.datalayer.io/products/agent-runtimes/agent-runtimes-chat.gif)
 
@@ -17,16 +17,16 @@ import { useDocsSidebar } from '@docusaurus/plugin-content-docs/client';
 
 ```bash
 pip install agent-runtimes        # Python 3.11 or later
-loop --local -a example-simple    # a local server and a chat in the terminal, on your own model keys
+agent --local -a example-simple    # a local server and a chat in the terminal, on your own model keys
 ```
 
-![The loop CLI: a question, a code execution, the answer](https://images.datalayer.io/products/agent-runtimes/agent-runtimes-loop-cli.gif)
+![The agent CLI: a question, a code execution, the answer](https://images.datalayer.io/products/agent-runtimes/agent-runtimes-agent-cli.gif)
 
 ## What is Agent Runtimes?
 
 1. **The meta-harness**: coding agents run as harnesses, driven over the Agent Client Protocol (ACP): Claude Code, Codex, OpenCode and pi. The runtime lends them tools, skills and models, and serves them like its own agents; the [Shield](/shield/) keeps the boundary, the rules, the audit and the trace. See [Harnesses](/harnesses/).
 2. **Protocols**: AG-UI, the Vercel AI SDK, ACP and A2A to reach an agent; A2UI and MCP-UI for generative UI; MCP for tools (local and remote servers); and the agent protocols Web Bot Auth, PAP, PACT, UCP and the Agentic Commerce Protocol, each a Reactor plugin. See [Protocols](/protocols/).
-3. **Applications**: an Appspec or a Python `app.py` becomes a chat, a widget, a worker or a decision. You run it with `loop apps run`, deploy it at its own address and embed it anywhere with `<datalayer-app>`. See [Loop Web](/apps/).
+3. **Applications**: an Appspec or a Python `app.py` becomes a chat, a widget, a worker or a decision. You run it with `agent apps run`, deploy it at its own address and embed it anywhere with `<datalayer-app>`. See [Agent Web](/apps/).
 4. **Identity and controls**: guardrails, tool approvals, budgets, hooks, monitoring and OpenTelemetry.
 5. **Programmatic tooling**: MCP and skills composed in a sandbox with Codemode.
 6. **Sessions and collaboration**: sessions you resume, swap, clone, export and import; subagents; teams over A2A.
@@ -55,7 +55,7 @@ Agent Runtimes is the **top-level orchestration layer** in the Datalayer AI stac
 - ✅ Applications: Appspecs, `app.py`, deployments and the `<datalayer-app>` embed
 - ✅ MCP server management and tool routing (local servers over stdio, remote servers over Streamable HTTP)
 - ✅ React UI components (ChatBase, ChatSidebar, ChatFloating)
-- ✅ Loop — the plugin-based browser workspace (chat + editors + sandbox)
+- ✅ Agent — the plugin-based browser workspace (chat + editors + sandbox)
 - ✅ Agent identity controls (guardrails, monitoring, tool approvals)
 - ✅ Extensions (A2UI, MCP-UI)
 - ✅ Integration layer for agent-codemode and agent-skills
@@ -84,10 +84,10 @@ The docs below explicitly cover the main building blocks used in the example gal
 | Concern | Where to Read |
 |---------|---------------|
 | Coding agents as harnesses, and the Shield around them | [Harnesses](/harnesses/), [The Shield](/shield/) |
-| Applications: Appspecs, Python, deploy, embed | [Loop Web](/apps), [Embedding](/apps/embedding) |
+| Applications: Appspecs, Python, deploy, embed | [Agent Web](/apps), [Embedding](/apps/embedding) |
 | Sessions: resume, swap, clone, export, import | [Sessions](/sessions/) |
-| The browser workspace (plugins, editors, commands) | [Loop Web](/apps) |
-| The interactive terminal | [Loop REPL](/loop-repl), [Loop CLI](/cli) |
+| The browser workspace (plugins, editors, commands) | [Agent Web](/apps) |
+| The interactive terminal | [Agent REPL](/agent-repl), [Agent CLI](/cli) |
 | UX patterns (GenUI) with A2UI and AG-UI | [Protocols](/protocols), [Chat](/chat) |
 | Agent protocols: MCP, A2A, Web Bot Auth, PAP, PACT, UCP, Agentic Commerce | [Agent protocols](/protocols/agent-protocols), [Personal Agent Protocol](/integrations/personal-agent-protocol) |
 | Interactive or triggered workflows | [Agentspecs](/agentspecs), [Endpoints](/endpoints) |
@@ -95,6 +95,6 @@ The docs below explicitly cover the main building blocks used in the example gal
 | Programmatic tooling with Sandbox and Codemode for MCP and Skills | [Programmatic Tools](/programmatic-tools), [Hooks](/hooks), [Endpoints](/endpoints#sandbox-status-websocket) |
 | Outputs and Notifications | [Integrations](/integrations), [Agentspecs](/agentspecs) |
 | Real-time collaboration with users, subagents, and multi-agent teams | [Protocols](/protocols), [Endpoints](/endpoints#acp-protocol-websocket), [Agentspecs](/agentspecs) |
-| Custom agents built from Agentspecs | [Agentspecs](/agentspecs), [Loop CLI](/cli) |
+| Custom agents built from Agentspecs | [Agentspecs](/agentspecs), [Agent CLI](/cli) |
 
 <DocCardList items={useDocsSidebar().items.filter(i => (i.label !== 'Agent Runtimes'))} />

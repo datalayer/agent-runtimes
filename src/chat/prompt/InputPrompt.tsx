@@ -137,7 +137,7 @@ export interface InputPromptProps {
   /**
    * Panels inside the prompt's card, above and below the composer itself.
    *
-   * Inside rather than beside, so a floating prompt carries them: the loop's
+   * Inside rather than beside, so a floating prompt carries them: the Agent's
    * page layout hangs the current turn under the composer this way, and it
    * travels with the card when the card is dragged.
    */

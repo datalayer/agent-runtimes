@@ -75,7 +75,7 @@ const three = vi.hoisted(() => {
       return this;
     }
     setLoop(loop: number) {
-      this.loop = loop;
+      this.agent = loop;
       return this;
     }
     setEffectiveWeight() {
@@ -330,7 +330,7 @@ describe('a 3D avatar changing state', () => {
   it('settles a wave back into idle, faded, and replays it faded over itself', async () => {
     await draw({ state: 'greeting' }, true);
     const wave = action('Wave');
-    expect(wave.loop).toBe(2200);
+    expect(wave.agent).toBe(2200);
     expect(wave.clampWhenFinished).toBe(true);
     act(() => mixer().finish(wave));
     expect(action('Idle').crossFadedFrom).toEqual([wave]);

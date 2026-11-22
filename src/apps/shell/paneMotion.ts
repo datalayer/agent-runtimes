@@ -9,7 +9,7 @@
  *
  * Read from the theme's tokens, `--theme-motion-pane` and
  * `--theme-motion-easing`: a theme that sets no motion (every theme but
- * `loop`) gives `0ms`, and nothing moves; nor does anything when the person
+ * `agent`) gives `0ms`, and nothing moves; nor does anything when the person
  * asked for reduced motion.
  *
  * @module apps/shell/paneMotion
@@ -17,7 +17,7 @@
 
 /** The keyframes' name for a pane opening from a side: one per side. */
 export const paneOpenKeyframes = (from: 'left' | 'right'): string =>
-  from === 'left' ? 'loopPaneOpenLeft' : 'loopPaneOpenRight';
+  from === 'left' ? 'agentPaneOpenLeft' : 'agentPaneOpenRight';
 
 /** The CSS `animation` of a pane opening from a side. */
 export const paneOpenAnimation = (from: 'left' | 'right'): string =>

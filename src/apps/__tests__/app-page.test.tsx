@@ -17,9 +17,9 @@ import { basicCatalog } from '@a2ui/react/v0_9';
 import { MessageProcessor, type A2uiMessage } from '@a2ui/web_core/v0_9';
 import { APP_CATALOGUE } from '../../specs/apps';
 import type { AppSpec } from '../../types/agentspecs';
-import { LoopEditorView } from '../core';
+import { AgentEditorView } from '../core';
 import { emptyAppspec } from '../apps/appspec';
-import { loopPlugins } from '../presets';
+import { agentPlugins } from '../presets';
 import { CHAT_PLUGIN_NAME, type ChatPluginConfig } from '../plugins/chat';
 import {
   APP_KIND_PATHS,
@@ -217,7 +217,7 @@ describe('which applications have a page', () => {
   it('is contributed as the editor beside the chat, which opens on it alone', () => {
     const plugin = defineAppPagePlugin(APP_CATALOGUE['quote-calculator']);
     const editors = (plugin.contributes ?? []).filter(
-      (item: { point?: unknown }) => item.point === LoopEditorView,
+      (item: { point?: unknown }) => item.point === AgentEditorView,
     ) as Array<{ value: { surfaceId: string; title: string } }>;
     expect(editors.map(item => item.value.surfaceId)).toEqual([
       APP_PAGE_SURFACE,
@@ -226,12 +226,12 @@ describe('which applications have a page', () => {
     // The preset honours the editor asked for with the notebook and the
     // document off, and offers no strip to swap it.
     const reactor = buildReactorFromPlugins(
-      loopPlugins({ editors: false, defaultEditor: APP_PAGE_SURFACE }),
+      agentPlugins({ editors: false, defaultEditor: APP_PAGE_SURFACE }),
     );
     const chat = reactor.getConfig<ChatPluginConfig>(CHAT_PLUGIN_NAME);
     expect(chat?.defaultSurface).toBe(APP_PAGE_SURFACE);
     expect(chat?.showSurfaceSelector).toBe(false);
-    const alone = buildReactorFromPlugins(loopPlugins({ editors: false }));
+    const alone = buildReactorFromPlugins(agentPlugins({ editors: false }));
     expect(
       alone.getConfig<ChatPluginConfig>(CHAT_PLUGIN_NAME)?.defaultSurface,
     ).toBe('none');
@@ -304,14 +304,14 @@ describe('what a button does', () => {
     );
     // What the page did goes with it to the session: the settings
     // as the session takes them — a message, never an action of its own.
-    const loop = {
+    const agent = {
       settings: { product: 'Desktop', short: true },
     };
     expect(first).toEqual({
       send: 'Hello\n\nProduct: Desktop\nShort answers: yes',
       inputs: 'Product: Desktop\nShort answers: yes',
       clear: ['/draft'],
-      loop,
+      agent,
     });
     const again = appPageAction(
       chat,
@@ -323,7 +323,7 @@ describe('what a button does', () => {
       send: 'And then?',
       inputs: 'Product: Desktop\nShort answers: yes',
       clear: [],
-      loop,
+      agent,
     });
     expect(appPageAction(chat, { name: 'send' }, data({}))).toEqual({
       refused: 'Nothing to send: write a message first.',
@@ -341,7 +341,7 @@ describe('what a button does', () => {
       send: 'Seats: 50\nPlan: Team\nTerm: Annual',
       inputs: 'Seats: 50\nPlan: Team\nTerm: Annual',
       clear: [],
-      loop: {
+      agent: {
         settings: settingsOf(quote, {
           seats: 50,
           plan: ['Team'],
@@ -383,7 +383,7 @@ describe('what a button does', () => {
       send: 'Report: Summary',
       inputs: 'Report: Summary',
       clear: [],
-      loop: {
+      agent: {
         files,
         settings: { report: 'Summary', question: '' },
       },
@@ -398,7 +398,7 @@ describe('what a button does', () => {
     ).toEqual(run);
     expect(
       appPageAction(report, { name: 'upload' }, data({ '/files': files })),
-    ).toMatchObject({ loop: { files } });
+    ).toMatchObject({ agent: { files } });
     expect(
       appPageAction(
         report,
@@ -414,7 +414,7 @@ describe('what a button does', () => {
         { name: 'upload', context: { files: [pdf] } },
         data({}),
       ),
-    ).toMatchObject({ send: 'Run on contract.pdf.', loop: { files: [pdf] } });
+    ).toMatchObject({ send: 'Run on contract.pdf.', agent: { files: [pdf] } });
   });
 
   it('refuses what is not a file, or a file larger than a session takes, in a sentence', () => {

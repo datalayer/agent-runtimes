@@ -39,7 +39,7 @@ Points:
 
 **Fail fast at the seam.** A contribution whose value is not the point's
 shape, or whose id another plugin contributed first, is refused with the
-plugin's name and the field (:func:`check`), listed by ``loop plugins``, and
+plugin's name and the field (:func:`check`), listed by ``agent plugins``, and
 never read: the host runs with the rest.
 """
 
@@ -94,7 +94,7 @@ IDENTITY_PROVIDERS: ContributionPoint["IdentityProvider"] = define_contribution_
     "identity.provider"
 )
 
-#: The points, in the order ``loop plugins`` lists them.
+#: The points, in the order ``agent plugins`` lists them.
 POINTS: tuple[ContributionPoint[Any], ...] = (
     HARNESSES,
     SESSION_STORES,
@@ -461,7 +461,7 @@ class IdentityProvider(Protocol):
 
 @dataclass(frozen=True)
 class Refusal:
-    """A contribution refused at the seam, as ``loop plugins`` lists it."""
+    """A contribution refused at the seam, as ``agent plugins`` lists it."""
 
     plugin: str
     point: str

@@ -7,8 +7,8 @@
 a turn runs or the harness loads, the new agent bound through the one way
 to reconfigure a running agent, the conversation carried with the sentence
 of what carries appended to it and in the record, the files still listed, a
-harness → framework swap and back; the old `loop/sessions/{id}/agent`
-answers 410 naming the session route and `LoopSession.with_agent` goes
+harness → framework swap and back; the old `agent/sessions/{id}/agent`
+answers 410 naming the session route and `AgentSession.with_agent` goes
 through the new one; the session's Rules carry, the organization's policy
 for the new harness is pulled before its first turn, fail closed.
 """
@@ -20,8 +20,8 @@ from typing import Any, Dict, List
 import pytest
 from fastapi.testclient import TestClient
 
+from agent_runtimes.agent.session import AgentRefused, AgentSession
 from agent_runtimes.apps import sessions
-from agent_runtimes.loop.session import LoopRefused, LoopSession
 from agent_runtimes.specs.agents.agents import list_agentspecs
 from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
     ASSISTANT,
@@ -271,14 +271,14 @@ def test_the_swap_carries_the_conversation_tells_the_new_agent_and_is_in_the_rec
     ]
 
 
-def test_the_old_loop_route_is_gone_and_the_loop_session_swaps_through_the_new_one(
+def test_the_old_agent_route_is_gone_and_the_agent_session_swaps_through_the_new_one(
     runtime: Runtime,  # noqa: F811 - the fixture
     remote: TestClient,  # noqa: F811 - the fixture
     rebinder: Any,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     gone = remote.post(
-        "/api/v1/loop/sessions/session-w003/agent", json={"agent_id": HARNESS_AGENT}
+        "/api/v1/agent/sessions/session-w003/agent", json={"agent_id": HARNESS_AGENT}
     )
     assert (gone.status_code, gone.json()["detail"]) == (
         410,
@@ -294,17 +294,19 @@ def test_the_old_loop_route_is_gone_and_the_loop_session_swaps_through_the_new_o
         )
 
     monkeypatch.setattr(httpx, "post", post)
-    loop = LoopSession(server_url="http://runtime", agent_id="notes-assistant")
-    with pytest.raises(LoopRefused, match="not an application session: resume one"):
-        loop.with_agent(HARNESS_AGENT)
-    loop.session_uid = "session-w003"
-    loop.token = "ada"
-    assert loop.with_agent(HARNESS_AGENT) is loop
-    assert loop.agent_id == HARNESS_AGENT and loop.said.startswith(
+    agent_session = AgentSession(
+        server_url="http://runtime", agent_id="notes-assistant"
+    )
+    with pytest.raises(AgentRefused, match="not an application session: resume one"):
+        agent_session.with_agent(HARNESS_AGENT)
+    agent_session.session_uid = "session-w003"
+    agent_session.token = "ada"
+    assert agent_session.with_agent(HARNESS_AGENT) is agent_session
+    assert agent_session.agent_id == HARNESS_AGENT and agent_session.said.startswith(
         "This conversation was with notes-assistant until turn 1"
     )
-    with pytest.raises(LoopRefused, match="is with example-harness-codex already"):
-        loop.with_agent(HARNESS_AGENT)
+    with pytest.raises(AgentRefused, match="is with example-harness-codex already"):
+        agent_session.with_agent(HARNESS_AGENT)
 
 
 def test_a_harness_whose_policy_cannot_be_read_is_refused_and_nothing_is_swapped(

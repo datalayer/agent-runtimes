@@ -426,7 +426,7 @@ def unregister_a2a_agent(agent_id: str) -> None:
             logger.info(f"Dynamically removed A2A route: {mount_path}/")
 
         try:
-            from ..streams.loop import purge_agent_stream_state
+            from ..streams.pubsub import purge_agent_stream_state
 
             purge_agent_stream_state(agent_id)
         except Exception as e:

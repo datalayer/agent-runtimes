@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-stripe-checkout` — a Stripe Checkout Session the
+ * `@datalayer/agent-plugin-stripe-checkout` — a Stripe Checkout Session the
  * agent created through Stripe's MCP server, drawn with the A2UI renderer
  * (the chat's A2UI catalogue, `InlineSurface`): its line items, total and
  * currency, test mode said. Brought by the `stripe` MCP server (the user,
@@ -44,7 +44,7 @@ import {
 } from './read';
 
 export const STRIPE_CHECKOUT_PLUGIN_NAME =
-  '@datalayer/loop-plugin-stripe-checkout';
+  '@datalayer/agent-plugin-stripe-checkout';
 
 export function StripeCheckoutCard({
   context,

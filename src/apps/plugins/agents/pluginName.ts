@@ -10,4 +10,4 @@
  * @module apps/plugins/agents/pluginName
  */
 
-export const AGENTS_PLUGIN_NAME = '@datalayer/loop-plugin-agents';
+export const AGENTS_PLUGIN_NAME = '@datalayer/agent-plugin-agents';

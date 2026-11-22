@@ -19,7 +19,7 @@ it installs and uninstalls them together, and decides nothing.
 
 Each plugin says what it is by contributing a :class:`ProtocolDescription`
 to ``protocols.description``, the one point the ``agent-runtimes.protocols``
-plugin declares; Studio and ``loop apps`` read it. Each protocol has its
+plugin declares; Studio and ``agent apps`` read it. Each protocol has its
 ``reactor-points.json``, which its Python and TypeScript tests hold it to.
 
 Importing this module imports no protocol.

@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """The harness catalogue over HTTP: ``GET /api/v1/harnesses``
-answers what ``loop harnesses`` prints — the accepted ``harness``
+answers what ``agent harnesses`` prints — the accepted ``harness``
 contributions with their terms, register entry, capabilities and ACP launch
 — and ``GET /api/v1/harnesses/{id}`` one of them, or a refusal in a sentence.
 """

@@ -7,7 +7,7 @@
  * The Canvas's palette as a Contribution Point: each UI plugin
  * of the catalogue that renders components (`agentspecs/ui` — the
  * A2UI surfaces, `a2ui-surface`) has its components contributed to
- * `loop.canvas.block` by a Reactor plugin of its own, one per UI spec. The
+ * `agent.canvas.block` by a Reactor plugin of its own, one per UI spec. The
  * palette lists what the enabled plugins contribute, and nothing else; a
  * plugin disabled takes its blocks off it, and an application that uses one
  * of them says so in its setup notes (`blockSetupNotes`).
@@ -28,7 +28,7 @@ import {
 import { listUI } from '../../../specs/ui';
 import type { AppSpec, ComponentSpec, UISpec } from '../../../types/agentspecs';
 import {
-  LoopCanvasBlock,
+  AgentCanvasBlock,
   type CanvasBlockContribution,
 } from '../../core/canvasBlocks';
 import { uiManifestOf } from '../../uiManifest';
@@ -36,13 +36,13 @@ import { uiManifestOf } from '../../uiManifest';
 /** What is read of a reactor here: its contributions to the point, and who is enabled. */
 type BlocksReader = {
   getContributions: (
-    point: typeof LoopCanvasBlock,
+    point: typeof AgentCanvasBlock,
   ) => ReadonlyArray<{ value: CanvasBlockContribution }>;
 };
 
 /** The name of the Reactor plugin that contributes a UI's blocks. */
 export const canvasBlocksPluginName = (ui: string): string =>
-  `@datalayer/loop-plugin-ui-${ui}`;
+  `@datalayer/agent-plugin-ui-${ui}`;
 
 /** A UI of the catalogue as the Reactor plugin contributing its components as blocks. */
 export function uiPluginBlocks(
@@ -56,7 +56,7 @@ export function uiPluginBlocks(
     octicon: 'apps',
     contributes: ui.components.map(component =>
       contribution(
-        LoopCanvasBlock,
+        AgentCanvasBlock,
         { id: component.id, ui: ui.id, component },
         { id: component.id },
       ),
@@ -134,7 +134,7 @@ export function pluginsOffSetupNotes(
 /** The blocks the enabled plugins contribute, in contribution order: the palette. */
 export function canvasBlocksOf(reactor: BlocksReader): ComponentSpec[] {
   return reactor
-    .getContributions(LoopCanvasBlock)
+    .getContributions(AgentCanvasBlock)
     .map(entry => entry.value.component);
 }
 
@@ -161,7 +161,7 @@ export function blockSetupNotes(
   reactor: BlocksReader,
 ): string[] {
   const contributed = new Set(
-    reactor.getContributions(LoopCanvasBlock).map(entry => entry.value.id),
+    reactor.getContributions(AgentCanvasBlock).map(entry => entry.value.id),
   );
   const off = new Map<UISpec, string[]>();
   for (const name of componentsUsedBy(app)) {

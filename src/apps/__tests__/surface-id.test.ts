@@ -18,19 +18,19 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { loopSurfaceId } from '../core';
+import { agentSurfaceId } from '../core';
 
 const PLUGINS = join(__dirname, '..', 'plugins');
 
 describe('naming a surface', () => {
   it('is derived from the session', () => {
-    expect(loopSurfaceId('loop-workspace')).toBe('loop-loop-workspace');
+    expect(agentSurfaceId('agent-workspace')).toBe('agent-agent-workspace');
   });
 
   it('has an answer for a workspace with no session id', () => {
-    // A blank id must not produce `loop-`, which two workspaces would share.
-    expect(loopSurfaceId(undefined)).toBe('loop-default');
-    expect(loopSurfaceId('')).toBe('loop-default');
+    // A blank id must not produce `agent-`, which two workspaces would share.
+    expect(agentSurfaceId(undefined)).toBe('agent-default');
+    expect(agentSurfaceId('')).toBe('agent-default');
   });
 });
 
@@ -44,8 +44,8 @@ describe('everyone that names one', () => {
     expect(source).toContain('workspace.surfaceId');
     // Deriving one locally is what drifted, and deriving it from the agent
     // renamed the surface on every switch — which threw the notebook away.
-    expect(source).not.toContain('`loop-${workspace.agentId');
-    expect(source).not.toContain('loopSurfaceId(workspace.agentId)');
+    expect(source).not.toContain('`agent-${workspace.agentId');
+    expect(source).not.toContain('agentSurfaceId(workspace.agentId)');
   });
 });
 
@@ -60,7 +60,7 @@ describe('what an in-page agent can reach', () => {
     // The chat reads its tools from its own extension point now; the
     // notebook's contribution is what carries the surface id in.
     const chat = readFileSync(join(PLUGINS, 'chat/ChatView.tsx'), 'utf8');
-    expect(chat).toContain('useContributions(LoopFrontendTool)');
+    expect(chat).toContain('useContributions(AgentFrontendTool)');
     const notebook = readFileSync(join(PLUGINS, 'notebook/index.ts'), 'utf8');
     expect(notebook).toContain('createNotebookTools(workspace.surfaceId)');
     expect(chat).toContain('frontendTools: agentTools');

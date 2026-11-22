@@ -287,7 +287,7 @@ def test_another_deployments_agent_is_refused_from_the_pod_too(
 
 #: A spec of the visitor's that declares a secret and starts a server of its choice.
 CRAFTED_HOOKS = {
-    "schema": "loop.app/v1",
+    "schema": "agent.app/v1",
     "id": "web-research",
     "name": "Web Research",
     "kind": "chat",

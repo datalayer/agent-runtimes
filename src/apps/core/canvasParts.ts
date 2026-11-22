@@ -73,5 +73,5 @@ export type CanvasPartContribution = {
   groupNote?: string;
 };
 
-export const LoopCanvasPart =
-  defineContributionPoint<CanvasPartContribution>('loop.canvas.part');
+export const AgentCanvasPart =
+  defineContributionPoint<CanvasPartContribution>('agent.canvas.part');

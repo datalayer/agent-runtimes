@@ -39,7 +39,7 @@ import {
   agentUiIdsOf,
   agentUiPluginsFor,
 } from '../agentUiPlugins';
-import { LoopSlots } from '../core';
+import { AgentSlots } from '../core';
 import { applicationPlugin } from '../apps/AppRenderer';
 import {
   COMPOSER_PORTAL_PLUGIN_NAME,
@@ -165,7 +165,7 @@ describe('the Composer’s button', () => {
           components: [
             {
               id: 'host-composer',
-              slot: LoopSlots.composerView,
+              slot: AgentSlots.composerView,
               Component: HostComposer as never,
             },
           ],
@@ -223,21 +223,40 @@ describe('the Composer’s button', () => {
 });
 
 describe('the Composer’s own content', () => {
-  it('reads the application on its Canvas, as YAML and in Python', () => {
+  it('reads the application on the Composer’s own editors: its Canvas, its YAML and its Python, read only', async () => {
     const app = APP_CATALOGUE['demo-marketer'];
     const { container } = render(themed(<ComposerSource app={app} />));
-    expect(
-      container.querySelector('[data-composer-canvas="demo-marketer"]'),
-    ).toBeTruthy();
+    const canvas = container.querySelector(
+      '[data-composer-canvas="demo-marketer"]',
+    );
+    expect(canvas).toBeTruthy();
+    // The Canvas editor, loaded on first view, as a picture: its graph and its panels
+    // (React Flow lays its nodes out in a browser; the browser check proves them).
+    await waitFor(
+      () =>
+        expect(
+          canvas!.querySelector('[data-designer-mock] [data-designer-graph]'),
+        ).toBeTruthy(),
+      { timeout: 10_000 },
+    );
     act(() => screen.getByRole('button', { name: 'YAML' }).click());
     const yaml = container.querySelector('[data-composer-code="yaml"]');
+    await waitFor(() =>
+      expect(yaml?.querySelector('[data-app-yaml-editor]')).toBeTruthy(),
+    );
     expect(yaml?.textContent).toContain('id: demo-marketer');
-    expect(yaml?.textContent).toContain('composer-portal');
+    // Read only: no checks under the text, which is not being written.
+    expect(yaml?.querySelector('[role="status"]')).toBeNull();
     act(() => screen.getByRole('button', { name: 'Python' }).click());
     const python = container.querySelector('[data-composer-code="python"]');
+    await waitFor(() =>
+      expect(
+        python?.querySelector('[data-app-python-editor="app.py"]'),
+      ).toBeTruthy(),
+    );
     expect(python?.textContent).toContain('Application');
     expect(screen.getByText(COMPOSER_PORTAL_WORDS.pythonEjected)).toBeTruthy();
-  });
+  }, 30_000);
 
   it('knows the Python of the catalogue’s applications only', () => {
     expect(composerPython({ id: 'demo-marketer' }).how).toBe('ejected');

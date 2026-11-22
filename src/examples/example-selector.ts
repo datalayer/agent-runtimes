@@ -5,6 +5,8 @@
 
 /// <reference types="vite/client" />
 
+import type { ExampleRuntimeTarget } from './utils/runtimeTargetStore';
+
 export type ExampleLoader = () => Promise<{ default: React.ComponentType }>;
 
 export interface ExampleEntry {
@@ -13,6 +15,13 @@ export interface ExampleEntry {
   description: string;
   tags: string[];
   loader: ExampleLoader;
+  /**
+   * The header's runtime targets this example cannot run on, each with why:
+   * shown disabled in the header's selector, the reason in its tooltip. The
+   * selector is on every example's header; none listed, every target is
+   * offered.
+   */
+  unavailableTargets?: Partial<Record<ExampleRuntimeTarget, string>>;
 }
 
 const DISPLAY_NAME_EXCEPTIONS: [RegExp, string][] = [
@@ -20,6 +29,7 @@ const DISPLAY_NAME_EXCEPTIONS: [RegExp, string][] = [
   [/\bA2 Ui\b/g, 'A2UI'],
   [/\bA2 A\b/g, 'A2A'],
   [/\bPap\b/g, 'PAP'],
+  [/\bUcp\b/g, 'UCP'],
   [/\bCopilot Kit\b/g, 'CopilotKit'],
   [/\bGen Ui\b/g, 'Gen UI'],
   [/\bM C P\b/g, 'MCP'],
@@ -28,6 +38,8 @@ const DISPLAY_NAME_EXCEPTIONS: [RegExp, string][] = [
   // The document editor is Lexical underneath; the examples are about the
   // document.
   [/\bLexical\b/g, 'Document'],
+  // The scenes of the catalogue are agents at work together.
+  [/^Scenes$/, 'Agent Scenes'],
 ];
 
 function humanizeExampleName(name: string): string {
@@ -67,6 +79,7 @@ function makeEntry(
   loader: ExampleLoader,
   description: string,
   tags?: string[],
+  unavailableTargets?: ExampleEntry['unavailableTargets'],
 ): ExampleEntry {
   return {
     id,
@@ -74,8 +87,13 @@ function makeEntry(
     description,
     tags: tags ?? inferTags(id),
     loader,
+    ...(unavailableTargets ? { unavailableTargets } : {}),
   };
 }
+
+/** Why an `AIApplication` has no Browser or bare Jupyter target. */
+const AI_APPLICATION_RUNS_ON =
+  'An AIApplication runs on an agent-runtimes server (Local) or a Datalayer runtime.';
 
 /**
  * Central examples registry. Keep all example definitions in this list so
@@ -164,9 +182,9 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'A document as a page: floating prompt on top, an agent writing in it.',
   ),
   makeEntry(
-    'DecksAgent',
-    () => import('./DecksAgent'),
-    'A deck beside the chat: the decks plugin in a Loop, and an agent that writes presentations as data.',
+    'AgentDecksExample',
+    () => import('./AgentDecksExample'),
+    'A deck beside the chat: the decks plugin in the Agent workspace, and an agent that writes presentations as data.',
   ),
   makeEntry(
     'CellExample',
@@ -239,7 +257,7 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'AgentDecideExample',
     () => import('./AgentDecideExample'),
     'Decide: typed decisions asked of Jev — yes or no, a choice, a score — from the chat, where the agent calls decide, and from the floating assistant’s Ask a decision.',
-    ['example', 'agent', 'loop', 'app', 'decisions', 'jev', 'assistant'],
+    ['example', 'agent', 'app', 'decisions', 'jev', 'assistant'],
   ),
   makeEntry(
     'AgentEvalsExample',
@@ -263,37 +281,46 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     ['example', 'agent', 'inference', 'provider', 'runtime'],
   ),
   makeEntry(
-    'LoopWorkspaceExample',
-    () => import('./LoopWorkspaceExample'),
-    'The LOOP workspace: a blank shell, with the chat, the editors and the plugin list all contributed as plugins.',
-    // `owns-sandbox-control`: this example brings its own sandbox switch, so
-    // the shell hides the one in its header rather than showing two controls
-    // for one sandbox — and a second one that would not agree with the first.
-    ['example', 'loop', 'workspace', 'sandbox', 'owns-sandbox-control'],
+    'AgentApplicationExample',
+    () => import('./AgentApplicationExample'),
+    'An extensible AI application: AIApplication with an Appspec written in the page or named from the catalogue, run where the header says (Local or Datalayer), composed of the chat, the plugins manager (the plug button in its footer, which lists every plugin it runs), the presentation plugin and a plugin of its own in the title bar and the right panel.',
+    ['example', 'app', 'ai-application', 'plugins', 'extensible'],
+    { browser: AI_APPLICATION_RUNS_ON, jupyter: AI_APPLICATION_RUNS_ON },
   ),
   makeEntry(
-    'LoopAppComputerExample',
-    () => import('./LoopAppComputerExample'),
+    'AgentWorkspaceExample',
+    () => import('./AgentWorkspaceExample'),
+    'The Agent workspace: a blank shell, with the chat, the editors and the plugin list all contributed as plugins.',
+    // Its sandbox follows the header's target: its own switch is left out.
+    ['example', 'agent', 'workspace', 'sandbox'],
+  ),
+  makeEntry(
+    'AgentComputerExample',
+    () => import('./AgentComputerExample'),
     'An application beside its computer: what its agent ran on its sandbox, its files, and Take over and Hand back (R-23).',
-    ['example', 'loop', 'app', 'computer', 'sandbox', 'owns-sandbox-control'],
+    ['example', 'agent', 'app', 'computer', 'sandbox'],
+    {
+      browser:
+        'Its computer is a sandbox on a server: its browser, files and shell cannot run in this page.',
+      jupyter:
+        'An anonymous Jupyter server brings no agent, and an application needs one.',
+    },
   ),
   makeEntry(
     'ScenesExample',
     () => import('./ScenesExample'),
     'The scenes of the catalogue in tabs — Sales & Accounting, Month-end Close, Crop Monitoring, Disaster Assessment — each its graph and transcript, its cues as suggestions, played against the local servers (A-15).',
-    ['example', 'loop', 'scenes', 'a2a', 'agentspecs', 'team'],
+    ['example', 'agent', 'scenes', 'a2a', 'agentspecs', 'team'],
   ),
   makeEntry(
-    'LoopShellExample',
-    () => import('./LoopShellExample'),
-    'The Loop shell at its most naked: a blank canvas, a floating draggable prompt, and an editor selector in the corner — none, notebook or document.',
-    // `owns-sandbox-control`: the shell is pinned to the browser sandbox, so
-    // the page's selector would offer three targets it cannot move to.
-    ['example', 'loop', 'shell', 'prompt', 'editors', 'owns-sandbox-control'],
+    'AgentShellExample',
+    () => import('./AgentShellExample'),
+    'The Agent shell at its most naked: a blank canvas, a floating draggable prompt, and an editor selector in the corner — none, notebook or document.',
+    ['example', 'agent', 'shell', 'prompt', 'editors'],
   ),
   makeEntry(
-    'LoopStrategyExample',
-    () => import('./LoopStrategyExample'),
+    'AgentStrategyExample',
+    () => import('./AgentStrategyExample'),
     'Define and launch an agent reasoning strategy (a control loop: observe/think/act/evaluate) over a live notebook, driven by generic strategy specs.',
     ['example', 'agent', 'strategy', 'notebook', 'agentspecs'],
   ),
@@ -489,6 +516,36 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'NotebookCollaborationExample',
     () => import('./NotebookCollaborationExample'),
     'Notebook collaboration runtime integration example.',
+  ),
+  makeEntry(
+    'DatalayerNotebookExample',
+    () => import('./DatalayerNotebookExample'),
+    'A notebook on a Datalayer runtime: the Datalayer service manager, and real-time collaboration when it is switched on.',
+    ['example', 'notebook', 'datalayer', 'collaboration'],
+  ),
+  makeEntry(
+    'NotebookMutationsKernel',
+    () => import('./NotebookMutationsKernel'),
+    'One notebook moved between kernels: none, the browser (Lite), a Jupyter server, Datalayer CPU or GPU.',
+    ['example', 'notebook', 'kernel'],
+  ),
+  makeEntry(
+    'NotebookMutationsServiceManager',
+    () => import('./NotebookMutationsServiceManager'),
+    'One notebook moved between service managers, its content kept across each change.',
+    ['example', 'notebook', 'service-manager'],
+  ),
+  makeEntry(
+    'ReactRouterExample',
+    () => import('./ReactRouterExample'),
+    'Core’s navigation hooks (useNavigate, useLocation, useParams, useHistory) inside a React Router.',
+    ['example', 'navigation', 'react-router'],
+  ),
+  makeEntry(
+    'NativeNavigationExample',
+    () => import('./NativeNavigationExample'),
+    'Core’s navigation hooks without a router: they fall back to the browser’s own history.',
+    ['example', 'navigation'],
   ),
 ];
 

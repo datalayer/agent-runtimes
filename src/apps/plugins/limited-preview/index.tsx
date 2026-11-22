@@ -4,14 +4,14 @@
  */
 
 /**
- * `@datalayer/loop-plugin-limited-preview` — an anonymous visitor's limited
+ * `@datalayer/agent-plugin-limited-preview` — an anonymous visitor's limited
  * preview, as one indicator beside the composer's controls, and the page
  * tools that read and mark it (the user, 20 November 2026: "Don't show
  * 'Limited preview: …' as a separated box … create a reactor plugin that will
  * add an indicator on the number of remaining turns … make sure the
  * agent/app has frontend tools to update the indicator").
  *
- * - The indicator (`LoopSlots.promptStatus`, the composer's footer, usable
+ * - The indicator (`AgentSlots.promptStatus`, the composer's footer, usable
  *   while the composer is closed):
  *   *Limited preview · 7/10 turns today*, opening onto what signing in keeps,
  *   what is disabled, and *Sign in* (`LimitedPreviewIndicator`).
@@ -32,7 +32,7 @@ import type { JSX } from 'react';
 import { EyeIcon } from '@primer/octicons-react';
 import type { PluginRef } from '@datalayer/reactor';
 import type { ToolCallRenderContext } from '../../../types/chat';
-import { LoopSlots } from '../../core';
+import { AgentSlots } from '../../core';
 import { CallLine, cardRole, toolOf } from '../../pageTools/cards';
 import { defineToolCardPlugin } from '../../toolCards/kit';
 import { LimitedPreviewIndicator } from './LimitedPreviewIndicator';
@@ -45,7 +45,7 @@ import {
 } from './preview';
 
 export const LIMITED_PREVIEW_PLUGIN_NAME =
-  '@datalayer/loop-plugin-limited-preview';
+  '@datalayer/agent-plugin-limited-preview';
 
 /** A call, as a line in the conversation. */
 export function LimitedPreviewCallCard({
@@ -93,7 +93,7 @@ export function limitedPreviewPlugin(disabled: readonly string[]): PluginRef {
       {
         // Beside the composer's controls, outside its disabled region: once
         // no turn is left, it still opens onto the refusal and Sign in.
-        slot: LoopSlots.promptStatus,
+        slot: AgentSlots.promptStatus,
         id: 'limited-preview-indicator',
         Component: Indicator as never,
       },

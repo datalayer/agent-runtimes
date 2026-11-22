@@ -229,7 +229,7 @@ export type EmbedLook = {
   colorMode: EmbedColorMode;
   /** The host's face; empty for the theme's own. */
   font: string;
-  /** The theme the application names; `loop` when it names none. */
+  /** The theme the application names; `agent` when it names none. */
   variant: AppThemeVariant;
 };
 
@@ -258,7 +258,7 @@ export function embedLookOf(
     app?.interface?.theme?.mode ??
     'auto';
   const font = checkedFont(attributes.font) || checkedFont(variables.font);
-  const variant = app?.interface?.theme?.variant ?? 'loop';
+  const variant = app?.interface?.theme?.variant ?? 'agent';
   return { mode, accent, colorMode, font, variant };
 }
 

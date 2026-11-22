@@ -109,12 +109,12 @@ describe('the window frame', () => {
     const { container, root } = await mount(
       <Harness
         plugins={[WindowFramePlugin]}
-        title={<span>Loop</span>}
+        title={<span>Agent</span>}
         height={200}
       />,
     );
 
-    expect(container.textContent).toContain('Loop');
+    expect(container.textContent).toContain('Agent');
 
     await act(async () => root.unmount());
   });
@@ -144,12 +144,12 @@ describe('a frame drawn outside the workspace', () => {
     // reactor, so on the first render there is no platform at all. Reading the
     // actions slot used to throw here, and took the page with it.
     const { container, root } = await mount(
-      <WindowFrame title={<span>Loop</span>} height={200}>
+      <WindowFrame title={<span>Agent</span>} height={200}>
         <div>the workspace, still starting</div>
       </WindowFrame>,
     );
 
-    expect(container.textContent).toContain('Loop');
+    expect(container.textContent).toContain('Agent');
     expect(container.textContent).toContain('the workspace, still starting');
 
     await act(async () => root.unmount());

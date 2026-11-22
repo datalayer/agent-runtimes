@@ -10,8 +10,8 @@
  *
  * Read through what the workspace offers, not around it: the chat keeps the
  * current turn — the question, the answer, the conversation's thread — in
- * `LoopChatTurn`, and the composer hangs what is contributed to
- * `LoopPromptPanel` beside the prompt. `AppRenderer` adds the plugin for an
+ * `AgentChatTurn`, and the composer hangs what is contributed to
+ * `AgentPromptPanel` beside the prompt. `AppRenderer` adds the plugin for an
  * application whose record keeps feedback, in the Studio's Preview and on
  * the hosted page alike.
  *
@@ -27,16 +27,16 @@ import { useContributions, useSignalValue } from '@datalayer/reactor/react';
 import { useIAMStore } from '../../state';
 import type { AppSpec } from '../../types/agentspecs';
 import {
-  LoopChatTurn,
-  LoopPromptPanel,
+  AgentChatTurn,
+  AgentPromptPanel,
   agentServerOf,
   type ChatTurnSnapshot,
   type ConversationEntry,
-  type LoopWorkspaceContext,
+  type AgentWorkspaceContext,
 } from '../core';
 import { answerIdOf, FEEDBACK_WORDS, sendFeedback } from './feedback';
 
-export const APP_FEEDBACK_PLUGIN_NAME = '@datalayer/loop-plugin-app-feedback';
+export const APP_FEEDBACK_PLUGIN_NAME = '@datalayer/agent-plugin-app-feedback';
 
 /* A signal to read when no chat contributed a turn: the hook needs one. */
 const NO_TURN = signal<ChatTurnSnapshot>({ id: 0, status: 'idle' });
@@ -54,9 +54,9 @@ export function AppFeedback({
   workspace,
 }: {
   app: Pick<AppSpec, 'name'>;
-  workspace: LoopWorkspaceContext;
+  workspace: AgentWorkspaceContext;
 }): JSX.Element | null {
-  const turns = useContributions(LoopChatTurn);
+  const turns = useContributions(AgentChatTurn);
   const turn = useSignalValue(turns[0]?.value.turn ?? NO_TURN);
   // Which answer it is about: its place among the conversation's answers.
   const conversation = useSignalValue(
@@ -207,7 +207,7 @@ export function defineAppFeedbackPlugin(app: AppSpec) {
   function Panel({
     workspace,
   }: {
-    workspace: LoopWorkspaceContext;
+    workspace: AgentWorkspaceContext;
   }): JSX.Element | null {
     return <AppFeedback app={app} workspace={workspace} />;
   }
@@ -219,7 +219,7 @@ export function defineAppFeedbackPlugin(app: AppSpec) {
     emoji: '\u{1F44D}',
     contributes: [
       contribution(
-        LoopPromptPanel,
+        AgentPromptPanel,
         { id: 'app-feedback', placement: 'above', order: 20, Component: Panel },
         { id: 'app-feedback' },
       ),

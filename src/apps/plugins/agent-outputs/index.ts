@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-agent-outputs` — structured outputs, as a capacity.
+ * `@datalayer/agent-plugin-agent-outputs` — structured outputs, as a capacity.
  *
  * Mounts the `example-output` agent, which answers with exactly one
  * structured block — a Markdown table, a JSON object, an ECharts chart or a
@@ -16,7 +16,8 @@
 
 import { defineAgentCapacityPlugin } from '../agent-capacity';
 
-export const AGENT_OUTPUTS_PLUGIN_NAME = '@datalayer/loop-plugin-agent-outputs';
+export const AGENT_OUTPUTS_PLUGIN_NAME =
+  '@datalayer/agent-plugin-agent-outputs';
 
 export const AgentOutputsPlugin = defineAgentCapacityPlugin({
   key: 'outputs',

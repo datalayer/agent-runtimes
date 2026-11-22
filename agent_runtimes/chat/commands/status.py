@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 NAME = "status"
 ALIASES: list[str] = []
-DESCRIPTION = "Show loop status including model, tokens, and connectivity"
+DESCRIPTION = "Show agent status including model, tokens, and connectivity"
 SHORTCUT = "escape s"
 
 
@@ -30,7 +30,7 @@ async def execute(tux: "CliTux") -> Optional[str]:
     from ..tux import STYLE_MUTED, STYLE_PRIMARY
 
     tux.console.print()
-    tux.console.print("● Loop Status", style=STYLE_PRIMARY)
+    tux.console.print("● Agent Status", style=STYLE_PRIMARY)
     tux.console.print()
 
     # Version

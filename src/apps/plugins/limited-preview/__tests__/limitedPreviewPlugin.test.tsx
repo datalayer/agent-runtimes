@@ -11,7 +11,7 @@
  *   own turns, note and disabled features, and one going leaves the other;
  * - an exhausted preview: the composer closed (`disableInputPrompt`), its
  *   footer dimmed and blocked, the indicator still opens onto the refusal
- *   and Sign in — it stands in `LoopSlots.promptStatus`, outside the
+ *   and Sign in — it stands in `AgentSlots.promptStatus`, outside the
  *   disabled region, through the real `InputPrompt`.
  */
 
@@ -32,7 +32,7 @@ import {
 } from '../../../../chat/anonymous/AnonymousChat';
 import { InputPrompt } from '../../../../chat/prompt/InputPrompt';
 import type { FrontendToolDefinition } from '../../../../types/tools';
-import { LoopChatExtras, LoopSlots } from '../../../core';
+import { AgentChatExtras, AgentSlots } from '../../../core';
 import { limitedPreviewPlugin, PREVIEW_INDICATOR_UPDATE } from '..';
 
 afterEach(cleanup);
@@ -65,12 +65,12 @@ function partsOf(disabled: string[]) {
   };
   const indicator = plugin
     .build({ config: {} })
-    .components.find(each => each.slot === LoopSlots.promptStatus);
+    .components.find(each => each.slot === AgentSlots.promptStatus);
   if (!indicator) {
     throw new Error('No indicator in the promptStatus slot.');
   }
   const tools: FrontendToolDefinition[] = plugin.contributes
-    .filter(entry => entry.point === LoopChatExtras)
+    .filter(entry => entry.point === AgentChatExtras)
     .flatMap(entry => entry.value.extras.value.frontendTools ?? []);
   const tool = (name: string) => {
     const found = tools.find(each => each.name === name);

@@ -109,7 +109,7 @@ def judge_saying(passed: Dict[str, bool]) -> validation.JudgeCall:
 def desk(**fields: Any) -> Application:
     app = Application.from_spec(
         {
-            "schema": "loop.app/v1",
+            "schema": "agent.app/v1",
             "id": "desk",
             "name": "Desk",
             "kind": "chat",
@@ -584,7 +584,7 @@ def test_validate_judges_a_worded_test_here_with_a_judge_and_attaches_the_report
     # ai-agents answers at its own origin, not Spacer's (r1 and prod1).
     from types import SimpleNamespace
 
-    import agent_runtimes.loop.launch as launch_module
+    import agent_runtimes.agent.launch as launch_module
 
     monkeypatch.setattr(
         launch_module,

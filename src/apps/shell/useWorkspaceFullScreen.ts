@@ -170,18 +170,18 @@ export function holdOverlaysInside(node: HTMLElement): () => void {
 /**
  * What full screen promotes, found from the control that asked.
  *
- * The workspace (`[data-loop-workspace]`) — unless a host marked something
- * around it with `data-loop-fullscreen-root`. A host that draws its own bar
+ * The workspace (`[data-agent-workspace]`) — unless a host marked something
+ * around it with `data-agent-fullscreen-root`. A host that draws its own bar
  * above the workspace and has the header's controls rendered in it
- * (`LoopWorkspace`'s `headerContainer`) marks the element holding both: the
+ * (`AgentWorkspace`'s `headerContainer`) marks the element holding both: the
  * controls are then outside the workspace, and promoting the workspace alone
  * would leave them — the one that leaves full screen included — under the
  * overlay. The anchor itself when there is neither.
  */
 export function fullScreenNode(anchor: HTMLElement | null): HTMLElement | null {
   return (
-    (anchor?.closest('[data-loop-fullscreen-root]') as HTMLElement | null) ??
-    (anchor?.closest('[data-loop-workspace]') as HTMLElement | null) ??
+    (anchor?.closest('[data-agent-fullscreen-root]') as HTMLElement | null) ??
+    (anchor?.closest('[data-agent-workspace]') as HTMLElement | null) ??
     anchor
   );
 }
@@ -191,8 +191,8 @@ export function fullScreenNode(anchor: HTMLElement | null): HTMLElement | null {
  * workspace.
  *
  * The element promoted is the whole workspace — the nearest
- * `[data-loop-workspace]` above the anchor, or the host's
- * `[data-loop-fullscreen-root]` around it (see `fullScreenNode`) — so the
+ * `[data-agent-workspace]` above the anchor, or the host's
+ * `[data-agent-fullscreen-root]` around it (see `fullScreenNode`) — so the
  * header's controls come along instead of being left on the page underneath.
  * With neither around it, the anchor's own element is promoted, which is what
  * a view mounted without a shell would want.

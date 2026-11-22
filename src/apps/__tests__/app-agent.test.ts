@@ -11,7 +11,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { LoopAgentBlueprint } from '../core';
+import { AgentBlueprint } from '../core';
 import { APP_CATALOGUE } from '../../specs/apps';
 import { getCog } from '../../specs/cogs';
 import { getAgentspecs } from '../../specs/agents';
@@ -25,7 +25,7 @@ import { browserSandboxNote, runsCodeInSandbox } from '../apps/browserSandbox';
 
 const blueprintOf = (plugin: ReturnType<typeof defineAppPlugin>) =>
   (plugin.contributes ?? []).find(
-    (item: { point?: unknown }) => item.point === LoopAgentBlueprint,
+    (item: { point?: unknown }) => item.point === AgentBlueprint,
   ) as unknown as {
     value: { specId: string; instructions?: string; model?: string };
   };

@@ -3,13 +3,13 @@
 
 """An application whose page side is a file of its folder.
 
-Its dial is ``components/dial.js``, beside this file. ``loop apps package
+Its dial is ``components/dial.js``, beside this file. ``agent apps package
 app.py`` puts it in the application's wheel; installed beside the server that
 runs the application, the page draws the dial from that server::
 
-    loop apps package app.py
-    pip install dist/loop_app_dial_desk-0.0.1-py3-none-any.whl
-    loop apps run app.py --web
+    agent apps package app.py
+    pip install dist/agent_app_dial_desk-0.0.1-py3-none-any.whl
+    agent apps run app.py --web
 """
 
 from agent_runtimes.apps import Application

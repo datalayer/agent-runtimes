@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-side-panels` — the agent opens and closes the
+ * `@datalayer/agent-plugin-side-panels` — the agent opens and closes the
  * workspace's side panels (the user, 18 November 2026: "the agent can open,
  * close and fill them through frontend tools"). Two frontend tools of the
  * `side-panels` set, run in the page:
@@ -35,7 +35,7 @@ import {
 } from '../../shell/SidePanel';
 import { defineToolCardPlugin } from '../../toolCards/kit';
 
-export const SIDE_PANELS_PLUGIN_NAME = '@datalayer/loop-plugin-side-panels';
+export const SIDE_PANELS_PLUGIN_NAME = '@datalayer/agent-plugin-side-panels';
 
 export const SIDE_PANELS_TOOL_NAMES = [OPEN_SIDE_PANEL, CLOSE_SIDE_PANEL];
 

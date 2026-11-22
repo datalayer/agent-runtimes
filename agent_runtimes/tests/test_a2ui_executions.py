@@ -7,17 +7,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
 
-import pytest
-
-# The SDK is an opt-in extra (`agent-runtimes[a2ui]`), because it drags in
-# google-adk and with it an OTEL ceiling for the whole environment. Where it is
-# installed, this file is what keeps the module's literal catalog id honest.
-_sdk = pytest.importorskip(
-    "a2ui.basic_catalog.provider",
-    reason="a2ui-agent-sdk is not installed; the catalog id falls back to its literal",
-)
-BasicCatalog = _sdk.BasicCatalog
-from a2ui.schema.constants import VERSION_0_9
+from a2ui.core.basic_catalog import BasicCatalog
+from a2ui.core.schema import ProtocolVersion
+from a2ui.utils import validate_payload
 
 from agent_runtimes.a2ui import A2UI_VERSION, ExecutionResult, execution_to_a2ui
 from agent_runtimes.a2ui.executions import A2UI_BASIC_CATALOG_ID, MAX_TEXT_CHARS
@@ -38,8 +30,15 @@ class TestShape:
     def test_uses_the_registered_v09_basic_catalog(self) -> None:
         messages = execution_to_a2ui(ExecutionResult(code="1"))
 
-        assert A2UI_BASIC_CATALOG_ID == BasicCatalog.get_catalog_id(VERSION_0_9)
+        assert A2UI_BASIC_CATALOG_ID == BasicCatalog(ProtocolVersion.V0_9).catalog_id
         assert messages[0]["createSurface"]["catalogId"] == A2UI_BASIC_CATALOG_ID
+
+    def test_a_renderer_holding_the_basic_catalog_accepts_the_payload(self) -> None:
+        messages = execution_to_a2ui(
+            ExecutionResult(code="x", stdout="out", error="boom", success=False)
+        )
+
+        validate_payload([BasicCatalog(ProtocolVersion.V0_9)], messages)
 
     def test_emits_the_three_v09_messages_in_order(self) -> None:
         messages = execution_to_a2ui(ExecutionResult(code="1"))

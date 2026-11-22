@@ -6,8 +6,8 @@
 /**
  * The transcript's grammar is one: the lines the page
  * reads from the Agent Inspector's spans (`sceneTranscript.ts`, the
- * reference) are the lines `loop scenes rehearse` reads in Python
- * (`agent_runtimes/loop/scenes/transcript.py`, its twin). Both are held to
+ * reference) are the lines `agent scenes rehearse` reads in Python
+ * (`agent_runtimes/agent/scenes/transcript.py`, its twin). Both are held to
  * the one fixture, `agent_runtimes/tests/fixtures/scene_transcript.json`:
  * each case's spans and the lines they give.
  */

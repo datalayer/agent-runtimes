@@ -14,8 +14,8 @@
 
 import { describe, expect, it } from 'vitest';
 import { buildReactorFromPlugins, configurePlugin } from '@datalayer/reactor';
-import { LoopAgentGate, createPromptChannel } from '../core';
-import type { LoopWorkspaceContext, SandboxSnapshot } from '../core';
+import { AgentGate, createPromptChannel } from '../core';
+import type { AgentWorkspaceContext, SandboxSnapshot } from '../core';
 import { AgentsPlugin } from '../plugins/agents';
 import {
   SANDBOX_TARGETS,
@@ -23,7 +23,7 @@ import {
   targetRunsAgentInPage,
 } from '../plugins/agents';
 
-function workspaceOn(target: string): LoopWorkspaceContext {
+function workspaceOn(target: string): AgentWorkspaceContext {
   const sandbox: SandboxSnapshot = { state: 'running', target };
   return {
     serverUrl: '',
@@ -53,9 +53,9 @@ describe('with no sandbox plugin', () => {
     const reactor = buildReactorFromPlugins([]);
     reactor.start();
 
-    expect(
-      reactor.checkGate(LoopAgentGate, workspaceOn('browser')).allowed,
-    ).toBe(true);
+    expect(reactor.checkGate(AgentGate, workspaceOn('browser')).allowed).toBe(
+      true,
+    );
   });
 });
 
@@ -64,7 +64,7 @@ describe('with the sandbox plugin', () => {
     const reactor = sandboxReactor();
 
     for (const target of SANDBOX_TARGETS) {
-      const verdict = reactor.checkGate(LoopAgentGate, workspaceOn(target));
+      const verdict = reactor.checkGate(AgentGate, workspaceOn(target));
       expect(verdict.allowed, target).toBe(TARGET_SPECS[target].hasAgent);
     }
   });
@@ -80,7 +80,7 @@ describe('with the sandbox plugin', () => {
 
   it('gives the chat a reason it can show', () => {
     const reactor = sandboxReactor();
-    const verdict = reactor.checkGate(LoopAgentGate, workspaceOn('jupyter'));
+    const verdict = reactor.checkGate(AgentGate, workspaceOn('jupyter'));
 
     expect(verdict.reason).toMatch(/no agent/i);
     // And names who refused, for a host that shows provenance.
@@ -91,12 +91,12 @@ describe('with the sandbox plugin', () => {
     // The service started on `browser`; the ask carries `jupyter`.
     const reactor = sandboxReactor();
 
-    expect(
-      reactor.checkGate(LoopAgentGate, workspaceOn('datalayer')).allowed,
-    ).toBe(true);
-    expect(
-      reactor.checkGate(LoopAgentGate, workspaceOn('jupyter')).allowed,
-    ).toBe(false);
+    expect(reactor.checkGate(AgentGate, workspaceOn('datalayer')).allowed).toBe(
+      true,
+    );
+    expect(reactor.checkGate(AgentGate, workspaceOn('jupyter')).allowed).toBe(
+      false,
+    );
   });
 
   it('says where the loop turns, not only whether there is one', () => {
@@ -110,17 +110,17 @@ describe('with the sandbox plugin', () => {
 
   it('stops refusing when the sandbox plugin is switched off', () => {
     const reactor = sandboxReactor();
-    expect(
-      reactor.checkGate(LoopAgentGate, workspaceOn('jupyter')).allowed,
-    ).toBe(false);
+    expect(reactor.checkGate(AgentGate, workspaceOn('jupyter')).allowed).toBe(
+      false,
+    );
 
     reactor.disable(AgentsPlugin.name);
 
     // Its answer went with it: a chat should not stay disabled by a plugin
     // that is no longer there.
-    expect(
-      reactor.checkGate(LoopAgentGate, workspaceOn('jupyter')).allowed,
-    ).toBe(true);
+    expect(reactor.checkGate(AgentGate, workspaceOn('jupyter')).allowed).toBe(
+      true,
+    );
   });
 });
 

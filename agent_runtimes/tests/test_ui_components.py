@@ -44,4 +44,4 @@ def test_ui_plugins_name_only_renderers_of_the_catalogue() -> None:
     assert not set(UI_CATALOGUE) & set(UI_RENDERER_CATALOGUE)
     for spec in UI_CATALOGUE.values():
         assert set(spec.renderers) <= set(UI_RENDERER_CATALOGUE), spec.id
-        assert spec.plugin.startswith("@datalayer/loop-plugin-"), spec.id
+        assert spec.plugin.startswith("@datalayer/agent-plugin-"), spec.id

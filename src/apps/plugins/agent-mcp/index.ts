@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-agent-mcp` — the capacity, as a plugin.
+ * `@datalayer/agent-plugin-agent-mcp` — the capacity, as a plugin.
  *
  * Mounts the `example-mcp` agent and offers what it is worth asking. Cast
  * from the shared capacity mould; see `apps/plugins/agent-capacity`.
@@ -16,7 +16,7 @@
 
 import { defineAgentCapacityPlugin } from '../agent-capacity';
 
-export const AGENT_MCP_PLUGIN_NAME = '@datalayer/loop-plugin-agent-mcp';
+export const AGENT_MCP_PLUGIN_NAME = '@datalayer/agent-plugin-agent-mcp';
 
 export const AgentMcpPlugin = defineAgentCapacityPlugin({
   key: 'mcp',

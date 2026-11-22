@@ -7,8 +7,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional
 
-from agent_runtimes.loop.commands import CommandArgSpec
-from agent_runtimes.loop.session import LoopRefused
+from agent_runtimes.agent.commands import CommandArgSpec
+from agent_runtimes.agent.session import AgentRefused
 
 from .sessions_shared import NOT_A_SESSION, current_uid, session_of
 
@@ -35,7 +35,7 @@ async def execute(tux: "CliTux", argv: str = "") -> Optional[str]:
     session = session_of(tux)
     try:
         session.with_agent(agent)
-    except LoopRefused as refused:
+    except AgentRefused as refused:
         tux.console.print(f"[red]{refused}[/red]")
         return None
     tux.agent_id = session.agent_id

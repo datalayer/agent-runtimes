@@ -190,9 +190,9 @@ describe('the stage of a scene', () => {
 describe('the Scenes example', () => {
   it('is registered in the Apps group, open without an account', () => {
     const entry = getExampleEntries().find(one => one.id === 'ScenesExample');
-    expect(entry?.title).toBe('Scenes');
+    expect(entry?.title).toBe('Agent Scenes');
     expect(EXAMPLES.ScenesExample).toBeTypeOf('function');
-    expect(getExampleGroup('ScenesExample')).toBe('Apps');
+    expect(getExampleGroup('ScenesExample')).toBe('Agents');
   });
 
   it('shows the catalogue’s scenes as tabs, each its face and name, and the first one drawn', async () => {

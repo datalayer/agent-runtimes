@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-checkpoints-sidebar` — the agent's conversation
+ * `@datalayer/agent-plugin-checkpoints-sidebar` — the agent's conversation
  * checkpoints, at the side of the workspace.
  *
  * The agent snapshots its conversation as it runs; this lists the snapshots
@@ -16,11 +16,11 @@
 
 import { definePlugin } from '@datalayer/reactor';
 import type { ReactorReactOutput } from '@datalayer/reactor/react';
-import { LoopSlots, type LoopWorkspaceContext } from '../../core';
+import { AgentSlots, type AgentWorkspaceContext } from '../../core';
 import { CheckpointsSidebar } from './CheckpointsSidebar';
 
 export const CHECKPOINTS_SIDEBAR_PLUGIN_NAME =
-  '@datalayer/loop-plugin-checkpoints-sidebar';
+  '@datalayer/agent-plugin-checkpoints-sidebar';
 
 export const CheckpointsSidebarPlugin = definePlugin<
   Record<string, never>,
@@ -36,10 +36,10 @@ export const CheckpointsSidebarPlugin = definePlugin<
     components: [
       {
         id: 'checkpoints-sidebar',
-        slot: LoopSlots.sidebar,
+        slot: AgentSlots.sidebar,
         // Part of the work, so above the plugins panel (900).
         order: 100,
-        Component: ({ workspace }: { workspace?: LoopWorkspaceContext }) => (
+        Component: ({ workspace }: { workspace?: AgentWorkspaceContext }) => (
           <CheckpointsSidebar workspace={workspace} />
         ),
       },

@@ -10,7 +10,7 @@
  * code (`session.close`) or by the person. Inline, an element is a message,
  * which the chat draws; this plugin draws the other two.
  *
- * The chat keeps what is open (`chat/base/loopElement`), from the session's
+ * The chat keeps what is open (`chat/base/agentElement`), from the session's
  * ui socket (RU-W); this plugin draws it from the
  * workspace's root slot, positioned against the workspace, so that nothing
  * is laid out while nothing is open. It also contributes the renderer of
@@ -27,13 +27,13 @@ import {
 } from '@datalayer/reactor';
 import { Renderers } from '@datalayer/reactor/ui';
 import { defineRenderer } from '@datalayer/reactor/ui/react';
-import { clearLoopElements } from '../../../chat/base/loopElement';
-import { LoopSlots } from '../../core';
+import { clearAgentElements } from '../../../chat/base/agentElement';
+import { AgentSlots } from '../../core';
 import { AppElements } from './AppElements';
 import { QUESTION_DISPLAY_TYPE, QuestionView } from './QuestionView';
 import { uiManifestOf } from '../../uiManifest';
 
-export const APP_ELEMENTS_PLUGIN_NAME = '@datalayer/loop-plugin-app-elements';
+export const APP_ELEMENTS_PLUGIN_NAME = '@datalayer/agent-plugin-app-elements';
 
 /** The plugin that draws an application's side panel and pages. */
 export const AppElementsPlugin = definePlugin({
@@ -50,13 +50,13 @@ export const AppElementsPlugin = definePlugin({
     components: [
       {
         id: 'app-elements',
-        slot: LoopSlots.root,
+        slot: AgentSlots.root,
         Component: AppElements as never,
       },
     ],
   }),
   // A workspace that goes takes what it had open with it.
-  register: () => clearLoopElements,
+  register: () => clearAgentElements,
 }) as unknown as ReactorPlugin<Record<string, never>, unknown, unknown>;
 
 export { AppElements, APP_PANEL_WIDTH, elementsByPlace } from './AppElements';

@@ -10,7 +10,7 @@ by session, ``POST …/apps/records`` for the writer, ``GET …/apps/sessions``
 by opener and ``POST …/apps/records/copy`` once the services answer them),
 keyed by ``DATALAYER_AI_AGENTS_URL``; and **the file store**, one
 ``entries.jsonl`` per session under ``~/.datalayer/sessions/<uid>/``, for
-``loop`` on a machine and the tests — a session's folder is named by its
+``agent`` on a machine and the tests — a session's folder is named by its
 uid, the same uid it has on Datalayer; ``index.json`` beside the folders
 keeps what a listing says of each, so listing reads one file
 (``AGENT_RUNTIMES_SESSIONS_PATH`` names another root). The harness rows (``harness_session``

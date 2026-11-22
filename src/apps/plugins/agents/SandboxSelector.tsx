@@ -22,7 +22,7 @@ import { Box } from '@datalayer/primer-addons';
 import { SegmentedControl, Spinner, Text } from '@primer/react';
 import { KernelIndicator } from '@datalayer/jupyter-react/kernel-indicator';
 import { useSignalValue } from '@datalayer/reactor/react';
-import type { LoopWorkspaceContext } from '../../core';
+import type { AgentWorkspaceContext } from '../../core';
 import {
   IDLE_SANDBOX_SNAPSHOT_SIGNAL,
   sandboxIndicatorState,
@@ -36,7 +36,7 @@ import {
 } from './switchable';
 
 export function SandboxSelector(_props: {
-  workspace: LoopWorkspaceContext;
+  workspace: AgentWorkspaceContext;
 }): JSX.Element | null {
   const service = useOptionalSandboxService();
   const [moving, setMoving] = useState(false);

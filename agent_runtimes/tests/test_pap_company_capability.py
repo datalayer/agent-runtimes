@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A Loop application as a PAP company.
+"""An Agent application as a PAP company.
 
 ``PapCompanyCapability`` publishes an application's ``pap.company`` through the
 SDK's reference company, ``pap.company.agent`` being the application over its

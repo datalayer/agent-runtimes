@@ -39,7 +39,7 @@ import {
   type DeckState,
 } from '../pageTools/deck';
 import { ConversationBound, succeeded } from '../pageTools/conversation';
-import { LoopChatExtras } from '../core';
+import { AgentChatExtras } from '../core';
 import { agentUiIdsOf, agentUiPluginsFor } from '../agentUiPlugins';
 import { PAGE_TOOL_RESULTS } from '../toolCards/toolResults';
 import {
@@ -511,7 +511,7 @@ describe('the page-deck plugin', () => {
         contributes: { point: unknown; value: unknown; id?: string }[];
       }
     ).contributes;
-    const extras = contributes.find(entry => entry.point === LoopChatExtras);
+    const extras = contributes.find(entry => entry.point === AgentChatExtras);
     const tools = (
       extras?.value as { extras: { value: { frontendTools: Tool[] } } }
     ).extras.value.frontendTools;
@@ -520,7 +520,7 @@ describe('the page-deck plugin', () => {
       contributes.filter(entry => entry.point === ToolBindings),
     ).toHaveLength(DECK_TOOL_NAMES.length);
     expect((PageDeckPlugin as { name: string }).name).toBe(
-      '@datalayer/loop-plugin-page-deck',
+      '@datalayer/agent-plugin-page-deck',
     );
   });
 
@@ -530,8 +530,8 @@ describe('the page-deck plugin', () => {
       { anonymous: true },
     ).map(plugin => (plugin as { name: string }).name);
     expect(mounted).toEqual([
-      '@datalayer/loop-plugin-page-deck',
-      '@datalayer/loop-plugin-page-sheet',
+      '@datalayer/agent-plugin-page-deck',
+      '@datalayer/agent-plugin-page-sheet',
     ]);
     expect(agentUiIdsOf('worker-marketer')).toContain('page-deck');
     expect(agentUiIdsOf('worker-accountant')).toContain('page-sheet');

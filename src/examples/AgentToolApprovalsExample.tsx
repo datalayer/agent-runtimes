@@ -21,7 +21,7 @@ import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { waitForAgent } from './utils/waitForAgent';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
-import { LoopEmbed } from '../apps';
+import { AgentEmbed } from '../apps';
 import { createAgentToolApprovalsPlugin } from '../apps/plugins/agent-tool-approvals';
 import { useAgentRuntimeApprovals } from '../stores/agentRuntimeStore';
 
@@ -95,7 +95,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
       ),
     [selectedSpecId, disableToolApprovals],
   );
-  // The capacity for the choice: the Loop creates the agent from its
+  // The capacity for the choice: the Agent creates the agent from its
   // blueprint, spec and approvals switch included.
   const plugins = useMemo(
     () => [
@@ -111,7 +111,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
     'launching' | 'ready' | 'error'
   >('launching');
   const [isReady, setIsReady] = useState(false);
-  // Kept for the effect's bookkeeping; the Loop mounts regardless.
+  // Kept for the effect's bookkeeping; the Agent mounts regardless.
   void isReady;
   const [hookError, setHookError] = useState<string | null>(null);
   const [agentId, setAgentId] = useState<string>(agentName);
@@ -167,7 +167,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
       setIsReconnectedAgent(false);
 
       try {
-        // The Loop creates the agent from the capacity plugin's blueprint —
+        // The Agent workspace creates the agent from the capacity plugin's blueprint —
         // spec, tools and the approvals switch included — as it mounts; the
         // page waits until the server has it.
         const found = await waitForAgent(agentBaseUrl, agentName, {
@@ -227,7 +227,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
 
       <Box flex={1} minHeight={0} display="flex">
         <Box flex={1} minWidth={0}>
-          <LoopEmbed
+          <AgentEmbed
             key={agentName}
             serverUrl={agentBaseUrl}
             target="local"

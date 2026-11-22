@@ -83,7 +83,7 @@ def composed(thread: str, text: str, files: List[Dict[str, Any]]) -> Dict[str, A
         "messages": [{"id": "m1", "role": "user", "content": text}],
         "tools": [],
         "context": [],
-        "forwardedProps": {"loop": {"files": files}},
+        "forwardedProps": {"agent": {"files": files}},
     }
 
 
@@ -257,7 +257,7 @@ def test_a_file_given_on_its_page_is_held_to_what_its_page_asks_for(
 def desk(received: List[Any]) -> Application:
     application = Application.from_spec(
         {
-            "schema": "loop.app/v1",
+            "schema": "agent.app/v1",
             "id": "photo-desk",
             "name": "Photo Desk",
             "kind": "chat",
@@ -321,7 +321,7 @@ def test_without_app_file_the_words_go_to_message_and_the_file_answers_what_it_a
 ) -> None:
     application = Application.from_spec(
         {
-            "schema": "loop.app/v1",
+            "schema": "agent.app/v1",
             "id": "asker",
             "name": "Asker",
             "kind": "chat",

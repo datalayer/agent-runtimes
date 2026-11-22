@@ -12,12 +12,14 @@
  */
 
 export const EXAMPLE_GROUP_ORDER = [
-  'Apps',
+  'Agent',
+  'Agents',
   'Avatar',
   'A2UI',
   'A2A',
   'Personal Agent Protocol',
-  'Agent protocols',
+  'Web Bot Auth',
+  'UCP',
   'Shield',
   'AG-UI',
   'Chat',
@@ -26,25 +28,40 @@ export const EXAMPLE_GROUP_ORDER = [
   'Capabilities',
   'Cell',
   'CopilotKit',
+  'Navigation',
 ] as const;
 
+/** The Agent group: the shells, the workspace, an application beside its computer, the Agent Application, the strategy. */
+const AGENT_EXAMPLES = new Set([
+  'AgentShellExample',
+  'AgentWorkspaceExample',
+  'AgentComputerExample',
+  'AgentApplicationExample',
+  'AgentStrategyExample',
+]);
+
 export const getExampleGroup = (id: string): string => {
-  // The library of specs, the Loop shells, and the scenes of the catalogue:
-  // the applications and what is staged with them.
+  // The Agent examples together, first (the user, 22 November 2026): the
+  // shells, the workspace, an application beside its computer, the Agent
+  // Application, the strategy.
+  if (AGENT_EXAMPLES.has(id)) return 'Agent';
+  // The library of specs, the scenes of the catalogue and the decks: the
+  // Agents group (the user, 22 November 2026, renamed from Applications).
   if (
     id === 'AgentspecsExample' ||
     id === 'ScenesExample' ||
-    id.startsWith('Loop') ||
-    id === 'DecksAgent'
+    id === 'AgentDecksExample'
   ) {
-    return 'Apps';
+    return 'Agents';
   }
   if (id.startsWith('A2Ui')) return 'A2UI';
   // Agents reached over the A2A protocol: their own category, after A2UI.
   if (id.startsWith('AgentA2A')) return 'A2A';
   if (id.startsWith('Pap')) return 'Personal Agent Protocol';
-  // The other agent protocols' examples: signed requests, commerce.
-  if (id.startsWith('Protocol')) return 'Agent protocols';
+  // The other agent protocols' examples, a group per protocol (the user,
+  // 22 November 2026): signed requests, a UCP checkout.
+  if (id === 'ProtocolSignedRequestsExample') return 'Web Bot Auth';
+  if (id === 'ProtocolUcpCheckoutExample') return 'UCP';
   // The Shield: a coding agent behind it, and its policy.
   if (id.startsWith('Shield')) return 'Shield';
   if (id.startsWith('AgUi')) return 'AG-UI';
@@ -58,6 +75,10 @@ export const getExampleGroup = (id: string): string => {
   // The document examples: the ones on the Lexical editor, and the page
   // with a document on it.
   if (id.startsWith('Lexical') || id.startsWith('Document')) return 'Document';
-  if (id.startsWith('Notebook')) return 'Notebook';
+  if (id.startsWith('Notebook') || id === 'DatalayerNotebookExample')
+    return 'Notebook';
+  // Core's navigation hooks, with a router and without one.
+  if (id === 'ReactRouterExample' || id === 'NativeNavigationExample')
+    return 'Navigation';
   return 'Cell';
 };

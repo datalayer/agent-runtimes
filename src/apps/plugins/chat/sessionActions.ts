@@ -4,7 +4,7 @@
  */
 
 /**
- * The chat's entries on a thread's menu (`loop.session.action`): *Switch
+ * The chat's entries on a thread's menu (`agent.session.action`): *Switch
  * agent…*, *Clone from here*, *Export*, *Import…*, *Resume* — each saying
  * with `when` whether it applies to the session as it stands, each doing
  * its work through the runtime's session API and the page's ways (a
@@ -37,7 +37,7 @@ export const SESSION_ACTION_WORDS = {
   switchAgent: 'Switch agent…',
   switchTitle: (agent: string): string => `Switch ${agent} to`,
   noPicker:
-    'Switching the agent needs a picker this page has not: use `loop sessions swap`.',
+    'Switching the agent needs a picker this page has not: use `agent sessions swap`.',
   noAgents: 'No other agent of the catalogue runs on a harness.',
   cloneFromHere: 'Clone from here',
   cloned: (atTurn: number, uid: string): string =>
@@ -47,7 +47,7 @@ export const SESSION_ACTION_WORDS = {
     `Exported ${turns} turn${turns === 1 ? '' : 's'}, ${redactions} redaction${redactions === 1 ? '' : 's'} → ${name}.`,
   import: 'Import…',
   noFilePicker:
-    'Importing a session needs a file picker this page has not: use `loop sessions import`.',
+    'Importing a session needs a file picker this page has not: use `agent sessions import`.',
   imported: (uid: string, turns: number, redactions: number): string =>
     `Imported as ${uid} (${turns} turn${turns === 1 ? '' : 's'}, ${redactions} redaction${redactions === 1 ? '' : 's'}): opened here.`,
   resume: 'Resume',

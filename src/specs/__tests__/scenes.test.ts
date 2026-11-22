@@ -59,7 +59,7 @@ describe('the scene catalogue', () => {
     expect(new Set(faces).size).toBe(faces.length);
     expect(faces).not.toContain('👀');
     for (const scene of listSceneSpecs()) {
-      expect(scene.schema).toBe('loop.scene/v1');
+      expect(scene.schema).toBe('agent.scene/v1');
       expect(scene.name).toBeTruthy();
       expect(scene.description).toBeTruthy();
       expect(scene.icon).toBeTruthy();

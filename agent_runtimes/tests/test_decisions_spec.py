@@ -192,12 +192,12 @@ def test_the_generator_refuses_an_application_deciding_through_an_agent_that_doe
     )
     with pytest.raises(SystemExit) as refused:
         check_app_decisions(
-            [{"id": "bad", "agent": "loop-shell:0.0.1", "backendTools": ["decide"]}],
+            [{"id": "bad", "agent": "agent-shell:0.0.1", "backendTools": ["decide"]}],
             CLONE / "apps",
         )
     assert (
         "application 'bad' lists the backend tool `decide` but its agent "
-        "'loop-shell' names no decisions" in str(refused.value)
+        "'agent-shell' names no decisions" in str(refused.value)
     )
 
 

@@ -42,7 +42,7 @@ from agent_runtimes.guardrails.shield_policy import policies_of  # noqa: E402
 KEY = "sk-ant-api03-" + "x" * 24
 
 APP = {
-    "schema": "loop.app/v1",
+    "schema": "agent.app/v1",
     "id": "shield-example",
     "name": "Shield example",
     "kind": "chat",

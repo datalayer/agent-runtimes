@@ -14,7 +14,7 @@ from typing import Any, Dict, List
 
 import pytest
 
-from agent_runtimes.loop.scenes.transcript import (
+from agent_runtimes.agent.scenes.transcript import (
     PERSON,
     SceneConnection,
     SceneMember,

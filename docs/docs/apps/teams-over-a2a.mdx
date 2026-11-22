@@ -145,11 +145,11 @@ A scene spec's `rehearsal` (agentspecs `scenes/`) says, per
 beat, the shape the transcript must take — in the grammar above, `You →
 Sales`, `Sales → Accounting`, `Accounting → Odoo: odoo_accounting_*`,
 `Accounting: a table`, `Sales: words` — the words the answer must and must
-not hold, and the time the beat may take. `loop scenes rehearse <scene>`
+not hold, and the time the beat may take. `agent scenes rehearse <scene>`
 plays each beat's cue through the scene and judges it:
 
-- **The stage** (`agent_runtimes.loop.scenes.stage`): the entry's application
-  runs in this process as `loop apps run` runs one (`AppHost`, its agent from
+- **The stage** (`agent_runtimes.agent.scenes.stage`): the entry's application
+  runs in this process as `agent apps run` runs one (`AppHost`, its agent from
   `local_agent` — or `browser_agent` for a member the scene puts in the
   browser, as the page plays it: its model and prompt without the
   connections, skills and backend tools a browser has not — or one a test
@@ -167,34 +167,34 @@ plays each beat's cue through the scene and judges it:
   set up in time is the member's sentence; nothing crashes.
 - **One grammar**: what happens is recorded as the spans the Agent Inspector
   reads (`invoke_agent`, `execute_tool`, `a2a`, each with the attributes
-  above) and read back by `agent_runtimes.loop.scenes.transcript`, the Python
+  above) and read back by `agent_runtimes.agent.scenes.transcript`, the Python
   twin of `sceneTranscript.ts` — `transcript_of_spans`, `transcript_of_record`,
   `line_text`, `transcript_text`. Both are held to one fixture,
   `agent_runtimes/tests/fixtures/scene_transcript.json` (the scripted scene,
   what is still happening and what failed, a tool of no connection, the
   same answer said once), read by `sceneTranscriptFixture.test.ts` and
   `test_scenes_transcript.py`.
-- **The verdict** (`agent_runtimes.loop.scenes.rehearsal`): the expected lines
+- **The verdict** (`agent_runtimes.agent.scenes.rehearsal`): the expected lines
   found in the transcript in order (a member by its id or its shown name, a
   system by its id, server or `as`; a detail as a pattern or words; *a
   table* read off the answer), `must_say` / `must_not_say` on the entry's
   answer, `within` on the time; each beat **passed**, **failed** with what
   differed, or **not run** with why — a member whose setup is incomplete
   leaves the beats that need it not run with its sentence. A scene with a
-  recording and no live run says its recording stands. Exit codes are `loop
+  recording and no live run says its recording stands. Exit codes are `agent
   apps validate`'s (1 failed, 3 not run); a scene whose every beat passed is
   *Live*.
 - **What was played is kept**: a rehearsal of every beat on Datalayer of a
   catalogue scene is written beside the specs as the scene's last
   (`agentspecs.scenes.write_played`, `<id>/rehearsal.json`: when, where,
   whether it passed, the verdict's sentence, each beat's verdict, the
-  agent-runtimes that played it). *Live* is read from it — by `loop scenes
+  agent-runtimes that played it). *Live* is read from it — by `agent scenes
   ls`, by the generated catalogue (`played` on the scene spec, `make specs`)
   and by the home page — never from a sentence written by hand; a scene whose
   last rehearsal did not pass says so. A beat alone, a local run or a scene
   file is not kept. With `--json`, stdout is the verdict and nothing else.
 
-`loop scenes ls` lists the catalogue: each scene's face, members (where each
+`agent scenes ls` lists the catalogue: each scene's face, members (where each
 runs, whom it asks, what it reaches), beats, setup, and whether it is *Live*,
 with its last rehearsal's day and sentence. The whole is on the [CLI page](/cli#a-scenes-rehearsal); the
 tests are `test_scenes_rehearse.py` (a scripted scene: fake members answering
@@ -207,10 +207,10 @@ A runtime serves an application over A2A when it is configured with `a2a`:
 
 ```bash
 # On Datalayer: a new cloud runtime, or a running one with -r <uid>.
-loop apps run agentspecs/agentspecs/apps/accounting.yaml --cloud --a2a --keep
-loop apps run agentspecs/agentspecs/apps/accounting.yaml --cloud -r <runtime uid> --a2a --keep
+agent apps run agentspecs/agentspecs/apps/accounting.yaml --cloud --a2a --keep
+agent apps run agentspecs/agentspecs/apps/accounting.yaml --cloud -r <runtime uid> --a2a --keep
 # Open to visitors without an account too (next sections).
-loop apps run agentspecs/agentspecs/apps/accounting.yaml --cloud --a2a --visitors --keep
+agent apps run agentspecs/agentspecs/apps/accounting.yaml --cloud --a2a --visitors --keep
 # On a runtime that is already running, such as the examples' server on :8765.
 python examples/sales-accounting-a2a/serve_accounting.py --url http://127.0.0.1:8765
 # Every member on a runtime of every scene, each on a local runtime of its own.
@@ -226,7 +226,7 @@ address callers reach) makes the runtime's agent the application's agent,
 with its connections and its rules. It also mounts the agent with fasta2a at
 `/api/v1/a2a/agents/<application id>/`, through the runtime's A2A route
 (`register_a2a_agent`): its task store and broker are the runtime's protocol
-state store, and its worker is the runtime's `A2AWorker`. `loop` prints the
+state store, and its worker is the runtime's `A2AWorker`. `agent` prints the
 address and the agent card, then waits until Ctrl-C.
 
 The agent card is written from the Appspec: its name, description and
@@ -264,7 +264,7 @@ gateway with some of its toolsets, such as `odoo-accounting`, which keeps its
 ## Open to visitors
 
 A signed-out visitor holds no key of the owner's. An application served over
-A2A can also answer visitors, the way LOOP's visitors' runtime answers
+A2A can also answer visitors, the way Agent's visitors' runtime answers
 an `at:<slug>` address. Its owner says so when it is configured, as
 `agent-teams demo deploy` does:
 
@@ -286,7 +286,7 @@ POST /api/v1/apps/configure
 The answer's `a2a` then says `visitors`: the runs a visitor has a day, all
 of them together, and what the runs act with.
 
-From the terminal, `loop apps run <app>.yaml --cloud --a2a --visitors` sends
+From the terminal, `agent apps run <app>.yaml --cloud --a2a --visitors` sends
 `visitors`, and `--visitors-key <token>` sends `visitors_key`. On a runtime
 that is already serving it, `-r <runtime uid>` configures it again on the
 same runtime, at the same address. `--visitors` without `--a2a`, or
@@ -327,7 +327,7 @@ anonymous rate and its ceiling for the day.
 
 ## At a stable address: an always-on deployment
 
-`loop apps run --cloud --a2a` serves an application from a runtime, at that
+`agent apps run --cloud --a2a` serves an application from a runtime, at that
 runtime's address. When the runtime is launched again, the address changes,
 and every caller has to be told the new one. An always-on **deployment**
 answers over A2A at an address that names its slug, not a runtime:
@@ -359,8 +359,8 @@ Its owner turns it on from the terminal, after pushing a version and
 deploying it:
 
 ```bash
-loop apps push accounting.yaml --app <application uid>
-loop apps deploy <application uid> --slug demo-accounting \
+agent apps push accounting.yaml --app <application uid>
+agent apps deploy <application uid> --slug demo-accounting \
   --visibility public --always-on --spend-limit 50 --a2a --visitors
 #  A2A: https://r1.datalayer.run/api/ai-agents/v1/apps/deployments/at/demo-accounting/a2a/  (open to visitors)
 ```
@@ -459,7 +459,7 @@ applies. The model is told that a notebook came, not its content.
 `useA2ATeam({ …, accept: NOTEBOOK_AND_WORDS })` keeps the peer's `artifacts`
 with its last answer, and its latest `notebook` until another one comes.
 `TeamNotebook` draws it, titled, with *Download .ipynb*, on the browser
-sandbox: the loop notebook view's own `EphemeralNotebook` bound to
+sandbox: the Agent notebook view's own `EphemeralNotebook` bound to
 `createBrowserSandboxService`, a JupyterLite Pyodide kernel in the page,
 where the reader runs cells, changes them and adds their own. The view,
 JupyterLab and Pyodide are loaded only once a notebook is drawn: a page that
@@ -546,7 +546,7 @@ answer to the member that showed it: `onPress(surface, pressed)` gets the
 option's words and its action (`pressedOf`), and the page asks that member
 with them — `askA2APeer(peer, pressed.message, { action: pressed.action })`
 puts the action in the message's metadata,
-`loop.action: {name, payload: {does}}`. One choice per surface; what came back is said under it (a
+`agent.action: {name, payload: {does}}`. One choice per surface; what came back is said under it (a
 press that failed is said, and another button can be pressed).
 
 **A press is a turn of the conversation.** In a team, give `onPress` the
@@ -558,7 +558,7 @@ history, its balloon, its link's flow, the team's report, surfaces and
 notebook — and in the entry's history as that member's answer. The entry's
 model reads both at its next turn. In the transcript the press is the
 person's: give the peer's `traceA2AFetch` `pressedBy: PERSON`, and a request
-carrying `loop.action` is recorded with *You* as its service — *You →
+carrying `agent.action` is recorded with *You* as its service — *You →
 Accounting: Send the reminders* — while the entry's own requests stay its.
 
 **An approval is honest.** An option whose `does` is more than `read`
@@ -929,7 +929,7 @@ at the last 500.
      `python examples/sales-accounting-a2a/serve_accounting.py`. From this
      machine it needs no key. The runtime reaches Odoo with its own
      `DATALAYER_API_KEY`.
-   - **On Datalayer**: `loop apps run …/accounting.yaml --cloud --a2a --keep`,
+   - **On Datalayer**: `agent apps run …/accounting.yaml --cloud --a2a --keep`,
      then mint a key for that runtime's route (next section) and put the A2A
      address in `.env.local` as `VITE_A2A_ACCOUNTING_URL`.
 3. Open `http://localhost:3000/` and choose *Agent A2A Team* in the A2A group.

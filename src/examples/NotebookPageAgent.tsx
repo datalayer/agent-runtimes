@@ -13,9 +13,9 @@
  * appear on the page; ask the Reviewer to check it and the verdict lands
  * beside them.
  *
- * Reactor plugins only. `pageLayout` mounts `LoopPageLayoutPlugin`, which
+ * Reactor plugins only. `pageLayout` mounts `AgentPageLayoutPlugin`, which
  * hands the chat view's parts to primer-addons' page layout through the
- * `LoopChatLayout` point; the
+ * `AgentChatLayout` point; the
  * `jupyter` team brings the Analyst, the Reviewer, the Writer and
  * the rest of the notebook's agents;
  * the loop turns in the browser, so nothing has to be installed or signed
@@ -27,12 +27,12 @@
 import React from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
-import { LoopEmbed } from '../apps';
+import { AgentEmbed } from '../apps';
 
 const NotebookPageAgent: React.FC = () => (
   <ThemedProvider>
-    <Box height="100vh" minHeight={0}>
-      <LoopEmbed
+    <Box height="100%" minHeight={0}>
+      <AgentEmbed
         target="browser"
         /* The Analyst is the team's front door; the team puts the other
            members one click away in the composer's agents menu. */

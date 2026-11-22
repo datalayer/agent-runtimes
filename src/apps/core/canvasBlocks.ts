@@ -29,5 +29,5 @@ export type CanvasBlockContribution = {
   component: ComponentSpec;
 };
 
-export const LoopCanvasBlock =
-  defineContributionPoint<CanvasBlockContribution>('loop.canvas.block');
+export const AgentCanvasBlock =
+  defineContributionPoint<CanvasBlockContribution>('agent.canvas.block');

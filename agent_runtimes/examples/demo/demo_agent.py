@@ -19,6 +19,7 @@ Usage:
 import ast
 import asyncio
 import logging
+import os
 from typing import Any, AsyncGenerator
 
 from agent_runtimes.adapters.base import (
@@ -211,10 +212,20 @@ def create_pydantic_demo_agent() -> tuple[Any, AgentInfo]:
         from pydantic_ai import Agent
 
         from agent_runtimes.adapters.pydantic_ai import PydanticAIAdapter
+        from agent_runtimes.specs.agents import get_agent_spec
 
-        # Create a simple Pydantic AI agent
+        # A simple Pydantic AI agent on the model of `example-blank`, the
+        # catalogue's agent that is a model and nothing else; the environment
+        # variable AGENT_RUNTIMES_MODEL, when set, overrides it.
+        spec = get_agent_spec("example-blank")
+        model = os.environ.get("AGENT_RUNTIMES_MODEL") or (spec.model if spec else None)
+        if not model:
+            raise ValueError(
+                "No model: AGENT_RUNTIMES_MODEL is unset and agentspec "
+                "'example-blank' names no model"
+            )
         pydantic_agent = Agent(
-            "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+            model,
             instructions=(
                 "You are a helpful demo agent for testing the agent-runtimes server. "
                 "Keep your responses concise and helpful. "

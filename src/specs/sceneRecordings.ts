@@ -5,7 +5,7 @@
 
 /**
  * The scenes' recordings: each the transcript of a passing rehearsal, kept
- * beside its spec as `<id>/recording.json` (`loop scenes record`) and played
+ * beside its spec as `<id>/recording.json` (`agent scenes record`) and played
  * at its recorded pace when the scene cannot play live (`useSceneRecording`).
  *
  * This file is AUTO-GENERATED from YAML specifications.

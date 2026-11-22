@@ -13,7 +13,7 @@
  * the document on the page, with the document's own tools, and the result
  * is a document a reader can keep editing by hand.
  *
- * Reactor plugins only: `pageLayout` mounts the layout plugin, the Loop
+ * Reactor plugins only: `pageLayout` mounts the layout plugin, the Agent
  * Shell's agent drives the document tools, and the loop turns in the
  * browser.
  *
@@ -23,18 +23,18 @@
 import React from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
-import { LoopEmbed } from '../apps';
+import { AgentEmbed } from '../apps';
 
 const DocumentPageAgent: React.FC = () => (
   <ThemedProvider>
-    <Box height="100vh" minHeight={0}>
-      <LoopEmbed
+    <Box height="100%" minHeight={0}>
+      <AgentEmbed
         target="browser"
-        /* The Loop Shell's agent: it drives the document tools — insert a
+        /* The Agent Shell's agent: it drives the document tools — insert a
            block, run a code block, read the document — as readily as the
            notebook's, and its openers work on either. */
-        agentId="loop-shell"
-        localAgentSpec="loop-shell"
+        agentId="agent-shell"
+        localAgentSpec="agent-shell"
         teamId=""
         /* The document, open on the page. */
         defaultEditor="document"

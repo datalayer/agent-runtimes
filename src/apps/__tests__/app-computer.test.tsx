@@ -36,12 +36,12 @@ import {
   terminalEntries,
 } from '../apps/computer';
 import {
-  LoopAgentBlueprint,
-  LoopChatTurn,
-  LoopSlots,
+  AgentBlueprint,
+  AgentChatTurn,
+  AgentSlots,
   type ChatTurnSnapshot,
   type ConversationEntry,
-  type LoopWorkspaceContext,
+  type AgentWorkspaceContext,
 } from '../core';
 import { AppComputer } from '../plugins/app-computer';
 import { ENGLISH_CHAT_WORDS } from '../../chat/words';
@@ -87,7 +87,7 @@ const workspace = {
   serverUrl: 'http://runtime.test',
   agentId: 'web-research',
   sandbox: { state: 'running' },
-} as unknown as LoopWorkspaceContext;
+} as unknown as AgentWorkspaceContext;
 
 const mounted: Array<ReturnType<typeof createRoot>> = [];
 
@@ -114,7 +114,7 @@ function InReactor({
           name: 'test-chat-turn',
           contributes: [
             contribution(
-              LoopChatTurn,
+              AgentChatTurn,
               {
                 id: 'turn',
                 turn: signal<ChatTurnSnapshot>({ id: 1, status: 'done' }),
@@ -268,7 +268,7 @@ describe('its agent, created on a runtime', () => {
     const codemode = (spec: AppSpec) =>
       (
         (defineAppPlugin(spec).contributes ?? []).find(
-          (item: { point?: unknown }) => item.point === LoopAgentBlueprint,
+          (item: { point?: unknown }) => item.point === AgentBlueprint,
         ) as { value: { createPayload: Record<string, unknown> } }
       ).value.createPayload.enable_codemode;
     expect(codemode(app({ files: true }))).toBe(false);
@@ -278,7 +278,7 @@ describe('its agent, created on a runtime', () => {
 
 describe('the preset, asked for the sidebar', () => {
   it('mounts the computer in the sidebar slot, and not unless asked', async () => {
-    const name = '@datalayer/loop-plugin-app-computer-web-research';
+    const name = '@datalayer/agent-plugin-app-computer-web-research';
     const preset = appPreset(app({ shell: true }), { sidebar: true });
     expect(preset.plugins.map(plugin => plugin.name)).toContain(name);
     const reactor = buildReactorFromPlugins(preset.plugins);
@@ -288,7 +288,7 @@ describe('the preset, asked for the sidebar', () => {
         components?: Array<{ id: string; slot: string }>;
       }>(name)?.components ?? [];
     expect(components.map(each => [each.id, each.slot])).toEqual([
-      ['app-computer', LoopSlots.sidebar],
+      ['app-computer', AgentSlots.sidebar],
     ]);
     expect(
       appPreset(app({ shell: true })).plugins.some(plugin =>
@@ -684,7 +684,7 @@ describe('the computer view', () => {
               target: 'datalayer',
               errorReason: reason,
             },
-          } as LoopWorkspaceContext
+          } as AgentWorkspaceContext
         }
       />,
     );

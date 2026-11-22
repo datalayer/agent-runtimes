@@ -469,7 +469,7 @@ class CodeSandboxManager:
     def _active_sandbox(self) -> "Sandbox | None":
         """Return the sandbox that reflects the live execution context.
 
-        In CLI / ``loop`` mode the sandbox is created per agent and stored in
+        In CLI / ``agent`` mode the sandbox is created per agent and stored in
         ``_agent_sandboxes`` rather than the global ``_sandbox``.  Prefer the
         global sandbox when present, otherwise fall back to the first per-agent
         sandbox so that status reporting (kernel id, running state) is accurate.
@@ -1173,7 +1173,7 @@ class CodeSandboxManager:
         else:
             python_path = str(Path(generated_path).resolve().parent)
 
-        # Resolve the live execution context.  In CLI / ``loop`` mode the
+        # Resolve the live execution context.  In CLI / ``agent`` mode the
         # sandbox lives in ``_agent_sandboxes`` (per-agent) rather than the
         # global ``_sandbox``, so inspect both to report an accurate kernel id
         # and running state.  Without this, ``/health/startup`` reports

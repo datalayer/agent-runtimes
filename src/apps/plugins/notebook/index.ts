@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-notebook` — a notebook editor, beside the chat.
+ * `@datalayer/agent-plugin-notebook` — a notebook editor, beside the chat.
  *
  * Contributed to the chat rather than to the workspace: a notebook is what the
  * conversation is about, and a person reading a reply wants the cell it just
@@ -20,17 +20,17 @@
 import { RowsIcon } from '@primer/octicons-react';
 import { contribution, definePlugin } from '@datalayer/reactor';
 import {
-  LoopCommand,
-  LoopEditorView,
-  LoopFrontendTool,
-  LoopOpeningNotebook,
+  AgentCommand,
+  AgentEditorView,
+  AgentFrontendTool,
+  AgentOpeningNotebook,
   requestSurface,
-  LoopNotebookToolbar,
+  AgentNotebookToolbar,
 } from '../../core';
 import { AgentsPlugin } from '../agents';
 import { uiManifestOf } from '../../uiManifest';
 
-export const NOTEBOOK_PLUGIN_NAME = '@datalayer/loop-plugin-notebook';
+export const NOTEBOOK_PLUGIN_NAME = '@datalayer/agent-plugin-notebook';
 
 export const NotebookPlugin = definePlugin({
   name: NOTEBOOK_PLUGIN_NAME,
@@ -47,12 +47,12 @@ export const NotebookPlugin = definePlugin({
   // And the opening notebook: what the editor holds before anyone types. The
   // plugin ships one cell with a result; a host whose argument needs several
   // contributes its own, and the view opens on that instead.
-  contributionPoints: [LoopNotebookToolbar, LoopOpeningNotebook],
+  contributionPoints: [AgentNotebookToolbar, AgentOpeningNotebook],
   contributes: [
     // The editor: one entry in the shell's segmented control, one view in
     // the editor column.
     contribution(
-      LoopEditorView,
+      AgentEditorView,
       {
         surfaceId: 'notebook',
         title: 'Notebook',
@@ -65,7 +65,7 @@ export const NotebookPlugin = definePlugin({
       { id: 'notebook', order: 10 },
     ),
     contribution(
-      LoopCommand,
+      AgentCommand,
       {
         name: 'notebook',
         description: 'Open the notebook beside the chat',
@@ -101,7 +101,7 @@ export const NotebookPlugin = definePlugin({
     void import('../../../tools/adapters/agent-runtimes/notebookHooks').then(
       ({ createNotebookTools }) => {
         ctx.contribute(
-          LoopFrontendTool,
+          AgentFrontendTool,
           {
             id: 'notebook-tools',
             tools: workspace => createNotebookTools(workspace.surfaceId),

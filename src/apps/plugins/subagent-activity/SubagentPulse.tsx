@@ -27,7 +27,7 @@ import {
 import { agentIcon } from '../agents/agentIcons';
 import { AGENTS_PLUGIN_NAME, type AgentsOutput } from '../agents/plugin';
 
-export const PULSE_ANIMATION = 'loop-subagent-pulse';
+export const PULSE_ANIMATION = 'agent-subagent-pulse';
 
 const KEYFRAMES = `@keyframes ${PULSE_ANIMATION} {
   0%, 100% { opacity: 0.25; }

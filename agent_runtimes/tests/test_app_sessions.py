@@ -38,7 +38,7 @@ from agent_runtimes.routes.agui import register_agui_agent, unregister_agui_agen
 CATALOGUE = Path(pytest.importorskip("agentspecs.apps").__file__).parent
 
 ASSISTANT: Dict[str, Any] = {
-    "schema": "loop.app/v1",
+    "schema": "agent.app/v1",
     "id": "notes-assistant",
     "name": "Notes Assistant",
     "kind": "chat",
@@ -305,7 +305,7 @@ def test_a_preview_session_starts_answers_and_is_recorded_as_the_person(
         )
     )
     assert types_of(started) == [
-        "CUSTOM:loop.session",
+        "CUSTOM:agent.session",
         "RUN_STARTED",
         "TEXT_MESSAGE_START",
         "TEXT_MESSAGE_END",
@@ -530,7 +530,7 @@ def test_the_chat_speaks_to_an_application_over_ag_ui_each_thread_a_session(
         "messages": [{"id": "m1", "role": "user", "content": "Hi there"}],
         "tools": [],
         "context": [],
-        "forwardedProps": {"loop": {"settings": {"tone": "Warm"}}},
+        "forwardedProps": {"agent": {"settings": {"tone": "Warm"}}},
     }
     events = events_of(
         local.post("/api/v1/apps/agents/notes-assistant/ag-ui/", json=run)
@@ -546,7 +546,7 @@ def test_the_chat_speaks_to_an_application_over_ag_ui_each_thread_a_session(
     assert {body["opened_by"] for body in runtime.records} == {""}
     wrong = local.post(
         "/api/v1/apps/agents/notes-assistant/ag-ui/",
-        json={**run, "forwardedProps": {"loop": {"settings": {"tone": "Loud"}}}},
+        json={**run, "forwardedProps": {"agent": {"settings": {"tone": "Loud"}}}},
     )
     assert wrong.status_code == 422
     # Checked against the settings' form, the sentence a Form's check says.
@@ -573,7 +573,7 @@ def test_a_file_of_any_kind_is_put_in_the_sandbox_of_an_application_with_a_shell
                 "tools": [],
                 "context": [],
                 "forwardedProps": {
-                    "loop": {
+                    "agent": {
                         "files": uploaded(
                             local,
                             "file-analyst",
@@ -612,7 +612,7 @@ def test_a_file_of_any_kind_is_put_in_the_sandbox_of_an_application_with_a_shell
 
 
 def _page_run(
-    thread: str, run: str, text: str, files: List[Dict[str, Any]], **loop: Any
+    thread: str, run: str, text: str, files: List[Dict[str, Any]], **agent_props: Any
 ) -> Dict[str, Any]:
     """An AG-UI run as a page's block sends it: its message, its files."""
     return {
@@ -621,7 +621,7 @@ def _page_run(
         "messages": [{"id": f"m-{run}", "role": "user", "content": text}],
         "tools": [],
         "context": [],
-        "forwardedProps": {"loop": {"files": files, **loop}},
+        "forwardedProps": {"agent": {"files": files, **agent_props}},
     }
 
 
@@ -994,7 +994,7 @@ async def test_what_an_answer_shows_is_a_surface_under_its_message() -> None:
     (frame,) = sessions.UI_HUB.ops(live.uid)
     assert (frame.seq, frame.op.op, frame.op.scope) == (1, "show", live.uid)
     display = frame.op.body.model_dump(mode="json")
-    assert display["type"] == "application/vnd.datalayer.loop.answer+json"
+    assert display["type"] == "application/vnd.datalayer.agent.answer+json"
     assert display["id"] == frame.op.id == f"{sent.id}-shows"
     assert display["data"]["message_id"] == sent.id
     assert display["text"] == "Notes assistant showed Table runs"
@@ -1355,7 +1355,7 @@ def test_report_from_a_file_over_ag_ui_as_its_page_runs_it(
                 "tools": [],
                 "context": [],
                 "forwardedProps": {
-                    "loop": {
+                    "agent": {
                         "settings": {"report": "Summary", "question": ""},
                         "files": uploaded(
                             local,
@@ -1396,7 +1396,7 @@ DEPTH = {
 def test_the_title_bars_drop_downs_are_told_to_its_agent_for_that_run(
     runtime: Runtime, local: TestClient
 ) -> None:
-    """``forwardedProps.loop.header`` — the option each drop-down of a header
+    """``forwardedProps.agent.header`` — the option each drop-down of a header
     UI is on, told in its UI spec's words for the run; what the catalogue
     does not have is refused, and nothing of it is kept in the conversation."""
     from pydantic_ai.messages import ModelRequest
@@ -1423,7 +1423,7 @@ def test_the_title_bars_drop_downs_are_told_to_its_agent_for_that_run(
         "messages": [{"id": "m1", "role": "user", "content": "Hi there"}],
         "tools": [],
         "context": [],
-        "forwardedProps": {"loop": {"header": {"shop-header": {"budget": "100"}}}},
+        "forwardedProps": {"agent": {"header": {"shop-header": {"budget": "100"}}}},
     }
     url = "/api/v1/apps/agents/notes-assistant/ag-ui/"
     assert answer_of(events_of(local.post(url, json=run))) == "Heard 1: Hi there"
@@ -1441,7 +1441,7 @@ def test_the_title_bars_drop_downs_are_told_to_its_agent_for_that_run(
             {"id": "m2", "role": "assistant", "content": "Heard 1: Hi there"},
             {"id": "m3", "role": "user", "content": "And now?"},
         ],
-        "forwardedProps": {"loop": {"header": {"shop-header": {"budget": "none"}}}},
+        "forwardedProps": {"agent": {"header": {"shop-header": {"budget": "none"}}}},
     }
     events_of(local.post(url, json=again))
     assert "chosen in the chat's header" not in told[-1]
@@ -1455,7 +1455,7 @@ def test_the_title_bars_drop_downs_are_told_to_its_agent_for_that_run(
         ({"nope": {}}, "There is no header UI named 'nope'."),
     ):
         refused = local.post(
-            url, json={**run, "forwardedProps": {"loop": {"header": wrong}}}
+            url, json={**run, "forwardedProps": {"agent": {"header": wrong}}}
         )
         assert refused.status_code == 422
         assert refused.json()["detail"] == sentence
@@ -1464,7 +1464,7 @@ def test_the_title_bars_drop_downs_are_told_to_its_agent_for_that_run(
 def test_the_mode_a_run_says_is_told_to_its_agent_for_that_run(
     runtime: Runtime, local: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """``forwardedProps.loop.modes`` — the options' instructions for the
+    """``forwardedProps.agent.modes`` — the options' instructions for the
     run, the model one names run on; a mode or an option it does not have refused."""
     from pydantic_ai.messages import ModelRequest
 
@@ -1494,7 +1494,7 @@ def test_the_mode_a_run_says_is_told_to_its_agent_for_that_run(
         "messages": [{"id": "m1", "role": "user", "content": "Hi there"}],
         "tools": [],
         "context": [],
-        "forwardedProps": {"loop": {}},
+        "forwardedProps": {"agent": {}},
     }
     url = "/api/v1/apps/agents/notes-assistant/ag-ui/"
     # Unsaid, a mode is on its first option.
@@ -1512,7 +1512,7 @@ def test_the_mode_a_run_says_is_told_to_its_agent_for_that_run(
         ("thorough", "The modes sent are not options by mode id."),
     ):
         refused = local.post(
-            url, json={**run, "forwardedProps": {"loop": {"modes": wrong}}}
+            url, json={**run, "forwardedProps": {"agent": {"modes": wrong}}}
         )
         assert refused.status_code == 422
         assert refused.json()["detail"] == sentence
@@ -1531,7 +1531,7 @@ def test_the_mode_a_run_says_is_told_to_its_agent_for_that_run(
         json={
             **run,
             "runId": "run-2",
-            "forwardedProps": {"loop": {"modes": {"depth": "thorough"}}},
+            "forwardedProps": {"agent": {"modes": {"depth": "thorough"}}},
         },
     )
     assert forwarded[-1]["model"] == "alibaba:qwen-max"
@@ -1558,7 +1558,7 @@ PROFILES = [
 def test_a_conversation_keeps_the_profile_it_started_with(
     runtime: Runtime, local: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """``forwardedProps.loop.profile`` — its instructions told before
+    """``forwardedProps.agent.profile`` — its instructions told before
     the modes', its model run unless a mode names one; kept to the end."""
     spec = {
         **ASSISTANT,
@@ -1584,7 +1584,7 @@ def test_a_conversation_keeps_the_profile_it_started_with(
         "messages": [{"id": "m1", "role": "user", "content": "Hi there"}],
         "tools": [],
         "context": [],
-        "forwardedProps": {"loop": {"profile": "sales"}},
+        "forwardedProps": {"agent": {"profile": "sales"}},
     }
     url = "/api/v1/apps/agents/notes-assistant/ag-ui/"
     local.post(url, json=run)
@@ -1601,7 +1601,7 @@ def test_a_conversation_keeps_the_profile_it_started_with(
             **run,
             "runId": "run-2",
             "forwardedProps": {
-                "loop": {"profile": "sales", "modes": {"depth": "thorough"}}
+                "agent": {"profile": "sales", "modes": {"depth": "thorough"}}
             },
         },
     )
@@ -1609,7 +1609,7 @@ def test_a_conversation_keeps_the_profile_it_started_with(
     assert forwarded[-1]["told"] == "Talk about plans.\n\nCite what you read."
     # Kept to the end: another is refused, an unknown one too.
     changed = local.post(
-        url, json={**run, "forwardedProps": {"loop": {"profile": "support"}}}
+        url, json={**run, "forwardedProps": {"agent": {"profile": "support"}}}
     )
     assert changed.status_code == 409
     assert changed.json()["detail"] == (
@@ -1620,7 +1620,7 @@ def test_a_conversation_keeps_the_profile_it_started_with(
         (3, "The profile sent is not a profile's id."),
     ):
         refused = local.post(
-            url, json={**run, "forwardedProps": {"loop": {"profile": wrong}}}
+            url, json={**run, "forwardedProps": {"agent": {"profile": wrong}}}
         )
         assert refused.status_code == 422
         assert refused.json()["detail"] == sentence
@@ -1675,13 +1675,15 @@ def test_its_code_is_told_the_settings_the_page_changed_and_the_profile(
         "messages": [{"id": "m1", "role": "user", "content": "Hello"}],
         "tools": [],
         "context": [],
-        "forwardedProps": {"loop": {"profile": "sales", "settings": {"tone": "Plain"}}},
+        "forwardedProps": {
+            "agent": {"profile": "sales", "settings": {"tone": "Plain"}}
+        },
     }
     url = "/api/v1/apps/agents/notes-desk/ag-ui/"
     assert answer_of(events_of(local.post(url, json=run))) == "sales: Plain: Hello"
     # Unchanged: its code is not told.
     assert told == []
-    run["forwardedProps"] = {"loop": {"settings": {"tone": "Warm"}}}
+    run["forwardedProps"] = {"agent": {"settings": {"tone": "Warm"}}}
     assert (
         answer_of(events_of(local.post(url, json={**run, "runId": "run-2"})))
         == "sales: Warm: Hello"

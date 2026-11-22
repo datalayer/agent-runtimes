@@ -8,7 +8,7 @@
  * typed-decision model, from the chat and from the floating assistant.
  *
  * The *Decide* application of the catalogue (agentspecs `apps/decide.yaml`)
- * in the LOOP workspace, on the Local target: its agent — `example-simple`
+ * in the Agent workspace, on the Local target: its agent — `example-simple`
  * with the `decide` tool — runs on the local agent-runtimes server, and
  * answers a question about a text by asking a typed decision. The floating
  * assistant beside it offers *Ask a decision* in its balloon: the situation,
@@ -36,7 +36,7 @@ import {
   appDatalayerCreatePayload,
 } from '../apps/apps/AppRenderer';
 import { AssistantCharactersPlugin } from '../apps/plugins/assistant-characters';
-import { LoopAssistantPlugin } from '../apps/plugins/assistant';
+import { AgentAssistantPlugin } from '../apps/plugins/assistant';
 import { APP_CATALOGUE } from '../specs/apps';
 
 setupPrimerPortals();
@@ -57,7 +57,7 @@ const AgentDecideExample: React.FC = () => {
   const plugins = useMemo(
     () => [
       AssistantCharactersPlugin,
-      configurePlugin(LoopAssistantPlugin, {
+      configurePlugin(AgentAssistantPlugin, {
         app: app.interface.avatar ?? undefined,
         decisions: { serverUrl },
       }),
@@ -72,7 +72,7 @@ const AgentDecideExample: React.FC = () => {
   );
   return (
     <ThemedProvider>
-      <Box height="100vh" minHeight={0} display="flex" bg="canvas.default">
+      <Box height="100%" minHeight={0} display="flex" bg="canvas.default">
         <Box flex={1} minWidth={0} minHeight={0}>
           <AppRenderer
             app={app}

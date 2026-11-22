@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-shop-header` — the Shopper's title bar: the basket
+ * `@datalayer/agent-plugin-shop-header` — the Shopper's title bar: the basket
  * it is putting together (a counter: items, and the total as its words), a
  * Budget drop-down told to the agent with every turn, and Approval while a
  * purchase waits. Stands in for `basket-total`: until the agent's tool says
@@ -21,7 +21,7 @@ import { defineHeaderPlugin } from '../../toolCards/headerItems';
 import { useLatestToolCall } from '../../toolCards/toolResults';
 import { basketTotalOf } from '../basket-total';
 
-export const SHOP_HEADER_PLUGIN_NAME = '@datalayer/loop-plugin-shop-header';
+export const SHOP_HEADER_PLUGIN_NAME = '@datalayer/agent-plugin-shop-header';
 
 /** The basket of the last `show_basket`, for the indicator its tool has not set. */
 function useShownBasket() {

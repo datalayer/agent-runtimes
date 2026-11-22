@@ -36,7 +36,7 @@ import {
 import { useContributions, useSignalValue } from '@datalayer/reactor/react';
 import { signal } from '@datalayer/reactor';
 import { TurnFooter } from '../../../chat/messages/TurnFooter';
-import { LoopChatTurn, type ChatTurnSnapshot } from '../../core';
+import { AgentChatTurn, type ChatTurnSnapshot } from '../../core';
 import { Streamdown } from 'streamdown';
 import { REHYPE_PLUGINS_WITHOUT_HTML } from '../../../chat/messages/markdownWithoutHtml';
 import { streamdownMarkdownStyles } from '../../../chat/styles/streamdownStyles';
@@ -70,11 +70,11 @@ function Thinking(): JSX.Element {
           height: 5,
           borderRadius: '50%',
           bg: 'fg.muted',
-          animation: 'loop-turn-dot 1.2s ease-in-out infinite',
+          animation: 'agent-turn-dot 1.2s ease-in-out infinite',
         },
         '& > i:nth-of-type(2)': { animationDelay: '0.15s' },
         '& > i:nth-of-type(3)': { animationDelay: '0.3s' },
-        '@keyframes loop-turn-dot': {
+        '@keyframes agent-turn-dot': {
           '0%, 80%, 100%': { opacity: 0.25 },
           '40%': { opacity: 1 },
         },
@@ -92,7 +92,7 @@ export function TurnPanel({
 }: {
   footer?: TurnPanelFooter;
 }): JSX.Element | null {
-  const entries = useContributions(LoopChatTurn);
+  const entries = useContributions(AgentChatTurn);
   const turn = useSignalValue(entries[0]?.value.turn ?? NO_TURN);
   const sheet = useSignalValue(pageLayoutSheet);
   const replyRef = useRef<HTMLDivElement | null>(null);

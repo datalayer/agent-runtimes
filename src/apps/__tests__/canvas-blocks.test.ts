@@ -24,7 +24,7 @@ import {
 } from '../plugins/canvas-blocks';
 import { checkApp, checkAppspec } from '../apps/checks';
 import { dumpAppspec } from '../apps/appspec';
-import { LoopCanvasBlock } from '../core';
+import { AgentCanvasBlock } from '../core';
 import { emptyAppspec } from '../apps/appspec';
 import { listComponents } from '../../specs/ui';
 import type { AppSpec, ComponentSpec } from '../../types/agentspecs';
@@ -47,7 +47,7 @@ const GaugePlugin = definePlugin({
   name: 'test-gauge-block',
   contributes: [
     contribution(
-      LoopCanvasBlock,
+      AgentCanvasBlock,
       { id: 'Gauge', ui: 'gauges', component: gauge },
       { id: 'Gauge' },
     ),

@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-shield-displays` — a coding agent's *diff* and
+ * `@datalayer/agent-plugin-shield-displays` — a coding agent's *diff* and
  * *terminal*, drawn where its tool results carry them.
  *
  * The runtime sends each beside the tool's result in
@@ -38,7 +38,7 @@ import { DiffCard } from './DiffCard';
 import { TerminalCard } from './TerminalCard';
 
 export const SHIELD_DISPLAYS_PLUGIN_NAME =
-  '@datalayer/loop-plugin-shield-displays';
+  '@datalayer/agent-plugin-shield-displays';
 
 function Diff({
   display,

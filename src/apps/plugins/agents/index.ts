@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-agents` — the sandbox, owned in one place.
+ * `@datalayer/agent-plugin-agents` — the sandbox, owned in one place.
  *
  * @module apps/plugins/agents
  */

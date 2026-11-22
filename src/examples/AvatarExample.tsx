@@ -9,7 +9,7 @@
  * here, acting out what the agent does and speaking in a balloon.
  *
  * The characters offered are what the enabled plugins contribute to
- * `loop.assistant.character`: Datalayer's four, and an owl from a
+ * `agent.assistant.character`: Datalayer's four, and an owl from a
  * small example plugin (`utils/owlCharacterPlugin`). Pixel, the test sprite,
  * is read through the clippy.js reader, as a character a person brings is,
  * and so are the characters clippy.js publishes, fetched when picked.
@@ -202,7 +202,7 @@ const AvatarExample: React.FC = () => {
     Object.values(clippyJs).includes(character);
   return (
     <ThemedProvider>
-      <Box minHeight="100vh" bg="canvas.default" p={4}>
+      <Box minHeight="100%" bg="canvas.default" p={4}>
         <Box maxWidth={720} mx="auto">
           <Heading as="h1" sx={{ mb: 2 }}>
             Avatar

@@ -32,7 +32,7 @@ copy it held expired (found on r1, 31 October 2026).
 no unexpired copy is :class:`agent_shield.saas.PolicyUnavailable`, a
 sentence naming IAM: the harness is refused with it at creation, and every
 further action of a running one is refused with it until IAM answers. A
-runtime with no token at all — the terminal's ``loop``, a test — is
+runtime with no token at all — the terminal's ``agent``, a test — is
 **unmanaged**: the application's Rules and the platform's default alone, as
 the standalone proxy runs on its file. So is a process with a token but no
 ``DATALAYER_IAM_URL`` — a developer's shell, CI — said once in the log: a

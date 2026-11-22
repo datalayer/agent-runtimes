@@ -138,7 +138,7 @@ def unregister_vercel_agent(agent_id: str, *, keep_state: bool = False) -> None:
     if agent_id in _vercel_adapters:
         del _vercel_adapters[agent_id]
     try:
-        from ..streams.loop import purge_agent_stream_state
+        from ..streams.pubsub import purge_agent_stream_state
 
         if not keep_state:
             purge_agent_stream_state(agent_id)

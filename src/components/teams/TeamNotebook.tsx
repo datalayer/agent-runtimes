@@ -8,7 +8,7 @@
  *
  * What a peer gives besides words arrives as an artifact by media type
  * (`a2aPeer`'s {@link A2APeerArtifact}); a Jupyter notebook
- * (`application/x-ipynb+json`) is shown here, as the loop's notebook view
+ * (`application/x-ipynb+json`) is shown here, as the Agent's notebook view
  * shows one: jupyter-react's notebook on the browser sandbox, a Pyodide
  * kernel in the page, where the reader runs cells, edits them and adds more.
  * It runs in the reader's browser and costs nothing elsewhere.

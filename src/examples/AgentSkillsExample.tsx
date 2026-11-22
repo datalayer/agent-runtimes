@@ -28,12 +28,12 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
-import { LoopEmbed } from '../apps';
+import { AgentEmbed } from '../apps';
 import { AgentSkillsPlugin } from '../apps/plugins/agent-skills';
 import { useSkills, useSkillActions } from '../hooks';
 import type { SkillInfo } from '../types';
 
-const LOOP_PLUGINS_AGENTSKI = [AgentSkillsPlugin];
+const AGENT_PLUGINS_AGENTSKI = [AgentSkillsPlugin];
 
 const queryClient = new QueryClient();
 const AGENT_NAME = 'skills-example-agent';
@@ -247,14 +247,14 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     <Box height="100%" display="flex" flexDirection="column">
       <Box flex={1} minHeight={0} display="flex">
         <Box flex={1} minWidth={0}>
-          <LoopEmbed
+          <AgentEmbed
             serverUrl={agentBaseUrl}
             target="local"
             showAgentVariants
             agentId={agentId}
             editors={false}
             showHeader
-            plugins={LOOP_PLUGINS_AGENTSKI}
+            plugins={AGENT_PLUGINS_AGENTSKI}
           />
         </Box>
 

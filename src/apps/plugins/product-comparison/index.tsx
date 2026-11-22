@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-product-comparison` — the Shopper's short list,
+ * `@datalayer/agent-plugin-product-comparison` — the Shopper's short list,
  * side by side: price, variant, availability, rating and seller, the one it
  * would pick marked with why. Draws `show_comparison` as a message, with the
  * A2UI renderer (`toolCards/a2uiCard`), the products' photos in a row under
@@ -26,7 +26,7 @@ import { PhotoStrip } from '../../toolCards/productPhoto';
 import { readComparison, type Comparison } from './read';
 
 export const PRODUCT_COMPARISON_PLUGIN_NAME =
-  '@datalayer/loop-plugin-product-comparison';
+  '@datalayer/agent-plugin-product-comparison';
 
 export const PRODUCT_COMPARISON_WORDS = {
   title: 'Compared',

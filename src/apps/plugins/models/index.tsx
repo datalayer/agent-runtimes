@@ -4,16 +4,16 @@
  */
 
 /**
- * `@datalayer/loop-plugin-models` — which model is answering.
+ * `@datalayer/agent-plugin-models` — which model is answering.
  *
  * @module apps/plugins/models
  */
 
 import { contribution, definePlugin } from '@datalayer/reactor';
-import { LoopCommand } from '../../core';
+import { AgentCommand } from '../../core';
 import { uiManifestOf } from '../../uiManifest';
 
-export const MODELS_PLUGIN_NAME = '@datalayer/loop-plugin-models';
+export const MODELS_PLUGIN_NAME = '@datalayer/agent-plugin-models';
 
 /*
  * No header chip any more.
@@ -29,7 +29,7 @@ export const ModelsPlugin = definePlugin({
   ...uiManifestOf('models'),
   contributes: [
     contribution(
-      LoopCommand,
+      AgentCommand,
       {
         name: 'models',
         aliases: ['model'],

@@ -11,7 +11,7 @@
 
 import { contribution, definePlugin } from '@datalayer/reactor';
 import type { ToolbarItem } from '@datalayer/primer-addons';
-import { LoopDocumentToolbar } from '../../core';
+import { AgentDocumentToolbar } from '../../core';
 import { SandboxStatusItem } from './SandboxStatusItem';
 import { DOCUMENT_TOOLBAR_PLUGIN_NAME } from './names';
 import { uiManifestOf } from '../../uiManifest';
@@ -24,16 +24,16 @@ export const DocumentToolbarPlugin = definePlugin({
   ...uiManifestOf('document-toolbar'),
   contributes: [
     contribution(
-      LoopDocumentToolbar,
+      AgentDocumentToolbar,
       {
         items: (): ToolbarItem[] => [
           {
-            key: 'loop-document-status-spacer',
+            key: 'agent-document-status-spacer',
             type: 'spacer',
             order: STATUS_ORDER - 1,
           },
           {
-            key: 'loop-document-sandbox-status',
+            key: 'agent-document-sandbox-status',
             type: 'custom',
             order: STATUS_ORDER,
             group: 'sandbox',

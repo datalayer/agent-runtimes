@@ -19,13 +19,13 @@ import { Tooltip } from '@primer/react';
 import type { Contribution } from '@datalayer/reactor';
 import {
   canOpenView,
-  type LoopWorkspaceContext,
+  type AgentWorkspaceContext,
   type ViewTypeContribution,
 } from '../core';
 
 export type ViewSwitcherProps = {
   views: Contribution<ViewTypeContribution>[];
-  workspace: LoopWorkspaceContext;
+  workspace: AgentWorkspaceContext;
   /**
    * Drop the labels and keep the icons.
    *

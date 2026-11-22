@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-page-layout` — the editor as a page.
+ * `@datalayer/agent-plugin-page-layout` — the editor as a page.
  *
  * The chat view's default arrangement is a split: the editor beside the
  * transcript, the prompt underneath. This plugin arranges the same parts the
@@ -16,12 +16,12 @@
  * The layout itself is primer-addons' `PageLayout` — with its panel signals
  * and its header toggle, in `@datalayer/primer-addons/lib/reactor` — which
  * any Reactor host can mount, on its own or as `PageLayoutPlugin` over
- * slots. This plugin is the Loop's side of it, in three contributions:
+ * slots. This plugin is the Agent's side of it, in three contributions:
  *
- * - the layout, through `LoopChatLayout`: the chat view's parts handed to
+ * - the layout, through `AgentChatLayout`: the chat view's parts handed to
  *   `PageLayout` — the editors as the page, the transcript as the panel,
  *   the composer as the band — with what the agent is doing in the page,
- *   read from `LoopChatTurn`, pinned to the top of the sheet;
+ *   read from `AgentChatTurn`, pinned to the top of the sheet;
  * - with the composer floating, the chat header's display-mode toggle in
  *   the card's footer, through the input-prompt plugin's `promptAction`
  *   slot: the card over the page, or the composer in the conversation panel
@@ -33,8 +33,8 @@
  *   the layout's `pageLayoutPanelOpen` signal with any host that wants to
  *   open the panel too;
  * - the **turn panel**, hung on the composer through the input-prompt
- *   plugin's `LoopPromptPanel` point and fed by the chat plugin's
- *   `LoopChatTurn`: with the transcript out of sight, the message just sent,
+ *   plugin's `AgentPromptPanel` point and fed by the chat plugin's
+ *   `AgentChatTurn`: with the transcript out of sight, the message just sent,
  *   the reply as it streams and what the agent is doing in the page show in
  *   the prompt's own band, cleared by the next message. `turnPanel` says which
  *   side of the composer; `turnPanelFooter` what goes under the reply. It
@@ -66,10 +66,10 @@ import {
 import type { ChatViewMode } from '../../../types/chat';
 import { ChatViewModeToggle } from '../../../chat/header/ChatViewModeToggle';
 import {
-  LoopChatLayout,
-  LoopChatTurn,
-  LoopPromptPanel,
-  LoopSlots,
+  AgentChatLayout,
+  AgentChatTurn,
+  AgentPromptPanel,
+  AgentSlots,
   type ChatLayoutParts,
   type ChatTurnSnapshot,
 } from '../../core';
@@ -79,7 +79,7 @@ import { uiManifestOf } from '../../uiManifest';
 
 /*
  * The layout's state is primer-addons', re-exported under the names the
- * Loop always had: a host that opened the conversation panel by calling
+ * Agent always had: a host that opened the conversation panel by calling
  * `openConversationPanel()` keeps doing so.
  */
 export {
@@ -103,11 +103,11 @@ export type {
   PageSizeFormat,
 } from '@datalayer/primer-addons/lib/reactor';
 
-export const LOOP_PAGE_LAYOUT_PLUGIN_NAME =
-  '@datalayer/loop-plugin-page-layout';
+export const AGENT_PAGE_LAYOUT_PLUGIN_NAME =
+  '@datalayer/agent-plugin-page-layout';
 
 /** What a host may set on the page layout. */
-export type LoopPageLayoutConfig = {
+export type AgentPageLayoutConfig = {
   /**
    * How the parts are arranged.
    *
@@ -246,7 +246,7 @@ function ChatModeAction(): JSX.Element {
  * what the agent is doing — the turn's `activity` — is the line at the top
  * of the sheet, so the change is seen where it happens.
  */
-function LoopPageLayout({
+function AgentPageLayout({
   parts,
   promptMode,
   pageSize,
@@ -255,7 +255,7 @@ function LoopPageLayout({
   promptMode: 'docked' | 'floating';
   pageSize?: PageSize;
 }): JSX.Element {
-  const turnEntries = useContributions(LoopChatTurn);
+  const turnEntries = useContributions(AgentChatTurn);
   const turn = useSignalValue(turnEntries[0]?.value.turn ?? NO_TURN);
   const chatMode = useSignalValue(pageLayoutChatMode);
   // The display modes are the floating card's own; a docked composer stays
@@ -295,8 +295,8 @@ function ConversationToggle(): JSX.Element | null {
   );
 }
 
-export const LoopPageLayoutPlugin = definePlugin<LoopPageLayoutConfig>({
-  name: LOOP_PAGE_LAYOUT_PLUGIN_NAME,
+export const AgentPageLayoutPlugin = definePlugin<AgentPageLayoutConfig>({
+  name: AGENT_PAGE_LAYOUT_PLUGIN_NAME,
   ...uiManifestOf('page-layout'),
   config: {
     arrangement: 'page',
@@ -311,7 +311,7 @@ export const LoopPageLayoutPlugin = definePlugin<LoopPageLayoutConfig>({
       // The conversation is on screen: the composer docked under it, and
       // nothing that stands in for a transcript out of sight.
       ctx.contribute(
-        LoopChatLayout,
+        AgentChatLayout,
         { id: 'split-layout', prompt: 'docked', Component: SplitLayout },
         { id: 'split-layout' },
       );
@@ -334,14 +334,14 @@ export const LoopPageLayoutPlugin = definePlugin<LoopPageLayoutConfig>({
       promptStance.value = floatingStance;
     }
     const ConfiguredLayout = (parts: ChatLayoutParts): JSX.Element => (
-      <LoopPageLayout
+      <AgentPageLayout
         parts={parts}
         promptMode={promptMode}
         pageSize={pageSize}
       />
     );
     ctx.contribute(
-      LoopChatLayout,
+      AgentChatLayout,
       {
         id: 'page-layout',
         prompt: promptMode === 'floating' ? floatingStance : 'docked-top',
@@ -360,7 +360,7 @@ export const LoopPageLayoutPlugin = definePlugin<LoopPageLayoutConfig>({
         <TurnPanel footer={footer} />
       );
       ctx.contribute(
-        LoopPromptPanel,
+        AgentPromptPanel,
         {
           id: 'page-layout-turn',
           placement: config.turnPanel,
@@ -374,7 +374,7 @@ export const LoopPageLayoutPlugin = definePlugin<LoopPageLayoutConfig>({
       components: [
         {
           id: 'page-layout-conversation-toggle',
-          slot: LoopSlots.header,
+          slot: AgentSlots.header,
           Component: ConversationToggle,
         },
         // The display modes, in the floating card's footer — and only
@@ -383,7 +383,7 @@ export const LoopPageLayoutPlugin = definePlugin<LoopPageLayoutConfig>({
           ? [
               {
                 id: 'page-layout-chat-mode',
-                slot: LoopSlots.promptAction,
+                slot: AgentSlots.promptAction,
                 Component: ChatModeAction,
               },
             ]
@@ -393,4 +393,4 @@ export const LoopPageLayoutPlugin = definePlugin<LoopPageLayoutConfig>({
   },
 });
 
-export default LoopPageLayoutPlugin;
+export default AgentPageLayoutPlugin;

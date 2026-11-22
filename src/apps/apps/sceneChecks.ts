@@ -5,13 +5,13 @@
 
 /**
  * One validation of a scene, said in agentspecs' own
- * sentences: what the spec editor refuses, the stage refuses and `loop`
+ * sentences: what the spec editor refuses, the stage refuses and `agent`
  * refuses, in the same words wherever a person meets them.
  *
  * This is the browser's half of `agentspecs.scenes.scene_problems` — the
  * same checks, in the same order, each sentence written exactly as the
  * Python writes it, so that a person who reads a refusal here reads it
- * again word for word from `loop scenes rehearse`. Both surfaces of the
+ * again word for word from `agent scenes rehearse`. Both surfaces of the
  * Studio read this module and nothing else: the stage's line above the
  * board and the panel under the spec editor are the same list.
  *
@@ -32,7 +32,7 @@
  * read on their own without a second set of checks.
  *
  * **What stays agentspecs'.** Three checks need more than the browser has,
- * and are made when the scene is loaded by `loop`: a tool a system does not
+ * and are made when the scene is loaded by `agent`: a tool a system does not
  * offer or offers for something else (`_tool_problem`, the action classes of
  * a running server); a connection a member of the person's *own*
  * applications reaches a system through (the catalogue's applications are
@@ -130,7 +130,7 @@ export const SECTION_WORDS: Record<SceneSection, string> = {
 };
 
 /**
- * The checks that are not the browser's: made by agentspecs when `loop`
+ * The checks that are not the browser's: made by agentspecs when `agent`
  * loads the scene. Said here so that no second set of them is written.
  */
 export const AGENTSPECS_OWN: readonly string[] = [
@@ -238,7 +238,7 @@ function castMakesNoTeam(spec: SceneSpec): string | undefined {
  * One of the person's own applications, kept in their Space: what the checks
  * read of it when a member of the cast is one of them rather than an
  * application of the catalogue — its name and face, and what its connections
- * reach. agentspecs reads the catalogue only, so to `loop` a member that is
+ * reach. agentspecs reads the catalogue only, so to `agent` a member that is
  * the person's own application reaches no system at all; the Studio has the
  * person's applications, and judges them by what they truly reach, in the
  * same sentences (decided 2026-10-10).

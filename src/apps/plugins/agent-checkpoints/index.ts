@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-agent-checkpoints` — checkpointing, as a capacity.
+ * `@datalayer/agent-plugin-agent-checkpoints` — checkpointing, as a capacity.
  *
  * Mounts the `example-checkpoints` agent: its conversation is snapshotted
  * after every turn, and it can save, list and rewind to checkpoints on
@@ -18,7 +18,7 @@
 import { defineAgentCapacityPlugin } from '../agent-capacity';
 
 export const AGENT_CHECKPOINTS_PLUGIN_NAME =
-  '@datalayer/loop-plugin-agent-checkpoints';
+  '@datalayer/agent-plugin-agent-checkpoints';
 
 export const AgentCheckpointsPlugin = defineAgentCapacityPlugin({
   key: 'checkpoints',

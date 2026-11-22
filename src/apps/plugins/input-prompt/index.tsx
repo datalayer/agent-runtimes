@@ -4,11 +4,11 @@
  */
 
 /**
- * `@datalayer/loop-plugin-input-prompt` — the composer, as a plugin.
+ * `@datalayer/agent-plugin-input-prompt` — the composer, as a plugin.
  *
  * The chat view assembles everything the composer needs — the draft, the
  * send handler, the tools/skills/model menus' data, the placement — and
- * offers it through the {@link LoopChatComposer} point. This plugin is the
+ * offers it through the {@link AgentChatComposer} point. This plugin is the
  * standard taker: it renders the assembled props with the chat's own
  * `InputPrompt`, which is the full composer — the lexical editor (`/` opens
  * the command menu, `@` mentions agents) and the session-controls footer.
@@ -24,7 +24,7 @@
  * host pays for by merely mounting the preset. The plugin file is a
  * manifest; the composer arrives when it first renders.
  *
- * Not to be confused with `@datalayer/loop-plugin-prompt`, which owns the
+ * Not to be confused with `@datalayer/agent-plugin-prompt`, which owns the
  * `/prompt` and `/new` commands and the **+** footer action — commands about
  * the composer, wherever it came from.
  *
@@ -35,13 +35,13 @@ import type { JSX } from 'react';
 import { Suspense, lazy } from 'react';
 import { contribution, definePlugin } from '@datalayer/reactor';
 import {
-  LoopChatComposer,
-  LoopPromptPanel,
-  type LoopChatComposerProps,
+  AgentChatComposer,
+  AgentPromptPanel,
+  type AgentChatComposerProps,
 } from '../../core';
 import { uiManifestOf } from '../../uiManifest';
 
-export const INPUT_PROMPT_PLUGIN_NAME = '@datalayer/loop-plugin-input-prompt';
+export const INPUT_PROMPT_PLUGIN_NAME = '@datalayer/agent-plugin-input-prompt';
 
 /**
  * What a host may set on the composer.
@@ -69,7 +69,7 @@ export type InputPromptPluginConfig = {
 const LazyComposerView = lazy(() => import('./ComposerView'));
 
 /** The lazy boundary, so the point's consumers need no Suspense of theirs. */
-function ComposerView(props: LoopChatComposerProps): JSX.Element {
+function ComposerView(props: AgentChatComposerProps): JSX.Element {
   return (
     <Suspense fallback={null}>
       <LazyComposerView {...props} />
@@ -84,10 +84,10 @@ export const InputPromptPlugin = definePlugin<InputPromptPluginConfig>({
   // The composer's own opening: panels hung above or below it, inside its
   // card. Declared here so the graph shows the point before anything fills
   // it; the page layout's current-turn panel is what normally does.
-  contributionPoints: [LoopPromptPanel],
+  contributionPoints: [AgentPromptPanel],
   contributes: [
     contribution(
-      LoopChatComposer,
+      AgentChatComposer,
       { id: 'input-prompt', Component: ComposerView },
       { id: 'input-prompt' },
     ),

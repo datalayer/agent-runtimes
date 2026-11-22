@@ -18,12 +18,12 @@ import type { JSX } from 'react';
 import { useRef } from 'react';
 import { Button } from '@primer/react';
 
-import type { LoopWorkspaceContext } from '../../core';
+import type { AgentWorkspaceContext } from '../../core';
 import { GRAPH_VIEW_TYPE } from './viewType';
 
 export type GraphToggleProps = {
   /** The workspace, so the button can move it to the graph and back. */
-  workspace?: LoopWorkspaceContext;
+  workspace?: AgentWorkspaceContext;
 };
 
 export default function GraphToggle({

@@ -9,8 +9,8 @@ stops to ask (`Session.ask`), keeps state across turns (`Session.state`),
 writes to the application's record (`Session.record`) and calls the
 application's agent (`Session.agent`).
 
-This is an application's session, not the workspace's: `LoopSession`
-(`agent_runtimes.loop.session`) is a terminal's or a browser's conversation
+This is an application's session, not the workspace's: `AgentSession`
+(`agent_runtimes.agent.session`) is a terminal's or a browser's conversation
 with an agent, and knows nothing of applications.
 
 A session talks to its user through a `Channel`: the page, the terminal, a
@@ -639,7 +639,7 @@ class MemoryChannel:
 
 #: The step a new step nests in.
 _STEP: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
-    "loop_app_step", default=None
+    "agent_app_step", default=None
 )
 
 

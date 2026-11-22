@@ -1,0 +1,183 @@
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+
+"""What a slash command is allowed to know about the session it runs in.
+
+Commands used to reach into the terminal object for everything: ``tux.agent_id``,
+``tux.server_url``, and whatever else happened to be an attribute. That couples
+every command to one front-end, and there are three (a terminal, a browser
+workspace, a JupyterLab panel).
+
+:class:`AgentSession` is the seam. A command receives the session, not the UI, so
+the same command can be driven from a prompt_toolkit prompt or from a React
+workspace — and so a session can be handed from one to the other, which is what
+``/browser`` does.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Any, Optional
+
+
+@dataclass
+class AgentSession:
+    """One conversation with one agent, wherever it is being driven from."""
+
+    #: Base URL of the agent-runtimes server backing this session. Either the
+    #: ephemeral process the CLI spawned on a free port, or a remote server.
+    server_url: str
+    #: Agent spec id currently bound to the session.
+    agent_id: str = ""
+    #: Conversation this session is continuing, when there is one.
+    conversation_id: Optional[str] = None
+    #: Active model id, as an agentspecs catalog id.
+    model: Optional[str] = None
+    #: Whether the server was started by this process — a spawned server dies
+    #: with the session, a remote one does not, and a handoff has to know which.
+    owns_server: bool = False
+    #: Sandbox facts as last reported by the server (variant, running, kernel).
+    sandbox: dict[str, Any] = field(default_factory=dict)
+    #: Free-form extras a front-end wants to carry without subclassing.
+    extras: dict[str, Any] = field(default_factory=dict)
+    #: The session this conversation is — an application's, or the session of
+    #: an agent run as such, from its first message: what `/pause`, `/swap`,
+    #: `/clone` and `/export` act on; none before the first message.
+    session_uid: Optional[str] = None
+    #: What the last swap said to the new agent.
+    said: str = ""
+    #: The token the session route is called with, when one is needed.
+    token: Optional[str] = None
+
+    @property
+    def api_base(self) -> str:
+        """Versioned API root for this session's server."""
+        return f"{self.server_url.rstrip('/')}/api/v1"
+
+    @property
+    def session_agui_url(self) -> str:
+        """Where this conversation's turns are sent: its agent over AG-UI, each
+        thread a session of it — recorded, listed, paused and resumed.
+        """
+        return session_agui_url(self.server_url, self.agent_id)
+
+    @property
+    def sandbox_variant(self) -> str:
+        """Sandbox variant, or an empty string when nothing is attached."""
+        return str(self.sandbox.get("variant") or "")
+
+    @property
+    def sandbox_running(self) -> bool:
+        """Whether a sandbox is up.
+
+        A Jupyter sandbox reports readiness as ``jupyter_connected`` rather than
+        ``sandbox_running``; both spellings mean the same thing to a caller
+        deciding whether it can execute code.
+        """
+        if bool(self.sandbox.get("sandbox_running")):
+            return True
+        return self.sandbox_variant == "jupyter-server" and bool(
+            self.sandbox.get("jupyter_connected")
+        )
+
+    def with_agent(self, agent_id: str) -> "AgentSession":
+        """The same session, its agent swapped in place through the session
+        route: ``POST /api/v1/apps/sessions/{uid}/agent``, the
+        sentence the new agent was told kept in ``said``.
+
+        Raises
+        ------
+        AgentRefused
+            In a sentence: a conversation that is no session, or the route's
+            refusal (a turn running, an unknown agent, settings that do not
+            fit).
+        """
+        import httpx
+
+        if not self.session_uid:
+            raise AgentRefused(
+                "This conversation is not an application session: resume one with "
+                "`/resume <uid>` or `agent sessions resume <uid>`, then swap."
+            )
+        headers = {"Authorization": f"Bearer {self.token}"} if self.token else {}
+        response = httpx.post(
+            f"{self.api_base}/apps/sessions/{self.session_uid}/agent",
+            json={"agent": agent_id},
+            headers=headers,
+            timeout=120.0,
+        )
+        if response.status_code >= 300:
+            detail: Any = ""
+            try:
+                detail = response.json().get("detail")
+            except ValueError:
+                detail = response.text
+            raise AgentRefused(
+                str(detail or f"The swap was refused ({response.status_code}).")
+            )
+        answer = response.json()
+        self.agent_id = str(answer.get("agent") or agent_id)
+        self.said = str(answer.get("said") or "")
+        return self
+
+
+#: The path of an agent's AG-UI endpoint whose threads are sessions.
+SESSION_AGUI_PATH = "/api/v1/apps/agents/"
+
+
+def session_agui_url(server_url: str, agent: str) -> str:
+    """An agent's AG-UI endpoint on a runtime, each thread a session of it."""
+    return f"{server_url.rstrip('/')}{SESSION_AGUI_PATH}{agent}/ag-ui/"
+
+
+def older_runtime_said(version: str) -> str:
+    """What is said of a runtime that keeps no session of an agent."""
+    return (
+        f"This runtime (agent-runtimes {version or 'of an earlier release'}) keeps no "
+        "session of an agent: the conversation goes on as before, and is not listed, "
+        "paused or resumed."
+    )
+
+
+def conversation_url(
+    server_url: str, agent: str, *, get: Any = None
+) -> tuple[str, str]:
+    """Where the prompt sends its turns, and what to say of it, if anything.
+
+    The runtime says what it can do (``GET /api/v1/runtime/status``,
+    ``agent_sessions``): one that keeps an agent's conversations as sessions
+    is talked to on its agent's endpoint whose threads are sessions; one
+    that does not say so — an older one, a pool not updated yet — on its
+    plain AG-UI endpoint, as before, with a sentence saying so.
+
+    Raises
+    ------
+    AgentRefused
+        When the runtime does not answer what it is: nothing is guessed.
+    """
+    import httpx
+
+    base = server_url.rstrip("/")
+    try:
+        answered = (get or httpx.get)(f"{base}/api/v1/runtime/status", timeout=30.0)
+    except httpx.HTTPError as refused:
+        raise AgentRefused(f"The runtime did not say what it runs: {refused}") from None
+    if answered.status_code >= 300:
+        raise AgentRefused(
+            f"The runtime did not say what it runs ({answered.status_code})."
+        )
+    said = answered.json() or {}
+    if said.get("agent_sessions") is True:
+        return session_agui_url(base, agent), ""
+    return f"{base}/api/v1/ag-ui/{agent}/", older_runtime_said(
+        str(said.get("version") or "")
+    )
+
+
+def is_session_agui_url(url: str) -> bool:
+    """Whether an AG-UI address is one whose threads are sessions."""
+    return SESSION_AGUI_PATH in url
+
+
+class AgentRefused(RuntimeError):
+    """What the session refused, in a sentence."""

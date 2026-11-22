@@ -713,7 +713,7 @@ def _classify_beta_event(event: Any) -> str:
 def _try_push_snapshot(agent_id: str) -> None:
     """Best-effort push of monitoring snapshot after graph execution."""
     try:
-        from ..streams.loop import push_snapshot
+        from ..streams.pubsub import push_snapshot
 
         push_snapshot(agent_id)
     except Exception:

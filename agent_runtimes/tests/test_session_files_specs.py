@@ -6,7 +6,7 @@
 Generated from agentspecs 0.0.119's `sessions/` kind by
 `scripts/codegen/generate_session_files.py`, wired into `make specs`: the
 caps, the states, the entry kinds, the redaction rules and the refusal
-sentences are agentspecs' own, word for word, so the runtime, `loop`, the
+sentences are agentspecs' own, word for word, so the runtime, `agent`, the
 chat and agent-teams refuse the same things in the same words.
 """
 

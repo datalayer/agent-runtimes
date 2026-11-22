@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-bluesky-post-preview` — a post on the person's Bluesky, as it
+ * `@datalayer/agent-plugin-bluesky-post-preview` — a post on the person's Bluesky, as it
  * will stand there, above the chat's approval row: the text, its length
  * against what Bluesky takes, the images, the post it answers, and the link
  * once out (`toolCards/postPreview`). Draws `post_to_bluesky` and `reply_on_bluesky`.
@@ -18,7 +18,7 @@ import { defineToolCardPlugin } from '../../toolCards/kit';
 import { PostPreviewCard } from '../../toolCards/postPreview';
 
 export const BLUESKY_POST_PREVIEW_PLUGIN_NAME =
-  '@datalayer/loop-plugin-bluesky-post-preview';
+  '@datalayer/agent-plugin-bluesky-post-preview';
 
 export function BlueskyPostPreviewCard({
   context,

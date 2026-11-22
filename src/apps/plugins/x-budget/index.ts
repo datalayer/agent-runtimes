@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-x-budget` — what is left of the person's X budget
+ * `@datalayer/agent-plugin-x-budget` — what is left of the person's X budget
  * today, in the chat's title bar or under the prompt (its placement; `Chat`'s
  * `uiPlugins` with `x-budget` draws the same chip). It reads the Marketer's
  * `x-api-budget` guardrail back from the runtimes service and counts
@@ -18,7 +18,7 @@
 import { defineChromePlugin } from '../../toolCards/chrome';
 import { XBudgetChip } from './XBudgetChip';
 
-export const X_BUDGET_PLUGIN_NAME = '@datalayer/loop-plugin-x-budget';
+export const X_BUDGET_PLUGIN_NAME = '@datalayer/agent-plugin-x-budget';
 
 /** The plugin for a placement: `header` (its default) or `footer`. */
 export const xBudgetPlugin = defineChromePlugin({

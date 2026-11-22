@@ -7,7 +7,7 @@ title: Sessions
 
 A **session** is one conversation of one person with one application's
 agent, kept in the application's record: one id a person lists, resumes,
-hands to another agent, clones, exports and ends — on the web, in `loop`,
+hands to another agent, clones, exports and ends — on the web, in `agent`,
 from a script. The runtime that runs the application holds a session while
 it is open; the record is its truth, so a session outlives its runtime and
 its agent.
@@ -28,7 +28,7 @@ its agent.
 
 ### What is listed
 
-A listing — `GET /api/v1/apps/sessions`, `loop sessions list`, the picker,
+A listing — `GET /api/v1/apps/sessions`, `agent sessions list`, the picker,
 the Sessions page — answers **the sessions that run (`open`) and those that
 can be gone on with (`paused`)**. A paused session is always resumable: a
 session ends with what it runs on, so a seat of a team run
@@ -47,9 +47,9 @@ its owner's, and reversible: its owner's list marks it (`paused, deployment
 paused`) and resuming it asks first to resume the deployment.
 
 An ended session is not resumed and not listed by default; it is not
-deleted either. `?state=ended` (`loop sessions list --state ended`, the
+deleted either. `?state=ended` (`agent sessions list --state ended`, the
 page's *Ended* filter) lists the ended ones, and one is still shown, cloned
-and exported by its uid. Only `DELETE` (`loop sessions delete <uid>`, a
+and exported by its uid. Only `DELETE` (`agent sessions delete <uid>`, a
 row's *Delete*) deletes a session.
 
 The record keeps the session's shape on its opening entry and says every
@@ -71,7 +71,7 @@ listing of sessions the runtime no longer holds says the truth.
 | **list** | `GET /sessions` | The caller's sessions, held and recorded, paged (`?limit=`, `?after=`, `has_more`), filtered (`?app=`, `?agent=`, `?state=`, `?q=`, `?archived=true`) | — |
 | **end** | `POST /sessions/{uid}/end` | — | — |
 
-**An agent's sessions.** An agent made without an Appspec (`loop -a
+**An agent's sessions.** An agent made without an Appspec (`agent -a
 <agentspec>`, an agent launched from the Agent Gallery) is the application
 of that one agent: its conversations are sessions of the same model, under
 the same routes. Its record names its application `agent:<agentspec id>`,
@@ -101,7 +101,7 @@ POST /api/v1/apps/sessions/e67a52b2/resume        (an ended session)
 GET /api/v1/apps/sessions?state=stopped
 → 422 {"detail": "There is no session state 'stopped': one of open, paused, ended."}
 
-POST /api/v1/loop/sessions/e67a52b2/agent          (the old route)
+POST /api/v1/agent/sessions/e67a52b2/agent          (the old route)
 → 410 {"detail": "A session's agent is swapped at POST /api/v1/apps/sessions/e67a52b2/agent; this route is gone."}
 ```
 
@@ -131,7 +131,7 @@ question answered from any surface first wins; the second answer is a `409`.
 Through the `session.store` point (see [Plugins](./plugins.mdx)): the
 platform's record when `DATALAYER_AI_AGENTS_URL` or `DATALAYER_API_KEY` is
 set, a file store (`~/.datalayer/sessions/<uid>/entries.jsonl`, with an
-`index.json` of what a listing says) otherwise; a runtime `loop` starts on
+`index.json` of what a listing says) otherwise; a runtime `agent` starts on
 this machine keeps the file store, signed in or not (see
 [Where a session lives](./cli.mdx#where-a-session-lives));
 `AGENT_RUNTIMES_SESSION_STORE` names one (`record` or `file`). Naming two,
@@ -148,6 +148,6 @@ agent) — stay in the protocol state store.
 - Side chats, projects, pins; a follow-up queued mid-turn; credits per session.
 - A clone rebuilding the vendor's own session file; an agent's own child sessions.
 
-See also: [`loop sessions`](./cli.mdx), [the session file](./files.mdx),
+See also: [`agent sessions`](./cli.mdx), [the session file](./files.mdx),
 [the plugin points and the worked examples](./plugins.mdx), the
 [`examples/sessions`](https://github.com/datalayer/agent-runtimes/tree/main/examples/sessions) scripts.

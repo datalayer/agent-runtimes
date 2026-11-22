@@ -4,22 +4,22 @@
  */
 
 /**
- * The plugins a Loop workspace normally has.
+ * The plugins an Agent workspace normally has.
  *
  * A host builds a workspace by choosing plugins, which is the point of the
  * architecture and also a lot to get right before seeing anything. This is the
  * set the examples app runs, as a function, so a third party can start from a
- * working Loop and take things out rather than assemble one from nothing.
+ * working Agent and take things out rather than assemble one from nothing.
  *
  * It exists because the landing page was importing the *example* to get it.
  * An example is written to be read: its props are demonstration switches, its
  * wiring is whatever made the demo clearest, and nothing about it is a promise.
- * A page that embeds Loop needs the plugins, not the demonstration — and the
+ * A page that embeds Agent needs the plugins, not the demonstration — and the
  * two drifting apart should not be able to break somebody's home page.
  *
  * ```tsx
- * const reactor = buildLoopReactor(loopPlugins({ serverUrl, target: 'browser' }));
- * <LoopWorkspace reactor={reactor} serverUrl={serverUrl} agentId={agentId} />
+ * const reactor = buildAgentReactor(agentPlugins({ serverUrl, target: 'browser' }));
+ * <AgentWorkspace reactor={reactor} serverUrl={serverUrl} agentId={agentId} />
  * ```
  *
  * The plugin graph is not among them: a host that shows it adds
@@ -59,12 +59,12 @@ import { InputPromptPlugin } from './plugins/input-prompt';
 import { NotebookViewPlugin } from './plugins/notebook-view';
 import { SpreadsheetPlugin } from './plugins/spreadsheet';
 import { SpreadsheetViewPlugin } from './plugins/spreadsheet-view';
-import { LoopCommandsPlugin } from './plugins/commands';
+import { AgentCommandsPlugin } from './plugins/commands';
 import { ModelsPlugin } from './plugins/models';
 import { PluginsPanelPlugin } from './plugins/plugins-panel';
 import { WindowFramePlugin } from './plugins/window-frame';
 import { DocumentExtension, NotebookExtension } from './extensions';
-import { LoopPageLayoutPlugin, type PageSize } from './plugins/page-layout';
+import { AgentPageLayoutPlugin, type PageSize } from './plugins/page-layout';
 import type { ResumedThread, ThemeOverrides } from '../types/chat';
 import {
   maxTurnsOf,
@@ -80,7 +80,7 @@ import type { AgentUiChoice } from './agentUiChoices';
 import { limitedPreviewPlugin } from './plugins/limited-preview';
 import type { UiChoice } from '../types/agentspecs';
 
-export type LoopPresetOptions = {
+export type AgentPresetOptions = {
   /** Where the agent runtimes service is. */
   serverUrl?: string;
   /** Where code runs: in the page, on a local server, or on Datalayer. */
@@ -112,7 +112,7 @@ export type LoopPresetOptions = {
   /**
    * Whether the composer takes the caret when the workspace opens. True by
    * default — the workspace is there to be typed into. A host that embeds the
-   * loop as one section of a longer page passes `false`, so that mounting it
+   * Agent workspace as one section of a longer page passes `false`, so that mounting it
    * does not scroll the reader into the middle of the page.
    */
   autoFocusPrompt?: boolean;
@@ -139,9 +139,9 @@ export type LoopPresetOptions = {
   /**
    * The page layout: the editor on a centred sheet, like a document, with
    * the composer docked above it at the sheet's own width and the
-   * conversation in a panel beside it. Mounts `LoopPageLayoutPlugin`, which
+   * conversation in a panel beside it. Mounts `AgentPageLayoutPlugin`, which
    * hands the chat view's parts to primer-addons' page layout through the
-   * `LoopChatLayout` point.
+   * `AgentChatLayout` point.
    */
   pageLayout?: boolean;
   /**
@@ -295,7 +295,7 @@ export type LoopPresetOptions = {
    *
    * The frame itself is composed by the host — see `WindowFrame` — but the
    * plugin is what opens its title bar to contributions, so a host that frames
-   * Loop wants this on.
+   * Agent wants this on.
    */
   windowFrame?: boolean;
   /**
@@ -334,7 +334,7 @@ export type LoopPresetOptions = {
  */
 export function limitedPreviewDisabled(
   options: Pick<
-    LoopPresetOptions,
+    AgentPresetOptions,
     'disabledUi' | 'uiPlugins' | 'datalayerAgentSpecId' | 'localAgentSpec'
   >,
 ): string[] {
@@ -351,7 +351,7 @@ export function limitedPreviewDisabled(
  * Defaults are the embeddable ones: code runs in the page, so nothing has to
  * be installed or signed into, and the switches a demonstration wants are off.
  */
-export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
+export function agentPlugins(options: AgentPresetOptions = {}): PluginRef[] {
   const {
     serverUrl,
     target = 'browser',
@@ -420,7 +420,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
         defaultEditor: 'none',
         showSelector: false,
       }),
-      ...(commandPalette ? [LoopCommandsPlugin] : []),
+      ...(commandPalette ? [AgentCommandsPlugin] : []),
       ...(pluginsPanel ? [PluginsPanelPlugin] : []),
       ...(windowFrame ? [WindowFramePlugin] : []),
     ] as PluginRef[];
@@ -563,7 +563,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     ...(floatingPrompt ? [PromptPlugin] : []),
     ...(pageLayout
       ? [
-          configurePlugin(LoopPageLayoutPlugin, {
+          configurePlugin(AgentPageLayoutPlugin, {
             arrangement: pageLayoutArrangement,
             turnPanel: pageLayoutTurnPanel,
             turnPanelFooter: pageLayoutTurnPanelFooter,
@@ -573,10 +573,10 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
           }),
         ]
       : []),
-    ...(commandPalette ? [LoopCommandsPlugin] : []),
+    ...(commandPalette ? [AgentCommandsPlugin] : []),
     ...(pluginsPanel ? [PluginsPanelPlugin] : []),
     ...(windowFrame ? [WindowFramePlugin] : []),
   ] as PluginRef[];
 }
 
-export default loopPlugins;
+export default agentPlugins;

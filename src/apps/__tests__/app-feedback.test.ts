@@ -13,7 +13,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { APP_CATALOGUE } from '../../specs/apps';
-import { LoopPromptPanel } from '../core';
+import { AgentPromptPanel } from '../core';
 import {
   FEEDBACK_COMMENT_LIMIT,
   FEEDBACK_WORDS,
@@ -119,7 +119,7 @@ describe('feedback on an application’s answers', () => {
   it('is a strip above the prompt, one plugin per application', () => {
     const plugin = defineAppFeedbackPlugin(APP_CATALOGUE['customer-interview']);
     const panels = (plugin.contributes ?? []).filter(
-      (item: { point?: unknown }) => item.point === LoopPromptPanel,
+      (item: { point?: unknown }) => item.point === AgentPromptPanel,
     ) as Array<{ value: Record<string, unknown> }>;
     expect(panels).toHaveLength(1);
     expect(panels[0].value).toMatchObject({

@@ -27,7 +27,7 @@ export type AroundName = { before: string; after: string };
 /** What the chat says itself, in one language. */
 export type ChatWords = {
   // The composer.
-  /** The prompt's placeholder in a LOOP workspace. */
+  /** The prompt's placeholder in an Agent workspace. */
   placeholder: string;
   /** The prompt's placeholder when nothing else says one. */
   typeMessage: string;

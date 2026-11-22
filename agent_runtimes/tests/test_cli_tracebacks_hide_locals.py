@@ -5,7 +5,7 @@
 
 Typer's pretty tracebacks show every frame's local variables by default,
 and a command's locals hold what it was given: an API key, a runtime's
-token, an account's secrets. A ``loop scenes rehearse`` crash printed one
+token, an account's secrets. A ``agent scenes rehearse`` crash printed one
 of them to stderr. Every Typer app of this package turns that off, and no
 module installs Rich's own traceback hook with locals on.
 """

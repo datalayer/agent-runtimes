@@ -13,7 +13,7 @@ Agent Runtimes speaks **A2UI v0.9** (`createSurface`, `updateComponents`,
 | | Python | TypeScript |
 | --- | --- | --- |
 | What it does | `agent_runtimes.a2ui.executions` turns sandbox output into surfaces; `render_a2ui_surface` is a backend tool | `createA2UIRenderer` in `src/ui-plugins`, the chat's `a2ui` activity |
-| Packages | `a2ui-agent-sdk>=0.7.0`, for the examples only (the `a2ui` extra) | `@a2ui/react` 0.12.0, `@a2ui/web_core` 0.12.0 |
+| Packages | `a2ui-core>=0.7.0` (the v0.9 basic catalog) and `a2ui-agent-sdk>=0.12.0` (payload validation), the `a2ui` extra | `@a2ui/react` 0.12.0, `@a2ui/web_core` 0.12.0 |
 
 A2UI is not a transport: its messages travel inside another protocol's answer.
 
@@ -30,10 +30,11 @@ agent-runtimes serve --agent-id example-a2ui-agent --protocol ag-ui --port 8765
 
 An Appspec's UI plugin says when it is exposed through A2UI (`ui`, `renderer: a2ui`).
 
-The `a2ui` extra needs care: `a2ui-agent-sdk` requires `google-adk`, which caps
-OpenTelemetry below what the runtime asks for, so the extra does not resolve as it
-stands. Install the SDK with `--no-deps` to run the examples below. The runtime
-itself works without it.
+The examples below need the `a2ui` extra (`pip install "agent-runtimes[a2ui]"`,
+also part of `all`): the v0.9 basic catalog comes from `a2ui-core`
+(`a2ui.core.basic_catalog.BasicCatalog(ProtocolVersion.V0_9)`), and each answer is
+checked with `a2ui.utils.validate_payload` before it is sent. The converter in
+`agent_runtimes.a2ui.executions` works without it.
 
 ## Routes
 
@@ -44,6 +45,10 @@ These serve two example agents, and they need that SDK:
 | `POST /api/v1/a2ui/restaurant` | The restaurant finder: a `query`, or an `action` with its `context` |
 | `POST /api/v1/a2ui/support-assistant` | The support assistant, likewise |
 | `GET /api/v1/a2ui/restaurant/health`, `GET /api/v1/a2ui/support-assistant/health` | `healthy`, or `unhealthy` with the reason |
+
+The restaurant finder runs the agentspec `example-a2ui-restaurant`: its model and
+instructions come from there, and `AGENT_RUNTIMES_MODEL`, when set, overrides the
+model (the same override every spec-driven agent takes).
 
 Each answers with A2A-style parts: a `text` part, then one `data` part per A2UI
 message. A request with neither `query` nor `action` and `context` is a 400.

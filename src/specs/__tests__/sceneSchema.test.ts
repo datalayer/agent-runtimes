@@ -5,7 +5,7 @@
 
 /**
  * The scene spec's JSON Schema: generated from agentspecs
- * beside the catalogue, it says what `loop.scene/v1` accepts — the parts of
+ * beside the catalogue, it says what `agent.scene/v1` accepts — the parts of
  * a scene, the cast member, a beat's move — so that an editor of the text
  * completes and explains the same thing the loader checks.
  */
@@ -19,11 +19,11 @@ const defs = SCENE_SCHEMA.$defs ?? {};
 const properties = SCENE_SCHEMA.properties ?? {};
 
 describe('the scene spec’s JSON Schema', () => {
-  it('is loop.scene/v1, with the parts of a scene', () => {
+  it('is agent.scene/v1, with the parts of a scene', () => {
     expect(SCENE_SCHEMA.title).toBe('Scene spec');
     expect(properties.schema).toMatchObject({
-      const: 'loop.scene/v1',
-      default: 'loop.scene/v1',
+      const: 'agent.scene/v1',
+      default: 'agent.scene/v1',
     });
     for (const part of [
       'id',

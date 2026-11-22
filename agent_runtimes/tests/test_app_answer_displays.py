@@ -10,7 +10,7 @@ button it has offers its action with a token this session minted for that
 display. A press comes up the socket and is checked before anything runs: a
 token minted for another display, another action or another session is a
 403, a press of an action the code has none of a 422; checked, it waits for
-the run that names it (``forwardedProps.loop.press``), once. A run carrying a
+the run that names it (``forwardedProps.agent.press``), once. A run carrying a
 display's press itself is refused, and a button naming no ``@app.action`` is
 refused when the answer is sent.
 """
@@ -154,7 +154,7 @@ async def test_a_press_checked_on_the_socket_runs_once_in_the_run_naming_it() ->
     chunks = [
         chunk
         async for chunk in live.run_agui(
-            {"runId": "r1", "messages": []}, loop={"press": "p-1"}, bearer=""
+            {"runId": "r1", "messages": []}, agent_props={"press": "p-1"}, bearer=""
         )
     ]
 
@@ -162,7 +162,9 @@ async def test_a_press_checked_on_the_socket_runs_once_in_the_run_naming_it() ->
     assert "Again." in json.dumps(events_of(chunks))
     # Once: the run that names it again finds nothing waiting.
     with pytest.raises(sessions.SessionRefused) as again:
-        live.run_agui({"runId": "r2", "messages": []}, loop={"press": "p-1"}, bearer="")
+        live.run_agui(
+            {"runId": "r2", "messages": []}, agent_props={"press": "p-1"}, bearer=""
+        )
     assert again.value.status == 422
 
 
@@ -213,7 +215,7 @@ async def test_a_run_carrying_a_displays_press_itself_is_refused() -> None:
     live._open_stream()
     await opened(live).send("Done.", show=button(opened(live), "again"))
     display = shown(live.uid)
-    for loop in (
+    for agent_props in (
         {
             "action": {
                 "name": "again",
@@ -225,7 +227,9 @@ async def test_a_run_carrying_a_displays_press_itself_is_refused() -> None:
         {"press": 3},
     ):
         with pytest.raises(sessions.SessionRefused) as refused:
-            live.run_agui({"runId": "r1", "messages": []}, loop=loop, bearer="")
+            live.run_agui(
+                {"runId": "r1", "messages": []}, agent_props=agent_props, bearer=""
+            )
         assert refused.value.status == 422
     assert pressed == []
 

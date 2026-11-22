@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-plugins-panel` — the plugin list, as a plugin.
+ * `@datalayer/agent-plugin-plugins-panel` — the plugin list, as a plugin.
  *
  * It fills the sidebar slot like any other contribution, which is the joke and
  * also the proof: the thing that switches plugins on and off is itself one, and
@@ -13,7 +13,7 @@
  * The list itself is no longer written here. `@datalayer/reactor-manager` is
  * the same surface, generic — a filter, a row per plugin, a switch each — and
  * the workspace had grown its own copy that answered the same questions
- * slightly differently. This plugin is now the loop's placement of it: which
+ * slightly differently. This plugin is now the Agent's placement of it: which
  * slot it goes in, and which plugin may not be switched off.
  *
  * What went with the rewrite is the graph button. The panel used to draw it,
@@ -27,9 +27,10 @@
 import { definePlugin } from '@datalayer/reactor';
 import type { ReactorReactOutput } from '@datalayer/reactor/react';
 import { PluginsManagerView } from '@datalayer/reactor-manager';
-import { LoopSlots, type LoopWorkspaceContext } from '../../core';
+import { AgentSlots, type AgentWorkspaceContext } from '../../core';
 
-export const PLUGINS_PANEL_PLUGIN_NAME = '@datalayer/loop-plugin-plugins-panel';
+export const PLUGINS_PANEL_PLUGIN_NAME =
+  '@datalayer/agent-plugin-plugins-panel';
 
 /**
  * How wide the panel is, and the aside around it.
@@ -42,7 +43,7 @@ export const PLUGINS_PANEL_PLUGIN_NAME = '@datalayer/loop-plugin-plugins-panel';
 export const SIDEBAR_WIDTH = 420;
 
 /**
- * The generic graph plugin, which the loop's own adapter wraps: by its name
+ * The generic graph plugin, which the Agent's own adapter wraps: by its name
  * (`GraphPlugin.name`), not its module — importing `@datalayer/reactor-graph`
  * for a string would bring ECharts to every workspace with this panel, and
  * to every one built by the preset, embedded applications too.
@@ -64,7 +65,7 @@ export const PluginsPanelPlugin = definePlugin<
     components: [
       {
         id: 'plugins-panel',
-        slot: LoopSlots.sidebar,
+        slot: AgentSlots.sidebar,
         // Last in the sidebar: it is about the workspace rather than part of
         // the work, so a plugin's own panel — the decks list, say — sits
         // above it whatever order the plugins were listed in.
@@ -75,10 +76,10 @@ export const PluginsPanelPlugin = definePlugin<
         // The workspace is forwarded rather than used here — the manager
         // passes whatever it is given to the plugins contributing actions, and
         // the graph button is the one that needs it.
-        Component: ({ workspace }: { workspace?: LoopWorkspaceContext }) => (
+        Component: ({ workspace }: { workspace?: AgentWorkspaceContext }) => (
           <PluginsManagerView
             protectedPlugins={[PLUGINS_PANEL_PLUGIN_NAME]}
-            // `@datalayer/loop-plugin-graph` is the switch that matters: it
+            // `@datalayer/agent-plugin-graph` is the switch that matters: it
             // places the graph in this workspace and pulls the generic plugin
             // in as a dependency. Listing both put two switches in front of
             // one feature, with no way to tell which to use.

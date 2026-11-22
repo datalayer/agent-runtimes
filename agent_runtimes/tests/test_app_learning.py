@@ -25,7 +25,7 @@ from agent_runtimes.apps.loading import load_app
 from agent_runtimes.apps.plugins import rules_for
 
 SPEC = {
-    "schema": "loop.app/v1",
+    "schema": "agent.app/v1",
     "id": "desk",
     "name": "Desk",
     "kind": "chat",

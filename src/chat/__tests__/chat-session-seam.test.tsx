@@ -6,7 +6,7 @@
 /**
  * The standalone `<Chat>` on a session: the thread a host
  * gives is drawn — read from its runtime by uid when asked —, the thread's
- * `⋯` menu is drawn from the `loop.session.action` registry when a Reactor
+ * `⋯` menu is drawn from the `agent.session.action` registry when a Reactor
  * is registered and the host lends the menu its ways, and a running tool
  * call's display reaches the host as it streams (`onToolCallUpdate`).
  */
@@ -22,7 +22,7 @@ import {
 import { registerReactor } from '@datalayer/reactor/react';
 import { Chat } from '../Chat';
 import {
-  LoopSessionAction,
+  AgentSessionAction,
   type SessionActionContribution,
 } from '../../apps/core';
 import type { ChatProps } from '../Chat';
@@ -174,14 +174,14 @@ async function mountChat(props: Partial<ChatProps>, run = sse([])) {
   };
 }
 
-/** A Reactor holding one `loop.session.action` entry. */
+/** A Reactor holding one `agent.session.action` entry. */
 async function reactorWith(entry: SessionActionContribution): Promise<void> {
   const plugin = definePlugin({
     name: '@datalayer/test-plugin-session-entry',
     displayName: 'A session entry',
     description: 'One entry for the thread menu.',
     contributes: [
-      contribution(LoopSessionAction, entry, { id: entry.id, order: 10 }),
+      contribution(AgentSessionAction, entry, { id: entry.id, order: 10 }),
     ],
   });
   const reactor = buildReactorFromPlugins([plugin as never]);

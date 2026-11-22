@@ -17,7 +17,7 @@ import type { JSX } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { ActionList, ActionMenu, Spinner } from '@primer/react';
-import type { LoopWorkspaceContext } from '../../core';
+import type { AgentWorkspaceContext } from '../../core';
 import { getAgentspecs } from '../../../specs/agents';
 
 type AgentSummary = {
@@ -30,7 +30,7 @@ type AgentSummary = {
 export function AgentspecPicker({
   workspace,
 }: {
-  workspace: LoopWorkspaceContext;
+  workspace: AgentWorkspaceContext;
 }): JSX.Element | null {
   const [agents, setAgents] = useState<AgentSummary[]>([]);
   const [switching, setSwitching] = useState(false);
@@ -75,7 +75,7 @@ export function AgentspecPicker({
       setSwitching(true);
       try {
         const response = await fetch(
-          `${workspace.serverUrl}/api/v1/loop/sessions/${encodeURIComponent(
+          `${workspace.serverUrl}/api/v1/agent/sessions/${encodeURIComponent(
             workspace.conversationId || workspace.agentId || 'session',
           )}/agent`,
           {
@@ -108,8 +108,8 @@ export function AgentspecPicker({
   /*
    * Named, never the raw id.
    *
-   * The active agent is not always in the server's catalogue — the Loop
-   * Shell runs `loop-shell`, created locally from a spec the server never
+   * The active agent is not always in the server's catalogue — the Agent
+   * Shell runs `agent-shell`, created locally from a spec the server never
    * listed — and the fallback used to be the bare id, printed beside an
    * agent summary that had just named the same agent properly. The local
    * spec catalogue knows the name; the id is the last resort, not the first.
@@ -122,7 +122,7 @@ export function AgentspecPicker({
      * Nothing, rather than the raw id.
 
      * With no catalogue to choose from — an in-page agent has no server to
-     * ask — this used to print the bare agent id ("loop-shell") beside the
+     * ask — this used to print the bare agent id ("agent-shell") beside the
      * agent summary, which already names the agent properly. A picker with
      * nothing to pick is furniture, and a spec id is not a label.
      */

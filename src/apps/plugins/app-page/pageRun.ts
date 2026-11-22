@@ -12,14 +12,14 @@
  * action of its code. The runtime checks them against the
  * page's form — refused with 422 and a sentence — runs its code's
  * `@app.page` on them, and answers its outputs as a `CUSTOM` event named
- * `loop.page`, `{inputs, outputs}`, which the page shows in place. Nothing is
+ * `agent.page`, `{inputs, outputs}`, which the page shows in place. Nothing is
  * said in the conversation.
  *
  * @module apps/plugins/app-page/pageRun
  */
 
 /** The `CUSTOM` event that says what a page shows. */
-export const LOOP_PAGE = 'loop.page';
+export const AGENT_PAGE = 'agent.page';
 
 /** Where the page reaches the application's session API, and as whom. */
 export type PageRunContext = {
@@ -63,7 +63,7 @@ export function pageTurnOf(stream: string): PageTurn {
     if (event.type === 'RUN_ERROR') {
       return { refused: String(event.message ?? 'Its page could not run.') };
     }
-    if (event.type === 'CUSTOM' && event.name === LOOP_PAGE) {
+    if (event.type === 'CUSTOM' && event.name === AGENT_PAGE) {
       const value = (event.value ?? {}) as {
         outputs?: Record<string, unknown>;
         inputs?: Record<string, unknown>;
@@ -115,7 +115,7 @@ export async function openPageSession(
     agent: context.agentId,
   });
   for (const event of streamEvents(stream)) {
-    if (event.type === 'CUSTOM' && event.name === 'loop.session') {
+    if (event.type === 'CUSTOM' && event.name === 'agent.session') {
       const uid = (event.value as { uid?: unknown } | undefined)?.uid;
       if (typeof uid === 'string' && uid) {
         return uid;

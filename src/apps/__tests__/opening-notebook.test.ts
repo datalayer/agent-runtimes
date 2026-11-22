@@ -81,10 +81,10 @@ describe('priming the sandbox', () => {
   it('runs it through the sandbox, once per kernel', () => {
     // What is run is `primeCode`: the plugin's own `openingCode()` unless a
     // host contributed an opening notebook of its own through the
-    // `LoopOpeningNotebook` point, in which case that notebook's code.
+    // `AgentOpeningNotebook` point, in which case that notebook's code.
     expect(VIEW).toContain('service.execute(primeCode)');
     expect(VIEW).toContain('return openingCode();');
-    expect(VIEW).toContain('useContributions(LoopOpeningNotebook)');
+    expect(VIEW).toContain('useContributions(AgentOpeningNotebook)');
     // Keyed on the kernel: a target switch is a new kernel and must be primed
     // again, while a re-render must not run it a second time.
     expect(VIEW).toContain('primed.current === kernelId');

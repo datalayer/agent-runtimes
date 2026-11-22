@@ -4,7 +4,7 @@
  */
 
 /**
- * The thread's `⋯` menu, drawn from the `loop.session.action` registry:
+ * The thread's `⋯` menu, drawn from the `agent.session.action` registry:
  * the entries that apply to the session as it stands, read when
  * the menu opens; an entry's `when` hides what does not apply.
  *
@@ -26,7 +26,7 @@ import { Dialog } from '@primer/react/experimental';
 import { Box } from '@datalayer/primer-addons';
 import { useContributions } from '@datalayer/reactor/react';
 import {
-  LoopSessionAction,
+  AgentSessionAction,
   sessionActionsFor,
   type SessionActionContext,
   type SessionPanel,
@@ -95,7 +95,7 @@ export function TurnActions({
   turn: number;
   context: SessionActionContext;
 }): JSX.Element | null {
-  const entries = useContributions(LoopSessionAction);
+  const entries = useContributions(AgentSessionAction);
   const applicable = sessionActionsFor(entries, facts, 'turn');
   if (!facts || applicable.length === 0 || turn < 1) {
     return null;
@@ -138,7 +138,7 @@ export function SessionActionsMenu({
   describe,
   context,
 }: SessionActionsMenuProps): JSX.Element | null {
-  const entries = useContributions(LoopSessionAction);
+  const entries = useContributions(AgentSessionAction);
   const [facts, setFacts] = useState<SessionFacts | undefined>(undefined);
   const [open, setOpen] = useState(false);
   const [said, setSaid] = useState('');

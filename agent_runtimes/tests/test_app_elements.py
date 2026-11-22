@@ -194,7 +194,7 @@ async def test_over_the_session_api_an_element_is_a_display_with_where_it_shows(
     shows = ops[0]["body"]
     assert ops[0]["scope"] == live.uid
     # What it shows is its display, where it shows in it.
-    assert shows["type"] == "application/vnd.datalayer.loop.answer+json"
+    assert shows["type"] == "application/vnd.datalayer.agent.answer+json"
     assert (shows["id"], shows["data"]["where"], shows["data"]["title"]) == (
         panel.id,
         "panel",

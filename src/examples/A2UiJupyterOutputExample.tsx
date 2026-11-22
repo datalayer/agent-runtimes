@@ -46,7 +46,7 @@ import { Output, OutputIPyWidgets } from '@datalayer/jupyter-react';
 import type { A2uiClientAction, A2uiMessage } from '@a2ui/web_core/v0_9';
 import type { FrontendToolDefinition } from '../types/tools';
 import type { ToolCallRenderContext } from '../types/chat';
-import { LoopEmbed } from '../apps';
+import { AgentEmbed } from '../apps';
 import { AgentA2uiJupyterOutputPlugin } from '../apps/plugins/agent-a2ui-jupyter-output';
 import { createChatExtrasPlugin } from '../apps/plugins/chat-extras';
 import { A2UI_RENDER_SCOPE_SX, A2uiSurfaceComposed } from '../components/a2ui';
@@ -1000,7 +1000,7 @@ const A2UiJupyterOutputExample: React.FC = () => {
     [run],
   );
 
-  // The chat column is the shared loop on the A2UI-jupyter-output capacity
+  // The chat column is the shared Agent on the A2UI-jupyter-output capacity
   // plugin; the bespoke run_jupyter_output_demo frontend tool reaches it
   // through the chat-extras channel, and its renderer as a plugin of its own.
   const { plugin: extrasPlugin, setExtras } = useMemo(
@@ -1171,7 +1171,7 @@ const A2UiJupyterOutputExample: React.FC = () => {
                     bg="canvas.default"
                   >
                     {agentReady && agentId ? (
-                      <LoopEmbed
+                      <AgentEmbed
                         serverUrl={serverUrl}
                         target="local"
                         // No `showAgentVariants` on purpose: without the choice the

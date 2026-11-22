@@ -23,7 +23,7 @@ the application — each call one A2UI surface, the runtime building its nodes
 from what the agent gave and checking each against the catalog's JSON Schema
 (`agent_runtimes.apps.components`). A button pressed comes back as the
 reader's next turn, its action in the message's metadata
-(``loop.action``): one whose option does more than read is refused to a
+(``agent.action``): one whose option does more than read is refused to a
 visitor in a sentence before any model runs (:func:`refused_action`).
 
 A Jupyter notebook (``application/x-ipynb+json``) is
@@ -755,7 +755,7 @@ def refused_action(message: Any) -> str:
     Why a button pressed on an answer's surface is not acted on, or ``""``.
 
     A press comes back as the reader's turn with its action in the message's
-    metadata (``loop.action``: its name, and ``payload.does``). In a
+    metadata (``agent.action``: its name, and ``payload.does``). In a
     visitor's run an option that does more than read is refused in the
     sentence a visitor's tool call is (`visitor_refusal`), before any model
     runs: nobody is there to be asked. Anywhere else, or for an option that
@@ -767,7 +767,7 @@ def refused_action(message: Any) -> str:
     from agent_runtimes.apps.visitors import visitor_refusal
 
     meta = message.get("metadata") if isinstance(message, Mapping) else None
-    ours = meta.get("loop") if isinstance(meta, Mapping) else None
+    ours = meta.get("agent") if isinstance(meta, Mapping) else None
     action = ours.get("action") if isinstance(ours, Mapping) else None
     if not isinstance(action, Mapping):
         return ""

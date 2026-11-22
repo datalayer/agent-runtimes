@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A Loop application as a PAP company, through the SDK's reference company.
+"""An Agent application as a PAP company, through the SDK's reference company.
 
 ``PapCompanyCapability`` assembles ``personal_agent_protocol.company`` for an
 application whose Appspec enables ``pap.company``. Its Reactor points:

@@ -41,7 +41,7 @@ redemption is represented by the `Performing` it would answer) and returns
 the states, summaries and gate decisions. The tool ran once.
 
 ```bash
-loop apps run examples/personal-agent-protocol/company-role/app.py
+agent apps run examples/personal-agent-protocol/company-role/app.py
 ```
 
 For the personal agent's side of the same exchange over HTTP, see

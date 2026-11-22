@@ -13,11 +13,11 @@ and one element:
 <datalayer-app app="01M…" origin="https://datalayer.app"></datalayer-app>
 ```
 
-The element draws the application in the mode its Appspec gives, in the `loop`
+The element draws the application in the mode its Appspec gives, in the `agent`
 theme with the application's accent. The host page's styles do not reach the
 application, and the application's styles do not reach the page. A host that
 uses React mounts the component the element draws,
-[`Application`](./application.mdx), in its own page and theme; `AppEmbed`,
+[`AIApplication`](./ai-application.mdx), in its own page and theme; `AppEmbed`,
 beneath it, is [the renderer](#in-react) for an Appspec already in hand.
 
 ## The four modes
@@ -61,7 +61,7 @@ The element looks in three places and uses the first one it finds:
    ```html
    <datalayer-app server="http://localhost:8765">
      <script type="application/yaml">
-       schema: loop.app/v1
+       schema: agent.app/v1
        id: support-desk
        name: Support Desk
        kind: chat
@@ -140,16 +140,16 @@ The theme travels inside the element. The application is drawn in the
 element's shadow root, which contains:
 
 - the bundle's stylesheet (`datalayer-app.css`, next to the script);
-- the `loop` theme as CSS custom properties — or the theme the application
+- the `agent` theme as CSS custom properties — or the theme the application
   names in its Appspec (`interface.theme.variant`: `datalayer`, `spatial`,
-  `lovely`, `matrix`, `earth`, `sand`, `ivory`, `sun`, `loop`, `vscode`) — set on the
+  `lovely`, `matrix`, `earth`, `sand`, `ivory`, `sun`, `agent`, `vscode`) — set on the
   theme's own element inside the root, with the accent, when one is named, applied
   in light and dark over whichever theme it is (`embedThemeStyles`). The colour mode is
   the host's `theme` attribute or CSS variable, else `interface.theme.mode`,
   else the visitor's system;
 - the same accent and face laid over the conversation's own theme
   (`embedThemeOverrides`, the chat's `themeOverrides`): the chat sets the
-  `loop` theme again inside it, and without them its bubbles and its button
+  `agent` theme again inside it, and without them its bubbles and its button
   would wear the theme's default mint and face whatever the embed set around
   it. Inline, floating and as the assistant alike;
 - the theme's own stylesheet, with its controls drawn as pills, scoped to that
@@ -296,12 +296,12 @@ import { AppEmbed } from '@datalayer/agent-runtimes/lib/apps';
 ```
 
 `plugins` are the host's own plugins for the assistant mode: the characters
-they contribute to `loop.assistant.character` are there beside Datalayer's
+they contribute to `agent.assistant.character` are there beside Datalayer's
 four, so an Appspec may name one of them (`interface.avatar: owl`). The
 element takes no plugins, so an embedded application draws one of the four.
 
-`AppEmbed` is the renderer beneath [`Application`](./application.mdx), which
-the element draws; a React page usually mounts `Application`, which also reads
+`AppEmbed` is the renderer beneath [`AIApplication`](./ai-application.mdx), which
+the element draws; a React page usually mounts `AIApplication`, which also reads
 a name and runs it for a visitor or on a person's runtime. In a React host it uses
 Primer's portal root, and the styles go where the host's bundler puts them.
 Pass `ownPortal` only when the component is mounted in a root of its own.
@@ -457,7 +457,7 @@ deployment:
 3. **The page** hands it to the element — `user-token="…"`, or
    `element.userToken = …` (in React, `host.userToken: () => token`) — and
    it goes with every run of the conversation
-   (`forwardedProps.loop.user_token`).
+   (`forwardedProps.agent.user_token`).
 
 Signing it in Python, with PyJWT:
 
@@ -708,7 +708,7 @@ Tested (vitest, `src/apps/__tests__/embed-config.test.ts`,
   `host_context`'s `user` the signed one whatever the page said; the byline
   and metadata of what it saves. Not run against a deployed runtime, nor in
   a browser;
-- window messages (`embed-session.test.tsx`, `loopWindow.test.ts`): a post
+- window messages (`embed-session.test.tsx`, `agentWindow.test.ts`): a post
   refused before the conversation has started, then sent to its session on
   the host's server, what the code answers raised as `window-message`, and
   what its code says in a turn raised the same way; the runtime's side and

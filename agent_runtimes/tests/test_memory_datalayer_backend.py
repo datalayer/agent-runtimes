@@ -4,7 +4,7 @@
 """An agent run on a person's own machine remembers on Datalayer with their key.
 
 The backend against the runtimes service stubbed; the registry's choice of
-it; and the ``loop`` picker, which offers an agent whose MCP servers lack
+it; and the ``agent`` picker, which offers an agent whose MCP servers lack
 their credentials, and reads a versioned env var reference by its name.
 """
 
@@ -107,7 +107,7 @@ def test_it_keeps_finds_lists_corrects_and_forgets_the_persons_own():
         await memory.add([{"role": "user", "content": "  Brand mascot is   Quill "}])
         await memory.add(
             [{"role": "user", "content": "No posts on Sundays"}],
-            metadata={"source": "loop"},
+            metadata={"source": "agent"},
         )
         await other.add([{"role": "user", "content": "Mascot is a fox"}])
         found = await memory.search("mascot")

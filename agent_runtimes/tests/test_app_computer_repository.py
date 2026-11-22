@@ -58,7 +58,7 @@ def _spec(revision: str, repository: bool = True) -> dict:
     if repository:
         computer["repository"] = {"url": URL, "revision": revision}
     return {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "code-explainer",
         "name": "Code Explainer",
         "kind": "chat",

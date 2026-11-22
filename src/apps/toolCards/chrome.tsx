@@ -9,14 +9,14 @@
  * header...)"). A UI spec says its `placements`; a chrome UI is one
  * component, mounted where its declaration places it:
  *
- * | Placement | A Loop workspace          | `Chat`                               |
+ * | Placement | An Agent workspace          | `Chat`                               |
  * |-----------|---------------------------|--------------------------------------|
- * | `header`  | `loop.chatHeader`         | items of its header toolbar ("…" when narrow) |
- * | `toolbar` | `loop.promptAction`       | the input toolbar (`toolbarExtras`)  |
- * | `footer`  | `loop.status`             | the band over the prompt (`footerContent`) |
- * | `banner`  | `loop.chatBanner`         | under the title (`headerContent`)    |
- * | `left`    | `loop.leftPanel`          | none (no side panels)                |
- * | `right`   | `loop.rightPanel`         | none (no side panels)                |
+ * | `header`  | `agent.chatHeader`         | items of its header toolbar ("…" when narrow) |
+ * | `toolbar` | `agent.promptAction`       | the input toolbar (`toolbarExtras`)  |
+ * | `footer`  | `agent.status`             | the band over the prompt (`footerContent`) |
+ * | `banner`  | `agent.chatBanner`         | under the title (`headerContent`)    |
+ * | `left`    | `agent.leftPanel`          | none (no side panels)                |
+ * | `right`   | `agent.rightPanel`         | none (no side panels)                |
  *
  * A `message` UI is a card in the conversation (`defineToolCardPlugin`).
  *
@@ -27,7 +27,7 @@ import type { ComponentType, JSX, ReactNode } from 'react';
 import { Label } from '@primer/react';
 import { definePlugin } from '@datalayer/reactor';
 import type { ReactorPlugin } from '@datalayer/reactor';
-import { LoopSlots } from '../core';
+import { AgentSlots } from '../core';
 import { uiManifestOf } from '../uiManifest';
 
 export type UiPlacement =
@@ -44,14 +44,14 @@ export const CHROME_PLACEMENTS: readonly ChromePlacement[] = [
   'right',
 ];
 
-/** The Loop slot of each chrome placement. */
+/** The Agent slot of each chrome placement. */
 export const CHROME_SLOTS: Record<ChromePlacement, string | undefined> = {
-  header: LoopSlots.chatHeader,
-  toolbar: LoopSlots.promptAction,
-  footer: LoopSlots.status,
-  banner: LoopSlots.chatBanner,
-  left: LoopSlots.leftPanel,
-  right: LoopSlots.rightPanel,
+  header: AgentSlots.chatHeader,
+  toolbar: AgentSlots.promptAction,
+  footer: AgentSlots.status,
+  banner: AgentSlots.chatBanner,
+  left: AgentSlots.leftPanel,
+  right: AgentSlots.rightPanel,
 };
 
 /** The two side panels' placements. */
@@ -89,11 +89,16 @@ export type ChromePluginOptions = {
   emoji: string;
   /** What it draws; nothing when it has nothing true to say. */
   Component: ComponentType<ChromeComponentProps>;
+  /**
+   * A slot of its own for a placement, in place of `CHROME_SLOTS`' (the
+   * plugins manager's footer is the row under the prompt, `promptStatus`).
+   */
+  slots?: Partial<Record<ChromePlacement, string>>;
 };
 
 /**
  * A chrome UI's plugin, for a placement: its component in that placement's
- * slot, under the plugin's one name (`@datalayer/loop-plugin-<id>`).
+ * slot, under the plugin's one name (`@datalayer/agent-plugin-<id>`).
  */
 export function defineChromePlugin(
   options: ChromePluginOptions,
@@ -102,12 +107,12 @@ export function defineChromePlugin(
 ) => ReactorPlugin<Record<string, never>, unknown, unknown> {
   const { Component } = options;
   return placement => {
-    const slot = CHROME_SLOTS[placement];
+    const slot = options.slots?.[placement] ?? CHROME_SLOTS[placement];
     function Slotted(): JSX.Element {
       return <Component placement={placement} />;
     }
     return definePlugin({
-      name: `@datalayer/loop-plugin-${options.id}`,
+      name: `@datalayer/agent-plugin-${options.id}`,
       displayName: options.displayName,
       description: options.description,
       octicon: options.octicon,

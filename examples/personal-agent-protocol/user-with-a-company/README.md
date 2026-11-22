@@ -14,7 +14,7 @@ returns the steps in plain words and the outcome; no token, code, or Session JWT
 enters it.
 
 ```bash
-loop apps run examples/personal-agent-protocol/user-with-a-company/app.py
+agent apps run examples/personal-agent-protocol/user-with-a-company/app.py
 ```
 
 Read the [company guide](https://personalagentprotocol.org/docs/guides/company)

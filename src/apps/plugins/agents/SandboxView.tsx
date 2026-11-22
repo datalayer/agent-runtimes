@@ -16,7 +16,7 @@ import type { JSX } from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { Label, Text } from '@primer/react';
 import { useSignalValue } from '@datalayer/reactor/react';
-import type { LoopViewProps } from '../../core';
+import type { AgentViewProps } from '../../core';
 import { useSandboxService } from './useSandboxService';
 
 function Row({ label, value }: { label: string; value?: string }): JSX.Element {
@@ -30,7 +30,7 @@ function Row({ label, value }: { label: string; value?: string }): JSX.Element {
   );
 }
 
-export default function SandboxView(_props: LoopViewProps): JSX.Element {
+export default function SandboxView(_props: AgentViewProps): JSX.Element {
   const service = useSandboxService();
   const snapshot = useSignalValue(service.snapshot);
   const status = useSignalValue(service.status);

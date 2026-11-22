@@ -4,7 +4,7 @@
  */
 
 /**
- * The scene spec's JSON Schema (`loop.scene/v1`), generated from agentspecs by
+ * The scene spec's JSON Schema (`agent.scene/v1`), generated from agentspecs by
  * `scripts/codegen/generate_scenes.py`. Do not edit.
  *
  * @module specs/sceneSchema
@@ -985,8 +985,8 @@ export const SCENE_SCHEMA: JsonSchema = {
     schema: {
       description: 'The version of the spec itself',
       title: 'Schema',
-      const: 'loop.scene/v1',
-      default: 'loop.scene/v1',
+      const: 'agent.scene/v1',
+      default: 'agent.scene/v1',
     },
     id: {
       description: 'Unique scene identifier',
@@ -1112,5 +1112,5 @@ export const SCENE_SCHEMA: JsonSchema = {
   title: 'Scene spec',
   type: 'object',
   $schema: 'https://json-schema.org/draft/2020-12/schema',
-  $id: 'https://agentspecs.datalayer.tech/schemas/loop.scene/v1.json',
+  $id: 'https://agentspecs.datalayer.tech/schemas/agent.scene/v1.json',
 };

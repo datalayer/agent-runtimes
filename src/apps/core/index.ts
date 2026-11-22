@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-core` — the contracts, and nothing else.
+ * `@datalayer/agent-core` — the contracts, and nothing else.
  *
  * Everything the workspace can be extended with is declared here: the points
  * plugins contribute to, and the shapes they contribute. No React, no server
@@ -172,8 +172,8 @@ export const IDLE_SANDBOX_TARGET_SIGNAL: ReadonlySignal<undefined> = {
  * away the work you were talking about. The notebook belongs to the workspace;
  * the agent is only a visitor to it.
  */
-export function loopSurfaceId(sessionId: string | undefined): string {
-  return `loop-${sessionId || 'default'}`;
+export function agentSurfaceId(sessionId: string | undefined): string {
+  return `agent-${sessionId || 'default'}`;
 }
 
 /**
@@ -183,7 +183,7 @@ export function loopSurfaceId(sessionId: string | undefined): string {
  * that owns it (the sandbox service, the agent service), not from a context
  * object that grows to mean everything.
  */
-export type LoopWorkspaceContext = {
+export type AgentWorkspaceContext = {
   /** Base URL of the agent-runtimes server backing this session. */
   serverUrl: string;
   /** Agent spec bound to the session. */
@@ -215,7 +215,7 @@ export type LoopWorkspaceContext = {
    * The id the notebook and the document on screen are addressed by.
    *
    * Fixed for the life of the workspace, so it survives an agent switch — see
-   * `loopSurfaceId`. Read this rather than deriving one, or the tools an agent
+   * `agentSurfaceId`. Read this rather than deriving one, or the tools an agent
    * is handed will address a surface nobody is looking at.
    */
   surfaceId: string;
@@ -254,10 +254,10 @@ export type LoopWorkspaceContext = {
   /**
    * Whatever the host wants in the chat's title bar.
    *
-   * The plugin road to the same place is `LoopSlots.chatHeader`, and it is the
+   * The plugin road to the same place is `AgentSlots.chatHeader`, and it is the
    * better one for anything that belongs to a capability. This is for the host
    * that is embedding the workspace and has one button to add — a page that
-   * mounts `LoopWorkspace` should not have to write a plugin to put an icon
+   * mounts `AgentWorkspace` should not have to write a plugin to put an icon
    * next to the agent's name.
    *
    * Rendered before the chat's own controls, so the host's additions read as
@@ -267,12 +267,12 @@ export type LoopWorkspaceContext = {
   /**
    * What leads the chat's title bar, before the agent's face and name: the
    * shell's own, the toggle of the workspace's left panel
-   * (`LoopSlots.leftPanel`), on the side the panel opens from.
+   * (`AgentSlots.leftPanel`), on the side the panel opens from.
    */
   chatHeaderLeading?: ReactNode;
   /**
    * What trails the chat's title bar, after its controls: the toggle of the
-   * workspace's right panel (`LoopSlots.rightPanel`), on the side the panel
+   * workspace's right panel (`AgentSlots.rightPanel`), on the side the panel
    * opens from.
    */
   chatHeaderTrailing?: ReactNode;
@@ -281,11 +281,11 @@ export type LoopWorkspaceContext = {
    * views with its view-mode toggle (`ChatViewModeToggle`). Unsaid, the
    * title bar offers none.
    */
-  chatViewModes?: LoopChatViewModes;
+  chatViewModes?: AgentChatViewModes;
 };
 
 /** The chat's view in a workspace whose host keeps it (`chatViewModes`). */
-export type LoopChatViewModes = {
+export type AgentChatViewModes = {
   /** The view the chat is in. */
   value: ChatViewMode;
   /** The person picked another view. */
@@ -386,7 +386,7 @@ export type ViewControls = {
    * message had no way in.
    *
    * `forwardedProps` go with the run as AG-UI's: an application's page says
-   * there what it did besides the message (`loop`). Answers why
+   * there what it did besides the message (`agent`). Answers why
    * the message cannot go, when it cannot.
    */
   send?: (
@@ -396,9 +396,9 @@ export type ViewControls = {
 };
 
 /** Props every view receives. */
-export type LoopViewProps = {
+export type AgentViewProps = {
   viewType: string;
-  workspace: LoopWorkspaceContext;
+  workspace: AgentWorkspaceContext;
 };
 
 /** A view the workspace may open. */
@@ -416,18 +416,18 @@ export type ViewTypeContribution = {
    * workspace. A notebook says "only with a running sandbox"; the reactor
    * holds no opinion about it, and neither does the switcher.
    */
-  canOpen?: (workspace: LoopWorkspaceContext) => boolean;
+  canOpen?: (workspace: AgentWorkspaceContext) => boolean;
   /**
    * Why it cannot be opened, for a disabled tab's tooltip. A tab that is
    * greyed out with no explanation is worse than no tab.
    */
-  unavailableReason?: (workspace: LoopWorkspaceContext) => string;
+  unavailableReason?: (workspace: AgentWorkspaceContext) => string;
   /**
    * Lazy module. Non-negotiable: the document view pulls
    * `@datalayer/jupyter-lexical` and its Lumino side effects, and must not be
    * in the shell's bundle until someone opens it.
    */
-  load: () => Promise<{ default: ComponentType<LoopViewProps> }>;
+  load: () => Promise<{ default: ComponentType<AgentViewProps> }>;
 };
 
 /**
@@ -466,8 +466,8 @@ export type CommandArgSpec = {
 };
 
 /** What a command is given when it runs. */
-export type LoopCommandContext = {
-  workspace: LoopWorkspaceContext;
+export type AgentCommandContext = {
+  workspace: AgentWorkspaceContext;
   /** The raw text after the command name. */
   argv: string;
 };
@@ -502,14 +502,14 @@ export type CommandContribution = {
    * the palette and `/help` for the rest.
    */
   composer?: boolean;
-  run: (ctx: LoopCommandContext) => Promise<CommandResult | void>;
+  run: (ctx: AgentCommandContext) => Promise<CommandResult | void>;
 };
 
 /**
  * What goes with every run besides the message, as AG-UI's `forwardedProps`:
  * an application's modes say there which option the person is in. Read when a message is sent, so it says what is true then; what a
  * page says with its own message (its action, its files) is merged over it,
- * the `loop` part key by key.
+ * the `agent` part key by key.
  */
 export type RunPropsContribution = {
   id: string;
@@ -537,11 +537,11 @@ export type MentionContribution = {
   namespace: string;
   trigger?: string;
   list: (
-    workspace: LoopWorkspaceContext,
+    workspace: AgentWorkspaceContext,
     query: string,
   ) => Promise<readonly MentionCandidate[]>;
   resolve: (
-    workspace: LoopWorkspaceContext,
+    workspace: AgentWorkspaceContext,
     id: string,
   ) => Promise<MentionBinding>;
 };
@@ -566,9 +566,9 @@ export type ChatSurfaceContribution = {
   /** Ordering in the chat's surface picker. Lower is earlier. */
   order?: number;
   /** Whether it can be opened right now, judged against the live workspace. */
-  canOpen?: (workspace: LoopWorkspaceContext) => boolean;
+  canOpen?: (workspace: AgentWorkspaceContext) => boolean;
   /** Why it cannot be, for the disabled control's tooltip. */
-  unavailableReason?: (workspace: LoopWorkspaceContext) => string;
+  unavailableReason?: (workspace: AgentWorkspaceContext) => string;
   /** Lazy module, for the same reason views are lazy. */
   load: () => Promise<{ default: ComponentType<ChatSurfaceProps> }>;
 };
@@ -576,12 +576,12 @@ export type ChatSurfaceContribution = {
 /** Props a chat surface receives. */
 export type ChatSurfaceProps = {
   surfaceId: string;
-  workspace: LoopWorkspaceContext;
+  workspace: AgentWorkspaceContext;
 };
 
 /** Views the workspace may open. */
-export const LoopViewType =
-  defineContributionPoint<ViewTypeContribution>('loop.viewType');
+export const AgentViewType =
+  defineContributionPoint<ViewTypeContribution>('agent.viewType');
 
 /** Editors the chat hosts beside the conversation. */
 /**
@@ -592,14 +592,14 @@ export const LoopViewType =
  * nothing at all until a plugin contributes one. The chat renders the chosen
  * editor's column, but the choice is the shell's.
  *
- * `LoopChatSurface` is the same point under its historical name, kept so
+ * `AgentChatSurface` is the same point under its historical name, kept so
  * nothing that contributed to it has to move in the same commit.
  */
-export const LoopEditorView =
-  defineContributionPoint<ChatSurfaceContribution>('loop.chat.surface');
+export const AgentEditorView =
+  defineContributionPoint<ChatSurfaceContribution>('agent.chat.surface');
 
-/** @deprecated Use {@link LoopEditorView}: the shell owns the point now. */
-export const LoopChatSurface = LoopEditorView;
+/** @deprecated Use {@link AgentEditorView}: the shell owns the point now. */
+export const AgentChatSurface = AgentEditorView;
 
 /** The shape an editor contributes — one view in the shell's editor point. */
 export type EditorViewContribution = ChatSurfaceContribution;
@@ -616,7 +616,7 @@ export type FrontendToolContribution = {
   /** Stable id, for the registry and the graph. */
   id: string;
   /** Build the tools for this workspace. Called on mount and agent switch. */
-  tools: (workspace: LoopWorkspaceContext) => FrontendToolDefinition[];
+  tools: (workspace: AgentWorkspaceContext) => FrontendToolDefinition[];
   /**
    * Whether these tools stay in the chat view — the conversation alone, no
    * editor on screen. Off by default: the chat view withholds tools that
@@ -626,8 +626,8 @@ export type FrontendToolContribution = {
   chatView?: boolean;
 };
 
-export const LoopFrontendTool =
-  defineContributionPoint<FrontendToolContribution>('loop.frontendTool');
+export const AgentFrontendTool =
+  defineContributionPoint<FrontendToolContribution>('agent.frontendTool');
 
 /**
  * The composer — the input prompt — arriving as a plugin.
@@ -640,8 +640,8 @@ export const LoopFrontendTool =
  * and unticking the input-prompt plugin removes the composer the way
  * unticking the notebook removes the editor.
  */
-export type LoopChatComposerProps = {
-  workspace: LoopWorkspaceContext;
+export type AgentChatComposerProps = {
+  workspace: AgentWorkspaceContext;
   /** The standard composer's props, fully assembled by the chat view. */
   composer: import('../../chat/prompt/InputPrompt').InputPromptProps;
 };
@@ -649,11 +649,11 @@ export type LoopChatComposerProps = {
 export type ChatComposerContribution = {
   /** Stable id, for the registry and the graph. */
   id: string;
-  Component: ComponentType<LoopChatComposerProps>;
+  Component: ComponentType<AgentChatComposerProps>;
 };
 
-export const LoopChatComposer =
-  defineContributionPoint<ChatComposerContribution>('loop.chat.composer');
+export const AgentChatComposer =
+  defineContributionPoint<ChatComposerContribution>('agent.chat.composer');
 
 /**
  * The chat's title bar, arriving as a plugin.
@@ -663,8 +663,8 @@ export const LoopChatComposer =
  * plugin renders them, by default with the standard `ChatBaseHeader`. No
  * contribution, no title bar.
  */
-export type LoopChatHeaderProps = {
-  workspace: LoopWorkspaceContext;
+export type AgentChatHeaderProps = {
+  workspace: AgentWorkspaceContext;
   /** The standard header's props, fully assembled by the chat. */
   header: import('../../chat/header/ChatHeaderBase').ChatBaseHeaderProps;
 };
@@ -672,11 +672,11 @@ export type LoopChatHeaderProps = {
 export type ChatHeaderContribution = {
   /** Stable id, for the registry and the graph. */
   id: string;
-  Component: ComponentType<LoopChatHeaderProps>;
+  Component: ComponentType<AgentChatHeaderProps>;
 };
 
-export const LoopChatHeader =
-  defineContributionPoint<ChatHeaderContribution>('loop.chat.header');
+export const AgentChatHeader =
+  defineContributionPoint<ChatHeaderContribution>('agent.chat.header');
 
 /**
  * A session of an application, as the runtime's session API describes it
@@ -759,8 +759,8 @@ export type SessionActionContribution = {
   placement?: SessionActionPlacement;
 };
 
-export const LoopSessionAction =
-  defineContributionPoint<SessionActionContribution>('loop.session.action');
+export const AgentSessionAction =
+  defineContributionPoint<SessionActionContribution>('agent.session.action');
 
 /** The entries that apply to a session now, for one placement, in their order. */
 export function sessionActionsFor(
@@ -815,7 +815,7 @@ export type AgentBlueprintContribution = {
   /** The model it runs on in the page, in place of its spec's. */
   model?: string;
   /**
-   * What the modes chosen in the composer (`forwardedProps.loop.modes`)
+   * What the modes chosen in the composer (`forwardedProps.agent.modes`)
    * tell a run turned in the page, and the model it runs on — as the
    * runtime's session API applies them. Unsaid for an agent with no modes.
    */
@@ -825,8 +825,8 @@ export type AgentBlueprintContribution = {
   ) => AppModeEffect;
 };
 
-export const LoopAgentBlueprint =
-  defineContributionPoint<AgentBlueprintContribution>('loop.agent.blueprint');
+export const AgentBlueprint =
+  defineContributionPoint<AgentBlueprintContribution>('agent.blueprint');
 
 /** One conversation opener a plugin offers on the empty chat. */
 export type ChatSuggestionItem = {
@@ -854,8 +854,8 @@ export type ChatSuggestionContribution = {
   suggestions: ChatSuggestionItem[];
 };
 
-export const LoopChatSuggestion =
-  defineContributionPoint<ChatSuggestionContribution>('loop.chat.suggestion');
+export const AgentChatSuggestion =
+  defineContributionPoint<ChatSuggestionContribution>('agent.chat.suggestion');
 
 /**
  * A character the floating assistant may show: a drawing — one
@@ -870,9 +870,9 @@ export type AssistantCharacterContribution = {
   character: AssistantCharacter | AssistantCharacterData;
 };
 
-export const LoopAssistantCharacter =
+export const AgentAssistantCharacter =
   defineContributionPoint<AssistantCharacterContribution>(
-    'loop.assistant.character',
+    'agent.assistant.character',
   );
 
 /**
@@ -892,34 +892,34 @@ export type AssistantMenuContribution = {
   group?: string;
 };
 
-export const LoopAssistantMenu =
-  defineContributionPoint<AssistantMenuContribution>('loop.assistant.menu');
+export const AgentAssistantMenu =
+  defineContributionPoint<AssistantMenuContribution>('agent.assistant.menu');
 
 // A block the Canvas may place, in a module of its own so that
 // the palette is read without the rest of the contracts.
-export { LoopCanvasBlock, type CanvasBlockContribution } from './canvasBlocks';
+export { AgentCanvasBlock, type CanvasBlockContribution } from './canvasBlocks';
 
 // A part of an agent the Canvas may place, beside the blocks.
 export {
-  LoopCanvasPart,
+  AgentCanvasPart,
   type CanvasPartContribution,
   type CanvasPartKind,
 } from './canvasParts';
 
 // A component an application adds to the catalog it is drawn with: the components its developer wrote, for its workspace alone.
 export {
-  LoopA2uiComponent,
+  AgentA2uiComponent,
   type A2uiComponentContribution,
 } from './a2uiComponents';
 
 // Where the files of an application's folder are served: said
 // by the page side its package carries.
-export { LoopAppFiles, type AppFilesContribution } from './appFiles';
+export { AgentAppFiles, type AppFilesContribution } from './appFiles';
 
 /**
- * The per-example chat extras a host feeds the loop's conversation live.
+ * The per-example chat extras a host feeds the Agent's conversation live.
  *
- * An example that keeps its bespoke panels around a `LoopEmbed` still has
+ * An example that keeps its bespoke panels around a `AgentEmbed` still has
  * things to say to the chat *column* — an error banner it computes from its
  * own state, the codemode toggle and the MCP/codemode status the footer
  * shows. These change over the life of the page, so the contribution carries
@@ -927,7 +927,7 @@ export { LoopAppFiles, type AppFilesContribution } from './appFiles';
  * chat view re-renders through `useSignalValue`. `createChatExtrasPlugin`
  * builds the plugin and hands back the setter.
  */
-export type LoopChatExtrasValue = {
+export type AgentChatExtrasValue = {
   /** A banner drawn above the transcript — the example's own diagnostics. */
   errorBanner?: { message: string; variant: 'danger' | 'warning' };
   /** Whether the codemode toggle in the footer reads as on. */
@@ -941,7 +941,7 @@ export type LoopChatExtrasValue = {
   /**
    * Extra frontend tools the agent may call, from the host example.
    *
-   * Folded into the loop's frontend-tool set alongside the notebook and
+   * Folded into the Agent's frontend-tool set alongside the notebook and
    * document tools (first name wins). For an example whose demo is a bespoke
    * client tool — A2UI Jupyter Output's `run_jupyter_output_demo`.
    */
@@ -1029,7 +1029,7 @@ export type LoopChatExtrasValue = {
  * they were taken, and the refusal in a sentence when they were not.
  */
 export async function sendInstead(
-  extras: Pick<LoopChatExtrasValue, 'sendInstead'>,
+  extras: Pick<AgentChatExtrasValue, 'sendInstead'>,
   message: string,
 ): Promise<{ sent: true } | { sent: false; refused: string } | null> {
   if (!extras.sendInstead) {
@@ -1052,9 +1052,9 @@ export async function sendInstead(
  * UI's tool beside a host example's, neither silencing the other.
  */
 export function mergeChatExtras(
-  merged: LoopChatExtrasValue,
-  next: LoopChatExtrasValue,
-): LoopChatExtrasValue {
+  merged: AgentChatExtrasValue,
+  next: AgentChatExtrasValue,
+): AgentChatExtrasValue {
   const tools = [...(merged.frontendTools ?? [])];
   for (const tool of next.frontendTools ?? []) {
     if (!tools.some(taken => taken.name === tool.name)) {
@@ -1072,11 +1072,11 @@ export type ChatExtrasContribution = {
   /** Stable id, for the registry and the graph. */
   id: string;
   /** The live extras. Updated by the example; read by the chat view. */
-  extras: ReadonlySignal<LoopChatExtrasValue>;
+  extras: ReadonlySignal<AgentChatExtrasValue>;
 };
 
-export const LoopChatExtras =
-  defineContributionPoint<ChatExtrasContribution>('loop.chat.extras');
+export const AgentChatExtras =
+  defineContributionPoint<ChatExtrasContribution>('agent.chat.extras');
 
 /**
  * What the notebook already holds when the workspace opens.
@@ -1103,13 +1103,15 @@ export type OpeningNotebookContribution = {
   prime?: string;
 };
 
-export const LoopOpeningNotebook =
-  defineContributionPoint<OpeningNotebookContribution>('loop.notebook.opening');
+export const AgentOpeningNotebook =
+  defineContributionPoint<OpeningNotebookContribution>(
+    'agent.notebook.opening',
+  );
 
 /**
  * What the document editor holds when it opens.
  *
- * The document's twin of {@link LoopOpeningNotebook}: a host that wants the
+ * The document's twin of {@link AgentOpeningNotebook}: a host that wants the
  * editor to open on something — a heading, a paragraph, a cell that has
  * already run — contributes it here, as a serialised Lexical editor state
  * built fresh per mount. Nothing contributed means the document plugin's own
@@ -1126,7 +1128,7 @@ export type OpeningDocumentContribution = {
    * field existed.
    *
    * A host that also asks the *chat's* composer to focus on mount (see
-   * `LoopPresetOptions.autoFocusPrompt`) should set this to `false`: the
+   * `AgentPresetOptions.autoFocusPrompt`) should set this to `false`: the
    * chat's own autofocus runs the moment its composer paints, but the
    * document waits on a sandbox and a kernel to start first, so its
    * unconditional autofocus used to win the race by simply going second —
@@ -1136,8 +1138,10 @@ export type OpeningDocumentContribution = {
   autoFocus?: boolean;
 };
 
-export const LoopOpeningDocument =
-  defineContributionPoint<OpeningDocumentContribution>('loop.document.opening');
+export const AgentOpeningDocument =
+  defineContributionPoint<OpeningDocumentContribution>(
+    'agent.document.opening',
+  );
 
 /**
  * Whether there is anything to chat with.
@@ -1151,12 +1155,10 @@ export const LoopOpeningDocument =
  * Nothing answering means allowed, so a workspace with no sandbox plugin has a
  * working chat.
  */
-export const LoopAgentGate = defineGate<LoopWorkspaceContext>(
-  'loop.agent.available',
-);
+export const AgentGate = defineGate<AgentWorkspaceContext>('agent.available');
 
-/** @deprecated Use `LoopAgentGate`; chat is one consumer of agent availability. */
-export const LoopChatGate = LoopAgentGate;
+/** @deprecated Use `AgentGate`; chat is one consumer of agent availability. */
+export const AgentChatGate = AgentGate;
 
 /**
  * What an editor hands a toolbar contributor.
@@ -1169,7 +1171,7 @@ export const LoopChatGate = LoopAgentGate;
  * they do not know each other.
  */
 export type EditorToolbarContext = {
-  workspace: LoopWorkspaceContext;
+  workspace: AgentWorkspaceContext;
   /** The id of the editor this toolbar belongs to. */
   editorId: string;
 };
@@ -1212,8 +1214,8 @@ export type EditorToolbarItemContribution = {
  * Offered by the notebook plugin and filled by the notebook toolbar plugin.
  * The notebook names neither the toolbar nor anything on it.
  */
-export const LoopNotebookToolbar =
-  defineContributionPoint<EditorToolbarContribution>('loop.notebook.toolbar');
+export const AgentNotebookToolbar =
+  defineContributionPoint<EditorToolbarContribution>('agent.notebook.toolbar');
 
 /**
  * What goes on the notebook's toolbar, once something provides one.
@@ -1222,19 +1224,19 @@ export const LoopNotebookToolbar =
  * buttons, so the plugin that owns the bar is the one that opens the point.
  * The chat puts its agent actions here.
  */
-export const LoopNotebookToolbarItem =
+export const AgentNotebookToolbarItem =
   defineContributionPoint<EditorToolbarItemContribution>(
-    'loop.notebook.toolbar.item',
+    'agent.notebook.toolbar.item',
   );
 
 /** The document editor's toolbar. The same arrangement, for prose. */
-export const LoopDocumentToolbar =
-  defineContributionPoint<EditorToolbarContribution>('loop.document.toolbar');
+export const AgentDocumentToolbar =
+  defineContributionPoint<EditorToolbarContribution>('agent.document.toolbar');
 
 /** What goes on the document's toolbar, once something provides one. */
-export const LoopDocumentToolbarItem =
+export const AgentDocumentToolbarItem =
   defineContributionPoint<EditorToolbarItemContribution>(
-    'loop.document.toolbar.item',
+    'agent.document.toolbar.item',
   );
 
 // Asking the chat to open a surface, from a command that runs outside it.
@@ -1248,14 +1250,14 @@ export {
 export { focusPrompt, onPromptFocusRequest } from './focusRequests';
 
 /** Slash commands, shared in shape with the CLI. */
-export const LoopCommand =
-  defineContributionPoint<CommandContribution>('loop.command');
+export const AgentCommand =
+  defineContributionPoint<CommandContribution>('agent.command');
 
 /**
  * The application a workspace draws, as its renderer says it: its Appspec in
  * the words the person reads. What a host's plugin reads of the application
  * it was added to — its name, its face, its `presentation` — without the
- * host having read the spec itself (`<Application app="demo-marketer">`
+ * host having read the spec itself (`<AIApplication app="demo-marketer">`
  * reads a name). One per workspace, contributed by `AppRenderer`; none in a
  * workspace that draws no application.
  */
@@ -1264,16 +1266,16 @@ export type ApplicationContribution = {
 };
 
 /** The application the workspace draws (`ApplicationContribution`). */
-export const LoopApplication =
-  defineContributionPoint<ApplicationContribution>('loop.application');
+export const AgentApplication =
+  defineContributionPoint<ApplicationContribution>('agent.application');
 
 /** What goes with every run besides the message (`forwardedProps`). */
-export const LoopRunProps =
-  defineContributionPoint<RunPropsContribution>('loop.runProps');
+export const AgentRunProps =
+  defineContributionPoint<RunPropsContribution>('agent.runProps');
 
 /**
  * The `forwardedProps` of a run: what the contributions say, then what the
- * sender gave, the `loop` part merged key by key, and its `header` (the
+ * sender gave, the `agent` part merged key by key, and its `header` (the
  * title bar's drop-downs) by header UI.
  */
 export function runForwardedProps(
@@ -1283,32 +1285,32 @@ export function runForwardedProps(
   let merged: Record<string, unknown> | undefined;
   for (const part of [...contributed.map(entry => entry.props()), given]) {
     if (!part) continue;
-    const before = (merged?.loop as Record<string, unknown> | undefined) ?? {};
-    const given = (part.loop as Record<string, unknown> | undefined) ?? {};
-    const loop: Record<string, unknown> = { ...before, ...given };
+    const before = (merged?.agent as Record<string, unknown> | undefined) ?? {};
+    const given = (part.agent as Record<string, unknown> | undefined) ?? {};
+    const agentProps: Record<string, unknown> = { ...before, ...given };
     // The title bar's drop-downs, by header UI: each header says its own.
     if (before.header && given.header) {
-      loop.header = {
+      agentProps.header = {
         ...(before.header as Record<string, unknown>),
         ...(given.header as Record<string, unknown>),
       };
     }
     merged = { ...merged, ...part };
-    if (Object.keys(loop).length > 0) {
-      merged.loop = loop;
+    if (Object.keys(agentProps).length > 0) {
+      merged.agent = agentProps;
     }
   }
   return merged;
 }
 
 /** `@` namespaces. */
-export const LoopMention =
-  defineContributionPoint<MentionContribution>('loop.mention');
+export const AgentMention =
+  defineContributionPoint<MentionContribution>('agent.mention');
 
 /** Slot names the shell renders. Slots render everything; points choose one. */
-export const LoopSlots = {
+export const AgentSlots = {
   /** Agent picker, model chip, status indicators. */
-  header: 'loop.header',
+  header: 'agent.header',
   /**
    * The chat's own title bar, beside the agent's name.
    *
@@ -1320,22 +1322,22 @@ export const LoopSlots = {
    * Empty for most workspaces, and the chat asks whether anyone contributed
    * before it draws anything, so an unfilled slot costs nothing.
    */
-  chatHeader: 'loop.chatHeader',
+  chatHeader: 'agent.chatHeader',
   /**
    * Above the conversation, under the chat's title bar: a band, as the
    * anonymous preview's box stands (the `banner` placement of an agent's UI,
    * 15 November 2026: *Link LinkedIn in Settings*). Empty, nothing drawn.
    */
-  chatBanner: 'loop.chatBanner',
+  chatBanner: 'agent.chatBanner',
   /** Buttons beside the prompt. */
-  promptAction: 'loop.promptAction',
+  promptAction: 'agent.promptAction',
   /**
    * A status beside the prompt's buttons that stays usable while the prompt
    * is closed — never dimmed, never inert: a visitor's limited preview,
    * whose refusal and *Sign in* must be reached once their turns are spent
    * (the user, 20 November 2026). Empty, nothing drawn.
    */
-  promptStatus: 'loop.promptStatus',
+  promptStatus: 'agent.promptStatus',
   /**
    * The strip inside the prompt, above where the typing goes.
    *
@@ -1345,7 +1347,7 @@ export const LoopSlots = {
    * for whatever wants to sit *in* the prompt rather than under it, and it
    * draws nothing while it is empty.
    */
-  inpromptMenu: 'loop.inpromptMenu',
+  inpromptMenu: 'agent.inpromptMenu',
   /**
    * Under the view, above the status line.
    *
@@ -1353,16 +1355,16 @@ export const LoopSlots = {
    * the shell, so a workspace mounted without a chat has nothing there instead
    * of an input box wired to nothing.
    */
-  footer: 'loop.footer',
+  footer: 'agent.footer',
   /** Small status items under the prompt. */
-  status: 'loop.status',
+  status: 'agent.status',
   /**
    * A mount point for plugins that position themselves.
    *
    * Rendered once, with no layout of its own. What goes here paints over the
    * workspace from a portal — the command palette does — so the slot only has
    * to exist somewhere the reactor is running. It is `root` rather than
-   * `loop.root` because it is the reactor's convention rather than the loop's:
+   * `agent.root` because it is the reactor's convention rather than the Agent's:
    * the music and CMS applications render the same name for the same plugins.
    */
   root: 'root',
@@ -1373,7 +1375,7 @@ export const LoopSlots = {
    * A slot, so a workspace with no sidebar plugin has no sidebar at all — the
    * column is not drawn when nothing fills it.
    */
-  sidebar: 'loop.sidebar',
+  sidebar: 'agent.sidebar',
   /**
    * The leading edge, beside the view: what is said *about* the work rather
    * than part of it — a host's presentation of the application, a guide.
@@ -1383,10 +1385,10 @@ export const LoopSlots = {
    * workspace's header when it has one), the view
    * keeps the whole width meanwhile, and in a narrow workspace the panel
    * opens over the view. A component names its toggle and says whether it
-   * has anything to show with its `panel` (`LoopLeftPanelComponent`); with
+   * has anything to show with its `panel` (`AgentLeftPanelComponent`); with
    * nothing to show there is no toggle and no panel.
    */
-  leftPanel: 'loop.leftPanel',
+  leftPanel: 'agent.leftPanel',
   /**
    * The trailing edge, beside the view: what the agent builds beside the
    * conversation — its UI placed `right`, such as the deck or the sheet it
@@ -1394,20 +1396,20 @@ export const LoopSlots = {
    * until the person or the agent opens it, its toggle trailing the chat's
    * title bar, over the view in a narrow workspace.
    */
-  rightPanel: 'loop.rightPanel',
+  rightPanel: 'agent.rightPanel',
   /**
    * Over the view, inside its bounds: what slides in from one of its edges
    * for a moment — the agent's notices (`apps/plugins/notices`). Never over
    * the page around the workspace.
    */
-  viewOverlay: 'loop.viewOverlay',
+  viewOverlay: 'agent.viewOverlay',
   /**
    * Inside the Composer's full-screen portal (`apps/plugins/composer-portal`):
    * how the application is built, drawn by its host — the Studio's Canvas,
    * its spec and its Python, read only. Given `{ app }`, the Appspec shown.
    * Empty, the portal draws its own spec and Python (`ComposerSource`).
    */
-  composerView: 'loop.composerView',
+  composerView: 'agent.composerView',
 } as const;
 
 /**
@@ -1440,7 +1442,7 @@ export function sandboxIndicatorState(
 /** Whether a view or a chat surface can be opened right now. */
 export function canOpenView(
   contribution: Pick<ViewTypeContribution, 'canOpen'>,
-  workspace: LoopWorkspaceContext,
+  workspace: AgentWorkspaceContext,
 ): boolean {
   return contribution.canOpen ? contribution.canOpen(workspace) : true;
 }
@@ -1461,9 +1463,9 @@ export function parseCommand(
 }
 
 export {
-  useLoopPromptStore,
-  suggestLoopPrompt,
-  type LoopPromptState,
+  useAgentPromptStore,
+  suggestAgentPrompt,
+  type AgentPromptState,
   type SuggestedPrompt,
 } from './promptStore';
 
@@ -1482,7 +1484,7 @@ export {
  * layout decides where things go, never what they do.
  */
 export type ChatLayoutParts = {
-  workspace: LoopWorkspaceContext;
+  workspace: AgentWorkspaceContext;
   /** The editor surfaces — every mountable surface, the active one shown. */
   editors: ReactNode;
   /** Whether an editor surface is on screen (false: the transcript is all). */
@@ -1529,8 +1531,8 @@ export type ChatLayoutContribution = {
   >;
 };
 
-export const LoopChatLayout =
-  defineContributionPoint<ChatLayoutContribution>('loop.chat.layout');
+export const AgentChatLayout =
+  defineContributionPoint<ChatLayoutContribution>('agent.chat.layout');
 
 /**
  * A panel attached to the composer, above or below it.
@@ -1547,11 +1549,11 @@ export type PromptPanelContribution = {
   placement?: 'above' | 'below';
   /** Among panels on the same side; lower first. */
   order?: number;
-  Component: ComponentType<{ workspace: LoopWorkspaceContext }>;
+  Component: ComponentType<{ workspace: AgentWorkspaceContext }>;
 };
 
-export const LoopPromptPanel =
-  defineContributionPoint<PromptPanelContribution>('loop.prompt.panel');
+export const AgentPromptPanel =
+  defineContributionPoint<PromptPanelContribution>('agent.prompt.panel');
 
 /**
  * The conversation's current turn, as a live value.
@@ -1626,5 +1628,5 @@ export type ChatTurnContribution = {
   presence: ReadonlySignal<PresenceState>;
 };
 
-export const LoopChatTurn =
-  defineContributionPoint<ChatTurnContribution>('loop.chat.turn');
+export const AgentChatTurn =
+  defineContributionPoint<ChatTurnContribution>('agent.chat.turn');

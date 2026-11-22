@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Matrix rain animation forLoop TUX."""
+"""Matrix rain animation for Agent TUX."""
 
 import asyncio
 import random

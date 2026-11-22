@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Terminal UX (TUX) for theLoop assistant."""
+"""Terminal UX (TUX) for the Agent assistant."""
 
 import asyncio
 import getpass
@@ -24,14 +24,14 @@ from rich.panel import Panel
 from rich.style import Style
 from rich.text import Text
 
-from agent_runtimes.loop import LoopSession, SessionSync, SlashCommandRegistry
-from agent_runtimes.loop.session import is_session_agui_url
+from agent_runtimes.agent import AgentSession, SessionSync, SlashCommandRegistry
+from agent_runtimes.agent.session import is_session_agui_url
 
 from .banner import (
+    AGENT_VERSION,
+    AGENT_WORDMARK,
     DATALAYER_MARK,
     DATALAYER_MARK_STAND_IN,
-    LOOP_VERSION,
-    LOOP_WORDMARK,
     TOKENS_DOWN,
     TOKENS_UP,
     drawn_cells,
@@ -134,7 +134,7 @@ class SessionStats:
 
 
 class CliTux:
-    """Terminal UX for theLoop assistant."""
+    """Terminal UX for the Agent assistant."""
 
     #: How often ai-agents is asked which approvals a cloud run waits on.
     APPROVALS_POLL_SECONDS = 2.0
@@ -181,7 +181,7 @@ class CliTux:
         self.eggs = eggs
         self.jupyter_url = jupyter_url
         self.extra_suggestions: list[str] = extra_suggestions or []
-        #: Whether the lines come from ``loop --prompt`` rather than a person:
+        #: Whether the lines come from ``agent --prompt`` rather than a person:
         #: a command then asks nothing (the next line is the next prompt).
         self.scripted = False
         #: The Datalayer runtime the agent runs on, when it is not this machine.
@@ -236,7 +236,7 @@ class CliTux:
         # What a command is allowed to know about the session it runs in, so a
         # command can be written against the session rather than against this
         # terminal (and can therefore also run in the browser workspace).
-        self.session = LoopSession(
+        self.session = AgentSession(
             server_url=self.server_url,
             agent_id=agent_id,
             owns_server=False,
@@ -280,7 +280,7 @@ class CliTux:
         self.status_console.print(problem, style=STYLE_ERROR, markup=False)
 
     @property
-    def loop_session(self) -> LoopSession:
+    def agent_session(self) -> AgentSession:
         """Return this session, with the terminal's live values folded in.
 
         `CliTux` mutates `agent_id` and `server_url` as the session goes on —
@@ -534,7 +534,7 @@ class CliTux:
         display_name = self._get_display_name()
         cwd = self._get_cwd()
 
-        version = LOOP_VERSION
+        version = AGENT_VERSION
 
         # ASCII art logo - Datalayer inspired (3 horizontal bars + feet)
         # Compact version: 6 chars wide
@@ -585,7 +585,7 @@ class CliTux:
         _append_tip("/context", "View context usage")
         _append_tip("/status", "Check connection status")
         _append_tip("/clear", "Start fresh conversation")
-        _append_tip("/exit", "Exit from loop", is_last=True)
+        _append_tip("/exit", "Exit from agent", is_last=True)
 
         # Create side-by-side layout
         inner_panel_height = 11
@@ -614,7 +614,7 @@ class CliTux:
 
         stands_in = drawn_cells(DATALAYER_MARK) != cell_len(DATALAYER_MARK)
         mark = DATALAYER_MARK_STAND_IN if stands_in else DATALAYER_MARK
-        title = f" {mark} {LOOP_WORDMARK} {version} by Datalayer "
+        title = f" {mark} {AGENT_WORDMARK} {version} by Datalayer "
 
         content = Group(
             Columns([left_panel, right_panel], equal=False, expand=True),
@@ -693,7 +693,7 @@ class CliTux:
             key_bindings = build_key_bindings(self.command_registry)
 
             # In the prompt's raw mode Ctrl-Z is a key, not SIGTSTP: it leaves
-            # `loop` as Ctrl-C does, with the goodbye.
+            # `agent` as Ctrl-C does, with the goodbye.
             @key_bindings.add("c-z")
             def _leave(event: Any) -> None:
                 event.app.exit(exception=KeyboardInterrupt())
@@ -776,7 +776,7 @@ class CliTux:
             async with httpx.AsyncClient() as client:
                 response = await client.get(f"{self.server_url}/health", timeout=10.0)
         except httpx.HTTPError as error:
-            return f"The relay to {self.where} is gone ({type(error).__name__}): restart loop."
+            return f"The relay to {self.where} is gone ({type(error).__name__}): restart agent."
         status = response.status_code
         problem = f"{self.where} does not answer (status {status}): nothing was run, here or there."
         return None if status == 200 else problem
@@ -829,7 +829,7 @@ class CliTux:
         return approved
 
     def _can_ask(self) -> bool:
-        """Whether a person is here to answer: never on ``loop --prompt`` lines."""
+        """Whether a person is here to answer: never on ``agent --prompt`` lines."""
         try:
             return not self.scripted and sys.stdin.isatty()
         except Exception:
@@ -891,9 +891,9 @@ class CliTux:
 
         Each tool call of this runtime waiting on the person is said once. A
         person at the terminal is asked, and the decision goes to ai-agents,
-        which tells the run; ``loop --prompt`` lines ask nothing: the approval
+        which tells the run; ``agent --prompt`` lines ask nothing: the approval
         is said with the commands that decide it, and waited for, and its
-        decision is said when it comes — from ``loop tool-approvals``, the
+        decision is said when it comes — from ``agent tool-approvals``, the
         approvals page of datalayer.ai, or anyone the approval waits on.
         """
         from agent_runtimes.commands.tool_approvals import (
@@ -957,8 +957,8 @@ class CliTux:
                         self._say_approval_waiting(
                             approval,
                             decide_with=(
-                                f"Approve: loop tool-approvals approve {approval_id}   "
-                                f"Reject: loop tool-approvals reject {approval_id}"
+                                f"Approve: agent tool-approvals approve {approval_id}   "
+                                f"Reject: agent tool-approvals reject {approval_id}"
                             ),
                         )
                 for approval_id in [
@@ -1048,7 +1048,7 @@ class CliTux:
                             continue
                         handled.add(approval_id)
                         if not self._can_ask():
-                            # ``loop --prompt`` asks nothing, and a line read
+                            # ``agent --prompt`` asks nothing, and a line read
                             # from no terminal is no answer: said, and waited for.
                             self._approvals_waiting.add(approval_id)
                             self._say_approval_waiting(
@@ -1469,7 +1469,7 @@ class CliTux:
         ``!!code`` runs in the sandbox, ``!command`` in a local shell,
         ``/command`` is that slash command (and a prompt it answers is sent),
         and anything else is a message to the agent, whose answer streams to
-        the console. The interactive prompt and ``loop --prompt`` both run
+        the console. The interactive prompt and ``agent --prompt`` both run
         their lines here.
 
         Parameters
@@ -1598,7 +1598,7 @@ async def run_tux(
     cloud_runtime: Optional[str] = None,
     resume: Optional[str] = None,
 ) -> None:
-    """Run theLoop assistant TUX.
+    """Run the Agent assistant TUX.
 
     Args:
         agent_url: URL of the AG-UI agent endpoint
@@ -1623,6 +1623,6 @@ async def run_tux(
         speak=speak,
         cloud_runtime=cloud_runtime,
     )
-    # A paused session picked as `loop` started: resumed before the first prompt.
+    # A paused session picked as `agent` started: resumed before the first prompt.
     tux.resume_at_start = resume
     await tux.run()

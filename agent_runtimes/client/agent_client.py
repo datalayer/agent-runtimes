@@ -774,7 +774,7 @@ def _turn_in_words(turn: dict[str, Any]) -> str:
 
 
 def _session_offers(lines: list[str]) -> dict[str, dict[str, Any]]:
-    """The actions a session offers, by name, as its ``loop.session`` event
+    """The actions a session offers, by name, as its ``agent.session`` event
     says them: each with the display that offers it and its
     token.
     """
@@ -789,7 +789,7 @@ def _session_offers(lines: list[str]) -> dict[str, dict[str, Any]]:
         if (
             isinstance(event, dict)
             and event.get("type") == "CUSTOM"
-            and event.get("name") == "loop.session"
+            and event.get("name") == "agent.session"
         ):
             for offer in (event.get("value") or {}).get("actions") or []:
                 offers[str(offer["name"])] = offer
@@ -835,7 +835,7 @@ def run_cloud_app_conversation(
     lines: list[str] = []
     said: list[dict[str, Any]] = []
     # What the session offers of its code's actions, with their tokens: each
-    # stream starts with what the session is (``loop.session``).
+    # stream starts with what the session is (``agent.session``).
     offered: dict[str, dict[str, Any]] = {}
 
     def failed(kind: str, message: str, detail: str, url: str) -> dict[str, Any]:
@@ -1101,6 +1101,7 @@ class AgentClient(
         agent_setup: Optional[dict[str, Any]] = None,
         client_id: Optional[str] = None,
         agent_uid: Optional[str] = None,
+        egress: Optional[list[str]] = None,
     ) -> RuntimeService:
         """
         Create a new runtime (kernel) for code execution.
@@ -1137,10 +1138,10 @@ class AgentClient(
         app_spec : Optional[dict[str, Any]], optional
             The Appspec of the application the runtime is launched for: its
             connections' secrets are given to it before its agent is made,
-            as `loop apps run --cloud` launches one.
+            as `agent apps run --cloud` launches one.
         agent_setup : Optional[dict[str, Any]], optional
             How its agent is configured at launch: ``without_mcp_servers``,
-            ``without_skills`` (``loop --without-mcp-servers``).
+            ``without_skills`` (``agent --without-mcp-servers``).
         client_id : Optional[str], optional
             What asked for the runtime, and ``agent_uid`` the agent it runs
             for in that client's naming (``kagent`` and
@@ -1148,6 +1149,11 @@ class AgentClient(
             agent dimensions. Neither changes who pays.
         agent_uid : Optional[str], optional
             See ``client_id``.
+        egress : Optional[list[str]], optional
+            Extra ``host:port`` the sandbox may reach beyond the web (any
+            public host on ports 80 and 443), e.g. ``["github.com:22"]``; only
+            for a runtime with no agent. The platform checks each and refuses
+            the launch in a sentence otherwise.
 
         Returns
         -------
@@ -1206,6 +1212,8 @@ class AgentClient(
             setup["client_id"] = client_id
         if agent_uid:
             setup["agent_uid"] = agent_uid
+        if egress:
+            setup["egress"] = list(egress)
 
         if snapshot_name is not None or from_snapshot_uid:
             snapshot_uid = from_snapshot_uid or None
@@ -1303,6 +1311,7 @@ class AgentClient(
             started_at=runtime_data.get("started_at"),
             expired_at=runtime_data.get("expired_at"),
             unmetered=bool(runtime_data.get("unmetered", False)),
+            egress=list(runtime_data.get("egress") or []),
         )
         return runtime
 
@@ -1352,6 +1361,7 @@ class AgentClient(
                     expired_at=runtime["expired_at"],
                     unmetered=bool(runtime.get("unmetered", False)),
                     deployment_uid=str(runtime.get("deployment_uid") or ""),
+                    egress=list(runtime.get("egress") or []),
                 )
             )
         return runtime_services
@@ -1537,6 +1547,7 @@ class AgentClient(
             started_at=runtime_data.get("started_at"),
             expired_at=runtime_data.get("expired_at"),
             unmetered=bool(runtime_data.get("unmetered", False)),
+            egress=list(runtime_data.get("egress") or []),
         )
 
     def update_runtime(

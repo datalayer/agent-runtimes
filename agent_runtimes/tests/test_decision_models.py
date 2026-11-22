@@ -192,7 +192,7 @@ class TestTheModelsCommand:
         assert REFUSAL in _models(tux, JEV)
         assert set(agents_route._agentspecs) == {AGENT}
         assert agents_route._agentspecs[AGENT]["model"] == SONNET
-        assert tux.loop_session.model == SONNET
+        assert tux.agent_session.model == SONNET
 
         # Asked directly, the runtime refuses it too, before the agent in
         # place is deleted.

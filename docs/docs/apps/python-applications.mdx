@@ -29,7 +29,7 @@ with its rules, checks and record on. It is tested (see the end of the
 page).
 
 **A Python application of your own runs on a deployment's runtime** (since
-1.3.9x): pushed with `loop apps push app.py --app <id>`, the
+1.3.9x): pushed with `agent apps push app.py --app <id>`, the
 file is kept with the version, and the runtime of a deployment — its
 scheduled ticks, its always-on runtime, the hosted page's sessions — is
 handed the code when its agent is made, and runs its `start`, `message` and
@@ -54,7 +54,7 @@ What does **not** exist yet:
 application code runs on a runtime only — the sandbox a person's agent runs
 in, through the [Session API](./session-api) — never inside ai-agents or
 durable. An `app.py` of your own is built on your machine into the spec it
-amounts to (`loop apps build`, `push`); the platform keeps the file beside
+amounts to (`agent apps build`, `push`); the platform keeps the file beside
 the spec, versioned with it, and with each deployment of that version. The
 runtime reads it from the deployment when the deployment's agent is made
 (`GET /api/ai-agents/v1/apps/deployments/{uid}/code?version=N` on
@@ -194,10 +194,10 @@ application keeps nothing in its record unless its Appspec names it (see
 [The record](#the-record)). Given no `recorder`, the host keeps the record
 in memory — `host.recorder` is an `AppRecorder` whose `sent` holds each body
 as it would have been sent, and whose `entries` flattens them — which is
-what a script or a test wants; a runtime, and `loop apps run`, give one that
+what a script or a test wants; a runtime, and `agent apps run`, give one that
 sends it to the session store (`AppRecorder(app=app.spec, send=…)`).
 
-The scenario is the one `agent_runtimes/tests/test_loop_app_api.py` runs
+The scenario is the one `agent_runtimes/tests/test_agent_app_api.py` runs
 (`interview()`, `hosted()`), where the model is scripted turn by turn.
 
 ## `Application`
@@ -292,7 +292,7 @@ What an application declares is its Appspec. Each call adds to it:
 An application works with companies for each person, is a company itself,
 or both — the way two companies work together. The
 calls write the `pap` block the Spec and the Canvas write, checked by
-agentspecs' own models; `loop apps build` writes the same Appspec:
+agentspecs' own models; `agent apps build` writes the same Appspec:
 
 ```python
 app = Application("books", "chat", agent="example-blank:0.0.1")
@@ -406,7 +406,7 @@ async def reply(session: Session, text: str) -> None:
 ```
 
 The page offers the profiles in a picker beside the composer and sends the
-one picked with every run (`forwardedProps.loop.profile`); the empty chat
+one picked with every run (`forwardedProps.agent.profile`); the empty chat
 offers its starters. Once the first message is sent, the conversation keeps
 its profile: a run naming another is refused (409, *This conversation is with
 Sales: start another to talk to Support.*), and one naming a profile the
@@ -433,11 +433,11 @@ session always first:
 | `@app.stop` | `(session)` | The person presses Stop, after what was running is cancelled. |
 | `@app.resume` | `(session)` | An earlier session is reopened, its state back — an ended one too. |
 | `@app.feedback` | `(session, feedback)` | A person gave a thumb up or down on an answer, with a comment or not, and it is kept in the record (only when the Appspec's `record.include` names `feedback`). `feedback` is a `Feedback`: `liked`, `comment`, `message` (the answer it is about, `answer-<n>`) and `by`. See [Threads and feedback](#threads-and-feedback). |
-| `@app.audio` | `(session, heard)` | The person spoke: the turn's sound, given to `host.audio` in chunks, heard by the same engines as a page's and `loop --voice`'s — on the machine when the pinned Whisper and faster-whisper are there, else by Datalayer's speech service with the person's token. `heard` is a `HeardSpeech`: `text`, `language`, `engine` and `where` (`device` or `server`). Without a handler, the words are the person's message, marked spoken. The sound is never kept. See [Voice](#voice). |
+| `@app.audio` | `(session, heard)` | The person spoke: the turn's sound, given to `host.audio` in chunks, heard by the same engines as a page's and `agent --voice`'s — on the machine when the pinned Whisper and faster-whisper are there, else by Datalayer's speech service with the person's token. `heard` is a `HeardSpeech`: `text`, `language`, `engine` and `where` (`device` or `server`). Without a handler, the words are the person's message, marked spoken. The sound is never kept. See [Voice](#voice). |
 | `@app.interrupted` | `(session)` | The person spoke over the agent: what was running is cancelled, the page told to stop the voice, then this runs. The conversation stays open for what they say next. |
 | `@app.end` | `(session)` | The conversation closes for good, after what was running is cancelled: the person left the terminal, or a client ended the session. The last thing it runs; nobody reads what it sends. |
 | `@app.logout` | `(session)` | The person signed out. The session then ends: `end` runs after it. |
-| `@app.command(name, description)` | `(session, words)` | The person sends `/<name> words`: the code answers in place of `message`. Declared in the Appspec with the prompt `/<name> {input}`, and marked as code by `loop apps build` (`command <name>`); in the terminal, `/<name>` runs it too. |
+| `@app.command(name, description)` | `(session, words)` | The person sends `/<name> words`: the code answers in place of `message`. Declared in the Appspec with the prompt `/<name> {input}`, and marked as code by `agent apps build` (`command <name>`); in the terminal, `/<name>` runs it too. |
 | `@app.schedule(cron, *, name="", description="", prompt="")` | `(session)` | On a schedule, in a session of its own, known by `name` (the handler's when unsaid): `host.tick(name)`. Also adds the schedule to the Appspec's triggers. Refused at the call on anything but a `worker` — a chat starts when somebody opens it. |
 | `@app.page` / `@app.page(live=False)` | `([session], **inputs)` | A widget's page: its inputs changed on the page, or Run pressed with `live=False`. Returns its outputs. See [A widget's page](#a-widgets-page). |
 
@@ -490,8 +490,8 @@ its one output, or its outputs by name, all of them. Declaring none, the page
 has one: `result`, in words.
 
 Both are its Appspec's `interface.page` — `function`, `inputs`, `outputs`,
-`live` — so that the Canvas shows them and validation runs them; `loop apps
-build` marks the function as code (`# loop:code page: quote (app.py:9)`).
+`live` — so that the Canvas shows them and validation runs them; `agent apps
+build` marks the function as code (`# agent:code page: quote (app.py:9)`).
 
 | What | Refused |
 | --- | --- |
@@ -500,8 +500,8 @@ build` marks the function as code (`# loop:code page: quote (app.py:9)`).
 
 `AppHost.page(session, inputs)` runs it in process and returns its outputs;
 the page sends its inputs as the `page` action of its session
-(`{"inputs": {...}}`), and the outputs come back as a `loop.page` event. The
-terminal says them. `loop apps validate app.py --tests --local` runs the page
+(`{"inputs": {...}}`), and the outputs come back as a `agent.page` event. The
+terminal says them. `agent apps validate app.py --tests --local` runs the page
 on its inputs' defaults — *It shows each of its outputs for its inputs'
 defaults.* — and fails when the function raises, returns what its page does
 not show, or an input it requires has no default (a page shows its outputs
@@ -554,21 +554,21 @@ def gives_the_status(conversation: Conversation) -> bool | str:
 | --- | --- | --- |
 | `@app.tool(does=…, description="")` | `tools`: its name (the function's), its description (the docstring's when unsaid), its `parameters` — the JSON Schema of its arguments, from their types — and what it `does`, by class of action. | Its agent is given it beside its own tools; sync or async, called with its arguments, what it returns is what the agent reads. Every call is decided by the rules, as any tool's: by a rule that names it by its name alone (`applies_to="refund"`), else by what it does — reading needs no rule, anything that acts asks first. |
 | `@app.check(on, description="")` | `checks.code`: its name, its stage, what it checks in words (the docstring's first line when unsaid). | At its stage, after the built-in checks and before the record: `answer`, `handler(text)` before the answer is given — refused, the agent is asked again with why; `tool_call`, `handler(tool, arguments)` once the rules let the call through — refused, the call is stopped (`AppCheckBlockedError`). `None` or `True` lets it pass, `False` or a sentence refuses; anything else raises. Each refusal is a `check` entry of the record. |
-| `@app.test(expect, *, ask)` | A case of `tests.cases`, its `code` the function's name. | `loop apps validate app.py --tests --local`: the case asked of the application in this process, a session of its own, and its `Conversation` — `ask`, `answer` (its messages, one after the other), `messages`, `steps`, `asked` (what it stopped to ask the person, when it did) — handed to the function, which returns `True`, `False` or a sentence saying why it failed. `None` is not a pass: it is said, and the test is not run. Without the file — on Datalayer, through the Evals engine — the case is judged by its words. |
+| `@app.test(expect, *, ask)` | A case of `tests.cases`, its `code` the function's name. | `agent apps validate app.py --tests --local`: the case asked of the application in this process, a session of its own, and its `Conversation` — `ask`, `answer` (its messages, one after the other), `messages`, `steps`, `asked` (what it stopped to ask the person, when it did) — handed to the function, which returns `True`, `False` or a sentence saying why it failed. `None` is not a pass: it is said, and the test is not run. Without the file — on Datalayer, through the Evals engine — the case is judged by its words. |
 
 `@app.tool` without `does` raises `TypeError`; a tool or a check that says
 nothing of itself, a stage that is neither `answer` nor `tool_call`, or a
 name used twice raise `ValueError`; what agentspecs refuses — a class of
 action that is none — raises `AppNotRunnable` from `app.spec`.
 
-`loop apps build` marks each as code, `# loop:code tool lookup_order:
+`agent apps build` marks each as code, `# agent:code tool lookup_order:
 lookup_order (app.py:7)`, `check …`, `test …`. A spec validated alone — its
 `app.yaml` without the file — *needs attention* for each: its tools are not
 given, its checks check nothing, its tests are judged by their words.
 
 ```bash
-loop apps validate app.py --tests           # lists them
-loop apps validate app.py --tests --local   # runs them here; exit 1 when one fails, 3 when one could not run
+agent apps validate app.py --tests           # lists them
+agent apps validate app.py --tests --local   # runs them here; exit 1 when one fails, 3 when one could not run
 ```
 
 ### Schedules on the platform
@@ -586,12 +586,12 @@ resuming starts them again, taking it down removes them; deploying another
 version registers that version's schedules. Every tick is a run of the
 schedule, which says whether it answered.
 
-Your code is the deployment's. The `app.py` that `loop apps push` kept
+Your code is the deployment's. The `app.py` that `agent apps push` kept
 beside the version's spec is kept with the deployment, and the runtime of
 each tick reads it from there as the agent is made (the payload that
 creates the agent carries none), then runs the session with it — its
 `start`, `message` and `schedule` handlers, its tools and checks — under
-the application's rules, as `loop apps run` does. The runtime reads code
+the application's rules, as `agent apps run` does. The runtime reads code
 for a deployment's agent only, once it holds the deployment's principal
 token, with the same caller's token. A version written as a spec has no
 code, and its agent is asked the prompt. The stream of a woken
@@ -621,7 +621,7 @@ runtime has: the scheduler knows a schedule by its position among the
 application's triggers, the runtime finds the handler the code declared
 there (`app.schedule_at(position)`) and runs it with the session, in place
 of the prompt, as a command's code runs — what the platform holds for
-`loop.app.schedule` under `<id>/<name>` (`AppHost.tick(name, session=…)`).
+`agent.app.schedule` under `<id>/<name>` (`AppHost.tick(name, session=…)`).
 The code's `start` runs first, as in any session opened. A schedule the
 code did not declare — one of the Appspec's own — asks the agent its
 prompt. When the trigger at that position is not the schedule the code
@@ -793,17 +793,17 @@ a file with none, or more than one, raises `ValueError`.
 ### A Reactor plugin
 
 An application written in Python is a [Reactor](/apps) plugin, as one
-written as a spec is: `loop-app-<id>`, its manifest the application's
+written as a spec is: `agent-app-<id>`, its manifest the application's
 identity (name, version, description, emoji, kind) — the name its page's
 plugin has too, which the manifest names as what it cannot be used without
 (`frontend_dependencies`), both delivered as one extension of that name
 ([one application, two plugins](./app-renderer#one-application-two-plugins-of-one-name)).
-`loop apps eject` changes nothing of it: the `app.py` it writes is the same
+`agent apps eject` changes nothing of it: the `app.py` it writes is the same
 pair as the spec it was written from. Each decorator is a
-contribution of that plugin to a point of its own — `loop.app.start`,
-`loop.app.message`, `loop.app.settings`, `loop.app.stop`, `loop.app.resume`,
-`loop.app.end`, `loop.app.logout`, and `loop.app.action` and
-`loop.app.schedule` known as `<id>/<name>` — beside its spec on `loop.app`.
+contribution of that plugin to a point of its own — `agent.app.start`,
+`agent.app.message`, `agent.app.settings`, `agent.app.stop`, `agent.app.resume`,
+`agent.app.end`, `agent.app.logout`, and `agent.app.action` and
+`agent.app.schedule` known as `<id>/<name>` — beside its spec on `agent.app`.
 
 An `AppHost` registers the application on a Reactor `PluginPlatform` — its
 `platform`, one of its own unless given, started with it — as one extension of
@@ -814,7 +814,7 @@ and is gone when that plugin is unregistered. The platform's switches are
 Reactor's: a disabled application's reactions are not read. `host.dispose()`
 takes the application's extension away (`unregister_extension`) — its spec,
 every reaction and contribution, the plugins it delivered; an action then
-raises `KeyError`. `loop apps run` and a runtime's [session](./session-api)
+raises `KeyError`. `agent apps run` and a runtime's [session](./session-api)
 load it the same way, each session's host with a platform of its own; the
 runtime's own platform (`plugins.PLATFORM`) holds agent-runtimes' plugin, the
 catalogue, and the plugin of each application it is configured with.
@@ -847,15 +847,15 @@ that runs it honours it.
 
 | Call | Is, in Reactor | Honoured by |
 | --- | --- | --- |
-| `app.manifest` | Its `PluginManifest`: `loop-app-<id>`, the plugins it uses as its `dependencies`, its own points as its `contribution_points`. | Every host: listed, switched, drawn on the graph. |
-| `app.extension(frontend=None)` | Its `ReactorExtension`: the plugins it composes and its own plugin; its frontend half, its page side when packaged ([below](#its-page-side-as-a-package)). | `register_extension_object`; the entry point `loop apps package` writes. |
-| `app.contribute(point, value, id=None, order=0)` | A contribution to any point — one of agent-runtimes' (`loop.app.start`…), one of a plugin it uses, one of its own. | Whoever reads the point, on the host's platform. |
+| `app.manifest` | Its `PluginManifest`: `agent-app-<id>`, the plugins it uses as its `dependencies`, its own points as its `contribution_points`. | Every host: listed, switched, drawn on the graph. |
+| `app.extension(frontend=None)` | Its `ReactorExtension`: the plugins it composes and its own plugin; its frontend half, its page side when packaged ([below](#its-page-side-as-a-package)). | `register_extension_object`; the entry point `agent apps package` writes. |
+| `app.contribute(point, value, id=None, order=0)` | A contribution to any point — one of agent-runtimes' (`agent.app.start`…), one of a plugin it uses, one of its own. | Whoever reads the point, on the host's platform. |
 | `app.extend(point, target, value, id=None)` | An extension of one contribution of a point (`PluginContributions.extend`). | `get_contribution_extensions`. |
 | `app.contribution_point(id)` | A point of its own (`define_contribution_point`), said in its manifest, that other plugins contribute to. | Its code: `session.contributions(point)`. |
 | `app.uses(plugin, tools={...})` | A plugin it composes — a `(PluginManifest, implementation)` pair, delivered in its extension and gone with it, or a `ReactorExtension`, registered on the host when it is not there yet and kept — a dependency, activated first. `tools` gives its agent the plugin's agent tools (`provide_agent_tools`) by name, each with what it does. | The host's platform; its agent's tools, decided by its rules. |
 | `@app.reactor_command(id, name)` | A Reactor `Command` of its plugin (`provide_slash_commands`). | `platform.list_commands()`, `execute_command`, `session.execute_command`. |
 | `app.command(name, description, run=id)` | A command of its composer that a Reactor command answers — its own or a used plugin's — with the words typed after it; what it returns is the answer. | The composer (`/name words`), the terminal. |
-| `@app.route(path, methods=["GET"])` | A route of its plugin (`provide_routes`), with its endpoint. | `app.mount` and `loop apps run --web`, under the application's path (Reactor's `include_plugin_routes`). |
+| `@app.route(path, methods=["GET"])` | A route of its plugin (`provide_routes`), with its endpoint. | `app.mount` and `agent apps run --web`, under the application's path (Reactor's `include_plugin_routes`). |
 
 ```python
 from agent_runtimes.apps import Application, Session
@@ -889,14 +889,14 @@ What a used plugin's agent tool does is said by the application, as for
 and a rule can name it, and every call is decided by its rules; it runs the
 Reactor command the plugin's bundle names, on the host's platform. A tool the
 plugin does not offer is refused (*support-crm offers support-desk-plus no
-agent tool 'nothing': it offers lookup_customer.*). `loop apps build` marks a
+agent tool 'nothing': it offers lookup_customer.*). `agent apps build` marks a
 command or a tool a Reactor command answers as such (*tool lookup_customer:
 the Reactor command crm.lookup*). A hook a plugin implements for Reactor's
 lifecycle (`@hookimpl def on_reactor_start`) runs when the host's platform
 starts; a route is mounted when the application is mounted, so a route changed
 under `--watch` is mounted again on the next start.
 
-Not from Python: a point of the page — the Canvas's `loop.canvas.part`, a
+Not from Python: a point of the page — the Canvas's `agent.canvas.part`, a
 block of its palette — is the page's, contributed by the application's page
 side ([below](#its-page-side-as-a-package)); the server's platform does not
 reach a browser.
@@ -943,7 +943,7 @@ What people say reaches `@app.audio` from wherever they say it:
 - **On its page**, the microphone hears what is said — in the browser, or on
   Datalayer's servers — and the words come to `@app.audio` as what was heard
   (`where` says which); the sound stays where it was heard.
-- **At the terminal**, `loop --voice` running the application: the second
+- **At the terminal**, `agent --voice` running the application: the second
   `/voice` (or `Ctrl`+`T`) gives the turn's sound to `@app.audio`, heard on
   your machine when the `voice` extra and the pinned model are there, else on
   Datalayer's servers — not to the prompt line.
@@ -1165,18 +1165,18 @@ dial-desk/
 ```
 
 ```bash
-loop apps package app.py                  # writes dist/loop-app-dial-desk/ and builds its wheel
-pip install dist/loop_app_dial_desk-0.0.1-py3-none-any.whl
-loop apps run app.py --web                # or app.mount(api) in your own FastAPI
+agent apps package app.py                  # writes dist/agent-app-dial-desk/ and builds its wheel
+pip install dist/agent_app_dial_desk-0.0.1-py3-none-any.whl
+agent apps run app.py --web                # or app.mount(api) in your own FastAPI
 ```
 
-- `loop apps package` writes the distribution `loop-app-<id>`: the
-  application's module (`loop_app_<id>.app`, so `from loop_app_dial_desk.app
+- `agent apps package` writes the distribution `agent-app-<id>`: the
+  application's module (`agent_app_<id>.app`, so `from agent_app_dial_desk.app
   import app` mounts it), and the files its components name under
-  `share/datalayer/reactor/extensions/loop-app-<id>/`, beside a generated
+  `share/datalayer/reactor/extensions/agent-app-<id>/`, beside a generated
   page-side module. It is advertised under Reactor's
   `datalayer.reactor.extensions` entry point, by the name of the
-  application's plugin pair, `loop-app-<id>`, and the entry point resolves to
+  application's plugin pair, `agent-app-<id>`, and the entry point resolves to
   the application's own extension, `app.extension()` — its plugin, the
   plugins it uses, its page side. A file its components name that is not in
   the folder is refused.
@@ -1185,11 +1185,11 @@ loop apps run app.py --web                # or app.mount(api) in your own FastAP
   the next load — and serves it beside the application's plugin state, as
   Reactor's routes serve an extension:
   `GET <server>/api/v1/apps/<id>/plugins/frontend-extensions` and
-  `GET <server>/api/v1/apps/<id>/reactor-extensions/loop-app-<id>/<path>`.
+  `GET <server>/api/v1/apps/<id>/reactor-extensions/agent-app-<id>/<path>`.
   Nothing outside the package's directory is served, and nothing of another
   application.
 - The page reads it with Reactor's `bootstrapExtensions` and installs it into
-  the application's extension: its page-side plugin, `loop-app-<id>/page`,
+  the application's extension: its page-side plugin, `agent-app-<id>/page`,
   needs the application's server plugin and says where the folder's files
   are served. A component of the folder is fetched from there and drawn in
   its sandboxed frame like any other: its module still never runs in the
@@ -1462,8 +1462,8 @@ no application.* when it runs none). Its owner lists a thread's feedback
 from the terminal:
 
 ```bash
-loop apps threads <app> --search export --tag csv   # your threads, newest first, each with its id
-loop apps feedback <session>                       # 👎 on answer-2 by bob: Too long.
+agent apps threads <app> --search export --tag csv   # your threads, newest first, each with its id
+agent apps feedback <session>                       # 👎 on answer-2 by bob: Too long.
 ```
 
 A thread is opened again from the history: the chat reads its conversation
@@ -1513,7 +1513,7 @@ MCP servers, no skills, no tools. So `local_agent` builds it in your
 process, and what the agent is told is the application's instructions alone:
 `Application(id="echo-desk", agent="example-blank:0.0.1", instructions="You
 are Echo Desk…")` answers as Echo Desk. Its tools are the application's own
-(`@app.tool`). `loop apps init --python` starts a blank `app.py` with it. The
+(`@app.tool`). `agent apps init --python` starts a blank `app.py` with it. The
 Studio's blank application keeps `example-simple`, which has a decide tool
 and the events skill — so it runs on a runtime, not in your process.
 
@@ -1532,9 +1532,9 @@ place of its agent's: a plain function, a LangGraph graph or a
 LangChain runnable, a LlamaIndex agent or workflow. `session.agent` is then
 that agent, with the same `run` and `stream`, so an application with no
 `@app.message` is answered by it, and code that calls `session.agent` does
-not change. Wherever the application runs — `loop apps run`, a runtime, a
+not change. Wherever the application runs — `agent apps run`, a runtime, a
 mount — its sessions get it: it is the application plugin's contribution to
-`loop.app.agent`.
+`agent.app.agent`.
 
 What it does becomes the session's **steps** (see [Steps](#steps)): a step
 for the run, named after the agent, and nested in it a step per model call
@@ -1543,8 +1543,8 @@ chat shows, kept in the record with the tool calls, the decisions, the
 person's approvals and the turn.
 
 The spec still names an agent of the catalogue (`agent=`): what answers where
-the file does not run. `loop apps build` marks the agent of the code —
-`# loop:code agent langgraph: research (app.py:12)` — and the Studio's Canvas
+the file does not run. `agent apps build` marks the agent of the code —
+`# agent:code agent langgraph: research (app.py:12)` — and the Studio's Canvas
 shows it, locked, as the rest of what the code decides.
 
 Each framework is an extra, so that nothing is installed for an application
@@ -1640,9 +1640,9 @@ answer.
 | A LlamaIndex agent | Decided, each one, before it runs |
 | A plain function, a LlamaIndex workflow | **Not seen**: no rule decides them |
 
-LOOP does not see what a plain function or a workflow calls: `loop apps
+Agent does not see what a plain function or a workflow calls: `agent apps
 validate` says so — *needs attention*: *Its agent is a plain function,
-answer: LOOP sees none of the tools it may call, so its rules decide none of
+answer: Agent sees none of the tools it may call, so its rules decide none of
 them* — so that the verdict never passes for what the rules never saw.
 
 What every agent of the code gets: a credential is withheld from its answer
@@ -1650,7 +1650,7 @@ as it streams; an answer that a Gate or a check of its code reads is given
 whole once they let it through, and not at all when they refuse it — a
 framework's model cannot be asked again, as a catalogue agent's is. What it
 does not get: connections, skills, backend tools, documents to answer from,
-a Space to save to and a team are tools LOOP gives an agent of the
+a Space to save to and a team are tools Agent gives an agent of the
 catalogue; an application declaring them with an agent of its code is
 refused, and so is `@app.tool` beside `app.agent`: give the tool to the agent
 itself. The modes' and profile's instructions are told to it; their model is
@@ -1749,15 +1749,15 @@ order; `messages` the whole messages; `questions` everything asked; and
 
 ## A scene and its stage, in Python
 
-An application is `loop.app(...)` — the `Application` of this page. Beside it,
-`loop.scene(...)` and `loop.stage(...)` write the rest of the lifecycle: a
+An application is `agent.app(...)` — the `Application` of this page. Beside it,
+`agent.scene(...)` and `agent.stage(...)` write the rest of the lifecycle: a
 **scene**, applications of the catalogue playing together, and its
 **stage**, where each plays and who may watch.
 
 ```python
-from agent_runtimes import loop
+from agent_runtimes import agent
 
-scene = loop.scene("desk-and-sales", "Desk & Sales", emoji="🎬", entry="desk")
+scene = agent.scene("desk-and-sales", "Desk & Sales", emoji="🎬", entry="desk")
 scene.player("desk", app="support-desk", role="initiator", talks_to=["sales"],
              name="Desk", brief="Ask Sales, and report what it answers.")
 scene.player("sales", app="sales", name="Sales")
@@ -1769,14 +1769,14 @@ beat.answers("sales", "words")
 beat.answers("desk", "words")
 beat.rehearse("You → Desk", "Desk → Sales", "Desk: words", must_say=["pipeline"], within="3m")
 
-loop.stage(scene, runs_in={"desk": "browser", "sales": "browser"},
+agent.stage(scene, runs_in={"desk": "browser", "sales": "browser"},
            positions={"desk": (0.25, 0.5), "sales": (0.75, 0.5)})
 ```
 
-What it writes is the scene spec, `loop.scene/v1` — the same one the Studio's
+What it writes is the scene spec, `agent.scene/v1` — the same one the Studio's
 spec editor and its Canvas write, and nothing of its own:
 
-- **`loop.scene(id, name, …)`** — its face (`emoji`, `description`, `tags`),
+- **`agent.scene(id, name, …)`** — its face (`emoji`, `description`, `tags`),
   and either a `team` of the catalogue, whose members are then its players,
   or `entry`, the player the audience talks to.
 - **`scene.player(member, …)`** — what it is (`app`, an application of the
@@ -1791,7 +1791,7 @@ spec editor and its Canvas write, and nothing of its own:
   (`over` is said for you: `mcp` to a system, `a2a` to a player),
   **`answers(who, kind)`**, **`branch(decision, …)`** and **`rehearse(*lines,
   must_say=, must_not_say=, within=)`**, the shape its transcript must take.
-- **`loop.stage(scene, …)`** — a stage is not a spec of its own: it writes
+- **`agent.stage(scene, …)`** — a stage is not a spec of its own: it writes
   the scene's parts that say where it plays — `runs_in` for each player
   (`browser` or `runtime`), `positions` as fractions of the box, `opens_first`,
   the `transcript` and `inspectors`, the `audience` (`visitors`, `signed-in`
@@ -1799,19 +1799,19 @@ spec editor and its Canvas write, and nothing of its own:
   `addresses` it is deployed with.
 
 `scene.spec` is the spec agentspecs reads; what agentspecs refuses is said in
-agentspecs' own sentences (`SceneNotPlayable`), as the Studio and `loop` say
+agentspecs' own sentences (`SceneNotPlayable`), as the Studio and `agent` say
 them — a stage that puts a player at `x: 5`, a beat whose cue nobody
 answers, a player of a team that says where it runs. `scene.yaml()` is its
 text.
 
 ```bash
-loop scenes rehearse scene.py                  # played beat by beat, here
-loop scenes build scene.py --out scene.yaml    # the scene spec, loop.scene/v1
-loop scenes push scene.py --space <space id>   # a new scene of yours, in that space
-loop scenes push scene.py --scene <scene uid>  # saved as a scene of yours
+agent scenes rehearse scene.py                  # played beat by beat, here
+agent scenes build scene.py --out scene.yaml    # the scene spec, agent.scene/v1
+agent scenes push scene.py --space <space id>   # a new scene of yours, in that space
+agent scenes push scene.py --scene <scene uid>  # saved as a scene of yours
 ```
 
-`loop scenes push` keeps it in your Space exactly as the Studio's *Save
+`agent scenes push` keeps it in your Space exactly as the Studio's *Save
 scene* does — an item of type `scene`, its spec its content — so the Studio
 opens it as any scene of yours: its spec editor reads the same text, its
 stage draws the same players. A file that writes no scene, or two, is refused
@@ -1820,11 +1820,11 @@ your own is not cast yet. The example is `examples/scene-in-python/scene.py`.
 
 ## Chainlit's cookbook, rebuilt
 
-LOOP's Python flavor is meant to do everything Chainlit does, with its own
+Agent's Python flavor is meant to do everything Chainlit does, with its own
 API. The check is to rebuild Chainlit's own examples — its cookbook's and
 its documentation's — and run them: `examples/chainlit-parity/` holds nine,
 each saying in its docstring which example it rebuilds and how each of
-Chainlit's calls maps to LOOP's.
+Chainlit's calls maps to Agent's.
 
 | Chainlit's example | Rebuilt as | What it uses |
 | --- | --- | --- |
@@ -1852,13 +1852,13 @@ All but the voice assistant run on the blank agent, `example-blank`, built in
 this process. The voice assistant has not run on a real model, nor has the
 copilot been seen in a browser: the embed it loads does not load yet.
 
-**What Chainlit does that LOOP does not, yet:**
+**What Chainlit does that Agent does not, yet:**
 
 - **A live microphone, frame by frame.** Chainlit streams the microphone to
-  the application (`on_audio_chunk`); LOOP gives its code a whole turn, heard
+  the application (`on_audio_chunk`); Agent gives its code a whole turn, heard
   (`@app.audio`, [Voice](#voice)), never the frames as they are captured.
 
-What the rebuilds found missing and LOOP now has: a step that streams
+What the rebuilds found missing and Agent now has: a step that streams
 (`step.stream`, [Steps](#steps)), a blank agent built in this process
 (`example-blank`, [The agent](#the-agent)), and each tool call of the agent
 as a step in this process too; and, from the documentation's *Text to SQL*,
@@ -1873,35 +1873,35 @@ patterns find e-mails, phone numbers and cards only. Chainlit's
 
 ## From the command line
 
-`loop apps init` starts one: a folder named by its id, with an `app.py`, the
+`agent apps init` starts one: a folder named by its id, with an `app.py`, the
 spec it builds and `tests/test_app.py` — its CI's checks, the build among
 them — blank or from an example of the catalogue:
 
 ```bash
-loop apps init my-app --python
-loop apps init interview --from customer-interview
+agent apps init my-app --python
+agent apps init interview --from customer-interview
 ```
 
 See [A new application](/cli#a-new-application) for every option.
 
-`loop apps build` writes the Appspec an `app.py` amounts to — its
+`agent apps build` writes the Appspec an `app.py` amounts to — its
 `Application.spec`, as YAML — printed, or to a file with `--out`
 (`--force` to overwrite):
 
 ```bash
-loop apps build app.py
-loop apps build app.py --out app.yaml
+agent apps build app.py
+agent apps build app.py --out app.yaml
 ```
 
 What the code decides is marked as code at the top of the spec, in comments,
 one line per handler, with where it is:
 
 ```yaml
-# Built from app.py by `loop apps build`: the file is the source; edit it there.
+# Built from app.py by `agent apps build`: the file is the source; edit it there.
 # What its code decides; without the file, its agent answers:
-# loop:code start: opening (app.py:7)
-# loop:code message: reply (app.py:12)
-schema: loop.app/v1
+# agent:code start: opening (app.py:7)
+# agent:code message: reply (app.py:12)
+schema: agent.app/v1
 id: echo-desk
 ...
 ```
@@ -1912,15 +1912,15 @@ is refused, with a sentence and exit code 1, when the file does not load,
 defines no `Application` or more than one, or its spec does not validate (the
 reasons of `AppNotRunnable`).
 
-`loop apps validate`, `loop apps run` and `loop apps push` take an `app.py`
+`agent apps validate`, `agent apps run` and `agent apps push` take an `app.py`
 as they take a spec: they build it first. `deploy` deploys a saved version
 by its id, so a Python application reaches it through `push`.
 
-**Where the file lives.** `loop apps push app.py --app <id>` keeps the file
+**Where the file lives.** `agent apps push app.py --app <id>` keeps the file
 itself in the application's item, beside the spec it builds — `code`,
 `{"file": "app.py", "text": …}` in the item's content — and versions it with
 the spec: a changed file is the next version, even when the spec it builds
-is the same, and the version left behind keeps its own file. `loop apps pull
+is the same, and the version left behind keeps its own file. `agent apps pull
 <id>` writes it back, `app.py` beside `app.yaml` (neither overwritten without
 `--force`). An application kept with its file is refused a spec pushed
 without it (*… is written in Python: push its app.py, which builds this
@@ -1941,7 +1941,7 @@ the next version once the one it was at has run or shipped. Nothing is kept
 on the runtime. The route answers a person, never a visitor or an embed.
 
 **From a spec.** An application built by spec or on the Canvas becomes one
-written in Python with `loop apps eject app.yaml`: an `app.py` holding its
+written in Python with `agent apps eject app.yaml`: an `app.py` holding its
 spec, ready for code, which builds it the same. One way, said before it is
 done; see the [CLI](../cli#eject-an-application-into-python). The Studio's
 Python tab has the same *Eject*: `POST /api/v1/apps/eject` with `{"spec": …}`
@@ -1952,7 +1952,7 @@ version, the ones before it kept. The `SPEC` an ejected `app.py` holds says no
 version is the one the code runs as (see *Its version* under `Application`).
 Write a `version` into it only to pin the file to one version.
 
-`loop apps run app.py` runs it as it runs a spec — a runtime here
+`agent apps run app.py` runs it as it runs a spec — a runtime here
 (`--local`) or on Datalayer (`--cloud`), configured with the built Appspec,
 in the terminal's renderer, the starters as its suggestions — and the
 terminal is also the application's `AppHost`:
@@ -1979,7 +1979,7 @@ builds is said, and the application as it was goes on. For a spec,
 
 ### In a browser page, with hot reload
 
-`loop apps run app.py --web` serves the application on this machine in a
+`agent apps run app.py --web` serves the application on this machine in a
 browser page instead of the terminal — drawn by the embed, the same renderer
 as its hosted page, the Studio's Preview and a host's page — at
 `http://127.0.0.1:8000/app` (`--host`, `--port`), and opens it (`--headless`
@@ -1989,7 +1989,7 @@ code under `/app`, its agent made on a runtime in the same process, with your
 own model keys.
 
 ```bash
-loop apps run app.py --web --watch
+agent apps run app.py --web --watch
 ```
 
 With `--watch`, the files of its folder (`.py`, `.yaml`, `.yml`, `.json`) are
@@ -2014,7 +2014,7 @@ application run by a team is not served in a page yet.
 
 ## What is verified, and what is not
 
-**Verified.** `agent_runtimes/tests/test_loop_app_api.py` runs every call on
+**Verified.** `agent_runtimes/tests/test_agent_app_api.py` runs every call on
 this page in process: declarations becoming a validated Appspec, attaching
 to an existing one, one handler per moment; start, message, action,
 settings, stop, resume, end, logout and schedule through an `AppHost` (an
@@ -2032,7 +2032,7 @@ above was run as printed. `agent_runtimes/tests/test_apps_build.py` covers
 `build`, its refusals and its marks, `validate` and `push` of an `app.py`,
 `run` serving one, the terminal routing to the code — an author, an edit and
 a removal printed, `end` when the person leaves — and `--watch` rebuilding
-with the session's state kept; `loop apps run app.py --local --ask` was run
+with the session's state kept; `agent apps run app.py --local --ask` was run
 against a local server. `agent_runtimes/tests/test_app_own_code.py` covers
 `@app.tool`, `@app.check` and `@app.test`: declared in the spec, refused in
 sentences, marked by `build`, said by `validate` of a spec alone; a tool
@@ -2046,7 +2046,7 @@ agent as a `tool` step, nested where it was called, ended with its result or
 with the refusal of the person asked, streamed or not, in this process and
 through a runtime's agent (`agent_maker`); and the blank agent built here with
 the application's instructions alone. The chat's drawing of a step as it
-streams is tested with vitest (`loopStep`). Both were also run on a real
+streams is tested with vitest (`agentStep`). Both were also run on a real
 model (Bedrock) in this process: the SQL written into its step in 17 pieces
 over 0.7 s, and both tool calls of the assistant shown as steps.
 `agent_runtimes/tests/test_app_reactor.py` covers *Extending with Reactor*:
@@ -2057,7 +2057,7 @@ listed and run from the composer, a used plugin's agent tool declared and run
 as its command, its routes mounted by `app.mount` and described without their
 endpoints, the marks of `build`, and `examples/reactor-extensible`; the example
 was also run on a real model (Bedrock) in this process — its agent called
-`lookup_customer`, which ran the CRM's `crm.lookup` — and served by `loop apps
+`lookup_customer`, which ran the CRM's `crm.lookup` — and served by `agent apps
 run --web`, its `/app/health` answering.
 `agent_runtimes/tests/test_app_elements.py` covers `show` and
 `close` — a panel, a page, inline, what is refused, the terminal — and the
@@ -2066,7 +2066,7 @@ element displays of the Session API, drawn again on a resume.
 parameters and `app.input`, outputs from `app.output`, the page in the spec
 and marked by `build`, refused in sentences when declared and when run; run
 through an `AppHost`, the terminal's `/page`, and the Session API's `page`
-action — a `loop.page` event, 422 for inputs its form refuses — and from
+action — a `agent.page` event, 422 for inputs its form refuses — and from
 `validate --tests --local` on its defaults. The page side — run as an input
 changes in a session of its own, its outputs shown in place — is tested with
 vitest (`app-page-code`), against a stubbed runtime; no widget page has been
@@ -2079,7 +2079,7 @@ review, its palette entry, its frame, its module fetched and checked, what it
 sends — is tested with vitest (`app-custom-components`). No custom component
 has been drawn in a browser by the page's own code yet.
 `agent_runtimes/tests/test_app_packaging.py` covers a page side packaged:
-the project and the wheel `loop apps package` writes, a file it names that
+the project and the wheel `agent apps package` writes, a file it names that
 is missing refused, and the wheel laid out as pip installs it served beside
 the application's plugin state — its record, its files, nothing outside its
 directory and nothing for another application; the page reading it with

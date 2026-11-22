@@ -398,7 +398,7 @@ def team_app(team: TeamSpec) -> dict[str, Any]:
     The application a team's seats' sessions are of.
 
     A seat's task is a turn of an apps session; a session is of an
-    application, and a team's is the team itself: a ``loop.app/v1`` document
+    application, and a team's is the team itself: a ``agent.app/v1`` document
     naming the team (``team:``), whose record keeps what the seats say and
     do. Loaded by ``agent_runtimes.apps.loading.load_app``.
 
@@ -413,7 +413,7 @@ def team_app(team: TeamSpec) -> dict[str, Any]:
         The application's document.
     """
     return {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": f"team-{team.id}",
         "name": team.name,
         "kind": "chat",

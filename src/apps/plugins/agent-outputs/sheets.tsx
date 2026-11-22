@@ -297,7 +297,7 @@ export function SheetCodeBlock({
 }
 
 export const AGENT_OUTPUTS_SHEETS_PLUGIN_NAME =
-  '@datalayer/loop-plugin-agent-outputs-sheets';
+  '@datalayer/agent-plugin-agent-outputs-sheets';
 
 /** A ```csv (or ```tsv) block of an answer, drawn as a Cells grid in the message. */
 export const AgentOutputsSheetsPlugin = definePlugin({
@@ -328,5 +328,5 @@ export const AgentOutputsSheetsPlugin = definePlugin({
  */
 export const AgentOutputsSheetToolsPlugin = cellsAgentToolsPlugin({
   model: latestSheetModel,
-  name: '@datalayer/loop-plugin-agent-outputs-sheet-tools',
+  name: '@datalayer/agent-plugin-agent-outputs-sheet-tools',
 });

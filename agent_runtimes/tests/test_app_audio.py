@@ -5,7 +5,7 @@
 ``@app.audio``.
 
 A turn's sound comes in chunks and is heard by the engines a page's and
-``loop --voice``'s are — here, else by Datalayer's speech service — then
+``agent --voice``'s are — here, else by Datalayer's speech service — then
 ``@app.audio`` runs with what was heard, or the words are the person's
 message, marked spoken. ``session.say(text)`` says a line aloud with the
 application's voice, and the person speaking over the agent stops what runs
@@ -282,4 +282,4 @@ def test_audio_and_interrupted_are_contribution_points_of_the_platform():
     from agent_runtimes.apps.plugins import REACTION_POINTS
 
     assert {"audio", "interrupted"} <= set(REACTION_POINTS)
-    assert REACTION_POINTS["audio"].id == "loop.app.audio"
+    assert REACTION_POINTS["audio"].id == "agent.app.audio"

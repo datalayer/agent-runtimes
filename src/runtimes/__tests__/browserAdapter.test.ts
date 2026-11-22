@@ -469,11 +469,11 @@ describe('an application’s modes, in the page', () => {
     await adapter.sendMessage(userMessage('hello'), {
       messages: [],
       model: 'bedrock:picked-in-the-chat',
-      forwardedProps: { loop: { modes: { depth: 'quick' } } },
+      forwardedProps: { agent: { modes: { depth: 'quick' } } },
     });
     await adapter.sendMessage(userMessage('hello'), {
       messages: [],
-      forwardedProps: { loop: { modes: { depth: 'thorough' } } },
+      forwardedProps: { agent: { modes: { depth: 'thorough' } } },
     });
     await adapter.sendMessage(userMessage('hello'), { messages: [] });
 
@@ -498,11 +498,11 @@ describe('an application’s modes, in the page', () => {
     );
     await adapter.sendMessage(userMessage('hello'), {
       messages: [],
-      forwardedProps: { loop: { profile: 'sales' } },
+      forwardedProps: { agent: { profile: 'sales' } },
     });
     await adapter.sendMessage(userMessage('hello'), {
       messages: [],
-      forwardedProps: { loop: { profile: 'support', modes: {} } },
+      forwardedProps: { agent: { profile: 'support', modes: {} } },
     });
     expect(asked).toEqual([
       {
@@ -520,7 +520,7 @@ describe('an application’s modes, in the page', () => {
     const { adapter, asked, events } = recording();
     await adapter.sendMessage(userMessage('hello'), {
       messages: [],
-      forwardedProps: { loop: { modes: { depth: 'quick' } } },
+      forwardedProps: { agent: { modes: { depth: 'quick' } } },
     });
     expect(asked).toEqual([]);
     expect(events.find(event => event.type === 'error').error.message).toBe(
@@ -535,7 +535,7 @@ describe('an application’s modes, in the page', () => {
     });
     await adapter.sendMessage(userMessage('hello'), {
       messages: [],
-      forwardedProps: { loop: { modes: { depth: 'deep' } } },
+      forwardedProps: { agent: { modes: { depth: 'deep' } } },
     });
     expect(asked).toEqual([]);
     expect(events.find(event => event.type === 'error').error.message).toBe(
@@ -554,7 +554,7 @@ describe('an application’s modes, in the page', () => {
     adapter.subscribe(event => events.push(event));
     await adapter.sendMessage(userMessage('hello'), {
       messages: [],
-      forwardedProps: { loop: { modes: { depth: 'quick' } } },
+      forwardedProps: { agent: { modes: { depth: 'quick' } } },
     });
     expect(events.find(event => event.type === 'error').error.message).toBe(
       "The mode or profile chosen runs on bedrock:quick-one, and this agent's model is its host's own: it cannot run on another.",
@@ -564,7 +564,7 @@ describe('an application’s modes, in the page', () => {
     adapter.subscribe(event => told.push(event));
     await adapter.sendMessage(userMessage('hello'), {
       messages: [],
-      forwardedProps: { loop: { modes: { depth: 'thorough' } } },
+      forwardedProps: { agent: { modes: { depth: 'thorough' } } },
     });
     expect(told.some(event => event.type === 'error')).toBe(false);
   });

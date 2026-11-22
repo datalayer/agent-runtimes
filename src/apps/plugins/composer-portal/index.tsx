@@ -4,13 +4,13 @@
  */
 
 /**
- * `@datalayer/loop-plugin-composer-portal` — how the application is built,
+ * `@datalayer/agent-plugin-composer-portal` — how the application is built,
  * from its chat (the user, 21 November 2026: "a reactor plugin to show in a
  * full screen portal the composer (canvas, spec, python) … the plugin will
  * add a new button to the agent toolbar").
  *
  * One button in the chat's toolbar (its `toolbar` placement: beside the
- * prompt in a Loop workspace, the input toolbar in `Chat`; or its title bar,
+ * prompt in an Agent workspace, the input toolbar in `Chat`; or its title bar,
  * `header`). Pressed, a full-screen dialog opens over the page — its title
  * names the application, Escape and its close button close it, the focus is
  * held inside it and goes back to the button after — and shows what the
@@ -18,10 +18,10 @@
  * its Python, read only. Nobody edits from here: a visitor owns nothing, and
  * the Studio is where an application is changed.
  *
- * The application is the workspace's (`LoopApplication`, the Appspec its
+ * The application is the workspace's (`AgentApplication`, the Appspec its
  * renderer draws) or, in a `Chat` outside a workspace, its agent's, as the
  * Personal page draws it (`agentAppspec`). What fills the dialog is its
- * host's when the host has one (`LoopSlots.composerView`: Datalayer's pages
+ * host's when the host has one (`AgentSlots.composerView`: Datalayer's pages
  * contribute the Studio's own Canvas, spec and Python), otherwise this
  * plugin's own spec and Python (`ComposerSource`). The dialog's code loads
  * on the first press, not with the chat.
@@ -36,10 +36,10 @@ import type { JSX } from 'react';
 import { lazy, Suspense, useMemo, useRef, useState } from 'react';
 import { useSyncExternalStore } from 'react';
 import { IconButton } from '@primer/react';
-import { StackIcon } from '@primer/octicons-react';
+import { PencilIcon } from '@primer/octicons-react';
 import { useOptionalReactorPlatform } from '@datalayer/reactor/react';
 import type { AppSpec } from '../../../types/agentspecs';
-import { LoopApplication } from '../../core';
+import { AgentApplication } from '../../core';
 import {
   defineChromePlugin,
   type ChromeComponentProps,
@@ -54,12 +54,12 @@ export {
 } from './context';
 
 export const COMPOSER_PORTAL_PLUGIN_NAME =
-  '@datalayer/loop-plugin-composer-portal';
+  '@datalayer/agent-plugin-composer-portal';
 
 const NO_SUBSCRIPTION = () => () => undefined;
 
 /**
- * The Appspec the workspace draws (`LoopApplication`), or none: outside a
+ * The Appspec the workspace draws (`AgentApplication`), or none: outside a
  * workspace — a `Chat` — there is no platform, and nothing is read.
  */
 export function useWorkspaceApplication(): AppSpec | undefined {
@@ -69,7 +69,7 @@ export function useWorkspaceApplication(): AppSpec | undefined {
     () => (platform ? platform.getRevision() : -1),
   );
   return useMemo(
-    () => platform?.getContributions(LoopApplication)[0]?.value.app,
+    () => platform?.getContributions(AgentApplication)[0]?.value.app,
     // `revision` is the snapshot: the contributions are rebuilt on each call.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [platform, revision],
@@ -96,7 +96,7 @@ export function ComposerPortalButton({
     <>
       <IconButton
         ref={button}
-        icon={StackIcon}
+        icon={PencilIcon}
         aria-label={COMPOSER_PORTAL_WORDS.open}
         aria-haspopup="dialog"
         aria-expanded={open}
@@ -125,7 +125,7 @@ export const composerPortalPlugin = defineChromePlugin({
   displayName: 'Composer',
   description:
     'A button in the chat’s toolbar that opens the application’s Composer full screen: its Canvas, its spec and its Python, read only.',
-  octicon: 'stack',
+  octicon: 'pencil',
   emoji: '\u{1F9F1}',
   Component: ComposerPortalButton,
 });

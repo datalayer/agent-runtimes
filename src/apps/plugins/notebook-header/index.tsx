@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-notebook-header` — the Jupyter Data Analyst's
+ * `@datalayer/agent-plugin-notebook-header` — the Jupyter Data Analyst's
  * title bar: the dataset it works on, what ran (said by the agent: never a
  * run that did not happen), and a Profile data button that asks for a
  * profile of every column.
@@ -19,7 +19,7 @@
 import { defineHeaderPlugin } from '../../toolCards/headerItems';
 
 export const NOTEBOOK_HEADER_PLUGIN_NAME =
-  '@datalayer/loop-plugin-notebook-header';
+  '@datalayer/agent-plugin-notebook-header';
 
 /** The plugin, built for a workspace: what a person picked is that workspace's. */
 export const notebookHeaderPlugin = defineHeaderPlugin({

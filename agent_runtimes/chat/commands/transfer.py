@@ -12,7 +12,7 @@ import os
 import sys
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
-from agent_runtimes.loop.commands import CommandArgSpec
+from agent_runtimes.agent.commands import CommandArgSpec
 
 from .pause import remembered_line
 from .sessions_shared import NOT_A_SESSION, ask, current_uid
@@ -41,13 +41,13 @@ GO_ON: Dict[str, List[str]] = {}
 
 
 def go_on_command(uid: str) -> List[str]:
-    """`loop --resume <uid>`: the session resumed where it lives now."""
+    """`agent --resume <uid>`: the session resumed where it lives now."""
     return ["--resume", uid]
 
 
 def _go_on_at_exit(arguments: List[str]) -> None:
     """Once the prompt has ended and its runtime is stopped or given back,
-    this process becomes `loop --resume <uid>`.
+    this process becomes `agent --resume <uid>`.
     """
     atexit.register(lambda: os.execvp(sys.argv[0], [sys.argv[0], *arguments]))
 
@@ -64,8 +64,8 @@ async def execute(
     """Pause this session, move it to the other place under its uid, end the
     prompt, and go on with it there.
     """
-    from agent_runtimes.loop.paused import ON_DATALAYER, ON_THIS_MACHINE
-    from agent_runtimes.loop.transfer import SAID, TransferRefused, places, transfer
+    from agent_runtimes.agent.paused import ON_DATALAYER, ON_THIS_MACHINE
+    from agent_runtimes.agent.transfer import SAID, TransferRefused, places, transfer
 
     words = (argv or "").split()
     yes = "--yes" in words or "-y" in words
@@ -130,12 +130,12 @@ async def execute(
         return None
     tux.console.print(done.said, markup=False)
     tux.console.print(
-        f"Going on with it on {SAID[to]}: `loop --resume {uid}`.", markup=False
+        f"Going on with it on {SAID[to]}: `agent --resume {uid}`.", markup=False
     )
     runtime = getattr(tux, "cloud_runtime", None)
     if runtime:
         # Its runtime on Datalayer is given back as the prompt ends.
-        from agent_runtimes.loop.launch import give_back
+        from agent_runtimes.agent.launch import give_back
 
         give_back(str(runtime))
     client = getattr(tux, "_agui_client", None)

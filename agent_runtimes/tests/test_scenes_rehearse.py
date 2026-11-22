@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""`loop scenes`: a scripted scene — fake members answering fixed
+"""`agent scenes`: a scripted scene — fake members answering fixed
 lines over the catalogue's ``sales-and-accounting`` scene spec — rehearsed
 to a pass, a fail with what differed, and a *not run* with why; the command's
 words and exit codes. No live call: the members are pydantic-ai agents on a
@@ -34,9 +34,7 @@ from typer.testing import CliRunner
 
 scenes = pytest.importorskip("agentspecs.scenes")
 
-from agent_runtimes.apps.own import FAILED, NOT_RUN, PASSED  # noqa: E402
-from agent_runtimes.commands import scenes as scenes_command  # noqa: E402
-from agent_runtimes.loop.scenes.rehearsal import (  # noqa: E402
+from agent_runtimes.agent.scenes.rehearsal import (  # noqa: E402
     RehearsalVerdict,
     answer_differences,
     expected_of,
@@ -48,7 +46,7 @@ from agent_runtimes.loop.scenes.rehearsal import (  # noqa: E402
     tool_fits_of,
     verdict_of,
 )
-from agent_runtimes.loop.scenes.stage import (  # noqa: E402
+from agent_runtimes.agent.scenes.stage import (  # noqa: E402
     A2AAnswer,
     A2AStep,
     Played,
@@ -57,7 +55,9 @@ from agent_runtimes.loop.scenes.stage import (  # noqa: E402
     members_of,
     shown_kinds,
 )
-from agent_runtimes.loop.scenes.transcript import line_text  # noqa: E402
+from agent_runtimes.agent.scenes.transcript import line_text  # noqa: E402
+from agent_runtimes.apps.own import FAILED, NOT_RUN, PASSED  # noqa: E402
+from agent_runtimes.commands import scenes as scenes_command  # noqa: E402
 
 runner = CliRunner()
 
@@ -421,9 +421,9 @@ def test_a_span_ends_after_its_child_in_the_milliseconds_the_transcript_reads(
     from datetime import datetime as real_datetime
     from datetime import timezone
 
-    from agent_runtimes.loop.scenes import stage as stage_module
-    from agent_runtimes.loop.scenes.stage import Recording
-    from agent_runtimes.loop.scenes.transcript import millis
+    from agent_runtimes.agent.scenes import stage as stage_module
+    from agent_runtimes.agent.scenes.stage import Recording
+    from agent_runtimes.agent.scenes.transcript import millis
 
     now = real_datetime(2026, 11, 8, 10, 0, 0, 101200, tzinfo=timezone.utc)
 
@@ -449,7 +449,7 @@ def test_a_harness_s_steps_are_named_by_kind_and_title_and_drawn_on_its_workspac
     """OpenCode on r1 (30 October 2026): a step told as *read*, then ended as
     *README.md*, is one line, *Read README.md*, on its workspace — not two
     lines on its runtime, the first left open."""
-    from agent_runtimes.loop.scenes.stage import _steps_of
+    from agent_runtimes.agent.scenes.stage import _steps_of
 
     started = _steps_of(
         [{"data": {"tool_call": {"id": "c1", "name": "read"}}}],
@@ -494,14 +494,14 @@ def test_a_member_at_an_address_is_asked_for_what_it_can_show_and_its_surface_is
     # does, and reads the kinds off the surface the answer came with.
     import httpx
 
-    from agent_runtimes.loop.scenes.stage import (
+    from agent_runtimes.agent.scenes.stage import (
         ACCEPTED_OUTPUT_MODES,
         ask_over_a2a,
     )
 
     surface = {
         "surfaceId": "answer-1",
-        "catalogId": "loop.answer",
+        "catalogId": "agent.answer",
         "title": "Aged receivables",
         "messages": [
             {
@@ -578,7 +578,7 @@ def test_the_cast_s_brief_is_given_over_the_application_s_instructions(
     # The brief is "what it is for in this scene, over its application's
     # instructions": Sales's application may ask the person which period it
     # means, and in the scene there is nobody to answer — so the brief wins.
-    from agent_runtimes.loop.scenes.stage import with_ask_tools, with_brief
+    from agent_runtimes.agent.scenes.stage import with_ask_tools, with_brief
 
     sales = members_of(scene)[0][0]
     document = with_brief(sales, with_ask_tools(sales, {}))
@@ -675,7 +675,7 @@ def test_rehearse_writes_what_it_played_as_a_transcript(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Any
 ) -> None:
     """`--transcript`: the lines played, the beats they belong to, the verdict — what `record` keeps."""
-    from agent_runtimes.loop.scenes.transcript import lines_of_json
+    from agent_runtimes.agent.scenes.transcript import lines_of_json
 
     _here(monkeypatch, cast())
     path = tmp_path / "run.json"
@@ -746,7 +746,7 @@ def test_a_browser_member_is_played_as_the_browser_plays_it(scene: Any) -> None:
     # Sales, in the browser: its agent names skills and backend tools, which the
     # page has not; the rehearsal leaves them out as the page does.
     # Accounting, on a runtime, is still refused in this process.
-    from agent_runtimes.loop.scenes.stage import refused_here
+    from agent_runtimes.agent.scenes.stage import refused_here
 
     sales, accounting = members_of(scene)[0]
     assert refused_here(sales) == ""
@@ -777,8 +777,8 @@ def _cloud(
     configured: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Datalayer faked: what `launch_cloud` and `configure_on` were asked, kept."""
+    from agent_runtimes.agent import launch as launch_module
     from agent_runtimes.commands import apps as apps_module
-    from agent_runtimes.loop import launch as launch_module
 
     asked: Dict[str, Any] = {"launches": [], "configures": []}
 
@@ -893,7 +893,7 @@ def test_what_the_runtime_says_is_to_set_up_is_the_member_s_notes(
 ) -> None:
     # The catalogue's own notes come back from the configure (an agent or a
     # server not offered by default); the member is served all the same, as
-    # `loop apps run` serves it. A secret not given is a refusal, not a note.
+    # `agent apps run` serves it. A secret not given is a refusal, not a note.
     _cloud(
         monkeypatch,
         configured={
@@ -1082,7 +1082,7 @@ def test_a_tool_line_takes_only_the_moves_class(scene: Any) -> None:
     pattern also names fails the line (agentspecs' tool_line_fits, 20 November 2026)."""
     from dataclasses import replace
 
-    from agent_runtimes.loop.scenes.transcript import CALLED
+    from agent_runtimes.agent.scenes.transcript import CALLED
 
     names = scene_names(scene)
     beat = scene.rehearsal.beats[0]

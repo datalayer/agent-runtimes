@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-agent-a2ui` — generated surfaces, as a capacity.
+ * `@datalayer/agent-plugin-agent-a2ui` — generated surfaces, as a capacity.
  *
  * Mounts the `example-a2ui-agent` agent: ask for a form or a configurator
  * and the answer arrives as an interactive A2UI surface, rendered in the
@@ -15,7 +15,7 @@
 
 import { defineAgentCapacityPlugin } from '../agent-capacity';
 
-export const AGENT_A2UI_PLUGIN_NAME = '@datalayer/loop-plugin-agent-a2ui';
+export const AGENT_A2UI_PLUGIN_NAME = '@datalayer/agent-plugin-agent-a2ui';
 
 export const AgentA2uiPlugin = defineAgentCapacityPlugin({
   key: 'a2ui',

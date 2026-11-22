@@ -28,7 +28,7 @@ import { useSyncExternalStore } from 'react';
 import { IconButton } from '@primer/react';
 import { definePlugin } from '@datalayer/reactor';
 import { useContributions } from '@datalayer/reactor/react';
-import { LoopEditorView, LoopSlots } from '../../core';
+import { AgentEditorView, AgentSlots } from '../../core';
 import {
   NONE_EDITOR,
   chooseEditor,
@@ -82,7 +82,7 @@ function makeViewSwitchAction({
      * that mounts no selector would leave it empty with every editor
      * standing. The point is the source of truth about what exists.
      */
-    const editors = useContributions(LoopEditorView);
+    const editors = useContributions(AgentEditorView);
     // An editor's icon withdraws while its editor is not contributed: a
     // button that switches to nothing is the trap the fail-loud rules exist
     // to prevent. The chat's icon withdraws too while no editor is: with the
@@ -106,7 +106,7 @@ function makeViewSwitchAction({
         onClick={() => {
           if (!chooseEditor(viewId)) {
             console.warn(
-              `[loop] No chat is on screen to switch to '${viewId}'.`,
+              `[agent] No chat is on screen to switch to '${viewId}'.`,
             );
           }
         }}
@@ -121,7 +121,7 @@ export function defineViewPlugin(options: ViewPluginOptions) {
     options;
   const Component = makeViewSwitchAction({ viewId, icon, tooltip });
   return definePlugin({
-    name: `@datalayer/loop-plugin-${key}-view`,
+    name: `@datalayer/agent-plugin-${key}-view`,
     displayName,
     description,
     octicon: options.octicon ?? 'eye',
@@ -137,7 +137,7 @@ export function defineViewPlugin(options: ViewPluginOptions) {
       components: [
         {
           id: `${key}-view-action`,
-          slot: LoopSlots.promptAction,
+          slot: AgentSlots.promptAction,
           order,
           Component,
         },

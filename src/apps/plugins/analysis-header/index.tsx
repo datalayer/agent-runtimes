@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-analysis-header` — the Functional Analyst's title bar: what
+ * `@datalayer/agent-plugin-analysis-header` — the Functional Analyst's title bar: what
  * is being analysed, whether its diagrams parse (said by the agent from what
  * Mermaid's parser answered), and a Draw on the canvas button.
  *
@@ -18,7 +18,7 @@
 import { defineHeaderPlugin } from '../../toolCards/headerItems';
 
 export const ANALYSIS_HEADER_PLUGIN_NAME =
-  '@datalayer/loop-plugin-analysis-header';
+  '@datalayer/agent-plugin-analysis-header';
 
 /** The plugin, built for a workspace: what a person picked is that workspace's. */
 export const analysisHeaderPlugin = defineHeaderPlugin({

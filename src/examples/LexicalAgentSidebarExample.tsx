@@ -272,12 +272,7 @@ export function ChatLexicalAgentExampleInner({
 
   return (
     <>
-      <Box
-        height="calc(100vh - 70px)"
-        width="100vw"
-        display="flex"
-        overflow="hidden"
-      >
+      <Box height="100%" width="100%" display="flex" overflow="hidden">
         {/* Main content area */}
         <Box flex={1} display="flex" flexDirection="column" overflow="hidden">
           {/* Header */}

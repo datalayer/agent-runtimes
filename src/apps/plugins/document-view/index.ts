@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-document-view` — the document, one click away.
+ * `@datalayer/agent-plugin-document-view` — the document, one click away.
  *
  * The footer icon that opens the document beside the conversation. It shows
  * only while a document is actually contributed, and requires the
@@ -16,7 +16,8 @@
 import { FileIcon } from '@primer/octicons-react';
 import { defineViewPlugin } from '../view-switch';
 
-export const DOCUMENT_VIEW_PLUGIN_NAME = '@datalayer/loop-plugin-document-view';
+export const DOCUMENT_VIEW_PLUGIN_NAME =
+  '@datalayer/agent-plugin-document-view';
 
 export const DocumentViewPlugin = defineViewPlugin({
   key: 'document',

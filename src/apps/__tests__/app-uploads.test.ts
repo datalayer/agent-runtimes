@@ -13,7 +13,7 @@
 import { createElement, act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { describe, expect, it } from 'vitest';
-import { LoopRunProps, runForwardedProps } from '../core';
+import { AgentRunProps, runForwardedProps } from '../core';
 import { defineAppComposerPlugin, holdUploads } from '../apps/AppComposer';
 import { appPreset } from '../apps/AppRenderer';
 import { dumpAppspec, parseAppspec } from '../apps/appspec';
@@ -29,7 +29,7 @@ import { refusal } from '../../components/a2ui/datalayer/FileUpload';
 import type { GivenFile } from '../../components/a2ui/datalayer/FileUpload';
 
 const BASE = {
-  schema: 'loop.app/v1',
+  schema: 'agent.app/v1',
   id: 'desk',
   name: 'Desk',
   kind: 'chat',
@@ -177,13 +177,13 @@ describe('what a person sends', () => {
       appPreset(parseAppspec(spec).app).plugins.map(
         item => (item as { name: string }).name,
       );
-    expect(names(DESK)).toContain('@datalayer/loop-plugin-app-composer-desk');
+    expect(names(DESK)).toContain('@datalayer/agent-plugin-app-composer-desk');
     expect(names(BASE)).not.toContain(
-      '@datalayer/loop-plugin-app-composer-desk',
+      '@datalayer/agent-plugin-app-composer-desk',
     );
     const plugin = defineAppComposerPlugin(parseAppspec(DESK).app);
     const props = (plugin.contributes ?? []).filter(
-      (item: { point?: unknown }) => item.point === LoopRunProps,
+      (item: { point?: unknown }) => item.point === AgentRunProps,
     ) as Array<{ value: { props: () => Record<string, unknown> } }>;
     expect(props).toHaveLength(1);
     // Nothing held: nothing goes with the run.
@@ -191,7 +191,7 @@ describe('what a person sends', () => {
     const plain = defineAppComposerPlugin(parseAppspec(BASE).app);
     expect(
       (plain.contributes ?? []).filter(
-        (item: { point?: unknown }) => item.point === LoopRunProps,
+        (item: { point?: unknown }) => item.point === AgentRunProps,
       ),
     ).toEqual([]);
   });
@@ -219,7 +219,7 @@ describe('what a person sends', () => {
     ).build();
     const attach = built.components.find(item => item.id === 'app-uploads')!;
     const [props] = (plugin.contributes ?? []).filter(
-      (item: { point?: unknown }) => item.point === LoopRunProps,
+      (item: { point?: unknown }) => item.point === AgentRunProps,
     ) as Array<{ value: { props: () => Record<string, unknown> } }>;
     const container = document.createElement('div');
     document.body.appendChild(container);
@@ -255,7 +255,7 @@ describe('what a person sends', () => {
     await act(async () => {
       sentNow = props.value.props();
     });
-    const files = (sentNow.loop as { files: GivenFile[] }).files;
+    const files = (sentNow.agent as { files: GivenFile[] }).files;
     expect(files.map(file => [file.name, file.type])).toEqual([
       ['a.pdf', 'application/pdf'],
     ]);

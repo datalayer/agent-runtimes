@@ -13,7 +13,7 @@
  * contributes to the Contribution Points it says, adds the Commands it says,
  * offers the Contribution Points it says and takes the settings it says —
  * nothing more and nothing less. And every plugin folder has a UI spec, or a
- * reason it has none (`NOT_UI`): a plugin added to the Loop editor without
+ * reason it has none (`NOT_UI`): a plugin added to the Agent editor without
  * its spec, or a spec whose plugin went, fails here.
  */
 

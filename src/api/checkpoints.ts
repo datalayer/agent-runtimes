@@ -9,7 +9,7 @@
  * The agent takes its own checkpoints as it runs; these calls let a page see
  * them, take one between turns, rewind to one and drop one. They speak to
  * `/api/v1/agents/{id}/checkpoints` on the server the workspace is backed by,
- * as the Loop's other local calls do — no token, the local server checks
+ * as the Agent's other local calls do — no token, the local server checks
  * none.
  *
  * @module api/checkpoints

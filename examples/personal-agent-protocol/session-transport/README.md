@@ -9,7 +9,7 @@ authorization headers.
 Access tokens, Session JWTs, and Session IDs remain host-owned.
 
 ```bash
-loop apps run examples/personal-agent-protocol/session-transport/app.py
+agent apps run examples/personal-agent-protocol/session-transport/app.py
 ```
 
 Read the [Session transport flow](https://personalagentprotocol.org/examples/session-transport/).

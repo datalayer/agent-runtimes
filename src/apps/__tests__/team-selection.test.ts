@@ -16,7 +16,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildReactorFromPlugins, configurePlugin } from '@datalayer/reactor';
 
-import { LoopSlots } from '../core';
+import { AgentSlots } from '../core';
 import { AgentsPlugin } from '../plugins/agents';
 import {
   createTeamSelection,
@@ -118,7 +118,7 @@ describe('the picker in the header', () => {
       components?: { slot: string; id: string }[];
     }>(AgentsPlugin.name);
     return (output?.components ?? [])
-      .filter(entry => entry.slot === LoopSlots.header)
+      .filter(entry => entry.slot === AgentSlots.header)
       .map(entry => entry.id);
   }
 

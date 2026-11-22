@@ -1,12 +1,12 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Applications in LOOP: the application API, and what decides their tool calls.
+"""Applications in Agent: the application API, and what decides their tool calls.
 
 An application written in Python is an `Application` — its Appspec and the
 code that reacts to its sessions — run by an `AppHost`; its code is handed a
-`Session`, an application's session, apart from the workspace's `LoopSession`
-(`agent_runtimes.loop.session`).
+`Session`, an application's session, apart from the workspace's `AgentSession`
+(`agent_runtimes.agent.session`).
 
 An application (`agent_runtimes.specs.apps`) carries rules written in a
 person's words and applied to what a tool does. This package is where they are

@@ -32,7 +32,7 @@ export type PluginTogglesProps = {
 /** Trim the package scope so the list reads as names rather than paths. */
 function shortName(name: string): string {
   return name
-    .replace(/^@datalayer\/loop-plugin-/, '')
+    .replace(/^@datalayer\/agent-plugin-/, '')
     .replace(/^@datalayer\//, '');
 }
 

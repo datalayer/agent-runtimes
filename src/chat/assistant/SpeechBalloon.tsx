@@ -11,7 +11,7 @@
  * notification — that opens the conversation when clicked, and can be
  * dismissed; an approval it waits on, answered there with *Approve* or
  * *Deny*, and how many more wait; and, where the runtime can be asked and
- * the conversation is elsewhere (the LOOP workspace), *Ask a decision*: a
+ * the conversation is elsewhere (the Agent workspace), *Ask a decision*: a
  * typed decision asked of Jev, its answer said back in the balloon.
  *
  * Shown `history` with the conversation's messages (`history`), it lists

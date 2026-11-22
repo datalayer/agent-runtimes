@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-locked-ui` — the agent's UI that needs the
+ * `@datalayer/agent-plugin-locked-ui` — the agent's UI that needs the
  * person's own connection, drawn locked for an anonymous visitor (the user,
  * 14–15 November 2026: "if tools/features are not available, indicate it
  * visually so user is tempted to sign up / sign in", then "the marketer is
@@ -36,7 +36,7 @@ import {
 } from '../../../chat/anonymous/anonymousMode';
 import { defineChromePlugin } from '../../toolCards/chrome';
 
-export const LOCKED_UI_PLUGIN_NAME = '@datalayer/loop-plugin-locked-ui';
+export const LOCKED_UI_PLUGIN_NAME = '@datalayer/agent-plugin-locked-ui';
 
 const NO_ANONYMOUS: ChatAnonymous = {};
 

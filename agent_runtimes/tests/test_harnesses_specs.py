@@ -79,7 +79,7 @@ class TestTheHarnessCatalogue:
     def test_a_harness_not_offered_is_refused_in_its_sentence_everywhere(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        """The runtime (`harness_agent`), `loop --harness` and the Studio's
+        """The runtime (`harness_agent`), `agent --harness` and the Studio's
         check each say the catalogue's sentence; nothing launches it."""
         from agent_runtimes.adapters.acp_agent import HarnessRefused, harness_agent
         from agent_runtimes.chat.cli import _prepare_harness
@@ -101,7 +101,7 @@ class TestTheHarnessCatalogue:
             _prepare_harness("openhands")
         with pytest.raises(
             ValueError,
-            match="one of claude-code, codex, opencode, pi \\(`loop harnesses`\\)",
+            match="one of claude-code, codex, opencode, pi \\(`agent harnesses`\\)",
         ):
             _prepare_harness("nope")
 

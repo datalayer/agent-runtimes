@@ -20,7 +20,7 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, HTTPException, Query, WebSocket
 from pydantic import BaseModel, Field
 
-from agent_runtimes.streams.loop import (
+from agent_runtimes.streams.pubsub import (
     publish_stream_event,
     stream_loop,
 )
@@ -543,7 +543,7 @@ async def update_local_approval_status(
         signal_approval_event(approval_id, status == "approved", note)
         if status == "approved":
             try:
-                from agent_runtimes.streams.loop import (
+                from agent_runtimes.streams.pubsub import (
                     mark_agent_mcp_tool_approved,
                 )
 
@@ -733,7 +733,7 @@ async def _update_approval(
 
     if status == "approved":
         try:
-            from agent_runtimes.streams.loop import mark_agent_mcp_tool_approved
+            from agent_runtimes.streams.pubsub import mark_agent_mcp_tool_approved
 
             mark_agent_mcp_tool_approved(updated.agent_id or None, updated.tool_name)
         except Exception:

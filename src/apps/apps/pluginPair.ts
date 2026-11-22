@@ -7,7 +7,7 @@
  * An application's two Reactor plugins, named once.
  *
  * Whichever editor wrote it — a spec, the Canvas, an `app.py` — an
- * application is a pair of plugins of one name, `loop-app-<id>`: the page's
+ * application is a pair of plugins of one name, `agent-app-<id>`: the page's
  * (`defineAppPlugin`) and the runtime's (`manifest_of` in
  * `agent_runtimes.apps.plugins`, which says the same name). Each
  * declares the other: the page's `requiredBackendPlugins`, the runtime's
@@ -25,7 +25,7 @@ import type { SandboxSnapshot } from '../core';
 import type { SandboxTarget } from '../plugins/agents/switchable';
 
 /** The one name of an application's two plugins, the page's and the runtime's. */
-export const appPluginName = (appId: string): string => `loop-app-${appId}`;
+export const appPluginName = (appId: string): string => `agent-app-${appId}`;
 
 /** What each tier of an application's pair says. */
 export type AppPluginPair = {

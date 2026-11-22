@@ -42,7 +42,7 @@ What the code shows besides its text — what its answers show, its steps,
 its elements, its messages' authors, its window messages — is said as
 ``reactor.ui`` ops on the session's ui socket (`UI_HUB`, RU-W),
 and the presses of what they offer come up it, checked, each waiting for the
-run that names it (``forwardedProps.loop.press``).
+run that names it (``forwardedProps.agent.press``).
 
 When the code asks the person something, the stream ends on the question —
 the question in words, its display on the ui socket (an ``ask`` op offering
@@ -117,7 +117,7 @@ from agent_runtimes.apps.forms import field_title, form_fields
 from agent_runtimes.apps.header import header_instructions
 from agent_runtimes.apps.host_user import HostUser, reads_user, signed_host_context
 from agent_runtimes.apps.page_tools import PageCalls
-from agent_runtimes.apps.pages import LOOP_PAGE, page_values
+from agent_runtimes.apps.pages import AGENT_PAGE, page_values
 from agent_runtimes.apps.record import (
     AppRecorder,
     agent_app_uid,
@@ -383,7 +383,7 @@ def placed_in_words(file: UploadedFile, path: str) -> str:
 
 
 def question_of(question: Question) -> Dict[str, Any]:
-    """A question as the ``loop.ask`` event carries it."""
+    """A question as the ``agent.ask`` event carries it."""
     if isinstance(question, ChoiceQuestion):
         return {
             "kind": "choice",
@@ -582,7 +582,7 @@ def _step_value(value: Any) -> Any:
 
 
 #: The display type of a step of an application's code.
-STEP_DISPLAY_TYPE = "application/vnd.datalayer.loop.step+json"
+STEP_DISPLAY_TYPE = "application/vnd.datalayer.agent.step+json"
 
 
 @display_type(STEP_DISPLAY_TYPE, version=1)
@@ -627,7 +627,7 @@ class StepShown(Display):
 
 
 #: The display type of what an application's code asks.
-QUESTION_DISPLAY_TYPE = "application/vnd.datalayer.loop.question+json"
+QUESTION_DISPLAY_TYPE = "application/vnd.datalayer.agent.question+json"
 
 
 @display_type(QUESTION_DISPLAY_TYPE, version=1)
@@ -1157,10 +1157,10 @@ class LiveSession:
             self._queue = None
 
     def session_event(self) -> str:
-        """The ``loop.session`` event: what the session is now."""
+        """The ``agent.session`` event: what the session is now."""
         from ag_ui.core import CustomEvent
 
-        return _encode(CustomEvent(name="loop.session", value=self.describe()))
+        return _encode(CustomEvent(name="agent.session", value=self.describe()))
 
     def _open_stream(self, run_id: str = "") -> asyncio.Queue[Optional[str]]:
         """A stream for the next request, under a run id."""
@@ -1457,7 +1457,7 @@ class LiveSession:
             # A widget's page, shown in place for its inputs.
             self.emit(
                 CustomEvent(
-                    name=LOOP_PAGE,
+                    name=AGENT_PAGE,
                     value={"inputs": event.inputs, "outputs": event.outputs},
                 )
             )
@@ -1592,7 +1592,7 @@ class LiveSession:
         """A press of something a display offered, come up the ui socket
         (RU-W): checked — offered to this session, on that display
         (403 not offered, 422 unknown) — and kept for the run that runs it,
-        which names it (``forwardedProps.loop.press``). Nothing runs here.
+        which names it (``forwardedProps.agent.press``). Nothing runs here.
         """
         if not self.answers_to(caller):
             raise UiActionRefused(f"Session {self.uid} is not yours to press in.")
@@ -2045,7 +2045,7 @@ class LiveSession:
     ) -> AsyncIterator[str]:
         """Run its page on its inputs: checked against its form
         first — refused with the sentence — then its ``@app.page``, its
-        outputs a ``loop.page`` event. Not a turn of the conversation.
+        outputs a ``agent.page`` event. Not a turn of the conversation.
         """
         if self.host is None or self.host.app.handler("page") is None:
             raise SessionRefused(
@@ -2197,7 +2197,7 @@ class LiveSession:
     def window_message(self, data: Any, *, head: str = "") -> AsyncIterator[str]:
         """A message from the page the application sits in: its
         code's ``window`` runs on it, as a turn, streamed — what it sends back
-        with ``session.send_window_message`` a ``loop.window`` event.
+        with ``session.send_window_message`` a ``agent.window`` event.
 
         Refused for an application whose code reads none: a spec, or code
         without ``@app.window``.
@@ -2534,7 +2534,7 @@ class LiveSession:
         forwarded = body.get("forwardedProps")
         if isinstance(forwarded, Mapping):
             forwarded = {
-                key: value for key, value in forwarded.items() if key != "loop"
+                key: value for key, value in forwarded.items() if key != "agent"
             }
         said = [dict(m) for m in body.get("messages") or [] if isinstance(m, Mapping)]
         self._title_from_turn(asked)
@@ -2731,11 +2731,11 @@ class LiveSession:
         keep()
 
     def run_agui(
-        self, body: Dict[str, Any], *, loop: Mapping[str, Any], bearer: str
+        self, body: Dict[str, Any], *, agent_props: Mapping[str, Any], bearer: str
     ) -> AsyncIterator[str]:
         """An AG-UI run of the session, as a chat sends it.
 
-        ``forwardedProps.loop`` says what the page did besides the message: the
+        ``forwardedProps.agent`` says what the page did besides the message: the
         settings it holds (``settings``), the option of each mode the person is
         in (``modes``), the option each drop-down of the chat's title bar is on
         (``header``, told to the agent for this run:
@@ -2762,10 +2762,10 @@ class LiveSession:
         ]
         last = messages[-1] if messages else {}
         text = _text_of(last.get("content")) if last.get("role") == "user" else ""
-        settings = loop.get("settings")
+        settings = agent_props.get("settings")
         if settings is not None and not isinstance(settings, Mapping):
             raise SessionRefused(422, "The settings sent are not values by id.")
-        self._choose_profile(loop.get("profile"))
+        self._choose_profile(agent_props.get("profile"))
         changed: Dict[str, Any] = {}
         if settings is not None:
             try:
@@ -2783,7 +2783,7 @@ class LiveSession:
             self.settings = updated
             # The page says them in its message: not said again.
             self._sent_settings = dict(self.settings)
-        modes = loop.get("modes")
+        modes = agent_props.get("modes")
         if modes is not None and not isinstance(modes, Mapping):
             raise SessionRefused(422, "The modes sent are not options by mode id.")
         try:
@@ -2794,26 +2794,26 @@ class LiveSession:
             self.session._update_modes(self.modes)
         # What the chat's title bar says: its drop-downs, in the UI specs' words.
         try:
-            header_told = header_instructions(loop.get("header"))
+            header_told = header_instructions(agent_props.get("header"))
         except ValueError as wrong:
             raise SessionRefused(422, str(wrong)) from None
         files = given_files(
-            loop.get("files"), scope=self.uid, owner=owner_of(self.opened_by)
+            agent_props.get("files"), scope=self.uid, owner=owner_of(self.opened_by)
         )
-        if "action" in loop:
+        if "action" in agent_props:
             # A page's block says a message, its files and its settings; a
             # button presses what was offered, up the ui socket.
             raise SessionRefused(
                 422,
                 "A run carries no action: a page's block sends a message, and a "
                 "button presses what was offered up the ui socket, the run naming "
-                "it with forwardedProps.loop.press.",
+                "it with forwardedProps.agent.press.",
             )
-        if "press" in loop:
+        if "press" in agent_props:
             # Checked on the socket (RU-W): the run says which, and
             # nothing else.
             return self.pressed(
-                self._take_press(loop.get("press")), files=files, run_id=run_id
+                self._take_press(agent_props.get("press")), files=files, run_id=run_id
             )
         if self.turn == "waiting":
             # The chat answers by pressing what the question offered — a file
@@ -2868,7 +2868,7 @@ class LiveSession:
         forwarded = body.get("forwardedProps")
         if isinstance(forwarded, Mapping):
             forwarded = {
-                key: value for key, value in forwarded.items() if key != "loop"
+                key: value for key, value in forwarded.items() if key != "agent"
             }
 
         async def work() -> None:

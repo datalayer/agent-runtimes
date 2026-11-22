@@ -21,21 +21,21 @@ import { IconButton, Text } from '@primer/react';
 import { XIcon } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import {
-  closeLoopElement,
-  onLoopElements,
-  openLoopElements,
-  type LoopElement,
-} from '../../../chat/base/loopElement';
-import type { LoopWorkspaceContext } from '../../core';
+  closeAgentElement,
+  onAgentElements,
+  openAgentElements,
+  type AgentElement,
+} from '../../../chat/base/agentElement';
+import type { AgentWorkspaceContext } from '../../core';
 import { AnswerShowsView } from '../a2ui-surface/AnswerShows';
 
 /** How wide the side panel is, at most. */
 export const APP_PANEL_WIDTH = 380;
 
 /** What is open now: the panels in the order they opened, and the last page. */
-export function elementsByPlace(open: readonly LoopElement[]): {
-  panels: LoopElement[];
-  page: LoopElement | null;
+export function elementsByPlace(open: readonly AgentElement[]): {
+  panels: AgentElement[];
+  page: AgentElement | null;
 } {
   const pages = open.filter(element => element.where === 'page');
   return {
@@ -44,13 +44,13 @@ export function elementsByPlace(open: readonly LoopElement[]): {
   };
 }
 
-type Send = LoopWorkspaceContext['viewControls']['send'];
+type Send = AgentWorkspaceContext['viewControls']['send'];
 
 function ElementBody({
   element,
   send,
 }: {
-  element: LoopElement;
+  element: AgentElement;
   send: Send;
 }): JSX.Element {
   // What its code shows, drawn as an answer's display is: its buttons press
@@ -65,7 +65,7 @@ function ElementBody({
   );
 }
 
-function ElementHeader({ element }: { element: LoopElement }): JSX.Element {
+function ElementHeader({ element }: { element: AgentElement }): JSX.Element {
   return (
     <Box
       display="flex"
@@ -82,7 +82,7 @@ function ElementHeader({ element }: { element: LoopElement }): JSX.Element {
         variant="invisible"
         size="small"
         aria-label={`Close ${element.title}`}
-        onClick={() => closeLoopElement(element.id)}
+        onClick={() => closeAgentElement(element.id)}
       />
     </Box>
   );
@@ -92,12 +92,12 @@ function ElementHeader({ element }: { element: LoopElement }): JSX.Element {
 export function AppElements({
   workspace,
 }: {
-  workspace?: LoopWorkspaceContext;
+  workspace?: AgentWorkspaceContext;
 }): JSX.Element | null {
   const open = useSyncExternalStore(
-    onLoopElements,
-    openLoopElements,
-    openLoopElements,
+    onAgentElements,
+    openAgentElements,
+    openAgentElements,
   );
   const { panels, page } = elementsByPlace(open);
   const send = workspace?.viewControls.send;

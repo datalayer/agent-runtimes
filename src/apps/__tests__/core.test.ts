@@ -5,19 +5,19 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  LoopCommand,
-  LoopMention,
-  LoopViewType,
+  AgentCommand,
+  AgentMention,
+  AgentViewType,
   canOpenView,
   createPromptChannel,
   parseCommand,
-  type LoopWorkspaceContext,
+  type AgentWorkspaceContext,
   type ViewTypeContribution,
 } from '../core';
 
-const workspace: LoopWorkspaceContext = {
+const workspace: AgentWorkspaceContext = {
   serverUrl: 'http://server',
-  agentId: 'loop-shell',
+  agentId: 'agent-shell',
   sandbox: { state: 'idle' },
   activeViewType: 'chat',
   setActiveViewType: () => {},
@@ -39,9 +39,9 @@ function view(
 
 describe('extension points', () => {
   it('are distinct', () => {
-    const ids = [LoopViewType.id, LoopCommand.id, LoopMention.id];
+    const ids = [AgentViewType.id, AgentCommand.id, AgentMention.id];
     expect(new Set(ids).size).toBe(3);
-    expect(LoopViewType.id).toBe('loop.viewType');
+    expect(AgentViewType.id).toBe('agent.viewType');
   });
 });
 

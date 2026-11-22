@@ -4,17 +4,17 @@
  */
 
 /**
- * The editor choice, in the loop's vocabulary.
+ * The editor choice, in the Agent's vocabulary.
  *
- * The store itself lives in `@datalayer/reactor-shell` now — the loop's
+ * The store itself lives in `@datalayer/reactor-shell` now — the Agent's
  * editor selector grew into the generic shell plugin, and this module is the
  * thin dictionary between the two: `editor` here is `view` there. Kept so
- * everything written against the loop's names (the `/editor` command, the
+ * everything written against the Agent's names (the `/editor` command, the
  * tests, the barrel) reads unchanged.
  *
  * The one behavioural difference from the old local store is deliberate:
  * `chooseEditor` no longer calls the chat's surface channel itself — the
- * generic store announces every choice through the announcer the loop's
+ * generic store announces every choice through the announcer the Agent's
  * shell plugin installs, which is wired to `requestSurface`. One path,
  * whether the choice came from the selector, `/editor`, or the generic
  * cycle command.
@@ -39,7 +39,7 @@ import { requestSurface } from '../../core/surfaceRequests';
  * plain contribution that can be run without a reactor around it — the tests
  * do, and so does anything driving commands headlessly — and a choice that
  * silently announced to nobody would look exactly like the bug the surface
- * channel exists to prevent. The loop shell plugin installs the same
+ * channel exists to prevent. The Agent shell plugin installs the same
  * announcer again when it registers, which is idempotent by construction.
  */
 setViewAnnouncer(requestSurface);
@@ -57,7 +57,7 @@ export const NONE_EDITOR = NONE_VIEW;
 let mappedFor: unknown = null;
 let mapped: { editorId: string; options: readonly string[] } | null = null;
 
-/** The current request and options, in loop names. */
+/** The current request and options, in the Agent's names. */
 export function getEditorChoice(): {
   editorId: string;
   options: readonly string[];

@@ -57,12 +57,12 @@ from .apps import router as apps_router
 from .browser_sessions import router as browser_sessions_router
 from .checkpoints import router as checkpoints_router
 from .configure import router as configure_router
+from .handoff import router as handoff_router
 from .harnesses import router as harnesses_router
 from .health import router as health_router
 from .history import router as history_router
 from .identity import router as identity_router
 from .inference_relay import router as inference_relay_router
-from .loop import router as loop_router
 from .mcp import router as mcp_router
 from .mcp_auth import router as mcp_auth_router
 from .mcp_lent import router as mcp_lent_router
@@ -114,7 +114,7 @@ __all__ = [
     "app_plugins_router",
     "apps_router",
     "protocols_router",
-    "loop_router",
+    "handoff_router",
     "inference_relay_router",
     "mcp_lent_router",
     "mcp_proxy_router",

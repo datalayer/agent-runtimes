@@ -61,7 +61,7 @@ export const DECK_THEMES = [
   'sand',
   'ivory',
   'sun',
-  'loop',
+  'agent',
   'metal',
 ] as const;
 

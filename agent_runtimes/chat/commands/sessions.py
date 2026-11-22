@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional
 
+from agent_runtimes.agent.commands import CommandArgSpec
 from agent_runtimes.commands.sessions import session_line
-from agent_runtimes.loop.commands import CommandArgSpec
 
 from .sessions_shared import ask, current_uid, session_of
 
@@ -76,12 +76,12 @@ async def execute(tux: "CliTux", argv: str = "") -> Optional[str]:
         return None
     # Where they are kept, said first: this runtime lists the sessions of
     # the place it runs in.
-    from agent_runtimes.loop.paused import MANAGED
+    from agent_runtimes.agent.paused import MANAGED
 
     on_datalayer = bool(getattr(tux, "cloud_runtime", None))
     tux.console.print(
         f"{'On Datalayer' if on_datalayer else 'On this machine'}: {MANAGED[1 if on_datalayer else 0].split(': ', 1)[1]} "
-        f"`loop sessions` lists both places; `/transfer` moves this session to the other.",
+        f"`agent sessions` lists both places; `/transfer` moves this session to the other.",
         markup=False,
         style="dim",
     )

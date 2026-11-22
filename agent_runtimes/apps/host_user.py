@@ -9,7 +9,7 @@ acts in each user's name, or shows data that is theirs, and takes only a user
 the host's **server** signed: a short token, HS256 with the deployment's
 secret, naming ``sub`` (the host's own id for the user), ``name`` and ``exp``
 at most an hour away. The page hands it over (the element's ``user-token``),
-and it goes with the run that opens the session (``forwardedProps.loop
+and it goes with the run that opens the session (``forwardedProps.agent
 .user_token``, or ``user_token`` when a session is started).
 
 Verified **here, where the session opens**, with the secret given to the

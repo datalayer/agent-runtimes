@@ -12,12 +12,12 @@ never names it.
 
 ## In the browser
 
-The [Loop Web](/apps) workspace is built entirely from reactor plugins: the
+The [Agent Web](/apps) workspace is built entirely from reactor plugins: the
 chat, the editors, the command palette, even the theme arrive as
-contributions into declared extension points (`LoopViewType`,
-`LoopEditorView`, `LoopFrontendTool`, `LoopCommand`, the slots). A host
+contributions into declared extension points (`AgentViewType`,
+`AgentEditorView`, `AgentFrontendTool`, `AgentCommand`, the slots). A host
 plugin that adds an editor, its agent tools, and a command is ordinary
-reactor code — the Loop page carries a complete example, and the generic
+reactor code — the Agent page carries a complete example, and the generic
 machinery (`@datalayer/reactor-shell`, `@datalayer/reactor-commands`,
 `@datalayer/primer-theme`) is documented in the reactor's own docs.
 
@@ -64,7 +64,7 @@ answers with the PAP SDK's `PapSignIn` display
 (`application/vnd.datalayer.pap.sign-in+json`, version 1), whose `open` (the
 company's page) and `code` are for the page alone; the model reads only where
 to sign in, how, and until when. The plugin
-`@datalayer/loop-plugin-pap-sign-in` (`src/apps/plugins/pap-sign-in`) contributes
+`@datalayer/agent-plugin-pap-sign-in` (`src/apps/plugins/pap-sign-in`) contributes
 its renderer and binds the tool, so an older result without the display is
 drawn by the same card. The card draws the display's three modes: `direct`
 (the company's page), `device` (its page and a code, with a QR) and
@@ -82,7 +82,7 @@ import { defineRenderer } from '@datalayer/reactor/ui/react';
 const PAP_SIGN_IN_TYPE = 'application/vnd.datalayer.pap.sign-in+json';
 
 export const PapSignInPlugin = definePlugin({
-  name: '@datalayer/loop-plugin-pap-sign-in',
+  name: '@datalayer/agent-plugin-pap-sign-in',
   contributes: [
     contribution(
       Renderers,
@@ -124,23 +124,23 @@ Three hooks, three surfaces:
 | Hook | Surface | Discovered under |
 |---|---|---|
 | `provide_cli(cli)` | The command line — a Typer application the plugin adds command groups to | `datalayer.cli`, `datalayer.reactor.cli` |
-| `provide_slash_commands(registry)` | The interactive session — the [Loop REPL](/loop-repl)'s slash menu | `loop.plugins` |
+| `provide_slash_commands(registry)` | The interactive session — the [Agent REPL](/agent-repl)'s slash menu | `agent.plugins` |
 | Tool hooks (`before_tool_execute`, …) | The agent's tool lifecycle — see [Hooks](/hooks) | agentspec configuration |
 
 Agent Runtimes plays both roles. As a **host**, the REPL discovers slash
-commands from any distribution advertising under `loop.plugins`. As an
+commands from any distribution advertising under `agent.plugins`. As an
 **extension**, `agent_runtimes.reactor_extension` packages this package's
 command groups so the `datalayer` and `reactor` CLIs carry them — nothing
 spawns another executable; the groups register in-process at startup.
 
 ```toml
 # A distribution shipping a /deploy command for the REPL:
-[project.entry-points."loop.plugins"]
-my-package = "my_package.loop_plugin:plugin"
+[project.entry-points."agent.plugins"]
+my-package = "my_package.agent_plugin:plugin"
 ```
 
 ```python
-class MyLoopPlugin:
+class MyAgentPlugin:
     def provide_slash_commands(self, registry) -> None:
         registry.try_register(SlashCommandSpec(
             name="deploy",

@@ -34,7 +34,7 @@ from agent_runtimes.tests.test_agents_create_integration import (  # noqa: F401 
 DEPLOYMENT = {"app_uid": "app-25", "deployment_uid": "dep-25", "version": 2}
 
 NOTES = {
-    "schema": "loop.app/v1",
+    "schema": "agent.app/v1",
     "id": "r25-notes",
     "name": "R-25 notes",
     "kind": "chat",

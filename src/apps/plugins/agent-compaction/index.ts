@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-agent-compaction` — history compaction, as a capacity.
+ * `@datalayer/agent-plugin-agent-compaction` — history compaction, as a capacity.
  *
  * Mounts the `example-compaction` agent, a long-winded one, under a context
  * token budget: once the history grows past it, older turns are summarized.
@@ -16,7 +16,7 @@
 import { defineAgentCapacityPlugin } from '../agent-capacity';
 
 export const AGENT_COMPACTION_PLUGIN_NAME =
-  '@datalayer/loop-plugin-agent-compaction';
+  '@datalayer/agent-plugin-agent-compaction';
 
 /** The budget the plain plugin mounts the agent under, in tokens. */
 export const DEFAULT_COMPACTION_MAX_TOKENS = 8000;

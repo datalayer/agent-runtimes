@@ -32,7 +32,7 @@ import {
   Text,
   Truncate,
 } from '@primer/react';
-import { Box, loopShapeVars, useColorPalette } from '@datalayer/primer-addons';
+import { Box, agentShapeVars, useColorPalette } from '@datalayer/primer-addons';
 import { ScreenFullIcon, ScreenNormalIcon } from '@primer/octicons-react';
 import { computed, signal } from '@datalayer/reactor';
 import type { ChatLayoutContribution } from '../../core';
@@ -89,7 +89,7 @@ import { useOptionalTeamSelection } from '../agents/useTeamSelection';
 const EMPTY_SELECTION = signal('');
 /* A signal to read when no example contributed chat extras, so the hook
    below always has one — a hook cannot be called conditionally. */
-const EMPTY_CHAT_EXTRAS = signal<LoopChatExtrasValue>({});
+const EMPTY_CHAT_EXTRAS = signal<AgentChatExtrasValue>({});
 import { useWorkspaceFullScreen } from '../../shell/useWorkspaceFullScreen';
 import { CHAT_PLUGIN_NAME, type ChatPluginConfig } from './index';
 import {
@@ -149,33 +149,33 @@ import type {
 } from '../../../types';
 import { AI_MODEL_CATALOGUE, isChatModel } from '../../../specs/models';
 import {
-  LoopAgentBlueprint,
-  LoopAgentGate,
-  LoopChatComposer,
+  AgentBlueprint,
+  AgentGate,
+  AgentChatComposer,
   sendInstead,
-  LoopChatExtras,
-  LoopChatHeader,
-  LoopChatLayout,
-  LoopChatSuggestion,
-  LoopChatSurface,
-  LoopChatTurn,
-  LoopCommand,
+  AgentChatExtras,
+  AgentChatHeader,
+  AgentChatLayout,
+  AgentChatSuggestion,
+  AgentChatSurface,
+  AgentChatTurn,
+  AgentCommand,
   type SessionActionContext,
   type SessionFacts,
-  LoopFrontendTool,
-  LoopRunProps,
+  AgentFrontendTool,
+  AgentRunProps,
   mergeChatExtras,
-  LoopSlots,
+  AgentSlots,
   agentServerOf,
   noRuntimeSaid,
   canOpenView,
   runForwardedProps,
   onPromptFocusRequest,
   onSurfaceRequest,
-  useLoopPromptStore,
+  useAgentPromptStore,
   type ChatSurfaceContribution,
-  type LoopChatExtrasValue,
-  type LoopViewProps,
+  type AgentChatExtrasValue,
+  type AgentViewProps,
 } from '../../core';
 import { messageText, turnWritersOf, type TurnFeed } from './turnState';
 import {
@@ -257,14 +257,14 @@ const FULLSCREEN_HINT_PERIOD_MS = 1400;
 
 /**
  * An application's face in the empty state: the page's size of the three a
- * face is drawn at (`--loop-face-large`, 72px).
+ * face is drawn at (`--agent-face-large`, 72px).
  */
-const FACE_LARGE = parseInt(loopShapeVars['--loop-face-large'], 10);
+const FACE_LARGE = parseInt(agentShapeVars['--agent-face-large'], 10);
 
 /** No anonymous visitor: one object, so that the sign-in hook never reads a change. */
 const NO_ANONYMOUS: ChatAnonymous = {};
 
-export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
+export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
   const chatText = useChatWords();
   /* The active theme's own colours. Read from the store rather than a
      provider, so a workspace mounted without the addons theme still gets the
@@ -302,10 +302,10 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    *
    * `firstPromptHook` has to fire for *every* way a message reaches
    * `handleSend` below — typed and sent through the composer, a suggestion
-   * chip clicked, or a host's own `suggestLoopPrompt(text, {submit: true})`
+   * chip clicked, or a host's own `suggestAgentPrompt(text, {submit: true})`
    * arriving through the prompt store — and this view is the only thing all
    * three of those already go through. The composer that renders is
-   * swappable (a host may contribute a different one to `LoopChatComposer`
+   * swappable (a host may contribute a different one to `AgentChatComposer`
    * entirely) and does not see the other two paths at all, so watching for
    * the first send from inside it would miss most of what "first prompt"
    * needs to mean.
@@ -347,19 +347,19 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    */
   const surfaceChosen = useRef(false);
 
-  const surfaces = useContributions(LoopChatSurface);
+  const surfaces = useContributions(AgentChatSurface);
   /* The composer and the title bar arrive as plugins: this view assembles
      their props, whoever contributed renders them. First contribution wins —
      these are single-occupant surfaces, not lists. */
-  const composerEntries = useContributions(LoopChatComposer);
-  const headerEntries = useContributions(LoopChatHeader);
+  const composerEntries = useContributions(AgentChatComposer);
+  const headerEntries = useContributions(AgentChatHeader);
   /* Live per-example chat extras — an error banner, the codemode toggle, the
      footer's MCP/codemode status. Carried as a signal so the example can
      update it without the plugin being rebuilt; first contribution wins. */
   /* How the parts are arranged. No contribution: the split below. A layout
      plugin — the page layout — takes the same wired parts and arranges them
      its own way; first contribution wins. */
-  const layoutEntries = useContributions(LoopChatLayout);
+  const layoutEntries = useContributions(AgentChatLayout);
   const layout = layoutEntries[0]?.value;
   // The composer's stance: live when the layout publishes one (the page
   // layout, moving the composer as the display mode changes), its starting
@@ -369,7 +369,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   /* The current turn, kept for whoever shows the conversation without the
      transcript. The chat plugin contributed the feed at build; this view is
      its writer — begin on send, the reply as it arrives, end when it stops. */
-  const turnEntries = useContributions(LoopChatTurn);
+  const turnEntries = useContributions(AgentChatTurn);
   const turnFeed = turnWritersOf(turnEntries[0]?.value);
   /* Reached through a ref from the send and loading handlers, which are
      memoised with empty deps and must not go stale on it. */
@@ -378,20 +378,20 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   /* Who is working, for the activity line — read through a ref by a
      handler memoised with empty deps. Set once the spec is resolved below. */
   const agentNameRef = useRef<string>('');
-  const extrasEntries = useContributions(LoopChatExtras);
+  const extrasEntries = useContributions(AgentChatExtras);
   /*
    * Every contribution, merged, a later one winning a key both set — but
    * the frontend tools, which add up (`mergeChatExtras`).
    *
    * Only the first used to be read, which made the extras the property of
-   * whichever plugin registered first: the loop's own surface plugin
+   * whichever plugin registered first: the Agent's own surface plugin
    * contributes a tool-result renderer, and a host example contributing a
    * banner beside it would have silenced one or the other.
    */
   const mergedExtras = useMemo(
     () =>
-      computed<LoopChatExtrasValue>(() =>
-        extrasEntries.reduce<LoopChatExtrasValue>(
+      computed<AgentChatExtrasValue>(() =>
+        extrasEntries.reduce<AgentChatExtrasValue>(
           (merged, entry) => mergeChatExtras(merged, entry.value.extras.value),
           {},
         ),
@@ -408,7 +408,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   // Asked, not assumed: the chat cannot know whether anything is listening,
   // and whichever plugin does answers the gate. Re-asked on every render with
   // the live workspace, so switching the sandbox switches the prompt.
-  const usable = useGate(LoopAgentGate, workspace);
+  const usable = useGate(AgentGate, workspace);
   /* The sandbox's answer. It is not the only thing that can close the chat —
      an anonymous visitor's trial key runs out too — so the two are combined
      further down, once the key is known. */
@@ -630,7 +630,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   /** What goes with every run (an application's modes), read when it is sent. */
   // How the words in the composer were heard, when they were said.
   const spokenRef = useRef<SpokenMetadata | undefined>(undefined);
-  const runProps = useContributions(LoopRunProps);
+  const runProps = useContributions(AgentRunProps);
   const runPropsRef = useRef(runProps);
   runPropsRef.current = runProps;
   /*
@@ -640,12 +640,12 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * begins its turn, and a page reading the turn sees it asked and answered.
    *
    * What the page did besides the message goes with it as AG-UI's
-   * `forwardedProps` (`loop`): the application's session takes a
+   * `forwardedProps` (`agent`): the application's session takes a
    * file there. An agent turned in this page has no session: one that runs
    * its code in the page's sandbox has the files put there, and the message
    * names them; to any other no file is handed — said, rather
    * than dropped. What the workspace's plugins send with every run
-   * (`LoopRunProps`: the modes the person is in) goes under it —
+   * (`AgentRunProps`: the modes the person is in) goes under it —
    * and an agent turned in this page applies the modes itself (`modeEffect`,
    * `BrowserAgentAdapter`).
    */
@@ -663,8 +663,13 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         spoken ? { ...(given ?? {}), voice: spoken } : given,
       );
       // The page's files, or those attached in the composer.
-      const loop = forwardedProps?.loop as { files?: unknown[] } | undefined;
-      if (inPageRef.current && loop?.files && loop.files.length > 0) {
+      const agentProps = forwardedProps?.agent as
+        { files?: unknown[] } | undefined;
+      if (
+        inPageRef.current &&
+        agentProps?.files &&
+        agentProps.files.length > 0
+      ) {
         const sandbox = pageSandboxRef.current;
         if (!sandbox) {
           return 'A file is given to an application running on a runtime: run it on Datalayer or on your machine to give it one.';
@@ -672,7 +677,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         let files: SandboxFile[];
         try {
           files = (
-            loop.files as Array<{ name?: unknown; data_url?: unknown }>
+            agentProps.files as Array<{ name?: unknown; data_url?: unknown }>
           ).map(file => ({
             file: sandboxFileName(String(file.name ?? '')),
             base64: dataUrlBase64(String(file.data_url ?? '')),
@@ -693,8 +698,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             `${message}\n\n${givenFilesSentence(files.map(file => file.file))}`,
             {
               ...forwardedProps,
-              loop: Object.fromEntries(
-                Object.entries(loop).filter(([key]) => key !== 'files'),
+              agent: Object.fromEntries(
+                Object.entries(agentProps).filter(([key]) => key !== 'files'),
               ),
             },
           );
@@ -773,7 +778,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       /*
        * Every way a message reaches this view runs through here — typed and
        * sent through the composer, a suggestion chip clicked, or a host's own
-       * `suggestLoopPrompt(text, {submit: true})` arriving through the prompt
+       * `suggestAgentPrompt(text, {submit: true})` arriving through the prompt
        * store (see the `suggestion.submit` effect below) — so this is the one
        * place "the first prompt" means the same thing regardless of which one
        * a person or a host used.
@@ -1093,14 +1098,14 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * The spec, found two ways.
    *
    * By the agent's id first — a team member's spec id, or a host that names
-   * the spec as the agent, as the Loop Shell does. Failing that, by the
+   * the spec as the agent, as the Agent Shell does. Failing that, by the
    * blueprint a capacity plugin contributed: an agent it created on a server
    * carries an instance name (`subagents-example-agent-…`), not a spec id, and
    * the same agent turned in this page had no prompt, no subagents and no
    * icon for want of this lookup — it used the document tools and called
    * nobody.
    */
-  const blueprint = useContributions(LoopAgentBlueprint)[0]?.value;
+  const blueprint = useContributions(AgentBlueprint)[0]?.value;
   const blueprintSpecId = blueprint?.specId;
   /*
    * An agent of the catalogue or a Cog's, as a runtime resolves it: an
@@ -1134,7 +1139,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * The openers: a capacity plugin's first, then the team's with the
    * addressed member's own beneath, then — with no team — the agent's own.
    *
-   * A contribution to `LoopChatSuggestion` is a deliberate statement about
+   * A contribution to `AgentChatSuggestion` is a deliberate statement about
    * what this workspace is worth asking, so it replaces the spec's generic
    * list rather than joining it.
    *
@@ -1146,7 +1151,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * member's only) hid the team. An opener the team already lists is not
    * repeated.
    */
-  const suggestionEntries = useContributions(LoopChatSuggestion);
+  const suggestionEntries = useContributions(AgentChatSuggestion);
   const hiddenOpeners = chatExtras.hiddenOpeners;
   const hideOpeners = chatExtras.hideOpeners;
   const liveOpeners = chatExtras.openers;
@@ -1240,7 +1245,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * `surfaceId` can never point at a different notebook than the one on
    * screen.
    */
-  const toolContributions = useContributions(LoopFrontendTool);
+  const toolContributions = useContributions(AgentFrontendTool);
   const notebookTools = useMemo(() => {
     /*
      * One tool per name, first contribution wins — so the order is decided
@@ -1280,7 +1285,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       } catch (error) {
         // One broken contributor must not cost the agent every tool.
         console.warn(
-          `[loop] frontend tools from '${entry.plugin}' failed:`,
+          `[agent] frontend tools from '${entry.plugin}' failed:`,
           error,
         );
         continue;
@@ -1289,7 +1294,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         const owner = owners.get(tool.name);
         if (owner) {
           console.warn(
-            `[loop] frontend tool '${tool.name}' from '${entry.plugin}' is shadowed by the one from '${owner}'.`,
+            `[agent] frontend tool '${tool.name}' from '${entry.plugin}' is shadowed by the one from '${owner}'.`,
           );
           continue;
         }
@@ -1419,7 +1424,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * it, an application's. Picking one writes `/<name> `, and the
    * workspace runs it when the message is sent.
    */
-  const commands = useContributions(LoopCommand);
+  const commands = useContributions(AgentCommand);
   const composerCommands = useMemo(
     () =>
       commands
@@ -1671,17 +1676,17 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const [chatUsage, setChatUsage] = useState<ContextSnapshotData>();
   const contextUsage = fromStore ?? chatUsage ?? null;
   // Read to decide whether the strip exists at all, not to render it.
-  const inpromptMenu = useSlotComponents(LoopSlots.inpromptMenu);
+  const inpromptMenu = useSlotComponents(AgentSlots.inpromptMenu);
   // Buttons for the prompt's footer bar, beside the session menus. Asked
   // whether anyone contributed before anything is drawn, for the same reason
   // as the in-prompt menu: an empty slot is still an element.
-  const promptActions = useSlotComponents(LoopSlots.promptAction);
+  const promptActions = useSlotComponents(AgentSlots.promptAction);
   // What stays usable while the prompt is closed: a visitor's limited preview.
-  const promptStatus = useSlotComponents(LoopSlots.promptStatus);
+  const promptStatus = useSlotComponents(AgentSlots.promptStatus);
   // Same question for the chat's own title bar, which plugins may add to.
-  const chatHeaderItems = useSlotComponents(LoopSlots.chatHeader);
+  const chatHeaderItems = useSlotComponents(AgentSlots.chatHeader);
   // And for the band above the conversation (an agent's `banner` UI).
-  const chatBannerItems = useSlotComponents(LoopSlots.chatBanner);
+  const chatBannerItems = useSlotComponents(AgentSlots.chatBanner);
 
   const footerAgents = useMemo<FooterAgent[]>(
     () =>
@@ -1693,7 +1698,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       })) ?? [],
     [team],
   );
-  const suggestion = useLoopPromptStore(state => state.pending);
+  const suggestion = useAgentPromptStore(state => state.pending);
   /*
    * `/prompt`, or its keystroke, asking for the caret.
    *
@@ -1715,7 +1720,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     setDraft(suggestion.text);
     // Taken, so a second click on the same button offers it again rather than
     // finding the store already holding it.
-    useLoopPromptStore.getState().consume();
+    useAgentPromptStore.getState().consume();
     if (suggestion.submit) {
       void handleSend(suggestion.text);
     }
@@ -2337,7 +2342,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
 
   /*
    * The composer, assembled here and rendered by whoever contributed to the
-   * `LoopChatComposer` point — the input-prompt plugin, normally.
+   * `AgentChatComposer` point — the input-prompt plugin, normally.
    *
    * The wiring is this view's knowledge: the controlled draft (so an outside
    * suggestion has somewhere to land, with `focusTrigger` putting the caret
@@ -2409,20 +2414,20 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         : 3,
     promptVariant: 'lexical',
     // True unless the host asked otherwise: the workspace is there to be typed
-    // into. A page that embeds the loop as one section among many turns it off,
+    // into. A page that embeds the Agent workspace as one section among many turns it off,
     // because focusing an input on mount scrolls the browser to it.
     autoFocus: config?.autoFocusPrompt ?? true,
     mentionableAgents: mentionable,
     promptCommands: composerCommands,
     headerContent:
       inpromptMenu.length > 0 ? (
-        <ReactorSlot slot={LoopSlots.inpromptMenu} props={{ workspace }} />
+        <ReactorSlot slot={AgentSlots.inpromptMenu} props={{ workspace }} />
       ) : undefined,
     // Outside the footer's disabled region: once a visitor's turns are spent,
     // the limited preview still opens onto the refusal and Sign in.
     footerLive:
       promptStatus.length > 0 ? (
-        <ReactorSlot slot={LoopSlots.promptStatus} props={{ workspace }} />
+        <ReactorSlot slot={AgentSlots.promptStatus} props={{ workspace }} />
       ) : undefined,
     footerExtras:
       // No Anonymous label: a visitor's limited-preview indicator is in the
@@ -2430,7 +2435,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       promptActions.length > 0 || (voice && voice.input !== 'off') ? (
         <>
           {promptActions.length > 0 ? (
-            <ReactorSlot slot={LoopSlots.promptAction} props={{ workspace }} />
+            <ReactorSlot slot={AgentSlots.promptAction} props={{ workspace }} />
           ) : null}
           {voice && voice.input !== 'off' ? (
             <ComposerVoice
@@ -2564,7 +2569,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    *
    * Each is wired here — the surfaces' hidden mounts, the transcript's
    * stream, the composer's draft — and only *placed* below: by the split
-   * this view has always drawn, or by whatever `LoopChatLayout` contributed.
+   * this view has always drawn, or by whatever `AgentChatLayout` contributed.
    */
   const pickerEl =
     surfaces.length > 0 && config?.showSurfaceSelector !== false ? (
@@ -2594,7 +2599,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
 
         The agent's tools live in the editors — the notebook registers the
         cell tools, the document its lexical ones — so an editor that is
-        not mounted is an editor the agent cannot touch. On the Loop Shell,
+        not mounted is an editor the agent cannot touch. On the Agent Shell,
         which opens with no editor shown, that meant an agent with a
         notebook in its toolset and no notebook to use it on.
 
@@ -2859,7 +2864,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                     ) : null}
                     {chatBannerItems.length > 0 ? (
                       <ReactorSlot
-                        slot={LoopSlots.chatBanner}
+                        slot={AgentSlots.chatBanner}
                         props={{ workspace }}
                       />
                     ) : null}
@@ -3008,7 +3013,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                       },
                     ]
                   : []),
-                /* The thread's menu: what the `loop.session.action`
+                /* The thread's menu: what the `agent.session.action`
                    registry holds and applies to this session, read when it
                    opens — nothing for a thread that is no session; with the
                    session's state words and where it comes from.
@@ -3034,7 +3039,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                       },
                     ]
                   : []),
-                /* What plugins put in the title bar (`LoopSlots.chatHeader`),
+                /* What plugins put in the title bar (`AgentSlots.chatHeader`),
                    each contribution its own item — the slot's own list, so a
                    contribution that draws nothing takes no room. */
                 ...chatHeaderItems.map(entry => {
@@ -3201,7 +3206,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             submit — and without it those cards could never send. */}
         {!headerShown && chatHeaderItems.length > 0 ? (
           <Box hidden>
-            <ReactorSlot slot={LoopSlots.chatHeader} props={{ workspace }} />
+            <ReactorSlot slot={AgentSlots.chatHeader} props={{ workspace }} />
           </Box>
         ) : null}
         {besideChat && !promptHidden ? prompt : null}
@@ -3430,7 +3435,7 @@ function SurfacePicker({
   surfaces: ChatSurfaceContribution[];
   active: string;
   onChange: (surfaceId: string) => void;
-  workspace: LoopViewProps['workspace'];
+  workspace: AgentViewProps['workspace'];
 }): JSX.Element {
   const ordered = [...surfaces].sort(
     (left, right) => (left.order ?? 100) - (right.order ?? 100),

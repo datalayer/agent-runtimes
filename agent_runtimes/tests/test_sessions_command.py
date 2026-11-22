@@ -1,9 +1,9 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""`loop sessions …`: one command per verb against a fake runtime —
+"""`agent sessions …`: one command per verb against a fake runtime —
 the real session routes in process, the command's client the test's — and
-the retired `loop apps threads|feedback` answering with their sentence.
+the retired `agent apps threads|feedback` answering with their sentence.
 """
 
 from __future__ import annotations
@@ -170,7 +170,7 @@ def test_swap_clone_export_import_resume_end(
         assert cloned.exit_code == 0, cloned.output
         clone_uid = cloned.output.split("Cloned as ")[1].split(" ")[0]
         assert (
-            f"(paused, 1 turn). Resume it: loop sessions resume {clone_uid}"
+            f"(paused, 1 turn). Resume it: agent sessions resume {clone_uid}"
             in cloned.output
         )
         too_far = runner.invoke(command.app, ["clone", "session-k010", "--at", "9"])
@@ -203,7 +203,7 @@ def test_swap_clone_export_import_resume_end(
         new_uid = imported.output.split("Imported as ")[1].split(" ")[0]
         assert (
             "(paused, 1 turn, " in imported.output
-            and f"Resume it: loop sessions resume {new_uid}" in imported.output
+            and f"Resume it: agent sessions resume {new_uid}" in imported.output
         )
         assert (
             runner.invoke(
@@ -237,13 +237,13 @@ def test_the_retired_verbs_answer_with_their_sentence() -> None:
     threads = runner.invoke(apps_app, ["threads"])
     assert threads.exit_code == 1
     assert (
-        "`loop apps threads` is retired: list your conversations with `loop sessions list [--app <id>]`."
+        "`agent apps threads` is retired: list your conversations with `agent sessions list [--app <id>]`."
         in threads.output
     )
     feedback = runner.invoke(apps_app, ["feedback", "session-x"])
     assert feedback.exit_code != 0
     assert (
-        "`loop apps feedback` is retired" in feedback.output
+        "`agent apps feedback` is retired" in feedback.output
         or "No such option" in feedback.output
         or "Got unexpected extra argument" in feedback.output
     )

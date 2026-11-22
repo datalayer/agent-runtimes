@@ -541,11 +541,11 @@ class TestTheRunReachesOdooWithTheKey:
         assert seen["headers"] == {"Authorization": f"Bearer {KEY}"}
 
 
-class TestLoopServesIt:
-    def test_loop_apps_run_a2a_asks_the_runtime_to_serve_it_at_its_ingress(
+class TestAgentServesIt:
+    def test_agent_apps_run_a2a_asks_the_runtime_to_serve_it_at_its_ingress(
         self, monkeypatch: Any
     ) -> None:
-        """`loop apps run accounting.yaml --cloud --a2a`: the card names the ingress."""
+        """`agent apps run accounting.yaml --cloud --a2a`: the card names the ingress."""
         import httpx as real_httpx
 
         from agent_runtimes.commands.apps import configure_on
@@ -596,8 +596,8 @@ class TestLoopServesIt:
         import typer
         from typer.testing import CliRunner
 
+        from agent_runtimes.agent import launch
         from agent_runtimes.commands import apps as apps_commands
-        from agent_runtimes.loop import launch
 
         def refuse(*args: Any, **kwargs: Any) -> Any:
             raise AssertionError("nothing is launched or configured")
@@ -1122,7 +1122,7 @@ class TestTheComponents:
     ) -> None:
         request = _accepting("Send the reminders", [A2UI, "text/markdown"])
         request["params"]["message"]["metadata"] = {
-            "loop": {
+            "agent": {
                 "action": {"name": "Send the reminders", "payload": {"does": "send"}}
             }
         }
@@ -1146,7 +1146,7 @@ class TestTheComponents:
     ) -> None:
         request = _accepting("Not now", [A2UI])
         request["params"]["message"]["metadata"] = {
-            "loop": {"action": {"name": "Not now", "payload": {"does": "read"}}}
+            "agent": {"action": {"name": "Not now", "payload": {"does": "read"}}}
         }
         async with (
             served(state, visitors=True) as (app, agent),

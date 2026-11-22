@@ -16,7 +16,7 @@ import { checkAppspec } from '../apps/checks';
 import { APP_CATALOGUE } from '../../specs/apps';
 
 const app = (connections: unknown[]) => ({
-  schema: 'loop.app/v1',
+  schema: 'agent.app/v1',
   id: 'posting',
   name: 'Posting',
   kind: 'chat',

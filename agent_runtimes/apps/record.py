@@ -184,7 +184,7 @@ REFUSALS = {"space_not_granted": "not granted to write that Space"}
 
 #: The session the current run belongs to.
 _SESSION: contextvars.ContextVar[str] = contextvars.ContextVar(
-    "loop_app_session", default=""
+    "agent_app_session", default=""
 )
 
 Send = Callable[[Dict[str, Any]], Awaitable[None]]
@@ -233,7 +233,7 @@ TURN_LIMIT = 4000
 #: started_at, started, microvm_started_at}``, set by the target for the time
 #: of the call (`invoked`). ``None`` on every other runtime.
 _INVOCATION: contextvars.ContextVar[Optional[Dict[str, Any]]] = contextvars.ContextVar(
-    "loop_app_invocation", default=None
+    "agent_app_invocation", default=None
 )
 
 
@@ -392,7 +392,7 @@ def token_for(deployment_uid: str) -> Tuple[Optional[str], str]:
 #: The person's own token during a Preview's run, whose request token is
 #: theirs narrowed to the Spaces its application is granted.
 _PERSONS_OWN: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
-    "loop_preview_persons_own_token", default=None
+    "agent_preview_persons_own_token", default=None
 )
 
 
@@ -1529,7 +1529,7 @@ class AppRecorder:
 
     def asked(self, session: str, kind: str) -> None:
         """Say that the application asked the person and waits for the answer
-        (`loop.ask`), and send it now: ai-agents tells whoever opened the
+        (`agent.ask`), and send it now: ai-agents tells whoever opened the
         session — on their phone too. Its kind only, never the
         question's words, which the conversation keeps.
         """

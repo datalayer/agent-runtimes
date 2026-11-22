@@ -39,7 +39,7 @@ def helpdesk() -> Application:
     """A Python application that answers in words and talks to its page."""
     application = Application.from_spec(
         {
-            "schema": "loop.app/v1",
+            "schema": "agent.app/v1",
             "id": "help-desk",
             "name": "Help Desk",
             "kind": "chat",
@@ -170,7 +170,7 @@ def test_the_page_posts_a_window_message_that_its_code_answers(
         )
     )
     assert types_of(answered) == [
-        "CUSTOM:loop.session",
+        "CUSTOM:agent.session",
         "RUN_STARTED",
         "RUN_FINISHED",
     ]

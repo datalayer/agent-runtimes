@@ -43,7 +43,7 @@ import {
   folderSourceUrl,
   isFolderSource,
 } from '../../../apps/apps/customComponents';
-import { LoopAppFiles } from '../../../apps/core/appFiles';
+import { AgentAppFiles } from '../../../apps/core/appFiles';
 import { componentSchemaOf } from '../datalayer/schema';
 import { BlockFrame, Problem } from '../datalayer/parts';
 import {
@@ -83,7 +83,7 @@ const setterOf = (name: string): string =>
 
 /**
  * Where the files of an application's folder are served, as its package's
- * page side said (`LoopAppFiles`); undefined until it says it —
+ * page side said (`AgentAppFiles`); undefined until it says it —
  * while its runtime starts, or for ever on a server it is not installed
  * beside.
  */
@@ -101,7 +101,7 @@ export function useAppFilesBase(appId: string): string | undefined {
   return useMemo(
     () =>
       reactor
-        ?.getContributions(LoopAppFiles)
+        ?.getContributions(AgentAppFiles)
         .find(entry => entry.value.app === appId)?.value.base,
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [reactor, revision, appId],
@@ -227,7 +227,7 @@ export function CustomComponentView({
       {problem ? <Problem>{problem}</Problem> : null}
       {!problem && folder && !source ? (
         <Problem>
-          {`Its module “${component.source}” is a file of its application's folder: it is drawn once the server running the application serves its package (loop apps package, installed beside that server).`}
+          {`Its module “${component.source}” is a file of its application's folder: it is drawn once the server running the application serves its package (agent apps package, installed beside that server).`}
         </Problem>
       ) : null}
       <iframe

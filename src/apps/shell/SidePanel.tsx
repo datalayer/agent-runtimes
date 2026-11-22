@@ -9,10 +9,10 @@
  * panels that receive controls and visuals: an agent's UI plugins placed
  * there … Unify the left one with the existing leftPanel"):
  *
- * - the **left** one (`LoopSlots.leftPanel`): what is said about the work —
+ * - the **left** one (`AgentSlots.leftPanel`): what is said about the work —
  *   a host's presentation of the application — and the agent's UI placed
  *   `left`;
- * - the **right** one (`LoopSlots.rightPanel`): what the agent builds beside
+ * - the **right** one (`AgentSlots.rightPanel`): what the agent builds beside
  *   the conversation — the UI placed `right`, such as the deck or the sheet
  *   it makes in the page.
  *
@@ -40,7 +40,7 @@
  * conversation opened again shows its panels as they stood, and one started
  * over closes them.
  *
- * A component says how it shows with its `panel` (`LoopSidePanelComponent`):
+ * A component says how it shows with its `panel` (`AgentSidePanelComponent`):
  * its toggle's name, whether it has anything to show for the application,
  * whether it draws its own Close control (then the shell draws none, so that
  * there is always exactly one), the width it needs, and the tools whose
@@ -69,7 +69,7 @@ import {
   type ReactorSlotComponent,
 } from '@datalayer/reactor/react';
 import type { AppSpec } from '../../types/agentspecs';
-import { LoopApplication, LoopSlots } from '../core';
+import { AgentApplication, AgentSlots } from '../core';
 import { toolPattern } from '../toolCards/kit';
 import {
   ToolResultsContext,
@@ -82,8 +82,8 @@ export const SIDE_PANEL_SIDES: readonly SidePanelSide[] = ['left', 'right'];
 
 /** The slot of each side. */
 export const SIDE_PANEL_SLOTS: Record<SidePanelSide, string> = {
-  left: LoopSlots.leftPanel,
-  right: LoopSlots.rightPanel,
+  left: AgentSlots.leftPanel,
+  right: AgentSlots.rightPanel,
 };
 
 /** The frontend tool that opens a side panel: `{side}`. */
@@ -93,7 +93,7 @@ export const OPEN_SIDE_PANEL = 'open_side_panel';
 export const CLOSE_SIDE_PANEL = 'close_side_panel';
 
 /** How a side panel's component shows. */
-export type LoopSidePanel = {
+export type AgentSidePanel = {
   /**
    * Its name, on its toggle: said to a screen reader and shown on hover
    * (*About the Marketer*). A function reads it off the application.
@@ -109,7 +109,7 @@ export type LoopSidePanel = {
   /**
    * Whether the component draws its own Close control, calling the `close`
    * it is handed: the shell then draws none. Mark that control with
-   * `data-loop-<side>-panel-close`, and the focus goes to it when the panel
+   * `data-agent-<side>-panel-close`, and the focus goes to it when the panel
    * opens. Unsaid, the shell draws its own.
    */
   closes?: boolean;
@@ -124,7 +124,7 @@ export type LoopSidePanel = {
 };
 
 /** What a component of a side panel is rendered with. */
-export type LoopSidePanelProps = Record<string, unknown> & {
+export type AgentSidePanelProps = Record<string, unknown> & {
   /** The application the workspace draws, when it draws one. */
   application: AppSpec | undefined;
   /** Which side it is on. */
@@ -140,8 +140,8 @@ export type LoopSidePanelProps = Record<string, unknown> & {
 };
 
 /** A component of a side panel's slot, with how it shows. */
-export type LoopSidePanelComponent = ReactorSlotComponent & {
-  panel?: LoopSidePanel;
+export type AgentSidePanelComponent = ReactorSlotComponent & {
+  panel?: AgentSidePanel;
 };
 
 /** A side panel's width when open beside the view, in pixels, unless a component needs more. */
@@ -158,9 +158,9 @@ export const SIDE_PANEL_MOTION = '200ms';
 
 /** The components that have something to show for an application, in the slot's order. */
 export function sidePanelShown(
-  components: ReadonlyArray<LoopSidePanelComponent>,
+  components: ReadonlyArray<AgentSidePanelComponent>,
   application: AppSpec | undefined,
-): LoopSidePanelComponent[] {
+): AgentSidePanelComponent[] {
   return components.filter(component =>
     component.panel?.when ? component.panel.when(application) : true,
   );
@@ -168,7 +168,7 @@ export function sidePanelShown(
 
 /** The toggle's name: the first component's, or *Panel* when it names none. */
 export function sidePanelLabel(
-  components: ReadonlyArray<LoopSidePanelComponent>,
+  components: ReadonlyArray<AgentSidePanelComponent>,
   application: AppSpec | undefined,
 ): string {
   const label = components[0]?.panel?.label;
@@ -177,7 +177,7 @@ export function sidePanelLabel(
 
 /** The width a side needs: its widest component's, else its own. */
 export function sidePanelWidth(
-  components: ReadonlyArray<LoopSidePanelComponent>,
+  components: ReadonlyArray<AgentSidePanelComponent>,
 ): number {
   return Math.max(
     SIDE_PANEL_WIDTH,
@@ -267,7 +267,7 @@ export function sidePanelOpen(
 export type SidePanelState = {
   side: SidePanelSide;
   /** What has something to show: empty, there is no toggle and no panel. */
-  components: LoopSidePanelComponent[];
+  components: AgentSidePanelComponent[];
   /** The application the workspace draws, when it draws one. */
   application: AppSpec | undefined;
   open: boolean;
@@ -321,8 +321,8 @@ function useConversationCalls(names: readonly string[]): {
 export function useSidePanel(side: SidePanelSide): SidePanelState {
   const slot = useSlotComponents(
     SIDE_PANEL_SLOTS[side],
-  ) as LoopSidePanelComponent[];
-  const application = useContributions(LoopApplication)[0]?.value.app;
+  ) as AgentSidePanelComponent[];
+  const application = useContributions(AgentApplication)[0]?.value.app;
   const components = useMemo(
     () => sidePanelShown(slot, application),
     [slot, application],
@@ -360,7 +360,7 @@ export function useSidePanel(side: SidePanelSide): SidePanelState {
     },
     [lastOrder, generation],
   );
-  const panelId = `loop-${side}-panel-${useId().replace(/[^A-Za-z0-9_-]/g, '')}`;
+  const panelId = `agent-${side}-panel-${useId().replace(/[^A-Za-z0-9_-]/g, '')}`;
   const toggleRef = useRef<HTMLButtonElement | null>(null);
   const open = sidePanelOpen(fromCalls, person);
   const latest =
@@ -487,7 +487,7 @@ export function SidePanelToggle({
       variant="invisible"
       size="small"
       onClick={() => panel.setOpen(true)}
-      {...{ [`data-loop-${panel.side}-panel-toggle`]: '' }}
+      {...{ [`data-agent-${panel.side}-panel-toggle`]: '' }}
       sx={
         panel.side === 'right' && !panel.icon
           ? { svg: { transform: 'scaleX(-1)' } }
@@ -544,7 +544,7 @@ export function SidePanel({
       const element = panelRef.current;
       const target =
         element?.querySelector<HTMLElement>(
-          `[data-loop-${side}-panel-close]`,
+          `[data-agent-${side}-panel-close]`,
         ) ??
         element?.querySelector<HTMLElement>(FOCUSABLE) ??
         element;
@@ -573,8 +573,8 @@ export function SidePanel({
       // Focusable by script only, for a panel with nothing that takes the focus.
       tabIndex={-1}
       {...{
-        [`data-loop-${side}-panel`]: '',
-        'data-loop-side-panel': side,
+        [`data-agent-${side}-panel`]: '',
+        'data-agent-side-panel': side,
       }}
       data-open={open ? '' : undefined}
       data-narrow={narrow ? '' : undefined}
@@ -622,7 +622,7 @@ export function SidePanel({
       }}
     >
       <Box
-        {...{ [`data-loop-${side}-panel-body`]: '' }}
+        {...{ [`data-agent-${side}-panel-body`]: '' }}
         position="relative"
         height="100%"
         overflowY="auto"
@@ -643,7 +643,7 @@ export function SidePanel({
               variant="invisible"
               size="small"
               onClick={close}
-              {...{ [`data-loop-${side}-panel-close`]: '' }}
+              {...{ [`data-agent-${side}-panel-close`]: '' }}
             />
           </Box>
         ) : null}

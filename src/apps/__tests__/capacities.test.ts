@@ -7,17 +7,17 @@
  * The agent-capacity plugins: one blueprint each, from the shared mould.
  *
  * What is pinned: every capacity plugin contributes exactly one
- * `LoopAgentBlueprint` naming its agentspec, with the pydantic-ai library
+ * `AgentBlueprint` naming its agentspec, with the pydantic-ai library
  * and an explicit codemode flag in the payload — the facts the Local target
  * needs to create the agent — and its openers (when it has any) arrive
- * through `LoopChatSuggestion` with both a chip text and a message.
+ * through `AgentChatSuggestion` with both a chip text and a message.
  */
 
 import { describe, expect, it } from 'vitest';
 import type { ReactorPlugin } from '@datalayer/reactor';
 import {
-  LoopAgentBlueprint,
-  LoopChatSuggestion,
+  AgentBlueprint,
+  AgentChatSuggestion,
   type AgentBlueprintContribution,
   type ChatSuggestionContribution,
 } from '../core';
@@ -80,7 +80,7 @@ const ROSTER: [AnyPlugin, string][] = [
 ];
 
 function blueprintOf(plugin: AnyPlugin): AgentBlueprintContribution {
-  const entry = plugin.contributes?.find(c => c.point === LoopAgentBlueprint);
+  const entry = plugin.contributes?.find(c => c.point === AgentBlueprint);
   expect(entry, `${plugin.name} contributes a blueprint`).toBeDefined();
   return entry!.value as AgentBlueprintContribution;
 }
@@ -110,7 +110,7 @@ describe('the capacity roster', () => {
   it('openers carry a chip text, and a message when the two differ', () => {
     for (const [plugin] of ROSTER) {
       const entry = plugin.contributes?.find(
-        c => c.point === LoopChatSuggestion,
+        c => c.point === AgentChatSuggestion,
       );
       if (!entry) {
         continue;

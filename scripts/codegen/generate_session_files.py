@@ -9,7 +9,7 @@ One spec under ``agentspecs/sessions``: ``datalayer-session-1.yaml``
 says the ``datalayer-session/1`` JSONL format — its caps, the states, the
 entry kinds a file may carry, the redaction rules by name and the sentences
 a reader refuses a file in — and ``session-file.schema.json`` beside it is
-the JSON Schema of a line. Both are generated here so the runtime, ``loop``,
+the JSON Schema of a line. Both are generated here so the runtime, ``agent``,
 the chat and agent-teams refuse the same things in the same words.
 
 Usage:

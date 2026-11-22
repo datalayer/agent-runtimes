@@ -4,9 +4,9 @@
  */
 
 /**
- * Lifecycle hooks, demonstrated as a Loop capacity plugin.
+ * Lifecycle hooks, demonstrated as an Agent capacity plugin.
  *
- * The capacity lives in `@datalayer/loop-plugin-agent-hooks`: the agentspec
+ * The capacity lives in `@datalayer/agent-plugin-agent-hooks`: the agentspec
  * the agent is created from, and the openers worth asking it. This file is
  * only the mounting — a reactor application assembled from the standard
  * chat plugins plus that one capacity — where it used to be a bespoke
@@ -20,7 +20,7 @@ import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
-import { LoopEmbed } from '../apps';
+import { AgentEmbed } from '../apps';
 import { AgentHooksPlugin } from '../apps/plugins/agent-hooks';
 
 setupPrimerPortals();
@@ -33,8 +33,8 @@ const AgentHooksExample: React.FC = () => {
   const plugins = useMemo(() => [AgentHooksPlugin], []);
   return (
     <ThemedProvider>
-      <Box height="100vh" minHeight={0}>
-        <LoopEmbed
+      <Box height="100%" minHeight={0}>
+        <AgentEmbed
           // The examples Vite server has no /api proxy; the page origin would
           // send agent creation to port 3000 and fail loudly.
           serverUrl={resolveExampleAgentRuntimesUrl('local')}

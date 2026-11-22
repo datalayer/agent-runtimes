@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""`loop scenes record`: a passing rehearsal's transcript kept as the scene's recording.
+"""`agent scenes record`: a passing rehearsal's transcript kept as the scene's recording.
 
 What a rehearsal played is written as the transcript JSON a stage exports
 (version 1) with its beats and its verdict; `record` keeps it beside the
@@ -23,26 +23,26 @@ from typer.testing import CliRunner
 
 scenes = pytest.importorskip("agentspecs.scenes")
 
-from agent_runtimes.apps.own import FAILED, PASSED  # noqa: E402
-from agent_runtimes.commands import scenes as scenes_command  # noqa: E402
-from agent_runtimes.loop.scenes.recording import (  # noqa: E402
+from agent_runtimes.agent.scenes.recording import (  # noqa: E402
     RecordingRefused,
     recorded_lines,
     recording_of,
     with_recording,
 )
-from agent_runtimes.loop.scenes.rehearsal import (  # noqa: E402
+from agent_runtimes.agent.scenes.rehearsal import (  # noqa: E402
     BeatVerdict,
     RehearsalVerdict,
     transcript_of_rehearsal,
 )
-from agent_runtimes.loop.scenes.transcript import (  # noqa: E402
+from agent_runtimes.agent.scenes.transcript import (  # noqa: E402
     ASKED,
     PERSON,
     SAID,
     TranscriptLine,
     lines_of_json,
 )
+from agent_runtimes.apps.own import FAILED, PASSED  # noqa: E402
+from agent_runtimes.commands import scenes as scenes_command  # noqa: E402
 
 runner = CliRunner()
 

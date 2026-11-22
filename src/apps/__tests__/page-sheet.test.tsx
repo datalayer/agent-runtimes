@@ -40,7 +40,7 @@ import {
   tabNames,
 } from '../pageTools/sheet';
 import { sheetToolSpecs } from '../pageTools/sheetSchemas';
-import { LoopChatExtras } from '../core';
+import { AgentChatExtras } from '../core';
 import { PAGE_TOOL_RESULTS } from '../toolCards/toolResults';
 import {
   PageSheetCard,
@@ -588,13 +588,13 @@ describe('the page-sheet plugin', () => {
         contributes: { point: unknown; value: unknown }[];
       }
     ).contributes;
-    const extras = contributes.find(entry => entry.point === LoopChatExtras);
+    const extras = contributes.find(entry => entry.point === AgentChatExtras);
     const tools = (
       extras?.value as { extras: { value: { frontendTools: Tool[] } } }
     ).extras.value.frontendTools;
     expect(tools.map(tool => tool.name)).toEqual([...SHEET_TOOL_NAMES]);
     expect((PageSheetPlugin as { name: string }).name).toBe(
-      '@datalayer/loop-plugin-page-sheet',
+      '@datalayer/agent-plugin-page-sheet',
     );
   });
 

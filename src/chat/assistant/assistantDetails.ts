@@ -133,7 +133,7 @@ const text = (value: unknown): string | undefined =>
   typeof value === 'string' && value ? value : undefined;
 
 /**
- * A sandbox from the status its server reports — the Loop's sandbox
+ * A sandbox from the status its server reports — the Agent's sandbox
  * service, or the agent's codemode status — and what the host adds.
  */
 export function assistantSandboxOf(

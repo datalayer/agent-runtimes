@@ -11,10 +11,10 @@
  * one per session, beside the run stream that carries the conversation's
  * text); `routeUiOp` says where each goes:
  *
- * - a `window` op to the page the conversation sits in (`loopWindow`);
- * - a step's display to its row (`loopStep`), patched as it streams;
+ * - a `window` op to the page the conversation sits in (`agentWindow`);
+ * - a step's display to its row (`agentStep`), patched as it streams;
  * - a display that says it shows in a panel or on a page to the elements
- *   open (`loopElement`), a `remove` of its id closing it;
+ *   open (`agentElement`), a `remove` of its id closing it;
  * - everything else to the messages (`withUiOp`): a display under a message
  *   (`data.message_id`) kept on it (`ChatMessage.displays`) and drawn by the
  *   renderer a plugin contributed for its type; a `meta` op's `author` the
@@ -40,9 +40,9 @@ import {
   type UiOp,
 } from '@datalayer/reactor/ui';
 import type { MessageSpeaker } from '../../types/messages';
-import { elementOfDisplay, type LoopElementChange } from './loopElement';
-import { isStepDisplay, stepOfDisplay, type LoopStep } from './loopStep';
-import { windowMessageOf } from './loopWindow';
+import { elementOfDisplay, type AgentElementChange } from './agentElement';
+import { isStepDisplay, stepOfDisplay, type AgentStep } from './agentStep';
+import { windowMessageOf } from './agentWindow';
 
 /** The message a display is under: its `data.message_id`. */
 export function messageOfDisplay(display: Display): string {
@@ -181,8 +181,8 @@ export function withUiOp<T extends WithDisplays>(items: T[], op: UiOp): T[] {
 /** Where an op goes (`routeUiOp`). */
 export type RoutedUiOp =
   | { to: 'window'; data: unknown }
-  | { to: 'step'; step: LoopStep }
-  | { to: 'element'; change: LoopElementChange }
+  | { to: 'step'; step: AgentStep }
+  | { to: 'element'; change: AgentElementChange }
   | { to: 'messages'; op: UiOp };
 
 /**
@@ -285,8 +285,9 @@ export function placeable<T extends WithDisplays>(
 export function displayPressOf(
   forwardedProps: Record<string, unknown> | undefined,
 ): UiAction | null {
-  const loop = forwardedProps?.loop as Record<string, unknown> | undefined;
-  const action = loop?.action as Record<string, unknown> | undefined;
+  const agentProps = forwardedProps?.agent as
+    Record<string, unknown> | undefined;
+  const action = agentProps?.action as Record<string, unknown> | undefined;
   if (!action || typeof action.display_id !== 'string') return null;
   if (typeof action.name !== 'string' || typeof action.token !== 'string') {
     throw new Error('A press of a display says its action and its token');
@@ -311,7 +312,7 @@ export function withPress(
   if (typeof press !== 'string' || !press) {
     throw new Error('The runtime checked the press but named none');
   }
-  const loop = { ...(forwardedProps.loop as Record<string, unknown>) };
-  delete loop.action;
-  return { ...forwardedProps, loop: { ...loop, press } };
+  const agentProps = { ...(forwardedProps.agent as Record<string, unknown>) };
+  delete agentProps.action;
+  return { ...forwardedProps, agent: { ...agentProps, press } };
 }

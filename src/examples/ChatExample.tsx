@@ -79,7 +79,7 @@ const AgentRuntimeChatExample: React.FC = () => {
           flexDirection="column"
           alignItems="center"
           justifyContent="center"
-          height="100vh"
+          height="100%"
           gap={3}
           bg="canvas.default"
         >
@@ -125,7 +125,7 @@ const AgentRuntimeChatExample: React.FC = () => {
       showTokenUsage={true}
       showInformation={true}
       autoFocus
-      height="100vh"
+      height="100%"
       runtimeId={agentName}
       historyEndpoint={inBrowser ? undefined : `${baseUrl}/api/v1/history`}
       suggestions={[

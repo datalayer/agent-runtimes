@@ -17,13 +17,13 @@ import { describe, expect, it } from 'vitest';
 import { buildReactorFromPlugins } from '@datalayer/reactor';
 import { PromptPlugin, PROMPT_PLUGIN_NAME } from '../plugins/prompt';
 import { CHAT_PLUGIN_NAME, type ChatPluginConfig } from '../plugins/chat';
-import { loopPlugins } from '../presets';
-import { LoopCommand, focusPrompt, onPromptFocusRequest } from '../core';
+import { agentPlugins } from '../presets';
+import { AgentCommand, focusPrompt, onPromptFocusRequest } from '../core';
 
 /** The command a plugin contributes, by name. */
 function commandOf(plugin: { contributes?: readonly any[] }, name: string) {
   const record = (plugin.contributes ?? []).find(
-    entry => entry.point === LoopCommand && entry.value.name === name,
+    entry => entry.point === AgentCommand && entry.value.name === name,
   );
   return record?.value;
 }
@@ -66,7 +66,7 @@ describe('the /prompt command', () => {
 describe('the preset switch', () => {
   it('floats the chat composer and mounts the command, together', () => {
     const reactor = buildReactorFromPlugins(
-      loopPlugins({ floatingPrompt: true }),
+      agentPlugins({ floatingPrompt: true }),
     );
     expect(reactor.hasPlugin(PROMPT_PLUGIN_NAME)).toBe(true);
     const chat = reactor.getConfig<ChatPluginConfig>(CHAT_PLUGIN_NAME);
@@ -77,7 +77,7 @@ describe('the preset switch', () => {
   });
 
   it('changes nothing when left off', () => {
-    const reactor = buildReactorFromPlugins(loopPlugins({}));
+    const reactor = buildReactorFromPlugins(agentPlugins({}));
     expect(reactor.hasPlugin(PROMPT_PLUGIN_NAME)).toBe(false);
     expect(
       reactor.getConfig<ChatPluginConfig>(CHAT_PLUGIN_NAME)?.promptPlacement,

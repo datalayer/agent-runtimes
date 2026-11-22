@@ -1,0 +1,121 @@
+---
+sidebar_position: 2.9
+title: The examples
+---
+
+# The examples
+
+`src/examples` is one gallery of React examples, each a page of its own, picked
+from the menu at the top or from the cards of the home example. They run in the
+examples' Vite server:
+
+```bash
+npm run examples        # the local agent-runtimes servers, a local Jupyter server, and the gallery on :3000
+make examples           # the same, with the local model keys
+npm run examples:vite   # the gallery alone, against servers already running
+```
+
+The page opens on `/html/examples.html`. An example is registered once, in
+`src/examples/example-selector.ts` (its id, a description for its card, its
+tags and a lazy import), and placed in a group of the menu by
+`src/examples/exampleGroups.ts`.
+
+Every example shows the runtime selector in the header — *Browser* (Python and
+the agent loop in the page), *Local* (the local agent-runtimes server and
+Jupyter server), *Jupyter* (an anonymous Jupyter server, no agent) and
+*Datalayer* (a runtime on Datalayer, once signed in) — and runs where it says:
+an example reads the choice (`useRuntimeTargetStore`) and brings no selector
+of its own. A target an example cannot run on stays in the selector, disabled,
+why in its tooltip (`unavailableTargets` in its registry entry): the *AI
+Application* and *Agent Computer* have no Browser or Jupyter target, since
+an application needs an agent-runtimes server or a Datalayer runtime.
+
+## The page never scrolls
+
+The gallery is a full-window shell: the header at its own height, the example
+filling the rest, and nothing past the window's edges at any size or zoom. The
+contract lives in `src/examples/components/exampleFrame.ts`:
+
+- `html`, `body` and `#root` are 100% tall, without margin, and clip
+  (`html/examples.html`);
+- the shell is pinned to the window (`position: fixed; inset: 0`), a column;
+  the header does not shrink and does not clip, so its popovers (the account's
+  hovercard) hang over the example; the content area is `flex: 1 1 0` with
+  `min-height: 0`, clips, and contains its layout, so an example's `fixed`
+  layers (a floating chat's panel, an overlay) stay under the header;
+- every example renders in `ExampleWrapper`, whose root child fills the
+  content area and cannot grow past it. An example sizes its root with
+  `height: 100%`, never `100vh` (the header's height too tall) or `100vw`,
+  and scrolls its long panels (a thread, a list) itself.
+
+`scripts/check-examples-viewport.py` checks it in a browser: every registered
+example, signed in, at 1400×900, 1280×720, 1366×657 and 1920×960, and zoomed
+to 90%, 110% and 125%. It fails on a page that scrolls, an element past the
+window's bottom or right edge outside an internal scroller, an element as tall
+as the window under the header, or an account hovercard that is clipped or
+painted under the example. With the gallery running (`make examples`):
+
+```bash
+source ~/.datalayer/datalayerrc-prod1   # DATALAYER_API_KEY; the token is not printed
+python scripts/check-examples-viewport.py                    # every example (about 40 minutes)
+python scripts/check-examples-viewport.py AgentDecksExample  # one
+```
+
+`src/examples/__tests__/exampleFrame.test.ts` holds the CSS of the contract and
+keeps `100vh`/`100vw` out of the examples.
+
+## Groups
+
+| Group | What it holds |
+| --- | --- |
+| Agent | The Agent shells and workspace, an application beside its computer (Agent Computer), the Agent Application, the strategy. |
+| Agents | Agent Specifications (the Agentspecs library), Agent Scenes (the catalogue's scenes listed on the left, the one chosen on the right), Agent Decks (the decks plugin in the Agent workspace, an agent writing presentations). |
+| Avatar | The floating assistant and the gallery of its characters. |
+| A2UI, A2A, Personal Agent Protocol, Web Bot Auth, UCP, Shield, AG-UI | One protocol each. |
+| Chat | The chat components, the voice chat. |
+| Document, Notebook, Cell | The editors with their agents; a notebook on a Datalayer runtime; one notebook moved between kernels and between service managers. |
+| Capabilities | One capability of the runtime each: checkpoints, hooks, memory, guardrails, MCP, skills, subagents… |
+| CopilotKit | CopilotKit beside the notebook and the document. |
+| Navigation | Core's navigation hooks (`useNavigate`, `useLocation`, `useParams`, `useHistory`) inside a React Router and without one. |
+
+## The Agent Application example
+
+*Agent Application* (`AgentApplicationExample.tsx`) is an extensible application
+drawn by [`AIApplication`](./ai-application.mdx):
+
+- **what** it shows: an Appspec written in the page (Web Research of the
+  catalogue, renamed, with a presentation of its own), or the catalogue's
+  `web-research` by its id;
+- **where** it runs: where the examples' header says, with no selector of
+  its own: *Local* is the local agent-runtimes server (`runsOn: { kind: 'server' }`,
+  on :8765), *Datalayer* a runtime launched on Datalayer
+  (`runsOn: { kind: 'datalayer' }`); `AIApplication` has no browser or bare
+  Jupyter mode, so on *Browser* or *Jupyter* the page asks for one of the two;
+- **what it is made of**, named at the top of the page: from its Appspec, the
+  chat and its UI plugins, the plugins manager and the Composer portal; added
+  by the page (`renderer.plugins`, made once), the library's presentation
+  plugin in the left panel and a plugin of the example's own, written with
+  Reactor's `definePlugin`, that puts a chip in the chat's title bar and a
+  right panel listing the plugins the workspace runs (`listPlugins`) and what
+  the application is made of (`useWorkspaceApplication`). The plug button in
+  the chat's footer is the plugins manager (`plugin-manager`, which every
+  application has unless its spec leaves it out): the same list, each plugin
+  with its switch. Its dialog is Primer's widest (`xlarge`, 960px) and its
+  list scrolls inside it; `PluginManagerButton`, `PluginManagerOverlay` and
+  `PluginManagerDialog` take `width`, one of Primer's named widths (`small`,
+  `medium`, `large`, `xlarge`) or a CSS length (`'80vw'`, `1100`), never
+  wider than the window less 32px.
+
+Copy it to start an application of your own: change the Appspec, add your
+plugins to `RENDERER`, and open the plugins manager to see them run.
+
+## One gallery
+
+The examples were once in two folders, `src/examples` and `src/examples2`,
+with two Vite targets. They are one now: the notebook on Datalayer
+(`DatalayerNotebookExample`), the two notebook mutations examples and the two
+navigation examples moved into `src/examples`, read the notebooks of
+`src/examples/utils/notebooks`, and are registered beside the others. The
+second folder's cell and notebook examples were older copies of
+`CellExample` and `NotebookExample`, and were dropped. `npm run examples2`,
+`make examples2` and `html/examples2.html` are gone.

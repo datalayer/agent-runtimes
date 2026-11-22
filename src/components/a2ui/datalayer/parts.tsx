@@ -5,7 +5,7 @@
 
 /**
  * What the components of Datalayer's own share: the frame a block is drawn
- * in — the `loop` theme's card radius and Primer's colours, so a block reads
+ * in — the `agent` theme's card radius and Primer's colours, so a block reads
  * as part of the page it is on in either colour mode — its title, and the
  * sentence it says when what it was given cannot be drawn.
  *

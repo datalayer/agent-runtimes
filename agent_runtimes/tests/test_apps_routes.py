@@ -27,7 +27,7 @@ from agent_runtimes.routes import apps as routes
 pytest.importorskip("agentspecs.apps")
 
 WEB_RESEARCH = {
-    "schema": "loop.app/v1",
+    "schema": "agent.app/v1",
     "id": "web-research",
     "name": "Web Research",
     "kind": "chat",
@@ -39,7 +39,7 @@ WEB_RESEARCH = {
 }
 
 TRIAGE_LIKE = {
-    "schema": "loop.app/v1",
+    "schema": "agent.app/v1",
     "id": "mail",
     "name": "Mail",
     "kind": "chat",
@@ -219,7 +219,7 @@ def test_the_runtime_lists_applications_from_reactor_and_runs_its_own(
         app["id"]: app["name"] for app in client.get("/api/v1/apps").json()["apps"]
     }
     assert names["web-research"] == "Web research, edited"
-    assert plugins.PLATFORM.has_plugin("loop-app-web-research")
+    assert plugins.PLATFORM.has_plugin("agent-app-web-research")
 
 
 def test_feedback_on_a_conversation_is_kept_in_the_record(
@@ -427,8 +427,8 @@ def test_build_runs_the_file_apart_and_answers_its_spec(client: Any) -> None:
     built = client.post("/api/v1/apps/build", json={"file": "app.py", "text": APP_PY})
     assert built.status_code == 200, built.text
     spec = built.json()["spec"]
-    assert spec.startswith("# Built from app.py by `loop apps build`")
-    assert "# loop:code start: opening (app.py:6)" in spec
+    assert spec.startswith("# Built from app.py by `agent apps build`")
+    assert "# agent:code start: opening (app.py:6)" in spec
     assert "\nid: hello\n" in spec
     broken = client.post(
         "/api/v1/apps/build", json={"file": "app.py", "text": "import nowhere_at_all\n"}
@@ -462,8 +462,8 @@ def test_eject_answers_an_app_py_that_builds_the_same_spec(client: Any) -> None:
     assert ejected.status_code == 200, ejected.text
     body = ejected.json()
     assert body["code"]["file"] == "app.py"
-    assert "Written by `loop apps eject`" in body["code"]["text"]
-    assert body["spec"].startswith("# Built from app.py by `loop apps build`")
+    assert "Written by `agent apps eject`" in body["code"]["text"]
+    assert body["spec"].startswith("# Built from app.py by `agent apps build`")
     assert yaml.safe_load(body["spec"]) == WEB_RESEARCH
     refused = client.post("/api/v1/apps/eject", json={"spec": "- a list\n"})
     assert refused.status_code == 422

@@ -50,8 +50,8 @@ PAGES = (
     "agent-node.html",
     "agent-notebook.html",
     "agent-document.html",
-    "loop.html",
-    "loop-example.html",
+    "agent-workspace.html",
+    "agent-example.html",
 )
 
 #: What the Vite build emits that no browser running these pages fetches,

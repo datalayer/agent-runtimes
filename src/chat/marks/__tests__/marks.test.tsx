@@ -154,3 +154,28 @@ describe('the tool call’s leading visual', () => {
     expect(await render(null)).toBeNull();
   });
 });
+
+describe('a frontend set whose toolset is all', () => {
+  it('gives its tools its marks once its adapter registers them', async () => {
+    const { marksOfFrontendTool, registerFrontendToolset } =
+      await import('../toolMarks');
+    // The edit set names insertCell; deleteCells is only in the 'all' set.
+    expect(marksOfFrontendTool('insertCell').icon).toBe(
+      '@datalayer/icons-react:jupyter',
+    );
+    expect(marksOfFrontendTool('a')).toEqual({
+      icon: undefined,
+      emoji: undefined,
+    });
+    registerFrontendToolset('jupyter-notebook', [
+      { name: 'datalayer_deleteCells', toolReferenceName: 'deleteCells' },
+    ]);
+    expect(marksOfFrontendTool('deleteCells').icon).toBe(
+      '@datalayer/icons-react:jupyter',
+    );
+    expect(marksOfFrontendTool('datalayer_deleteCells').emoji).toBe('📓');
+    expect(() => registerFrontendToolset('no-such-set', [])).toThrow(
+      'No frontend tool set',
+    );
+  });
+});

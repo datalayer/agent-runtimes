@@ -173,15 +173,16 @@ export function validateA2uiSubmission(
  * The display type of what an application's answer shows:
  * `AnswerShows` in `agent_runtimes.apps.components`.
  */
-export const ANSWER_DISPLAY_TYPE = 'application/vnd.datalayer.loop.answer+json';
+export const ANSWER_DISPLAY_TYPE =
+  'application/vnd.datalayer.agent.answer+json';
 
 /** A button pressed on what an answer shows, as the chat sends it on. */
 export type AnswerPress = {
   /** The person's turn, in words: the action's name. */
   message: string;
-  /** What the session API reads besides the message (`forwardedProps.loop`). */
+  /** What the session API reads besides the message (`forwardedProps.agent`). */
   forwardedProps: {
-    loop: {
+    agent: {
       action: {
         name: string;
         display_id: string;
@@ -221,7 +222,7 @@ export function answerPress(
   return {
     message: name,
     forwardedProps: {
-      loop: {
+      agent: {
         action: {
           name,
           display_id: display.id,

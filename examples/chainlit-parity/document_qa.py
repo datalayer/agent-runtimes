@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Document QA — Chainlit's cookbook ``pdf-qa``, rebuilt with LOOP's API.
+"""Document QA — Chainlit's cookbook ``pdf-qa``, rebuilt with Agent's API.
 
 Chainlit asks for a PDF or a text file when the chat starts (``AskFileMessage``),
 says it is processing it and updates that message when it is done, splits it

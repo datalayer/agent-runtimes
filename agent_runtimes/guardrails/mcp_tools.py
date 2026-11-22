@@ -27,7 +27,7 @@ class MCPToolsGuardrailCapability(AbstractCapability[Any]):
 
     def _enabled_tool_names(self) -> set[str]:
         try:
-            from agent_runtimes.streams.loop import get_agent_enabled_mcp_tool_names
+            from agent_runtimes.streams.pubsub import get_agent_enabled_mcp_tool_names
 
             return get_agent_enabled_mcp_tool_names(self.agent_id)
         except Exception:
@@ -35,7 +35,7 @@ class MCPToolsGuardrailCapability(AbstractCapability[Any]):
 
     def _approved_tool_names(self) -> set[str]:
         try:
-            from agent_runtimes.streams.loop import get_agent_approved_mcp_tool_names
+            from agent_runtimes.streams.pubsub import get_agent_approved_mcp_tool_names
 
             return get_agent_approved_mcp_tool_names(self.agent_id)
         except Exception:
@@ -43,7 +43,7 @@ class MCPToolsGuardrailCapability(AbstractCapability[Any]):
 
     def _known_mcp_tool_names(self) -> set[str]:
         try:
-            from agent_runtimes.streams.loop import get_known_mcp_tool_names
+            from agent_runtimes.streams.pubsub import get_known_mcp_tool_names
 
             return get_known_mcp_tool_names()
         except Exception:

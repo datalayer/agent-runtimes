@@ -125,7 +125,7 @@ RUNTIME_CLIENT_INFO = Implementation(
 )
 
 #: Where a harness's workspace is: the runtime's own. The same
-#: variable the runtime's codemode workspace reads; ``loop --harness`` sets it
+#: variable the runtime's codemode workspace reads; ``agent --harness`` sets it
 #: to the directory it runs in.
 WORKSPACE_VARIABLE = "AGENT_RUNTIMES_WORKSPACE_ROOT"
 
@@ -306,7 +306,7 @@ def harness_workspace(environment: Mapping[str, str] | None = None) -> Path:
     if not named:
         raise HarnessRefused(
             f"No workspace for the harness: set {WORKSPACE_VARIABLE} to the directory "
-            "it works in (`loop --harness` sets it to the directory it runs in)."
+            "it works in (`agent --harness` sets it to the directory it runs in)."
         )
     workspace = Path(named).expanduser().resolve()
     if not workspace.is_dir():
@@ -509,7 +509,7 @@ class RecordAudit:
     ``terminals``; otherwise a hash and a size, a command and an exit. Every
     row is redacted at the row (``agent_shield.audit.redacted_row``) before
     it is kept here, logged, recorded, or counted over OTEL
-    (``agent_shield.tracing.observe``). Without a recorder (``loop
+    (``agent_shield.tracing.observe``). Without a recorder (``agent
     --harness`` outside an application) the rows are logged and kept here
     for the terminal.
     """

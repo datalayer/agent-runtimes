@@ -15,7 +15,7 @@
  *   - FILE   → fenced block whose info string is a file extension and
  *              whose first line is `# filename: <name.ext>`
  *
- * The Loop creates the agent from the plugin's blueprint when it connects.
+ * The Agent workspace creates the agent from the plugin's blueprint when it connects.
  * We subscribe to the chat store, detect the output type of the latest
  * assistant message, auto-switch the sidebar tab, and render the payload
  * inline in the sidebar.
@@ -48,7 +48,7 @@ import { AuthRequiredView } from './components';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
-import { LoopEmbed } from '../apps';
+import { AgentEmbed } from '../apps';
 import {
   downloadSheet,
   parseSheetBlock,
@@ -56,7 +56,7 @@ import {
   useFitHeight,
   useSheetModel,
 } from '../apps/plugins/agent-outputs/sheets';
-import { AGENT_OUTPUTS_LOOP_PLUGINS } from './utils/agentOutputsPlugins';
+import { AGENT_OUTPUTS_AGENT_PLUGINS } from './utils/agentOutputsPlugins';
 import { SpreadsheetPreview } from '../components/outputs/SpreadsheetPreview';
 import { useChatStore } from '../stores/chatStore';
 import type { ChatMessage } from '../types';
@@ -431,7 +431,7 @@ const SheetView: React.FC<{ block: SheetBlock }> = ({ block }) => {
 // ─── Inner component (rendered after auth) ─────────────────────────────────
 
 const AgentOutputsInner: React.FC = () => {
-  // The Loop creates the agent from the plugin's blueprint when it connects;
+  // The Agent workspace creates the agent from the plugin's blueprint when it connects;
   // a fresh id per page load keeps each visit on its own agent.
   const agentName = useRef(uniqueAgentId(AGENT_NAME)).current;
   const agentBaseUrl = useExampleAgentRuntimesUrl();
@@ -509,14 +509,14 @@ const AgentOutputsInner: React.FC = () => {
       <Box flex={1} minHeight={0} display="flex">
         {/* Left: Chat */}
         <Box flex={1} minWidth={0}>
-          <LoopEmbed
+          <AgentEmbed
             serverUrl={agentBaseUrl}
             target="local"
             showAgentVariants
             agentId={agentName}
             editors={false}
             showHeader
-            plugins={AGENT_OUTPUTS_LOOP_PLUGINS}
+            plugins={AGENT_OUTPUTS_AGENT_PLUGINS}
           />
         </Box>
 

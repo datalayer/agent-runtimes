@@ -11,7 +11,7 @@ callback parameters, codes, verifiers, assertions, access tokens, and refresh
 tokens stay inside host-owned code.
 
 ```bash
-loop apps run examples/personal-agent-protocol/direct-sign-in-lifecycle/app.py
+agent apps run examples/personal-agent-protocol/direct-sign-in-lifecycle/app.py
 ```
 
 Read the [Direct Sign-In guide](https://personalagentprotocol.org/docs/guides/direct-sign-in)

@@ -1,0 +1,166 @@
+---
+sidebar_position: 2.85
+title: The Composer's editors
+---
+
+# The Composer's editors
+
+An application is one Appspec, and it is built with four editors over it:
+its **Canvas**, where its agent and its parts are dragged and dropped, its
+**layout**, the page a person meets laid out block by block, its **YAML**,
+and its **Python** when it is written in Python. The four are React
+components of this package, under `@datalayer/agent-runtimes/lib/apps/composer`.
+Datalayer's Studio builds its applications with them, and the Composer's
+button in a chat's toolbar shows them read only.
+
+```tsx
+import {
+  AppCanvasEditor,
+  AppLayoutEditor,
+  AppYamlEditor,
+  AppPythonEditor,
+  draftOfAppspec,
+} from '@datalayer/agent-runtimes/lib/apps/composer';
+```
+
+Each editor also has a module of its own, such as
+`@datalayer/agent-runtimes/lib/apps/composer/AppCanvasEditor`. Import that
+module when a page loads one editor lazily, so that React Flow, dnd-kit and
+CodeMirror load only once that editor is drawn.
+
+## The application they edit: `AppDraft`
+
+The editors read an `AppDraft`, which holds an application's Appspec
+(`spec`), the page its layout draws (`interface`, an A2UI tree), the
+components it may draw (`components`), the YAML its builder wrote
+(`source`), and, for an application written in Python, its `app.py`
+(`code`). `draftOfAppspec` reads one from an Appspec, either as its file holds
+it or as a renderer draws it:
+
+```tsx
+const draft = draftOfAppspec(app);
+```
+
+A host usually keeps more beside the draft, such as its versions, its
+validation or where it was cloned from. It can hand its own object, as long
+as that object has these fields. An editor hands back the same object with
+the fields it changed, so the host keeps `{ ...draft, ...next }`. Saving,
+versions and undo stay with the host. The editors keep nothing and fetch
+nothing.
+
+## The Canvas: `AppCanvasEditor`
+
+The agent sits in the centre of a graph, with an edge from it to a node for
+each kind of part: model, MCP, protocols, skills, rules, UI, tests, events,
+guards, gates and track. On the right is a **Toolbox** of the parts the
+enabled plugins contribute. A part is dragged onto the node of its kind (any
+other place refuses it), or added with a click where there is no pointer. It
+arrives with its example filled in. The **Properties** of the selected part
+are drawn from the Appspec's JSON Schema, and the **Events** say what happens
+when, and what it does. A switch above the graph shows the other surfaces
+the host gives: *Configuration* (the layout), *Flow*, *Python* and *Preview*.
+
+```tsx
+<AppCanvasEditor
+  definition={draft}
+  onChange={(next, source) => keep({ ...draft, ...next }, source)}
+  layout={<AppLayoutEditor definition={draft} onChange={next => keep({ ...draft, ...next }, 'layout')} pluginsOff={[]} />}
+  python={draft.code ? <MyPythonTab /> : undefined}
+  preview={<MyPreview />}
+/>
+```
+
+| Prop | What it is |
+| --- | --- |
+| `definition` | The `AppDraft` being built. |
+| `onChange(next, source)` | A change, and the part it is of (`designer:add:rule-0`, say). A host's history can coalesce typing in one part into one undo step. |
+| `layout`, `flow`, `python`, `preview` | The other surfaces, as React nodes, drawn when chosen. One that is absent has no button. |
+| `openOnLayout`, `openOnPython`, `openOnPreview` | Open on that surface, for example when an address asks for a block or a line. |
+| `pluginsOff` | Catalogue ids of the plugins turned off: their parts are not in the Toolbox. |
+| `agentEngine(agent)` | What runs and hosts the agent, drawn beside *Harness* in its Properties. Without it, that line is not drawn. |
+| `disabled` | Read only while the host saves. |
+
+### As a picture
+
+With `mock`, the Canvas is read only. A part is still selected and its
+Properties unfold, but a part dropped on it is refused with a sentence, and
+nothing is written:
+
+```tsx
+<AppCanvasEditor mock example="accounting" />      {/* a catalogue example as it ships */}
+<AppCanvasEditor mock definition={draftOfAppspec(app)} />  {/* any application */}
+<AppCanvasEditor mock wide contentWidth={960} />   {/* the Accounting picture, for a slide */}
+```
+
+## The layout: `AppLayoutEditor`
+
+This editor draws the page a person meets, as blocks of the A2UI catalogue.
+A block is dragged from the palette into place and moved by dragging, or with
+the keyboard. Selecting a block opens what it shows, what it sends and, for a
+button, what it does, each chosen in words from what the application's kind
+gives and takes. The block's own properties are a form drawn from its JSON
+Schema. On a chat, its welcome, its suggested questions, its settings,
+commands and modes are edited above the page. Every change is checked as it
+is made.
+
+| Prop | What it is |
+| --- | --- |
+| `definition`, `onChange(next)` | As above. |
+| `pluginsOff` | Their blocks are off the palette. |
+| `select` | The block to open on, selected. |
+| `ask` | A model (`(messages) => Promise<string>`): *Ask the assistant* proposes a change of the layout. Without it, *Ask the assistant* is not offered. |
+| `openLine(line)` | Where its code decides something is a link to that line of its `app.py`. |
+| `componentsHref` | The host's page listing every component: the palette's *More* opens it. |
+
+## The YAML: `AppYamlEditor`
+
+This editor shows the Appspec as its file holds it, with completion, hover
+help and every instant check underlined on its line, and the checks under
+the text. It is controlled: the host holds the text and is handed each
+change with what it reads as.
+
+```tsx
+const [text, setText] = useState(() => writeAppspecYaml(app));
+<AppYamlEditor
+  value={text}
+  onChange={(next, read) => {
+    setText(next);
+    if (read.app) keep(read.app, next);   // null while YAML cannot read it
+  }}
+/>
+```
+
+`read` replaces how a text is read and checked (`readAppYaml` by default),
+for a host that checks more. `reveal` opens the editor at the line an
+instant check is about. `checks={false}` hides the checks. Without
+`onChange`, the editor is read only.
+
+## The Python: `AppPythonEditor`
+
+This editor shows an application's `app.py`, as `agent apps push` keeps it,
+with the line an address asks for marked and brought into view. Running the
+file, ejecting a spec into one and opening it elsewhere are the host's job:
+its controls go in `actions` and what they said goes in `children`.
+
+```tsx
+<AppPythonEditor
+  code={draft.code}
+  value={text}
+  onChange={setText}
+  line={search.get('line')}
+  says="app.py, as it was last saved."
+  toolbar={<ComputerPicker />}
+  actions={<Button onClick={run}>Run it</Button>}
+>
+  {said}
+</AppPythonEditor>
+```
+
+## In the Composer's portal
+
+The [Composer's button](./ai-application.mdx#extending-it) in a chat's
+toolbar opens a full-screen dialog with the application on these editors,
+read only: the Canvas as a picture, its YAML and its Python, each loaded
+when its view is first chosen. A host that contributes its own view
+(`AgentSlots.composerView`, or `ComposerViewProvider` outside a workspace)
+draws that view instead.

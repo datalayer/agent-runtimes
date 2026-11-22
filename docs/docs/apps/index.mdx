@@ -1,11 +1,11 @@
 ---
 sidebar_position: 7
-title: Loop Web
+title: Agent Web
 ---
 
-# Loop Web
+# Agent Web
 
-**Loop** is the Agent Runtimes workspace for the browser: a conversation, the
+**Agent** is the Agent Runtimes workspace for the browser: a conversation, the
 editors the agent works in, and the sandbox the code runs on — assembled
 entirely from plugins. The base shell is deliberately blank: it renders one
 view host and some slots, and everything a person actually sees — the chat,
@@ -13,21 +13,21 @@ the notebook, the prompt, the command palette — arrives as a plugin
 contribution. A workspace mounted with no plugins shows an empty frame, which
 is the honest picture of what the shell is.
 
-Loop runs on the [Datalayer reactor](https://github.com/datalayer/reactor)
+Agent runs on the [Datalayer reactor](https://github.com/datalayer/reactor)
 plugin platform: plugins declare **contribution points**, contribute values
 into points other plugins declared, render into **slots**, and register
 **commands** with cross-platform keybindings.
 
 ## Quick start
 
-The supported way to put Loop in a page is `LoopEmbed`, with the standard
-plugin set from `loopPlugins`:
+The supported way to put Agent in a page is `AgentEmbed`, with the standard
+plugin set from `agentPlugins`:
 
 ```tsx
-import { LoopEmbed } from '@datalayer/agent-runtimes/lib/apps';
+import { AgentEmbed } from '@datalayer/agent-runtimes/lib/apps';
 
-<LoopEmbed
-  agentId="loop-shell"
+<AgentEmbed
+  agentId="agent-shell"
   target="browser"          // code runs in the page — no server, no account
   defaultEditor="none"      // conversation is the canvas
   floatingPrompt            // draggable composer over the workspace
@@ -41,23 +41,23 @@ A host that assembles its own reactor uses the pieces directly:
 
 ```tsx
 import {
-  buildLoopReactor,
-  LoopWorkspace,
-  loopPlugins,
+  buildAgentReactor,
+  AgentWorkspace,
+  agentPlugins,
 } from '@datalayer/agent-runtimes/lib/apps';
 
-const reactor = buildLoopReactor(loopPlugins({ target: 'browser' }));
-<LoopWorkspace reactor={reactor} serverUrl={serverUrl} agentId={agentId} />;
+const reactor = buildAgentReactor(agentPlugins({ target: 'browser' }));
+<AgentWorkspace reactor={reactor} serverUrl={serverUrl} agentId={agentId} />;
 ```
 
 ## Architecture
 
 ### The shell
 
-`LoopWorkspace` — the shell component — keeps only what no plugin could do
+`AgentWorkspace` — the shell component — keeps only what no plugin could do
 for it:
 
-- host the active **view** (`LoopViewType` contributions) and the header,
+- host the active **view** (`AgentViewType` contributions) and the header,
   sidebar, footer, status and root **slots**;
 - mint the workspace context (`serverUrl`, `agentId`, `surfaceId`, the
   sandbox snapshot, the prompt channel);
@@ -74,32 +74,32 @@ inside the Datalayer app, and inside a JupyterLab panel.
 
 | Point | Declared by | Filled by |
 |---|---|---|
-| `LoopViewType` | shell plugin | chat (`chat` view), a2ui — and graph, when a host adds `GraphViewPlugin` |
-| `LoopEditorView` | shell plugin | notebook, document — each entry appears in the segmented editor control and renders in the editor column |
-| `LoopFrontendTool` | chat plugin | notebook (cell tools), document (lexical tools) — the tools the chat hands its agent |
-| `LoopChatComposer` | chat plugin | input-prompt plugin — the chat assembles the composer's props, the contribution renders them |
-| `LoopChatHeader` | chat plugin | chat-header plugin — same shape for the conversation's title bar |
-| `LoopChatSuggestion` | chat plugin | capacity plugins — openers shown ahead of the spec's own |
-| `LoopAgentBlueprint` | agents plugin | capacity plugins — which agent the Local target creates, from which spec |
-| `LoopChatLayout` | chat plugin | page-layout plugin — the chat view assembles its parts (editors, transcript, prompt, chips, picker) and a layout arranges them; the default is the split |
-| `LoopChatExtras` | chat plugin | a host, via `createChatExtrasPlugin()` — a *live* signal carrying an error banner, the codemode toggle, MCP status, a tool-result renderer, extra frontend tools, `hidePrompt`, or `hiddenOpeners` (the spec's chips a page does not offer, by their words), for a page composing panels around a `LoopEmbed` |
-| `LoopOpeningNotebook` | notebook plugin | a host — the notebook the editor opens on (several cells, outputs already in them) in place of the plugin's one cell, plus the code run to prime the sandbox |
-| `LoopOpeningDocument` | document plugin | a host — the document the editor opens on, as a serialised Lexical state, in place of the plugin's own (a heading, a paragraph and a cell that has already run) |
-| `LoopPromptPanel` | input-prompt plugin | page-layout plugin — a panel hung on the composer, `above` or `below` it, *inside* its card so a floating prompt carries it |
-| `LoopChatTurn` | chat plugin (opens **and** fills it) | readers — the current turn as a live signal: the last user message, the reply as it streams, and its status; a new message replaces it. The page layout's turn panel reads it |
-| `LoopCommand` | — | every plugin; each command is a slash command, a palette entry, and (optionally) a keystroke |
-| `LoopAgentGate` | chat plugin | agents plugin — whether there is anything to talk to, and why not |
-| `LoopNotebookToolbar` / `LoopDocumentToolbar` items | toolbar plugins | the chat contributes its agent actions onto the editors' toolbars |
-| Slots (`LoopSlots.header`, `chatHeader`, `promptAction`, `inpromptMenu`, `footer`, `status`, `sidebar`, `leftPanel`, `rightPanel`, `viewOverlay`, `root`) | shell | anything with chrome to add — the floating prompt uses `root`, the + uses `promptAction`, a host's presentation of the application uses `leftPanel` ([closed until opened](./app-renderer#the-left-panel-what-a-host-says-about-it)), the agent's UI placed `right` uses `rightPanel` ([the side panels](./app-renderer#beside-its-conversation-the-side-panels)), its notices `viewOverlay` |
-| `LoopApplication` | `AppRenderer` | a host's plugins — the Appspec of the application the workspace draws |
+| `AgentViewType` | shell plugin | chat (`chat` view), a2ui — and graph, when a host adds `GraphViewPlugin` |
+| `AgentEditorView` | shell plugin | notebook, document — each entry appears in the segmented editor control and renders in the editor column |
+| `AgentFrontendTool` | chat plugin | notebook (cell tools), document (lexical tools) — the tools the chat hands its agent |
+| `AgentChatComposer` | chat plugin | input-prompt plugin — the chat assembles the composer's props, the contribution renders them |
+| `AgentChatHeader` | chat plugin | chat-header plugin — same shape for the conversation's title bar |
+| `AgentChatSuggestion` | chat plugin | capacity plugins — openers shown ahead of the spec's own |
+| `AgentBlueprint` | agents plugin | capacity plugins — which agent the Local target creates, from which spec |
+| `AgentChatLayout` | chat plugin | page-layout plugin — the chat view assembles its parts (editors, transcript, prompt, chips, picker) and a layout arranges them; the default is the split |
+| `AgentChatExtras` | chat plugin | a host, via `createChatExtrasPlugin()` — a *live* signal carrying an error banner, the codemode toggle, MCP status, a tool-result renderer, extra frontend tools, `hidePrompt`, or `hiddenOpeners` (the spec's chips a page does not offer, by their words), for a page composing panels around a `AgentEmbed` |
+| `AgentOpeningNotebook` | notebook plugin | a host — the notebook the editor opens on (several cells, outputs already in them) in place of the plugin's one cell, plus the code run to prime the sandbox |
+| `AgentOpeningDocument` | document plugin | a host — the document the editor opens on, as a serialised Lexical state, in place of the plugin's own (a heading, a paragraph and a cell that has already run) |
+| `AgentPromptPanel` | input-prompt plugin | page-layout plugin — a panel hung on the composer, `above` or `below` it, *inside* its card so a floating prompt carries it |
+| `AgentChatTurn` | chat plugin (opens **and** fills it) | readers — the current turn as a live signal: the last user message, the reply as it streams, and its status; a new message replaces it. The page layout's turn panel reads it |
+| `AgentCommand` | — | every plugin; each command is a slash command, a palette entry, and (optionally) a keystroke |
+| `AgentGate` | chat plugin | agents plugin — whether there is anything to talk to, and why not |
+| `AgentNotebookToolbar` / `AgentDocumentToolbar` items | toolbar plugins | the chat contributes its agent actions onto the editors' toolbars |
+| Slots (`AgentSlots.header`, `chatHeader`, `promptAction`, `inpromptMenu`, `footer`, `status`, `sidebar`, `leftPanel`, `rightPanel`, `viewOverlay`, `root`) | shell | anything with chrome to add — the floating prompt uses `root`, the + uses `promptAction`, a host's presentation of the application uses `leftPanel` ([closed until opened](./app-renderer#the-left-panel-what-a-host-says-about-it)), the agent's UI placed `right` uses `rightPanel` ([the side panels](./app-renderer#beside-its-conversation-the-side-panels)), its notices `viewOverlay` |
+| `AgentApplication` | `AppRenderer` | a host's plugins — the Appspec of the application the workspace draws |
 
 The segmented editor control shows **nothing at all** until a plugin
 contributes an editor: an empty workspace is an empty control, not a fake one.
 
 #### The page layout
 
-`loopPlugins({ pageLayout: true })` mounts `LoopPageLayoutPlugin`, which fills
-`LoopChatLayout`: the notebook or the document sits on a centred sheet over a
+`agentPlugins({ pageLayout: true })` mounts `AgentPageLayoutPlugin`, which fills
+`AgentChatLayout`: the notebook or the document sits on a centred sheet over a
 quiet canvas, like a document application; the composer stands at the *top*
 of the page — docked in a band at the sheet's width by default, or as a
 draggable card over the canvas with `pageLayoutPrompt: 'floating'` — with the
@@ -112,13 +112,13 @@ panel is closed, so the agent's tools keep running. `NotebookPageAgent` and
 The layout itself lives in primer-addons — `PageLayout`, its panel signals
 and its header toggle, in `@datalayer/primer-addons/lib/reactor` — where any
 Reactor host can mount it, on its own or as `PageLayoutPlugin` over slots
-(`page`, `page-band`, `page-panel`, `page-chips`). The Loop's plugin is the
+(`page`, `page-band`, `page-panel`, `page-chips`). The Agent's plugin is the
 adapter: it hands the chat view's parts to that layout — the editors as the
 page, the transcript as the panel, the composer as the band — and keeps the
 turn panel, which renders the reply the way the transcript does.
 
-The **turn panel** hangs the current turn on the composer (`LoopPromptPanel`,
-fed by `LoopChatTurn`): the message just sent, the reply as it streams, and —
+The **turn panel** hangs the current turn on the composer (`AgentPromptPanel`,
+fed by `AgentChatTurn`): the message just sent, the reply as it streams, and —
 while a tool runs — what the agent is doing in the page ("Analyst is adding a
 cell…", also shown at the top of the sheet). `pageLayoutTurnPanel` picks the
 side (`below` by default), `pageLayoutTurnPanelFooter` what goes under the
@@ -140,57 +140,57 @@ would change a notebook or a document nobody is looking at.
 
 The shell plugin is itself a thin wrapper over the generic
 `@datalayer/reactor-shell` plugin from the reactor repository: the choice
-store, the selector and the cycle command live there, and the loop supplies
-what makes them the loop's — the editor point, the gating against the live
+store, the selector and the cycle command live there, and the Agent supplies
+what makes them the Agent's — the editor point, the gating against the live
 workspace, and an announcer wired to the chat's surface-request channel.
 
 ### The plugin graph
 
 ```
-LoopWorkspace (shell component — renders the view host, slots, header)
+AgentWorkspace (shell component — renders the view host, slots, header)
 │
-├── @datalayer/loop-plugin-shell            owns: LoopViewType, LoopEditorView
+├── @datalayer/agent-plugin-shell            owns: AgentViewType, AgentEditorView
 │     │                                     segmented editor control, /editor ⌥⌘E
 │     └──wraps──▶ @datalayer/reactor-shell  the generic view point + selector + choice store
 │
-├── @datalayer/loop-plugin-chat             ──extends shell──▶ view 'chat' → LoopViewType
-│     owns: LoopFrontendTool, LoopAgentGate, LoopChatComposer, LoopChatHeader
-│     renders the chosen LoopEditorView beside the transcript
+├── @datalayer/agent-plugin-chat             ──extends shell──▶ view 'chat' → AgentViewType
+│     owns: AgentFrontendTool, AgentGate, AgentChatComposer, AgentChatHeader
+│     renders the chosen AgentEditorView beside the transcript
 │
-├── @datalayer/loop-plugin-input-prompt     ──extends chat──▶ composer → LoopChatComposer
+├── @datalayer/agent-plugin-input-prompt     ──extends chat──▶ composer → AgentChatComposer
 │     the standard InputPrompt, rendered from the chat's assembled props
 │
-├── @datalayer/loop-plugin-chat-header      ──extends chat──▶ title bar → LoopChatHeader
+├── @datalayer/agent-plugin-chat-header      ──extends chat──▶ title bar → AgentChatHeader
 │     the standard ChatBaseHeader, same arrangement
 │
-├── @datalayer/loop-plugin-chat-view        ──depends on──▶ loop-plugin-input-prompt
-├── @datalayer/loop-plugin-notebook-view    ──depends on──▶ loop-plugin-input-prompt
-├── @datalayer/loop-plugin-document-view    ──depends on──▶ loop-plugin-input-prompt
+├── @datalayer/agent-plugin-chat-view        ──depends on──▶ agent-plugin-input-prompt
+├── @datalayer/agent-plugin-notebook-view    ──depends on──▶ agent-plugin-input-prompt
+├── @datalayer/agent-plugin-document-view    ──depends on──▶ agent-plugin-input-prompt
 │     one footer icon each, switching the workspace to its view; an editor's
 │     icon withdraws while its editor is not contributed
 │
-├── @datalayer/loop-plugin-agent-<capacity> ──extends agents──▶ LoopAgentBlueprint
+├── @datalayer/agent-plugin-agent-<capacity> ──extends agents──▶ AgentBlueprint
 │     hooks, codemode, … one folder per capacity, cast from
 │     defineAgentCapacityPlugin: which agent answers, and its openers
 │
-├── @datalayer/loop-plugin-notebook         ──depends on──▶ loop-plugin-agents
-│     ├─ extends shell ▶ editor 'notebook' → LoopEditorView
-│     └─ extends chat  ▶ cell tools        → LoopFrontendTool
+├── @datalayer/agent-plugin-notebook         ──depends on──▶ agent-plugin-agents
+│     ├─ extends shell ▶ editor 'notebook' → AgentEditorView
+│     └─ extends chat  ▶ cell tools        → AgentFrontendTool
 │
-├── @datalayer/loop-plugin-document         ──depends on──▶ loop-plugin-agents
-│     ├─ extends shell ▶ editor 'document' → LoopEditorView
-│     └─ extends chat  ▶ lexical tools     → LoopFrontendTool   (contributed lazily)
+├── @datalayer/agent-plugin-document         ──depends on──▶ agent-plugin-agents
+│     ├─ extends shell ▶ editor 'document' → AgentEditorView
+│     └─ extends chat  ▶ lexical tools     → AgentFrontendTool   (contributed lazily)
 │
-├── @datalayer/loop-plugin-agents           sandbox targets, answers LoopAgentGate
-├── @datalayer/loop-plugin-prompt           extends chat ▶ footer + (/prompt ⌥⌘P, /new ⌥⌘R)
-├── @datalayer/loop-plugin-commands         ──depends on──▶ reactor-commands, @datalayer/primer-theme
+├── @datalayer/agent-plugin-agents           sandbox targets, answers AgentGate
+├── @datalayer/agent-plugin-prompt           extends chat ▶ footer + (/prompt ⌥⌘P, /new ⌥⌘R)
+├── @datalayer/agent-plugin-commands         ──depends on──▶ reactor-commands, @datalayer/primer-theme
 ├── @datalayer/primer-theme                 portal root + color-mode toggle (⌥⌘T)
-├── @datalayer/loop-plugin-a2ui             view 'a2ui' (server-rendered surfaces)
-├── @datalayer/loop-plugin-agentspecs       agent picker, /agents ⌥⌘A
-├── @datalayer/loop-plugin-models           /models ⌥⌘M
-├── (@datalayer/loop-plugin-graph           the plugin graph as a view, /graph ⌥⌘G — not in the preset: a host adds `GraphViewPlugin` from `./plugins/graph`)
-├── @datalayer/loop-plugin-plugins-panel    the sidebar of on/off switches
-└── @datalayer/loop-plugin-window-frame     browser-window chrome, full-screen icon
+├── @datalayer/agent-plugin-a2ui             view 'a2ui' (server-rendered surfaces)
+├── @datalayer/agent-plugin-agentspecs       agent picker, /agents ⌥⌘A
+├── @datalayer/agent-plugin-models           /models ⌥⌘M
+├── (@datalayer/agent-plugin-graph           the plugin graph as a view, /graph ⌥⌘G — not in the preset: a host adds `GraphViewPlugin` from `./plugins/graph`)
+├── @datalayer/agent-plugin-plugins-panel    the sidebar of on/off switches
+└── @datalayer/agent-plugin-window-frame     browser-window chrome, full-screen icon
 ```
 
 `──depends on──▶` is a hard reactor dependency: it auto-mounts and cascades
@@ -202,7 +202,7 @@ chat off must leave the notebook standing.
 ### Fail-loud conventions
 
 Controls that look wired but quietly do nothing are the workspace's worst
-failure mode, so Loop's cross-plugin channels all report whether anyone was
+failure mode, so Agent's cross-plugin channels all report whether anyone was
 listening:
 
 - `workspace.submit()` returns whether anything handled the message, with a
@@ -215,7 +215,7 @@ listening:
 
 ### Commands, everywhere at once
 
-Every `LoopCommand` contribution is at once a slash command (`/notebook`), a
+Every `AgentCommand` contribution is at once a slash command (`/notebook`), a
 palette entry (Ctrl-K / ⌘K), and — when it declares a `keybinding` — a live
 keystroke. Bindings are written once, platform-agnostically (`Mod` is ⌘ on a
 Mac, Ctrl elsewhere) and displayed per-OS in the palette. The palette binds
@@ -241,19 +241,19 @@ handlers and the browser's defaults.
 
 The composer arrives as a plugin: the chat *assembles* everything it needs —
 the draft, the send handler, the menus' data, the placement — and offers it
-through `LoopChatComposer`; `@datalayer/loop-plugin-input-prompt` is the
+through `AgentChatComposer`; `@datalayer/agent-plugin-input-prompt` is the
 standard taker, rendering the full `InputPrompt` with the lexical editor
 (`/` opens the command menu, `@` mentions agents) and the session-controls
 footer (tools, skills, model). Untick the plugin and the box goes; contribute
 your own component to the point and the workspace types through yours, with
 none of the wiring re-derived. The title bar works the same way through
-`LoopChatHeader` and `@datalayer/loop-plugin-chat-header`.
+`AgentChatHeader` and `@datalayer/agent-plugin-chat-header`.
 
 `promptPlacement` decides where the composer stands:
 `bottom` spans the workspace, `bottom-chat` sits under the transcript, and
 `floating` wraps the same composer in a draggable card over the canvas
-(`loopPlugins({ floatingPrompt: true })`). The footer bar is extensible
-through `LoopSlots.promptAction` — the prompt plugin's **+** (start the
+(`agentPlugins({ floatingPrompt: true })`). The footer bar is extensible
+through `AgentSlots.promptAction` — the prompt plugin's **+** (start the
 conversation over) arrives that way.
 
 ### Views, one click from the composer
@@ -276,9 +276,9 @@ Every capability demonstration — hooks, codemode, guardrails, memory — is,
 from the workspace's side, the same two statements: *which agent* answers
 (an agentspec and the create-payload its server needs) and *what it is
 worth asking* (the openers on the empty chat). `defineAgentCapacityPlugin`
-turns those statements into a plugin: a `LoopAgentBlueprint` contribution
+turns those statements into a plugin: a `AgentBlueprint` contribution
 the agents plugin reads when its Local target creates the agent, and a
-`LoopChatSuggestion` contribution the chat shows ahead of the spec's own.
+`AgentChatSuggestion` contribution the chat shows ahead of the spec's own.
 
 ```tsx
 export const AgentHooksPlugin = defineAgentCapacityPlugin({
@@ -289,7 +289,7 @@ export const AgentHooksPlugin = defineAgentCapacityPlugin({
   suggestions: [{ text: 'Explain the hook lifecycle' }],
 });
 
-<LoopEmbed serverUrl={serverUrl} target="local" agentId={agentName}
+<AgentEmbed serverUrl={serverUrl} target="local" agentId={agentName}
   defaultEditor="none" plugins={[AgentHooksPlugin]} />;
 ```
 
@@ -346,7 +346,7 @@ that was inserted, updated or run appears under its tool row as a captioned
 surface: the change first (the cell source, read-only), then its outputs,
 bound to the live model's own output area so a run that prints as it goes
 **streams into the transcript**. `executeCodeInNotebook` shows only its outputs. This
-is chat machinery (`ChatBase`'s `notebookToolSurfacesId` prop), not Loop
+is chat machinery (`ChatBase`'s `notebookToolSurfacesId` prop), not Agent
 magic — any `ChatBase` host can turn it on.
 
 ### Sandbox targets
@@ -373,7 +373,7 @@ there and does not know the difference.
 
 ## Preset options
 
-`loopPlugins(options)` — every option is an off-by-default demonstration
+`agentPlugins(options)` — every option is an off-by-default demonstration
 switch except where noted:
 
 | Option | Default | What it does |
@@ -390,19 +390,19 @@ switch except where noted:
 | `showAgentVariants` | `false` | The browser/local/cloud control |
 | `teamId`, `localAgent`, `localAgentSpec` | — | Which agent answers, and what a Local target creates |
 | `commandPalette` | `false` | Ctrl-K over the contributed commands |
-| `pluginsPanel`, `windowFrame` | `false` | The demonstration chrome. The plugin graph is no `loopPlugins` option: a host that shows it adds `GraphViewPlugin` (`./plugins/graph`) beside the preset, as the Loop Workspace example does. |
+| `pluginsPanel`, `windowFrame` | `false` | The demonstration chrome. The plugin graph is no `agentPlugins` option: a host that shows it adds `GraphViewPlugin` (`./plugins/graph`) beside the preset, as the Agent Workspace example does. |
 
 ## Try it
 
-The examples app ships two Loop demonstrations, both running on the browser
+The examples app ships two Agent demonstrations, both running on the browser
 sandbox with no account:
 
-- **Loop Workspace** — everything on: the sidebar of plugin switches, the
+- **Agent Workspace** — everything on: the sidebar of plugin switches, the
   graph (added by the example itself, `GraphViewPlugin`), the
   browser/local/cloud control. The proof that the extension model
   is real: untick the chat and the prompt goes with it; untick the notebook
   and it leaves the editor control.
-- **Loop Shell** — the opposite pole: a blank canvas, a floating draggable
+- **Agent Shell** — the opposite pole: a blank canvas, a floating draggable
   prompt, the editor selector on `Chat` (the bare conversation), and the
   `jupyter` team the landing page runs — Analyst, Reviewer, Writer,
   Decks, Tutor and Compactor — with the Analyst at the front door, `@` in the
@@ -411,10 +411,12 @@ sandbox with no account:
 
 ## Applications
 
-An application runs in a Loop workspace through `AppRenderer`: its agent, its
+An application runs in an Agent workspace through `AppRenderer`: its agent, its
 starters, its layout, and its [presence](../chat/presence.mdx) — its face, name,
 welcome and line of status — in the chat. An application can also be written
-in Python: see [Applications in Python](./python-applications.mdx).
+in Python: see [Applications in Python](./python-applications.mdx). In a React
+page of your own, [`AIApplication`](./ai-application.mdx) draws an application
+where it runs, with the plugins your page adds.
 
 On the `browser` target the agent is told what a runtime tells it: its agent's
 system prompt — a Cog's from the Cogs catalogue, its Frames already in it —
@@ -446,7 +448,7 @@ caller's token. Nothing falls back to the catalogue's: when they cannot be
 read — nobody signed in, IAM unreachable or refusing — the agent is not made,
 and the answer (422) says why; so is an application naming a context of an
 organization's own that its organization does not have, or one with no
-organization said. `loop apps validate --organization <uid>` checks an
+organization said. `agent apps validate --organization <uid>` checks an
 `org-…` context against the organization's; without it, the application is
 *Not ready*. The instant checks in a page do the same with
 `checkApp(app, [], { pluginsOff, organizationFrames })`.
@@ -468,7 +470,7 @@ it sets), not on a layout of its own:
 
 A decision has no page of its own here, so its `page` or `split` layout keeps
 the notebook and the document on the sheet or beside the conversation. A host
-still wins over the application: any `LoopEmbed` prop it passes —
+still wins over the application: any `AgentEmbed` prop it passes —
 `pageLayoutArrangement`, `editors` — replaces what the layout implies.
 `frame` draws the application in the window-frame plugin's window, titled with
 its face and name. The embed's inline mode (`AppEmbed`, `<datalayer-app>`) is
@@ -476,18 +478,18 @@ its face and name. The embed's inline mode (`AppEmbed`, `<datalayer-app>`) is
 
 **The rail.** With its sidebar (`sidebar`, what a builder reads beside its
 page: its rules and approvals, its activity, its computer), an application's
-workspace draws a rail (`LoopEmbed`'s and `LoopWorkspace`'s `sidebarRail`):
+workspace draws a rail (`AgentEmbed`'s and `AgentWorkspace`'s `sidebarRail`):
 a narrow column of line icons on the trailing edge, one per panel, the chosen
 one on a grey rounded square, and that one panel beside it. A click shows a
 panel, a click on the chosen one closes the column; every panel stays mounted
 while another is shown. A sidebar plugin names itself on the rail by giving
-its component a `rail: { label, icon }` (`LoopSidebarComponent`); one that
+its component a `rail: { label, icon }` (`AgentSidebarComponent`); one that
 does not is shown by its id under a generic icon.
 
 **A pane opening.** The split's page, the rail's panel and the page layout's
 conversation panel open at the theme's pace — `--theme-motion-pane` and
 `--theme-motion-easing` (`paneOpening`; primer-addons' `panelOpening`) — which
-only the `loop` theme sets to a duration: nothing moves in another theme, nor
+only the `agent` theme sets to a duration: nothing moves in another theme, nor
 when the person asked for reduced motion.
 
 Tested in `app-layout.test.tsx` (the options per layout, the split's
@@ -498,7 +500,7 @@ contribution, the hairline by key and pointer, the embed's inline mode) and
 
 A chat, a widget or a worker runs as its conversation. When it has a page —
 a `page` or `split` layout — `AppRenderer` mounts the `app-page` plugin (`defineAppPagePlugin`), which
-contributes the page as the editor beside the chat (`LoopEditorView`), in place
+contributes the page as the editor beside the chat (`AgentEditorView`), in place
 of the notebook and the document. It is drawn by the workspace's own A2UI
 renderer (`InlineSurface`, the one that draws surfaces in the transcript); an
 application with a page layout and no surface composed gets the default page
@@ -533,7 +535,7 @@ value written under `/inputs`, one `Label: value` per line.
 `/messages` is the whole conversation, in order, as the `Chat` component draws
 it: `{role: 'user' | 'assistant', text}`, and `{role: 'tool', name, args,
 result}` for a tool called — empty again when the chat starts over. The chat
-plugin keeps it beside the turn (`LoopChatTurn`'s `conversation`), from every
+plugin keeps it beside the turn (`AgentChatTurn`'s `conversation`), from every
 change of the chat's items, the reply as it streams included. A `Chat` block
 bound to it (`messages: {path: /messages}`, `message: {path: /draft}`, its
 action `send`) is the application's own conversation: what is written in it is
@@ -547,7 +549,7 @@ File upload's own action, runs at once on the files of its context (else those
 at `/files`): each is uploaded to the application's runtime first, and its ref
 goes to the application's session with the chat's run (no
 bytes in the run)
-(`forwardedProps.loop`, see [Session API](./session-api)), which puts each in
+(`forwardedProps.agent`, see [Session API](./session-api)), which puts each in
 the sandbox of an application with a shell, whatever its type and size, gives
 a text file in the message to one without, and refuses anything else in a
 sentence. What is not a list of files, or a file over `MAX_FILE_BYTES`
@@ -559,7 +561,7 @@ sentence. What is not a list of files, or a file over `MAX_FILE_BYTES`
 ```
 
 A setting reaches a written application in the words of its message, and
-every application's session as a value (`forwardedProps.loop.settings`). A button the kind does not handle, or a send with nothing
+every application's session as a value (`forwardedProps.agent.settings`). A button the kind does not handle, or a send with nothing
 written, is refused in a sentence on the page; a tree the A2UI catalog refuses
 is said where it would have been drawn.
 
@@ -616,7 +618,7 @@ declares Guards and Gates; this runtime executes them. Three moments:
 - **On the answer** (`post_run`): a credential in it has the model answer
   again without it; what streams is withheld as it streams.
 
-A Guard judged by a Cog or a person is not run: `loop apps validate` and the
+A Guard judged by a Cog or a person is not run: `agent apps validate` and the
 Studio's instant checks say so (*Needs attention*), and `AppChecks.unexecuted`
 is logged at each run's start — never passed in silence.
 
@@ -708,7 +710,7 @@ each skill its `optional_env_vars`, its `any_of_env_vars`, which are set
 **An application's runtime is launched with its Appspec.** Whoever launches
 one for an application sends its Appspec with the launch —
 `RuntimesClient.create(app_spec=…)` refuses `app_uid` without it, and so does
-the Operator (`422`); `loop apps run --cloud`, an always-on deployment's
+the Operator (`422`); `agent apps run --cloud`, an always-on deployment's
 runtime and a scheduled or event session all send it. The Operator hands it
 to the companion's start hooks, the companion declares it with the spec and
 hands it on (`launch_app_spec`) to `configure-from-spec` or
@@ -728,15 +730,15 @@ before asking anything. A preview of an application not saved yet sends its
 Appspec alone. An application's runtime is always its own: the hook never
 looks for a running one to reuse for it.
 
-**A runtime you attach to** (`loop apps run … --cloud -r <runtime>`) was not
+**A runtime you attach to** (`agent apps run … --cloud -r <runtime>`) was not
 launched for the application, and secrets reach a runtime only when it is
 launched, from its companion. The application is still configured there: if
 the runtime holds every secret its connections need, it runs. If not, the
-configure refuses in the sentence above, and `loop` adds *runtime-9 was not
+configure refuses in the sentence above, and `agent` adds *runtime-9 was not
 launched for Web research: a runtime is given an application's secrets when
 it is launched for it. Run it without --runtime to launch one for it.* Without
-`-r`, `loop apps run --cloud` does not offer you a running runtime first, as
-`loop --cloud` does for an agent: it launches one for the application.
+`-r`, `agent apps run --cloud` does not offer you a running runtime first, as
+`agent --cloud` does for an agent: it launches one for the application.
 
 Before it gives anything, the pod companion asks
 `POST /api/v1/agents/declared-secrets` (the spec's names, answered with names
@@ -748,7 +750,7 @@ declares is unset, and `mcp-servers/start` keeps to what its running agents
 declare. **Fail fast:** a spec whose server or skill needs a secret that is
 not there is refused with `422`, a sentence per secret — *Crop monitoring is
 not set up: the MCP server earthdata needs DATALAYER_API_KEY, which this
-runtime was not given…* — and `loop apps run --cloud` says that sentence and
+runtime was not given…* — and `agent apps run --cloud` says that sentence and
 stops the runtime instead of waiting; nothing falls back to all the secrets.
 A runtime with no agentspec and no application is a person's notebook: its
 kernel keeps the account's secrets. A configure that takes a name away also
@@ -762,7 +764,7 @@ them. A secret printed as it is, is withheld; one printed changed — reversed,
 encoded — is not, since no value matches it. An application's answer is
 checked for credentials by its built-in check too.
 
-## Extending Loop
+## Extending Agent
 
 A host plugin is ordinary reactor code. One that adds an editor, its tools,
 and a command — the contribution points are imported from `lib/apps/core`,
@@ -771,26 +773,26 @@ which `lib/apps` does not re-export:
 ```tsx
 import { contribution, definePlugin } from '@datalayer/reactor';
 import {
-  LoopCommand,
-  LoopEditorView,
-  LoopFrontendTool,
+  AgentCommand,
+  AgentEditorView,
+  AgentFrontendTool,
   requestSurface,
 } from '@datalayer/agent-runtimes/lib/apps/core';
 
 export const MyEditorPlugin = definePlugin({
-  name: '@me/loop-plugin-spreadsheet',
+  name: '@me/agent-plugin-spreadsheet',
   contributes: [
-    contribution(LoopEditorView, {
+    contribution(AgentEditorView, {
       surfaceId: 'spreadsheet',
       title: 'Spreadsheet',
       order: 30,
       load: () => import('./SpreadsheetView'),
     }, { id: 'spreadsheet' }),
-    contribution(LoopFrontendTool, {
+    contribution(AgentFrontendTool, {
       id: 'spreadsheet-tools',
       tools: workspace => createSpreadsheetTools(workspace.surfaceId),
     }, { id: 'spreadsheet-tools' }),
-    contribution(LoopCommand, {
+    contribution(AgentCommand, {
       name: 'spreadsheet',
       description: 'Open the spreadsheet beside the chat',
       group: 'Open',
@@ -806,6 +808,6 @@ export const MyEditorPlugin = definePlugin({
 });
 ```
 
-Mount it beside the preset: `LoopEmbed` takes `plugins={[MyEditorPlugin]}`,
-and `buildLoopReactor([...loopPlugins(options), MyEditorPlugin])` does the
+Mount it beside the preset: `AgentEmbed` takes `plugins={[MyEditorPlugin]}`,
+and `buildAgentReactor([...agentPlugins(options), MyEditorPlugin])` does the
 same without the embed.

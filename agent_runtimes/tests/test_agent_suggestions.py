@@ -106,7 +106,7 @@ def test_listed_under_prompt_with_the_flags_and_nothing_asked(
     runtime: FastAPI,  # noqa: F811
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Under ``loop --prompt`` the next line is the next prompt, not a choice."""
+    """Under ``agent --prompt`` the next line is the next prompt, not a choice."""
     _configure(runtime, agent_id=AGENT)
     tux = _tux(runtime, monkeypatch)
     tux.extra_suggestions = ["What is new?"]
@@ -174,5 +174,5 @@ def test_an_older_runtime_is_said_to_be_older(
 
     assert (
         "This runtime (agent-runtimes 1.3.32) does not say its agent's "
-        "suggestions: it is older than this loop" in _said(tux)
+        "suggestions: it is older than this agent" in _said(tux)
     )

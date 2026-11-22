@@ -354,7 +354,7 @@ describe('the conversation a run builds', () => {
     });
   });
 
-  it('waits on what the application asks, from RUN_FINISHED or loop.session', () => {
+  it('waits on what the application asks, from RUN_FINISHED or agent.session', () => {
     const asked = replay([
       { type: 'RUN_STARTED' },
       { type: 'TEXT_MESSAGE_START', messageId: 'q' },
@@ -385,7 +385,7 @@ describe('the conversation a run builds', () => {
     expect(asked.items.some(item => item.kind === 'end')).toBe(false);
     const reopened = reduceConversation(emptyConversation(), {
       type: 'CUSTOM',
-      name: 'loop.session',
+      name: 'agent.session',
       value: {
         uid: 's',
         state: 'waiting',

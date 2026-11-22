@@ -15,7 +15,7 @@
  * panel opens at the theme's pace.
  *
  * A panel names itself on the rail by the `rail` its plugin gives its
- * component (`LoopSidebarComponent`); without one it is shown by its id
+ * component (`AgentSidebarComponent`); without one it is shown by its id
  * under a generic icon. Every panel stays mounted while another is shown,
  * so a feed keeps its place and a live computer its connection.
  *
@@ -30,7 +30,7 @@ import type { ReactorSlotComponent } from '@datalayer/reactor/react';
 import { paneOpening } from './paneMotion';
 
 /** How a sidebar panel shows on the rail. */
-export type LoopSidebarRail = {
+export type AgentSidebarRail = {
   /** Its name, said to a screen reader and shown on hover. */
   label: string;
   /** A line icon (an octicon). */
@@ -38,8 +38,8 @@ export type LoopSidebarRail = {
 };
 
 /** A component of the sidebar slot, with how it shows on the rail. */
-export type LoopSidebarComponent = ReactorSlotComponent & {
-  rail?: LoopSidebarRail;
+export type AgentSidebarComponent = ReactorSlotComponent & {
+  rail?: AgentSidebarRail;
 };
 
 /** One entry of the rail. */
@@ -51,7 +51,7 @@ export type RailItem = {
 
 /** The rail's entries, in the slot's order. */
 export function railItemsOf(
-  components: ReadonlyArray<LoopSidebarComponent>,
+  components: ReadonlyArray<AgentSidebarComponent>,
 ): RailItem[] {
   return components.map(component => ({
     id: component.id,
@@ -73,7 +73,7 @@ export const RAIL_WIDTH = 48;
 
 export type SidebarRailProps = {
   /** The sidebar's components, as the slot gives them. */
-  components: ReadonlyArray<LoopSidebarComponent>;
+  components: ReadonlyArray<AgentSidebarComponent>;
   /** What each panel is rendered with. */
   props: Record<string, unknown>;
   /** The panel's width when open. */
@@ -93,13 +93,13 @@ export function SidebarRail({
   return (
     <Box
       as="aside"
-      data-loop-rail-sidebar=""
+      data-agent-rail-sidebar=""
       flex="0 0 auto"
       display="flex"
       minHeight={0}
     >
       <Box
-        data-loop-rail-panel={open ?? undefined}
+        data-agent-rail-panel={open ?? undefined}
         display={open ? 'block' : 'none'}
         width={`${width}px`}
         minWidth={0}
@@ -115,7 +115,7 @@ export function SidebarRail({
           return (
             <Box
               key={component.id}
-              id={`loop-rail-panel-${component.id}`}
+              id={`agent-rail-panel-${component.id}`}
               role="region"
               aria-label={railItemsOf([component])[0].label}
               hidden={!shown}
@@ -147,11 +147,11 @@ export function SidebarRail({
               key={item.id}
               as="button"
               type="button"
-              data-loop-rail-item={item.id}
+              data-agent-rail-item={item.id}
               aria-label={item.label}
               title={item.label}
               aria-pressed={active}
-              aria-controls={`loop-rail-panel-${item.id}`}
+              aria-controls={`agent-rail-panel-${item.id}`}
               onClick={() => setChosen(railChoiceAfter(open, item.id))}
               width={32}
               height={32}

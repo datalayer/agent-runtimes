@@ -63,7 +63,7 @@ def service(asked: list[httpx.Request], status: int = 200, said: Any = None):
 @pytest.mark.asyncio
 async def test_a_user_message_s_audio_is_heard_and_becomes_its_transcript_marked_spoken():
     asked: list[httpx.Request] = []
-    body = run([{"type": "text", "text": "Listen:"}, audio()], {"loop": {"a": 1}})
+    body = run([{"type": "text", "text": "Listen:"}, audio()], {"agent": {"a": 1}})
     heard_body, spoken = await hear_agui_messages(
         body,
         token="person-token",
@@ -80,7 +80,7 @@ async def test_a_user_message_s_audio_is_heard_and_becomes_its_transcript_marked
         {"type": "text", "text": SAID},
     ]
     assert heard_body["forwardedProps"] == {
-        "loop": {"a": 1},
+        "agent": {"a": 1},
         "voice": {
             "input": "voice",
             "language": "en",

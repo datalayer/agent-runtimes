@@ -4,9 +4,9 @@
  */
 
 /**
- * `@datalayer/loop-plugin-agentspecs` — which agentspec the session runs.
+ * `@datalayer/agent-plugin-agentspecs` — which agentspec the session runs.
  *
- * The other half of the question `@datalayer/loop-plugin-agents` answers: that
+ * The other half of the question `@datalayer/agent-plugin-agents` answers: that
  * one says *where* the agent runs, this one says *what* it is.
  *
  * @module apps/plugins/agents
@@ -14,11 +14,11 @@
 
 import { contribution, definePlugin } from '@datalayer/reactor';
 import type { ReactorSlotComponent } from '@datalayer/reactor/react';
-import { LoopCommand, LoopSlots } from '../../core';
+import { AgentCommand, AgentSlots } from '../../core';
 import { AgentspecPicker } from './AgentspecPicker';
 import { uiManifestOf } from '../../uiManifest';
 
-export const AGENTSPECS_PLUGIN_NAME = '@datalayer/loop-plugin-agentspecs';
+export const AGENTSPECS_PLUGIN_NAME = '@datalayer/agent-plugin-agentspecs';
 
 export const AgentspecsPlugin = definePlugin<
   Record<string, never>,
@@ -31,7 +31,7 @@ export const AgentspecsPlugin = definePlugin<
     return {
       components: [
         {
-          slot: LoopSlots.header,
+          slot: AgentSlots.header,
           id: 'agent-picker',
           Component: AgentspecPicker as never,
         },
@@ -40,7 +40,7 @@ export const AgentspecsPlugin = definePlugin<
   },
   contributes: [
     contribution(
-      LoopCommand,
+      AgentCommand,
       {
         name: 'agents',
         aliases: ['agent'],
@@ -56,7 +56,7 @@ export const AgentspecsPlugin = definePlugin<
             };
           }
           const response = await fetch(
-            `${workspace.serverUrl}/api/v1/loop/sessions/${encodeURIComponent(
+            `${workspace.serverUrl}/api/v1/agent/sessions/${encodeURIComponent(
               workspace.conversationId || workspace.agentId || 'session',
             )}/agent`,
             {

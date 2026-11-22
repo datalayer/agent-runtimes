@@ -6,7 +6,7 @@
 Each action of an application's code is declared with the pydantic model of
 its payload (``@app.action(name, payload=Model)``), its JSON Schema in the
 Appspec. The session offers what its code declares on the application's own
-display (``app``), each with a token it minted — ``loop.session`` says them —
+display (``app``), each with a token it minted — ``agent.session`` says them —
 and a press is checked before anything runs: offered (403), an action its
 code declares (422), with what it takes (422, each field and why). The
 handler is given the model; nothing pressed is said to the model. A run
@@ -80,7 +80,7 @@ def test_the_session_offers_what_its_code_declares_and_runs_it_typed(
     insight = {"insight": "Setup held them back.", "quote": "It took a week."}
 
     events = events_of(local.post(url, json=_press(offered["save"], insight)))
-    assert types_of(events)[:2] == ["CUSTOM:loop.session", "RUN_STARTED"]
+    assert types_of(events)[:2] == ["CUSTOM:agent.session", "RUN_STARTED"]
     assert types_of(events)[-1] == "RUN_FINISHED"
     [kept] = [
         entry["payload"]
@@ -134,7 +134,7 @@ def test_a_run_carries_no_action_and_an_application_without_code_offers_none(
             "runId": "run-1",
             "messages": [{"id": "m1", "role": "user", "content": "Chosen."}],
             "forwardedProps": {
-                "loop": {"action": {"name": "select", "payload": {"secret": "s"}}}
+                "agent": {"action": {"name": "select", "payload": {"secret": "s"}}}
             },
         },
     )
@@ -180,7 +180,7 @@ def test_what_the_session_offers_is_pressed_up_the_ui_socket(
 
     async def run() -> None:
         async for chunk in live.run_agui(
-            {"runId": "run-f", "messages": []}, loop={"press": "f-1"}, bearer=""
+            {"runId": "run-f", "messages": []}, agent_props={"press": "f-1"}, bearer=""
         ):
             chunks.append(chunk)
 

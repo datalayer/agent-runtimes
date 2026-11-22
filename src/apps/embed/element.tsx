@@ -30,10 +30,10 @@
  *    element.
  *
  * Every other application is drawn here, in the element's shadow root, by
- * `Application` — the same React component a React host mounts in its own
+ * `AIApplication` — the same React component a React host mounts in its own
  * page (the user, 16 November 2026), here in its own theme — inline, or
  * floating over the page as a bubble, a panel or the assistant. A name with
- * no token is read as `Application` reads one (`resolveApplication`). The bundle's stylesheet is linked inside that root, the
+ * no token is read as `AIApplication` reads one (`resolveAIApplication`). The bundle's stylesheet is linked inside that root, the
  * styled-components rules are written into it, and Primer's overlays are
  * drawn in it, so nothing of the application's styles reaches the page and
  * nothing of the page's reaches the application.
@@ -75,12 +75,12 @@ import type { DatalayerVisitors } from '../apps/visitorToken';
 import { readAppspecYaml } from '../apps/yaml';
 import { embedAssistantCharacter } from './AppEmbed';
 import {
-  Application,
-  resolveApplication,
+  AIApplication,
+  resolveAIApplication,
   visitorApiOf,
   visitorInferenceOf,
-  type ApplicationRunsOn,
-} from '../Application';
+  type AIApplicationRunsOn,
+} from '../AIApplication';
 import type { AppEmbedHost, HostFunction, WindowPost } from './hostBridge';
 import { WINDOW_NOT_YET } from './embedSession';
 import { MISSING_SENTENCE } from './visitorApp';
@@ -515,8 +515,8 @@ export function defineDatalayerAppElement(
         // A public application, as a visitor without an account:
         // an example kept warm or an address open to visitors, run on the
         // visitors' runtime; a decision framed; a refusal said.
-        // Read as `Application` reads a name (one way, `resolveApplication`).
-        return resolveApplication({
+        // Read as `AIApplication` reads a name (one way, `resolveAIApplication`).
+        return resolveAIApplication({
           app,
           runsOn: {
             kind: 'visitor',
@@ -711,7 +711,7 @@ export function defineDatalayerAppElement(
         }
       }
       this.setAttribute('data-embed-mode', look.mode);
-      // The theme's own stylesheet: `loop`'s, or the one the application
+      // The theme's own stylesheet: `agent`'s, or the one the application
       // names.
       const shadow = this.skeleton(
         getThemeConfig(look.variant).themeStyles.css,
@@ -726,7 +726,7 @@ export function defineDatalayerAppElement(
       // says not; on the host's server, the visit's embed
       // token going with the conversation; else on Datalayer, with
       // the signed-in person's credentials.
-      const runsOn: ApplicationRunsOn = source.visitors
+      const runsOn: AIApplicationRunsOn = source.visitors
         ? {
             kind: 'visitor',
             visitors: source.visitors,
@@ -741,11 +741,11 @@ export function defineDatalayerAppElement(
               ...(this.token ? { embedToken: this.token } : {}),
             }
           : { kind: 'datalayer' };
-      // One implementation: the element is `Application` in its shadow root,
+      // One implementation: the element is `AIApplication` in its shadow root,
       // in its own theme, its overlays drawn there too.
       this.root.render(
         <StyleSheetManager target={shadow as unknown as HTMLElement}>
-          <Application
+          <AIApplication
             app={source.app}
             runsOn={runsOn}
             theme="own"

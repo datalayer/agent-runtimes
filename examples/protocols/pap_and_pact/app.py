@@ -15,7 +15,7 @@ Everything runs in one process with no network and no model: real keys,
 Session JWTs, personal-agent JWTs and signed receipts over in-process HTTP.
 
     python examples/protocols/pap_and_pact/app.py
-    loop apps run examples/protocols/pap_and_pact/app.py
+    agent apps run examples/protocols/pap_and_pact/app.py
 """
 
 from __future__ import annotations

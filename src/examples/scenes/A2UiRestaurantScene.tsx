@@ -5,12 +5,12 @@
 
 /*
  * Scene extracted from the A2UiRestaurantExample page: the same canned A2UI
- * messages, rendered as a Loop workspace view. The page itself now mounts
+ * messages, rendered as an Agent workspace view. The page itself now mounts
  * a reactor application with this scene as a plugin.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Box, getCardGradient } from '@datalayer/primer-addons';
+import { Box, Card, getCardGradient } from '@datalayer/primer-addons';
 import { Text, Spinner, TextInput, Button } from '@primer/react';
 import {
   A2UI_RENDER_SCOPE_SX,
@@ -83,7 +83,7 @@ function RestaurantSearch({
   const gradient = getCardGradient(theme, colorMode);
 
   const handleSubmit = useCallback(
-    (event: React.FormEvent<HTMLFormElement>) => {
+    (event: React.FormEvent<HTMLElement>) => {
       event.preventDefault();
       if (!inputValue.trim() || isLoading) {
         return;
@@ -103,17 +103,18 @@ function RestaurantSearch({
       maxWidth={640}
       mx="auto"
     >
-      <Box
+      <Card
+        shadow="none"
         width="100%"
         height={200}
-        borderRadius={2}
-        background={`linear-gradient(135deg, ${gradient.from} 0%, ${gradient.to} 100%)`}
-        display="flex"
         alignItems="center"
         justifyContent="center"
+        sx={{
+          background: `linear-gradient(135deg, ${gradient.from} 0%, ${gradient.to} 100%)`,
+        }}
       >
         <Text sx={{ fontSize: '4rem' }}>🍽️</Text>
-      </Box>
+      </Card>
 
       <Text
         as="h1"
@@ -125,21 +126,25 @@ function RestaurantSearch({
         A2UI renderer connected to a live agent backend.
       </Text>
 
-      <form onSubmit={handleSubmit} style={{ width: '100%' }}>
-        <Box display="flex" gap={2}>
-          <TextInput
-            value={inputValue}
-            onChange={e => setInputValue(e.target.value)}
-            placeholder="Search for restaurants..."
-            disabled={isLoading}
-            sx={{ flex: 1 }}
-            block
-          />
-          <Button type="submit" disabled={isLoading || !inputValue.trim()}>
-            {isLoading ? <Spinner size="small" /> : 'Search'}
-          </Button>
-        </Box>
-      </form>
+      <Box
+        as="form"
+        onSubmit={handleSubmit}
+        width="100%"
+        display="flex"
+        gap={2}
+      >
+        <TextInput
+          value={inputValue}
+          onChange={e => setInputValue(e.target.value)}
+          placeholder="Search for restaurants..."
+          disabled={isLoading}
+          sx={{ flex: 1 }}
+          block
+        />
+        <Button type="submit" disabled={isLoading || !inputValue.trim()}>
+          {isLoading ? <Spinner size="small" /> : 'Search'}
+        </Button>
+      </Box>
     </Box>
   );
 }
@@ -263,12 +268,7 @@ const A2UiRestaurantScene: React.FC = () => {
           display="flex"
           flexDirection="column"
         >
-          <Box
-            p={3}
-            borderBottom="1px solid"
-            borderColor="border.default"
-            backgroundColor="canvas.default"
-          >
+          <Card variant="subtle" shadow="none" rounded={0} p={3}>
             <Text as="h1" sx={{ fontSize: '1.25rem', fontWeight: 'bold' }}>
               🤖 A2UI Restaurant Example
             </Text>
@@ -276,7 +276,7 @@ const A2UiRestaurantScene: React.FC = () => {
               Uses MessageProcessor and A2uiSurface with native A2UI backend
               messages.
             </Text>
-          </Box>
+          </Card>
 
           <Box flex={1} p={3}>
             {!hasData && !isLoading && !error && (
@@ -300,9 +300,10 @@ const A2UiRestaurantScene: React.FC = () => {
             )}
 
             {error && !isLoading && (
-              <Box
-                display="flex"
-                flexDirection="column"
+              <Card
+                variant="danger"
+                border
+                shadow="none"
                 alignItems="center"
                 gap={3}
                 p={4}
@@ -311,13 +312,13 @@ const A2UiRestaurantScene: React.FC = () => {
                 <Button onClick={handleRetry} disabled={!lastQuery}>
                   Retry
                 </Button>
-              </Box>
+              </Card>
             )}
 
             {!isLoading && hasData && !error && (
               <Box
-                style={themeStyle}
                 sx={{
+                  ...themeStyle,
                   ...A2UI_RENDER_SCOPE_SX,
                   display: 'flex',
                   flexDirection: 'column',
@@ -332,31 +333,25 @@ const A2UiRestaurantScene: React.FC = () => {
                   ← New Search
                 </Button>
                 {surfaces.map(surface => (
-                  <Box
-                    key={surface.id}
-                    border="1px solid"
-                    borderColor="border.default"
-                    borderRadius={1}
-                    p={3}
-                  >
+                  <Card key={surface.id} border shadow="none" p={3}>
                     <A2uiSurfaceComposed surface={surface} />
-                  </Box>
+                  </Card>
                 ))}
               </Box>
             )}
           </Box>
 
-          <Box
+          <Card
+            variant="subtle"
+            shadow="none"
+            rounded={0}
             p={2}
-            borderTop="1px solid"
-            borderColor="border.default"
-            backgroundColor="canvas.default"
-            textAlign="center"
+            alignItems="center"
           >
             <Text sx={{ fontSize: '0.75rem', color: 'fg.muted' }}>
               Backend: {a2uiRestaurantEndpoint}
             </Text>
-          </Box>
+          </Card>
         </Box>
       </A2uiMarkdownProvider>
     </>

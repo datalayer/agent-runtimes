@@ -49,7 +49,7 @@ def test_the_catalogue_holds_the_four_scenes_with_their_faces() -> None:
     faces = [scene.emoji for scene in SCENE_CATALOGUE.values()]
     assert len(set(faces)) == len(faces) and "👀" not in faces
     for scene in SCENE_CATALOGUE.values():
-        assert isinstance(scene, SceneSpec) and scene.schema_ == "loop.scene/v1"
+        assert isinstance(scene, SceneSpec) and scene.schema_ == "agent.scene/v1"
         assert scene.name and scene.description and scene.icon
         assert scene.emoji not in {member.persona.face for member in scene.cast}
 

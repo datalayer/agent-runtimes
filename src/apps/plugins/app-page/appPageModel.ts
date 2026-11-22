@@ -16,7 +16,7 @@
  * answer stopped, the conversation started over. Nothing here is a server
  * API: what a button did besides its message — the block's action, the files
  * given, the settings — goes with the chat's own run to the application's
- * session (`forwardedProps.loop`), which puts a file where the
+ * session (`forwardedProps.agent`), which puts a file where the
  * application reads it; a setting also reaches a written application in the
  * words of its message.
  *
@@ -633,12 +633,12 @@ function formValuesOf(
 /**
  * What the page did besides its message, for the session API: the files
  * given with it, the settings it holds. Sent with the chat's own run (AG-UI's
- * `forwardedProps.loop`), so that what it answers streams in the
+ * `forwardedProps.agent`), so that what it answers streams in the
  * conversation. A block sends a message, never an action of its
  * own: an action of the application's code is pressed with the token its
  * session offered, up the ui socket.
  */
-export type AppPageLoop = {
+export type AppPageAgent = {
   files?: GivenFile[];
   settings?: Record<string, unknown>;
 };
@@ -655,7 +655,7 @@ export type AppPageOutcome =
       /** A message for the application, sent as the person's next turn. */
       send: string;
       /** What the page did besides, for the session it is sent in. */
-      loop: AppPageLoop;
+      agent: AppPageAgent;
       /** The inputs in words as sent, to tell a change next time. */
       inputs: string;
       /** Paths to empty once it is sent. */
@@ -693,7 +693,7 @@ export function appPageAction(
   const message = typeof given === 'string' ? given.trim() : '';
   const inputs = paths.inputs ? inputsInWords(app, read('/inputs')) : '';
   const settings = paths.inputs ? settingsOf(app, read('/inputs')) : undefined;
-  const loop = (files?: GivenFile[]): AppPageLoop => ({
+  const agentOf = (files?: GivenFile[]): AppPageAgent => ({
     ...(files && files.length > 0 ? { files } : {}),
     ...(settings ? { settings } : {}),
   });
@@ -723,7 +723,7 @@ export function appPageAction(
         [message, inputs].filter(Boolean).join('\n') ||
         (names ? `Run on ${names}.` : '');
       return text
-        ? { send: text, inputs, clear: [], loop: loop(files.files) }
+        ? { send: text, inputs, clear: [], agent: agentOf(files.files) }
         : { refused: `${app.name} has no inputs to run on: set one first.` };
     }
     default: {
@@ -738,7 +738,7 @@ export function appPageAction(
         send: changed ? `${written}\n\n${inputs}` : written,
         inputs,
         clear: message ? [] : [DRAFT.path],
-        loop: loop(),
+        agent: agentOf(),
       };
     }
   }

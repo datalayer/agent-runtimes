@@ -18,9 +18,9 @@ import { Box } from '@datalayer/primer-addons';
 import { Text } from '@primer/react';
 import { EphemeralNotebook } from '../../../chat/notebook/EphemeralNotebook';
 import {
-  LoopNotebookToolbar,
-  LoopNotebookToolbarItem,
-  LoopOpeningNotebook,
+  AgentNotebookToolbar,
+  AgentNotebookToolbarItem,
+  AgentOpeningNotebook,
   type ChatSurfaceProps,
 } from '../../core';
 import { useEditorToolbar } from '../../core/toolbar';
@@ -43,8 +43,8 @@ export default function NotebookView({
   // of them. It used to hardcode two buttons that submitted prompts, which
   // meant the notebook knew about the chat.
   const toolbar = useEditorToolbar(
-    LoopNotebookToolbar,
-    LoopNotebookToolbarItem,
+    AgentNotebookToolbar,
+    AgentNotebookToolbarItem,
     {
       workspace,
       editorId: notebookId,
@@ -63,13 +63,13 @@ export default function NotebookView({
   /*
    * A host's own opening notebook wins over the plugin's one cell.
    *
-   * Read from the `LoopOpeningNotebook` point: a page whose argument needs
+   * Read from the `AgentOpeningNotebook` point: a page whose argument needs
    * several cells and an output in the first viewport contributes them, and
    * this view opens on that instead. First contribution wins. What to run so
    * the kernel agrees with the cells comes with it, or is the code cells'
    * own source joined top to bottom.
    */
-  const openingEntries = useContributions(LoopOpeningNotebook);
+  const openingEntries = useContributions(AgentOpeningNotebook);
   const contributedOpening = openingEntries[0]?.value;
   const opening = useMemo(
     () =>
@@ -124,7 +124,7 @@ export default function NotebookView({
       // Not worth a banner. The notebook still shows what it showed; what a
       // reader loses is the variable, and the agent will say so plainly the
       // first time it looks.
-      console.warn('[loop] could not prime the opening cell', error);
+      console.warn('[agent] could not prime the opening cell', error);
     });
   }, [service, snapshot.state, snapshot.kernelId, primeCode]);
 
@@ -183,7 +183,7 @@ export default function NotebookView({
           whether or not Lumino ever says anything.
 
           `!important` because Lumino writes its own inline sizes and would
-          otherwise win. Scoped to this view, so it is the LOOP workspace's
+          otherwise win. Scoped to this view, so it is the Agent workspace's
           notebook that is pinned and not every notebook in the package — the
           real fix belongs in the widget layer, and this must not make that
           harder to find.

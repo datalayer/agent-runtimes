@@ -2,7 +2,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The two packages' contributions, as `loop plugins` would list them.
+"""The two packages' contributions, as `agent plugins` would list them.
 
 Without installing anything: each package's `extension()` is registered on a
 fresh platform the way discovery registers an installed one, then the

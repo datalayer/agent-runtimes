@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-agent-triggers` — triggers, as a capacity.
+ * `@datalayer/agent-plugin-agent-triggers` — triggers, as a capacity.
  *
  * Mounts the `example-one-trigger` agent: an agent whose turns are started
  * by cron schedules, webhooks and event subscriptions rather than only by a
@@ -18,7 +18,7 @@
 import { defineAgentCapacityPlugin } from '../agent-capacity';
 
 export const AGENT_TRIGGERS_PLUGIN_NAME =
-  '@datalayer/loop-plugin-agent-triggers';
+  '@datalayer/agent-plugin-agent-triggers';
 
 export const AgentTriggersPlugin = defineAgentCapacityPlugin({
   key: 'triggers',

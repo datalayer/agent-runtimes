@@ -4,14 +4,14 @@
  */
 
 /**
- * The left panel (`LoopSlots.leftPanel`): what a host says about the work on
+ * The left panel (`AgentSlots.leftPanel`): what a host says about the work on
  * the leading edge of the workspace — closed to start with, opened by a
  * toggle that says what it controls and is there only while it is closed,
  * closed by one Close control (its component's own, else the shell's) or by
  * Escape, the focus moved in on opening and back to the toggle on closing;
  * with nothing to show (`panel.when`) no toggle and no panel; and the
  * application the workspace draws, said to the host's plugins
- * (`LoopApplication`).
+ * (`AgentApplication`).
  */
 
 import React, { act } from 'react';
@@ -26,18 +26,18 @@ import {
   registerReactor,
   type ReactorReactOutput,
 } from '@datalayer/reactor/react';
-import { LoopApplication, LoopSlots } from '../core';
+import { AgentApplication, AgentSlots } from '../core';
 import {
   LeftPanel,
   LeftPanelToggle,
   leftPanelLabel,
   leftPanelShown,
   useLeftPanel,
-  type LoopLeftPanelComponent,
-  type LoopLeftPanelProps,
+  type AgentLeftPanelComponent,
+  type AgentLeftPanelProps,
 } from '../shell/LeftPanel';
 import { appExtension, applicationPlugin } from '../apps/AppRenderer';
-import { agentAppspec } from '../Application';
+import { agentAppspec } from '../AIApplication';
 import { emptyAppspec, parseAppspec, dumpAppspec } from '../apps/appspec';
 import type { AppSpec } from '../../types/agentspecs';
 
@@ -70,9 +70,9 @@ const nameOf = (button: HTMLElement): string | null | undefined =>
     ?.textContent;
 
 const mounted: string[] = [];
-const about: LoopLeftPanelComponent = {
+const about: AgentLeftPanelComponent = {
   id: 'about',
-  slot: LoopSlots.leftPanel,
+  slot: AgentSlots.leftPanel,
   Component: ({ application }: { application?: AppSpec }) => {
     React.useEffect(() => {
       mounted.push('about');
@@ -126,9 +126,9 @@ function render(plugins: PluginRef[]) {
 
 describe('the left panel', () => {
   it('shows what has something to show for the application, named by the first', () => {
-    const bare: LoopLeftPanelComponent = {
+    const bare: AgentLeftPanelComponent = {
       id: 'bare',
-      slot: LoopSlots.leftPanel,
+      slot: AgentSlots.leftPanel,
       Component: () => null,
     };
     expect(leftPanelShown([about, bare], presented())).toEqual([about, bare]);
@@ -143,9 +143,9 @@ describe('the left panel', () => {
     const app = presented('Plans and drafts.');
     const page = render([applicationPlugin(app, app), aboutPlugin]);
     const toggle = page.querySelector<HTMLButtonElement>(
-      '[data-loop-left-panel-toggle]',
+      '[data-agent-left-panel-toggle]',
     )!;
-    const panel = page.querySelector<HTMLElement>('[data-loop-left-panel]')!;
+    const panel = page.querySelector<HTMLElement>('[data-agent-left-panel]')!;
     expect(nameOf(toggle)).toBe('About the Marketer');
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
     expect(toggle.getAttribute('aria-controls')).toBe(panel.id);
@@ -162,9 +162,9 @@ describe('the left panel', () => {
     );
     // Open, the toggle is gone: the panel's Close control closes it, and
     // the focus has moved onto that control.
-    expect(page.querySelector('[data-loop-left-panel-toggle]')).toBeNull();
+    expect(page.querySelector('[data-agent-left-panel-toggle]')).toBeNull();
     const close = page.querySelector<HTMLButtonElement>(
-      '[data-loop-left-panel-close]',
+      '[data-agent-left-panel-close]',
     )!;
     expect(nameOf(close)).toBe('Close: About the Marketer');
     expect(document.activeElement).toBe(close);
@@ -173,7 +173,7 @@ describe('the left panel', () => {
     expect(panel.hasAttribute('data-open')).toBe(false);
     // The toggle shows back, the focus on it.
     const back = page.querySelector<HTMLButtonElement>(
-      '[data-loop-left-panel-toggle]',
+      '[data-agent-left-panel-toggle]',
     )!;
     expect(back.getAttribute('aria-expanded')).toBe('false');
     expect(document.activeElement).toBe(back);
@@ -185,14 +185,14 @@ describe('the left panel', () => {
   it('closes on Escape from inside it, the focus back on its toggle', () => {
     const app = presented();
     const page = render([applicationPlugin(app, app), aboutPlugin]);
-    const panel = page.querySelector<HTMLElement>('[data-loop-left-panel]')!;
+    const panel = page.querySelector<HTMLElement>('[data-agent-left-panel]')!;
     act(() =>
       page
-        .querySelector<HTMLButtonElement>('[data-loop-left-panel-toggle]')!
+        .querySelector<HTMLButtonElement>('[data-agent-left-panel-toggle]')!
         .click(),
     );
     // The toggle is gone: the focus is inside the panel, where Escape is heard.
-    expect(page.querySelector('[data-loop-left-panel-toggle]')).toBeNull();
+    expect(page.querySelector('[data-agent-left-panel-toggle]')).toBeNull();
     expect(panel.contains(document.activeElement)).toBe(true);
     act(() => {
       document.activeElement!.dispatchEvent(
@@ -201,18 +201,18 @@ describe('the left panel', () => {
     });
     expect(panel.hasAttribute('data-open')).toBe(false);
     expect(document.activeElement).toBe(
-      page.querySelector('[data-loop-left-panel-toggle]'),
+      page.querySelector('[data-agent-left-panel-toggle]'),
     );
   });
 
   it('hands its component the panel’s state; a component that closes it draws the one Close control', () => {
-    const handed: Array<Pick<LoopLeftPanelProps, 'open' | 'panelId'>> = [];
-    const closing: LoopLeftPanelComponent = {
+    const handed: Array<Pick<AgentLeftPanelProps, 'open' | 'panelId'>> = [];
+    const closing: AgentLeftPanelComponent = {
       id: 'closing',
-      slot: LoopSlots.leftPanel,
+      slot: AgentSlots.leftPanel,
       Component: (props: Record<string, unknown>) => {
         const { open, close, toggle, panelId, application } =
-          props as LoopLeftPanelProps;
+          props as AgentLeftPanelProps;
         handed.push({ open, panelId });
         return (
           <div>
@@ -221,7 +221,7 @@ describe('the left panel', () => {
               type="button"
               aria-label="Close"
               onClick={close}
-              data-loop-left-panel-close=""
+              data-agent-left-panel-close=""
               data-own-close=""
             />
             <button type="button" onClick={toggle} data-own-toggle="" />
@@ -240,16 +240,16 @@ describe('the left panel', () => {
     }) as PluginRef;
     const app = presented();
     const page = render([applicationPlugin(app, app), plugin]);
-    const panel = page.querySelector<HTMLElement>('[data-loop-left-panel]')!;
+    const panel = page.querySelector<HTMLElement>('[data-agent-left-panel]')!;
     act(() =>
       page
-        .querySelector<HTMLButtonElement>('[data-loop-left-panel-toggle]')!
+        .querySelector<HTMLButtonElement>('[data-agent-left-panel-toggle]')!
         .click(),
     );
     expect(handed.at(-1)).toEqual({ open: true, panelId: panel.id });
     // Its Close control is the only one, and the focus is on it.
     const own = page.querySelector<HTMLButtonElement>('[data-own-close]')!;
-    expect(page.querySelectorAll('[data-loop-left-panel-close]')).toHaveLength(
+    expect(page.querySelectorAll('[data-agent-left-panel-close]')).toHaveLength(
       1,
     );
     expect(document.activeElement).toBe(own);
@@ -258,7 +258,7 @@ describe('the left panel', () => {
     expect(panel.hasAttribute('data-open')).toBe(false);
     expect(handed.at(-1)?.open).toBe(false);
     const toggle = page.querySelector<HTMLButtonElement>(
-      '[data-loop-left-panel-toggle]',
+      '[data-agent-left-panel-toggle]',
     )!;
     expect(document.activeElement).toBe(toggle);
 
@@ -274,15 +274,15 @@ describe('the left panel', () => {
     // An application that presents nothing.
     const silent = presented('');
     let page = render([applicationPlugin(silent, silent), aboutPlugin]);
-    expect(page.querySelector('[data-loop-left-panel-toggle]')).toBeNull();
-    expect(page.querySelector('[data-loop-left-panel]')).toBeNull();
+    expect(page.querySelector('[data-agent-left-panel-toggle]')).toBeNull();
+    expect(page.querySelector('[data-agent-left-panel]')).toBeNull();
     act(() => root?.unmount());
     host?.remove();
     // A workspace nothing contributes a left panel to.
     const app = presented();
     page = render([applicationPlugin(app, app)]);
-    expect(page.querySelector('[data-loop-left-panel-toggle]')).toBeNull();
-    expect(page.querySelector('[data-loop-left-panel]')).toBeNull();
+    expect(page.querySelector('[data-agent-left-panel-toggle]')).toBeNull();
+    expect(page.querySelector('[data-agent-left-panel]')).toBeNull();
   });
 });
 
@@ -292,7 +292,7 @@ describe('the application, said to its host’s plugins', () => {
     const shown = { ...app, name: 'Marketeur' };
     const reactor = buildReactorFromPlugins([appExtension(app, shown, [])]);
     reactor.start();
-    const said = reactor.getContributions(LoopApplication);
+    const said = reactor.getContributions(AgentApplication);
     expect(said).toHaveLength(1);
     expect(said[0].value.app).toBe(shown);
   });

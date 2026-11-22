@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-a2ui-surface` — an agent's generated surfaces,
+ * `@datalayer/agent-plugin-a2ui-surface` — an agent's generated surfaces,
  * drawn in the transcript and submitted back to it.
  *
  * An agentspec binds a tool's result to a renderer by name:
@@ -42,7 +42,7 @@ import {
 } from '@datalayer/reactor/ui/react';
 import type { ToolCallRenderContext } from '../../../types/chat';
 import { AGENTSPECS } from '../../../specs/agents';
-import { LoopSlots, type LoopWorkspaceContext } from '../../core';
+import { AgentSlots, type AgentWorkspaceContext } from '../../core';
 import { AnswerShowsView } from './AnswerShows';
 import { ANSWER_DISPLAY_TYPE } from './toolResult';
 import {
@@ -52,7 +52,7 @@ import {
 } from './SurfaceToolResult';
 import { uiManifestOf } from '../../uiManifest';
 
-export const A2UI_SURFACE_PLUGIN_NAME = '@datalayer/loop-plugin-a2ui-surface';
+export const A2UI_SURFACE_PLUGIN_NAME = '@datalayer/agent-plugin-a2ui-surface';
 
 /** The renderer name a spec binds a tool to. */
 export const A2UI_SURFACE_RENDERER = 'a2ui-surface';
@@ -121,7 +121,7 @@ export function createA2uiSurfacePlugin(
   function Capture({
     workspace,
   }: {
-    workspace?: LoopWorkspaceContext;
+    workspace?: AgentWorkspaceContext;
   }): JSX.Element | null {
     const workspaceSend = workspace?.viewControls.send;
     useEffect(() => {
@@ -198,7 +198,7 @@ export function createA2uiSurfacePlugin(
     build() {
       return {
         components: [
-          { slot: LoopSlots.chatHeader, id, Component: Capture as never },
+          { slot: AgentSlots.chatHeader, id, Component: Capture as never },
         ],
       };
     },

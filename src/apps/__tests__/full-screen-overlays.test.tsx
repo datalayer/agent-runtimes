@@ -33,7 +33,7 @@ function Menu() {
 describe('overlays at full screen', () => {
   it('are drawn inside the workspace while it is held, and under <body> after', () => {
     const workspace = document.createElement('div');
-    workspace.setAttribute('data-loop-workspace', '');
+    workspace.setAttribute('data-agent-workspace', '');
     document.body.appendChild(workspace);
 
     const release = holdOverlaysInside(workspace);

@@ -50,7 +50,7 @@ import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 
 const queryClient = new QueryClient();
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { LoopEmbed } from '../apps';
+import { AgentEmbed } from '../apps';
 import { AgentMonitoringPlugin } from '../apps/plugins/agent-monitoring';
 import { createChatExtrasPlugin } from '../apps/plugins/chat-extras';
 import type { McpToolsetsStatusResponse } from '../types/mcp';
@@ -98,7 +98,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
   const [liveMcpStatus, setLiveMcpStatus] = useState<
     McpToolsetsStatusResponse | undefined
   >(undefined);
-  // The chat column is the shared loop; the live MCP status the footer shows
+  // The chat column is the shared Agent; the live MCP status the footer shows
   // reaches it through the chat-extras channel.
   const { plugin: extrasPlugin, setExtras } = useMemo(
     () => createChatExtrasPlugin(),
@@ -158,7 +158,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
       setIsReconnectedAgent(false);
 
       try {
-        // The Loop creates the agent from the capacity plugin's blueprint as
+        // The Agent workspace creates the agent from the capacity plugin's blueprint as
         // it mounts; the page only waits until the server has it, so its own
         // sockets and reads address an agent that exists.
         const found = await waitForAgent(agentBaseUrl, agentName, {
@@ -476,7 +476,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
         </Box>
 
         <Box flex={1} minWidth={0}>
-          <LoopEmbed
+          <AgentEmbed
             serverUrl={agentBaseUrl}
             target="local"
             showAgentVariants

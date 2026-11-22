@@ -311,11 +311,11 @@ def test_build_marks_the_agent_of_its_code_and_validation_says_its_rules_see_not
     file = tmp_path / "app.py"
     file.write_text(APP_PY)
     built = build(file)
-    assert "# loop:code agent function: answer (app.py:7)" in built.text.splitlines()
+    assert "# agent:code agent function: answer (app.py:7)" in built.text.splitlines()
     report = validate_file(file)
     assert report.verdict == NEEDS_ATTENTION
     assert any(
-        "Its agent is a plain function, answer: LOOP sees none of the tools" in note
+        "Its agent is a plain function, answer: Agent sees none of the tools" in note
         for note in report.attention
     )
 
@@ -372,7 +372,7 @@ def test_a_function_has_no_tools_to_say() -> None:
         app.agent(lambda text: text, tools={"search": "read"})
 
 
-def test_what_loop_gives_an_agent_of_the_catalogue_is_not_given_to_one_of_its_code() -> (
+def test_what_agent_gives_an_agent_of_the_catalogue_is_not_given_to_one_of_its_code() -> (
     None
 ):
     app = Application(id="connected", kind="chat", agent=AGENT)
@@ -382,7 +382,7 @@ def test_what_loop_gives_an_agent_of_the_catalogue_is_not_given_to_one_of_its_co
     assert app.code_agent is not None
     problems = code_agent_problems(spec.spec, app.code_agent)
     assert problems == [
-        "connected has connections, which LOOP gives an agent of the catalogue, "
+        "connected has connections, which Agent gives an agent of the catalogue, "
         "not its agent echo (a plain function): give them to it in its own code, "
         "or leave app.agent out."
     ]
@@ -395,7 +395,7 @@ def test_what_loop_gives_an_agent_of_the_catalogue_is_not_given_to_one_of_its_co
 
 
 def _fake_langchain(monkeypatch: pytest.MonkeyPatch) -> type:
-    """Stand in for LangChain's callbacks and runnables, as small as LOOP reads them."""
+    """Stand in for LangChain's callbacks and runnables, as small as Agent reads them."""
 
     class BaseCallbackHandler:
         raise_error = False
@@ -756,7 +756,7 @@ def test_a_tool_not_said_is_refused_when_given_and_one_it_lacks_too(
 
 
 def _fake_llama(monkeypatch: pytest.MonkeyPatch) -> Dict[str, Any]:
-    """Stand in for LlamaIndex's agents and workflows, as small as LOOP reads them."""
+    """Stand in for LlamaIndex's agents and workflows, as small as Agent reads them."""
 
     class Workflow:
         pass

@@ -29,7 +29,7 @@ import {
   hasFolderModules,
   isFolderSource,
 } from '../apps/customComponents';
-import { LoopAppFiles } from '../core/appFiles';
+import { AgentAppFiles } from '../core/appFiles';
 import type { AppCustomComponentSpec } from '../../types/agentspecs';
 
 (
@@ -49,24 +49,24 @@ const DIAL: AppCustomComponentSpec = {
 
 const RUNTIME = 'http://127.0.0.1:8765';
 const BASE = `${RUNTIME}/api/v1/apps/dial-desk`;
-const FILES = `${BASE}/reactor-extensions/loop-app-dial-desk/`;
+const FILES = `${BASE}/reactor-extensions/agent-app-dial-desk/`;
 
 /** What `GET <base>/plugins/frontend-extensions` answers for an installed package. */
 const RECORD = {
-  name: 'loop-app-dial-desk',
+  name: 'agent-app-dial-desk',
   version: '0.0.1',
   displayName: 'Dial desk',
   apiVersion: 'v1',
   kind: 'esm',
-  entry: '/reactor-extensions/loop-app-dial-desk/index.js?v=1',
+  entry: '/reactor-extensions/agent-app-dial-desk/index.js?v=1',
   plugins: [
     {
-      name: 'loop-app-dial-desk/page',
-      requiredBackendPlugins: ['loop-app-dial-desk'],
+      name: 'agent-app-dial-desk/page',
+      requiredBackendPlugins: ['agent-app-dial-desk'],
       export: '',
     },
   ],
-  backendPlugins: ['loop-app-dial-desk'],
+  backendPlugins: ['agent-app-dial-desk'],
 };
 
 /**
@@ -75,10 +75,10 @@ const RECORD = {
  */
 const PAGE_SIDE = (url: string) => ({
   default: {
-    name: 'loop-app-dial-desk/page',
+    name: 'agent-app-dial-desk/page',
     contributes: [
       {
-        point: { id: 'loop.app.files' },
+        point: { id: 'agent.app.files' },
         value: { app: 'dial-desk', base: new URL('./', url).href },
         options: { id: 'dial-desk' },
       },
@@ -149,7 +149,7 @@ describe('its packaged page side', () => {
       definePlugin({ name: 'host', build: () => ({}) }),
     ]);
     reactor.start();
-    await reactor.setBackendPlugins(['loop-app-dial-desk']);
+    await reactor.setBackendPlugins(['agent-app-dial-desk']);
     const fetchJson = vi.fn(async () => [RECORD]);
     const loader = vi.fn(async (url: string) => PAGE_SIDE(url));
     const found = await bootstrapExtensions(BASE, { fetchJson, loader });
@@ -157,18 +157,18 @@ describe('its packaged page side', () => {
       `${BASE}/plugins/frontend-extensions`,
     );
     const own = found.filter(
-      item => item.name === 'loop-app-dial-desk',
+      item => item.name === 'agent-app-dial-desk',
     ) as ReactorExtension[];
     expect(own).toHaveLength(1);
     await reactor.install(own[0]);
     await reactor.whenReady();
     await vi.waitFor(() =>
       expect(
-        reactor.getContributions(LoopAppFiles).map(entry => entry.value),
+        reactor.getContributions(AgentAppFiles).map(entry => entry.value),
       ).toEqual([{ app: 'dial-desk', base: FILES }]),
     );
     expect(loader.mock.calls[0][0]).toBe(
-      `${BASE}/reactor-extensions/loop-app-dial-desk/index.js?v=1`,
+      `${BASE}/reactor-extensions/agent-app-dial-desk/index.js?v=1`,
     );
   });
 
@@ -204,7 +204,7 @@ describe('its packaged page side', () => {
     await act(async () => {
       window.dispatchEvent(
         new MessageEvent('message', {
-          data: { tag: 'loop.component', kind: 'ready' },
+          data: { tag: 'agent.component', kind: 'ready' },
           source: frame.contentWindow,
         }),
       );
@@ -230,7 +230,7 @@ describe('its packaged page side', () => {
       `${FILES}components/dial.js`,
     );
     expect(told).toContainEqual({
-      tag: 'loop.component',
+      tag: 'agent.component',
       kind: 'module',
       code,
     });

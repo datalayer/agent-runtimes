@@ -7,7 +7,7 @@
  * The instant checks of an application: what an editor
  * shows on every change, with no model call.
  *
- * The same checks `loop apps validate` runs with agentspecs, in the words it
+ * The same checks `agent apps validate` runs with agentspecs, in the words it
  * uses, read here from the catalogues this package generates:
  *
  * - **problems** — what stops the application from being used: what the spec
@@ -947,7 +947,7 @@ const ENUMS = {
 /**
  * What the document says in a shape the spec refuses — a list where a list is
  * not, a word where a choice is — which the tolerant reader replaces with a
- * default. `loop apps validate` refuses these; so does this.
+ * default. `agent apps validate` refuses these; so does this.
  */
 export function documentShapeProblems(document: unknown): string[] {
   const problems: string[] = [];

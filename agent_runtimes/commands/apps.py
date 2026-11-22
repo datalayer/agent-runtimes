@@ -1,10 +1,10 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Applications: `loop apps …`.
+"""Applications: `agent apps …`.
 
 An application is kept as an Appspec, a YAML file reviewed like code
-(`agentspecs.apps`). `loop apps validate` runs the checks that take no model
+(`agentspecs.apps`). `agent apps validate` runs the checks that take no model
 call — the instant checks of the Studio — in a terminal and in CI:
 
 - **the spec**: what the schema refuses, and every reference that does not
@@ -36,7 +36,7 @@ saved version the file is, as the Studio keeps a run of the Evals engine, so
 Readiness and the Ship tab read it.
 
 An application written in Python, an ``app.py``, is built to its Appspec
-first (`loop apps build`): `validate`, `run` and `push` take one
+first (`agent apps build`): `validate`, `run` and `push` take one
 as they take a spec, and `run` runs its code in this process.
 """
 
@@ -317,7 +317,7 @@ def validate_file(
 def code_agent_notes(path: Path) -> List[str]:
     """What validation says of the agent an ``app.py`` gives itself.
 
-    An agent whose tool calls LOOP does not see — a plain function, a
+    An agent whose tool calls Agent does not see — a plain function, a
     LlamaIndex workflow — has none of them decided by its rules: said, so that
     the verdict is not *passes* for what its rules never see.
     """
@@ -728,7 +728,7 @@ def _attach_report(path: Path, report: Report, app_uid: str) -> bool:
     if _canonical(read_document(path)) != _canonical(item.model.get("spec")):
         report.tests_says += (
             f" Not attached: {path} is not version {item.version} of {item.name}, "
-            f"the saved one: `loop apps push {path} --app {app_uid}` first."
+            f"the saved one: `agent apps push {path} --app {app_uid}` first."
         )
         return False
     held = report.validation or {}
@@ -753,7 +753,7 @@ def _attach_report(path: Path, report: Report, app_uid: str) -> bool:
         where=str(held.get("where") or validation.HERE),
         at=str(held.get("at") or ""),
     )
-    from agent_runtimes.loop.launch import make_client
+    from agent_runtimes.agent.launch import make_client
 
     # ai-agents' own origin: Spacer and ai-agents need not share one (r1's
     # ai-agents keeps it, Spacer answers on prod1).
@@ -928,13 +928,13 @@ def _answers_on_local_runtime(document: Dict[str, Any], cases: List[Any]) -> Lis
     import asyncio
     import logging
 
+    from agent_runtimes.agent.launch import CLOUD_AGENT_NAME, speak_ag_ui
     from agent_runtimes.apps.safety import Answered
     from agent_runtimes.chat.cli import (
         _run_single_query_ag_ui,
         _start_agent_runtime_server,
         _wait_for_server,
     )
-    from agent_runtimes.loop.launch import CLOUD_AGENT_NAME, speak_ag_ui
 
     logging.getLogger("httpx").setLevel(logging.WARNING)
     process, port = _start_agent_runtime_server(BOOTSTRAP_AGENT_SPEC_ID)
@@ -972,10 +972,10 @@ def _safety_in_cloud(
     """The safety set run by the Evals engine on the saved application (its `app` subject)."""
     import httpx
 
+    from agent_runtimes.agent.launch import NotSignedIn, interactive, make_client
     from agent_runtimes.apps import safety as _safety
     from agent_runtimes.apps.deployments import DeployRefused
     from agent_runtimes.apps.store import _canonical
-    from agent_runtimes.loop.launch import NotSignedIn, interactive, make_client
 
     try:
         client, _token = make_client()
@@ -994,7 +994,7 @@ def _safety_in_cloud(
     if _canonical(read_document(path)) != _canonical(item.model.get("spec")):
         report.safety_says = (
             f"Safety: not asked. {path} is not version {version} of {item.name}, "
-            f"which the engine would run: `loop apps push {path} --app {app_uid}` first."
+            f"which the engine would run: `agent apps push {path} --app {app_uid}` first."
         )
         return True
 
@@ -1080,7 +1080,7 @@ def apps_init(
             typer.echo(name)
         return
     if not app_id:
-        console.print("[red]✗[/red] Name the application: loop apps init <id>.")
+        console.print("[red]✗[/red] Name the application: agent apps init <id>.")
         raise typer.Exit(1)
     try:
         written = init(app_id, where, kind=kind, example=example, python=python)
@@ -1096,7 +1096,7 @@ def apps_init(
     )
     source = PYTHON_FILE if PYTHON_FILE in written.files else "app.yaml"
     console.print(
-        f"Next: cd {written.folder} && loop apps run {source}", highlight=False
+        f"Next: cd {written.folder} && agent apps run {source}", highlight=False
     )
 
 
@@ -1124,8 +1124,8 @@ def apps_eject(
     """
     import yaml
 
+    from agent_runtimes.agent.launch import interactive
     from agent_runtimes.apps.scaffold import EJECT_SAID, InitRefused, eject
-    from agent_runtimes.loop.launch import interactive
 
     _require_agentspecs()
     loaded = yaml.safe_load(path.read_text())
@@ -1152,8 +1152,8 @@ def apps_eject(
         highlight=False,
     )
     console.print(
-        f"Next: loop apps run {written.name} --watch, then "
-        f"loop apps push {written.name} --app <its id>.",
+        f"Next: agent apps run {written.name} --watch, then "
+        f"agent apps push {written.name} --app <its id>.",
         highlight=False,
     )
 
@@ -1227,10 +1227,10 @@ def apps_package(
 ) -> None:
     """Package an app.py with its page side, as a Reactor extension.
 
-    Writes the Python distribution loop-app-<id> — the application's module,
+    Writes the Python distribution agent-app-<id> — the application's module,
     and the files of its folder its components name, under
-    share/datalayer/reactor/extensions/loop-app-<id>/ — then builds its wheel.
-    Installed beside the server that runs the application (`loop apps run
+    share/datalayer/reactor/extensions/agent-app-<id>/ — then builds its wheel.
+    Installed beside the server that runs the application (`agent apps run
     --web`, `app.mount`), its page draws them from that server.
     """
     from agent_runtimes.apps.build import is_python
@@ -1362,7 +1362,7 @@ def configure_on(
     if visitors_key:
         body["visitors_key"] = visitors_key
     if organization:
-        from agent_runtimes.loop.launch import NotSignedIn, make_client
+        from agent_runtimes.agent.launch import NotSignedIn, make_client
 
         body["organization_uid"] = organization
         try:
@@ -1503,9 +1503,7 @@ def apps_run(
     """
     import asyncio
 
-    from agent_runtimes.apps.build import is_python
-    from agent_runtimes.apps.loading import AppNotRunnable
-    from agent_runtimes.loop.launch import (
+    from agent_runtimes.agent.launch import (
         CLOUD,
         CLOUD_AGENT_NAME,
         CloudRefused,
@@ -1515,6 +1513,8 @@ def apps_run(
         launch_cloud,
         speak_ag_ui,
     )
+    from agent_runtimes.apps.build import is_python
+    from agent_runtimes.apps.loading import AppNotRunnable
 
     if (visitors or visitors_key) and not a2a:
         console.print(
@@ -1648,7 +1648,7 @@ def apps_run(
             # A runtime attached to was not launched for the application: its
             # secrets are given at launch only, so the remedy is a
             # launch, not the account's secrets.
-            from agent_runtimes.loop.launch import attached_refusal
+            from agent_runtimes.agent.launch import attached_refusal
 
             raise typer.BadParameter(
                 f"{refused.message} "
@@ -1670,7 +1670,7 @@ def apps_run(
             *plugins_off_setup_notes(application.interface, plugins_off.plugins),
         ]:
             console.print(f"[yellow]•[/yellow] {note}")
-        from agent_runtimes.loop.session import session_agui_url
+        from agent_runtimes.agent.session import session_agui_url
 
         # The terminal's conversation with an application is a session of
         # it — listed, paused with /pause, resumed — as its page's is.
@@ -1729,7 +1729,7 @@ def apps_run(
             process.terminate()
             process.join(timeout=5.0)
             if ask:
-                from agent_runtimes.loop.launch import stopped_said
+                from agent_runtimes.agent.launch import stopped_said
 
                 console.print(stopped_said(cloud=False, app=True), style="dim")
 
@@ -1746,7 +1746,7 @@ def _serve_web(
     embed_dir: Optional[Path],
     refused_with: List[str],
 ) -> None:
-    """`loop apps run --web`: the application in a browser page on this machine."""
+    """`agent apps run --web`: the application in a browser page on this machine."""
     import threading
     import webbrowser
 
@@ -1914,13 +1914,13 @@ def apps_deploy(
 
     import httpx
 
+    from agent_runtimes.agent.launch import NotSignedIn, make_client
     from agent_runtimes.apps.deployments import (
         Deployments,
         DeployRefused,
         deploy,
         deployment_path,
     )
-    from agent_runtimes.loop.launch import NotSignedIn, make_client
 
     logging.getLogger("httpx").setLevel(logging.WARNING)
     try:
@@ -2016,8 +2016,8 @@ def organization_frames(
         Its contexts — none with no organization — or the sentence saying why
         they were not read.
     """
+    from agent_runtimes.agent.launch import NotSignedIn, make_client
     from agent_runtimes.apps.frames import FramesUnread, read_organization_frames
-    from agent_runtimes.loop.launch import NotSignedIn, make_client
 
     try:
         if not organization:
@@ -2046,8 +2046,8 @@ def organization_plugins_off(organization: Optional[str]) -> PluginsOff:
     PluginsOff
         The list — empty with no organization, signed out or offline — and why.
     """
+    from agent_runtimes.agent.launch import NotSignedIn, make_client
     from agent_runtimes.apps.plugins_off import read_plugins_off
-    from agent_runtimes.loop.launch import NotSignedIn, make_client
 
     if not organization:
         return read_plugins_off(None, iam_url="", token=None)
@@ -2118,7 +2118,7 @@ RESUME_DEPLOYMENT_QUESTION = (
 
 def _ask_to_resume_deployment() -> Optional[bool]:
     """The person's answer to `RESUME_DEPLOYMENT_QUESTION`, or ``None`` where nobody can be asked."""
-    from agent_runtimes.loop.launch import interactive
+    from agent_runtimes.agent.launch import interactive
 
     if not interactive():
         return None
@@ -2158,7 +2158,7 @@ def deployment_preflight(deployment: Any, store: Any, confirm: Any = None) -> An
         raise ResumeRefused(
             "Its deployment is paused, and a paused deployment's session is not gone on with: "
             "nothing was launched. Resume the deployment — on its page, or by answering yes to "
-            "`loop --resume <uid>` in a terminal — then go on."
+            "`agent --resume <uid>` in a terminal — then go on."
         )
     if not answer:
         raise ResumeRefused(
@@ -2283,7 +2283,7 @@ def stop_or_finish(
     the person asked to keep it (``--keep``) or it was running before
     (attached): then it is finished as usual.
     """
-    from agent_runtimes.loop.launch import finish_cloud
+    from agent_runtimes.agent.launch import finish_cloud
 
     say = say or (lambda line: console.print(line, style="dim", markup=False))
     if started or keep or getattr(launch, "attached", False):
@@ -2296,7 +2296,7 @@ def stop_or_finish(
     else:
         say(
             f"Could not stop {launch.said} {launch.runtime_name}: stop it with "
-            f"`loop agents terminate {launch.runtime_name}`."
+            f"`agent agents terminate {launch.runtime_name}`."
         )
 
 
@@ -2312,7 +2312,7 @@ def resume_application_session(
     runtime: str = "",
 ) -> None:
     """Go on with a paused session of an application from the terminal: the
-    application started as `loop apps run` starts it — on this machine, or on
+    application started as `agent apps run` starts it — on this machine, or on
     Datalayer for a session that ran there — and the session resumed from its
     record before the first prompt.
 
@@ -2329,8 +2329,7 @@ def resume_application_session(
     import asyncio
     import logging
 
-    from agent_runtimes.apps.application import Application
-    from agent_runtimes.loop.launch import (
+    from agent_runtimes.agent.launch import (
         CLOUD_AGENT_NAME,
         CloudRefused,
         NotSignedIn,
@@ -2338,7 +2337,8 @@ def resume_application_session(
         launch_cloud,
         speak_ag_ui,
     )
-    from agent_runtimes.loop.session import session_agui_url
+    from agent_runtimes.agent.session import session_agui_url
+    from agent_runtimes.apps.application import Application
 
     instance: Dict[str, Any] = {}
     if deployment_uid:
@@ -2442,7 +2442,7 @@ def resume_application_session(
         elif process is not None:
             process.terminate()
             process.join(timeout=5.0)
-            from agent_runtimes.loop.launch import stopped_said
+            from agent_runtimes.agent.launch import stopped_said
 
             console.print(stopped_said(cloud=False, app=True), style="dim")
 
@@ -2451,8 +2451,8 @@ def _store() -> Any:
     """The caller's applications on the Spacer, or a said exit."""
     import logging
 
+    from agent_runtimes.agent.launch import NotSignedIn, make_client
     from agent_runtimes.apps.store import AppStore
-    from agent_runtimes.loop.launch import NotSignedIn, make_client
 
     logging.getLogger("httpx").setLevel(logging.WARNING)
     try:
@@ -2649,7 +2649,7 @@ def _ai_agents() -> Any:
 
     import httpx
 
-    from agent_runtimes.loop.launch import NotSignedIn, make_client
+    from agent_runtimes.agent.launch import NotSignedIn, make_client
 
     logging.getLogger("httpx").setLevel(logging.WARNING)
     try:
@@ -2666,7 +2666,7 @@ def _ai_agents() -> Any:
 
 @app.command(name="threads", hidden=True)
 def apps_threads() -> None:
-    """Retired: `loop sessions list` lists your conversations."""
+    """Retired: `agent sessions list` lists your conversations."""
     from agent_runtimes.commands.sessions import retired
 
     console.print(f"[red]✗[/red] {retired('threads')}")
@@ -2675,7 +2675,7 @@ def apps_threads() -> None:
 
 @app.command(name="feedback", hidden=True)
 def apps_feedback() -> None:
-    """Retired: `loop sessions feedback <uid>` reads what people said."""
+    """Retired: `agent sessions feedback <uid>` reads what people said."""
     from agent_runtimes.commands.sessions import retired
 
     console.print(f"[red]✗[/red] {retired('feedback')}")

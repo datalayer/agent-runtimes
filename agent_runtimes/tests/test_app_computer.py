@@ -227,7 +227,7 @@ class Talking:
 
 
 SPEC = {
-    "schema": "loop.app/v1",
+    "schema": "agent.app/v1",
     "id": "desk",
     "name": "Desk",
     "kind": "chat",

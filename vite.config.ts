@@ -105,8 +105,6 @@ export default defineConfig(({ mode, command }) => {
 
   const isShowcaseVercelAiElements = target === 'showcase-vercel-ai-elements';
   const isExamples = target === 'examples';
-  const isExamples2 = target === 'examples2';
-  const isExamplesTarget = isExamples || isExamples2;
 
   const plugins = [
     react(),
@@ -279,7 +277,7 @@ export default defineConfig(({ mode, command }) => {
     },
   ];
 
-  if (isExamplesTarget) {
+  if (isExamples) {
     plugins.unshift({
       name: 'html-transform',
       transformIndexHtml: {
@@ -383,10 +381,10 @@ export default defineConfig(({ mode, command }) => {
         open: '/html/index-showcase-vercel-ai-elements.html',
         fs: { strict: false, allow: ['..', '../..', '../../..'] },
       }
-    : isExamplesTarget
+    : isExamples
       ? {
           port: 3000,
-          open: isExamples2 ? '/html/examples2.html' : '/html/examples.html',
+          open: '/html/examples.html',
           fs: { strict: false, allow: ['..', '../..', '../../..'] },
         }
       : {
@@ -440,11 +438,8 @@ export default defineConfig(({ mode, command }) => {
       __dirname,
       'html/index-showcase-vercel-ai-elements.html',
     );
-  } else if (isExamplesTarget) {
-    build.rollupOptions.input = path.resolve(
-      __dirname,
-      isExamples2 ? 'html/examples2.html' : 'html/examples.html',
-    );
+  } else if (isExamples) {
+    build.rollupOptions.input = path.resolve(__dirname, 'html/examples.html');
   } else {
     build.rollupOptions.input = {
       main: path.resolve(__dirname, 'html/index.html'),
@@ -452,8 +447,8 @@ export default defineConfig(({ mode, command }) => {
       'agent-node': path.resolve(__dirname, 'html/agent-node.html'),
       'agent-notebook': path.resolve(__dirname, 'html/agent-notebook.html'),
       'agent-document': path.resolve(__dirname, 'html/agent-document.html'),
-      loop: path.resolve(__dirname, 'html/loop.html'),
-      'loop-example': path.resolve(__dirname, 'html/loop-example.html'),
+      'agent-workspace': path.resolve(__dirname, 'html/agent-workspace.html'),
+      'agent-example': path.resolve(__dirname, 'html/agent-example.html'),
       // An agent's page at its address ({name}.web.<domain>, port 8768).
       'agent-web': path.resolve(__dirname, 'html/agent-web.html'),
     };
@@ -470,7 +465,7 @@ export default defineConfig(({ mode, command }) => {
       'react-is',
       // Hoisted to the workspace root, so Vite sees these as *linked* deps
       // and serves them file by file over @fs — @primer/react alone was 72
-      // waterfall requests standing between the Loop shell and its first
+      // waterfall requests standing between the Agent shell and its first
       // paint. Naming them here forces pre-bundling: one request each.
       '@primer/react',
       '@primer/react/experimental',
@@ -603,15 +598,13 @@ export default defineConfig(({ mode, command }) => {
   // In dev mode (vite serve), use '/' so pages are accessible without the prefix.
   const isServe = command === 'serve';
   const base =
-    isShowcaseVercelAiElements || isExamplesTarget || isServe
-      ? '/'
-      : '/static/';
+    isShowcaseVercelAiElements || isExamples || isServe ? '/' : '/static/';
 
   return {
     base,
     plugins,
     root: '.',
-    publicDir: isExamplesTarget ? false : 'public',
+    publicDir: isExamples ? false : 'public',
     define: {
       global: 'globalThis',
       __webpack_public_path__: '""',

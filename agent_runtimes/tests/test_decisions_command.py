@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""``loop``'s ``/decisions``: typed questions asked of the agent's decision model.
+"""``agent``'s ``/decisions``: typed questions asked of the agent's decision model.
 
 An agent decides only when its spec names decisions: the command is offered
 for such an agent, and says why not for another. It asks the session's runtime
@@ -84,7 +84,7 @@ def session(
     monkeypatch: pytest.MonkeyPatch,
 ) -> Iterator[tuple[SimpleNamespace, list[httpx.Request]]]:
     """
-    Give ``loop``'s session on a runtime whose ai-inference is mocked.
+    Give ``agent``'s session on a runtime whose ai-inference is mocked.
 
     Yields
     ------
@@ -342,5 +342,5 @@ def test_an_older_runtime_is_said_to_be_older(
 
     assert (
         "This runtime (agent-runtimes 1.3.32) does not say decisions (/decisions): "
-        "it is older than this loop" in said
+        "it is older than this agent" in said
     )

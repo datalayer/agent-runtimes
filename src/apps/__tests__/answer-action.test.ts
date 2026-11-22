@@ -48,7 +48,7 @@ describe('a button of what an answer shows', () => {
       {
         message: 'again',
         forwardedProps: {
-          loop: {
+          agent: {
             action: {
               name: 'again',
               display_id: 'm1-shows',

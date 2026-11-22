@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""PACT in the Loop Python surface (DOC-03).
+"""PACT in the Agent Python surface (DOC-03).
 
 `app.business_connection` writes the `pact` block the Spec and the Studio's
 *Add a business* write, and lists `pact` among the protocols: the

@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-chat-view` — the bare conversation, one click away.
+ * `@datalayer/agent-plugin-chat-view` — the bare conversation, one click away.
  *
  * The footer icon that clears the editor column: the view the selector used
  * to call "None", renamed to what it actually is. Requires the input-prompt
@@ -17,7 +17,7 @@ import { CommentDiscussionIcon } from '@primer/octicons-react';
 import { NONE_EDITOR } from '../shell/editorChoice';
 import { defineViewPlugin } from '../view-switch';
 
-export const CHAT_VIEW_PLUGIN_NAME = '@datalayer/loop-plugin-chat-view';
+export const CHAT_VIEW_PLUGIN_NAME = '@datalayer/agent-plugin-chat-view';
 
 export const ChatViewPlugin = defineViewPlugin({
   key: 'chat',

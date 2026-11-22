@@ -7,7 +7,7 @@ Tracked upstream as `datalayer/agentspecs#2`. Four specs that share a sandbox
 variant, a toolset and a set of conventions should not drift apart by hand, so
 a spec can say what it builds on:
 
-    extends: loop-base:0.0.1        # inheritance — "the same agent, adjusted"
+    extends: agent-base:0.0.1        # inheritance — "the same agent, adjusted"
     includes: [notebook-surfaces]   # composition — "this bundle, wherever needed"
 
 A **fragment** is not a runnable agent: no model, no system prompt, only

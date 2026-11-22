@@ -45,7 +45,7 @@ export type SuggestedPrompt = {
   nonce: number;
 };
 
-export type LoopPromptState = {
+export type AgentPromptState = {
   /** The suggestion waiting to be picked up, if there is one. */
   pending?: SuggestedPrompt;
   /** Offer a prompt to the workspace. */
@@ -54,7 +54,7 @@ export type LoopPromptState = {
   consume: () => void;
 };
 
-export const useLoopPromptStore = create<LoopPromptState>((set, get) => ({
+export const useAgentPromptStore = create<AgentPromptState>((set, get) => ({
   pending: undefined,
   suggest: (text, options) => {
     const trimmed = text.trim();
@@ -79,18 +79,18 @@ export const useLoopPromptStore = create<LoopPromptState>((set, get) => ({
  * React tree — a click handler in a landing page is the case this is for:
  *
  * ```ts
- * <Button onClick={() => suggestLoopPrompt('Plot this data as a histogram')}>
+ * <Button onClick={() => suggestAgentPrompt('Plot this data as a histogram')}>
  * ```
  *
  * Safe to call before the workspace has mounted: the suggestion waits, and the
  * prompt picks it up when it arrives. That matters for a lazily loaded
  * workspace, where the button can easily be clicked first.
  */
-export function suggestLoopPrompt(
+export function suggestAgentPrompt(
   text: string,
   options?: { submit?: boolean },
 ): void {
-  useLoopPromptStore.getState().suggest(text, options);
+  useAgentPromptStore.getState().suggest(text, options);
 }
 
-export default useLoopPromptStore;
+export default useAgentPromptStore;

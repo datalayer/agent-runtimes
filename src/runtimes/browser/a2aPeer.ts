@@ -182,7 +182,7 @@ const FORMAT_NAMES: Record<string, string> = {
 /**
  * A button pressed on an answer's surface, sent back with the reader's turn:
  * its name and what choosing it does (`payload.does`). The runtime reads it
- * from the message's metadata (`loop.action`): one that does more than read
+ * from the message's metadata (`agent.action`): one that does more than read
  * is refused to a visitor in a sentence, before any model runs.
  */
 export type A2APeerAction = {
@@ -282,7 +282,7 @@ export function textMessage(text: string, action?: A2APeerAction): Message {
         mediaType: '',
       },
     ],
-    metadata: action ? { loop: { action } } : undefined,
+    metadata: action ? { agent: { action } } : undefined,
     extensions: [],
     referenceTaskIds: [],
   };

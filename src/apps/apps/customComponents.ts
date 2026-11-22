@@ -59,8 +59,8 @@ export const CUSTOM_SOURCE =
 /**
  * Or a file of the application's folder, by its path in it: a
  * `.js` or `.mjs` file inside the folder — no absolute path, no `..`.
- * Packaged with the application (`loop apps package`), it is served by the
- * server its package is installed beside (`LoopAppFiles`).
+ * Packaged with the application (`agent apps package`), it is served by the
+ * server its package is installed beside (`AgentAppFiles`).
  */
 export const CUSTOM_FILE =
   /^(?:\.\/)?(?:[A-Za-z0-9_][A-Za-z0-9_.-]*\/)*[A-Za-z0-9_][A-Za-z0-9_.-]*\.m?js$/;
@@ -71,7 +71,7 @@ export const isFolderSource = (source: string): boolean =>
 
 /**
  * The address a file of the folder is fetched from, under the base its
- * package's page side said (`LoopAppFiles`).
+ * package's page side said (`AgentAppFiles`).
  */
 export const folderSourceUrl = (source: string, base: string): string =>
   new URL(source.replace(/^\.\//, ''), base.endsWith('/') ? base : `${base}/`)

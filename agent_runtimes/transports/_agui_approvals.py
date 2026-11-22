@@ -11,7 +11,7 @@ fires.  This wrapper intercepts the AG-UI ``TOOL_CALL_START`` / ``TOOL_CALL_ARGS
 / ``TOOL_CALL_END`` SSE events, reconstructs the tool call, and creates matching
 approval records in the local in-memory store (with best-effort remote
 ai-agents sync) so every approval surface — the web UI, the SaaS panel, and the
-LOOP TUI — can display them and enable the Approve / Deny controls.
+Agent TUI — can display them and enable the Approve / Deny controls.
 
 The record-creation logic (dedupe, remote sync, mirror, credential + mapping
 registration) is intentionally kept byte-for-byte equivalent to the Vercel AI

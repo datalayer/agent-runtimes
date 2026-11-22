@@ -1043,7 +1043,7 @@ export type AppThemeVariant =
   | 'sand'
   | 'ivory'
   | 'sun'
-  | 'loop'
+  | 'agent'
   | 'vscode';
 
 /** The colour mode it is worn in: `auto` follows the device. */
@@ -1061,7 +1061,7 @@ export interface AppThemeSpec {
 
 /**
  * An avatar named by id: the id an enabled plugin contributes it
- * under to `loop.assistant.character` — Datalayer's orb is `orb`, in the
+ * under to `agent.assistant.character` — Datalayer's orb is `orb`, in the
  * theme's colours, acting out each of the assistant's states; its own drawings are
  * `paperclip`, `wizard`, `cat` and `eyes`; the characters clippy.js
  * publishes, Microsoft's and fetched from jsDelivr when shown, are
@@ -1989,7 +1989,7 @@ export interface AppSamplesSpec {
  * is not enabled (`setup`).
  */
 export interface AppSpec {
-  /** The version of the spec itself: `loop.app/v1`. */
+  /** The version of the spec itself: `agent.app/v1`. */
   schema: string;
   id: string;
   version: string;
@@ -2074,7 +2074,7 @@ export interface AppSpec {
   /**
    * What it is, as one Markdown document, for a page that presents it beside
    * its conversation: what a host's plugin draws in the workspace's left
-   * panel (`LoopSlots.leftPanel`). A paragraph, a bullet list of what it
+   * panel (`AgentSlots.leftPanel`). A paragraph, a bullet list of what it
    * does, a note wholly in emphasis, and a paragraph of links for its
    * actions, the main one in bold. Unsaid or empty, nothing is presented.
    */
@@ -2197,7 +2197,7 @@ export interface Agentspec {
   enabled: boolean;
   /**
    * Whether the pickers offer the agent (the new agent page, the chats, the
-   * assign menu, loop's pickers), true unless said: an enabled agent that is
+   * assign menu, `agent`'s pickers), true unless said: an enabled agent that is
    * not listed runs by id and as a default, without being offered.
    */
   listed?: boolean;

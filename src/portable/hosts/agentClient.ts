@@ -45,7 +45,7 @@ export type HostTurnRequest<P> = Readonly<{
   /**
    * The session the thread runs, as the host keeps it: a message to it.
    * Without one, the turn opens a new session, whose uid the runtime mints
-   * (a ULID) and names back in the turn's `loop.turn` event; the host keeps
+   * (a ULID) and names back in the turn's `agent.turn` event; the host keeps
    * it against its thread from `TurnStream.sessionId`.
    */
   sessionId?: string;
@@ -59,7 +59,7 @@ export type HostTurnRequest<P> = Readonly<{
 
 export type TurnStream = Readonly<{
   /**
-   * The run the stream is of, as its `loop.turn` event names it: known once
+   * The run the stream is of, as its `agent.turn` event names it: known once
    * the stream has said it (what a Stop button names).
    */
   run: { id?: string };
@@ -452,8 +452,8 @@ export class HttpAgentClient<P> implements AgentClient<P>, SessionBinder<P> {
       );
     }
     const events = agUiEventsOf(response.body)[Symbol.asyncIterator]();
-    // A new session is named by the runtime: its `loop.turn` event, the
-    // first or second of the stream (after `loop.session`), on a first run
+    // A new session is named by the runtime: its `agent.turn` event, the
+    // first or second of the stream (after `agent.session`), on a first run
     // and on a retry's replay alike.
     const head: AgUiEvent[] = [];
     let sessionId = request.sessionId;

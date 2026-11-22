@@ -21,7 +21,7 @@ import { signal } from '@datalayer/reactor';
 import { useContributions, useSignalValue } from '@datalayer/reactor/react';
 import { useCoreStore } from '@datalayer/core/lib/state';
 import { useIAMStore } from '@datalayer/core/lib/state/substates/IAMState';
-import { LoopChatTurn, type ChatTurnSnapshot } from '../../core';
+import { AgentChatTurn, type ChatTurnSnapshot } from '../../core';
 import {
   RECORD_KIND_WORDS,
   entrySaid,
@@ -148,7 +148,7 @@ export function AppActivity({ appUid }: { appUid?: string }): JSX.Element {
         state.configuration,
     )?.aiAgentsUrl ?? '';
   // Read again as each turn ends: what it just did is in the record then.
-  const turnEntries = useContributions(LoopChatTurn);
+  const turnEntries = useContributions(AgentChatTurn);
   const turn = useSignalValue(turnEntries[0]?.value.turn ?? NO_TURN);
   const settled = turn.status !== 'thinking' && turn.status !== 'streaming';
   const [ended, setEnded] = useState(0);

@@ -56,11 +56,12 @@ import {
 } from './utils/runtimeTargetStore';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { useCoreStore } from '@datalayer/core';
-import { LoopEmbed } from '../apps';
+import { AgentEmbed } from '../apps';
 import { AgentEvalsPlugin } from '../apps/plugins/agent-evals';
+import { getAgentspecs } from '../specs/agents';
 import { useExampleAgentRuntimes as useAgentRuntimes } from './hooks/useExampleAgentRuntimes';
 
-const LOOP_PLUGINS_AGENTEVA = [AgentEvalsPlugin];
+const AGENT_PLUGINS_AGENTEVA = [AgentEvalsPlugin];
 
 const queryClient = new QueryClient();
 
@@ -68,6 +69,15 @@ const queryClient = new QueryClient();
 
 const AGENT_NAME = 'eval-example-agent';
 const AGENTSPEC_ID = 'example-evals';
+
+/** The model the example's agentspec names; no spec or no model is an error. */
+const AGENTSPEC_MODEL = (() => {
+  const model = getAgentspecs(AGENTSPEC_ID)?.model;
+  if (!model) {
+    throw new Error(`Agentspec '${AGENTSPEC_ID}' names no model`);
+  }
+  return model;
+})();
 
 const normalizeHttpUrl = (value: unknown): string | null => {
   if (typeof value !== 'string') {
@@ -151,7 +161,7 @@ const AgentEvalsInner: React.FC<{
       executionTarget === 'local' ? localRuntimeBaseUrl : cloudRuntimeBaseUrl,
     agentConfig: {
       name: agentName,
-      model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+      model: AGENTSPEC_MODEL,
       protocol: 'ag-ui',
       description: 'Agent with evaluation and quality scoring',
     },
@@ -261,7 +271,7 @@ const AgentEvalsInner: React.FC<{
       setLocalError(null);
 
       try {
-        // The Loop creates the agent from the capacity plugin's blueprint as
+        // The Agent workspace creates the agent from the capacity plugin's blueprint as
         // it mounts; the page waits until the server has it before it talks
         // to the eval API about it.
         const found = await waitForAgent(agentBaseUrl, agentName, {
@@ -461,7 +471,7 @@ const AgentEvalsInner: React.FC<{
 
   // ── Loading / Error ───────────────────────────────────────────────────
 
-  // Local: the Loop must mount to create the agent, so no waiting screen.
+  // Local: the Agent must mount to create the agent, so no waiting screen.
   if (executionTarget !== 'local' && !isAgentReady && agentStatus !== 'error') {
     return (
       <Box
@@ -546,14 +556,14 @@ const AgentEvalsInner: React.FC<{
       <Box flex={1} minHeight={0} display="flex">
         {/* Left: Chat */}
         <Box flex={1} minWidth={0}>
-          <LoopEmbed
+          <AgentEmbed
             serverUrl={agentBaseUrl}
             target="local"
             showAgentVariants
             agentId={agentId}
             editors={false}
             showHeader
-            plugins={LOOP_PLUGINS_AGENTEVA}
+            plugins={AGENT_PLUGINS_AGENTEVA}
           />
         </Box>
 

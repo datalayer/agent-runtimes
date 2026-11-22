@@ -12,8 +12,8 @@
  *
  * Each side is its own agent on its own agent-runtimes server, and a gauge
  * on each side tracks the tokens it consumed in real time. The chat shows
- * one side at a time, with a switch in the header: the reactor a Loop runs
- * on is published to a page-global store, so a page hosts one Loop — a
+ * one side at a time, with a switch in the header: the reactor an Agent runs
+ * on is published to a page-global store, so a page hosts one Agent — a
  * second one would take the first one's place. Both gauges keep counting
  * whichever side is on screen.
  */
@@ -37,7 +37,7 @@ import { ThemedProvider } from './utils/themedProvider';
 import { AuthRequiredView } from './components';
 import { uniqueAgentId } from './utils/agentId';
 import { useAIAgentsWebSocket } from '../hooks';
-import { LoopEmbed } from '../apps';
+import { AgentEmbed } from '../apps';
 import {
   AgentCodemodePlugin,
   AgentNoCodemodePlugin,
@@ -153,7 +153,7 @@ const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
   onContextSnapshot,
 }) => {
   const runtimeName = useRef(uniqueAgentId(`codemode-${config.key}`)).current;
-  // The Loop creates the agent on this pane's server from the capacity
+  // The Agent workspace creates the agent on this pane's server from the capacity
   // plugin's blueprint, under this name; the pane only has to know it.
   const agentId = runtimeName;
   const [selectedServerIds, setSelectedServerIds] = useState<string[]>([]);
@@ -233,7 +233,7 @@ const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
   });
 
   // Fetch creation spec to get selected MCP server IDs (for the MCP indicator).
-  // The Loop is creating the agent meanwhile, so ask again until it is there.
+  // The Agent workspace is creating the agent meanwhile, so ask again until it is there.
   useEffect(() => {
     let cancelled = false;
     let attempts = 0;
@@ -419,7 +419,7 @@ const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
     [authFetch, agentId, config.baseUrl],
   );
 
-  // The pane's chat column is the shared loop on this pane's capacity plugin
+  // The pane's chat column is the shared Agent on this pane's capacity plugin
   // (codemode vs raw MCP). Its live codemode toggle and MCP/codemode status
   // reach the footer through the chat-extras channel.
   const { plugin: extrasPlugin, setExtras } = useMemo(
@@ -443,7 +443,7 @@ const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
   void codemodeStatusData;
 
   // Mounted for its websocket and gauge whichever side is on screen; only
-  // the side on screen mounts a Loop, there being one per page.
+  // the side on screen mounts an Agent workspace, there being one per page.
   if (!active) {
     return null;
   }
@@ -459,9 +459,9 @@ const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
       flexDirection="column"
     >
       <Box flex={1} minHeight={0}>
-        {/* The variants stay visible: hidden, the Loop pins the agent to the
+        {/* The variants stay visible: hidden, the Agent pins the agent to the
             page, and this pane's whole point is the server it runs on. */}
-        <LoopEmbed
+        <AgentEmbed
           serverUrl={config.baseUrl}
           target="local"
           showAgentVariants

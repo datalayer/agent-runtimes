@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Voice at the terminal, for ``loop --voice``.
+"""Voice at the terminal, for ``agent --voice``.
 
 The microphone and the speaker are this machine's, through ``sounddevice``
 (MIT, PortAudio), installed with the ``voice`` extra —
@@ -20,7 +20,7 @@ service (``POST /speech/syntheses``, 16-bit PCM), and played here. The store
 is filled from Datalayer's CDN, hash-checked: ``python -m
 agent_runtimes.voice.store``.
 
-When ``loop`` runs its agent **on Datalayer** (``--cloud``), what
+When ``agent`` runs its agent **on Datalayer** (``--cloud``), what
 is said is heard and answers are said **on Datalayer's servers** with the
 person's token, whatever this machine has. Only what the catalogue says runs
 on the machine (``where: machine``) is run here, and Kokoro is first asked to
@@ -217,7 +217,7 @@ class Hearing:
         post: Optional[Callable[..., Any]] = None,
         on_datalayer: bool = False,
     ) -> None:
-        #: ``loop`` runs its agent on Datalayer: heard there, whatever is here.
+        #: ``agent`` runs its agent on Datalayer: heard there, whatever is here.
         self.on_datalayer = on_datalayer
         self.models_dir = models_dir or Path(
             os.path.expanduser(os.getenv(MODELS_DIR_ENV) or DEFAULT_MODELS_DIR)
@@ -336,7 +336,7 @@ class Speaker:
         on_datalayer: bool = False,
     ) -> None:
         self.voice = voice
-        #: ``loop`` runs its agent on Datalayer: said there, whatever is here.
+        #: ``agent`` runs its agent on Datalayer: said there, whatever is here.
         self.on_datalayer = on_datalayer
         self.language = language
         self.token = token if token is not None else _token()
@@ -542,8 +542,8 @@ def _token() -> Optional[str]:
 
 
 def _signed_in_token() -> Optional[str]:
-    """The token ``datalayer login`` keeps, read as ``loop --cloud`` reads it; ``None`` when signed out."""
-    from agent_runtimes.loop.launch import NotSignedIn, make_client  # noqa: PLC0415
+    """The token ``datalayer login`` keeps, read as ``agent --cloud`` reads it; ``None`` when signed out."""
+    from agent_runtimes.agent.launch import NotSignedIn, make_client  # noqa: PLC0415
 
     try:
         return make_client()[1]
@@ -567,7 +567,7 @@ def _play(pcm16: bytes, rate: int) -> None:
 
 @dataclass
 class VoiceSession:
-    """Voice for one ``loop`` session: the listener, where it is heard, and the speaker."""
+    """Voice for one ``agent`` session: the listener, where it is heard, and the speaker."""
 
     hearing: Hearing = field(default_factory=Hearing)
     listener: Listener = field(default_factory=Listener)

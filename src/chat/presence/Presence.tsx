@@ -77,11 +77,11 @@ export function PresenceFace({
         opacity={active || state === 'waiting' || paused ? 0.9 : 0}
         transition="opacity var(--theme-motion-status, 0ms) var(--theme-motion-easing, ease)"
         animation={
-          active ? 'loopPresenceBreath 1.8s ease-in-out infinite' : 'none'
+          active ? 'agentPresenceBreath 1.8s ease-in-out infinite' : 'none'
         }
         reducedMotion={{ animation: 'none' }}
         sx={{
-          '@keyframes loopPresenceBreath': {
+          '@keyframes agentPresenceBreath': {
             '0%, 100%': { transform: 'scale(0.92)', opacity: 0.35 },
             '50%': { transform: 'scale(1.06)', opacity: 0.9 },
           },

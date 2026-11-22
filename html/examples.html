@@ -81,6 +81,21 @@
       data-jupyter-widgets-cdn-only="true"
     ></script>
 
+    <!--
+      The page never scrolls: the examples shell fills the window and each
+      example scrolls its own panels (src/examples/components/exampleFrame.ts).
+    -->
+    <style>
+      html,
+      body,
+      #root {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+    </style>
+
     <!-- Favicon -->
     <link
       rel="shortcut icon"

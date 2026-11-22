@@ -30,7 +30,7 @@ lines in order, the words the answer must say and must not say, and how
 long the beat may take. A **rehearsal** plays every beat and checks it:
 
 ```bash
-loop scenes rehearse sales-and-accounting --cloud
+agent scenes rehearse sales-and-accounting --cloud
 ```
 
 Each beat is **passed**, **failed** (with what differed), or **not run**
@@ -43,7 +43,7 @@ same JSON a stage exports.
 
 Datalayer rehearses its demo stages every night, on its own platform. Each
 demo stage is always on under a demo account, and each night every one of
-them is rehearsed with `loop scenes rehearse --cloud`, one scene at a time,
+them is rehearsed with `agent scenes rehearse --cloud`, one scene at a time,
 at its always-on runtime. A stage whose rehearsal passed says *Live*
 with the time; one that failed says *Needs attention* with the failing beat.
 
@@ -67,8 +67,8 @@ taken &lt;date&gt;*.
 Take one from a passing rehearsal:
 
 ```bash
-loop scenes rehearse sales-and-accounting --cloud --transcript run.json
-loop scenes record sales-and-accounting --from run.json --note "Recorded on Datalayer."
+agent scenes rehearse sales-and-accounting --cloud --transcript run.json
+agent scenes record sales-and-accounting --from run.json --note "Recorded on Datalayer."
 ```
 
 `record` refuses a transcript whose rehearsal did not pass, that misses a
@@ -113,7 +113,7 @@ const played = useSceneRecording(getSceneRecording(scene.id), {
 <TranscriptViews lines={played.lines} members={members} />
 ```
 
-Pass `beat` to play one beat only, `speed` to play faster, `loop` to start
+Pass `beat` to play one beat only, `speed` to play faster, `agent` to start
 again at the end.
 
 ## The coding-agent stage

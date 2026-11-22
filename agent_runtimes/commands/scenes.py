@@ -1,19 +1,19 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Scenes: `loop scenes …`.
+"""Scenes: `agent scenes …`.
 
-A scene is a scene spec (`agentspecs.scenes`, ``loop.scene/v1``): a team
+A scene is a scene spec (`agentspecs.scenes`, ``agent.scene/v1``): a team
 staged — its cast with their personas, its setting, its script of beats,
 and its rehearsal, the shape each beat's transcript must take.
 
-- ``loop scenes ls`` lists the catalogue: each scene's face and name, its
+- ``agent scenes ls`` lists the catalogue: each scene's face and name, its
   members (where each runs, what it reaches), what it needs set up, and
   whether it is *Live*: its last rehearsal on Datalayer passed
   (`agentspecs.scenes.scene_played`, the file `<id>/rehearsal.json` beside
   the specs); one that did not says so.
-- ``loop scenes rehearse <scene>`` plays each beat's cue through the scene —
-  the entry's application run the way `loop apps run` runs one, in this
+- ``agent scenes rehearse <scene>`` plays each beat's cue through the scene —
+  the entry's application run the way `agent apps run` runs one, in this
   process (a member the scene puts in the browser played as the browser
   plays it), or with ``--cloud`` every member on a runtime served over A2A
   on a cloud runtime of its own, launched for its application so that it is
@@ -24,23 +24,23 @@ and its rehearsal, the shape each beat's transcript must take.
   (``--key``) — reads the transcript from what happened and compares it to
   the beat's expected lines, words and time. Each beat is **passed**,
   **failed** with what differed, or **not run** with why, in the Validate
-  tab's words; the exit code is `loop apps validate`'s (1 when a beat failed,
+  tab's words; the exit code is `agent apps validate`'s (1 when a beat failed,
   3 when one was not run). A member whose setup is incomplete, or whose
   runtime Datalayer refused or did not set up, makes the beats that need it
   *not run* with that sentence; nothing crashes. A scene with a recording
   and no live run says its recording stands. What a rehearsal on Datalayer
   found is kept as the catalogue scene's last (`write_played`), which is what
   *Live* reads — never a local run's, never a scene file's.
-- ``loop scenes rehearse … --transcript run.json`` also writes what the
+- ``agent scenes rehearse … --transcript run.json`` also writes what the
   rehearsal played as the transcript JSON a stage exports (version 1), with
-  its beats and its verdict; ``loop scenes record <scene> --from run.json``
+  its beats and its verdict; ``agent scenes record <scene> --from run.json``
   keeps such a transcript, of a rehearsal that passed every beat, as the
   scene's recording beside the specs (``<id>/recording.json``) and names it
   in the scene's YAML (``rehearsal.recording``): what a stage plays, at its
   recorded pace, when the scene cannot play live.
-- ``loop scenes build scene.py`` writes the scene spec a scene written in
-  Python amounts to (``loop.scene``, ``loop.stage``), and
-  ``loop scenes push`` keeps a scene in the person's Space as the Studio keeps
+- ``agent scenes build scene.py`` writes the scene spec a scene written in
+  Python amounts to (``agent.scene``, ``agent.stage``), and
+  ``agent scenes push`` keeps a scene in the person's Space as the Studio keeps
   one; ``rehearse`` takes a ``scene.py`` as it takes a YAML file.
 """
 
@@ -91,7 +91,7 @@ def _require_scenes() -> Any:
 
 def written_scene_of(path: Path) -> Any:
     """The scene a ``scene.py`` writes; refused in a sentence."""
-    from agent_runtimes.loop.scenes.written import load_scene_file
+    from agent_runtimes.agent.scenes.written import load_scene_file
 
     if not path.is_file():
         raise typer.BadParameter(f"{path} is not a file.")
@@ -105,7 +105,7 @@ def written_scene_of(path: Path) -> Any:
 
 def spec_of_written(path: Path) -> Any:
     """The scene spec a ``scene.py`` amounts to, checked by agentspecs; refused in its sentences."""
-    from agent_runtimes.loop.scenes.written import SceneNotPlayable
+    from agent_runtimes.agent.scenes.written import SceneNotPlayable
 
     written = written_scene_of(path)
     try:
@@ -360,7 +360,7 @@ def _addresses_of(addresses: List[str], scene: Any) -> Dict[str, str]:
 
 def stage_here(scene: Any, *, agent: Optional[Callable[[Any], Any]] = None) -> Any:
     """The scene's stage in this process: every member played here, or saying why it cannot be."""
-    from agent_runtimes.loop.scenes.stage import Stage, members_of, refused_here
+    from agent_runtimes.agent.scenes.stage import Stage, members_of, refused_here
 
     members, entry = members_of(scene)
     for member in members:
@@ -389,10 +389,10 @@ def stage_in_cloud(
     member's sentence, never a crash; what its runtime says is to set up is
     the member's notes. Returns the stage and the launches, to finish.
     """
+    from agent_runtimes.agent.launch import CloudRefused, NotSignedIn, launch_cloud
+    from agent_runtimes.agent.scenes.stage import Stage, members_of, refused_here
     from agent_runtimes.client.agent_client import build_agent_runtimes_base_url
     from agent_runtimes.commands.apps import BOOTSTRAP_AGENT_SPEC_ID, configure_on
-    from agent_runtimes.loop.launch import CloudRefused, NotSignedIn, launch_cloud
-    from agent_runtimes.loop.scenes.stage import Stage, members_of, refused_here
 
     members, entry = members_of(
         scene,
@@ -442,7 +442,7 @@ def stage_in_cloud(
             continue
         # What the runtime says is to set up — the catalogue's own notes, an
         # agent or a server not offered by default — is kept for the verdict;
-        # it is served all the same, as `loop apps run` serves it. A secret it
+        # it is served all the same, as `agent apps run` serves it. A secret it
         # was not given is a refusal of the configure, said above.
         member.notes = [str(note) for note in configured.get("setup") or []]
         member.address = str((configured.get("a2a") or {}).get("url") or "")
@@ -518,15 +518,15 @@ def scenes_rehearse(
         None,
         "--transcript",
         dir_okay=False,
-        help="Also write what was played as a transcript (JSON, version 1): what `loop scenes record` keeps.",
+        help="Also write what was played as a transcript (JSON, version 1): what `agent scenes record` keeps.",
     ),
 ) -> None:
     """Play each beat's cue through the scene and compare the transcript to what the rehearsal expects.
 
     Exit 1 when a beat failed, 3 when one was not run, 0 when every beat passed.
     """
+    from agent_runtimes.agent.scenes.rehearsal import rehearse
     from agent_runtimes.commands.apps import _quiet
-    from agent_runtimes.loop.scenes.rehearsal import rehearse
 
     if local and cloud:
         raise typer.BadParameter("--local or --cloud: one place to play it.")
@@ -594,13 +594,13 @@ def scenes_rehearse(
             )
     finally:
         if launches:
-            from agent_runtimes.loop.launch import finish_cloud
+            from agent_runtimes.agent.launch import finish_cloud
 
             for launch in launches:
                 finish_cloud(launch, keep=keep, can_ask=False, say=aside)
     verdict.notes = notes + verdict.notes
     if transcript is not None:
-        from agent_runtimes.loop.scenes.rehearsal import transcript_of_rehearsal
+        from agent_runtimes.agent.scenes.rehearsal import transcript_of_rehearsal
 
         written = transcript_of_rehearsal(
             verdict, at=datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -656,7 +656,7 @@ def scenes_record(
         "--from",
         exists=True,
         dir_okay=False,
-        help="The transcript of a rehearsal that passed: `loop scenes rehearse --cloud --transcript <file>`.",
+        help="The transcript of a rehearsal that passed: `agent scenes rehearse --cloud --transcript <file>`.",
     ),
     taken: str = typer.Option(
         None,
@@ -682,7 +682,7 @@ def scenes_record(
     transcript that is not of this scene, not of a rehearsal that passed, or
     that misses a beat is refused in a sentence: exit 1.
     """
-    from agent_runtimes.loop.scenes.recording import (
+    from agent_runtimes.agent.scenes.recording import (
         RecordingRefused,
         recording_of,
         with_recording,
@@ -735,7 +735,7 @@ def scenes_record(
 @app.command(name="build")
 def scenes_build(
     path: Path = typer.Argument(
-        ..., dir_okay=False, help="The scene, a scene.py written with loop.scene."
+        ..., dir_okay=False, help="The scene, a scene.py written with agent.scene."
     ),
     out: Path = typer.Option(
         None, "--out", "-o", help="Where to write the scene spec; printed when unsaid."
@@ -744,7 +744,7 @@ def scenes_build(
         False, "--force", help="Overwrite a file that is there."
     ),
 ) -> None:
-    """Write the scene spec a scene.py amounts to: loop.scene/v1, as YAML.
+    """Write the scene spec a scene.py amounts to: agent.scene/v1, as YAML.
 
     Refused, with agentspecs' sentences, when the file writes no scene or more
     than one, or agentspecs refuses the scene it writes.
@@ -796,9 +796,9 @@ def scenes_push(
     """
     import httpx
 
+    from agent_runtimes.agent.launch import NotSignedIn, make_client
+    from agent_runtimes.agent.scenes.store import SceneStore
     from agent_runtimes.apps.deployments import DeployRefused
-    from agent_runtimes.loop.launch import NotSignedIn, make_client
-    from agent_runtimes.loop.scenes.store import SceneStore
 
     if bool(scene_uid) == bool(space):
         console.print(

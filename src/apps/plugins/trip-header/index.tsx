@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-trip-header` — the Traveller's title bar: the trip
+ * `@datalayer/agent-plugin-trip-header` — the Traveller's title bar: the trip
  * being planned (where and when), a Travellers drop-down told to the agent
  * with every turn, and how many options are ready to compare. Stands in for
  * `trip-summary`: until the agent's tool says the trip, it reads the
@@ -21,7 +21,7 @@ import { defineHeaderPlugin } from '../../toolCards/headerItems';
 import { useLatestToolCall } from '../../toolCards/toolResults';
 import { tripSummaryOf } from '../trip-summary';
 
-export const TRIP_HEADER_PLUGIN_NAME = '@datalayer/loop-plugin-trip-header';
+export const TRIP_HEADER_PLUGIN_NAME = '@datalayer/agent-plugin-trip-header';
 
 /** The trip of the cards shown, for the indicator its tool has not set. */
 function useShownTrip() {

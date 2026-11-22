@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-page-excalidraw` — drawings the agent makes in the
+ * `@datalayer/agent-plugin-page-excalidraw` — drawings the agent makes in the
  * conversation, on an Excalidraw canvas, with frontend tools run in the page
  * (the user, 19 November 2026: the Functional Analyst's Excalidraw tools).
  *
@@ -41,7 +41,7 @@ import {
 } from './store';
 
 export const PAGE_EXCALIDRAW_PLUGIN_NAME =
-  '@datalayer/loop-plugin-page-excalidraw';
+  '@datalayer/agent-plugin-page-excalidraw';
 
 const DrawingStage = lazy(() => import('./DrawingStage'));
 

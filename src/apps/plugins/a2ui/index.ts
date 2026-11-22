@@ -4,18 +4,18 @@
  */
 
 /**
- * `@datalayer/loop-plugin-a2ui` — a prompt runs code, and the result is a UI.
+ * `@datalayer/agent-plugin-a2ui` — a prompt runs code, and the result is a UI.
  *
  * @module apps/plugins/a2ui
  */
 
 import { BrowserIcon } from '@primer/octicons-react';
 import { contribution, definePlugin } from '@datalayer/reactor';
-import { LoopCommand, LoopViewType } from '../../core';
+import { AgentCommand, AgentViewType } from '../../core';
 import { AgentsPlugin } from '../agents';
 import { uiManifestOf } from '../../uiManifest';
 
-export const A2UI_PLUGIN_NAME = '@datalayer/loop-plugin-a2ui';
+export const A2UI_PLUGIN_NAME = '@datalayer/agent-plugin-a2ui';
 
 export const A2uiPlugin = definePlugin({
   name: A2UI_PLUGIN_NAME,
@@ -23,7 +23,7 @@ export const A2uiPlugin = definePlugin({
   dependencies: [AgentsPlugin],
   contributes: [
     contribution(
-      LoopViewType,
+      AgentViewType,
       {
         viewType: 'a2ui',
         title: 'Surface',
@@ -44,7 +44,7 @@ export const A2uiPlugin = definePlugin({
       { id: 'a2ui', order: 30 },
     ),
     contribution(
-      LoopCommand,
+      AgentCommand,
       {
         name: 'a2ui',
         aliases: ['surface'],

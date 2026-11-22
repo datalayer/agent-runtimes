@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-prompt` — the prompt as a first-class subject.
+ * `@datalayer/agent-plugin-prompt` — the prompt as a first-class subject.
  *
  * The composer itself is the chat's, whatever the placement: docked under the
  * workspace, in the chat column, or floating in a draggable card
@@ -18,25 +18,25 @@
  * in it from anywhere, through the same ask-and-answer channel the editor
  * commands use; `/new` (Mod+Alt+R) starts the conversation over, and the +
  * this plugin puts in the prompt's footer bar presses exactly that command.
- * `loopPlugins({ floatingPrompt: true })` mounts this plugin and asks the
+ * `agentPlugins({ floatingPrompt: true })` mounts this plugin and asks the
  * chat for the floating placement together.
  *
  * @module apps/plugins/prompt
  */
 
 import { contribution, definePlugin } from '@datalayer/reactor';
-import { LoopCommand, LoopSlots, focusPrompt } from '../../core';
+import { AgentCommand, AgentSlots, focusPrompt } from '../../core';
 import { NewChatAction } from './NewChatAction';
 import { uiManifestOf } from '../../uiManifest';
 
-export const PROMPT_PLUGIN_NAME = '@datalayer/loop-plugin-prompt';
+export const PROMPT_PLUGIN_NAME = '@datalayer/agent-plugin-prompt';
 
 export const PromptPlugin = definePlugin({
   name: PROMPT_PLUGIN_NAME,
   ...uiManifestOf('prompt'),
   contributes: [
     contribution(
-      LoopCommand,
+      AgentCommand,
       {
         name: 'prompt',
         description: 'Focus the prompt',
@@ -51,7 +51,7 @@ export const PromptPlugin = definePlugin({
       { id: 'prompt' },
     ),
     contribution(
-      LoopCommand,
+      AgentCommand,
       {
         name: 'new',
         aliases: ['reset'],
@@ -73,7 +73,7 @@ export const PromptPlugin = definePlugin({
     components: [
       {
         id: 'new-chat',
-        slot: LoopSlots.promptAction,
+        slot: AgentSlots.promptAction,
         Component: NewChatAction,
       },
     ],

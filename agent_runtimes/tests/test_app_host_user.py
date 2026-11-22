@@ -319,12 +319,12 @@ def test_over_ag_ui_the_token_goes_with_the_run_and_host_context_says_its_user(
         "messages": _answered(json.dumps({"values": {"user": "admin"}})),
         "tools": [],
         "context": [],
-        "forwardedProps": {"loop": {}},
+        "forwardedProps": {"agent": {}},
     }
     url = "/api/v1/apps/agents/notes-assistant/ag-ui/"
     refused = remote.post(url, headers=as_("embed:visit-a"), json=run)
     assert refused.status_code == 401
-    run["forwardedProps"] = {"loop": {"user_token": signed()}}
+    run["forwardedProps"] = {"agent": {"user_token": signed()}}
     accepted = remote.post(url, headers=as_("embed:visit-a"), json=run)
     assert accepted.status_code == 200, accepted.text
     told = json.loads(forwarded[-1]["messages"][2]["content"])
@@ -341,7 +341,7 @@ def test_over_ag_ui_the_token_goes_with_the_run_and_host_context_says_its_user(
         json={
             **run,
             "threadId": "thread-ana-0002",
-            "forwardedProps": {"loop": {"user_token": 7}},
+            "forwardedProps": {"agent": {"user_token": 7}},
         },
     )
     assert wrong.status_code == 422

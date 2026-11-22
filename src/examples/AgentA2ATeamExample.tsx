@@ -283,7 +283,7 @@ function AgentA2ATeam(): JSX.Element {
           with{' '}
           <code>python examples/sales-accounting-a2a/serve_accounting.py</code>{' '}
           on the local server, or{' '}
-          <code>loop apps run accounting.yaml --cloud --a2a</code> and set{' '}
+          <code>agent apps run accounting.yaml --cloud --a2a</code> and set{' '}
           <code>VITE_A2A_ACCOUNTING_URL</code>.
         </Flash>
       )}

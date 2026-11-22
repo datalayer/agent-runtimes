@@ -14,7 +14,7 @@
  *
  * Its entries are composed from what the host passes ({@link
  * AssistantMenuItem}s): a host or a plugin adds its own (`contextMenu`; in
- * the LOOP workspace, the `loop.assistant.menu` contribution point).
+ * the Agent workspace, the `agent.assistant.menu` contribution point).
  *
  * @module chat/assistant/AssistantContextMenu
  */

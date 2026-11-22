@@ -45,7 +45,7 @@ __all__ = [
 
 #: The origin of the page an embed's visitor is on, for this request: what
 #: the visitor's browser sent, said to ai-agents.
-PAGE_ORIGIN: ContextVar[str] = ContextVar("loop_embed_page_origin", default="")
+PAGE_ORIGIN: ContextVar[str] = ContextVar("agent_embed_page_origin", default="")
 
 #: The header ai-agents reads it in.
 PAGE_ORIGIN_HEADER = "X-Datalayer-Embed-Origin"

@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-agent-tool-approvals` — tool approvals, as a capacity.
+ * `@datalayer/agent-plugin-agent-tool-approvals` — tool approvals, as a capacity.
  *
  * Mounts the `example-tool-approvals` agent: two echo tools, one of which is
  * held for a person's approval before it runs. Cast from the shared capacity
@@ -16,7 +16,7 @@
 import { defineAgentCapacityPlugin } from '../agent-capacity';
 
 export const AGENT_TOOL_APPROVALS_PLUGIN_NAME =
-  '@datalayer/loop-plugin-agent-tool-approvals';
+  '@datalayer/agent-plugin-agent-tool-approvals';
 
 export interface ToolApprovalsCapacityOptions {
   /** The agentspec to mount; the example lets a person pick another. */

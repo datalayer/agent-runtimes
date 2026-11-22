@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-document-toolbar` — the document's own toolbar items.
+ * `@datalayer/agent-plugin-document-toolbar` — the document's own toolbar items.
  *
  * The prose counterpart of the notebook toolbar plugin, and the same
  * arrangement: the document editor offers a point, this plugin provides the
@@ -20,7 +20,7 @@
  */
 
 import { defineLazyPlugin, onContributionPoint } from '@datalayer/reactor';
-import { LoopDocumentToolbar, LoopDocumentToolbarItem } from '../../core';
+import { AgentDocumentToolbar, AgentDocumentToolbarItem } from '../../core';
 import { DOCUMENT_TOOLBAR_PLUGIN_NAME } from './names';
 
 export { DOCUMENT_TOOLBAR_PLUGIN_NAME };
@@ -31,9 +31,9 @@ export const DocumentToolbarPlugin = defineLazyPlugin({
   description: 'Shows what the document’s code blocks run on.',
   octicon: 'circle',
   emoji: '\u{1F535}',
-  activationEvents: [onContributionPoint(LoopDocumentToolbar)],
+  activationEvents: [onContributionPoint(AgentDocumentToolbar)],
   /** The bar accepts the buttons, so the bar's owner opens the point. */
-  contributionPoints: [LoopDocumentToolbarItem],
+  contributionPoints: [AgentDocumentToolbarItem],
   load: () => import('./plugin'),
 });
 

@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-page-sheet` — a spreadsheet the agent fills in
+ * `@datalayer/agent-plugin-page-sheet` — a spreadsheet the agent fills in
  * the conversation, with frontend tools run in the page (the user, 18
  * November 2026: "add to the accountant the frontend tools to create
  * spreadsheets").
@@ -40,7 +40,7 @@ import {
 import type { SidePlacement } from '../../toolCards/chrome';
 import { PAGE_SHEET, pageSheetTools } from './store';
 
-export const PAGE_SHEET_PLUGIN_NAME = '@datalayer/loop-plugin-page-sheet';
+export const PAGE_SHEET_PLUGIN_NAME = '@datalayer/agent-plugin-page-sheet';
 
 const SheetStage = lazy(() => import('./SheetStage'));
 

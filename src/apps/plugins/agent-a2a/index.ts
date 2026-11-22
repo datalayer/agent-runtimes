@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-agent-a2a` — the capacity, as a plugin.
+ * `@datalayer/agent-plugin-agent-a2a` — the capacity, as a plugin.
  *
  * Mounts the `example-a2a` agent: an orchestrator whose researcher and writer
  * are separate agents reached over the A2A protocol, launched beside it on
@@ -17,7 +17,7 @@
 
 import { defineAgentCapacityPlugin } from '../agent-capacity';
 
-export const AGENT_A2A_PLUGIN_NAME = '@datalayer/loop-plugin-agent-a2a';
+export const AGENT_A2A_PLUGIN_NAME = '@datalayer/agent-plugin-agent-a2a';
 
 export const AgentA2APlugin = defineAgentCapacityPlugin({
   key: 'a2a',

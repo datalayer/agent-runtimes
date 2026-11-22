@@ -1,12 +1,12 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The Personal Agent Protocol in the Loop Python surface, both roles.
+"""The Personal Agent Protocol in the Agent Python surface, both roles.
 
 `app.company_connection`, `app.as_company` and `@app.company_operation` write
 the `pap` block the Spec and the Canvas write: the catalogue's *Order Desk*
 and *Exchange Desk* are rebuilt here from Python, field for field, and
-`loop apps build` writes the same Appspec back.
+`agent apps build` writes the same Appspec back.
 """
 
 from __future__ import annotations
@@ -123,7 +123,9 @@ def close_month(month: str, company: str) -> dict:
 '''
 
 
-def test_loop_apps_build_writes_the_same_appspec_for_both_roles(tmp_path: Path) -> None:
+def test_agent_apps_build_writes_the_same_appspec_for_both_roles(
+    tmp_path: Path,
+) -> None:
     """An application with both roles (the Ledgerly pattern): its app.py builds an
     Appspec whose YAML reads back to the same spec."""
     (tmp_path / "app.py").write_text(SOURCE)
@@ -277,7 +279,7 @@ def test_an_application_refuses_a_renderer_named_as_its_ui() -> None:
         ).spec
 
 
-def test_loop_apps_build_marks_what_the_code_decides_of_pap_with_its_line(
+def test_agent_apps_build_marks_what_the_code_decides_of_pap_with_its_line(
     tmp_path: Path,
 ) -> None:
     """Each company, the company role and each operation built in Python are

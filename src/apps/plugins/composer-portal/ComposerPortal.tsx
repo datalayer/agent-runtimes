@@ -10,7 +10,7 @@
  * given back to the button — drawn over the whole page, in a portal under
  * `<body>`, so that no card the chat sits in holds it.
  *
- * What fills it is its host's (`LoopSlots.composerView`, given the Appspec)
+ * What fills it is its host's (`AgentSlots.composerView`, given the Appspec)
  * when the host has contributed one, else the view its host handed through
  * `ComposerViewProvider`, otherwise `ComposerSource`.
  *
@@ -24,8 +24,8 @@ import { Box } from '@datalayer/primer-addons';
 import { useOptionalSlotComponents } from '@datalayer/reactor/react';
 import { getAgentspecs } from '../../../specs/agents';
 import type { AppSpec } from '../../../types/agentspecs';
-import { agentAppspec } from '../../Application';
-import { LoopSlots } from '../../core';
+import { agentAppspec } from '../../AIApplication';
+import { AgentSlots } from '../../core';
 import { COMPOSER_PORTAL_WORDS } from './words';
 import { ComposerViewContext } from './context';
 import { ComposerSource } from './ComposerSource';
@@ -68,8 +68,8 @@ export function ComposerPortal({
     () => composedApplication(application, agentSpecId),
     [application, agentSpecId],
   );
-  // The host's own Composer, when it contributed one (a Loop workspace's).
-  const views = useOptionalSlotComponents(LoopSlots.composerView);
+  // The host's own Composer, when it contributed one (an Agent workspace's).
+  const views = useOptionalSlotComponents(AgentSlots.composerView);
   // Else the one its host handed through the context (a `Chat` outside a workspace).
   const HostView = useContext(ComposerViewContext);
   if (!app) {

@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-odoo-context` — the Odoo company the Accountant
+ * `@datalayer/agent-plugin-odoo-context` — the Odoo company the Accountant
  * works in and the period it reads, in the chat's title bar: the company as
  * Odoo answered it (`odoo_get_context`, with or without the gateway's
  * prefix), the period of the last trial balance or VAT it showed. Nothing

@@ -110,7 +110,7 @@ def _turn(events: List[Dict[str, Any]]) -> Dict[str, Any]:
     [found] = [
         e["value"]
         for e in events
-        if e.get("type") == "CUSTOM" and e.get("name") == "loop.turn"
+        if e.get("type") == "CUSTOM" and e.get("name") == "agent.turn"
     ]
     return found
 
@@ -505,7 +505,7 @@ def test_an_external_turn_holds_to_the_shared_contract(
 ) -> None:
     """The `external_turn` section of the hosts' shared contracts,
     held by the session API that answers it: its requests are taken as
-    written, the `loop.turn` event carries exactly its keys, and a retry is
+    written, the `agent.turn` event carries exactly its keys, and a retry is
     answered as its replay rule says, under the external event id (a start)
     and under the `Idempotency-Key` (a message)."""
     contract = CONTRACTS["external_turn"]

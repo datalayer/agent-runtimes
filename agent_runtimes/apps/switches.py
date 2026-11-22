@@ -8,11 +8,11 @@ visitors and people signed in alike).
 
 An application's agent is shared: a deployment's by every visitor, a
 Preview's by its builder's conversations. So a conversation's switches are
-never written to the agent's state (``streams.loop``), which the monitoring
+never written to the agent's state (``streams.pubsub``), which the monitoring
 stream's controls switch for everybody: they are kept on the session
 (``LiveSession.switches``) and are in force during its turns only
 (`conversation_switches`), where the agent's MCP and skills guardrails read
-them through ``streams.loop``'s accessors.
+them through ``streams.pubsub``'s accessors.
 
 Only what the runtime offers is switched (`offered_of`): an MCP server that
 runs here and the tools it lists, a skill that is active. Anything else is
@@ -192,7 +192,7 @@ def _equipment_of(agent_id: str) -> Optional[Dict[str, Any]]:
 
 
 def _running_tools() -> Dict[str, Set[str]]:
-    from agent_runtimes.streams.loop import _build_all_mcp_tools_by_server
+    from agent_runtimes.streams.pubsub import _build_all_mcp_tools_by_server
 
     return _build_all_mcp_tools_by_server()
 

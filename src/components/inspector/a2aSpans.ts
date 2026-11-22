@@ -60,7 +60,7 @@ export type A2ASpansOptions = {
   classifyTool?: (name: string, args?: Record<string, unknown>) => ToolClass;
   /**
    * Who presses the buttons of what the peer shows: a request carrying a
-   * pressed button's action (`loop.action` in its message's metadata) is
+   * pressed button's action (`agent.action` in its message's metadata) is
    * theirs, not the asker's — the person (`You`) on a page that draws the
    * surfaces. Unsaid, every request is the asker's.
    */
@@ -164,13 +164,13 @@ function stepOf(message: unknown):
   return undefined;
 }
 
-/** Whether a message carries a pressed button's action: `metadata.loop.action`. */
+/** Whether a message carries a pressed button's action: `metadata.agent.action`. */
 export function pressedAction(message: unknown): boolean {
   if (!isObject(message) || !isObject(message.metadata)) {
     return false;
   }
-  const loop = message.metadata.loop;
-  return isObject(loop) && isObject(loop.action);
+  const agentProps = message.metadata.agent;
+  return isObject(agentProps) && isObject(agentProps.action);
 }
 
 const FAILED_STATES = /FAILED|REJECTED|CANCELED/;

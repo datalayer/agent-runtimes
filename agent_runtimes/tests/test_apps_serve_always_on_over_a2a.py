@@ -112,8 +112,8 @@ async def test_an_agent_not_made_here_or_not_an_application_is_refused(
     assert apps_a2a.served_apps() == []
 
 
-def test_loop_apps_deploy_changes_the_deployment_as_the_ship_tab_would() -> None:
-    """`loop apps deploy` changes the deployment as the Ship tab would, and reads where it answers."""
+def test_agent_apps_deploy_changes_the_deployment_as_the_ship_tab_would() -> None:
+    """`agent apps deploy` changes the deployment as the Ship tab would, and reads where it answers."""
     asked: list[httpx.Request] = []
 
     def ai_agents(request: httpx.Request) -> httpx.Response:

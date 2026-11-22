@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-aws-savings` — the Steward's savings, largest
+ * `@datalayer/agent-plugin-aws-savings` — the Steward's savings, largest
  * first, as a message drawn by the A2UI renderer: each finding with its
  * resource, the estimated monthly saving and whose estimate it is, its state,
  * and the reads it rests on; their sum at the top. Draws
@@ -26,7 +26,7 @@ import {
 import { A2uiCard, type CardSpec } from '../../toolCards/a2uiCard';
 import { readSavings, type Savings } from './read';
 
-export const AWS_SAVINGS_PLUGIN_NAME = '@datalayer/loop-plugin-aws-savings';
+export const AWS_SAVINGS_PLUGIN_NAME = '@datalayer/agent-plugin-aws-savings';
 
 export const AWS_SAVINGS_WORDS = {
   title: 'Savings',

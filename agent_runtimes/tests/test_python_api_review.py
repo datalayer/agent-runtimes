@@ -53,7 +53,7 @@ def test_the_package_is_agent_runtimes_apps_and_the_old_path_is_gone():
     assert Application.__module__ == "agent_runtimes.apps.application"
     assert Session.__module__ == "agent_runtimes.apps.session"
     with pytest.raises(ModuleNotFoundError):
-        importlib.import_module("agent_runtimes.loop.apps")
+        importlib.import_module("agent_runtimes.agent.apps")
 
 
 @pytest.mark.asyncio

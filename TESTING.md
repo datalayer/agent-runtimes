@@ -62,7 +62,7 @@ describe('Component/Function Name', () => {
 
 ## Pictures as tests
 
-The `loop` theme's four reference screens — a conversation, a conversation
+The `agent` theme's four reference screens — a conversation, a conversation
 beside its work, the activity of a worker, an approval — and the floating
 assistant's states are pictures kept in `pictures/baselines/`.
 A run takes them again in Chrome and compares them; a changed
@@ -73,7 +73,7 @@ token, radius or colour shows as a failed picture, to fix or to accept.
 npm run test:pictures
 
 # Only some themes, for a quicker run
-PICTURES_THEMES=loop,datalayer npm run test:pictures
+PICTURES_THEMES=agent,datalayer npm run test:pictures
 
 # Only the floating assistant's pictures (its states and the characters)
 npm run test:pictures -- -g "assistant|character"
@@ -85,16 +85,16 @@ npm run test:pictures:accept
 - **What is pictured.** The four screens in each of the nine themes of the
   registry (`themeConfigs` of `@datalayer/primer-addons`), light and dark, at
   960×640; and the paper clip — idle, thinking, working, waiting, speaking,
-  stepped aside for a dialog — in the `loop` theme, light and dark, at
-  480×360; and the wizard, the cat, the L👀P eyes and the owl an example
-  plugin contributes (`loop.assistant.character`), idle, each in its light
+  stepped aside for a dialog — in the `agent` theme, light and dark, at
+  480×360; and the wizard, the cat, the Agent eyes and the owl an example
+  plugin contributes (`agent.assistant.character`), idle, each in its light
   and its dark drawing. 92 pictures, some 3 MB.
-- **Where they come from.** `html/pictures.html?screen=approval&theme=loop&mode=dark`
+- **Where they come from.** `html/pictures.html?screen=approval&theme=agent&mode=dark`
   (or `?assistant=thinking&mode=light`, or `?character=owl&mode=dark`) renders one of them: the real chat
   components — `ChatBaseHeader` with the presence, `ChatMessageList`,
   `InputPrompt`, `ToolCallDisplay`'s approval card, `AssistantStage` — with
-  fixed data (`src/stories/loop/ReferenceScreens.tsx`). The same screens are
-  stories (`src/stories/loop/LoopReference.stories.tsx`).
+  fixed data (`src/stories/agent/ReferenceScreens.tsx`). The same screens are
+  stories (`src/stories/agent/AgentReference.stories.tsx`).
 - **How they are taken.** Playwright (`pictures/playwright.config.ts`) starts
   Vite on port 3107 with a dependency cache of its own
   (`vite.pictures.config.ts`), opens each page in the system Chrome
@@ -113,10 +113,10 @@ npm run test:pictures:accept
   new picture and a `-diff.png` in `pictures/test-results/<test>/`.
 - **Trying a token before changing it.** `PICTURES_CSS` adds a stylesheet to
   every page before it is pictured:
-  `PICTURES_THEMES=loop PICTURES_CSS='[data-datalayer-theme-scope] { --theme-radius-frame: 20px !important }' npm run test:pictures`
+  `PICTURES_THEMES=agent PICTURES_CSS='[data-datalayer-theme-scope] { --theme-radius-frame: 20px !important }' npm run test:pictures`
   shows what that change would do, as differences.
-- **Fonts.** The `loop` pictures are drawn in Inter, served by the pictures
-  page's own Vite: it imports `@datalayer/primer-addons/style/loop-face.css`
+- **Fonts.** The `agent` pictures are drawn in Inter, served by the pictures
+  page's own Vite: it imports `@datalayer/primer-addons/style/agent-face.css`
   and is ready only once both weights, 400 and 600, are in. The
   other themes use whatever face they resolve on the machine that takes them.
   Baselines are taken on Linux: another system draws text differently and

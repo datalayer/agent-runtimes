@@ -13,7 +13,7 @@
  * How a chat is told to talk to an in-page agent.
  *
  * The shape belongs with the harness rather than with whoever renders a chat.
- * It started in the examples, and then the LOOP workspace needed the identical
+ * It started in the examples, and then the Agent workspace needed the identical
  * thing — same fields, same reasons — which is the usual sign that a shape was
  * living in the wrong place.
  *

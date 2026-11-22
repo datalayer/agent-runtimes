@@ -4,12 +4,12 @@
  */
 
 /**
- * An application, rendered: the LOOP workspace configured from an Appspec.
+ * An application, rendered: the Agent workspace configured from an Appspec.
  *
  * One renderer for every place an application appears — the Studio's
  * Preview, its hosted page, an embed, the home page — so that what a builder
  * sees while building is what its users get. It is not a second shell: it is
- * `LoopEmbed`, given
+ * `AgentEmbed`, given
  *
  * - an **application plugin** (`defineAppPlugin`): the agent that answers,
  *   created with the application in its payload — so the runtime reaches only
@@ -43,7 +43,7 @@
  *   its page — what its builder reads in the Studio's Preview.
  *
  * Which plugins a kind needs, and how its workspace is laid out, is one
- * function: `appPreset`, the preset per kind, as `loopPlugins` is for the
+ * function: `appPreset`, the preset per kind, as `agentPlugins` is for the
  * examples.
  *
  * @module apps/apps/AppRenderer
@@ -74,9 +74,9 @@ import {
   CANVAS_BLOCK_PLUGINS,
   canvasBlocksPluginName,
 } from '../plugins/canvas-blocks';
-import { LoopApplication } from '../core';
-import { LoopEmbed, type LoopEmbedProps } from '../embed/LoopEmbed';
-import type { LoopPresetOptions } from '../presets';
+import { AgentApplication } from '../core';
+import { AgentEmbed, type AgentEmbedProps } from '../embed/AgentEmbed';
+import type { AgentPresetOptions } from '../presets';
 import {
   agentUiChoicesOf,
   agentUiPluginsFor,
@@ -124,9 +124,9 @@ export const agentIdOf = (app: Pick<AppSpec, 'agent' | 'team'>): string => {
 };
 
 /**
- * The plugin that makes a LOOP workspace run an application.
+ * The plugin that makes an Agent workspace run an application.
  *
- * Its page plugin of the pair: named `loop-app-<id>`, as its
+ * Its page plugin of the pair: named `agent-app-<id>`, as its
  * runtime's plugin is, and requiring it — so that it stands down while its
  * runtime does not hold the application, and comes back when it does
  * (`AppRuntimePlugins` follows the runtime).
@@ -148,7 +148,7 @@ export function defineAppPlugin(
   }: {
     /**
      * Its agent is one already on a runtime, made there from its agentspec
-     * and not from the application (a person's own agent, `Application`'s
+     * and not from the application (a person's own agent, `AIApplication`'s
      * runtime mode): the runtime holds no plugin of the application, so the
      * page's requires none.
      */
@@ -208,7 +208,7 @@ export function defineAppPlugin(
 
 /**
  * The application on the page: its plugins delivered as one extension named
- * as its plugin pair is, `loop-app-<id>` — the extension its runtime's plugin
+ * as its plugin pair is, `agent-app-<id>` — the extension its runtime's plugin
  * says too, so that Reactor's manager ("Delivered by") and graph show the
  * page's plugins and the runtime's as one application.
  */
@@ -228,20 +228,20 @@ export function appExtension(
 }
 
 /**
- * The application itself, said to the workspace (`LoopApplication`): what a
+ * The application itself, said to the workspace (`AgentApplication`): what a
  * host's plugin reads of the application it was added to — the left panel's
  * presentation reads its `presentation`, its name and its face — in the
  * words the person reads.
  */
 export function applicationPlugin(app: AppSpec, shown: AppSpec): PluginRef {
   return definePlugin({
-    name: `loop-app-${app.id}-application`,
+    name: `agent-app-${app.id}-application`,
     displayName: `${shown.name}: the application`,
     description: `The Appspec of ${shown.name}, for the plugins its host adds to it.`,
     octicon: 'apps',
     emoji: app.emoji,
     contributes: [
-      contribution(LoopApplication, { app: shown }, { id: 'application' }),
+      contribution(AgentApplication, { app: shown }, { id: 'application' }),
     ],
   }) as PluginRef;
 }
@@ -268,7 +268,7 @@ export type AppInstance = {
   runtimeEngine?: 'datalayer' | 'kagent';
 };
 
-export type AppRendererProps = Omit<LoopEmbedProps, 'agentId'> & {
+export type AppRendererProps = Omit<AgentEmbedProps, 'agentId'> & {
   /** The application to render. */
   app: AppSpec;
   /** What its record is kept under, on Datalayer: the application, its deployment. */
@@ -339,7 +339,7 @@ export type AppRendererProps = Omit<LoopEmbedProps, 'agentId'> & {
   /**
    * The agent that answers, by its name on the runtime it already runs on
    * (`datalayerKept`): a person's own agent, launched from its agentspec
-   * (`Application`'s runtime mode). Its page plugin then requires nothing of
+   * (`AIApplication`'s runtime mode). Its page plugin then requires nothing of
    * that runtime, which holds no plugin of the application. Unsaid, the
    * application's own agent, made under its id.
    */
@@ -348,7 +348,7 @@ export type AppRendererProps = Omit<LoopEmbedProps, 'agentId'> & {
 
 /** What `interface.layout` sets on the workspace. */
 export type AppLayoutOptions = Pick<
-  LoopPresetOptions,
+  AgentPresetOptions,
   | 'editors'
   | 'showViewSelector'
   | 'defaultEditor'
@@ -397,12 +397,12 @@ export function appLayoutOptions(
 export type AppPreset = {
   plugins: PluginRef[];
   workspace: AppLayoutOptions &
-    Pick<LoopPresetOptions, 'conversation' | 'disabledUi'>;
+    Pick<AgentPresetOptions, 'conversation' | 'disabledUi'>;
 };
 
 /**
  * The plugins an application's kind needs, and how its workspace is laid
- * out: the preset per kind, as `loopPlugins` is for the examples.
+ * out: the preset per kind, as `agentPlugins` is for the examples.
  *
  * - a **chat**, a **widget**, a **worker**: its agent (`defineAppPlugin`);
  *   its page (`app-page`) when it has one, with the Canvas's block plugins
@@ -560,7 +560,7 @@ export function appPreset(
  * What an application's agent is created with on a Datalayer runtime: under
  * the application's id, over AG-UI, with the application's own document —
  * so that the runtime registers it and decides every tool call by its rules,
- * as `loop apps run --cloud` does. One payload for every
+ * as `agent apps run --cloud` does. One payload for every
  * place it runs, all of them the workspace (`AppRenderer`): the Studio's
  * Preview, the hosted page, and the embed inline and floating.
  */
@@ -598,9 +598,9 @@ export function appDatalayerCreatePayload(
 }
 
 /**
- * An application in a LOOP workspace: its agent, its starters, its layout.
+ * An application in an Agent workspace: its agent, its starters, its layout.
  *
- * Every other prop is `LoopEmbed`'s, and wins over what the application
+ * Every other prop is `AgentEmbed`'s, and wins over what the application
  * implies — a host that wants the editors beside a chat still says so.
  */
 /** No host plugins: one array, so that it never reads as a change. */
@@ -672,7 +672,7 @@ export function AppRenderer({
   ...embed
 }: AppRendererProps): React.JSX.Element {
   /*
-   * The kind's plugins, made once per application. `LoopEmbed` rebuilds its
+   * The kind's plugins, made once per application. `AgentEmbed` rebuilds its
    * whole reactor when its plugins change, so a new plugin on every render
    * of the host would restart the running workspace. The key is the
    * application as its file holds it: a change to it is a new application.
@@ -743,7 +743,7 @@ export function AppRenderer({
   /*
    * On Datalayer, the application runs on a runtime: allocated with a plain
    * agentspec, its agent created there with the application's spec — so that
-   * the runtime registers it and decides every tool call by its rules, as `loop apps run --cloud` does.
+   * the runtime registers it and decides every tool call by its rules, as `agent apps run --cloud` does.
    */
   const conversation =
     !('problem' in preset) && preset.workspace.conversation !== false;
@@ -856,7 +856,7 @@ export function AppRenderer({
     // The chat's own words in the person's language too: the host's,
     // else the browser's.
     <ChatLanguage language={language}>
-      <LoopEmbed
+      <AgentEmbed
         // The application's own agent: created under its id, so that its
         // spec is applied to an agent of its own, never to the one it extends
         // — or, for a visitor, the one their token reaches.

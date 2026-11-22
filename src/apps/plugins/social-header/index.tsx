@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-social-header` — the Marketer's title bar: a
+ * `@datalayer/agent-plugin-social-header` — the Marketer's title bar: a
  * Network drop-down (all, X, Bluesky, LinkedIn, Discord) told to the agent
  * with every turn, and how many drafts wait for the person's approval. Needs
  * no connection of the person's: a visitor's demo has it too.
@@ -18,7 +18,8 @@
 
 import { defineHeaderPlugin } from '../../toolCards/headerItems';
 
-export const SOCIAL_HEADER_PLUGIN_NAME = '@datalayer/loop-plugin-social-header';
+export const SOCIAL_HEADER_PLUGIN_NAME =
+  '@datalayer/agent-plugin-social-header';
 
 /** The plugin, built for a workspace: what a person picked is that workspace's. */
 export const socialHeaderPlugin = defineHeaderPlugin({

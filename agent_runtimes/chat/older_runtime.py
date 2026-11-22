@@ -3,7 +3,7 @@
 
 """What a slash command says when the runtime answers without what it reads.
 
-A ``loop`` newer than the runtime it talks to (a cloud runtime started from
+A ``agent`` newer than the runtime it talks to (a cloud runtime started from
 an older image) reads keys and routes the runtime does not have yet. The
 command then says so in a sentence, naming both versions, rather than
 failing on a missing key.
@@ -61,11 +61,11 @@ async def older_runtime(tux: "CliTux", what: str) -> str:
     Returns
     -------
     str
-        The sentence, naming the runtime's version and this ``loop``'s.
+        The sentence, naming the runtime's version and this ``agent``'s.
     """
     version = await runtime_version(tux)
     where = getattr(tux, "where", None) or "This runtime"
     return (
         f"{where} (agent-runtimes {version}) does not say {what}: it is older "
-        f"than this loop ({__version__})."
+        f"than this agent ({__version__})."
     )

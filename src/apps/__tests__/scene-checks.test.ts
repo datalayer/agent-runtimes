@@ -4,7 +4,7 @@
  */
 
 /**
- * What an editor refuses of a scene is what `loop` refuses:
+ * What an editor refuses of a scene is what `agent` refuses:
  * every sentence of `sceneChecks` is agentspecs' own, in agentspecs'
  * order, each one at a time as agentspecs stops where it stops.
  *
@@ -60,7 +60,7 @@ const specOf = (yaml: string) => {
   return read.spec;
 };
 
-describe('what an editor refuses of a scene is what `loop` refuses', () => {
+describe('what an editor refuses of a scene is what `agent` refuses', () => {
   it('has a case for every sentence agentspecs says, recorded from agentspecs itself', () => {
     expect(table.recordedWith).toBe('scripts/record-scene-checks.py');
     expect(table.cases.length).toBeGreaterThanOrEqual(34);
@@ -172,8 +172,8 @@ describe('each refusal says which part of the scene it is about', () => {
   it('never throws on a scene of the wrong shape: it refuses it', () => {
     // A cast written as one word used to make the reader throw.
     for (const yaml of [
-      'schema: loop.scene/v1\nid: x\nname: X\ncast: sales\n',
-      'schema: loop.scene/v1\nid: x\nname: X\nscript: 3\nstage: []\n',
+      'schema: agent.scene/v1\nid: x\nname: X\ncast: sales\n',
+      'schema: agent.scene/v1\nid: x\nname: X\nscript: 3\nstage: []\n',
     ]) {
       expect(() => sceneTextProblems(yaml)).not.toThrow();
       expect(sceneTextProblems(yaml).length).toBe(1);
@@ -262,12 +262,12 @@ describe('the pieces of the reading', () => {
 
 describe("a scene of the person's own applications", () => {
   /*
-   * agentspecs reads the catalogue only, so to `loop` a member that is one of
+   * agentspecs reads the catalogue only, so to `agent` a member that is one of
    * the person's own applications — written as its uid — reaches no system.
    * The Studio has the person's applications and judges them by what they
    * truly reach, in the same sentences (decided 2026-10-10).
    */
-  const OWN = `schema: loop.scene/v1
+  const OWN = `schema: agent.scene/v1
 id: probe
 version: 0.0.1
 name: Probe
@@ -302,7 +302,7 @@ script:
   const said = (own?: Parameters<typeof sceneTextProblems>[1]) =>
     sceneTextProblems(OWN, own).map(problem => problem.says);
 
-  it('without them, says what `loop` says: the system is reached by no one', () => {
+  it('without them, says what `agent` says: the system is reached by no one', () => {
     expect(said()).toEqual([
       "The system 'Odoo' (odoo-accounting) is on stage, and no member of the cast reaches it.",
       "Beat 'open': 'mine' asks 'odoo-accounting' (odoo-accounting), which it reaches through no connection.",

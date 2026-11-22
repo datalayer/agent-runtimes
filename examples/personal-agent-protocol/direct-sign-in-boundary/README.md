@@ -8,7 +8,7 @@ model—owns the redirect URI, authorization URL, state, verifier, callback, and
 tokens.
 
 ```bash
-loop apps run examples/personal-agent-protocol/direct-sign-in-boundary/app.py
+agent apps run examples/personal-agent-protocol/direct-sign-in-boundary/app.py
 ```
 
 See the canonical

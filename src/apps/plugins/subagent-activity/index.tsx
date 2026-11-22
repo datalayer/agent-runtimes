@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-subagent-activity` — a delegation, visible.
+ * `@datalayer/agent-plugin-subagent-activity` — a delegation, visible.
  *
  * While an agent has handed work to a subagent, that subagent's icon pulses
  * in the composer's own header — the band inside the prompt box, above the
@@ -16,13 +16,13 @@
  */
 
 import { definePlugin } from '@datalayer/reactor';
-import { LoopSlots } from '../../core';
+import { AgentSlots } from '../../core';
 import { InputPromptPlugin } from '../input-prompt';
 import { SubagentPulse } from './SubagentPulse';
 import { uiManifestOf } from '../../uiManifest';
 
 export const SUBAGENT_ACTIVITY_PLUGIN_NAME =
-  '@datalayer/loop-plugin-subagent-activity';
+  '@datalayer/agent-plugin-subagent-activity';
 
 export const SubagentActivityPlugin = definePlugin({
   name: SUBAGENT_ACTIVITY_PLUGIN_NAME,
@@ -33,7 +33,7 @@ export const SubagentActivityPlugin = definePlugin({
     components: [
       {
         id: 'subagent-pulse',
-        slot: LoopSlots.inpromptMenu,
+        slot: AgentSlots.inpromptMenu,
         // In the prompt's header band, beside the agent chip.
         order: 0,
         Component: SubagentPulse,

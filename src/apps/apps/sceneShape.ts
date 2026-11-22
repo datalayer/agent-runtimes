@@ -4,7 +4,7 @@
  */
 
 /**
- * A scene's shape, refused as `loop` refuses it.
+ * A scene's shape, refused as `agent` refuses it.
  *
  * agentspecs reads a scene with pydantic, which refuses a scene of the wrong
  * shape — a list where a word is written, a choice that is none of its
@@ -14,7 +14,7 @@
  * or `where is not a field of the spec`, after the scene's id.
  *
  * An editor had none of this. It accepted `audience.who: nobody-at-all` and
- * `rehearsal.within: soon`, which `loop` refuses, and a cast written as one
+ * `rehearsal.within: soon`, which `agent` refuses, and a cast written as one
  * word made its reader throw (seen 2026-10-10). This walks the scene's
  * generated JSON Schema (`specs/sceneSchema`) over the text as agentspecs
  * spells it and says pydantic's sentences, in pydantic's order; the table
@@ -242,7 +242,7 @@ const sentence = (issue: Issue): string => {
 };
 
 /**
- * What `loop` says of a scene's shape — every issue, after the scene's id —
+ * What `agent` says of a scene's shape — every issue, after the scene's id —
  * filed under the part of the scene its first issue is about; nothing when
  * the shape is right. `data` is the text read as plain data, in agentspecs'
  * spelling.

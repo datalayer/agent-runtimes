@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The safety set every application runs, from `loop apps validate`.
+"""The safety set every application runs, from `agent apps validate`.
 
 The cases are the Studio's (`appSafety.ts` in the landing), case for case:
 the same ids, failure modes, words and conditions, and the same key. Where
@@ -53,7 +53,7 @@ pytest.importorskip("agentspecs.apps")
 runner = CliRunner()
 
 BASE: Dict[str, Any] = {
-    "schema": "loop.app/v1",
+    "schema": "agent.app/v1",
     "id": "desk",
     "name": "Desk",
     "kind": "chat",
@@ -465,8 +465,8 @@ def test_one_that_does_not_hold_fails_the_command(
 def test_what_only_a_runtime_brings_is_asked_on_a_runtime_on_this_machine(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    from agent_runtimes.agent import launch
     from agent_runtimes.chat import cli
-    from agent_runtimes.loop import launch
 
     configured: List[Dict[str, Any]] = []
     asked: List[str] = []
@@ -729,7 +729,7 @@ class FakeStore:
 def _cloud(
     monkeypatch: pytest.MonkeyPatch, engine: FakeEvals, saved: Dict[str, Any]
 ) -> None:
-    from agent_runtimes.loop import launch
+    from agent_runtimes.agent import launch
 
     monkeypatch.setattr(launch, "make_client", lambda: (engine, "token"))
     monkeypatch.setattr(apps_command, "_store", lambda: FakeStore(saved))
@@ -776,4 +776,4 @@ def test_on_datalayer_nothing_is_launched_without_a_yes_or_for_another_version(
     )
     assert other.exit_code == 3, other.output
     assert "is not version 2 of Desk" in other.output
-    assert "loop apps push" in other.output
+    assert "agent apps push" in other.output

@@ -3,13 +3,13 @@
   Distributed under the terms of the Modified BSD License.
 -->
 
-# Writing a LOOP plugin
+# Writing an Agent plugin
 
 The workspace is a prompt at the bottom and one view above it. Everything else
 — the views, the commands, the header controls — is contributed by plugins.
 This is how to write one.
 
-A plugin depends on `@datalayer/loop-core` and on the reactor, never on the
+A plugin depends on `@datalayer/agent-core` and on the reactor, never on the
 shell. That is what lets the same plugin run in the standalone page, inside the
 Datalayer application, and (later) inside a JupyterLab panel.
 
@@ -17,13 +17,13 @@ Datalayer application, and (later) inside a JupyterLab panel.
 
 ```tsx
 import { contribution, definePlugin } from '@datalayer/reactor';
-import { LoopViewType } from '@datalayer/loop-core';
+import { AgentViewType } from '@datalayer/agent-core';
 
 export const HelloPlugin = definePlugin({
-  name: '@acme/loop-plugin-hello',
+  name: '@acme/agent-plugin-hello',
   contributes: [
     contribution(
-      LoopViewType,
+      AgentViewType,
       {
         viewType: 'hello',
         title: 'Hello',
@@ -38,9 +38,9 @@ export const HelloPlugin = definePlugin({
 
 ```tsx
 // HelloView.tsx — the default export is what the host renders.
-import type { LoopViewProps } from '@datalayer/loop-core';
+import type { AgentViewProps } from '@datalayer/agent-core';
 
-export default function HelloView({ workspace }: LoopViewProps) {
+export default function HelloView({ workspace }: AgentViewProps) {
   return <p>Talking to {workspace.serverUrl}</p>;
 }
 ```
@@ -55,14 +55,14 @@ bundle for everyone, including people who never open it.
 
 ## Contribution points
 
-| Point          | For                           | Rendered by                  |
-| -------------- | ----------------------------- | ---------------------------- |
-| `LoopViewType` | a view the workspace may open | the view host, one at a time |
-| `LoopCommand`  | a slash command               | the prompt, on `/name`       |
-| `LoopMention`  | an `@` namespace              | the prompt's typeahead       |
+| Point           | For                           | Rendered by                  |
+| --------------- | ----------------------------- | ---------------------------- |
+| `AgentViewType` | a view the workspace may open | the view host, one at a time |
+| `AgentCommand`  | a slash command               | the prompt, on `/name`       |
+| `AgentMention`  | an `@` namespace              | the prompt's typeahead       |
 
 And three slots, which render _everything_ contributed rather than choosing:
-`LoopSlots.header`, `LoopSlots.promptAction`, `LoopSlots.status`.
+`AgentSlots.header`, `AgentSlots.promptAction`, `AgentSlots.status`.
 
 Reach for a **slot** when everything contributed should appear (a status chip, a
 header control). Reach for a **point** when something has to pick.
@@ -80,7 +80,7 @@ Give the reason. A greyed-out tab with no explanation is worse than no tab.
 
 ```ts
 contribution(
-  LoopCommand,
+  AgentCommand,
   {
     name: 'hello',
     aliases: ['hi'],
@@ -102,18 +102,18 @@ the two implementations differ, a Rich panel there and a React panel here.
 ## Toolbars are contribution points too
 
 An editor offers a toolbar point; anyone fills it. The notebook plugin offers
-`LoopNotebookToolbar` and renders whatever is on it — it does not know what
+`AgentNotebookToolbar` and renders whatever is on it — it does not know what
 that will be:
 
 ```ts
 definePlugin({
-  name: '@datalayer/loop-plugin-notebook',
-  contributionPoints: [LoopNotebookToolbar], // declared, so the graph shows it empty
+  name: '@datalayer/agent-plugin-notebook',
+  contributionPoints: [AgentNotebookToolbar], // declared, so the graph shows it empty
 });
 ```
 
 ```tsx
-const toolbarExtraItems = useEditorToolbarItems(LoopNotebookToolbar, {
+const toolbarExtraItems = useEditorToolbarItems(AgentNotebookToolbar, {
   workspace,
   editorId: notebookId,
 });
@@ -123,7 +123,7 @@ Filling one from another plugin:
 
 ```ts
 contribution(
-  LoopNotebookToolbar,
+  AgentNotebookToolbar,
   {
     items: ({ workspace, editorId }) => [
       {
@@ -157,9 +157,9 @@ module is not fetched until then:
 
 ```ts
 export const MyToolbarPlugin = defineLazyPlugin({
-  name: '@acme/loop-plugin-my-toolbar',
+  name: '@acme/agent-plugin-my-toolbar',
   displayName: 'My toolbar', // listed and describable meanwhile
-  activationEvents: [onContributionPoint(LoopNotebookToolbar)],
+  activationEvents: [onContributionPoint(AgentNotebookToolbar)],
   load: () => import('./plugin'),
 });
 ```
@@ -173,7 +173,7 @@ one can wait for it — and stand down when it closes:
 
 ```ts
 definePlugin({
-  name: '@acme/loop-plugin-notebook-only',
+  name: '@acme/agent-plugin-notebook-only',
   activationEvents: [onView('notebook')],
   deactivationEvents: [onView('chat')],
 });
@@ -193,7 +193,7 @@ fates:
 
 ```ts
 export const NotebookExtension = defineExtension({
-  name: '@datalayer/loop-extension-notebook',
+  name: '@datalayer/agent-extension-notebook',
   displayName: 'Notebooks',
   plugins: [NotebookPlugin, NotebookToolbarPlugin],
 });
@@ -211,10 +211,10 @@ Declare it, and read its build output:
 import {
   CodeSandboxPlugin,
   useSandboxService,
-} from '@datalayer/loop-plugin-code-sandbox';
+} from '@datalayer/agent-plugin-code-sandbox';
 
 export const MyPlugin = definePlugin({
-  name: '@acme/loop-plugin-mine',
+  name: '@acme/agent-plugin-mine',
   dependencies: [CodeSandboxPlugin], // pulled in whether or not the host mounted it
   // …
 });
@@ -234,7 +234,7 @@ A plugin that holds a connection, a kernel or a cache must say so:
 
 ```ts
 definePlugin({
-  name: '@acme/loop-plugin-mine',
+  name: '@acme/agent-plugin-mine',
   preserveOutput: true, // enable() keeps what I built
   build: () => ({ connection: connect() }),
 });
@@ -277,12 +277,12 @@ A plugin is testable without a DOM, because contributions are data:
 const reactor = buildReactorFromPlugins([MyPlugin]);
 reactor.start();
 
-expect(reactor.getContributions(LoopViewType).map(v => v.id)).toEqual([
+expect(reactor.getContributions(AgentViewType).map(v => v.id)).toEqual([
   'hello',
 ]);
 
-reactor.disable('@acme/loop-plugin-mine');
-expect(reactor.getContributions(LoopViewType)).toHaveLength(0);
+reactor.disable('@acme/agent-plugin-mine');
+expect(reactor.getContributions(AgentViewType)).toHaveLength(0);
 ```
 
 If disabling your plugin leaves anything behind, something is holding a

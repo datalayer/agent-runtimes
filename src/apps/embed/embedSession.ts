@@ -26,7 +26,7 @@
  */
 
 import type { ChatMessage } from '../../types/messages';
-import { windowTurnErrorOf } from '../../chat/base/loopWindow';
+import { windowTurnErrorOf } from '../../chat/base/agentWindow';
 import { messagesOfThread } from '../../portable/thread';
 
 /** Where a visit's session is kept in the host's storage: `<prefix>:<app>:<visit>`. */

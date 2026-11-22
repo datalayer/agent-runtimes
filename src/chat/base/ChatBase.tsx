@@ -229,9 +229,9 @@ import {
   chatSpanRecorder,
   type ChatSpanRecorder,
 } from '../../components/inspector/chatSpans';
-import { isStepDisplay, withLoopStep } from './loopStep';
-import { applyLoopElement } from './loopElement';
-import { tellLoopWindow } from './loopWindow';
+import { isStepDisplay, withAgentStep } from './agentStep';
+import { applyAgentElement } from './agentElement';
+import { tellAgentWindow } from './agentWindow';
 import {
   displayPressOf,
   placeable,
@@ -2306,7 +2306,7 @@ function ChatBaseInner({
   /*
    * Handed on to a host that draws its own prompt.
    *
-   * The loop workspace is one: it renders the composer itself, so the usage
+   * The Agent workspace is one: it renders the composer itself, so the usage
    * bar beside it can only show what this component passes out. Without this
    * an in-page agent — whose only account of the window is the totals the
    * harness reports here — left that bar permanently empty.
@@ -2468,7 +2468,7 @@ function ChatBaseInner({
       const routed = next.routed;
       if (routed.to === 'window') {
         // For the page it sits in, outside the conversation.
-        tellLoopWindow(routed.data);
+        tellAgentWindow(routed.data);
       } else if (routed.to === 'step') {
         // A step of its code, drawn as it runs.
         const step = routed.step;
@@ -2477,7 +2477,7 @@ function ChatBaseInner({
             kept.steps.map(row => [row.item.id, row.after] as const),
           );
           const last = conversationRef.current.items.at(-1)?.id ?? null;
-          const items = withLoopStep(
+          const items = withAgentStep(
             kept.steps.map(row => row.item),
             step,
           ) as ToolCallMessage[];
@@ -2494,7 +2494,7 @@ function ChatBaseInner({
       } else if (routed.to === 'element') {
         // In a side panel or on a page of its own.
         uiElementsRef.current.add(routed.change.id);
-        applyLoopElement(routed.change);
+        applyAgentElement(routed.change);
       } else if (!placeable(messageStubs(), routed.op)) {
         const under =
           routed.op.op === 'show' || routed.op.op === 'ask'
@@ -3851,7 +3851,7 @@ function ChatBaseInner({
 
         case 'activity':
           // What the server says besides the conversation's text comes on
-          // the ui socket (RU-W); the run's own — `loop.session`
+          // the ui socket (RU-W); the run's own — `agent.session`
           // among them — are the conversation's.
           if (event.activity) {
             voiceSayRef.current?.(event.activity);
@@ -4531,7 +4531,7 @@ function ChatBaseInner({
                 : 'Answered.'
             : action.action;
         await handleSend(words, {
-          loop: {
+          agent: {
             action: {
               name: action.action,
               display_id: display.id,
@@ -4574,7 +4574,7 @@ function ChatBaseInner({
     resetConversation,
   ]);
 
-  // Hand the send function to a host that owns the input box (the LOOP
+  // Hand the send function to a host that owns the input box (the Agent
   // workspace). Withdrawn on unmount so nothing holds a stale sender.
   useEffect(() => {
     if (!onSendReady) return undefined;
@@ -4588,7 +4588,7 @@ function ChatBaseInner({
       },
       stop: handleStop,
       // The same reset the header's + performs, for a host whose controls
-      // live outside this component — the LOOP prompt's + reaches it here.
+      // live outside this component — the Agent prompt's + reaches it here.
       newChat: handleNewChat,
       thread: () => threadIdRef.current,
       // Its speaker, for a host whose composer holds the microphone.
@@ -5342,7 +5342,7 @@ function ChatBaseInner({
   //
   // Assembled as a props object first: `renderHeader` lets a host take these
   // exact props — kernel indicator, runtime status, actions, all of it — and
-  // draw the bar itself. The loop's chat-header plugin is that host: the
+  // draw the bar itself. The Agent's chat-header plugin is that host: the
   // header then *arrives as a plugin* without this component re-deriving any
   // of what only it knows.
   const chatHeaderProps: ChatBaseHeaderProps = {
@@ -5416,7 +5416,7 @@ function ChatBaseInner({
           As wide as the host, always.
 
           The root set its height and said nothing about width, so mounted in
-          a flex row — which is how the LOOP chat mounts it — it was a
+          a flex row — which is how the Agent chat mounts it — it was a
           shrink-to-fit item: as wide as its widest line and no wider,
           anchored to the left of a row it should have filled, and re-sizing
           with every streamed chunk. That is what made the person's own
@@ -5451,7 +5451,7 @@ function ChatBaseInner({
           This is a flex container holding one child, and `AgentDetails` sets a
           height but no width — so in a row it was a flex item with `flex-basis:
           auto` and no grow, which is to say it was as wide as its longest line
-          of text and no wider. On the LOOP workspace, where the chat column is
+          of text and no wider. On the Agent workspace, where the chat column is
           already narrow, that read as the panel occupying half the space it was
           given, with the rest of the surface blank beside it.
        

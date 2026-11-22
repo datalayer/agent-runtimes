@@ -85,20 +85,20 @@ describe('the semantic agent events contract (version 1)', () => {
 });
 
 describe('a turn and its question', () => {
-  it('reads loop.turn and nothing else', () => {
+  it('reads agent.turn and nothing else', () => {
     expect(
       turnOf({
         type: 'CUSTOM',
-        name: 'loop.turn',
+        name: 'agent.turn',
         value: { session: 'S1', turn: 't1', replayed: true, state: 'finished' },
       }),
     ).toEqual({ replayed: true, session: 'S1', state: 'finished', turn: 't1' });
-    expect(turnOf({ type: 'CUSTOM', name: 'loop.session', value: {} })).toBe(
+    expect(turnOf({ type: 'CUSTOM', name: 'agent.session', value: {} })).toBe(
       undefined,
     );
     // A value that is not an object names no field: never stringified.
     expect(
-      turnOf({ type: 'CUSTOM', name: 'loop.turn', value: { turn: { a: 1 } } }),
+      turnOf({ type: 'CUSTOM', name: 'agent.turn', value: { turn: { a: 1 } } }),
     ).toEqual({ replayed: false, session: '', state: '', turn: '' });
   });
 

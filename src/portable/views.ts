@@ -49,7 +49,7 @@ export type TurnEndRowProps = { item: TurnEndItem };
 /** A failure, announced. */
 export type ErrorRowProps = { item: ErrorItem };
 
-/** What the application waits for the person to answer (`loop.ask`). */
+/** What the application waits for the person to answer (`agent.ask`). */
 export type QuestionCardProps = {
   question: ConversationQuestion;
   busy: boolean;

@@ -13,10 +13,10 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  applyLoopElement,
-  clearLoopElements,
-} from '../../chat/base/loopElement';
-import type { LoopWorkspaceContext } from '../core';
+  applyAgentElement,
+  clearAgentElements,
+} from '../../chat/base/agentElement';
+import type { AgentWorkspaceContext } from '../core';
 import { AppElements, elementsByPlace } from '../plugins/app-elements';
 import { ANSWER_DISPLAY_TYPE } from '../plugins/a2ui-surface/toolResult';
 import type { Display } from '@datalayer/reactor/ui';
@@ -64,7 +64,7 @@ function shows(id: string, title: string, text: string): Display {
 }
 
 afterEach(() => {
-  act(() => clearLoopElements());
+  act(() => clearAgentElements());
   document.body.replaceChildren();
 });
 
@@ -74,7 +74,7 @@ async function mounted(send = vi.fn()) {
   const root = createRoot(container);
   const workspace = {
     viewControls: { send },
-  } as unknown as LoopWorkspaceContext;
+  } as unknown as AgentWorkspaceContext;
   await act(async () => root.render(<AppElements workspace={workspace} />));
   return { container, root };
 }
@@ -89,13 +89,13 @@ describe('the side panel and the pages', () => {
   it('draw a panel and a page where they belong, each closed by its own button', async () => {
     const { container, root } = await mounted();
     await act(async () => {
-      applyLoopElement({
+      applyAgentElement({
         id: 'runs',
         where: 'panel',
         title: 'Runs',
         shows: shows('runs', 'Runs', 'Two runs'),
       });
-      applyLoopElement({
+      applyAgentElement({
         id: 'report',
         where: 'page',
         title: 'The report',
@@ -119,7 +119,7 @@ describe('the side panel and the pages', () => {
     await act(async () => close.click());
     expect(container.querySelector('[role="dialog"]')).toBeNull();
     expect(container.querySelector('aside')).not.toBeNull();
-    await act(async () => applyLoopElement({ id: 'runs', closed: true }));
+    await act(async () => applyAgentElement({ id: 'runs', closed: true }));
     expect(container.innerHTML).toBe('');
     await act(async () => root.unmount());
   });

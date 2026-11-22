@@ -14,9 +14,9 @@ import { describe, expect, it } from 'vitest';
 import {
   getThemeConfig,
   themeAccentVars,
-  loopControlsCss,
-  loopFontFamily,
-  loopThemeStyles,
+  agentControlsCss,
+  agentFontFamily,
+  agentThemeStyles,
 } from '@datalayer/primer-addons';
 import { DEFAULT_VOICE, emptyAppspec } from '../apps/appspec';
 import type { AppVoiceSpec } from '../../types/agentspecs';
@@ -78,7 +78,7 @@ describe('what the host overrides', () => {
       accent: 'sky',
       colorMode: 'auto',
       font: '',
-      variant: 'loop',
+      variant: 'agent',
     });
     expect(
       embedLookOf(
@@ -240,7 +240,7 @@ describe('an application that listens, embedded', () => {
 });
 
 describe('the theme inside the element', () => {
-  it('is the loop theme with the application’s accent, in both modes', () => {
+  it('is the agent theme with the application’s accent, in both modes', () => {
     const styles = embedThemeStyles({ accent: 'violet' }) as {
       light: Record<string, string>;
       dark: Record<string, string>;
@@ -248,7 +248,7 @@ describe('the theme inside the element', () => {
     };
     expect(styles.light).toMatchObject(themeAccentVars('violet', 'light'));
     expect(styles.dark).toMatchObject(themeAccentVars('violet', 'dark'));
-    expect(styles.css).toBe(loopThemeStyles.css);
+    expect(styles.css).toBe(agentThemeStyles.css);
   });
 
   it('is the theme the application names, with its accent over it (every theme since 2026-10-07)', () => {
@@ -278,7 +278,7 @@ describe('the theme inside the element', () => {
     const values = Object.values(styles.light).filter(
       value => typeof value === 'string',
     );
-    expect(values.some(value => value.includes(loopFontFamily))).toBe(false);
+    expect(values.some(value => value.includes(agentFontFamily))).toBe(false);
     expect(styles.light['--fontStack-sansSerif']).toBe('Georgia, serif');
     expect(styles.light['--text-title-shorthand-medium']).toContain(
       'Georgia, serif',
@@ -286,12 +286,12 @@ describe('the theme inside the element', () => {
   });
 
   it('resets what the host page would pass down, and scopes the theme’s controls to its element', () => {
-    const css = embedShadowCss(loopThemeStyles.css);
+    const css = embedShadowCss(agentThemeStyles.css);
     expect(css).toContain(':host {\n  all: initial;');
     expect(css).toContain(
       '@scope ([data-datalayer-theme-scope]) to ([data-datalayer-theme-scope]:not([data-datalayer-theme-scope]))',
     );
-    expect(css).toContain(loopControlsCss.trim().split('\n')[0]);
+    expect(css).toContain(agentControlsCss.trim().split('\n')[0]);
     // A floating mode takes no room in the page.
     expect(css).toContain(':host(:not([data-embed-mode="inline"]))');
   });

@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-social-accounts` — which of X, Bluesky and
+ * `@datalayer/agent-plugin-social-accounts` — which of X, Bluesky and
  * LinkedIn the person linked, as whom, and what each can do: linked,
  * posting only (link it again for reading), reconnect (LinkedIn's grant
  * lapsed) or not linked, with where to fix it. Draws `social_accounts`,
@@ -36,7 +36,7 @@ import {
 } from './read';
 
 export const SOCIAL_ACCOUNTS_PLUGIN_NAME =
-  '@datalayer/loop-plugin-social-accounts';
+  '@datalayer/agent-plugin-social-accounts';
 
 export const SOCIAL_ACCOUNTS_WORDS = {
   title: 'Your social accounts',

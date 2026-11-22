@@ -292,7 +292,7 @@ def _carries_history(body: Mapping[str, Any]) -> bool:
 
 #: A session's conversation, kept in this process: its text turns as the last
 #: run had them, with that run's answer. A ``{"prompt": ...}`` caller (AWS's
-#: samples, ``loop``) sends only its new message, where an AG-UI client (the
+#: samples, ``agent``) sends only its new message, where an AG-UI client (the
 #: Studio, through ai-agents) sends the whole conversation: whichever ran last,
 #: the next prompt goes after it. Bounded per session and in sessions, the
 #: oldest dropped first.

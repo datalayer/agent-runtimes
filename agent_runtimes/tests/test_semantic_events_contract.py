@@ -8,7 +8,7 @@ events.
 reduces a session's AG-UI stream to; `src/portable/semanticOfAgUi.ts`
 reduces every case of it. This side holds the cases to what the session
 code emits: every AG-UI event type and custom event the session routes and
-the loop's sessions emit has a case, every `loop.turn` state a case names is
+the loop's sessions emit has a case, every `agent.turn` state a case names is
 one the runtime sets, and every question kind the runtime asks has a case.
 No case stands for an event the runtime never sends.
 """
@@ -94,7 +94,7 @@ def test_every_event_type_the_session_code_emits_has_a_case():
 
 def test_every_custom_event_the_session_code_emits_has_a_case():
     emitted = _emitted_custom_names()
-    assert {"loop.session", "loop.turn"} <= emitted
+    assert {"agent.session", "agent.turn"} <= emitted
     cased = {event["name"] for event in _cased() if event["type"] == "CUSTOM"}
     assert emitted - cased == set()
 
@@ -106,7 +106,7 @@ def test_no_case_is_a_custom_event_the_runtime_never_sends():
     assert cased - _emitted_custom_names() == {"reactor.ui"}
 
 
-def test_every_loop_turn_state_a_case_names_is_one_the_runtime_sets():
+def test_every_agent_turn_state_a_case_names_is_one_the_runtime_sets():
     source = inspect.getsource(external_turns)
     states = set(re.findall(r'\bstate(?::\s*str)?\s*=\s*"([a-z]+)"', source))
     assert states == {"running", "finished", "failed"}

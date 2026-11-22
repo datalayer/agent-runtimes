@@ -21,11 +21,11 @@ export const COMPOSER_PORTAL_WORDS = {
   spec: 'YAML',
   python: 'Python',
   canvasSays:
-    'Its parts: who does the work, how its page is laid out, the UI it brings and how it starts.',
+    'Its agent and its parts on the visual editor, read only: select a part to see its properties.',
   specSays: 'The whole application written out, every part of it.',
   pythonBuilt: 'Built in Python: its own app.py.',
   pythonEjected:
-    'Written as a spec: this is the app.py `loop apps eject` writes from it, its spec ready for code.',
+    'Written as a spec: this is the app.py `agent apps eject` writes from it, its spec ready for code.',
   pythonNone:
     'Written as a spec, and not one of the catalogue’s: its app.py is written when it is ejected in the Studio.',
 } as const;

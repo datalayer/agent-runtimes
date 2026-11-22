@@ -7,7 +7,7 @@ A header UI (``agentspecs/ui/<id>.yaml``, ``header``) puts buttons,
 drop-downs and indicators in the chat's title bar. Its indicators are set by
 the agent, with a frontend tool the page runs; its drop-downs go the other
 way: the page sends the option each one is on with every run
-(``forwardedProps.loop.header``, an option id by item id, by UI id), and the
+(``forwardedProps.agent.header``, an option id by item id, by UI id), and the
 runtime tells the agent their sentences for that run only — as it does the
 modes of the composer (:mod:`agent_runtimes.apps.composer`).
 
@@ -81,7 +81,7 @@ def header_says(ui_id: str, chosen: Mapping[str, Any]) -> List[str]:
 
 
 def header_instructions(header: Any) -> str:
-    """What a run is told of its title bar's drop-downs: ``forwardedProps.loop.header``.
+    """What a run is told of its title bar's drop-downs: ``forwardedProps.agent.header``.
 
     Parameters
     ----------

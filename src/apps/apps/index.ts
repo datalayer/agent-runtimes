@@ -4,7 +4,7 @@
  */
 
 /**
- * Applications in LOOP: what an application does when its agent calls a tool.
+ * Applications in Agent: what an application does when its agent calls a tool.
  *
  * @module apps/apps
  */

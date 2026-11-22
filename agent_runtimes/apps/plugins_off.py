@@ -7,7 +7,7 @@ An organization keeps the UI plugins of the catalogue it has turned off in IAM
 (`GET /api/iam/v1/organizations/{uid}/plugins-off`, ids of agentspecs' ``ui``
 such as ``a2ui-surface``). An application whose page uses a block of one of them says so in
 its setup notes, in the words of the Studio's Canvas (agent-runtimes'
-`blockSetupNotes`): `loop apps validate` and a runtime configured with the
+`blockSetupNotes`): `agent apps validate` and a runtime configured with the
 application read the list with the caller's token. With no organization, or
 when IAM cannot be read, none is off, and the reading says why.
 """

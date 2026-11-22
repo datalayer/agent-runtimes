@@ -8,7 +8,7 @@ The package declares one entry point under ``datalayer.reactor.extensions``
 with one plugin, whose ``provide_contributions`` contributes the harness —
 its spec read from ``aider.yaml`` beside this module, in the catalogue's
 schema, and the ACP adapter that drives every ACP harness. Installed beside
-agent-runtimes, ``loop harnesses`` lists it and an agent spec may say
+agent-runtimes, ``agent harnesses`` lists it and an agent spec may say
 ``harness: aider``. Nothing in agent-runtimes is edited.
 
 A yaml missing ``terms`` is refused at the seam, naming this plugin: a

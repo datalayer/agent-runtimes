@@ -6,7 +6,7 @@
 An application declares slash commands (``interface.commands``) and mode
 switches (``interface.modes``). The page lists the commands when ``/`` is
 typed and sends the prompt of the one picked; it sends the options of the
-modes with every run (``forwardedProps.loop.modes``), and the runtime tells
+modes with every run (``forwardedProps.agent.modes``), and the runtime tells
 the agent the instructions of the options chosen and runs the model one of
 them names — for that run only. A profile (``interface.profiles``) is
 picked before the conversation starts and kept to its end: its instructions

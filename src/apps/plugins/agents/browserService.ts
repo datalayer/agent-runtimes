@@ -218,8 +218,8 @@ export function createBrowserSandboxService(
 
     serviceManager = await source.acquire();
     const connection = await serviceManager.sessions.startNew({
-      name: 'loop',
-      path: 'loop.ipynb',
+      name: 'agent',
+      path: 'agent.ipynb',
       type: 'notebook',
       kernel: { name: 'python' },
     });

@@ -168,7 +168,7 @@ async def test_its_agent_opens_reads_screenshots_and_clicks(fake: FakeBrowser) -
             ToolCallPart("page_screenshot", {}),
             ToolCallPart("click_on_page", {"selector": "a"}),
             ToolCallPart(
-                "type_on_page", {"selector": "#q", "text": "loop", "submit": True}
+                "type_on_page", {"selector": "#q", "text": "agent", "submit": True}
             ),
         ]
     )
@@ -201,7 +201,7 @@ async def test_its_agent_opens_reads_screenshots_and_clicks(fake: FakeBrowser) -
     assert fake.done == [
         ("open", "https://example.com"),
         ("click", "a"),
-        ("type", "#q", "loop", True),
+        ("type", "#q", "agent", True),
     ]
 
 
@@ -332,7 +332,7 @@ class Talking:
 
 
 SPEC = {
-    "schema": "loop.app/v1",
+    "schema": "agent.app/v1",
     "id": "desk",
     "name": "Desk",
     "kind": "chat",
@@ -398,7 +398,7 @@ def test_a_person_sees_its_page_takes_it_over_and_hands_it_back(
         )
         clicked = remote.post(f"{BASE}/browser/click", json=click, headers=ada)
         assert clicked.json()["page"]["title"] == "Example Domain"
-        remote.post(f"{BASE}/browser/type", json={"text": "loop"}, headers=ada)
+        remote.post(f"{BASE}/browser/type", json={"text": "agent"}, headers=ada)
         remote.post(f"{BASE}/browser/key", json={"key": "Enter"}, headers=ada)
         remote.post(f"{BASE}/browser/scroll", json={"dy": 300}, headers=ada)
         refused = remote.post(f"{BASE}/browser/key", json={"key": "F12"}, headers=ada)
@@ -416,7 +416,7 @@ def test_a_person_sees_its_page_takes_it_over_and_hands_it_back(
         )
         assert held.done == [
             ("click_at", 40.0, 120.0),
-            ("type_text", "loop"),
+            ("type_text", "agent"),
             ("press", "Enter"),
             ("scroll", 300.0),
             ("open", "https://example.org/"),
@@ -491,8 +491,8 @@ async def test_a_real_chromium_opens_reads_types_and_shows_a_page(
         # Width and height, from the PNG's header: the page's own size.
         assert int.from_bytes(png[16:20], "big") == browsing.WIDTH
         assert int.from_bytes(png[20:24], "big") == browsing.HEIGHT
-        await browser.type("#q", "loop")
-        assert (await browser.click("#go")).title == "Typed: loop"
+        await browser.type("#q", "agent")
+        assert (await browser.click("#go")).title == "Typed: agent"
         with pytest.raises(ComputerRefused, match="Nothing on the page matches"):
             await browser.click("#missing")
         # A person clicks where the field and the button show on the
@@ -504,9 +504,9 @@ async def test_a_real_chromium_opens_reads_types_and_shows_a_page(
         field = await browser._call(centre, "q")
         await browser.click_at(*field)
         await browser.press("Backspace")
-        await browser.type_text("p!")
+        await browser.type_text("t!")
         button = await browser._call(centre, "go")
-        assert (await browser.click_at(*button)).title == "Typed: loop!"
+        assert (await browser.click_at(*button)).title == "Typed: agent!"
         # What a page fetches is let through where private pages are allowed.
         reached = await browser._evaluate(
             f"fetch({served!r}, {{mode: 'no-cors'}})"

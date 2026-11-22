@@ -7,37 +7,37 @@ from __future__ import annotations
 
 import pytest
 
-from agent_runtimes.streams import loop
+from agent_runtimes.streams import pubsub
 
 
 class TestStreamSkillsState:
     def test_set_agent_enabled_skills_defaults_to_enabled(self) -> None:
         agent_id = "skills-default-enabled"
-        loop.purge_agent_stream_state(agent_id)
+        pubsub.purge_agent_stream_state(agent_id)
         try:
-            snapshot = loop.set_agent_enabled_skills(agent_id, ["alpha", "beta"])
+            snapshot = pubsub.set_agent_enabled_skills(agent_id, ["alpha", "beta"])
             by_id = {entry["id"]: entry for entry in snapshot}
 
             assert by_id["alpha"]["status"] == "enabled"
             assert by_id["beta"]["status"] == "enabled"
-            assert loop.get_agent_enabled_skill_ids(agent_id) == {"alpha", "beta"}
+            assert pubsub.get_agent_enabled_skill_ids(agent_id) == {"alpha", "beta"}
         finally:
-            loop.purge_agent_stream_state(agent_id)
+            pubsub.purge_agent_stream_state(agent_id)
 
     def test_set_agent_turn_enabled_skills_preserves_tracked_scope(self) -> None:
         agent_id = "skills-turn-enablement"
-        loop.purge_agent_stream_state(agent_id)
+        pubsub.purge_agent_stream_state(agent_id)
         try:
-            loop.set_agent_enabled_skills(agent_id, ["alpha", "beta"])
-            snapshot = loop.set_agent_turn_enabled_skills(agent_id, ["alpha"])
+            pubsub.set_agent_enabled_skills(agent_id, ["alpha", "beta"])
+            snapshot = pubsub.set_agent_turn_enabled_skills(agent_id, ["alpha"])
             by_id = {entry["id"]: entry for entry in snapshot}
 
             assert set(by_id.keys()) == {"alpha", "beta"}
             assert by_id["alpha"]["status"] == "enabled"
             assert by_id["beta"]["status"] == "available"
-            assert loop.get_agent_enabled_skill_ids(agent_id) == {"alpha"}
+            assert pubsub.get_agent_enabled_skill_ids(agent_id) == {"alpha"}
         finally:
-            loop.purge_agent_stream_state(agent_id)
+            pubsub.purge_agent_stream_state(agent_id)
 
     def test_set_agent_enabled_skills_uses_catalog_metadata_when_missing(
         self, monkeypatch: pytest.MonkeyPatch
@@ -49,9 +49,9 @@ class TestStreamSkillsState:
 
         monkeypatch.setattr(configure, "_get_available_skills", lambda: [])
         agent_id = "skills-catalog-fallback"
-        loop.purge_agent_stream_state(agent_id)
+        pubsub.purge_agent_stream_state(agent_id)
         try:
-            snapshot = loop.set_agent_enabled_skills(
+            snapshot = pubsub.set_agent_enabled_skills(
                 agent_id,
                 ["text-summarizer:0.0.1"],
             )
@@ -60,7 +60,7 @@ class TestStreamSkillsState:
             assert by_id["text-summarizer"]["name"] == "Text Summarizer Skill"
             assert by_id["text-summarizer"]["status"] == "enabled"
         finally:
-            loop.purge_agent_stream_state(agent_id)
+            pubsub.purge_agent_stream_state(agent_id)
 
 
 class TestStreamMCPState:
@@ -69,10 +69,10 @@ class TestStreamMCPState:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         agent_id = "mcp-turn-enablement"
-        loop.purge_agent_stream_state(agent_id)
+        pubsub.purge_agent_stream_state(agent_id)
         try:
             monkeypatch.setattr(
-                loop,
+                pubsub,
                 "_build_all_mcp_tools_by_server",
                 lambda: {
                     "server-a": {"search_docs", "list_docs"},
@@ -80,7 +80,7 @@ class TestStreamMCPState:
                 },
             )
 
-            result = loop.set_agent_enabled_mcp_tool_names(
+            result = pubsub.set_agent_enabled_mcp_tool_names(
                 agent_id,
                 ["list_docs", "fetch_url", "unknown"],
             )
@@ -89,29 +89,29 @@ class TestStreamMCPState:
                 "server-a": ["list_docs"],
                 "server-b": ["fetch_url"],
             }
-            assert loop.get_agent_enabled_mcp_tool_names(agent_id) == {
+            assert pubsub.get_agent_enabled_mcp_tool_names(agent_id) == {
                 "list_docs",
                 "fetch_url",
             }
         finally:
-            loop.purge_agent_stream_state(agent_id)
+            pubsub.purge_agent_stream_state(agent_id)
 
     def test_set_agent_enabled_mcp_tool_names_matches_normalized_aliases(
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         agent_id = "mcp-normalized-aliases"
-        loop.purge_agent_stream_state(agent_id)
+        pubsub.purge_agent_stream_state(agent_id)
         try:
             monkeypatch.setattr(
-                loop,
+                pubsub,
                 "_build_all_mcp_tools_by_server",
                 lambda: {
                     "tavily": {"tavily__tavily_extract", "tavily__tavily_search"},
                 },
             )
 
-            result = loop.set_agent_enabled_mcp_tool_names(
+            result = pubsub.set_agent_enabled_mcp_tool_names(
                 agent_id,
                 ["tavily_extract"],
             )
@@ -119,21 +119,21 @@ class TestStreamMCPState:
             assert result == {
                 "tavily": ["tavily__tavily_extract"],
             }
-            assert loop.get_agent_enabled_mcp_tool_names(agent_id) == {
+            assert pubsub.get_agent_enabled_mcp_tool_names(agent_id) == {
                 "tavily__tavily_extract",
             }
         finally:
-            loop.purge_agent_stream_state(agent_id)
+            pubsub.purge_agent_stream_state(agent_id)
 
     def test_set_agent_enabled_mcp_tool_names_ignores_non_mcp_selection(
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         agent_id = "mcp-ignore-non-mcp"
-        loop.purge_agent_stream_state(agent_id)
+        pubsub.purge_agent_stream_state(agent_id)
         try:
             monkeypatch.setattr(
-                loop,
+                pubsub,
                 "_build_all_mcp_tools_by_server",
                 lambda: {
                     "server-a": {"search_docs", "list_docs"},
@@ -141,9 +141,9 @@ class TestStreamMCPState:
             )
 
             # Establish explicit prior state.
-            loop.set_agent_enabled_mcp_tool_names(agent_id, ["search_docs"])
+            pubsub.set_agent_enabled_mcp_tool_names(agent_id, ["search_docs"])
 
-            result = loop.set_agent_enabled_mcp_tool_names(
+            result = pubsub.set_agent_enabled_mcp_tool_names(
                 agent_id,
                 ["web_search_preview"],
             )
@@ -151,8 +151,8 @@ class TestStreamMCPState:
             assert result == {
                 "server-a": ["search_docs"],
             }
-            assert loop.get_agent_enabled_mcp_tool_names(agent_id) == {
+            assert pubsub.get_agent_enabled_mcp_tool_names(agent_id) == {
                 "search_docs",
             }
         finally:
-            loop.purge_agent_stream_state(agent_id)
+            pubsub.purge_agent_stream_state(agent_id)

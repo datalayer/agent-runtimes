@@ -46,7 +46,7 @@ import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { LoopEmbed } from '../apps';
+import { AgentEmbed } from '../apps';
 import { useAgentRuntimeStore } from '../stores';
 import { AgentNotificationsPlugin } from '../apps/plugins/agent-notifications';
 
@@ -324,11 +324,11 @@ const AgentNotificationsInner: React.FC<{ onLogout: () => void }> = ({
       </Box>
 
       <Box flex={1} minHeight={0} display="flex">
-        {/* Left: the conversation, as the shared loop on the notifications
+        {/* Left: the conversation, as the shared Agent on the notifications
             capacity plugin. The channel panel on the right is the example's
             own, kept verbatim. */}
         <Box flex={1} minWidth={0}>
-          <LoopEmbed
+          <AgentEmbed
             serverUrl={agentBaseUrl}
             target="local"
             showAgentVariants

@@ -16,12 +16,12 @@ import { describe, expect, it } from 'vitest';
 import { onSurfaceRequest, requestSurface } from '../core';
 import { NotebookPlugin } from '../plugins/notebook';
 import { DocumentPlugin } from '../plugins/document';
-import { LoopCommand } from '../core';
+import { AgentCommand } from '../core';
 
 /** The command a plugin contributes, by name. */
 function commandOf(plugin: { contributes?: readonly any[] }, name: string) {
   const record = (plugin.contributes ?? []).find(
-    entry => entry.point === LoopCommand && entry.value.name === name,
+    entry => entry.point === AgentCommand && entry.value.name === name,
   );
   return record?.value;
 }

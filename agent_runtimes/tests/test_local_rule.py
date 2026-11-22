@@ -20,10 +20,10 @@ from typing import Any, Dict, List, Optional
 
 import pytest
 
+from agent_runtimes.agent.paused import STATES, listed, local_paused
 from agent_runtimes.apps import local_rule
 from agent_runtimes.apps.record import session_from_entries
 from agent_runtimes.apps.session_store import FileSessionStore
-from agent_runtimes.loop.paused import STATES, listed, local_paused
 
 RUN = "exec_0001"
 SEAT = {"kind": "team_run", "execution_id": RUN, "seat": "analyst"}
@@ -224,7 +224,7 @@ def test_the_pickers_first_group_lists_what_runs_or_resumes_here(
     files: FileSessionStore, tmp_path: Path
 ) -> None:
     """The invariant on this machine: every local row listed as paused is resumed by Enter."""
-    from agent_runtimes.loop.picker import why_not
+    from agent_runtimes.agent.picker import why_not
 
     _keep(files, "stale", held_by=GONE)
     _keep(files, "seat-over", runs_on=SEAT)

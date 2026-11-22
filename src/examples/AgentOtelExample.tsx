@@ -44,7 +44,7 @@ import {
 import { useCoreStore } from '@datalayer/core';
 import { ThemedProvider } from './utils/themedProvider';
 import { AuthRequiredView } from './components';
-import { LoopEmbed } from '../apps';
+import { AgentEmbed } from '../apps';
 import { uniqueAgentId } from './utils/agentId';
 import { AgentOtelPlugin } from '../apps/plugins/agent-otel';
 import { Protocol } from '../types';
@@ -95,7 +95,7 @@ const AgentLaunchPanel: React.FC<AgentLaunchPanelProps> = ({
 
     try {
       const transport: Protocol = DEFAULT_AGENT_PROTOCOL;
-      // The Loop creates the agent from the otel capacity plugin's blueprint
+      // The Agent workspace creates the agent from the otel capacity plugin's blueprint
       // once it mounts on this id; the launcher only picks the id.
       onConnected(uniqueAgentId(AGENTSPEC_ID), transport);
     } catch (e) {
@@ -242,10 +242,10 @@ const AgentOtelExampleInner: React.FC<{
   // ── Agent state ─────────────────────────────────────────────────
   //
   // The launch panel creates the `example-otel` agent and reports its id; the
-  // LoopEmbed below runs on the Local target pointed at that same id, so its
+  // AgentEmbed below runs on the Local target pointed at that same id, so its
   // `ensureLocalAgent` finds the created agent and reuses it rather than
   // making a second one. The bespoke launcher and its Disconnect control are
-  // kept — the chat column is the shared loop now, everything around it is the
+  // kept — the chat column is the shared Agent now, everything around it is the
   // example's own.
   const [connectedAgentId, setConnectedAgentId] = useState<string | null>(null);
 
@@ -341,7 +341,7 @@ const AgentOtelExampleInner: React.FC<{
           </Box>
         </Box>
 
-        {/* ── Agent sidebar: the example's launcher over the shared loop ── */}
+        {/* ── Agent sidebar: the example's launcher over the shared Agent ── */}
         <Box
           width={380}
           flexShrink={0}
@@ -360,12 +360,12 @@ const AgentOtelExampleInner: React.FC<{
             isConnected={!!connectedAgentId}
             connectedAgentName={connectedAgentId ?? undefined}
           />
-          {/* The conversation, as the shared loop. Local target on the
+          {/* The conversation, as the shared Agent. Local target on the
               launched agent id; the otel capacity plugin carries its spec and
               its telemetry openers. */}
           <Box flex={1} minHeight={0}>
             {connectedAgentId ? (
-              <LoopEmbed
+              <AgentEmbed
                 key={connectedAgentId}
                 serverUrl={agentBaseUrl}
                 target="local"

@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-x-post-preview` — a post on the person's X, as it
+ * `@datalayer/agent-plugin-x-post-preview` — a post on the person's X, as it
  * will stand there, above the chat's approval row: the text, its length
  * against what X takes, the images, the post it answers, and the link
  * once out (`toolCards/postPreview`). Draws `post_to_x` and `reply_on_x`.
@@ -18,7 +18,7 @@ import { defineToolCardPlugin } from '../../toolCards/kit';
 import { PostPreviewCard } from '../../toolCards/postPreview';
 
 export const X_POST_PREVIEW_PLUGIN_NAME =
-  '@datalayer/loop-plugin-x-post-preview';
+  '@datalayer/agent-plugin-x-post-preview';
 
 export function XPostPreviewCard({
   context,

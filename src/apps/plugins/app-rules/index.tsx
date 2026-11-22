@@ -4,9 +4,9 @@
  */
 
 /**
- * `@datalayer/loop-plugin-app-rules` — an application's rules and the
+ * `@datalayer/agent-plugin-app-rules` — an application's rules and the
  * approvals it waits on, as a plugin: a card in the
- * workspace's sidebar (`LoopSlots.sidebar`), beside its page.
+ * workspace's sidebar (`AgentSlots.sidebar`), beside its page.
  *
  * @module apps/plugins/app-rules
  */
@@ -15,18 +15,18 @@ import type { JSX } from 'react';
 import { definePlugin, type ReactorPlugin } from '@datalayer/reactor';
 import { ShieldCheckIcon } from '@primer/octicons-react';
 import type { AppSpec } from '../../../types/agentspecs';
-import { LoopSlots, type LoopWorkspaceContext } from '../../core';
+import { AgentSlots, type AgentWorkspaceContext } from '../../core';
 import { AppRulesCard } from './AppRulesCard';
 import { uiManifestOf } from '../../uiManifest';
 
-export const APP_RULES_PLUGIN_NAME = '@datalayer/loop-plugin-app-rules';
+export const APP_RULES_PLUGIN_NAME = '@datalayer/agent-plugin-app-rules';
 
 /** The plugin that lists an application's rules and the approvals waiting for the person. */
 export function defineAppRulesPlugin(
   app: AppSpec,
 ): ReactorPlugin<Record<string, never>, unknown, unknown> {
   // One component per plugin: the slot keeps it, and the application with it.
-  function Card(props: { workspace?: LoopWorkspaceContext }): JSX.Element {
+  function Card(props: { workspace?: AgentWorkspaceContext }): JSX.Element {
     return <AppRulesCard app={app} workspace={props.workspace} />;
   }
   const plugin = definePlugin({
@@ -39,7 +39,7 @@ export function defineAppRulesPlugin(
       components: [
         {
           id: 'app-rules',
-          slot: LoopSlots.sidebar,
+          slot: AgentSlots.sidebar,
           order: 10,
           Component: Card,
           // Its line icon on the workspace's rail.

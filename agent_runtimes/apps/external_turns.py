@@ -12,11 +12,11 @@ and an ``Idempotency-Key`` header; the key, or else the external event id,
 names the turn **for its caller**:
 
 - the first time, the turn runs, and its stream says which turn it is — a
-  ``loop.turn`` custom event right after ``loop.session``: ``{turn,
+  ``agent.turn`` custom event right after ``agent.session``: ``{turn,
   external_event_id, replayed: false, state}``;
 - again, with the same request, nothing runs: the stream says the original
-  session and turn — ``loop.session`` when the runtime still holds it, and
-  ``loop.turn`` with ``replayed: true`` and where the turn stands
+  session and turn — ``agent.session`` when the runtime still holds it, and
+  ``agent.turn`` with ``replayed: true`` and where the turn stands
   (``running``, ``finished``, ``failed``) — and the host reads what the turn
   said from the session (`GET /sessions/{uid}/messages`);
 - again with another request under the same key: ``409``, said.
@@ -48,10 +48,10 @@ HELD = 5000
 KEY_LIMIT = 255
 
 #: The custom event that says which turn a stream is.
-TURN_EVENT = "loop.turn"
+TURN_EVENT = "agent.turn"
 
 #: The kind of the protocol state records a turn is kept under, by its key.
-KIND = "loop.external_turn"
+KIND = "agent.external_turn"
 
 #: How often, in seconds, the stale records are removed from the store; a
 #: stale record is never answered, removed or not.
@@ -247,7 +247,7 @@ async def release(key: str) -> None:
 
 
 def turn_event(turn: ExternalTurn, *, replayed: bool) -> str:
-    """The ``loop.turn`` event, encoded as the session API streams events."""
+    """The ``agent.turn`` event, encoded as the session API streams events."""
     from ag_ui.core import CustomEvent
     from ag_ui.encoder import EventEncoder
 

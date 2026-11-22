@@ -289,7 +289,7 @@ def test_validate_says_a_guard_the_runtime_does_not_run(tmp_path):
     path.write_text(
         yaml.safe_dump(
             {
-                "schema": "loop.app/v1",
+                "schema": "agent.app/v1",
                 "id": "desk",
                 "name": "Desk",
                 "kind": "chat",
@@ -533,7 +533,7 @@ def test_validate_no_longer_says_the_preflight_guards_are_not_run(tmp_path):
     path.write_text(
         yaml.safe_dump(
             {
-                "schema": "loop.app/v1",
+                "schema": "agent.app/v1",
                 "id": "desk",
                 "name": "Desk",
                 "kind": "chat",

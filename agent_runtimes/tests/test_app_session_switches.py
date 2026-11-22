@@ -24,7 +24,7 @@ from agent_runtimes.apps.switches import (
     conversation_switches,
     in_force,
 )
-from agent_runtimes.streams import loop
+from agent_runtimes.streams import pubsub
 from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
     ASSISTANT,
     Runtime,
@@ -154,18 +154,18 @@ def agent_state(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
         The state stays set for the test, and is cleared after it.
     """
     monkeypatch.setattr(
-        loop,
+        pubsub,
         "_build_default_mcp_enabled_tools_by_server",
         lambda agent_id: {"kiwi": ["feedback", "search-flight"]},
     )
     for agent in ("traveller", "other"):
-        loop._SKILLS_BY_AGENT[loop._stream_key(agent)] = {
+        pubsub._SKILLS_BY_AGENT[pubsub._stream_key(agent)] = {
             skill: {"id": skill, "status": "enabled", "approved": False}
             for skill in ("travel-planning", "datalayer-memory-add")
         }
     yield
     for agent in ("traveller", "other"):
-        loop.purge_agent_stream_state(agent)
+        pubsub.purge_agent_stream_state(agent)
 
 
 def test_in_force_for_its_conversations_turn_alone(agent_state: None) -> None:
@@ -183,30 +183,34 @@ def test_in_force_for_its_conversations_turn_alone(agent_state: None) -> None:
     assert in_force("traveller") is None
     with conversation_switches("traveller", switched):
         assert in_force("traveller") is switched
-        assert loop.get_agent_enabled_mcp_tool_names("traveller") == {"search-flight"}
-        assert loop.get_agent_approved_mcp_tool_names("traveller") == {"search-flight"}
-        assert loop.get_agent_enabled_skill_ids("traveller") == {"datalayer-memory-add"}
-        assert loop.get_agent_approved_skill_ids("traveller") == {
+        assert pubsub.get_agent_enabled_mcp_tool_names("traveller") == {"search-flight"}
+        assert pubsub.get_agent_approved_mcp_tool_names("traveller") == {
+            "search-flight"
+        }
+        assert pubsub.get_agent_enabled_skill_ids("traveller") == {
+            "datalayer-memory-add"
+        }
+        assert pubsub.get_agent_approved_skill_ids("traveller") == {
             "datalayer-memory-add"
         }
         # Another agent's turns are not this conversation's.
         assert in_force("other") is None
-        assert loop.get_agent_enabled_mcp_tool_names("other") == {
+        assert pubsub.get_agent_enabled_mcp_tool_names("other") == {
             "feedback",
             "search-flight",
         }
-        assert loop.get_agent_enabled_skill_ids("other") == {
+        assert pubsub.get_agent_enabled_skill_ids("other") == {
             "travel-planning",
             "datalayer-memory-add",
         }
     # Outside the turn, the agent's own state: nothing was written to it.
     assert in_force("traveller") is None
-    assert loop.get_agent_enabled_mcp_tool_names("traveller") == {
+    assert pubsub.get_agent_enabled_mcp_tool_names("traveller") == {
         "feedback",
         "search-flight",
     }
-    assert loop.get_agent_approved_mcp_tool_names("traveller") == set()
-    assert loop.get_agent_enabled_skill_ids("traveller") == {
+    assert pubsub.get_agent_approved_mcp_tool_names("traveller") == set()
+    assert pubsub.get_agent_enabled_skill_ids("traveller") == {
         "travel-planning",
         "datalayer-memory-add",
     }

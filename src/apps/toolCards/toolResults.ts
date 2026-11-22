@@ -8,7 +8,7 @@
  * chrome (the header chips: the basket's total, the Odoo company, the trip,
  * the area searched, the savings found) to read its state from — never made
  * up. The transcript (`ChatMessageList`) records each completed call into the
- * store of its context; `Chat` gives each chat a store of its own, and a Loop
+ * store of its context; `Chat` gives each chat a store of its own, and an Agent
  * workspace shares the page's.
  *
  * @module apps/toolCards/toolResults
@@ -114,7 +114,7 @@ export class ToolResultsStore {
   }
 }
 
-/** The page's store: a Loop workspace's chrome and transcript share it. */
+/** The page's store: an Agent workspace's chrome and transcript share it. */
 export const PAGE_TOOL_RESULTS = new ToolResultsStore();
 
 export const ToolResultsContext =

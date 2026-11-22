@@ -7,13 +7,13 @@
  * Pictures as tests, among them the states of the floating assistant.
  *
  * Each picture is a page of `html/pictures.html` — the real chat components
- * with fixed data (`src/stories/loop/ReferenceScreens.tsx`) — taken once its
+ * with fixed data (`src/stories/agent/ReferenceScreens.tsx`) — taken once its
  * fonts are in, with motion reduced and animations stopped, and compared with
  * its baseline. A changed token shows as a failed test and a `-diff.png` in
  * `pictures/test-results/`: fix it, or accept it with
  * `npm run test:pictures:accept`.
  *
- * `PICTURES_THEMES=loop,datalayer` narrows the themes for a quicker run;
+ * `PICTURES_THEMES=agent,datalayer` narrows the themes for a quicker run;
  * `npm run test:pictures -- -g "assistant|character"` takes only the floating
  * assistant's pictures.
  * `PICTURES_CSS` adds a stylesheet to every page before it is pictured — to
@@ -33,7 +33,7 @@ const ALL_THEMES = [
   'sand',
   'ivory',
   'sun',
-  'loop',
+  'agent',
 ];
 const THEMES = process.env.PICTURES_THEMES
   ? process.env.PICTURES_THEMES.split(',').map(theme => theme.trim())
@@ -137,7 +137,7 @@ for (const mode of MODES) {
     test.use({ colorScheme: mode, viewport: { width: 480, height: 360 } });
     for (const picture of ASSISTANT) {
       test(picture, async ({ page }) => {
-        await show(page, `assistant=${picture}&theme=loop&mode=${mode}`);
+        await show(page, `assistant=${picture}&theme=agent&mode=${mode}`);
         const stage = page.locator('[data-assistant-state]');
         if (picture === 'aside') {
           // A dialog over it: it steps aside, and the picture holds that.
@@ -175,7 +175,7 @@ for (const mode of MODES) {
   test.describe(`assistant open · ${mode}`, () => {
     test.use({ colorScheme: mode, viewport: { width: 560, height: 720 } });
     test('open', async ({ page }) => {
-      await show(page, `assistant=open&theme=loop&mode=${mode}`);
+      await show(page, `assistant=open&theme=agent&mode=${mode}`);
       await expect(page.locator('[data-conversation-balloon]')).toBeVisible();
       await expect(
         page.locator('[data-conversation-balloon] [contenteditable="true"]'),
@@ -196,7 +196,7 @@ for (const mode of MODES) {
     test.use({ colorScheme: mode, viewport: { width: 480, height: 360 } });
     for (const character of CHARACTERS) {
       test(character, async ({ page }) => {
-        await show(page, `character=${character}&theme=loop&mode=${mode}`);
+        await show(page, `character=${character}&theme=agent&mode=${mode}`);
         await expect(
           page.locator(
             `[data-assistant-state="idle"] svg[data-assistant-mode="${mode}"]`,
@@ -217,7 +217,7 @@ for (const mode of MODES) {
   test.describe(`assistant gallery · ${mode}`, () => {
     test.use({ colorScheme: mode, viewport: { width: 880, height: 520 } });
     test('every character in every state', async ({ page }) => {
-      await show(page, `gallery=grid&theme=loop&mode=${mode}`);
+      await show(page, `gallery=grid&theme=agent&mode=${mode}`);
       await expect(page.locator('[data-gallery-cell]')).toHaveCount(7 * 9);
       await expect(
         page.locator(

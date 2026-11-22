@@ -12,7 +12,7 @@ import { renderMarkdown } from '@a2ui/markdown-it';
  * it. Without it, `Text` components fall back to the raw markdown string
  * (`## Title` instead of a rendered heading).
  *
- * In the library rather than the examples: the loop's own surface plugin
+ * In the library rather than the examples: the Agent's own surface plugin
  * draws surfaces, and needs the same context the examples had.
  */
 export const A2uiMarkdownProvider: React.FC<React.PropsWithChildren> = ({

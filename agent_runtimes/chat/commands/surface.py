@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, Optional
 
 import httpx
 
-from agent_runtimes.loop.commands import CommandArgSpec
+from agent_runtimes.agent.commands import CommandArgSpec
 
 if TYPE_CHECKING:
     from ..tux import CliTux

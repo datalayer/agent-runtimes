@@ -26,9 +26,9 @@
  * its page side in its package, installed beside the server that runs it:
  * once on a runtime, the page reads it there with Reactor's
  * `bootstrapExtensions` (`<base>/plugins/frontend-extensions`) and installs
- * it into the running platform — the extension `loop-app-<id>`, the
+ * it into the running platform — the extension `agent-app-<id>`, the
  * application's, its page-side plugin saying where the folder's files are
- * (`LoopAppFiles`). A runtime with no package of it answers nothing, and its
+ * (`AgentAppFiles`). A runtime with no package of it answers nothing, and its
  * components say so.
  *
  * A plugin of its own, with no backend requirement, so that it keeps
@@ -53,12 +53,12 @@ import {
 import {
   IDLE_SANDBOX_SNAPSHOT_SIGNAL,
   IDLE_SANDBOX_TARGET_SIGNAL,
-  LoopSlots,
+  AgentSlots,
 } from '../core';
 import { useOptionalSandboxService } from '../plugins/agents/useSandboxService';
 import { appPluginName, appPluginsBase, appRuntimeOf } from './pluginPair';
 
-export const APP_RUNTIME_PLUGIN_NAME = '@datalayer/loop-plugin-app-runtime';
+export const APP_RUNTIME_PLUGIN_NAME = '@datalayer/agent-plugin-app-runtime';
 
 /** A host's answer to "is this runtime plugin running?", from a list. */
 const runningOf =
@@ -150,7 +150,7 @@ export function defineAppRuntimePlugin(
     build: () => ({
       components: [
         {
-          slot: LoopSlots.status,
+          slot: AgentSlots.status,
           id: 'app-runtime-plugins',
           Component: Follow as never,
         },

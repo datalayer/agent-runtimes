@@ -201,7 +201,7 @@ def mark_spoken(body: Any) -> None:
     Say, for the run this body starts, whether its message was said.
 
     ``forwardedProps.voice`` is how a client that heard the person itself —
-    the page, ``loop --voice`` — says so: ``{"input": "voice", "language",
+    the page, ``agent --voice`` — says so: ``{"input": "voice", "language",
     "engine", "where"}``.
 
     Parameters
@@ -218,7 +218,7 @@ def mark_spoken(body: Any) -> None:
 def header_of_run(body: Any) -> str:
     """
     What a run is told of its chat's title bar: the sentences of the options
-    its drop-downs are on (``forwardedProps.loop.header``).
+    its drop-downs are on (``forwardedProps.agent.header``).
 
     Parameters
     ----------
@@ -239,8 +239,10 @@ def header_of_run(body: Any) -> str:
     from ..apps.header import header_instructions  # noqa: PLC0415
 
     forwarded = body.get("forwardedProps") if isinstance(body, dict) else None
-    loop = forwarded.get("loop") if isinstance(forwarded, dict) else None
-    return header_instructions(loop.get("header") if isinstance(loop, dict) else None)
+    agent_props = forwarded.get("agent") if isinstance(forwarded, dict) else None
+    return header_instructions(
+        agent_props.get("header") if isinstance(agent_props, dict) else None
+    )
 
 
 @contextmanager
@@ -445,8 +447,8 @@ class AGUITransport(BaseTransport):
                         mark_spoken(body)
                     # What the chat's title bar says: the option each of its
                     # drop-downs is on, told to the agent for this run
-                    # (`forwardedProps.loop.header`; a session of an
-                    # application has told it already and sends no `loop`).
+                    # (`forwardedProps.agent.header`; a session of an
+                    # application has told it already and sends no `agent`).
                     try:
                         header_told = header_of_run(body)
                     except ValueError as refused:
@@ -579,7 +581,7 @@ class AGUITransport(BaseTransport):
 
                 # Apply per-turn enablement to backend guardrail state.
                 try:
-                    from agent_runtimes.streams.loop import (
+                    from agent_runtimes.streams.pubsub import (
                         get_known_mcp_tool_names,
                         has_agent_mcp_tool_selection,
                         set_agent_enabled_mcp_tool_names,

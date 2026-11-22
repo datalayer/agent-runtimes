@@ -119,11 +119,11 @@ def test_an_application_is_a_reactor_plugin_and_an_extension() -> None:
     app.uses(crm())
     points = app.contribution_point("greeter.greetings")
     manifest = app.manifest
-    assert manifest.name == manifest.extension == "loop-app-greeter"
+    assert manifest.name == manifest.extension == "agent-app-greeter"
     assert manifest.dependencies == ["crm"]
     assert manifest.contribution_points == [points.id]
     extension = app.extension()
-    assert extension.name == "loop-app-greeter" and extension.frontend is None
+    assert extension.name == "agent-app-greeter" and extension.frontend is None
     ((own, plugin),) = extension.plugins
     assert own == manifest and isinstance(plugin, AppPlugin)
     with pytest.raises(ValueError, match="already declares"):
@@ -141,19 +141,19 @@ async def test_what_it_contributes_is_on_the_hosts_platform_and_goes_with_it() -
 
     held = platform.get_contributions(SOURCES)
     assert [(c.plugin, c.id, c.value) for c in held] == [
-        ("loop-app-greeter", "greetings", {"name": "greetings"})
+        ("agent-app-greeter", "greetings", {"name": "greetings"})
     ]
     extended = platform.get_contribution_extensions(SOURCES, "greetings")
     assert [c.value for c in extended] == [{"label": "Greetings"}]
     assert find_app("greeter", platform) == app.spec
     assert [e["name"] for e in platform.list_extensions()] == [
         "crm",
-        "loop-app-greeter",
+        "agent-app-greeter",
     ]
 
     host.dispose()
     assert platform.get_contributions(SOURCES) == []
-    assert not platform.has_plugin("loop-app-greeter")
+    assert not platform.has_plugin("agent-app-greeter")
     # What it used, installed on its own, stays: it was not the application's.
     assert platform.has_plugin("crm")
 
@@ -179,7 +179,7 @@ async def test_its_own_point_is_extended_by_another_plugin_and_read_by_its_code(
     host, channel = host_of(app)
     await host.open()
     assert [m.text for m in channel.messages] == ["Good morning."]
-    assert host.platform.list_plugins()[0]["extension"] == "loop-app-greeter"
+    assert host.platform.list_plugins()[0]["extension"] == "agent-app-greeter"
     host.dispose()
     assert not host.platform.has_plugin("polite")
 
@@ -191,7 +191,7 @@ async def test_a_used_extension_is_registered_with_it_and_started() -> None:
     host, _ = host_of(app)
     assert [p["name"] for p in host.platform.list_plugins()] == [
         "crm",
-        "loop-app-greeter",
+        "agent-app-greeter",
     ]
     # The host's own platform is started: its plugins were told.
     assert Crm.started == 1
@@ -215,7 +215,7 @@ async def test_its_commands_are_reactors_listed_and_run_from_the_composer() -> N
     assert listed["greeter.greet"].description == "Say hello to somebody."
     assert [d["plugin"] for d in host.platform.describe_commands()] == [
         "crm",
-        "loop-app-greeter",
+        "agent-app-greeter",
     ]
     session = await host.open()
     await host.message(session, "/greet Ada")
@@ -287,7 +287,7 @@ def test_its_plugin_routes_say_their_plugin() -> None:
     platform = PluginPlatform()
     host, _ = host_of(app, platform)
     assert platform.describe_routes() == [
-        {"path": "/status", "method": "GET", "plugin": "loop-app-greeter"}
+        {"path": "/status", "method": "GET", "plugin": "agent-app-greeter"}
     ]
     host.dispose()
     assert platform.describe_routes() == []
@@ -321,7 +321,7 @@ async def test_the_example_extends_with_reactor() -> None:
     ]
     sources = host.platform.get_contributions(define_contribution_point("crm.sources"))
     assert [(c.plugin, c.id) for c in sources] == [
-        ("loop-app-support-desk-plus", "tickets")
+        ("agent-app-support-desk-plus", "tickets")
     ]
     (toolset,) = session._own_toolsets
     assert (await toolset.tools["lookup_customer"].function(email="alan@example.com"))[
@@ -335,7 +335,7 @@ async def test_the_example_extends_with_reactor() -> None:
     }
 
 
-def test_loop_apps_build_marks_what_a_reactor_command_answers() -> None:
+def test_agent_apps_build_marks_what_a_reactor_command_answers() -> None:
     from agent_runtimes.apps.build import code_marks
 
     app = greeter()
