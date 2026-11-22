@@ -113,7 +113,7 @@ import { AppLayoutUnshown } from './AppLayoutUnshown';
 import { CanvasAsk } from './CanvasAsk';
 import { actionDecidedBy, codeOf, momentWords, type AppCode } from './appCode';
 import { CodeWhere } from './AppCodeWhere';
-import type { AskModel } from './canvasAsk';
+import type { AskModel } from './canvasAskModel';
 import { CanvasChatBlock } from './CanvasChatBlock';
 import { paletteComponents } from './canvasPalette';
 import { groupComponents } from './componentCatalog';

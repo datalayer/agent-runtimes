@@ -13,7 +13,7 @@
 import { describe, expect, it } from 'vitest';
 import { getComponent, listComponents } from '../../specs/ui';
 import { emptyAppspec } from '../apps/appspec';
-import type { ChatMessage } from '../composer/canvasAsk';
+import type { ChatMessage } from '../composer/canvasAskModel';
 import { kindInterface, type AppInterface } from '../composer/appInterface';
 import { insertBlock, startSurface } from '../composer/canvasModel';
 import {
@@ -22,7 +22,7 @@ import {
   layoutChanges,
   proposeLayout,
   type LayoutAskContext,
-} from '../composer/canvasAsk';
+} from '../composer/canvasAskModel';
 
 const CATALOG = listComponents().map(component => component.id);
 

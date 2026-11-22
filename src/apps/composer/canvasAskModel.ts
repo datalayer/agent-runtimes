@@ -21,7 +21,7 @@
  * Pure but for the call to the model, which is given (`AskModel`): the page
  * gives ai-inference's chat completions, a test an answer it wrote.
  *
- * @module apps/composer/canvasAsk
+ * @module apps/composer/canvasAskModel
  */
 
 import type { ComponentSpec } from '../../types/agentspecs';

@@ -43,4 +43,4 @@ export { KeptWhileHidden } from './KeptWhileHidden';
 export { draftOfAppspec, type AppDraft } from './draft';
 export type { AppCode, AppCodeFile, CodeMark } from './appCode';
 export type { AppInterface, InterfaceComponent } from './appInterface';
-export type { AskModel, ChatMessage } from './canvasAsk';
+export type { AskModel, ChatMessage } from './canvasAskModel';

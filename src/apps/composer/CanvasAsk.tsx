@@ -17,13 +17,13 @@ import type { FormEvent, JSX } from 'react';
 import { useState } from 'react';
 import { Button, Flash, FormControl, Text, TextInput } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
-import type { AskModel } from './canvasAsk';
+import type { AskModel } from './canvasAskModel';
 import type { AppInterface } from './appInterface';
 import {
   proposeLayout,
   type LayoutAskContext,
   type LayoutProposal,
-} from './canvasAsk';
+} from './canvasAskModel';
 
 export type CanvasAskProps = {
   context: LayoutAskContext;
