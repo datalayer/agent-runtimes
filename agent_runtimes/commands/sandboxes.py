@@ -93,13 +93,27 @@ def _sandbox_table(title: str) -> Table:
     table.add_column("Provider")
     table.add_column("Name")
     table.add_column("Status")
+    table.add_column("Egress")
     return table
+
+
+def _egress_label(info: Any) -> str:
+    """What the sandbox may reach beyond the web, as a cell: its extra hosts.
+
+    A Datalayer sandbox reaches any public host on ports 80 and 443; the
+    hosts its launch named (`--egress`) come on top. Empty for a sandbox
+    that named none, or a provider that does not say.
+    """
+    egress = (info.metadata or {}).get("egress") or []
+    if isinstance(egress, str):
+        return egress
+    return ", ".join(str(item) for item in egress)
 
 
 def _add(table: Table, provider: str, info: Any) -> None:
     """One sandbox, as a row."""
     status = getattr(info.status, "value", info.status)
-    table.add_row(info.id, provider, info.name or "", str(status))
+    table.add_row(info.id, provider, info.name or "", str(status), _egress_label(info))
 
 
 providers_app = typer.Typer(
@@ -321,6 +335,16 @@ def create_sandbox(
     name: Optional[str] = typer.Option(
         None, "--name", "-n", help="Name to give the sandbox."
     ),
+    egress: Optional[list[str]] = typer.Option(
+        None,
+        "--egress",
+        help=(
+            "An extra host:port the sandbox may reach, e.g. github.com:22; repeat it "
+            "for more (at most 20). A Datalayer sandbox reaches any public host on "
+            "ports 80 and 443 only; private, link-local and cluster addresses are "
+            "refused."
+        ),
+    ),
 ) -> None:
     """Create a sandbox."""
     options: dict[str, Any] = {}
@@ -328,6 +352,8 @@ def create_sandbox(
         options["environment"] = environment
     if name:
         options["name"] = name
+    if egress:
+        options["egress"] = list(egress)
     try:
         info = _manager(provider).create(**options)
     except typer.Exit:

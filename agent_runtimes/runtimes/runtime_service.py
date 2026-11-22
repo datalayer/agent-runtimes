@@ -74,6 +74,7 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
         expired_at: Optional[str] = None,
         unmetered: bool = False,
         deployment_uid: str = "",
+        egress: Optional[list[str]] = None,
     ):
         """
         Initialize a runtime service.
@@ -113,6 +114,9 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
         unmetered : bool
             Whether the runtime was started on the platform's magic key: it
             consumes no credits and never expires.
+        egress : Optional[list[str]]
+            The extra ``host:port`` its launch allowed the sandbox beyond the
+            web, as the platform answers them.
         """
         # Initialize the runtime model with all the data fields
         self._model = RuntimeModel(
@@ -140,6 +144,9 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
         #: The deployment the runtime was launched for, '' for none: such a
         #: runtime serves that application's own routes only.
         self.deployment_uid = deployment_uid
+        #: The extra ``host:port`` its launch allowed the sandbox beyond the
+        #: web (any public host on ports 80 and 443); empty for none.
+        self.egress: list[str] = list(egress or [])
 
     @property
     def model(self) -> RuntimeModel:

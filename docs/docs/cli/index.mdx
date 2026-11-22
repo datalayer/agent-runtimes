@@ -895,6 +895,7 @@ The CLI includes server/control commands plus runtime-management command groups.
 | `evals` | Benchmarks: `evals run <spec\|evalset_id> --agent-spec-ids … [--models …] [--budget …]` imports, validates, launches and follows a benchmark on the platform — a line per change, a heartbeat while nothing changes, and a launch still `queued` with no task after 3 minutes is given up on naming the executor rather than waited on for an hour; `evals launches ls\|get\|cancel`, `evals subjects`, and the evalset, experiment, run and report commands |
 | `exec` | Execute Python files or notebooks on a runtime |
 | `pools` | Runtime pool administration commands |
+| `sandboxes` | Code sandboxes: `providers`, `environments`, `ls`, `get`, `create`, `update`, `rm` (see below) |
 | `sandbox-snapshots` | Runtime snapshot commands |
 | `ray` | Ray cluster and Ray job commands |
 | `schedules` | Scheduler commands |
@@ -906,6 +907,28 @@ agent-runtimes --help
 # Or using the Python module directly
 python -m agent_runtimes --help
 ```
+
+### A code sandbox's network
+
+A code sandbox on Datalayer reaches **any public host on ports 80 and 443
+only**: pip, npm, `git` over https and web APIs work; SSH, SMTP, raw TCP and
+other ports are refused. The platform's own services stay reachable. Name each
+other `host:port` one sandbox needs when you create it (repeatable, at most 20):
+
+```bash
+datalayer sandboxes create datalayer --name build-box --egress github.com:22
+datalayer sandboxes ls        # the Egress column says what each sandbox was given
+```
+
+An entry is an exact public host name or a public IPv4 address with its port.
+The launch is refused, with the reason, for an entry without a port, a
+wildcard, a CIDR, an IPv6 address, a private, loopback or link-local address
+(the cloud metadata address `169.254.169.254` among them), a cluster or
+private name (`*.svc`, `*.cluster.local`, `localhost`, `*.internal`), or a name
+that resolves to such an address. From Python, `AgentClient.create_runtime(...,
+egress=["github.com:22"])` asks the same; `RuntimeService.egress` answers it.
+An agent's network is its spec's `policy.shield`, never a launch's: `--egress`
+is for a sandbox with no agent.
 
 ## Agent teams
 

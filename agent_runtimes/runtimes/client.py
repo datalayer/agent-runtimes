@@ -177,6 +177,7 @@ class RuntimesClient:
         client_id: Optional[str] = None,
         agent_uid: Optional[str] = None,
         runtime_engine: Optional[str] = None,
+        egress: Optional[list[str]] = None,
     ) -> dict[str, Any]:
         """Create a runtime — ``POST /runtimes``.
 
@@ -248,6 +249,12 @@ class RuntimesClient:
             ``agentcore``. It overrides the spec's ``runtime_engine``; none
             means the spec's. Another value is refused here (`ValueError`),
             and Runtimes refuses an engine the agent's harness cannot run.
+        egress : Optional[list[str]]
+            Extra ``host:port`` a plain sandbox (no agent) may reach beyond the
+            web: a sandbox reaches any public host on ports 80 and 443 only,
+            plus these, applied by its firewall. The platform refuses, in a
+            sentence, an entry without a port, a wildcard, a private,
+            link-local or cluster address or name, and more than 20.
 
         Returns
         -------
@@ -373,6 +380,8 @@ class RuntimesClient:
                 body["client_id"] = client_id
             if agent_uid:
                 body["agent_uid"] = agent_uid
+            if egress:
+                body["egress"] = list(egress)
 
             if runtime_name:
                 body["runtime_name"] = runtime_name
