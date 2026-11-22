@@ -4,53 +4,156 @@
  */
 
 /**
- * Where an in-page kernel looks for itself.
+ * Where an in-page kernel looks for itself, and what the page keeps.
  *
- * A JupyterLite service manager reads `PageConfig` when it is built, and the
- * kernel connection then opens a socket at whatever `wsUrl` said. That makes
- * one shared global decide whether the browser sandbox talks to the page it is
- * in or to a remote Jupyter — and on any host configured for a remote one, the
- * regression is silent: the kernel starts, the socket goes to a server that
- * refuses it, and cells run into nothing. No error, no output, no kernel
- * anybody can blame.
+ * A JupyterLite service manager reads `PageConfig` when it is built, and
+ * its kernels take their socket address from it then: built while the page
+ * points at a remote Jupyter, the kernel's socket goes to a server that
+ * refuses it, and cells run into nothing. So the sandbox points the page at
+ * itself while it builds the manager.
  *
- * This lived in the landing page for exactly this reason and was lost when the
- * embedding moved into the package. It belongs here, beside the sandbox that
- * needs it, which is the whole argument for the move.
+ * And only then: `PageConfig` and jupyter-react's configuration are shared
+ * by everything on the page. Left pointed at this origin, and with the
+ * manager published as the page's, every Jupyter client started after it
+ * asked the site itself for `/api/sessions`, `/api/kernelspecs`,
+ * `/datalayer/config` and the rest, parsing its HTML as JSON (the Studio's
+ * application page, its Preview in the browser kept mounted, 22 November
+ * 2026).
  */
 
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { PageConfig } from '@jupyterlab/coreutils';
 
-const SOURCE = readFileSync(
-  join(__dirname, '..', 'plugins', 'agents', 'browserService.ts'),
-  'utf8',
-);
+const REMOTE = 'https://prod1.example/api/jupyter-server';
 
-describe('the in-page sandbox', () => {
-  it('points Jupyter at this origin before it builds the kernel', () => {
-    // `lite: true` is jupyter-react's own way of saying "the page is the
-    // server". The order matters as much as the call: the manager reads the
-    // configuration once, when it is created.
-    expect(SOURCE).toContain('loadJupyterConfig({ lite: true })');
-    const configured = SOURCE.indexOf('loadJupyterConfig({ lite: true })');
-    const built = SOURCE.indexOf('await createLiteServiceManager()');
-    expect(configured).toBeGreaterThan(-1);
-    expect(built).toBeGreaterThan(configured);
+const fake = vi.hoisted(() => ({
+  config: undefined as { url: string; token: string } | undefined,
+  seenWhileBuilding: undefined as
+    { baseUrl: string; wsUrl: string; url?: string } | undefined,
+  published: [] as unknown[],
+}));
+
+vi.mock('@datalayer/jupyter-react', async () => {
+  const { PageConfig } = await import('@jupyterlab/coreutils');
+  const need = () => {
+    if (!fake.config) {
+      throw new Error('Jupyter React Config must be loaded first.');
+    }
+    return fake.config;
+  };
+  const setUrl = (url: string) => {
+    need().url = url;
+    PageConfig.setOption('baseUrl', url);
+    PageConfig.setOption('wsUrl', url.replace(/^http/, 'ws'));
+  };
+  return {
+    getJupyterServerUrl: () => need().url,
+    getJupyterServerToken: () => need().token,
+    setJupyterServerUrl: setUrl,
+    setJupyterServerToken: (token: string) => {
+      need().token = token;
+      PageConfig.setOption('token', token);
+    },
+    resetJupyterConfig: () => {
+      fake.config = undefined;
+    },
+    // As jupyter-react's: `lite` points the page at this origin.
+    loadJupyterConfig: ({ lite }: { lite?: boolean } = {}) => {
+      fake.config = {
+        url: PageConfig.getOption('baseUrl'),
+        token: PageConfig.getOption('token'),
+      };
+      if (lite) {
+        setUrl(`${location.protocol}//${location.host}`);
+      }
+      return {};
+    },
+    createLiteServiceManager: async () => {
+      fake.seenWhileBuilding = {
+        baseUrl: PageConfig.getOption('baseUrl'),
+        wsUrl: PageConfig.getOption('wsUrl'),
+        url: fake.config?.url,
+      };
+      return {
+        sessions: {
+          startNew: async () => ({
+            kernel: {
+              id: 'lite-kernel',
+              requestExecute: () => ({
+                done: Promise.resolve(),
+                onIOPub: null,
+              }),
+              shutdown: async () => {},
+            },
+          }),
+        },
+      };
+    },
+    jupyterReactStore: {
+      getState: () => ({
+        setServiceManager: (manager: unknown) => fake.published.push(manager),
+      }),
+    },
+  };
+});
+
+import {
+  browserSource,
+  createBrowserSandboxService,
+} from '../plugins/agents/browserService';
+
+describe('the in-page sandbox and the page’s Jupyter configuration', () => {
+  beforeEach(() => {
+    PageConfig.setOption('baseUrl', REMOTE);
+    PageConfig.setOption('wsUrl', 'wss://prod1.example/api/jupyter-server');
+    PageConfig.setOption('token', 'page-token');
+    fake.config = undefined;
+    fake.seenWhileBuilding = undefined;
+    fake.published = [];
   });
 
-  it('uses the loader rather than the setter that refuses to run', () => {
-    // `setJupyterServerUrl` throws when no config has been loaded, and a
-    // workspace can start a sandbox before any Jupyter component has mounted
-    // to load one.
-    expect(SOURCE).not.toContain('setJupyterServerUrl');
+  afterEach(() => {
+    fake.config = undefined;
   });
 
-  it('gives the page back what it borrowed', () => {
-    // `PageConfig` is shared by everything on the page, and a workspace is a
-    // component on somebody's page rather than the page itself.
-    expect(SOURCE).toContain('release: () => {');
-    expect(SOURCE).toContain('source.release?.()');
+  it('builds its manager pointed at the page, then gives the page back its server', async () => {
+    const manager = await browserSource().acquire();
+    const origin = `${location.protocol}//${location.host}`;
+    // While built: this origin, where the JupyterLite server answers.
+    expect(fake.seenWhileBuilding).toEqual({
+      baseUrl: origin,
+      wsUrl: origin.replace(/^http/, 'ws'),
+      url: origin,
+    });
+    // After: the configured server, as the page had it, wsUrl included.
+    expect(PageConfig.getOption('baseUrl')).toBe(REMOTE);
+    expect(PageConfig.getOption('wsUrl')).toBe(
+      'wss://prod1.example/api/jupyter-server',
+    );
+    expect(PageConfig.getOption('token')).toBe('page-token');
+    // jupyter-react's own configuration: not loaded before, not loaded after,
+    // for the next reader to load from the page.
+    expect(fake.config).toBeUndefined();
+    // And the manager is the sandbox's own, not the page's.
+    expect(manager).toBeTruthy();
+    expect(fake.published).toEqual([]);
+  });
+
+  it('puts back a jupyter-react configuration that was loaded', async () => {
+    fake.config = { url: REMOTE, token: 'page-token' };
+    await browserSource().acquire();
+    expect(fake.config).toEqual({ url: REMOTE, token: 'page-token' });
+    expect(PageConfig.getOption('baseUrl')).toBe(REMOTE);
+  });
+
+  it('starts its kernel without leaving the page pointed at itself', async () => {
+    const service = createBrowserSandboxService();
+    const stop = service.connect();
+    await vi.waitFor(() => expect(service.ready.peek()).toBe(true));
+    expect(service.getServiceManager()).toBeTruthy();
+    expect(PageConfig.getOption('baseUrl')).toBe(REMOTE);
+    expect(fake.published).toEqual([]);
+    stop();
+    expect(PageConfig.getOption('baseUrl')).toBe(REMOTE);
   });
 });
