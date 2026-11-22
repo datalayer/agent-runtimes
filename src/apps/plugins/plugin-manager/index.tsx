@@ -43,6 +43,7 @@ import {
 } from '../../toolCards/chrome';
 import { AgentSlots } from '../../core';
 import { PLUGIN_MANAGER_WORDS } from './words';
+import type { PluginManagerWidth } from './PluginManagerDialog';
 
 export {
   PLUGIN_MANAGER_HIDDEN,
@@ -50,7 +51,11 @@ export {
   PLUGIN_MANAGER_PROTECTED,
   PLUGIN_MANAGER_WORDS,
 } from './words';
-export type { PluginManagerDialogProps } from './PluginManagerDialog';
+export type {
+  PluginManagerDialogProps,
+  PluginManagerNamedWidth,
+  PluginManagerWidth,
+} from './PluginManagerDialog';
 
 /** Loaded on the first press, not with the chat. */
 export const LazyPluginManagerDialog = lazy(
@@ -63,6 +68,8 @@ export const LazyPluginManagerDialog = lazy(
  */
 export function PluginManagerOverlay(props: {
   onClose: () => void;
+  /** How wide the dialog is (`PluginManagerDialogProps.width`): `'xlarge'` unless said. */
+  width?: PluginManagerWidth;
   returnFocusRef?: RefObject<HTMLElement | null>;
   protectedPlugins?: readonly string[];
   hiddenPlugins?: readonly string[];
@@ -78,9 +85,12 @@ export function PluginManagerOverlay(props: {
  * The plug button, and the dialog it opens. Nothing drawn where no platform
  * runs.
  */
-export function PluginManagerButton(
-  _props: Partial<ChromeComponentProps>,
-): JSX.Element | null {
+export function PluginManagerButton({
+  width,
+}: Partial<ChromeComponentProps> & {
+  /** How wide the dialog it opens is: `'xlarge'` unless said. */
+  width?: PluginManagerWidth;
+}): JSX.Element | null {
   const platform = useOptionalReactorPlatform();
   const [open, setOpen] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
@@ -102,6 +112,7 @@ export function PluginManagerButton(
       />
       {open ? (
         <PluginManagerOverlay
+          width={width}
           returnFocusRef={button}
           onClose={() => setOpen(false)}
         />

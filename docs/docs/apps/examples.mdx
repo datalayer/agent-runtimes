@@ -100,7 +100,11 @@ drawn by [`AIApplication`](./ai-application.mdx):
   the application is made of (`useWorkspaceApplication`). The plug button in
   the chat's footer is the plugins manager (`plugin-manager`, which every
   application has unless its spec leaves it out): the same list, each plugin
-  with its switch.
+  with its switch. Its dialog is Primer's widest (`xlarge`, 960px) and its
+  list scrolls inside it; `PluginManagerButton`, `PluginManagerOverlay` and
+  `PluginManagerDialog` take `width`, one of Primer's named widths (`small`,
+  `medium`, `large`, `xlarge`) or a CSS length (`'80vw'`, `1100`), never
+  wider than the window less 32px.
 
 Copy it to start an application of your own: change the Appspec, add your
 plugins to `RENDERER`, and open the plugins manager to see them run.

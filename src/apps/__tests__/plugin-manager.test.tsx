@@ -47,6 +47,10 @@ import {
   PluginManagerPlugin,
   pluginManagerPlugin,
 } from '../plugins/plugin-manager';
+import {
+  PLUGIN_MANAGER_DEFAULT_WIDTH,
+  pluginManagerDialogWidth,
+} from '../plugins/plugin-manager/PluginManagerDialog';
 
 // jsdom has no ResizeObserver, which Primer's dialog sizes its body with.
 if (!('ResizeObserver' in globalThis)) {
@@ -197,5 +201,46 @@ describe('the plugins manager’s button', () => {
     act(() => within(reopened).getByRole('button', { name: 'Close' }).click());
     expect(screen.queryByRole('dialog')).toBeNull();
     await waitFor(() => expect(document.activeElement).toBe(button));
+  });
+});
+
+describe('the plugins manager’s width (the user, 22 November 2026: "should show up larger - make sure width is configurable via props")', () => {
+  async function openedWith(width?: string | number): Promise<HTMLElement> {
+    withPlatform([PluginManagerPlugin, DemoPlugin]);
+    render(
+      themed(
+        <PluginManagerButton
+          placement="footer"
+          {...(width === undefined ? {} : { width })}
+        />,
+      ),
+    );
+    act(() =>
+      screen.getByRole('button', { name: PLUGIN_MANAGER_WORDS.open }).click(),
+    );
+    return screen.findByRole('dialog');
+  }
+
+  it('is Primer’s widest, xlarge (960px), unless said', async () => {
+    expect(PLUGIN_MANAGER_DEFAULT_WIDTH).toBe('xlarge');
+    const dialog = await openedWith();
+    expect(dialog.getAttribute('data-width')).toBe('xlarge');
+  });
+
+  it('takes a named width', async () => {
+    expect(pluginManagerDialogWidth('medium')).toEqual({ width: 'medium' });
+    const dialog = await openedWith('large');
+    expect(dialog.getAttribute('data-width')).toBe('large');
+  });
+
+  it('takes a CSS length, never wider than the window less 32px', () => {
+    expect(pluginManagerDialogWidth('80vw')).toEqual({
+      width: 'xlarge',
+      sx: { width: '80vw', maxWidth: 'calc(100vw - 32px)' },
+    });
+    expect(pluginManagerDialogWidth(1100)).toEqual({
+      width: 'xlarge',
+      sx: { width: '1100px', maxWidth: 'calc(100vw - 32px)' },
+    });
   });
 });

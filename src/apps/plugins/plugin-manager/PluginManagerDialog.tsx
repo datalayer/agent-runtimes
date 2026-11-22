@@ -29,8 +29,43 @@ import {
   PLUGIN_MANAGER_WORDS,
 } from './words';
 
+/** Primer's named dialog widths: 296, 320, 480 and 640px... up to 960px. */
+export type PluginManagerNamedWidth = 'small' | 'medium' | 'large' | 'xlarge';
+
+/**
+ * How wide the dialog is: one of Primer's named widths, or a CSS length
+ * (`'80vw'`, `'1100px'`, or a number of pixels), never wider than the window
+ * less 32px.
+ */
+export type PluginManagerWidth = PluginManagerNamedWidth | string | number;
+
+/** The dialog's width when none is said: Primer's widest, 960px. */
+export const PLUGIN_MANAGER_DEFAULT_WIDTH: PluginManagerNamedWidth = 'xlarge';
+
+const NAMED_WIDTHS: readonly string[] = ['small', 'medium', 'large', 'xlarge'];
+
+/** Primer's `width` and the `sx` that gives a CSS length, for a width. */
+export function pluginManagerDialogWidth(width: PluginManagerWidth): {
+  width: PluginManagerNamedWidth;
+  sx?: Record<string, string>;
+} {
+  if (typeof width === 'string' && NAMED_WIDTHS.includes(width)) {
+    return { width: width as PluginManagerNamedWidth };
+  }
+  const length = typeof width === 'number' ? `${width}px` : width;
+  return {
+    width: PLUGIN_MANAGER_DEFAULT_WIDTH,
+    sx: { width: length, maxWidth: 'calc(100vw - 32px)' },
+  };
+}
+
 export type PluginManagerDialogProps = {
   onClose: () => void;
+  /**
+   * How wide: Primer's `'small' | 'medium' | 'large' | 'xlarge'` or a CSS
+   * length (`'80vw'`, `1100`). `'xlarge'` (960px) unless said.
+   */
+  width?: PluginManagerWidth;
   /** Where the focus goes back to: the button that opened it. */
   returnFocusRef?: RefObject<HTMLElement | null>;
   /** Switches fixed on, beside the defaults (`PLUGIN_MANAGER_PROTECTED`). */
@@ -44,18 +79,26 @@ export function PluginManagerDialog({
   returnFocusRef,
   protectedPlugins = [],
   hiddenPlugins = [],
+  width = PLUGIN_MANAGER_DEFAULT_WIDTH,
 }: PluginManagerDialogProps): JSX.Element {
   const platform = useOptionalReactorPlatform();
+  const sized = pluginManagerDialogWidth(width);
   return (
     <Dialog
       title={PLUGIN_MANAGER_WORDS.title}
       subtitle={PLUGIN_MANAGER_WORDS.subtitle}
       onClose={() => onClose()}
-      width="large"
+      width={sized.width}
+      sx={sized.sx}
       position={{ narrow: 'fullscreen', regular: 'center', wide: 'center' }}
       returnFocusRef={returnFocusRef as RefObject<HTMLElement> | undefined}
     >
-      <Box data-plugin-manager-dialog="" minHeight={240}>
+      <Box
+        data-plugin-manager-dialog=""
+        minHeight={360}
+        maxHeight="calc(100vh - 160px)"
+        overflowY="auto"
+      >
         {platform ? (
           <PluginsManagerView
             protectedPlugins={[
