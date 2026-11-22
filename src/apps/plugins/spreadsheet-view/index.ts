@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-spreadsheet-view` — the spreadsheet, one click away.
+ * `@datalayer/agent-plugin-spreadsheet-view` — the spreadsheet, one click away.
  *
  * The footer icon that opens the workbook beside the conversation, like the
  * notebook's and the document's. It shows only while the spreadsheet editor
@@ -17,7 +17,7 @@ import { TableIcon } from '@primer/octicons-react';
 import { defineViewPlugin } from '../view-switch';
 
 export const SPREADSHEET_VIEW_PLUGIN_NAME =
-  '@datalayer/loop-plugin-spreadsheet-view';
+  '@datalayer/agent-plugin-spreadsheet-view';
 
 export const SpreadsheetViewPlugin = defineViewPlugin({
   key: 'spreadsheet',

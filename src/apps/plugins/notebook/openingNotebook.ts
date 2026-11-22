@@ -93,7 +93,7 @@ export function openingCode(): string {
 }
 
 /**
- * The notebook a LOOP workspace opens on.
+ * The notebook an Agent workspace opens on.
  *
  * Exported as a factory rather than a constant: `EphemeralNotebook` keeps the
  * object it is first given and edits it in place, so two workspaces sharing one

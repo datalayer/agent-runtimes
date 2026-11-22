@@ -11,19 +11,19 @@
  * @module apps/plugins/plugin-manager/words
  */
 
-/** The name the plugin registers under (`@datalayer/loop-plugin-<id>`). */
+/** The name the plugin registers under (`@datalayer/agent-plugin-<id>`). */
 export const PLUGIN_MANAGER_PLUGIN_NAME =
-  '@datalayer/loop-plugin-plugin-manager';
+  '@datalayer/agent-plugin-plugin-manager';
 
 /** Reactor's plugins manager (`MANAGER_PLUGIN_NAME` of `@datalayer/reactor-manager`). */
 export const REACTOR_MANAGER_PLUGIN_NAME = '@datalayer/reactor-manager';
 
-/** The Loop workspace's sidebar placement of the same list (`plugins-panel`). */
-export const LOOP_PLUGINS_PANEL_PLUGIN_NAME =
-  '@datalayer/loop-plugin-plugins-panel';
+/** The Agent workspace's sidebar placement of the same list (`plugins-panel`). */
+export const AGENT_PLUGINS_PANEL_PLUGIN_NAME =
+  '@datalayer/agent-plugin-plugins-panel';
 
 /**
- * The generic graph plugin, an implementation detail of the Loop's graph
+ * The generic graph plugin, an implementation detail of the Agent's graph
  * adapter: left out, as the sidebar's panel leaves it out.
  */
 export const REACTOR_GRAPH_PLUGIN_NAME = '@datalayer/reactor-graph';
@@ -34,7 +34,7 @@ export const REACTOR_GRAPH_PLUGIN_NAME = '@datalayer/reactor-graph';
  */
 export const PLUGIN_MANAGER_PROTECTED: readonly string[] = [
   PLUGIN_MANAGER_PLUGIN_NAME,
-  LOOP_PLUGINS_PANEL_PLUGIN_NAME,
+  AGENT_PLUGINS_PANEL_PLUGIN_NAME,
   REACTOR_MANAGER_PLUGIN_NAME,
 ];
 

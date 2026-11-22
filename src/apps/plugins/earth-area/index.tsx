@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-earth-area` — the area and the dates Terra
+ * `@datalayer/agent-plugin-earth-area` — the area and the dates Terra
  * searched, in the chat's title bar: from the last scenes it showed
  * (`show_scenes`: the area, the period, the most cloud cover), else from its
  * last granule search's bounding box and dates (`search_earth_datagranules`,

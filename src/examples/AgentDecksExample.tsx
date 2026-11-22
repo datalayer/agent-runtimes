@@ -6,7 +6,7 @@
 /**
  * A deck beside the chat, written by an agent.
  *
- * What this shows is a *plugin* joining a Loop: `@datalayer/decks` is a
+ * What this shows is a *plugin* joining an Agent: `@datalayer/decks` is a
  * Reactor plugin with a Python half of its own, and here it is mounted into
  * an agent workspace — its list in the sidebar, its view as an editor beside
  * the conversation, its commands in the palette and in a menu on the
@@ -27,8 +27,8 @@ import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
 import { registerDeckComponents, registerDecks } from '@datalayer/decks';
 import { exampleDeckComponents, exampleDecks } from '@datalayer/decks/examples';
-import { LoopEmbed } from '../apps';
-import { DeckViewPlugin, LoopDecksPlugin } from '../apps/plugins/decks';
+import { AgentEmbed } from '../apps';
+import { DeckViewPlugin, AgentDecksPlugin } from '../apps/plugins/decks';
 import { GraphViewPlugin } from '../apps/plugins/graph';
 
 // The package's example decks, so the catalog has something to open and the
@@ -39,12 +39,12 @@ registerDeckComponents(exampleDeckComponents);
 
 // Module-level, so the embed builds its reactor once rather than on every
 // render of this component.
-const DECK_PLUGINS = [LoopDecksPlugin, DeckViewPlugin, GraphViewPlugin];
+const DECK_PLUGINS = [AgentDecksPlugin, DeckViewPlugin, GraphViewPlugin];
 
 const AgentDecksExample: React.FC = () => (
   <ThemedProvider>
     <Box height="100%" minHeight={0}>
-      <LoopEmbed
+      <AgentEmbed
         target="browser"
         agentId="example-decks"
         /* The deck open beside the chat from the first frame. */

@@ -17,7 +17,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { describe, expect, it } from 'vitest';
 import { visitorForOf } from '../plugins/agents/visitorFor';
-import { loopPlugins } from '../presets';
+import { agentPlugins } from '../presets';
 
 const source = (...path: string[]) =>
   readFileSync(join(__dirname, '..', ...path), 'utf8');
@@ -36,7 +36,7 @@ describe('what a visitor’s key is for', () => {
   });
 
   it('reaches the agents plugin from the preset', () => {
-    const configs = loopPlugins({ visitorFor: 'quote-calculator' }).map(
+    const configs = agentPlugins({ visitorFor: 'quote-calculator' }).map(
       ref => (ref as { config?: Record<string, unknown> }).config,
     );
     expect(

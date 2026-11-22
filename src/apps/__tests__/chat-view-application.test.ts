@@ -15,7 +15,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { loopShapeVars } from '@datalayer/primer-addons';
+import { agentShapeVars } from '@datalayer/primer-addons';
 
 const chat = readFileSync(
   join(__dirname, '..', 'plugins/chat/ChatView.tsx'),
@@ -24,9 +24,9 @@ const chat = readFileSync(
 
 describe('an application in the chat', () => {
   it('draws its face in the empty state at the page’s size', () => {
-    expect(loopShapeVars['--loop-face-large']).toBe('72px');
+    expect(agentShapeVars['--agent-face-large']).toBe('72px');
     expect(chat).toContain(
-      "const FACE_LARGE = parseInt(loopShapeVars['--loop-face-large'], 10);",
+      "const FACE_LARGE = parseInt(agentShapeVars['--agent-face-large'], 10);",
     );
     expect(chat).toMatch(/style=\{\{ fontSize: FACE_LARGE, lineHeight: 1 \}\}/);
     expect(chat).not.toContain('fontSize: 48');

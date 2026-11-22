@@ -77,7 +77,7 @@ live, with that release.
 From the Agent Runtimes repository:
 
 ```bash
-loop apps run examples/personal-agent-protocol/company-discovery/app.py
+agent apps run examples/personal-agent-protocol/company-discovery/app.py
 python scripts/validate_pap_examples.py
 ```
 

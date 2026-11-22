@@ -212,7 +212,7 @@
     },
     "turn_event": {
       "type": "CUSTOM",
-      "name": "loop.turn",
+      "name": "agent.turn",
       "value_keys": [
         "session",
         "turn",

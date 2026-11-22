@@ -150,7 +150,9 @@ def test_the_page_receives_the_sessions_ops_and_presses_up_the_socket(
             [
                 chunk
                 async for chunk in live.run_agui(
-                    {"runId": "r1", "messages": []}, loop={"press": "p-1"}, bearer=""
+                    {"runId": "r1", "messages": []},
+                    agent_props={"press": "p-1"},
+                    bearer="",
                 )
             ]
         )

@@ -92,7 +92,7 @@ class Rememberer:
 
 #: Who the turn under way remembers for; None outside a session: its owner.
 _TURN: ContextVar[Optional[Rememberer]] = ContextVar(
-    "loop_app_rememberer", default=None
+    "agent_app_rememberer", default=None
 )
 
 

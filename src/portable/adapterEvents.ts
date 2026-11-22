@@ -37,7 +37,7 @@
  * `conversationEventsOf` says each `ProtocolEvent` as the reducer's input: a
  * message as `MESSAGE_SAID`, a call as `TOOL_CALL_SAID`, a result as
  * `TOOL_CALL_DONE`, `done` as `RUN_FINISHED`, `error` as `RUN_ERROR`, an
- * activity as `CUSTOM` (so `loop.session` is the session's here too).
+ * activity as `CUSTOM` (so `agent.session` is the session's here too).
  * `snapshotOfMessages` says a conversation read again as one AG-UI
  * `MESSAGES_SNAPSHOT`, its tool calls and their results with it. Both refuse
  * what is malformed, in a sentence.

@@ -22,7 +22,7 @@ import {
 } from '../composer/appSpecLanguage';
 
 const DOC = [
-  'schema: loop.app/v1',
+  'schema: agent.app/v1',
   'id: desk',
   'name: Desk',
   'kind: chat',
@@ -205,7 +205,7 @@ describe('the YAML editor of an Appspec', () => {
   */
   describe('a scene’s refusal, as agentspecs says it', () => {
     const SCENE = [
-      'schema: loop.scene/v1', //            1
+      'schema: agent.scene/v1', //            1
       'id: sales-accounting', //             2
       'name: Sales & Accounting', //         3
       'cast:', //                            4

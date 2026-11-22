@@ -24,5 +24,5 @@ export type A2uiComponentContribution = {
   implementation: ReactComponentImplementation;
 };
 
-export const LoopA2uiComponent =
-  defineContributionPoint<A2uiComponentContribution>('loop.a2ui.component');
+export const AgentA2uiComponent =
+  defineContributionPoint<A2uiComponentContribution>('agent.a2ui.component');

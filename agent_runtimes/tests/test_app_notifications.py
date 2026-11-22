@@ -40,7 +40,7 @@ from agent_runtimes.tests.test_agents_create_integration import (  # noqa: F401 
 )
 
 APP: dict[str, Any] = {
-    "schema": "loop.app/v1",
+    "schema": "agent.app/v1",
     "id": "triage",
     "name": "Inbox triage",
     "kind": "worker",

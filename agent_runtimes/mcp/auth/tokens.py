@@ -3,7 +3,7 @@
 
 """Where MCP credentials live.
 
-The naive answer — "on the server" — does not survive contact with how `loop`
+The naive answer — "on the server" — does not survive contact with how `agent`
 runs: the CLI spawns its own agent-runtimes process on a random port and kills
 it when the session ends. A refresh token written there is gone by morning.
 
@@ -35,7 +35,7 @@ from typing import Any, Optional, Protocol
 logger = logging.getLogger(__name__)
 
 #: Keyring service name under which MCP credentials are filed.
-KEYRING_SERVICE = "datalayer-loop-mcp"
+KEYRING_SERVICE = "datalayer-agent-mcp"
 
 #: Refresh this many seconds before expiry, so a token never expires mid-call.
 EXPIRY_MARGIN_SECONDS = 60

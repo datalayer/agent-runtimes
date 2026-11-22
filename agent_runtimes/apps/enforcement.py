@@ -479,7 +479,7 @@ class AppRulesCapability(AbstractCapability[Any]):
         if self.known_mcp_tools is not None:
             return self.known_mcp_tools()
         try:
-            from agent_runtimes.streams.loop import get_known_mcp_tool_names
+            from agent_runtimes.streams.pubsub import get_known_mcp_tool_names
 
             return get_known_mcp_tool_names()
         except Exception:

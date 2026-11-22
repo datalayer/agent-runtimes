@@ -3,8 +3,8 @@
 
 """The sessions documentation holds to the code.
 
-Each verb `loop sessions --help` offers has its row on the CLI page, the
-REPL's commands and `loop plugins` are named, the harness capabilities page
+Each verb `agent sessions --help` offers has its row on the CLI page, the
+REPL's commands and `agent plugins` are named, the harness capabilities page
 says each catalogue harness's table as the catalogue does, the pages name
 nothing private, and the sidebar lists them.
 """
@@ -49,7 +49,7 @@ def test_every_cli_verb_has_its_row_on_the_page() -> None:
         assert verb in result.output, verb
     page = _text("cli.mdx")
     for verb in verbs:
-        assert f"`loop sessions {verb}" in page, verb
+        assert f"`agent sessions {verb}" in page, verb
     for command in (
         "/sessions",
         "/resume <uid>",
@@ -58,8 +58,8 @@ def test_every_cli_verb_has_its_row_on_the_page() -> None:
         "/export [file]",
     ):
         assert command in page, command
-    assert "`loop plugins [<name>]`" in page
-    assert "`loop apps threads` and `loop apps feedback` are retired" in page
+    assert "`agent plugins [<name>]`" in page
+    assert "`agent apps threads` and `agent apps feedback` are retired" in page
 
 
 def test_the_capabilities_page_says_the_catalogue() -> None:

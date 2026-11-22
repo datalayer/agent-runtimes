@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, Optional
 
 import httpx
 
-from agent_runtimes.loop.commands import CommandArgSpec
+from agent_runtimes.agent.commands import CommandArgSpec
 
 if TYPE_CHECKING:
     from ..tux import CliTux
@@ -79,7 +79,7 @@ async def prefetch(tux: "CliTux") -> None:
 
 def _active_model(tux: "CliTux") -> str:
     """The model in use, as far as this session knows."""
-    session = getattr(tux, "loop_session", None)
+    session = getattr(tux, "agent_session", None)
     return str(getattr(session, "model", "") or getattr(tux, "model", "") or "")
 
 
@@ -315,7 +315,7 @@ async def _switch(tux: "CliTux", model_id: str) -> None:
         tux.console.print(f"[red]Unable to switch model: {error}[/red]")
         return
 
-    session = getattr(tux, "loop_session", None)
+    session = getattr(tux, "agent_session", None)
     if session is not None:
         session.model = model_id
 
@@ -354,7 +354,7 @@ async def _set_fallbacks(tux: "CliTux", ids: str) -> None:
     if not known:
         return
 
-    session = getattr(tux, "loop_session", None)
+    session = getattr(tux, "agent_session", None)
     if session is not None:
         session.extras["model_fallbacks"] = known
 

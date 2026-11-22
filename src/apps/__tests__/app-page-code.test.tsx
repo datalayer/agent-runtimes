@@ -22,7 +22,7 @@ import {
 } from '@datalayer/reactor';
 import { useReactor } from '@datalayer/reactor/react';
 import type { AppPageSpec, AppSpec } from '../../types/agentspecs';
-import { LoopChatTurn, type LoopWorkspaceContext } from '../core';
+import { AgentChatTurn, type AgentWorkspaceContext } from '../core';
 import { ENGLISH_CHAT_WORDS } from '../../chat/words';
 import { dumpAppspec, emptyAppspec, parseAppspec } from '../apps/appspec';
 import { checkAppspec, pageProblems } from '../apps/checks';
@@ -33,7 +33,7 @@ import {
   appPageAction,
   appPageInitialData,
   defaultAppSurface,
-  LOOP_PAGE,
+  AGENT_PAGE,
   openPageSession,
   outputsData,
   PAGE_ACTION,
@@ -267,11 +267,11 @@ describe('over the session API', () => {
     expect(
       pageTurnOf(
         sse(
-          { type: 'CUSTOM', name: 'loop.session', value: { uid: 's' } },
+          { type: 'CUSTOM', name: 'agent.session', value: { uid: 's' } },
           { type: 'RUN_STARTED' },
           {
             type: 'CUSTOM',
-            name: LOOP_PAGE,
+            name: AGENT_PAGE,
             value: { inputs: { seats: 1 }, outputs: { total: '12 €' } },
           },
           { type: 'RUN_FINISHED' },
@@ -292,7 +292,7 @@ describe('over the session API', () => {
       if (url.endsWith('/api/v1/apps/sessions')) {
         expect(body).toEqual({ agent: 'quote' });
         return new Response(
-          sse({ type: 'CUSTOM', name: 'loop.session', value: { uid: 's-1' } }),
+          sse({ type: 'CUSTOM', name: 'agent.session', value: { uid: 's-1' } }),
         );
       }
       expect(url).toBe('http://runtime/api/v1/apps/sessions/s-1/page');
@@ -309,7 +309,7 @@ describe('over the session API', () => {
       return new Response(
         sse({
           type: 'CUSTOM',
-          name: LOOP_PAGE,
+          name: AGENT_PAGE,
           value: { outputs: { total: '24 €' } },
         }),
       );
@@ -356,7 +356,7 @@ describe('the page drawn', () => {
       vi.fn(async (url: string, init?: RequestInit) => {
         if (url.endsWith('/api/v1/apps/sessions')) {
           return new Response(
-            sse({ type: 'CUSTOM', name: 'loop.session', value: { uid: 'p' } }),
+            sse({ type: 'CUSTOM', name: 'agent.session', value: { uid: 'p' } }),
           );
         }
         const inputs = JSON.parse(String(init?.body)).inputs;
@@ -364,7 +364,7 @@ describe('the page drawn', () => {
         return new Response(
           sse({
             type: 'CUSTOM',
-            name: LOOP_PAGE,
+            name: AGENT_PAGE,
             value: {
               outputs: {
                 total: `${Number(inputs.seats) * 12} €`,
@@ -383,7 +383,7 @@ describe('the page drawn', () => {
       name: 'test-chat-turn',
       contributes: [
         contribution(
-          LoopChatTurn,
+          AgentChatTurn,
           { id: 'turn', turn: feed.turn, conversation: feed.conversation },
           { id: 'turn' },
         ),
@@ -395,7 +395,7 @@ describe('the page drawn', () => {
       sandbox: { state: 'running' },
       viewControls: { send },
       prompts: { submit: vi.fn() },
-    } as unknown as LoopWorkspaceContext;
+    } as unknown as AgentWorkspaceContext;
     const app = widget();
     function Harness() {
       const reactor = React.useMemo(
@@ -453,7 +453,7 @@ describe('the page drawn', () => {
       name: 'test-chat-turn',
       contributes: [
         contribution(
-          LoopChatTurn,
+          AgentChatTurn,
           { id: 'turn', turn: feed.turn, conversation: feed.conversation },
           { id: 'turn' },
         ),
@@ -467,7 +467,7 @@ describe('the page drawn', () => {
       sandbox: { state: 'error', target: 'datalayer', errorReason: reason },
       viewControls: { send: vi.fn() },
       prompts: { submit: vi.fn() },
-    } as unknown as LoopWorkspaceContext;
+    } as unknown as AgentWorkspaceContext;
     const app = widget();
     function Harness() {
       const reactor = React.useMemo(

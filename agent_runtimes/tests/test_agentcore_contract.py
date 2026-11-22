@@ -54,7 +54,7 @@ UID = "session-0001"
 SID = session_uid_to_agentcore(UID)
 
 ASSISTANT: Dict[str, Any] = {
-    "schema": "loop.app/v1",
+    "schema": "agent.app/v1",
     "id": "notes-assistant",
     "name": "Notes Assistant",
     "kind": "chat",
@@ -394,7 +394,7 @@ def test_an_ag_ui_run_brings_its_own_conversation(
 def test_a_prompt_after_ag_ui_runs_carries_their_conversation(
     client: TestClient, model: Said
 ) -> None:
-    # The Studio's turns (AG-UI, through ai-agents), then a `loop` prompt on the
+    # The Studio's turns (AG-UI, through ai-agents), then a `agent` prompt on the
     # same session: the prompt goes after the conversation the last run had
     # (the drill's step 2, 10 November 2026).
     events_of(

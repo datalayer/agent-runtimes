@@ -12,7 +12,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { APP_CATALOGUE } from '../../specs/apps';
-import { LoopPromptPanel } from '../core';
+import { AgentPromptPanel } from '../core';
 import { emptyAppspec } from '../apps/appspec';
 import { appPreset } from '../apps/AppRenderer';
 import { defineAppKeptPlugin } from '../apps/AppKept';
@@ -90,14 +90,14 @@ describe('what an application keeps, before the first message', () => {
   it('is said under the prompt at its address and embedded, not in the Preview', () => {
     const app = APP_CATALOGUE['web-research'];
     expect(names(appPreset(app).plugins)).not.toContain(
-      '@datalayer/loop-plugin-app-kept-web-research',
+      '@datalayer/agent-plugin-app-kept-web-research',
     );
     expect(
       names(appPreset(app, { kept: { visitor: false } }).plugins),
-    ).toContain('@datalayer/loop-plugin-app-kept-web-research');
+    ).toContain('@datalayer/agent-plugin-app-kept-web-research');
     const plugin = defineAppKeptPlugin(app, 'Kept for a year.');
     const panels = (plugin.contributes ?? []).filter(
-      (item: { point?: unknown }) => item.point === LoopPromptPanel,
+      (item: { point?: unknown }) => item.point === AgentPromptPanel,
     ) as Array<{ value: Record<string, unknown> }>;
     expect(panels).toHaveLength(1);
     expect(panels[0].value).toMatchObject({

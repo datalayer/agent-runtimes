@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """A voice assistant — Chainlit's cookbook ``openai-whisper``, rebuilt with
-LOOP's API as far as LOOP goes.
+Agent's API as far as Agent goes.
 
 Chainlit streams the microphone to the application (``on_audio_start``,
 ``on_audio_chunk``: 16-bit PCM, a turn ended by 1.3 s of silence), writes the
@@ -10,8 +10,8 @@ turn as a WAV, transcribes it with Whisper in a ``tool`` step, shows it as the
 user's message with its audio, answers with a model, speaks the answer with
 ElevenLabs, and plays it.
 
-**The gap.** LOOP has no live microphone: the composer takes no audio stream,
-and no handler hears one (voice is set aside). What LOOP does
+**The gap.** Agent has no live microphone: the composer takes no audio stream,
+and no handler hears one (voice is set aside). What Agent does
 take is a **voice note** — an audio file sent with a message (``@app.file``,
 ``audio/*`` in the Appspec's uploads) — and that is what this rebuild
 answers: transcribed with Whisper in a ``tool`` step as Chainlit does,
@@ -29,7 +29,7 @@ AGENT = "example-a2a-writer:0.0.1"
 
 app = Application.from_spec(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "voice-assistant",
         "name": "Voice Assistant",
         "kind": "chat",

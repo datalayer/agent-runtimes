@@ -183,7 +183,7 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
   makeEntry(
     'AgentDecksExample',
     () => import('./AgentDecksExample'),
-    'A deck beside the chat: the decks plugin in a Loop, and an agent that writes presentations as data.',
+    'A deck beside the chat: the decks plugin in the Agent workspace, and an agent that writes presentations as data.',
   ),
   makeEntry(
     'CellExample',
@@ -256,7 +256,7 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'AgentDecideExample',
     () => import('./AgentDecideExample'),
     'Decide: typed decisions asked of Jev — yes or no, a choice, a score — from the chat, where the agent calls decide, and from the floating assistant’s Ask a decision.',
-    ['example', 'agent', 'loop', 'app', 'decisions', 'jev', 'assistant'],
+    ['example', 'agent', 'app', 'decisions', 'jev', 'assistant'],
   ),
   makeEntry(
     'AgentEvalsExample',
@@ -280,24 +280,24 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     ['example', 'agent', 'inference', 'provider', 'runtime'],
   ),
   makeEntry(
-    'LoopApplicationExample',
-    () => import('./LoopApplicationExample'),
+    'AgentApplicationExample',
+    () => import('./AgentApplicationExample'),
     'An extensible AI application: AIApplication with an Appspec written in the page or named from the catalogue, run where the header says (Local or Datalayer), composed of the chat, the plugins manager (the plug button in its footer, which lists every plugin it runs), the presentation plugin and a plugin of its own in the title bar and the right panel.',
     ['example', 'app', 'ai-application', 'plugins', 'extensible'],
     { browser: AI_APPLICATION_RUNS_ON, jupyter: AI_APPLICATION_RUNS_ON },
   ),
   makeEntry(
-    'LoopWorkspaceExample',
-    () => import('./LoopWorkspaceExample'),
-    'The LOOP workspace: a blank shell, with the chat, the editors and the plugin list all contributed as plugins.',
+    'AgentWorkspaceExample',
+    () => import('./AgentWorkspaceExample'),
+    'The Agent workspace: a blank shell, with the chat, the editors and the plugin list all contributed as plugins.',
     // Its sandbox follows the header's target: its own switch is left out.
-    ['example', 'loop', 'workspace', 'sandbox'],
+    ['example', 'agent', 'workspace', 'sandbox'],
   ),
   makeEntry(
-    'LoopComputerExample',
-    () => import('./LoopComputerExample'),
+    'AgentComputerExample',
+    () => import('./AgentComputerExample'),
     'An application beside its computer: what its agent ran on its sandbox, its files, and Take over and Hand back (R-23).',
-    ['example', 'loop', 'app', 'computer', 'sandbox'],
+    ['example', 'agent', 'app', 'computer', 'sandbox'],
     {
       browser:
         'Its computer is a sandbox on a server: its browser, files and shell cannot run in this page.',
@@ -309,17 +309,17 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'ScenesExample',
     () => import('./ScenesExample'),
     'The scenes of the catalogue in tabs — Sales & Accounting, Month-end Close, Crop Monitoring, Disaster Assessment — each its graph and transcript, its cues as suggestions, played against the local servers (A-15).',
-    ['example', 'loop', 'scenes', 'a2a', 'agentspecs', 'team'],
+    ['example', 'agent', 'scenes', 'a2a', 'agentspecs', 'team'],
   ),
   makeEntry(
-    'LoopShellExample',
-    () => import('./LoopShellExample'),
-    'The Loop shell at its most naked: a blank canvas, a floating draggable prompt, and an editor selector in the corner — none, notebook or document.',
-    ['example', 'loop', 'shell', 'prompt', 'editors'],
+    'AgentShellExample',
+    () => import('./AgentShellExample'),
+    'The Agent shell at its most naked: a blank canvas, a floating draggable prompt, and an editor selector in the corner — none, notebook or document.',
+    ['example', 'agent', 'shell', 'prompt', 'editors'],
   ),
   makeEntry(
-    'LoopStrategyExample',
-    () => import('./LoopStrategyExample'),
+    'AgentStrategyExample',
+    () => import('./AgentStrategyExample'),
     'Define and launch an agent reasoning strategy (a control loop: observe/think/act/evaluate) over a live notebook, driven by generic strategy specs.',
     ['example', 'agent', 'strategy', 'notebook', 'agentspecs'],
   ),

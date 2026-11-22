@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""``loop tool-approvals``: list, approve and reject the tool calls waiting on you.
+"""``agent tool-approvals``: list, approve and reject the tool calls waiting on you.
 
 An agent whose tool call needs a person's approval asks ai-agents, and the run
 waits until that person decides. These commands read and decide those

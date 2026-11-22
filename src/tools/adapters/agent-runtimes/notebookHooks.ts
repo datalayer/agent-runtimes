@@ -33,7 +33,7 @@ const useNotebookStore = () => notebookStore.getState();
  *
  * What `useNotebookTools` memoises, as a plain function — for callers that
  * are not components: a reactor plugin contributing the tools to the chat's
- * `LoopFrontendTool` point builds them here. The executor reads the store's
+ * `AgentFrontendTool` point builds them here. The executor reads the store's
  * live state through its methods, so nothing here needs reactivity.
  */
 export function createNotebookTools(

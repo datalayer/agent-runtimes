@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A runtime launched for a LOOP deployment names it.
+"""A runtime launched for an Agent deployment names it.
 
 ``RuntimesClient.create`` sends ``app_uid`` and ``deployment_uid`` in the
 body, the way ai-agents launches a kept runtime: the Operator writes them on

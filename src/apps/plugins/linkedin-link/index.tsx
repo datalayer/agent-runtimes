@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-linkedin-link` — *Link LinkedIn in Settings*,
+ * `@datalayer/agent-plugin-linkedin-link` — *Link LinkedIn in Settings*,
  * above the conversation (its `banner` placement; or the title bar), while the person's LinkedIn is not linked through
  * Datalayer (IAM's `/social/accounts`) or its 60-day grant lapsed
  * (*Reconnect LinkedIn in Settings*). Brought by the `datalayer-social`
@@ -26,7 +26,8 @@ import { requestDatalayerAPI } from '@datalayer/core/lib/api/DatalayerApi';
 import { defineChromePlugin } from '../../toolCards/chrome';
 import { record } from '../../toolCards/kit';
 
-export const LINKEDIN_LINK_PLUGIN_NAME = '@datalayer/loop-plugin-linkedin-link';
+export const LINKEDIN_LINK_PLUGIN_NAME =
+  '@datalayer/agent-plugin-linkedin-link';
 
 /** Where Settings › LinkedIn is, on Datalayer's pages. */
 export const LINKEDIN_SETTINGS_PATH = '/settings/linkedin';

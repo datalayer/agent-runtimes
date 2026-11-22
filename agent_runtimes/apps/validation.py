@@ -39,7 +39,7 @@ cannot be read is not graded on its answer alone (`RecordUnavailable`).
 A case is `own.PASSED`, `own.FAILED` or `own.NOT_RUN`, as a beat of a scene's
 rehearsal is (`scenes.rehearsal`); a failed case names the check (`check`) and
 says why (`says`). The report is plain data (`ValidationReport.as_dict`),
-what `loop apps validate --tests --local --json` prints and ``--attach``
+what `agent apps validate --tests --local --json` prints and ``--attach``
 hands to ai-agents, which keeps it against the saved version as the Studio
 keeps a run of the Evals engine (``state.validation`` of the item).
 """

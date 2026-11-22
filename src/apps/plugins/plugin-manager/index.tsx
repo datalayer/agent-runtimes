@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-plugin-manager` — the plugins of the page, from a
+ * `@datalayer/agent-plugin-plugin-manager` — the plugins of the page, from a
  * button (the user, 21 November 2026: "reactor has a plugin plugin-manager to
  * list, enable, disable the plugins of the reactor app - add that plugin as a
  * footer menu ... when user will click on that icon the overlay will be
@@ -13,16 +13,16 @@
  * A wrapper of Reactor's plugins manager (`@datalayer/reactor-manager`):
  * that plugin fills a `sidebar` slot, and a chat's footer is not one. This
  * one places a plug button in the chat's footer (`footer`, the row under
- * the prompt, `loop.promptStatus`, in a Loop workspace; or its title bar,
+ * the prompt, `agent.promptStatus`, in an Agent workspace; or its title bar,
  * `header`) and, pressed, opens a dialog
  * holding Reactor's own `PluginsManagerView` — the list is Reactor's. The
  * button and the dialog are exported besides, for a host to draw them
  * itself (Datalayer's sidebar footer does).
  *
- * The platform listed is the one the page runs (Reactor's store): in a Loop
+ * The platform listed is the one the page runs (Reactor's store): in an Agent
  * workspace, the workspace's. Nothing is drawn where no platform runs — so
  * a `Chat` outside a workspace has no such button. The dialog's code loads
- * on the first press, not with the chat. This button's plugin, the Loop's
+ * on the first press, not with the chat. This button's plugin, the Agent's
  * sidebar panel and Reactor's manager are fixed on in the list.
  *
  * Every application has it unless its spec leaves it out
@@ -41,7 +41,7 @@ import {
   defineChromePlugin,
   type ChromeComponentProps,
 } from '../../toolCards/chrome';
-import { LoopSlots } from '../../core';
+import { AgentSlots } from '../../core';
 import { PLUGIN_MANAGER_WORDS } from './words';
 
 export {
@@ -122,7 +122,7 @@ export const pluginManagerPlugin = defineChromePlugin({
   // In the chat's footer row, under the prompt, beside its other controls,
   // and usable while the prompt is closed (22 November 2026: it stood in a
   // row of its own below the footer).
-  slots: { footer: LoopSlots.promptStatus },
+  slots: { footer: AgentSlots.promptStatus },
 });
 
 export const PluginManagerPlugin = pluginManagerPlugin('footer');

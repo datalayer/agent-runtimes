@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
-from agent_runtimes.loop.commands import CommandArgSpec
+from agent_runtimes.agent.commands import CommandArgSpec
 
 from .sessions_shared import NOT_A_SESSION, ask, current_uid
 

@@ -47,7 +47,7 @@ GRANT = "grant-1"
 OWNER_KEY = "owner"
 
 TRIAGE = {
-    "schema": "loop.app/v1",
+    "schema": "agent.app/v1",
     "id": "inbox-triage",
     "name": "Inbox triage",
     "kind": "worker",
@@ -364,7 +364,7 @@ def test_the_scheduler_s_start_session_sends_the_token_with_the_session_request_
             return httpx.Response(200, json={"id": "inbox-triage"})
         assert request.headers["authorization"] == f"Bearer {OWNER_KEY}"
         stream = (
-            'data: {"type": "CUSTOM", "name": "loop.session", "value": {"uid": "s-1"}}\n\n'
+            'data: {"type": "CUSTOM", "name": "agent.session", "value": {"uid": "s-1"}}\n\n'
             'data: {"type": "RUN_FINISHED"}\n\n'
         )
         return httpx.Response(

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The speech models on this machine, for ``loop --voice``.
+"""The speech models on this machine, for ``agent --voice``.
 
 The machine's store is laid out as the speech service's,
 ``<store>/<provider>/<model id>/<path>`` (``DATALAYER_SPEECH_MODELS_DIR``,
@@ -14,7 +14,7 @@ third party's hub. ::
     python -m agent_runtimes.voice.store             # whisper-small and kokoro-82m
     python -m agent_runtimes.voice.store kokoro-82m  # one model
 
-With the ``voice`` extra and these two models here, ``loop --voice --speak``
+With the ``voice`` extra and these two models here, ``agent --voice --speak``
 hears and says on the machine; without them, on Datalayer's servers.
 """
 

@@ -5,9 +5,9 @@
 
 /**
  * The local runtime and the harness on the machine:
- * where `loop` is looked for, the version
+ * where `agent` is looked for, the version
  * read, the refusals (absent, too old, unanswered) each naming the install
- * line in the host's words, the port parsed from `loop serve`'s lines, the
+ * line in the host's words, the port parsed from `agent serve`'s lines, the
  * loopback origins a policy admits, the environment handed (the trimmed
  * set, the declared credentials by name and nothing undeclared, the folder
  * as the workspace, the file store, the token when signed in), the chat's
@@ -19,7 +19,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  candidateLoopPaths,
+  candidateAgentPaths,
   compareVersions,
   credentialNamesOf,
   credentialSecretKey,
@@ -31,10 +31,10 @@ import {
   type HarnessMachine,
   INSTALL_LINE,
   localRuntimeHandle,
-  LOOP_MIN_VERSION,
-  LOOP_SERVE_ARGUMENTS,
+  AGENT_MIN_VERSION,
+  AGENT_SERVE_ARGUMENTS,
   loopbackSourcesOf,
-  loopDetection,
+  agentDetection,
   nodeMajorOf,
   portOf,
   requiredNodeMajor,
@@ -46,42 +46,42 @@ import {
   VSCODE_HOST,
 } from '../localRuntime';
 
-describe('where loop is looked for', () => {
+describe('where agent is looked for', () => {
   it("takes the configured path first, then PATH, then uv tool's and pipx's bins", () => {
-    const paths = candidateLoopPaths({
+    const paths = candidateAgentPaths({
       platform: 'linux',
       home: '/home/ada',
       pathVariable: '/usr/bin:/home/ada/miniconda3/bin/',
-      configured: '/opt/loop',
+      configured: '/opt/agent',
     });
     expect(paths).toEqual([
-      '/opt/loop',
-      '/usr/bin/loop',
-      '/home/ada/miniconda3/bin/loop',
-      '/home/ada/.local/bin/loop',
-      '/home/ada/.local/share/uv/tools/agent-runtimes/bin/loop',
-      '/home/ada/.local/pipx/venvs/agent-runtimes/bin/loop',
+      '/opt/agent',
+      '/usr/bin/agent',
+      '/home/ada/miniconda3/bin/agent',
+      '/home/ada/.local/bin/agent',
+      '/home/ada/.local/share/uv/tools/agent-runtimes/bin/agent',
+      '/home/ada/.local/pipx/venvs/agent-runtimes/bin/agent',
     ]);
   });
 
-  it('looks for loop.exe on Windows', () => {
-    const paths = candidateLoopPaths({
+  it('looks for agent.exe on Windows', () => {
+    const paths = candidateAgentPaths({
       platform: 'win32',
       home: 'C:\\Users\\ada',
       pathVariable: 'C:\\Python\\Scripts',
       configured: '',
     });
-    expect(paths[0]).toBe('C:\\Python\\Scripts\\loop.exe');
-    expect(paths).toContain('C:\\Users\\ada\\.local\\bin\\loop.exe');
+    expect(paths[0]).toBe('C:\\Python\\Scripts\\agent.exe');
+    expect(paths).toContain('C:\\Users\\ada\\.local\\bin\\agent.exe');
   });
 });
 
 describe('the version read', () => {
   it('is 1.5.70 at least: the release that keeps the instructions file and serves the harnesses', () => {
-    expect(LOOP_MIN_VERSION).toBe('1.5.70');
+    expect(AGENT_MIN_VERSION).toBe('1.5.70');
   });
 
-  it('reads loop --version in both of its shapes, colours stripped', () => {
+  it('reads agent --version in both of its shapes, colours stripped', () => {
     expect(versionOf('\u001b[32mAgent Runtimes Chat\u001b[0m v1.5.70\n')).toBe(
       '1.5.70',
     );
@@ -97,24 +97,24 @@ describe('the version read', () => {
 });
 
 describe("the refusals, in the host's words", () => {
-  it('refuses an absent loop with the install line and how the host sets a path', () => {
-    const editor = loopDetection(null, VSCODE_HOST);
+  it('refuses an absent agent with the install line and how the host sets a path', () => {
+    const editor = agentDetection(null, VSCODE_HOST);
     expect(editor.ok).toBe(false);
     if (!editor.ok) {
       expect(editor.reason).toBe('absent');
       expect(editor.sentence).toContain(INSTALL_LINE);
-      expect(editor.sentence).toContain('datalayer.local.loopPath');
+      expect(editor.sentence).toContain('datalayer.local.agentPath');
     }
-    const desktop = loopDetection(null, DESKTOP_HOST);
+    const desktop = agentDetection(null, DESKTOP_HOST);
     if (!desktop.ok) {
       expect(desktop.sentence).toContain(INSTALL_LINE);
       expect(desktop.sentence).toContain("Desktop's settings");
     }
   });
 
-  it('refuses a loop older than the release the host needs', () => {
-    const detection = loopDetection(
-      { path: '/usr/bin/loop', versionOutput: 'agent_runtimes: 1.5.69' },
+  it('refuses an agent older than the release the host needs', () => {
+    const detection = agentDetection(
+      { path: '/usr/bin/agent', versionOutput: 'agent_runtimes: 1.5.69' },
       DESKTOP_HOST,
     );
     expect(detection.ok).toBe(false);
@@ -122,16 +122,16 @@ describe("the refusals, in the host's words", () => {
       expect(detection.reason).toBe('too-old');
       expect(detection.sentence).toContain('1.5.69');
       expect(detection.sentence).toContain(
-        `Datalayer Desktop needs ${LOOP_MIN_VERSION} or later`,
+        `Datalayer Desktop needs ${AGENT_MIN_VERSION} or later`,
       );
       expect(detection.sentence).toContain(INSTALL_LINE);
     }
   });
 
-  it('refuses a loop that does not answer, with the first line of why', () => {
-    const detection = loopDetection(
+  it('refuses an agent that does not answer, with the first line of why', () => {
+    const detection = agentDetection(
       {
-        path: '/usr/bin/loop',
+        path: '/usr/bin/agent',
         versionOutput: null,
         failure: '\n/usr/bin/python3: No such file or directory\n',
       },
@@ -147,14 +147,17 @@ describe("the refusals, in the host's words", () => {
 
   it('accepts the minimum and anything newer', () => {
     expect(
-      loopDetection(
-        { path: '/usr/bin/loop', versionOutput: 'Agent Runtimes Chat v1.5.70' },
+      agentDetection(
+        {
+          path: '/usr/bin/agent',
+          versionOutput: 'Agent Runtimes Chat v1.5.70',
+        },
         DESKTOP_HOST,
       ),
-    ).toEqual({ ok: true, path: '/usr/bin/loop', version: '1.5.70' });
+    ).toEqual({ ok: true, path: '/usr/bin/agent', version: '1.5.70' });
     expect(
-      loopDetection(
-        { path: '/usr/bin/loop', versionOutput: 'agent_runtimes: 1.6.0' },
+      agentDetection(
+        { path: '/usr/bin/agent', versionOutput: 'agent_runtimes: 1.6.0' },
         VSCODE_HOST,
       ).ok,
     ).toBe(true);
@@ -162,8 +165,8 @@ describe("the refusals, in the host's words", () => {
 });
 
 describe('the port and the start', () => {
-  it('starts loop serve on loopback with a free port', () => {
-    expect(LOOP_SERVE_ARGUMENTS).toEqual([
+  it('starts agent serve on loopback with a free port', () => {
+    expect(AGENT_SERVE_ARGUMENTS).toEqual([
       'serve',
       '--host',
       '127.0.0.1',
@@ -172,7 +175,7 @@ describe('the port and the start', () => {
     ]);
   });
 
-  it('reads the port from the lines loop serve writes', () => {
+  it('reads the port from the lines agent serve writes', () => {
     expect(
       portOf(
         'INFO agent_runtimes.commands.serve Auto-selected free port 41231',

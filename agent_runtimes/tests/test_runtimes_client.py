@@ -90,7 +90,7 @@ class TestARuntimeOfAnExecutionTree:
 class TestAnApplicationIsLaunchedWithItsAppspec:
     """Its connections' secrets are given before its agent is made."""
 
-    APP = {"schema": "loop.app/v1", "id": "web-research", "connections": []}
+    APP = {"schema": "agent.app/v1", "id": "web-research", "connections": []}
 
     def _posted(self, **kwargs: Any) -> dict[str, Any]:
         transport = _Transport(_Response(payload={"success": True, "runtime": {}}))

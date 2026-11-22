@@ -48,7 +48,7 @@ OWN = {
 ACME = OrganizationFrames("01ORG", {"board-reporting": VERSION, "org-house-style": OWN})
 
 APP = {
-    "schema": "loop.app/v1",
+    "schema": "agent.app/v1",
     "id": "board-pack",
     "name": "Board pack",
     "kind": "chat",
@@ -203,8 +203,8 @@ async def test_the_runtime_refuses_it_when_its_organization_s_contexts_cannot_be
     assert creation_spy["pydantic_kwargs"] is None
 
 
-class TestLoopAppsValidate:
-    """`loop apps validate --organization` checks an organization's own context."""
+class TestAgentAppsValidate:
+    """`agent apps validate --organization` checks an organization's own context."""
 
     @staticmethod
     def _write(tmp_path) -> Any:
@@ -218,7 +218,7 @@ class TestLoopAppsValidate:
     def _signed_in(monkeypatch, frames: Any) -> None:
         from types import SimpleNamespace
 
-        from agent_runtimes.loop import launch
+        from agent_runtimes.agent import launch
 
         client = SimpleNamespace(urls=SimpleNamespace(iam_url="https://iam.test"))
         monkeypatch.setattr(launch, "make_client", lambda: (client, "t"))
@@ -260,8 +260,8 @@ class TestLoopAppsValidate:
     ):
         from typer.testing import CliRunner
 
+        from agent_runtimes.agent import launch
         from agent_runtimes.commands.apps import app
-        from agent_runtimes.loop import launch
 
         def signed_out():
             raise launch.NotSignedIn("No Datalayer credentials were found.")
@@ -465,8 +465,8 @@ class TestADisabledContext:
         import yaml
         from typer.testing import CliRunner
 
+        from agent_runtimes.agent import launch
         from agent_runtimes.commands.apps import app
-        from agent_runtimes.loop import launch
 
         path = tmp_path / "app.yaml"
         path.write_text(yaml.safe_dump({**APP, "agent": "cog-crawler:0.0.1"}))

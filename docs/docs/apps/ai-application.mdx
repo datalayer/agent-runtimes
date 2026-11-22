@@ -63,7 +63,7 @@ import {
 | --- | --- |
 | `app` | An Appspec, or a name: a catalogue example (`web-research`), an application at its address on Datalayer (`demo-marketer`), or a decision's id. A name is read before anything is drawn. |
 | `runsOn` | Where it runs: `visitor`, `runtime`, `server` or `datalayer` (see below). |
-| `theme` | `host` (the default) uses the page's primer-addons theme. `own` uses the application's own theme, `loop` unless the Appspec names one, as the element does. |
+| `theme` | `host` (the default) uses the page's primer-addons theme. `own` uses the application's own theme, `agent` unless the Appspec names one, as the element does. |
 | `height` | The height of an inline application. By default it fills its container (`100%`). |
 | `skeleton` | What holds its place while a name is read. A skeleton by default, never a loading sentence. |
 | `mode` | `inline`, `bubble`, `panel` or `assistant`. The Appspec's `deployment.embedded.mode` by default, then inline. |
@@ -174,14 +174,14 @@ it on a Datalayer runtime with the signed-in person's credentials; its
 
 What a host adds to the application's workspace goes in `renderer.plugins`:
 Reactor plugins (`definePlugin` from `@datalayer/reactor`) whose components
-fill the workspace's slots (`LoopSlots` from `@datalayer/agent-runtimes/lib/apps/core`):
+fill the workspace's slots (`AgentSlots` from `@datalayer/agent-runtimes/lib/apps/core`):
 the chat's title bar (`chatHeader`), its toolbar (`promptAction`), the left and
 right panels (`leftPanel`, `rightPanel`), a banner, the status line. Make the
 plugins once, outside a render: a new plugin restarts the workspace.
 
 ```tsx
 import { definePlugin } from '@datalayer/reactor';
-import { LoopSlots } from '@datalayer/agent-runtimes/lib/apps/core';
+import { AgentSlots } from '@datalayer/agent-runtimes/lib/apps/core';
 import { AgentPresentationPlugin } from '@datalayer/agent-runtimes/lib/apps/plugins/agent-presentation';
 import { useWorkspaceApplication } from '@datalayer/agent-runtimes/lib/apps/plugins/composer-portal';
 
@@ -194,7 +194,7 @@ const AnatomyPlugin = definePlugin({
   name: 'my-host-anatomy',
   build: () => ({
     components: [
-      { slot: LoopSlots.rightPanel, id: 'anatomy', Component: Anatomy, panel: { label: 'What it is made of' } },
+      { slot: AgentSlots.rightPanel, id: 'anatomy', Component: Anatomy, panel: { label: 'What it is made of' } },
     ],
   }),
 });
@@ -230,7 +230,7 @@ export const PresentationPlugin = agentPresentationPlugin({
 });
 ```
 
-The *Loop Application* example (`src/examples/LoopApplicationExample.tsx`, see
+The *Agent Application* example (`src/examples/AgentApplicationExample.tsx`, see
 [the examples](./examples.mdx)) puts all of it together.
 
 ## Where Datalayer uses it

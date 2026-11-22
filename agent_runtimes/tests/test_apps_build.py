@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""`loop apps build` and `loop apps run app.py`."""
+"""`agent apps build` and `agent apps run app.py`."""
 
 import asyncio
 import os
@@ -100,7 +100,7 @@ def test_build_writes_the_spec_the_file_amounts_to_with_its_code_marked(
             CodeMark("action save", "save", "app.py:27"),
         ]
     )
-    assert "# loop:code message: reply (app.py:21)" in built.text.splitlines()
+    assert "# agent:code message: reply (app.py:21)" in built.text.splitlines()
     # Its action typed, the model's schema in the spec.
     [action] = document["interface"]["actions"]
     assert action["name"] == "save"
@@ -274,7 +274,7 @@ def local_server(monkeypatch) -> List[Any]:
     monkeypatch.setattr(
         "agent_runtimes.chat.cli._wait_for_server", lambda *a, **k: True
     )
-    monkeypatch.setattr("agent_runtimes.loop.launch.speak_ag_ui", lambda url: True)
+    monkeypatch.setattr("agent_runtimes.agent.launch.speak_ag_ui", lambda url: True)
     monkeypatch.setattr(
         commands,
         "configure_on",
@@ -338,11 +338,11 @@ def test_an_application_refused_on_a_runtime_attached_to_is_told_to_launch_one(
 
     launched: List[Any] = []
     monkeypatch.setattr(
-        "agent_runtimes.loop.launch.launch_cloud",
+        "agent_runtimes.agent.launch.launch_cloud",
         lambda *args, **kwargs: _kept(launched, kwargs, _Attached()),
     )
     monkeypatch.setattr(
-        "agent_runtimes.loop.launch.finish_cloud", lambda *args, **kwargs: None
+        "agent_runtimes.agent.launch.finish_cloud", lambda *args, **kwargs: None
     )
 
     def refuse(url: str, document: Any, organization: Any = None) -> Any:

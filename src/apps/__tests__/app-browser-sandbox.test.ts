@@ -11,7 +11,7 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import { LoopAgentBlueprint } from '../core';
+import { AgentBlueprint } from '../core';
 import { APP_CATALOGUE } from '../../specs/apps';
 import { appPreset, defineAppPlugin } from '../apps/AppRenderer';
 import { APP_BROWSER_SANDBOX_PLUGIN_NAME } from '../apps/AppBrowserSandbox';
@@ -62,7 +62,7 @@ describe('an application whose agent runs code', () => {
 
   it('is told in the page where its code runs and where its price list is', () => {
     const [blueprint] = (defineAppPlugin(quote).contributes ?? []).filter(
-      (item: { point?: unknown }) => item.point === LoopAgentBlueprint,
+      (item: { point?: unknown }) => item.point === AgentBlueprint,
     ) as Array<{ value: { instructions?: string } }>;
     const told = blueprint.value.instructions ?? '';
     expect(told.startsWith(quote.instructions)).toBe(true);

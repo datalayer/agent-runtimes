@@ -5,7 +5,7 @@
 
 /**
  * An application written in Python, on the Canvas: what
- * `loop apps build` marks as decided by its code is read from the source the
+ * `agent apps build` marks as decided by its code is read from the source the
  * Studio keeps, shown, and a button whose action the code handles keeps it.
  */
 
@@ -27,17 +27,17 @@ import {
   whereWords,
 } from '../composer/appCode';
 
-/** The text `loop apps build` writes (agent-runtimes' build.spec_text). */
+/** The text `agent apps build` writes (agent-runtimes' build.spec_text). */
 const BUILT = [
-  '# Built from app.py by `loop apps build`: the file is the source; edit it there.',
+  '# Built from app.py by `agent apps build`: the file is the source; edit it there.',
   '# What its code decides; without the file, its agent answers:',
-  '# loop:code start: opening (app.py:14)',
-  '# loop:code message: reply (app.py:18)',
-  '# loop:code action save: save (app.py:23)',
-  '# loop:code schedule weekly: weekly (app.py:31)',
-  'schema: loop.app/v1',
+  '# agent:code start: opening (app.py:14)',
+  '# agent:code message: reply (app.py:18)',
+  '# agent:code action save: save (app.py:23)',
+  '# agent:code schedule weekly: weekly (app.py:31)',
+  'schema: agent.app/v1',
   'id: echo-desk',
-  '# loop:code action later: later (app.py:40)',
+  '# agent:code action later: later (app.py:40)',
   '',
 ].join('\n');
 
@@ -61,10 +61,10 @@ describe('what the code of an application built from a file decides', () => {
 
   it('is nothing for a spec written by hand', () => {
     expect(codeOf(undefined)).toBeNull();
-    expect(codeOf('# My desk\nschema: loop.app/v1\n')).toBeNull();
+    expect(codeOf('# My desk\nschema: agent.app/v1\n')).toBeNull();
     expect(
       codeOf(
-        '# Built from app.py by `loop apps build`: the file is the source; edit it there.\n# Its code decides nothing: its agent answers.\nid: x\n',
+        '# Built from app.py by `agent apps build`: the file is the source; edit it there.\n# Its code decides nothing: its agent answers.\nid: x\n',
       ),
     ).toEqual({
       file: 'app.py',
@@ -121,7 +121,7 @@ describe('what the code of an application built from a file decides', () => {
       'Its agent, a LlamaIndex workflow: its rules see none of the tools it calls',
     ]);
     expect(
-      codeOf('# loop:code agent langgraph: research (app.py:12)\nid: x\n')
+      codeOf('# agent:code agent langgraph: research (app.py:12)\nid: x\n')
         ?.marks[0],
     ).toEqual({
       moment: 'agent langgraph',
@@ -183,22 +183,22 @@ describe('the app.py its item keeps, in the Python tab, and linked from the Canv
 
   it('says the commands that change it', () => {
     expect(codeCommands('app-1', code)).toEqual({
-      pull: 'loop apps pull app-1',
-      push: 'loop apps push app.py --app app-1',
+      pull: 'agent apps pull app-1',
+      push: 'agent apps push app.py --app app-1',
     });
   });
 });
 
 describe('what the code decides of the Personal Agent Protocol', () => {
-  /** As agent-runtimes' `loop apps build` marks its builders. */
+  /** As agent-runtimes' `agent apps build` marks its builders. */
   const PAP_BUILT = [
-    '# Built from app.py by `loop apps build`: the file is the source; edit it there.',
+    '# Built from app.py by `agent apps build`: the file is the source; edit it there.',
     '# What its code decides; without the file, its agent answers:',
-    '# loop:code tool close_month: close_month (app.py:12)',
-    '# loop:code pap company northwind.example: company_connection (app.py:5)',
-    '# loop:code pap company-role: as_company (app.py:9)',
-    '# loop:code pap operation books.close_month: close_month (app.py:12)',
-    'schema: loop.app/v1',
+    '# agent:code tool close_month: close_month (app.py:12)',
+    '# agent:code pap company northwind.example: company_connection (app.py:5)',
+    '# agent:code pap company-role: as_company (app.py:9)',
+    '# agent:code pap operation books.close_month: close_month (app.py:12)',
+    'schema: agent.app/v1',
     '',
   ].join('\n');
 
@@ -215,7 +215,7 @@ describe('what the code decides of the Personal Agent Protocol', () => {
       'as_company, app.py line 9',
     );
     // A spec written by hand: nothing is the code's.
-    expect(papRoleDecidedBy(codeOf('schema: loop.app/v1\n'))).toBeUndefined();
+    expect(papRoleDecidedBy(codeOf('schema: agent.app/v1\n'))).toBeUndefined();
   });
 });
 

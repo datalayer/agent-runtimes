@@ -8,7 +8,7 @@
  *
  * `InputPromptBase` clears itself when it owns its own text, and deliberately
  * does not when the value is controlled — that value belongs to whoever passed
- * it. The LOOP chat passes one, because a page embedding the workspace can
+ * it. The Agent chat passes one, because a page embedding the workspace can
  * offer a prompt and needs somewhere outside the editor to put it. So clearing
  * is this view's job, and it was not doing it: the sentence stayed in the box
  * after the agent had answered, the next thing typed was appended to the last

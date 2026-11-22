@@ -6,7 +6,7 @@
 /**
  * The composer, rendered from the props the chat view assembled.
  *
- * Plus whatever was hung on it: the `LoopPromptPanel` point takes panels for
+ * Plus whatever was hung on it: the `AgentPromptPanel` point takes panels for
  * above and below the composer, and this view stacks them inside the prompt's
  * own card — so a floating composer carries its panels with it. The page
  * layout's current-turn panel is the first of these; the point is open to any
@@ -21,8 +21,8 @@ import { Box } from '@datalayer/primer-addons';
 import { useContributions } from '@datalayer/reactor/react';
 import { InputPrompt } from '../../../chat/prompt/InputPrompt';
 import {
-  LoopPromptPanel,
-  type LoopChatComposerProps,
+  AgentPromptPanel,
+  type AgentChatComposerProps,
   type PromptPanelContribution,
 } from '../../core';
 
@@ -36,8 +36,8 @@ function byOrder(
 export function ComposerView({
   workspace,
   composer,
-}: LoopChatComposerProps): JSX.Element {
-  const panels = useContributions(LoopPromptPanel);
+}: AgentChatComposerProps): JSX.Element {
+  const panels = useContributions(AgentPromptPanel);
   const { above, below } = useMemo(() => {
     const sorted = [...panels].sort(byOrder);
     return {

@@ -57,7 +57,7 @@ answer_of = sessions_api.answer_of
 as_ = sessions_api.as_
 
 DESK = {
-    "schema": "loop.app/v1",
+    "schema": "agent.app/v1",
     "id": "support-desk",
     "name": "Support Desk",
     "kind": "chat",

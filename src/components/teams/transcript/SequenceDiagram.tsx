@@ -156,7 +156,7 @@ export function SequenceDiagram({
           labelBoxBkgColor: palette.surface,
           labelBoxBorderColor: palette.border,
           labelTextColor: palette.text,
-          loopTextColor: palette.text,
+          agentTextColor: palette.text,
           noteBkgColor: palette.attention,
           noteBorderColor: palette.border,
           noteTextColor: palette.text,

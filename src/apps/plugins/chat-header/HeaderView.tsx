@@ -15,9 +15,9 @@
 
 import type { JSX } from 'react';
 import { ChatBaseHeader } from '../../../chat/header/ChatHeaderBase';
-import type { LoopChatHeaderProps } from '../../core';
+import type { AgentChatHeaderProps } from '../../core';
 
-export function HeaderView({ header }: LoopChatHeaderProps): JSX.Element {
+export function HeaderView({ header }: AgentChatHeaderProps): JSX.Element {
   return <ChatBaseHeader {...header} />;
 }
 

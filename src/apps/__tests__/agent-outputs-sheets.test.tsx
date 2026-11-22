@@ -21,7 +21,7 @@ import {
 } from '@datalayer/reactor';
 import type { CellsModel } from '@datalayer/cells';
 import { ChatCodeBlock } from '../../chat/messages/codeBlocks';
-import { LoopChatExtras } from '../core';
+import { AgentChatExtras } from '../core';
 import {
   AgentOutputsSheetsPlugin,
   AgentOutputsSheetToolsPlugin,
@@ -31,7 +31,7 @@ import {
   sheetModel,
   useReadOnlyMirror,
 } from '../plugins/agent-outputs/sheets';
-import { AGENT_OUTPUTS_LOOP_PLUGINS } from '../../examples/utils/agentOutputsPlugins';
+import { AGENT_OUTPUTS_AGENT_PLUGINS } from '../../examples/utils/agentOutputsPlugins';
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -137,7 +137,7 @@ describe('the chat renderer and the example', () => {
   });
 
   it('the outputs example hands its agent the cells tools and draws spreadsheets in the chat', () => {
-    const reactor = buildReactorFromPlugins(AGENT_OUTPUTS_LOOP_PLUGINS);
+    const reactor = buildReactorFromPlugins(AGENT_OUTPUTS_AGENT_PLUGINS);
     reactor.start();
     expect(agentToolBundle(reactor, 'cells')?.toolset).toEqual([
       'cells_read_range',
@@ -147,7 +147,7 @@ describe('the chat renderer and the example', () => {
       'cells_select_range',
     ]);
     const handed = reactor
-      .getContributions(LoopChatExtras)
+      .getContributions(AgentChatExtras)
       .flatMap(entry => entry.value.extras.value.agentToolBundles ?? []);
     expect(handed).toContain('cells');
     expect(

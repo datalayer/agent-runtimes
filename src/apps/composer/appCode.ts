@@ -7,9 +7,9 @@
  * What an application written in Python decides in its code, as
  * the Canvas shows it: locked, with where in the file it is decided.
  *
- * `loop apps build` writes an `app.py` as its Appspec and marks, at the top,
- * in comments, each moment its code reacts to — `# loop:code action save:
- * save (app.py:23)` — and `loop apps push` keeps that text as the
+ * `agent apps build` writes an `app.py` as its Appspec and marks, at the top,
+ * in comments, each moment its code reacts to — `# agent:code action save:
+ * save (app.py:23)` — and `agent apps push` keeps that text as the
  * application's source, which the Studio keeps through every save.
  * Read here: what the code decides (a reply, a button's action, a schedule)
  * is the code's, and the Canvas does not change it; what the spec decides —
@@ -39,8 +39,8 @@ export type CodeMark = {
 /** An application built from a file, and what its code decides. */
 export type AppCode = { file: string; marks: CodeMark[] };
 
-const BUILT = /^# Built from (\S+) by `loop apps build`/;
-const MARK = /^# loop:code ([^:]+): (\S+) \(([^)]*)\)\s*$/;
+const BUILT = /^# Built from (\S+) by `agent apps build`/;
+const MARK = /^# agent:code ([^:]+): (\S+) \(([^)]*)\)\s*$/;
 
 /** What an application's source says its code decides; null for one not built from a file. */
 export function codeOf(source: string | undefined): AppCode | null {
@@ -130,7 +130,7 @@ export function momentWords(moment: string): string {
   }
 }
 
-/** What an agent of its code is, by the framework `loop apps build` names. */
+/** What an agent of its code is, by the framework `agent apps build` names. */
 const AGENTS: Record<string, { what: string; decided: boolean }> = {
   function: { what: 'a plain function', decided: false },
   langgraph: { what: 'a LangGraph graph', decided: true },
@@ -141,7 +141,7 @@ const AGENTS: Record<string, { what: string; decided: boolean }> = {
 
 /**
  * Its agent, in words, and honestly whether its rules decide what it calls:
- * Loop sees the tool calls of a LangChain, LangGraph or LlamaIndex agent, not
+ * Agent sees the tool calls of a LangChain, LangGraph or LlamaIndex agent, not
  * those of a plain function or a workflow.
  */
 export function agentWords(framework: string): string {
@@ -195,8 +195,8 @@ export const papRoleDecidedBy = (code: AppCode | null): CodeMark | undefined =>
 
 /**
  * The `app.py` an application written in Python keeps in its item, beside
- * the Appspec it builds (decided 2026-10-06): saved by `loop apps push`,
- * versioned with the spec, written back by `loop apps pull`.
+ * the Appspec it builds (decided 2026-10-06): saved by `agent apps push`,
+ * versioned with the spec, written back by `agent apps pull`.
  */
 export type AppCodeFile = { file: string; text: string };
 
@@ -241,6 +241,6 @@ export const codeCommands = (
   appUid: string,
   code: AppCodeFile,
 ): { pull: string; push: string } => ({
-  pull: `loop apps pull ${appUid}`,
-  push: `loop apps push ${code.file} --app ${appUid}`,
+  pull: `agent apps pull ${appUid}`,
+  push: `agent apps push ${code.file} --app ${appUid}`,
 });

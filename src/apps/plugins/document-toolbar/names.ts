@@ -10,4 +10,4 @@
  */
 
 export const DOCUMENT_TOOLBAR_PLUGIN_NAME =
-  '@datalayer/loop-plugin-document-toolbar';
+  '@datalayer/agent-plugin-document-toolbar';

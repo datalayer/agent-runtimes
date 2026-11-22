@@ -4,8 +4,8 @@
  */
 
 /**
- * `@datalayer/loop-plugin-agent-presentation` — what the application is,
- * from its own spec, in the workspace's left panel (`LoopSlots.leftPanel`):
+ * `@datalayer/agent-plugin-agent-presentation` — what the application is,
+ * from its own spec, in the workspace's left panel (`AgentSlots.leftPanel`):
  * its emoji and name, and its spec's `presentation`, one Markdown document
  * (`AgentPresentation`). A host adds it to the application it shows
  * (`<AIApplication renderer={{ plugins: [AgentPresentationPlugin] }} />`);
@@ -38,10 +38,10 @@ import { Box } from '@datalayer/primer-addons';
 import { definePlugin } from '@datalayer/reactor';
 import type { ReactorReactOutput } from '@datalayer/reactor/react';
 import type { AppSpec } from '../../../types/agentspecs';
-import { LoopSlots } from '../../core';
+import { AgentSlots } from '../../core';
 import type {
-  LoopLeftPanelComponent,
-  LoopLeftPanelProps,
+  AgentLeftPanelComponent,
+  AgentLeftPanelProps,
 } from '../../shell/LeftPanel';
 import type { PresentationLinks } from './AgentPresentation';
 
@@ -55,7 +55,7 @@ export {
 } from './presentationBlocks';
 
 export const AGENT_PRESENTATION_PLUGIN_NAME =
-  '@datalayer/loop-plugin-agent-presentation';
+  '@datalayer/agent-plugin-agent-presentation';
 
 /** Loaded when the panel first opens, not with the page. */
 const AgentPresentation = lazy(() => import('./AgentPresentation'));
@@ -78,7 +78,7 @@ export const PRESENTATION_HEADING_HEIGHT = 48;
  * The panel's Close cross, at its top right, level with the heading and over
  * nothing it would push down: 32px to hit, 44px on a phone. Drawn with the
  * panel itself, not with its lazily loaded presentation, so that the focus
- * finds it when the panel opens (`data-loop-left-panel-close`).
+ * finds it when the panel opens (`data-agent-left-panel-close`).
  */
 function CloseCross({ close }: { close: () => void }): JSX.Element {
   return (
@@ -97,7 +97,7 @@ function CloseCross({ close }: { close: () => void }): JSX.Element {
         variant="invisible"
         onClick={close}
         sx={{ width: ['44px', '32px'], height: ['44px', '32px'] }}
-        data-loop-left-panel-close=""
+        data-agent-left-panel-close=""
         data-agent-presentation-close=""
       />
     </Box>
@@ -107,11 +107,11 @@ function CloseCross({ close }: { close: () => void }): JSX.Element {
 /** The left panel's component for what a host says of the links. */
 export function agentPresentationComponent(
   links?: PresentationLinks,
-): LoopLeftPanelComponent {
+): AgentLeftPanelComponent {
   function AgentPresentationPanel({
     application,
     close,
-  }: Pick<LoopLeftPanelProps, 'application' | 'close'>): JSX.Element | null {
+  }: Pick<AgentLeftPanelProps, 'application' | 'close'>): JSX.Element | null {
     const presentation = presentationOf(application);
     if (!application || !presentation) {
       return null;
@@ -144,8 +144,8 @@ export function agentPresentationComponent(
   }
   return {
     id: 'agent-presentation',
-    slot: LoopSlots.leftPanel,
-    Component: AgentPresentationPanel as LoopLeftPanelComponent['Component'],
+    slot: AgentSlots.leftPanel,
+    Component: AgentPresentationPanel as AgentLeftPanelComponent['Component'],
     panel: {
       label: presentationLabel,
       when: application => presentationOf(application) !== '',
@@ -155,7 +155,7 @@ export function agentPresentationComponent(
   };
 }
 
-const pluginOf = (component: LoopLeftPanelComponent) =>
+const pluginOf = (component: AgentLeftPanelComponent) =>
   definePlugin<Record<string, never>, unknown, ReactorReactOutput>({
     name: AGENT_PRESENTATION_PLUGIN_NAME,
     displayName: 'Agent presentation',

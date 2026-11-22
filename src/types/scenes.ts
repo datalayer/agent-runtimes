@@ -4,7 +4,7 @@
  */
 
 /**
- * Scenes (agentspecs `scenes`, `schema: loop.scene/v1`): a team,
+ * Scenes (agentspecs `scenes`, `schema: agent.scene/v1`): a team,
  * staged. The team says who is on stage; the scene says what happens there —
  * the setting, the script, the stage directions, the audience, the rehearsal
  * and where it plays.
@@ -275,7 +275,7 @@ export interface ScenePlayedBeatSpec {
 }
 
 /**
- * What came of the last rehearsal `loop scenes rehearse --cloud` played:
+ * What came of the last rehearsal `agent scenes rehearse --cloud` played:
  * kept beside the specs in `<id>/rehearsal.json`, written by the
  * command and never by hand. A scene is *Live* when it `passed`; one that did
  * not says so with `says`.
@@ -349,7 +349,7 @@ export interface SceneLineSpec {
 }
 
 export interface SceneSpec {
-  /** The version of the spec itself: `loop.scene/v1`. */
+  /** The version of the spec itself: `agent.scene/v1`. */
   schema: string;
   id: string;
   version: string;

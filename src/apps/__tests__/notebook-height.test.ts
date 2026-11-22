@@ -21,7 +21,7 @@
  * browser resolves on layout rather than a value computed from anything.
  *
  * The real fix belongs in the widget layer. Until it lands, this stays scoped
- * to the LOOP workspace's own view, so it cannot quietly become the way every
+ * to the Agent workspace's own view, so it cannot quietly become the way every
  * notebook in the package is sized.
  */
 

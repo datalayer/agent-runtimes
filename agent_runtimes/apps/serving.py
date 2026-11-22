@@ -3,7 +3,7 @@
 
 """An application served on this machine, with hot reload.
 
-``loop apps run app.py --web`` serves an application as ``app.mount`` serves
+``agent apps run app.py --web`` serves an application as ``app.mount`` serves
 one in a FastAPI of one's own: its page — the embed, the renderer
 of the hosted page, of the Studio's Preview and of a host's page — the
 session API and its code under ``/app``, its agent on a runtime in this
@@ -243,7 +243,7 @@ def local_server(
     embed_dir: Optional[Path] = None,
     config: Any = None,
 ) -> FastAPI:
-    """The FastAPI ``loop apps run --web`` serves: the application at ``/app``.
+    """The FastAPI ``agent apps run --web`` serves: the application at ``/app``.
 
     ``/`` leads to it. The embed's script is loaded from ``embed_origin``,
     or, with ``embed_dir`` — a build of the embed, agent-runtimes'
@@ -268,7 +268,7 @@ def local_server(
     elif not embed_origin:
         raise ValueError("Say where the embed's script is: an origin, or a folder.")
 
-    api = FastAPI(title=f"{application.spec.name} — loop apps run --web")
+    api = FastAPI(title=f"{application.spec.name} — agent apps run --web")
 
     async def home() -> RedirectResponse:
         """`/` leads to the application."""

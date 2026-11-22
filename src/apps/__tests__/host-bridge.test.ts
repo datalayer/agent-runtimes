@@ -346,10 +346,12 @@ describe('who its user is', () => {
     }))!;
     expect(runProps.id).toBe('host-user');
     expect(runProps.props()).toEqual({
-      loop: { user_token: 'one.two.three' },
+      agent: { user_token: 'one.two.three' },
     });
     token = 'four.five.six';
-    expect(runProps.props()).toEqual({ loop: { user_token: 'four.five.six' } });
+    expect(runProps.props()).toEqual({
+      agent: { user_token: 'four.five.six' },
+    });
     // None given: nothing sent, and the runtime refuses the session.
     token = '  ';
     expect(runProps.props()).toEqual({});

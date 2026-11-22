@@ -22,12 +22,12 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { emptyUiModel, type UiOp } from '@datalayer/reactor/ui';
 import type { DisplayItem } from '../../../types/chat';
 import {
-  applyLoopElement,
-  clearLoopElements,
-  openLoopElements,
-  type LoopElement,
-} from '../loopElement';
-import { withLoopStep } from '../loopStep';
+  applyAgentElement,
+  clearAgentElements,
+  openAgentElements,
+  type AgentElement,
+} from '../agentElement';
+import { withAgentStep } from '../agentStep';
 import {
   displayPressOf,
   placeable,
@@ -46,7 +46,7 @@ const fixture = JSON.parse(readFileSync(FIXTURE, 'utf8')) as {
   ui: { t: 'op'; seq: number; op: UiOp }[];
 };
 
-afterEach(() => clearLoopElements());
+afterEach(() => clearAgentElements());
 
 /**
  * The fixture drawn: every op of the socket first, then the run's events —
@@ -55,14 +55,14 @@ afterEach(() => clearLoopElements());
  */
 function drawn(): {
   items: DisplayItem[];
-  opened: LoopElement[][];
+  opened: AgentElement[][];
   windows: unknown[];
   waited: number;
 } {
   let items: DisplayItem[] = [];
   let steps = emptyUiModel();
   const elements = new Set<string>();
-  const opened: LoopElement[][] = [];
+  const opened: AgentElement[][] = [];
   const windows: unknown[] = [];
   let parked: UiOp[] = [];
   let waited: number;
@@ -86,11 +86,11 @@ function drawn(): {
     steps = next.steps;
     const routed = next.routed;
     if (routed.to === 'window') windows.push(routed.data);
-    else if (routed.to === 'step') items = withLoopStep(items, routed.step);
+    else if (routed.to === 'step') items = withAgentStep(items, routed.step);
     else if (routed.to === 'element') {
       elements.add(routed.change.id);
-      applyLoopElement(routed.change);
-      opened.push(openLoopElements());
+      applyAgentElement(routed.change);
+      opened.push(openAgentElements());
     } else place(routed.op);
   }
   waited = parked.length;
@@ -181,7 +181,7 @@ describe('a session’s ops, from the Python fixture', () => {
         op: 'show',
         id: 'st',
         body: {
-          type: 'application/vnd.datalayer.loop.step+json',
+          type: 'application/vnd.datalayer.agent.step+json',
           id: 'st',
           text: 'run step a running',
           data: { name: 'a', kind: 'run' },
@@ -197,7 +197,7 @@ describe('a session’s ops, from the Python fixture', () => {
 
   it('send a press of a display up the socket, the run naming it only', () => {
     const forwarded = {
-      loop: {
+      agent: {
         settings: { a: 1 },
         action: {
           name: 'again',
@@ -214,15 +214,15 @@ describe('a session’s ops, from the Python fixture', () => {
       payload: { row: 2 },
     });
     expect(withPress(forwarded, { press: 'p-1' })).toEqual({
-      loop: { settings: { a: 1 }, press: 'p-1' },
+      agent: { settings: { a: 1 }, press: 'p-1' },
     });
     // A page block's action (no display) is not a display's press.
     expect(
-      displayPressOf({ loop: { action: { name: 'submit', payload: {} } } }),
+      displayPressOf({ agent: { action: { name: 'submit', payload: {} } } }),
     ).toBeNull();
     expect(displayPressOf(undefined)).toBeNull();
     expect(() =>
-      displayPressOf({ loop: { action: { name: 'again', display_id: 'd' } } }),
+      displayPressOf({ agent: { action: { name: 'again', display_id: 'd' } } }),
     ).toThrow(/its token/);
     expect(() => withPress(forwarded, {})).toThrow(/named none/);
   });

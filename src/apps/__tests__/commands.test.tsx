@@ -16,8 +16,8 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { describe, expect, it } from 'vitest';
 import { buildReactorFromPlugins, configurePlugin } from '@datalayer/reactor';
-import { LoopWorkspace } from '../shell/LoopWorkspace';
-import { LoopCommandsPlugin } from '../plugins/commands';
+import { AgentWorkspace } from '../shell/AgentWorkspace';
+import { AgentCommandsPlugin } from '../plugins/commands';
 import { GraphViewPlugin } from '../plugins/graph';
 import { ChatPlugin } from '../plugins/chat';
 import { AgentsPlugin } from '../plugins/agents';
@@ -31,7 +31,7 @@ async function mount(
   const root = createRoot(container);
 
   await act(async () => {
-    root.render(<LoopWorkspace serverUrl="" agentId="a" reactor={reactor} />);
+    root.render(<AgentWorkspace serverUrl="" agentId="a" reactor={reactor} />);
   });
   await act(async () => {
     await Promise.resolve();
@@ -46,16 +46,16 @@ describe('the command palette bridge', () => {
       configurePlugin(AgentsPlugin, { target: 'browser' }),
       ChatPlugin,
       GraphViewPlugin,
-      LoopCommandsPlugin,
+      AgentCommandsPlugin,
     ]);
 
     const ids = reactor.listCommands().map(command => command.id);
     // Namespaced, because the registry is shared with whatever else the host
     // mounted.
-    expect(ids).toContain('loop.graph');
-    expect(ids).toContain('loop.chat');
+    expect(ids).toContain('agent.graph');
+    expect(ids).toContain('agent.chat');
 
-    const graph = reactor.getCommand('loop.graph');
+    const graph = reactor.getCommand('agent.graph');
     // The description a person reads is the command's own; the slash form it
     // may already be known by is kept beside it.
     expect(graph?.name).toBe('Show the plugin graph');
@@ -70,37 +70,37 @@ describe('the command palette bridge', () => {
       configurePlugin(AgentsPlugin, { target: 'browser' }),
       ChatPlugin,
       GraphViewPlugin,
-      LoopCommandsPlugin,
+      AgentCommandsPlugin,
     ]);
 
     // The graph command switches the active view; running it from the registry
     // has to reach the same workspace the shell is rendering, which is the one
     // thing a plugin phase cannot see.
     await act(async () => {
-      await reactor.executeCommand('loop.graph');
+      await reactor.executeCommand('agent.graph');
     });
 
-    const chat = reactor.getCommand('loop.chat');
+    const chat = reactor.getCommand('agent.chat');
     expect(chat).toBeDefined();
 
     await act(async () => root.unmount());
   });
 
   it('pulls the generic palette in as a dependency', () => {
-    const reactor = buildReactorFromPlugins([LoopCommandsPlugin]);
+    const reactor = buildReactorFromPlugins([AgentCommandsPlugin]);
     reactor.start();
 
-    // Mounting the loop's adapter is enough; the host need not remember the
+    // Mounting the Agent's adapter is enough; the host need not remember the
     // reusable plugin behind it.
     expect(reactor.listPlugins()).toContain('@datalayer/reactor-commands');
   });
 
   it('registers nothing when no plugin contributes a command', async () => {
-    const { reactor, root } = await mount([LoopCommandsPlugin]);
+    const { reactor, root } = await mount([AgentCommandsPlugin]);
 
     // Only the palette's own entry, which belongs to the generic plugin.
     const ids = reactor.listCommands().map(command => command.id);
-    expect(ids.filter(id => id.startsWith('loop.'))).toEqual([]);
+    expect(ids.filter(id => id.startsWith('agent.'))).toEqual([]);
 
     await act(async () => root.unmount());
   });
@@ -112,7 +112,7 @@ describe('the palette in the workspace', () => {
       configurePlugin(AgentsPlugin, { target: 'browser' }),
       ChatPlugin,
       GraphViewPlugin,
-      LoopCommandsPlugin,
+      AgentCommandsPlugin,
     ]);
 
     // The palette is contributed to the `root` slot. The shell did not render
@@ -141,11 +141,11 @@ describe('the palette in the workspace', () => {
       configurePlugin(AgentsPlugin, { target: 'browser' }),
       ChatPlugin,
       GraphViewPlugin,
-      LoopCommandsPlugin,
+      AgentCommandsPlugin,
     ]);
 
-    // Declared on the loop plugin's contribution, carried through the bridge.
-    expect(reactor.getCommand('loop.graph')?.keybinding).toBe('Mod+Alt+G');
+    // Declared on the Agent plugin's contribution, carried through the bridge.
+    expect(reactor.getCommand('agent.graph')?.keybinding).toBe('Mod+Alt+G');
 
     await act(async () => root.unmount());
   });
@@ -156,7 +156,7 @@ describe('where the palette renders', () => {
     const { root } = await mount([
       configurePlugin(AgentsPlugin, { target: 'browser' }),
       ChatPlugin,
-      LoopCommandsPlugin,
+      AgentCommandsPlugin,
     ]);
 
     await act(async () => {
@@ -185,7 +185,7 @@ describe('where the palette renders', () => {
   });
 
   it('gives the root a colormode for the palette to inherit', async () => {
-    const { root } = await mount([LoopCommandsPlugin]);
+    const { root } = await mount([AgentCommandsPlugin]);
 
     // The palette's dark rules key off this attribute on an ancestor; the
     // theme provider keeps it in step from here on.
@@ -202,7 +202,7 @@ describe('the graph command', () => {
       configurePlugin(AgentsPlugin, { target: 'browser' }),
       ChatPlugin,
       GraphViewPlugin,
-      LoopCommandsPlugin,
+      AgentCommandsPlugin,
     ]);
 
     const graphCommands = reactor
@@ -213,7 +213,7 @@ describe('the graph command', () => {
     // an event, and nothing in this workspace listens for it — so it did
     // nothing when chosen, beside an entry that worked. The adapter turns it
     // off and keeps its own.
-    expect(graphCommands.map(command => command.id)).toEqual(['loop.graph']);
+    expect(graphCommands.map(command => command.id)).toEqual(['agent.graph']);
 
     await act(async () => root.unmount());
   });

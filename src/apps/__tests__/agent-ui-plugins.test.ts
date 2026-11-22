@@ -27,9 +27,9 @@ import { appPreset } from '../apps/AppRenderer';
 import { ANONYMOUS_WORDS } from '../../chat/anonymous/anonymousMode';
 import { APP_CATALOGUE } from '../../specs/apps';
 import { listUI } from '../../specs/ui';
-import { loopPlugins } from '../presets';
+import { agentPlugins } from '../presets';
 
-const LOCKED = '@datalayer/loop-plugin-locked-ui';
+const LOCKED = '@datalayer/agent-plugin-locked-ui';
 
 const nameOf = (ref: unknown): string =>
   (ref as { name?: string; plugin?: { name: string } }).name ??
@@ -94,14 +94,14 @@ describe('the chat’s UI, merged', () => {
   it('gives an anonymous visitor only the UI that needs no connection', () => {
     const ids = agentUiIdsOf('worker-marketer');
     const visitor = agentUiPluginsFor(ids, { anonymous: true }).map(nameOf);
-    expect(visitor).not.toContain('@datalayer/loop-plugin-x-budget');
-    expect(visitor).not.toContain('@datalayer/loop-plugin-linkedin-link');
-    expect(visitor).not.toContain('@datalayer/loop-plugin-social-accounts');
+    expect(visitor).not.toContain('@datalayer/agent-plugin-x-budget');
+    expect(visitor).not.toContain('@datalayer/agent-plugin-linkedin-link');
+    expect(visitor).not.toContain('@datalayer/agent-plugin-social-accounts');
     const shopper = agentUiPluginsFor(agentUiIdsOf('worker-shopper'), {
       anonymous: true,
     }).map(nameOf);
-    expect(shopper).toContain('@datalayer/loop-plugin-shopping-basket');
-    expect(shopper).not.toContain('@datalayer/loop-plugin-pap-purchase');
+    expect(shopper).toContain('@datalayer/agent-plugin-shopping-basket');
+    expect(shopper).not.toContain('@datalayer/agent-plugin-pap-purchase');
   });
 
   it('passes over the UI every chat has and an id it does not know', () => {
@@ -141,17 +141,17 @@ describe('the seed agents’ UI', () => {
   });
 
   it('is mounted by the preset for the spec it creates', () => {
-    const names = loopPlugins({
+    const names = agentPlugins({
       target: 'datalayer',
       datalayerAgentSpecId: 'worker-accountant',
     }).map(nameOf);
-    expect(names).toContain('@datalayer/loop-plugin-bank-reconciliation');
-    expect(names).not.toContain('@datalayer/loop-plugin-trip-options');
-    const visitor = loopPlugins({
+    expect(names).toContain('@datalayer/agent-plugin-bank-reconciliation');
+    expect(names).not.toContain('@datalayer/agent-plugin-trip-options');
+    const visitor = agentPlugins({
       datalayerAgentSpecId: 'worker-marketer',
       runAsAnonymous: true,
     }).map(nameOf);
-    expect(visitor).not.toContain('@datalayer/loop-plugin-x-budget');
+    expect(visitor).not.toContain('@datalayer/agent-plugin-x-budget');
   });
 });
 
@@ -164,13 +164,13 @@ describe('where each UI goes', () => {
           agentUiPluginsFor([{ plugin, placement: placement as never }]),
         )
       ).slots;
-    expect(await slotsOf('x-budget', 'header')).toEqual(['loop.chatHeader']);
-    expect(await slotsOf('x-budget', 'footer')).toEqual(['loop.status']);
+    expect(await slotsOf('x-budget', 'header')).toEqual(['agent.chatHeader']);
+    expect(await slotsOf('x-budget', 'footer')).toEqual(['agent.status']);
     expect(await slotsOf('linkedin-link', 'banner')).toEqual([
-      'loop.chatBanner',
+      'agent.chatBanner',
     ]);
     expect(await slotsOf('trip-summary', 'header')).toEqual([
-      'loop.chatHeader',
+      'agent.chatHeader',
     ]);
     // A message UI binds its tools rather than fill a slot.
     const message = await registrationOf(() =>
@@ -273,22 +273,22 @@ describe('what a visitor sees locked (the user, 15 November 2026)', () => {
     const registration = await registrationOf(() =>
       lockedUiPluginsFor(marketer()),
     );
-    expect(registration.slots).toEqual(['loop.chatHeader']);
+    expect(registration.slots).toEqual(['agent.chatHeader']);
   });
 
   it('is mounted by the preset for a visitor, never for a person signed in', () => {
-    const visitor = loopPlugins({
+    const visitor = agentPlugins({
       datalayerAgentSpecId: 'worker-marketer',
       runAsAnonymous: true,
     }).map(nameOf);
     expect(visitor).toContain(LOCKED);
-    expect(visitor).not.toContain('@datalayer/loop-plugin-x-budget');
-    const signedIn = loopPlugins({
+    expect(visitor).not.toContain('@datalayer/agent-plugin-x-budget');
+    const signedIn = agentPlugins({
       target: 'datalayer',
       datalayerAgentSpecId: 'worker-marketer',
     }).map(nameOf);
     expect(signedIn).not.toContain(LOCKED);
-    expect(signedIn).toContain('@datalayer/loop-plugin-x-budget');
+    expect(signedIn).toContain('@datalayer/agent-plugin-x-budget');
   });
 
   it('comes with the demo Marketer’s agent on the visitors’ path, though its app names only the chat', () => {

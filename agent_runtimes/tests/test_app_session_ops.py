@@ -7,8 +7,8 @@ a message removed (``remove``), a step (a display, shown as it starts and
 ends, its output patched in as it streams), an element in a side panel or on
 a page (a display that says where it shows, a ``remove`` closing it), and a
 window message (``window``). The run stream carries the text and AG-UI's
-steps by name, and nothing of ``reactor.ui``; no ``loop.message``,
-``loop.step``, ``loop.element`` or ``loop.window`` event is sent any more.
+steps by name, and nothing of ``reactor.ui``; no ``agent.message``,
+``agent.step``, ``agent.element`` or ``agent.window`` event is sent any more.
 
 Both are the fixture ``fixtures/app_session_ops.json`` — ``run``, the run
 stream's events, and ``ui``, the socket's op frames — its ids and times made
@@ -132,14 +132,20 @@ async def test_the_session_says_steps_elements_authors_and_windows_as_ops() -> N
     assert [d["type"] for d in shown] == [
         sessions.STEP_DISPLAY_TYPE,
         sessions.STEP_DISPLAY_TYPE,
-        "application/vnd.datalayer.loop.answer+json",
+        "application/vnd.datalayer.agent.answer+json",
     ]
     assert shown[0]["text"] == "tool step gen_query running"
     assert shown[1]["text"] == "tool step gen_query ended"
     assert shown[2]["data"]["where"] == "panel"
 
 
-def test_no_loop_step_element_message_or_window_name_is_left() -> None:
+def test_no_agent_step_element_message_or_window_name_is_left() -> None:
     """The readers' and the producers' old names are gone."""
-    for name in ("LOOP_MESSAGE", "LOOP_STEP", "LOOP_ELEMENT", "LOOP_WINDOW", "step_of"):
+    for name in (
+        "AGENT_MESSAGE",
+        "AGENT_STEP",
+        "AGENT_ELEMENT",
+        "AGENT_WINDOW",
+        "step_of",
+    ):
         assert not hasattr(sessions, name), name

@@ -16,7 +16,7 @@
  * plugins depend on this plugin rather than on a connection of their own.
  *
  * Which agentspec the session runs is a different question, and belongs to
- * `@datalayer/loop-plugin-agentspecs`.
+ * `@datalayer/agent-plugin-agentspecs`.
  *
  * @module apps/plugins/agents/plugin
  */
@@ -26,11 +26,11 @@ import { ServerIcon } from '@primer/octicons-react';
 import { contribution, definePlugin } from '@datalayer/reactor';
 import type { ReactorSlotComponent } from '@datalayer/reactor/react';
 import {
-  LoopAgentBlueprint,
-  LoopAgentGate,
-  LoopCommand,
-  LoopSlots,
-  LoopViewType,
+  AgentBlueprint,
+  AgentGate,
+  AgentCommand,
+  AgentSlots,
+  AgentViewType,
 } from '../../core';
 import { SandboxStatusBridge } from './SandboxStatusBridge';
 import { DatalayerAgentMount } from './DatalayerAgentMount';
@@ -218,7 +218,7 @@ export const AgentsPlugin = definePlugin<AgentsConfig, unknown, AgentsOutput>({
   emoji: '\u{1F4E6}',
   config: { serverUrl: '', target: 'local' },
   // The capacity plugins' opening: what the Local agent is created from.
-  contributionPoints: [LoopAgentBlueprint],
+  contributionPoints: [AgentBlueprint],
   // This plugin owns a sandbox — a kernel, a WebSocket, an execution history.
   // Rebuilding it on enable would hand every view a fresh service while the
   // old one kept the connection: toggling the checkbox would silently detach
@@ -256,7 +256,7 @@ export const AgentsPlugin = definePlugin<AgentsConfig, unknown, AgentsOutput>({
         // blueprint is a contribution and its plugin may register after this
         // build runs.
         blueprint: () => {
-          const entry = reactor.getContributions(LoopAgentBlueprint)[0]?.value;
+          const entry = reactor.getContributions(AgentBlueprint)[0]?.value;
           if (!entry) {
             return undefined;
           }
@@ -271,7 +271,7 @@ export const AgentsPlugin = definePlugin<AgentsConfig, unknown, AgentsOutput>({
       // should the connection that tracks it.
       components: [
         {
-          slot: LoopSlots.status,
+          slot: AgentSlots.status,
           id: 'sandbox-status',
           Component: SandboxStatusBridge as never,
         },
@@ -282,7 +282,7 @@ export const AgentsPlugin = definePlugin<AgentsConfig, unknown, AgentsOutput>({
           // from this plugin's config itself, so no closure is needed here,
           // and it is loaded lazily so the runtime stack it needs stays out
           // of every host's module graph.
-          slot: LoopSlots.status,
+          slot: AgentSlots.status,
           id: 'datalayer-agent',
           Component: DatalayerAgentMount as never,
         },
@@ -296,7 +296,7 @@ export const AgentsPlugin = definePlugin<AgentsConfig, unknown, AgentsOutput>({
         ...(team && config.showTeamPicker !== false
           ? [
               {
-                slot: LoopSlots.header,
+                slot: AgentSlots.header,
                 id: 'team-member-picker',
                 Component: TeamMemberPicker as never,
               },
@@ -305,7 +305,7 @@ export const AgentsPlugin = definePlugin<AgentsConfig, unknown, AgentsOutput>({
         ...(showVariants
           ? [
               {
-                slot: LoopSlots.header,
+                slot: AgentSlots.header,
                 id: 'sandbox-selector',
                 Component: SandboxSelector as never,
               },
@@ -320,7 +320,7 @@ export const AgentsPlugin = definePlugin<AgentsConfig, unknown, AgentsOutput>({
           ? []
           : [
               {
-                slot: LoopSlots.header,
+                slot: AgentSlots.header,
                 id: 'agent-summary',
                 Component: AgentSummaryPanel as never,
               },
@@ -332,12 +332,12 @@ export const AgentsPlugin = definePlugin<AgentsConfig, unknown, AgentsOutput>({
         // nothing without an anonymous key, so the workspace that shows both
         // rows costs a duplicate only in the one anonymous case.
         {
-          slot: LoopSlots.chatHeader,
+          slot: AgentSlots.chatHeader,
           id: 'anonymous-key',
           Component: AnonymousKeyBadge as never,
         },
         {
-          slot: LoopSlots.header,
+          slot: AgentSlots.header,
           id: 'anonymous-key-header',
           // The ordered variant: in the trailing cluster, just before the
           // full-screen icon — see `AnonymousKeyHeaderBadge`.
@@ -361,7 +361,7 @@ export const AgentsPlugin = definePlugin<AgentsConfig, unknown, AgentsOutput>({
       return;
     }
     return contribute(
-      LoopAgentGate,
+      AgentGate,
       {
         // Read from the workspace, not from the signal: this is called during
         // the chat's render, and the workspace is what React re-runs it for.
@@ -377,7 +377,7 @@ export const AgentsPlugin = definePlugin<AgentsConfig, unknown, AgentsOutput>({
   },
   contributes: [
     contribution(
-      LoopViewType,
+      AgentViewType,
       {
         viewType: 'sandbox',
         title: 'Sandbox',
@@ -388,7 +388,7 @@ export const AgentsPlugin = definePlugin<AgentsConfig, unknown, AgentsOutput>({
       { id: 'sandbox', order: 40 },
     ),
     contribution(
-      LoopCommand,
+      AgentCommand,
       {
         name: 'sandbox',
         aliases: ['code-sandbox'],

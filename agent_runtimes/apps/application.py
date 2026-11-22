@@ -195,7 +195,7 @@ EVENTS = (
     "resume",
     # What a person said of an answer, once kept.
     "feedback",
-    # What the person said, heard by the same engines as a page's or `loop`'s,
+    # What the person said, heard by the same engines as a page's or `agent`'s,
     # and their speaking over the agent.
     "audio",
     "interrupted",
@@ -296,7 +296,7 @@ class Application:
     ) -> None:
         """Start an app's declaration with its id and kind."""
         document: Dict[str, Any] = {
-            "schema": "loop.app/v1",
+            "schema": "agent.app/v1",
             "id": id,
             "version": version if version is not None else FIRST_VERSION,
             "name": name or id.replace("-", " ").replace("_", " ").capitalize(),
@@ -345,7 +345,7 @@ class Application:
         self._tests: Dict[str, Handler] = {}
         self._code_agent: Optional[CodeAgent] = None
         # What its code decides of the Personal Agent Protocol, and on which line
-        #: `(moment, builder, line)`, marked by `loop apps build`.
+        #: `(moment, builder, line)`, marked by `agent apps build`.
         self._pap_marks: List[Tuple[str, str, int]] = []
         self._page_signature: Optional[PageSignature] = None
         # Reactor's vocabulary.
@@ -1444,7 +1444,7 @@ class Application:
         with it. Its module is a built ES module, its default export drawing
         it (``export default function (root, {props, send})``), loaded in a
         sandboxed frame of no origin. It may be a file of the application's
-        folder (``source="gauge.js"``): ``loop apps package`` puts it in the
+        folder (``source="gauge.js"``): ``agent apps package`` puts it in the
         application's wheel, and the server it is installed beside serves it
         to its page.
 
@@ -1782,7 +1782,7 @@ class Application:
         the model that heard it and where.
 
         The sound comes in chunks (``AppHost.audio``) and is heard by the same
-        engines as a page's or ``loop --voice``'s: on this machine when the
+        engines as a page's or ``agent --voice``'s: on this machine when the
         pinned Whisper and faster-whisper are here, else by Datalayer's speech
         service with the person's token. It is never kept. Without one, the
         words are the person's message, marked spoken. ``session.say(text)``
@@ -1970,9 +1970,9 @@ class Application:
             app.agent(graph, tools={"search": "read", "send_email": "send"})
 
         ``session.agent`` is then this agent: its run is shown as steps, and
-        its rules decide every tool call LOOP sees — a LangChain or LangGraph
+        its rules decide every tool call Agent sees — a LangChain or LangGraph
         tool through LangChain's callbacks, a LlamaIndex agent's through its
-        tool calls; a function's and a workflow's LOOP does not see (`frameworks`).
+        tool calls; a function's and a workflow's Agent does not see (`frameworks`).
         The spec still names an agent of the catalogue (``agent=``): what
         answers where its code does not run.
 
@@ -2167,7 +2167,7 @@ class Application:
         A case of the spec (``tests.cases``) — what it is asked, and what it
         should do in words — decided by the function, given the
         `Conversation` the case had; it returns ``True``, ``False`` or a
-        sentence saying why it failed. ``loop apps validate app.py --tests
+        sentence saying why it failed. ``agent apps validate app.py --tests
         --local`` runs it; without the file, the case is judged by its words::
 
             @app.test("It never asks a leading question", ask="Interview me.")
@@ -2283,7 +2283,7 @@ class Application:
 
     @property
     def manifest(self) -> PluginManifest:
-        """Return its Reactor plugin's manifest: ``loop-app-<id>``, the
+        """Return its Reactor plugin's manifest: ``agent-app-<id>``, the
         plugins it uses as its dependencies, the points it declares as its own.
         """
         return replace(
@@ -2302,13 +2302,13 @@ class Application:
     def extension(
         self, frontend: Optional[FrontendExtension] = None
     ) -> ReactorExtension:
-        """The application as one Reactor extension, ``loop-app-<id>``.
+        """The application as one Reactor extension, ``agent-app-<id>``.
 
         Its Python half: the plugins it composes (`uses`, a manifest and an
         implementation each), then its own plugin (`AppPlugin`) — its spec, its
         code's reactions, and what it contributes. Its frontend half: its page
         side, the files of its folder, as its installed package
-        says them; none when unsaid. What ``loop apps package`` advertises
+        says them; none when unsaid. What ``agent apps package`` advertises
         under Reactor's entry-point group, and what a host registers with
         ``PluginPlatform.register_extension_object``.
 
@@ -2339,7 +2339,7 @@ class Application:
     ) -> None:
         """Contribute to a Reactor contribution point, as its plugin.
 
-        Any point: the host's (``loop.app.start``, a point of agent-runtimes'),
+        Any point: the host's (``agent.app.start``, a point of agent-runtimes'),
         another plugin's (one it `uses` declares), its own
         (`contribution_point`). Collected when its plugin activates on a
         host's platform, disposed with it::
@@ -2550,7 +2550,7 @@ class Application:
         """Serve a route of its own, as its plugin provides it (``provide_routes``).
 
         A FastAPI endpoint, mounted by the host that serves the application —
-        ``app.mount`` and ``loop apps run --web`` — under the application's
+        ``app.mount`` and ``agent apps run --web`` — under the application's
         path (Reactor's ``include_plugin_routes``)::
 
             @app.route("/status")
@@ -2683,7 +2683,7 @@ async def _answer(session: Session, text: str) -> None:
 class AppHost:
     """What runs an application in this process, and calls its code.
 
-    A runtime, ``loop apps run`` and a test each drive an application through
+    A runtime, ``agent apps run`` and a test each drive an application through
     one: a session is opened, then told what the user does.
 
     Parameters
@@ -2697,7 +2697,7 @@ class AppHost:
     recorder : AppRecorder, optional
         Where the record is kept; in memory when unsaid (`AppRecorder.in_memory`:
         ``host.recorder.entries`` reads it), as a script or a test wants — a
-        runtime, and ``loop apps run``, give one that sends it to the store.
+        runtime, and ``agent apps run``, give one that sends it to the store.
     agent_maker : callable, optional
         The agent a session's code calls, made for that session: on a
         runtime, the agent the runtime made for the application;
@@ -3216,7 +3216,7 @@ def load_application(path: Union[str, Path]) -> Application:
         raise ValueError(f"{file} is not a Python file.")
     # Compiled from its source each time, never from a cached .pyc: a file
     # edited within the same second, to the same size, is read as it is now
-    # (`loop apps run --watch`), and nothing is written beside it.
+    # (`agent apps run --watch`), and nothing is written beside it.
     return load_application_source(file.read_bytes(), str(file))
 
 
@@ -3244,7 +3244,7 @@ def load_application_source(source: Union[str, bytes], file: str) -> Application
     """
     name = str(file or "app.py")
     text = source if isinstance(source, bytes) else source.encode("utf-8")
-    module_name = f"loop_app_{abs(hash((name, text)))}"
+    module_name = f"agent_app_{abs(hash((name, text)))}"
     module = types.ModuleType(module_name)
     module.__file__ = name
     sys.modules[module_name] = module

@@ -46,7 +46,7 @@ describe('the palette', () => {
 
   it("lists an application's own components last, under Its own, and on no other's", () => {
     const { app } = parseAppspec({
-      schema: 'loop.app/v1',
+      schema: 'agent.app/v1',
       id: 'desk',
       name: 'Desk',
       kind: 'chat',
@@ -75,7 +75,7 @@ describe('the palette', () => {
       groups[groups.length - 1].components.map(component => component.id),
     ).toEqual(['Gauge']);
     const other = parseAppspec({
-      schema: 'loop.app/v1',
+      schema: 'agent.app/v1',
       id: 'other',
       name: 'Other',
       kind: 'chat',

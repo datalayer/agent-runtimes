@@ -82,7 +82,7 @@ const VIEW: AgentView = {
       url: 'https://shop.web.datalayer.ai',
     },
   },
-  interface: { accent: 'violet', theme: { variant: 'loop', mode: 'light' } },
+  interface: { accent: 'violet', theme: { variant: 'agent', mode: 'light' } },
 };
 
 describe('an agent at its address', () => {

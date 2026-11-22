@@ -25,7 +25,7 @@ from agent_runtimes.apps import (
 from agent_runtimes.apps.callers import Caller
 from agent_runtimes.apps.loading import AppNotRunnable
 from agent_runtimes.apps.pages import (
-    LOOP_PAGE,
+    AGENT_PAGE,
     field_of,
     page_signature,
     page_values,
@@ -380,7 +380,7 @@ def live_of(application: Optional[Application], spec: Any = None) -> Any:
     return live
 
 
-async def test_over_the_session_api_its_page_run_answers_a_loop_page_event() -> None:
+async def test_over_the_session_api_its_page_run_answers_a_agent_page_event() -> None:
     live = live_of(quote_app())
     chunks = [chunk async for chunk in live.run_page({"seats": 2})]
     events = _events(chunks)
@@ -389,7 +389,7 @@ async def test_over_the_session_api_its_page_run_answers_a_loop_page_event() -> 
         "CUSTOM",
         "RUN_FINISHED",
     ]
-    assert events[1]["name"] == LOOP_PAGE == "loop.page"
+    assert events[1]["name"] == AGENT_PAGE == "agent.page"
     assert events[1]["value"] == {
         "inputs": {"seats": 2, "plan": "Team", "term": "Annual"},
         "outputs": {

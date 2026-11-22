@@ -2209,7 +2209,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         variant: {
           $ref: '#/$defs/ThemeVariant',
           description:
-            'The theme: `datalayer`, `spatial`, `lovely`, `matrix`, `earth`, `sand`, `ivory`, `sun`, `loop` or `vscode`',
+            'The theme: `datalayer`, `spatial`, `lovely`, `matrix`, `earth`, `sand`, `ivory`, `sun`, `agent` or `vscode`',
         },
         mode: {
           anyOf: [
@@ -2788,7 +2788,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         'sand',
         'ivory',
         'sun',
-        'loop',
+        'agent',
         'vscode',
       ],
       title: 'ThemeVariant',
@@ -2891,8 +2891,8 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     schema: {
       description: 'The version of the spec itself',
       title: 'Schema',
-      const: 'loop.app/v1',
-      default: 'loop.app/v1',
+      const: 'agent.app/v1',
+      default: 'agent.app/v1',
     },
     id: {
       description: 'Unique application identifier',
@@ -3210,5 +3210,5 @@ export const APPSPEC_SCHEMA: JsonSchema = {
   title: 'Appspec',
   type: 'object',
   $schema: 'https://json-schema.org/draft/2020-12/schema',
-  $id: 'https://agentspecs.datalayer.tech/schemas/loop.app/v1.json',
+  $id: 'https://agentspecs.datalayer.tech/schemas/agent.app/v1.json',
 };

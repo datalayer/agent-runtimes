@@ -9,7 +9,7 @@
  * The chat talks AG-UI to a local runtime whose agent is a harness: what the
  * agent changed is drawn as a **diff** in the file's language, what it ran
  * as a **terminal** with its output, through the `shield-displays` plugin
- * the Loop preset mounts (here, registered on its own); an action a rule
+ * the Agent preset mounts (here, registered on its own); an action a rule
  * asks first about waits in the chat's approval banner, answered there.
  *
  * It needs the local runtime with a harness, which this page does not
@@ -44,7 +44,7 @@ import {
 const ShieldHarnessExample: React.FC = () => {
   const baseUrl = resolveExampleAgentRuntimesUrl('local');
   // The diff and terminal renderers, registered for the chat to resolve
-  // `_meta["reactor.ui/display"]` with — what the Loop preset does.
+  // `_meta["reactor.ui/display"]` with — what the Agent preset does.
   const reactor = useMemo(
     () => buildReactorFromPlugins([createShieldDisplaysPlugin() as never]),
     [],

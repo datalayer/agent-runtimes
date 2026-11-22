@@ -11,7 +11,7 @@
  * bar; in runtime mode it speaks to the agent already on the person's
  * runtime and makes nothing there; and `<datalayer-app>` draws through it.
  *
- * `LoopEmbed` is stood in for: what is tested is what the renderer hands it.
+ * `AgentEmbed` is stood in for: what is tested is what the renderer hands it.
  */
 
 import React, { act } from 'react';
@@ -23,14 +23,14 @@ import { dumpAppspec } from '../apps/appspec';
 import { LOCKED_UI_PLUGIN_NAME } from '../plugins/locked-ui';
 
 const seen = vi.hoisted(() => ({
-  loop: [] as Array<Record<string, any>>,
+  agent: [] as Array<Record<string, any>>,
   application: [] as Array<Record<string, any>>,
 }));
 
-vi.mock('../embed/LoopEmbed', () => ({
-  LoopEmbed: (props: Record<string, any>) => {
-    seen.loop.push(props);
-    return <div data-testid="loop" />;
+vi.mock('../embed/AgentEmbed', () => ({
+  AgentEmbed: (props: Record<string, any>) => {
+    seen.agent.push(props);
+    return <div data-testid="agent" />;
   },
 }));
 
@@ -104,7 +104,7 @@ const atDemoMarketer = () =>
   });
 
 beforeEach(() => {
-  seen.loop.length = 0;
+  seen.agent.length = 0;
   seen.application.length = 0;
 });
 
@@ -144,12 +144,12 @@ describe('AIApplication in visitor mode', () => {
     expect(
       container.querySelector('[data-application-skeleton]'),
     ).not.toBeNull();
-    expect(seen.loop).toHaveLength(0);
+    expect(seen.agent).toHaveLength(0);
     await act(async () => release());
     await settle();
     expect(container.querySelector('[data-application-skeleton]')).toBeNull();
-    const loop = seen.loop.at(-1)!;
-    expect(loop).toMatchObject({
+    const agentProps = seen.agent.at(-1)!;
+    expect(agentProps).toMatchObject({
       agentId: 'at-demo-marketer',
       runAsAnonymous: true,
       maxTurns: 10,
@@ -159,13 +159,13 @@ describe('AIApplication in visitor mode', () => {
         inferenceUrl: 'https://r1.example',
       },
     });
-    expect(loop.onSignIn).toBeTypeOf('function');
+    expect(agentProps.onSignIn).toBeTypeOf('function');
     // What the Marketer would bring that needs the visitor's own
     // connection, locked in the title bar.
-    expect(namesOf(loop.plugins)).toContain(LOCKED_UI_PLUGIN_NAME);
+    expect(namesOf(agentProps.plugins)).toContain(LOCKED_UI_PLUGIN_NAME);
     // In the host's theme: none of its own named, nor a mode.
-    expect(loop.themeVariant).toBeUndefined();
-    expect(loop.colorMode).toBeUndefined();
+    expect(agentProps.themeVariant).toBeUndefined();
+    expect(agentProps.colorMode).toBeUndefined();
     await act(async () => root.unmount());
   });
 
@@ -187,9 +187,9 @@ describe('AIApplication in visitor mode', () => {
         }}
       />,
     );
-    const loop = seen.loop.at(-1)!;
+    const agentProps = seen.agent.at(-1)!;
     // Still the visitors' runtime and its turns: only the words and the action change.
-    expect(loop).toMatchObject({
+    expect(agentProps).toMatchObject({
       runAsAnonymous: true,
       maxTurns: 10,
       callToAction: {
@@ -197,7 +197,7 @@ describe('AIApplication in visitor mode', () => {
         label: 'Open your own Marketer',
       },
     });
-    loop.callToAction.onAction();
+    agentProps.callToAction.onAction();
     expect(onAction).toHaveBeenCalledOnce();
     await act(async () => root.unmount());
   });
@@ -233,7 +233,7 @@ describe('AIApplication in visitor mode', () => {
         'datalayer-app: No application is at this address.',
       ),
     );
-    expect(seen.loop).toHaveLength(0);
+    expect(seen.agent).toHaveLength(0);
     warn.mockRestore();
     await act(async () => root.unmount());
   });
@@ -287,8 +287,8 @@ describe('AIApplication in runtime mode', () => {
     );
     // An Appspec is drawn at once.
     expect(container.querySelector('[data-application-skeleton]')).toBeNull();
-    const loop = seen.loop.at(-1)!;
-    expect(loop).toMatchObject({
+    const agentProps = seen.agent.at(-1)!;
+    expect(agentProps).toMatchObject({
       agentId: 'default',
       target: 'datalayer',
       datalayerKept: {
@@ -297,17 +297,20 @@ describe('AIApplication in runtime mode', () => {
       },
       thread,
     });
-    expect(loop.datalayerVisitors).toBeUndefined();
-    expect(loop.runAsAnonymous).toBeUndefined();
+    expect(agentProps.datalayerVisitors).toBeUndefined();
+    expect(agentProps.runAsAnonymous).toBeUndefined();
     // Its page plugin requires nothing of a runtime that holds no plugin of
     // the application, and nothing follows it there.
-    const appPlugin = pluginNamed(loop.plugins, 'loop-app-worker-marketer');
+    const appPlugin = pluginNamed(
+      agentProps.plugins,
+      'agent-app-worker-marketer',
+    );
     expect(appPlugin).toBeDefined();
     expect(appPlugin.requiredBackendPlugins).toBeUndefined();
-    expect(namesOf(loop.plugins)).not.toContain(
-      '@datalayer/loop-plugin-app-runtime',
+    expect(namesOf(agentProps.plugins)).not.toContain(
+      '@datalayer/agent-plugin-app-runtime',
     );
-    expect(namesOf(loop.plugins)).not.toContain(LOCKED_UI_PLUGIN_NAME);
+    expect(namesOf(agentProps.plugins)).not.toContain(LOCKED_UI_PLUGIN_NAME);
     await act(async () => root.unmount());
   });
 });
@@ -333,20 +336,20 @@ describe('AIApplication at an application’s address (/apps/<slug>)', () => {
         }}
       />,
     );
-    const loop = seen.loop.at(-1)!;
-    expect(loop).toMatchObject({
+    const agentProps = seen.agent.at(-1)!;
+    expect(agentProps).toMatchObject({
       agentId: 'month-end-close',
       datalayerKept: { url: 'https://r1.example/agent-runtimes/pool/kept-1' },
       autoFocusPrompt: true,
     });
-    expect(loop.plugins).toContain(own);
+    expect(agentProps.plugins).toContain(own);
     // Its own agent, the application's pair whole: its page plugin requires its runtime's.
     expect(
-      pluginNamed(loop.plugins, 'loop-app-month-end-close')
+      pluginNamed(agentProps.plugins, 'agent-app-month-end-close')
         .requiredBackendPlugins,
-    ).toEqual(['loop-app-month-end-close']);
-    expect(namesOf(loop.plugins)).toContain(
-      '@datalayer/loop-plugin-app-computer-month-end-close',
+    ).toEqual(['agent-app-month-end-close']);
+    expect(namesOf(agentProps.plugins)).toContain(
+      '@datalayer/agent-plugin-app-computer-month-end-close',
     );
     await act(async () => root.unmount());
   });
@@ -377,7 +380,7 @@ describe('the element', () => {
     expect(
       element.shadowRoot!.querySelector('.datalayer-app-root'),
     ).not.toBeNull();
-    expect(seen.loop.at(-1)!.agentId).toBe('support-desk');
+    expect(seen.agent.at(-1)!.agentId).toBe('support-desk');
     await act(async () => element.remove());
   });
 

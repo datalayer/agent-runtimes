@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-agent-sandbox-*` — where the code runs, as
+ * `@datalayer/agent-plugin-agent-sandbox-*` — where the code runs, as
  * capacities.
  *
  * One plugin per sandbox variant, each cast from the shared capacity mould:

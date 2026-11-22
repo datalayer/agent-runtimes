@@ -33,11 +33,11 @@
     return;
   }
   // `@jupyter-widgets` assigns to a bare `__webpack_public_path__` at the top
-  // of the module (see `loop-main.tsx`): in an ES module that is a
+  // of the module (see `agent-workspace-main.tsx`): in an ES module that is a
   // ReferenceError unless the global exists, and the module's own body runs
   // after everything it imports, so it is declared here, before the import —
   // without it no application loads (`… did not load (__webpack_public_path__
-  // is not defined)`, seen with `loop apps run --web`).
+  // is not defined)`, seen with `agent apps run --web`).
   const globals = window as unknown as Record<string, unknown>;
   if (globals['__webpack_public_path__'] === undefined) {
     globals['__webpack_public_path__'] = '';

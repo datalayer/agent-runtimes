@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-trial-balance` — the Accountant's trial balance
+ * `@datalayer/agent-plugin-trial-balance` — the Accountant's trial balance
  * for a period: each account's debit, credit and balance, the totals summed
  * here and whether they agree. Draws `show_trial_balance`.
  *
@@ -25,7 +25,8 @@ import {
 } from '../../toolCards/kit';
 import { readTrialBalance, type TrialBalanceAccount } from './read';
 
-export const TRIAL_BALANCE_PLUGIN_NAME = '@datalayer/loop-plugin-trial-balance';
+export const TRIAL_BALANCE_PLUGIN_NAME =
+  '@datalayer/agent-plugin-trial-balance';
 
 export const TRIAL_BALANCE_WORDS = {
   title: (period: string) =>

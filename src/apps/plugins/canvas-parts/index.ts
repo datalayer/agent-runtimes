@@ -7,7 +7,7 @@
  * The agent's toolbox, contributed: one plugin per source of
  * parts — the servers of the catalogue a connection reaches, its skills, its
  * models, and the rules, tests and events an agent answers to — each
- * contributing to `loop.canvas.part`. The toolbox is what the enabled
+ * contributing to `agent.canvas.part`. The toolbox is what the enabled
  * plugins contribute, as the palette is (`canvas-blocks`).
  *
  * @module apps/plugins/canvas-parts
@@ -37,14 +37,14 @@ import {
 } from '../../../chat/assistant/catalogue';
 import { AVATAR_3D_ID } from '../../../chat/assistant/avatar3dModel';
 import {
-  LoopCanvasPart,
+  AgentCanvasPart,
   type CanvasPartContribution,
 } from '../../core/canvasParts';
 import { uiManifestOf } from '../../uiManifest';
 
 type PartsReader = {
   getContributions: (
-    point: typeof LoopCanvasPart,
+    point: typeof AgentCanvasPart,
   ) => ReadonlyArray<{ value: CanvasPartContribution }>;
 };
 
@@ -69,7 +69,7 @@ export const CANVAS_PART_SOURCES = [
 export type CanvasPartSource = (typeof CANVAS_PART_SOURCES)[number];
 
 export const canvasPartsPluginName = (source: CanvasPartSource): string =>
-  `@datalayer/loop-plugin-parts-${source}`;
+  `@datalayer/agent-plugin-parts-${source}`;
 
 const partsPlugin = (
   source: CanvasPartSource,
@@ -83,7 +83,7 @@ const partsPlugin = (
     description: `${displayName} in the agent's toolbox on the Canvas.`,
     octicon: 'package',
     contributes: parts.map(part =>
-      contribution(LoopCanvasPart, part, { id: part.id }),
+      contribution(AgentCanvasPart, part, { id: part.id }),
     ),
   });
 
@@ -421,5 +421,5 @@ export function canvasPartsReactorOf(
 
 /** What the toolbox offers: the parts the enabled plugins contribute, in their order. */
 export function canvasPartsOf(reactor: PartsReader): CanvasPartContribution[] {
-  return reactor.getContributions(LoopCanvasPart).map(entry => entry.value);
+  return reactor.getContributions(AgentCanvasPart).map(entry => entry.value);
 }

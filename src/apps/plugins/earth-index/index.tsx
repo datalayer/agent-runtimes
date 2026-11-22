@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-earth-index` — what Terra computed from the
+ * `@datalayer/agent-plugin-earth-index` — what Terra computed from the
  * pixels, as a message drawn by the A2UI renderer: an index (NDVI, NDWI,
  * NBR…) over an area on each date with the scene it came from, the change
  * between the dates, the map it drew and what limits the reading. Draws
@@ -23,7 +23,7 @@ import {
 import { A2uiCard, type CardSpec } from '../../toolCards/a2uiCard';
 import { readIndexResult, type IndexResult } from './read';
 
-export const EARTH_INDEX_PLUGIN_NAME = '@datalayer/loop-plugin-earth-index';
+export const EARTH_INDEX_PLUGIN_NAME = '@datalayer/agent-plugin-earth-index';
 
 const fixed = (value: number | undefined): string =>
   value === undefined ? '' : value.toFixed(3);

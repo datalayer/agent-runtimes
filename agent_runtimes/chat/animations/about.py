@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""About/logo animation forLoop TUX."""
+"""About/logo animation for Agent TUX."""
 
 import asyncio
 import time
@@ -12,7 +12,7 @@ from rich.panel import Panel
 from rich.style import Style
 from rich.text import Text
 
-from ..banner import LOOP_VERSION, LOOP_WORDMARK
+from ..banner import AGENT_VERSION, AGENT_WORDMARK
 from .utils import check_escape_pressed, raw_terminal
 
 # Primary accent color (matches tux.py)
@@ -105,7 +105,7 @@ async def about_animation(console: Console) -> None:
         return Panel(
             initial,
             border_style=STYLE_PRIMARY,
-            title=f" ☰ {LOOP_WORDMARK} {LOOP_VERSION} ",
+            title=f" ☰ {AGENT_WORDMARK} {AGENT_VERSION} ",
             subtitle="",
         )
 
@@ -134,7 +134,7 @@ async def about_animation(console: Console) -> None:
                         Panel(
                             frame,
                             border_style=STYLE_PRIMARY,
-                            title=f" ☰ {LOOP_WORDMARK} {LOOP_VERSION} ",
+                            title=f" ☰ {AGENT_WORDMARK} {AGENT_VERSION} ",
                             subtitle="",
                         )
                     )
@@ -172,7 +172,7 @@ async def about_animation(console: Console) -> None:
                         Panel(
                             frame,
                             border_style=STYLE_PRIMARY,
-                            title=f" ☰ {LOOP_WORDMARK} {LOOP_VERSION} ",
+                            title=f" ☰ {AGENT_WORDMARK} {AGENT_VERSION} ",
                             subtitle="",
                         )
                     )
@@ -195,7 +195,7 @@ async def about_animation(console: Console) -> None:
                         Panel(
                             frame,
                             border_style=STYLE_PRIMARY,
-                            title=f" ☰ {LOOP_WORDMARK} {LOOP_VERSION} ",
+                            title=f" ☰ {AGENT_WORDMARK} {AGENT_VERSION} ",
                             subtitle="",
                         )
                     )
@@ -218,7 +218,7 @@ async def about_animation(console: Console) -> None:
                         Panel(
                             frame,
                             border_style=STYLE_PRIMARY,
-                            title=f" ☰ {LOOP_WORDMARK} {LOOP_VERSION} ",
+                            title=f" ☰ {AGENT_WORDMARK} {AGENT_VERSION} ",
                             subtitle="",
                         )
                     )
@@ -241,7 +241,7 @@ async def about_animation(console: Console) -> None:
                         Panel(
                             frame,
                             border_style=STYLE_PRIMARY,
-                            title=f" ☰ {LOOP_WORDMARK} {LOOP_VERSION} ",
+                            title=f" ☰ {AGENT_WORDMARK} {AGENT_VERSION} ",
                             subtitle="",
                         )
                     )
@@ -319,7 +319,7 @@ async def about_animation(console: Console) -> None:
                             Panel(
                                 frame,
                                 border_style=STYLE_PRIMARY,
-                                title=f" ☰ {LOOP_WORDMARK} {LOOP_VERSION} ",
+                                title=f" ☰ {AGENT_WORDMARK} {AGENT_VERSION} ",
                                 subtitle="",
                             )
                         )

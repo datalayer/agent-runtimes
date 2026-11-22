@@ -230,7 +230,7 @@ def test_the_small_rules() -> None:
 
 
 WEB_RESEARCH = {
-    "schema": "loop.app/v1",
+    "schema": "agent.app/v1",
     "id": "web-research",
     "name": "Web research",
     "kind": "chat",

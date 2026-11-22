@@ -41,13 +41,13 @@ import { useIAMStore } from '@datalayer/core/lib/state/substates/IAMState';
 import type { AppSpec } from '../../../types/agentspecs';
 import { useChatWords } from '../../../chat/ChatLanguage';
 import {
-  LoopChatTurn,
+  AgentChatTurn,
   agentServerOf,
   noRuntimeSaid,
   IDLE_SANDBOX_SNAPSHOT,
   type ChatTurnSnapshot,
   type ConversationEntry,
-  type LoopWorkspaceContext,
+  type AgentWorkspaceContext,
 } from '../../core';
 import {
   BROWSER_KEYS,
@@ -599,10 +599,10 @@ export function AppComputer({
   workspace,
 }: {
   app: AppSpec;
-  workspace?: LoopWorkspaceContext;
+  workspace?: AgentWorkspaceContext;
 }): JSX.Element {
   const token = useIAMStore(state => state.token) ?? '';
-  const turnEntries = useContributions(LoopChatTurn);
+  const turnEntries = useContributions(AgentChatTurn);
   const turn = useSignalValue(turnEntries[0]?.value.turn ?? NO_TURN);
   const conversation = useSignalValue(
     turnEntries[0]?.value.conversation ?? NO_CONVERSATION,

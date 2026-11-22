@@ -134,13 +134,13 @@ const DEFAULT_CLOUD_RUNTIME_ENVIRONMENT = 'ai-agents-env';
  * another is adding an id.
  */
 const ANONYMOUS_EXAMPLES = new Set([
-  'LoopWorkspaceExample',
-  // The Loop Application, on the local agent-runtimes server: nothing
+  'AgentWorkspaceExample',
+  // The Agent Application, on the local agent-runtimes server: nothing
   // allocated on Datalayer, whose target waits for a sign-in in the header.
-  'LoopApplicationExample',
+  'AgentApplicationExample',
   // An application beside its computer, on the local agent-runtimes server:
   // nothing allocated on Datalayer, and the machine itself needs no token.
-  'LoopComputerExample',
+  'AgentComputerExample',
   // The Sales and Accounting team: Sales in the page on a visitor's trial
   // key, Accounting on the local server, which answers the machine itself.
   'AgentA2ATeamExample',
@@ -151,14 +151,14 @@ const ANONYMOUS_EXAMPLES = new Set([
   // through the server's ai-inference, with the server's own key.
   'AgentDecideExample',
   // Runs on the browser sandbox: nothing to allocate, nothing to sign into.
-  'LoopShellExample',
+  'AgentShellExample',
   // Temporarily anonymous so the Jupyter output surface can be driven and
   // debugged without a session. Remove once that work is finished.
   'A2UiJupyterOutputExample',
   // The two page layouts, on the browser sandbox like the shell.
   'NotebookPageAgent',
   'DocumentPageAgent',
-  // The decks plugin in a Loop; the agent and the decks both live in the page.
+  // The decks plugin in the Agent workspace; the agent and the decks both live in the page.
   'AgentDecksExample',
   // PAP protocol examples are deterministic browser views. They validate
   // fixtures and generate local Web Crypto material without allocating a
@@ -954,7 +954,7 @@ export const ExampleApp: React.FC = () => {
    * The load asked last, the only one that may mount its example. An import
    * is not instant (a cold one is seconds while Vite transforms its graph):
    * an example picked while another was still loading must not be replaced
-   * by the earlier one when it lands — which mounted the Loop Application (then named AI Application)
+   * by the earlier one when it lands — which mounted the Agent Application (then named AI Application)
    * under the A2UI Agent's name (22 November 2026).
    */
   const loadRequest = useRef(0);
@@ -1464,7 +1464,7 @@ const ExampleAppThemed: React.FC<{
   const agentSummary = useAgentSummaryStore(state => state.active);
   const isHome = selectedExample === 'HomeExample';
   // The one example that describes its own agent — see the header below.
-  const isLoopWorkspace = selectedExample === 'LoopWorkspaceExample';
+  const isAgentWorkspace = selectedExample === 'AgentWorkspaceExample';
   const cfg = themeConfigs[themeVariant];
   const logoColors = getLogoColors(themeVariant, colorMode);
   const { token, setAuth, clearAuth } = useSimpleAuthStore();
@@ -1473,7 +1473,7 @@ const ExampleAppThemed: React.FC<{
   /*
    * The sign-in screen stands aside for an example that needs no account.
    *
-   * Without this the screen offered the Loop workspace as a card and then
+   * Without this the screen offered the Agent workspace as a card and then
    * stayed put when it was chosen: the example *was* selected, and nothing
    * rendered it, because `showSignIn` knows only that nobody is signed in.
    * Offering a way through and then not taking it is worse than not offering
@@ -1496,25 +1496,25 @@ const ExampleAppThemed: React.FC<{
     }
     for (const [groupName, examples] of groups) {
       examples.sort((left, right) => {
-        if (groupName === 'Loop' || groupName === 'Agents') {
+        if (groupName === 'Agent' || groupName === 'Agents') {
           // The shells first, most naked first; then an application beside its
-          // computer and the Loop Application; then the strategy that drives a
+          // computer and the Agent Application; then the strategy that drives a
           // notebook; then the library of specs and the scenes behind them all.
-          const LOOP_ORDER = [
-            'LoopShellExample',
-            'LoopWorkspaceExample',
-            'LoopComputerExample',
-            'LoopApplicationExample',
-            'LoopStrategyExample',
+          const AGENT_ORDER = [
+            'AgentShellExample',
+            'AgentWorkspaceExample',
+            'AgentComputerExample',
+            'AgentApplicationExample',
+            'AgentStrategyExample',
             'AgentspecsExample',
             'ScenesExample',
             'AgentDecksExample',
           ];
-          const loopOrder = (id: string) => {
-            const index = LOOP_ORDER.indexOf(id);
-            return index === -1 ? LOOP_ORDER.length : index;
+          const agentOrder = (id: string) => {
+            const index = AGENT_ORDER.indexOf(id);
+            return index === -1 ? AGENT_ORDER.length : index;
           };
-          const order = loopOrder(left.id) - loopOrder(right.id);
+          const order = agentOrder(left.id) - agentOrder(right.id);
           if (order !== 0) return order;
         }
         return left.title.localeCompare(right.title);
@@ -1761,7 +1761,7 @@ const ExampleAppThemed: React.FC<{
               />
             )}
             {/*
-              Not for the Loop workspace, which draws its own.
+              Not for the Agent workspace, which draws its own.
 
               This shell keeps one summary for the example on screen, which is
               right while an example *is* an agent. The workspace is not: the
@@ -1769,7 +1769,7 @@ const ExampleAppThemed: React.FC<{
               this page knowing, so the summary here described a session it
               could not see — beside a header that described the real one.
             */}
-            {!isHome && !shouldShowAuthScreen && !isLoopWorkspace && (
+            {!isHome && !shouldShowAuthScreen && !isAgentWorkspace && (
               <Box sx={{ minWidth: 0, flexShrink: 1, overflow: 'hidden' }}>
                 <AgentSummary summary={agentSummary} />
               </Box>
@@ -1860,7 +1860,7 @@ const ExampleAppThemed: React.FC<{
               
               A sign-in screen on its own says only "not yet". Most of these
               examples do need an account — they allocate runtimes somebody
-              pays for — but the Loop workspace runs entirely in the page, so
+              pays for — but the Agent workspace runs entirely in the page, so
               putting it here turns a closed door into a choice: sign in for
               the rest, or try this one now.
             */

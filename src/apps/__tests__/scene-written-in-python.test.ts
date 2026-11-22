@@ -4,7 +4,7 @@
  */
 
 /**
- * A scene and its stage written in Python open in the Studio unchanged: the YAML `loop scenes build` writes of `examples/scene-in-python/
+ * A scene and its stage written in Python open in the Studio unchanged: the YAML `agent scenes build` writes of `examples/scene-in-python/
  * scene.py` — held current by pytest `test_scenes_written` — is read by the
  * spec editor's reader with nothing refused, and written back by it as the
  * same scene, so what the Python wrote is what the Studio shows and saves.
@@ -28,7 +28,7 @@ describe('a scene written in Python, opened in the Studio', () => {
     expect(read.problem).toBeFalsy();
     const spec = read.spec!;
     expect(sceneProblems(spec)).toEqual([]);
-    expect(spec.schema).toBe('loop.scene/v1');
+    expect(spec.schema).toBe('agent.scene/v1');
     expect(spec.id).toBe('desk-and-sales');
     expect(entryOf(spec)).toBe('desk');
     // The stage the Python wrote is the scene's own parts.

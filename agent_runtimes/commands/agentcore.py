@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""`loop agentcore deploy|status|invoke|sessions|destroy <agentspec>`.
+"""`agent agentcore deploy|status|invoke|sessions|destroy <agentspec>`.
 
 An agentspec on your own Amazon Bedrock AgentCore, with your own AWS
 credentials (as boto3 finds them: the environment, a profile, a role), no
@@ -10,7 +10,7 @@ Datalayer account: the shape of the AgentCore starter toolkit's
 target (:mod:`agent_runtimes.agentcore.target`).
 
 What was deployed, and the sessions invoked on it, are kept in
-``~/.datalayer/agentcore.json`` (``LOOP_AGENTCORE_STATE`` to move it): one
+``~/.datalayer/agentcore.json`` (``AGENTCORE_STATE`` to move it): one
 deployment per agentspec, until it is destroyed. AgentCore lists no runtime
 sessions of its own; ``sessions`` lists those this file kept, and stops one.
 """
@@ -44,7 +44,7 @@ app = typer.Typer(
 console = Console(soft_wrap=True)
 
 #: Where the deployments and their sessions are kept.
-STATE_ENV = "LOOP_AGENTCORE_STATE"
+STATE_ENV = "AGENTCORE_STATE"
 
 
 def state_path() -> Path:
@@ -90,7 +90,7 @@ def _deployment(state: Dict[str, Any], agentspec: str) -> Deployment:
     held = state["deployments"].get(agentspec)
     if held is None:
         _fail(
-            f"{agentspec} is not deployed to AgentCore from here: `loop agentcore deploy {agentspec}`."
+            f"{agentspec} is not deployed to AgentCore from here: `agent agentcore deploy {agentspec}`."
         )
     return Deployment.from_dict(held["deployment"])
 
@@ -139,13 +139,13 @@ def deploy(
 
     if get_agent_spec(agentspec) is None:
         _fail(
-            f"{agentspec} is not an agentspec of the catalogue: `loop list-specs` lists them."
+            f"{agentspec} is not an agentspec of the catalogue: `agent list-specs` lists them."
         )
     state = _read_state()
     if agentspec in state["deployments"]:
         _fail(
             f"{agentspec} is already deployed ({state['deployments'][agentspec]['deployment']['arn']}): "
-            f"`loop agentcore destroy {agentspec}` first."
+            f"`agent agentcore destroy {agentspec}` first."
         )
     authorizer: Optional[JwtAuthorizer] = None
     if discovery_url:

@@ -7,7 +7,7 @@
  * The conversation's current turn, kept by the chat and read by anyone.
  *
  * One instance per reactor — created by the chat plugin when it builds and
- * contributed to `LoopChatTurn` — so two workspaces on one page do not share
+ * contributed to `AgentChatTurn` — so two workspaces on one page do not share
  * a turn. The chat view drives it: `begin` on send (which is what clears the
  * previous turn), `assistant` as the reply arrives, `end` when the agent
  * stops. Readers hold the signal.
@@ -201,7 +201,7 @@ export function createTurnFeed(): TurnFeed {
  * fields the public type does not name; {@link turnWritersOf} is how the view
  * gets them back.
  */
-export const TURN_WRITERS = Symbol.for('loop.chat.turn.writers');
+export const TURN_WRITERS = Symbol.for('agent.chat.turn.writers');
 
 export function feedWriters(feed: TurnFeed): Record<symbol, TurnFeed> {
   return { [TURN_WRITERS]: feed };

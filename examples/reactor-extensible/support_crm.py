@@ -3,7 +3,7 @@
 
 """A third-party Reactor extension the application composes.
 
-Nothing here knows about LOOP: it is a Reactor extension as any — a plugin
+Nothing here knows about Agent: it is a Reactor extension as any — a plugin
 that registers a command (``crm.lookup``), offers it to agents as a tool
 (``provide_agent_tools``), declares a point of its own (``crm.sources``) and
 extends a point of the application's (``support-desk-plus.greetings``). As

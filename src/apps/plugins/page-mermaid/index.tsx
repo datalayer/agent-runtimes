@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-page-mermaid` — Mermaid diagrams the agent writes
+ * `@datalayer/agent-plugin-page-mermaid` — Mermaid diagrams the agent writes
  * in the conversation, with frontend tools run in the page (the user, 19
  * November 2026: the Functional Analyst's Mermaid tools).
  *
@@ -36,7 +36,7 @@ import {
 import type { SidePlacement } from '../../toolCards/chrome';
 import { MERMAID_TOOL_NAMES, PAGE_MERMAID, pageMermaidTools } from './store';
 
-export const PAGE_MERMAID_PLUGIN_NAME = '@datalayer/loop-plugin-page-mermaid';
+export const PAGE_MERMAID_PLUGIN_NAME = '@datalayer/agent-plugin-page-mermaid';
 
 const DiagramView = lazy(() => import('./DiagramView'));
 

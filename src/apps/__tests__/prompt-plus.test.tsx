@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildReactorFromPlugins } from '@datalayer/reactor';
 import { PromptPlugin, PROMPT_PLUGIN_NAME } from '../plugins/prompt';
-import { LoopSlots } from '../core';
+import { AgentSlots } from '../core';
 
 describe('the + in the prompt footer', () => {
   it('is contributed to the promptAction slot', async () => {
@@ -18,7 +18,7 @@ describe('the + in the prompt footer', () => {
       PROMPT_PLUGIN_NAME,
     );
     expect(
-      output?.components?.some(c => c.slot === LoopSlots.promptAction),
+      output?.components?.some(c => c.slot === AgentSlots.promptAction),
     ).toBe(true);
   });
 });

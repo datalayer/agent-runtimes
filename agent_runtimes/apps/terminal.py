@@ -3,7 +3,7 @@
 
 """An application in the terminal: its code run here, its agent on the runtime.
 
-``loop apps run`` serves an application on a runtime configured with its
+``agent apps run`` serves an application on a runtime configured with its
 Appspec and talks to it over AG-UI in the terminal's renderer (`CliTux`).
 An ``app.py`` adds its code: the terminal is then also its `AppHost`, so
 that what the code reacts to runs in this process, through a
@@ -418,7 +418,7 @@ class AppTux(CliTux):
 
     async def audio_turn(self, pcm16: bytes) -> None:
         """What ``/voice`` heard, given to its code's ``@app.audio``:
-        heard where ``loop --voice`` hears — this machine, else Datalayer's
+        heard where ``agent --voice`` hears — this machine, else Datalayer's
         speech service — and the turn run; what cannot be heard is said.
         """
         from agent_runtimes.voice.cli import RATE, wav_of

@@ -9,7 +9,7 @@
  * What the page holds of a file it was given — File upload and the composer
  * read it as `{name, type, data_url}` — is uploaded to the application's
  * runtime before the run that names it (Reactor's `uploadFile`), and the run
- * carries the ref it answers (`forwardedProps.loop.files`): a file's bytes
+ * carries the ref it answers (`forwardedProps.agent.files`): a file's bytes
  * never ride in the run.
  *
  * @module chat/base/uiFiles
@@ -54,7 +54,7 @@ export function blobOfDataUrl(
 export function namesFiles(
   forwardedProps: Record<string, unknown> | undefined,
 ): boolean {
-  const files = (forwardedProps?.loop as { files?: unknown } | undefined)
+  const files = (forwardedProps?.agent as { files?: unknown } | undefined)
     ?.files;
   return Array.isArray(files) && files.length > 0;
 }
@@ -69,8 +69,8 @@ export async function withUploadedFiles(
   forwardedProps: Record<string, unknown>,
   upload: UploadToConversation,
 ): Promise<Record<string, unknown>> {
-  const loop = forwardedProps.loop as Record<string, unknown>;
-  const files = loop.files as unknown[];
+  const agentProps = forwardedProps.agent as Record<string, unknown>;
+  const files = agentProps.files as unknown[];
   const refs: FileRef[] = [];
   for (const given of files) {
     if (isFileRef(given)) {
@@ -95,5 +95,5 @@ export async function withUploadedFiles(
       ),
     );
   }
-  return { ...forwardedProps, loop: { ...loop, files: refs } };
+  return { ...forwardedProps, agent: { ...agentProps, files: refs } };
 }

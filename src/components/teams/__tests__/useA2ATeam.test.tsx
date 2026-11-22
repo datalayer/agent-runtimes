@@ -456,7 +456,7 @@ describe('a button pressed on what a peer showed', () => {
               message: {
                 parts: [
                   {
-                    text: String(init?.body).includes('loop')
+                    text: String(init?.body).includes('agent')
                       ? 'It only reads: nothing sent.'
                       : 'Two are open.',
                   },
@@ -482,7 +482,7 @@ describe('a button pressed on what a peer showed', () => {
     await send('Which invoices are open?');
     await flush();
     await send('Send the reminders', {
-      loop: { action: PRESSED.action },
+      agent: { action: PRESSED.action },
     });
     await flush();
     const lines = transcriptOfSpans(tracer.spans(), [

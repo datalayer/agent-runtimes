@@ -23,7 +23,7 @@ import {
 import { useReactor } from '@datalayer/reactor/react';
 import { APP_CATALOGUE } from '../../specs/apps';
 import type { AppSpec } from '../../types/agentspecs';
-import { LoopChatTurn, type LoopWorkspaceContext } from '../core';
+import { AgentChatTurn, type AgentWorkspaceContext } from '../core';
 import { emptyAppspec } from '../apps/appspec';
 import { createTurnFeed } from '../plugins/chat/turnState';
 import {
@@ -33,7 +33,7 @@ import {
 } from '../plugins/app-page/AppPage';
 import { appPageMessages } from '../plugins/app-page';
 import { catalogOfBlocks } from '../../components/a2ui';
-import { LoopCanvasBlock } from '../core';
+import { AgentCanvasBlock } from '../core';
 import { COMPONENT_CATALOGUE } from '../../specs/ui';
 import { CANVAS_BLOCK_PLUGINS } from '../plugins/canvas-blocks';
 
@@ -61,7 +61,7 @@ async function drawPage(
     name: 'test-chat-turn',
     contributes: [
       contribution(
-        LoopChatTurn,
+        AgentChatTurn,
         { id: 'turn', turn: feed.turn, conversation: feed.conversation },
         { id: 'turn' },
       ),
@@ -71,7 +71,7 @@ async function drawPage(
     sandbox: { state: 'running' },
     viewControls: { send },
     prompts: { submit: vi.fn() },
-  } as unknown as LoopWorkspaceContext;
+  } as unknown as AgentWorkspaceContext;
   function Harness() {
     const reactor = React.useMemo(
       () => buildReactorFromPlugins([plugin, ...blocks]),
@@ -173,7 +173,7 @@ describe('a Chat block on a chat application’s page', () => {
     });
     // The chat's own send: the conversation the page shows, not a second one.
     expect(send).toHaveBeenCalledWith('And last month’s?', {
-      loop: { settings: {} },
+      agent: { settings: {} },
     });
     expect(send).toHaveBeenCalledTimes(1);
 
@@ -238,15 +238,15 @@ describe('a File upload on a widget’s page', () => {
     const [said, forwarded] = send.mock.calls[0];
     expect(said).toBe('Report: Summary');
     // A block sends a message, never an action of its own (RU-5).
-    expect(forwarded.loop.action).toBeUndefined();
-    expect(forwarded.loop.settings).toEqual({
+    expect(forwarded.agent.action).toBeUndefined();
+    expect(forwarded.agent.settings).toEqual({
       report: 'Summary',
       question: '',
     });
-    expect(forwarded.loop.files).toMatchObject([
+    expect(forwarded.agent.files).toMatchObject([
       { name: 'orders.csv', type: 'text/csv', size: 23 },
     ]);
-    expect(atob(forwarded.loop.files[0].data_url.split(',')[1])).toBe(
+    expect(atob(forwarded.agent.files[0].data_url.split(',')[1])).toBe(
       'region,orders\nNorth,12\n',
     );
   });
@@ -286,10 +286,10 @@ describe('a File upload on a widget’s page', () => {
     });
     await act(async () => new Promise(resolve => setTimeout(resolve, 20)));
     expect(send).toHaveBeenCalledTimes(1);
-    expect(send.mock.calls[0][1].loop).toMatchObject({
+    expect(send.mock.calls[0][1].agent).toMatchObject({
       files: [{ name: 'tiny.csv', type: 'text/csv' }],
     });
-    expect(send.mock.calls[0][1].loop.action).toBeUndefined();
+    expect(send.mock.calls[0][1].agent.action).toBeUndefined();
   });
 });
 
@@ -346,7 +346,7 @@ describe('what the page draws is what the Canvas can place (R-01b)', () => {
       name: 'only-column',
       contributes: [
         contribution(
-          LoopCanvasBlock,
+          AgentCanvasBlock,
           {
             id: 'Column',
             ui: 'a2ui',

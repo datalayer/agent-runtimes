@@ -4,9 +4,9 @@
  */
 
 /**
- * `@datalayer/loop-plugin-app-activity` — what an application did, as a
+ * `@datalayer/agent-plugin-app-activity` — what an application did, as a
  * plugin: its activity feed in the workspace's sidebar
- * (`LoopSlots.sidebar`), read from its record.
+ * (`AgentSlots.sidebar`), read from its record.
  *
  * @module apps/plugins/app-activity
  */
@@ -15,11 +15,11 @@ import type { JSX } from 'react';
 import { definePlugin, type ReactorPlugin } from '@datalayer/reactor';
 import { PulseIcon } from '@primer/octicons-react';
 import type { AppSpec } from '../../../types/agentspecs';
-import { LoopSlots } from '../../core';
+import { AgentSlots } from '../../core';
 import { AppActivity } from './AppActivity';
 import { uiManifestOf } from '../../uiManifest';
 
-export const APP_ACTIVITY_PLUGIN_NAME = '@datalayer/loop-plugin-app-activity';
+export const APP_ACTIVITY_PLUGIN_NAME = '@datalayer/agent-plugin-app-activity';
 
 /**
  * The plugin that lists what an application did: its record is kept under
@@ -44,7 +44,7 @@ export function defineAppActivityPlugin(
       components: [
         {
           id: 'app-activity',
-          slot: LoopSlots.sidebar,
+          slot: AgentSlots.sidebar,
           order: 20,
           Component: Feed,
           // Its line icon on the workspace's rail.

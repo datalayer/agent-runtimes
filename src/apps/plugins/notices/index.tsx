@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-notices` — a short notice the agent slides in from
+ * `@datalayer/agent-plugin-notices` — a short notice the agent slides in from
  * an edge of the view (the user, 18 November 2026: "the N/E/S/W sliding
  * panels are only for notices: info, success, warning, error and the like.
  * They are short, dismissible, triggered by the agent through one frontend
@@ -13,7 +13,7 @@
  * One frontend tool of the `notices` set, run in the page:
  * `show_notice({tone, title, text?, edge?, seconds?})`. A notice is
  * primer-addons' `SlidingPanel`, contained in the conversation — the view
- * (`LoopSlots.viewOverlay`) between the chat's title bar and its composer:
+ * (`AgentSlots.viewOverlay`) between the chat's title bar and its composer:
  * never over the page around the workspace, the application's own controls
  * or the person's typing — and says it comes from the agent. Words only: no link,
  * no button but its Close, nothing that could pass for the application's
@@ -31,12 +31,12 @@ import { BellIcon } from '@primer/octicons-react';
 import { Box, SlidingPanel } from '@datalayer/primer-addons';
 import type { ToolCallRenderContext } from '../../../types/chat';
 import type { FrontendToolDefinition } from '../../../types/tools';
-import { LoopSlots } from '../../core';
+import { AgentSlots } from '../../core';
 import { CallLine, cardRole } from '../../pageTools/cards';
 import { defineToolCardPlugin } from '../../toolCards/kit';
 import { ToolResultsContext } from '../../toolCards/toolResults';
 
-export const NOTICES_PLUGIN_NAME = '@datalayer/loop-plugin-notices';
+export const NOTICES_PLUGIN_NAME = '@datalayer/agent-plugin-notices';
 
 /** The one tool. */
 export const SHOW_NOTICE = 'show_notice';
@@ -425,7 +425,7 @@ export const NoticesPlugin = defineToolCardPlugin({
   frontendTools: noticesTools(),
   components: [
     {
-      slot: LoopSlots.viewOverlay,
+      slot: AgentSlots.viewOverlay,
       id: 'notices',
       Component: NoticesOverlay as never,
     },

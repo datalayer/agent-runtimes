@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-notebook-view` — the notebook, one click away.
+ * `@datalayer/agent-plugin-notebook-view` — the notebook, one click away.
  *
  * The footer icon that opens the notebook beside the conversation. It shows
  * only while a notebook is actually contributed, and requires the
@@ -18,7 +18,8 @@
 import { RowsIcon } from '@primer/octicons-react';
 import { defineViewPlugin } from '../view-switch';
 
-export const NOTEBOOK_VIEW_PLUGIN_NAME = '@datalayer/loop-plugin-notebook-view';
+export const NOTEBOOK_VIEW_PLUGIN_NAME =
+  '@datalayer/agent-plugin-notebook-view';
 
 export const NotebookViewPlugin = defineViewPlugin({
   key: 'notebook',

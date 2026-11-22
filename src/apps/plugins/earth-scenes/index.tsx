@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-earth-scenes` — the satellite scenes Terra found,
+ * `@datalayer/agent-plugin-earth-scenes` — the satellite scenes Terra found,
  * by date, as a message drawn by the A2UI renderer: each with its collection,
  * sensor and cloud cover as the catalogue gave them, the area and the dates
  * searched. Draws `show_scenes`.
@@ -22,7 +22,7 @@ import {
 import { A2uiCard, type CardSpec } from '../../toolCards/a2uiCard';
 import { readEarthScenes, type EarthScenes } from './read';
 
-export const EARTH_SCENES_PLUGIN_NAME = '@datalayer/loop-plugin-earth-scenes';
+export const EARTH_SCENES_PLUGIN_NAME = '@datalayer/agent-plugin-earth-scenes';
 
 export const EARTH_SCENES_WORDS = {
   title: 'Scenes',

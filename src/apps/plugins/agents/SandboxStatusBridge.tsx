@@ -21,7 +21,7 @@
 import type { JSX } from 'react';
 import { useEffect } from 'react';
 import { useSignalValue } from '@datalayer/reactor/react';
-import type { LoopWorkspaceContext } from '../../core';
+import type { AgentWorkspaceContext } from '../../core';
 import {
   IDLE_SANDBOX_SNAPSHOT_SIGNAL,
   IDLE_SANDBOX_TARGET_SIGNAL,
@@ -31,7 +31,7 @@ import { useOptionalSandboxService } from './useSandboxService';
 export function SandboxStatusBridge({
   workspace,
 }: {
-  workspace: LoopWorkspaceContext;
+  workspace: AgentWorkspaceContext;
 }): JSX.Element | null {
   const service = useOptionalSandboxService();
   const snapshot = useSignalValue(

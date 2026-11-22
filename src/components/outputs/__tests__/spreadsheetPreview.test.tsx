@@ -23,7 +23,7 @@ import {
   codeBlockRenderer,
 } from '../../../chat/messages/codeBlocks';
 import { OUTPUT_CATALOG } from '../../../specs/outputs';
-import { loopPlugins } from '../../../apps/presets';
+import { agentPlugins } from '../../../apps/presets';
 import {
   AgentOutputsXlsxPlugin,
   AGENT_OUTPUTS_XLSX_PLUGIN_NAME,
@@ -132,9 +132,9 @@ describe('in the chat', () => {
     }
   });
 
-  it('every Loop chat takes a ```xlsx block, by the preset', () => {
+  it('every Agent chat takes a ```xlsx block, by the preset', () => {
     expect(
-      buildReactorFromPlugins(loopPlugins({})).hasPlugin(
+      buildReactorFromPlugins(agentPlugins({})).hasPlugin(
         AGENT_OUTPUTS_XLSX_PLUGIN_NAME,
       ),
     ).toBe(true);

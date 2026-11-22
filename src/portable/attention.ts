@@ -377,7 +377,7 @@ const firstLine = (value: string | undefined): string =>
  * The turns to notify between two readings: a session **not in front**
  * whose turn was running and is not any more (the first line of its answer,
  * else that it finished), whose turn came to wait for the person (a
- * question, `loop.ask`), or whose runtime went away. The session in front
+ * question, `agent.ask`), or whose runtime went away. The session in front
  * is never notified; a session first seen is not.
  *
  * @param before - The sessions as last read.

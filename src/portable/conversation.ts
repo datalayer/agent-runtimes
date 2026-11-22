@@ -15,8 +15,8 @@
  * is read by `toolResultOf`, `STEP_*` into a step row, a `MESSAGES_SNAPSHOT`
  * (its tool calls and their results too) through `messagesOfThread`, a
  * `reactor.ui` op on the run refused — and adds what a session says besides:
- * `loop.session`, the question its application asks (`RUN_FINISHED` with
- * `result.asking`, LOOP `loop.ask`), and a turn that ended without words said
+ * `agent.session`, the question its application asks (`RUN_FINISHED` with
+ * `result.asking`, Agent `agent.ask`), and a turn that ended without words said
  * by how it ended (`answered`, `stopped`, `gone`).
  *
  * An adapter that tells a message or a tool call whole rather than by its
@@ -148,7 +148,7 @@ export type ConversationItem =
 
 type ToolItem = Extract<ConversationItem, { kind: 'tool' }>;
 
-/** What an application asks the person (`loop.ask`): its kind and what answers it. */
+/** What an application asks the person (`agent.ask`): its kind and what answers it. */
 export type ConversationQuestion = {
   kind: 'text' | 'choice' | 'form' | 'file';
   prompt: string;
@@ -165,7 +165,7 @@ export type ConversationState = {
   items: ConversationItem[];
   /** A turn is streaming. */
   running: boolean;
-  /** The session as `loop.session` said it last, or `null` (an agent's run). */
+  /** The session as `agent.session` said it last, or `null` (an agent's run). */
   session: Record<string, unknown> | null;
   /** What the application waits for an answer to, or `null`. */
   asking: ConversationQuestion | null;
@@ -880,7 +880,7 @@ export function reduceConversation(
       if (event.name === REACTOR_UI_NAME) {
         return withError(state, UI_ON_RUN);
       }
-      if (event.name === 'loop.session' && isRecord(event.value)) {
+      if (event.name === 'agent.session' && isRecord(event.value)) {
         const session = event.value;
         return {
           ...state,

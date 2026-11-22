@@ -18,7 +18,7 @@
  * members only.
  *
  * Its own hook because two callers need the identical answer — the examples
- * shell and the LOOP workspace — and neither should be reading stores to work
+ * shell and the Agent workspace — and neither should be reading stores to work
  * out a host.
  *
  * @module hooks/useBrowserInference

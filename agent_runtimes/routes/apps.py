@@ -38,12 +38,12 @@ no token. On the visitors' runtime
 one, holding a token for the one application they talk to.
 
 An application is a Reactor plugin here as in the page: the
-runtime reads applications from the ``loop.app`` contribution point, and
+runtime reads applications from the ``agent.app`` contribution point, and
 decides their tool calls with what extends their contribution
 (`agent_runtimes.apps.plugins`).
 
 An application that its builder's checks would refuse is refused here too,
-with the same sentences (422): a runtime never runs what `loop apps validate`
+with the same sentences (422): a runtime never runs what `agent apps validate`
 calls not ready.
 """
 
@@ -134,8 +134,8 @@ class ConfigureAppRequest(BaseModel):
     visitors: bool = Field(
         False,
         description=(
-            "Served over A2A (a2a), also open to visitors without an account (LOOP "
-            "R-30): a visitor's token from ai-inference naming this application is "
+            "Served over A2A (a2a), also open to visitors without an account (R-30"
+            "): a visitor's token from ai-inference naming this application is "
             "answered; their runs only read and are counted, a few a day each"
         ),
     )
@@ -954,7 +954,7 @@ async def build_file(
 ) -> Dict[str, Any]:
     """Build an ``app.py`` in a process of its own: the Studio's *Run*.
 
-    What ``loop apps build`` does, on this runtime: the file is run apart from
+    What ``agent apps build`` does, on this runtime: the file is run apart from
     the server, for at most a minute, and its Appspec is answered — what its
     code decides marked at the top — or, 422, why it does not build. Nothing
     is kept here: the Studio keeps the file and its spec as the next draft.
@@ -976,7 +976,7 @@ async def eject_spec(
 ) -> Dict[str, Any]:
     """Write an application built by spec as an ``app.py``.
 
-    `loop apps eject` on a spec's text: the ``app.py`` that holds it, ready
+    `agent apps eject` on a spec's text: the ``app.py`` that holds it, ready
     for code, and the spec that file builds — checked to be the same, else
     refused (422) with why. Nothing is kept here: the Studio saves both as the
     application's next version.
@@ -1142,7 +1142,7 @@ async def feedback(body: FeedbackRequest, request: Request) -> Dict[str, Any]:
 #
 # An application's sessions over the wire: start, message, action, settings
 # change, stop and resume, each streamed as AG-UI events (`text/event-stream`),
-# the first a `loop.session` custom event saying what the session is. And an
+# the first a `agent.session` custom event saying what the session is. And an
 # application's agent spoken to over AG-UI as any agent is, each thread a
 # session: what the chat of an application's page sends.
 
@@ -1849,7 +1849,7 @@ async def list_sessions(
         raise _refused(refused) from None
     authorized = await _authorize(request, False)
     # The record is read as the caller: the store takes the bearer from the
-    # request's context (found on r1, 21 October 2026: `loop sessions list
+    # request's context (found on r1, 21 October 2026: `agent sessions list
     # --cloud` on a kept runtime answered 401, "none was sent").
     bearer = bearer_of(request.headers.get("authorization")) or ""
     set_request_user_jwt(bearer or None)
@@ -1946,7 +1946,7 @@ async def get_session(uid: str, request: Request) -> Dict[str, Any]:
         live, _ = await _held(uid, request)
         described = dict(live.describe())
         # Its harness's row, with the vendor's own session id when the
-        # adapter exposes it: what `loop sessions show` prints.
+        # adapter exposes it: what `agent sessions show` prints.
         shield = live._shield()
         if shield is not None and hasattr(shield, "harness_row"):
             described["harness_session"] = await shield.harness_row(uid)
@@ -2382,7 +2382,7 @@ async def session_press(uid: str, request: Request) -> Any:
 async def session_page(uid: str, body: SessionPageRequest, request: Request) -> Any:
     """A widget's page run on its inputs: checked against its form
     — refused with 422 and the sentence — then its code's ``@app.page``, its
-    outputs a ``CUSTOM`` event named ``loop.page``. Not a turn of the
+    outputs a ``CUSTOM`` event named ``agent.page``. Not a turn of the
     conversation: nothing is said in it.
     """
     from agent_runtimes.apps.sessions import SessionRefused
@@ -2589,7 +2589,7 @@ async def upload_file(agent: str, request: Request) -> Any:
     ``X-Reactor-File-Name``, its media type in ``Content-Type``, the caller's
     token as for the session's other routes. Answers its ref —
     ``{ref, name, media_type, size, url}``, the url signed and short-lived —
-    which the run names (``forwardedProps.loop.files``) or a press answering
+    which the run names (``forwardedProps.agent.files``) or a press answering
     a file carries. Kept for its uploader in that conversation only; at most
     `MAX_FILE_BYTES` (413).
     """
@@ -2658,7 +2658,7 @@ async def session_ui(websocket: WebSocket) -> None:
     messages show, its steps, its elements, its authors, its window
     messages — numbered, and sends up the presses of what they offered, each
     checked here and kept for the run that names it
-    (``forwardedProps.loop.press``). A session not held here, or not the
+    (``forwardedProps.agent.press``). A session not held here, or not the
     caller's, is refused (4403); a token refused, 4401.
     """
     from reactor.ui.ws import (
@@ -2943,7 +2943,7 @@ async def session_agui(agent: str, request: Request) -> Any:
 
     What the chat of an application's page sends: an AG-UI run whose thread
     is the session — opened at its first run — and whose
-    ``forwardedProps.loop`` carries what the page did besides the message
+    ``forwardedProps.agent`` carries what the page did besides the message
     (its settings, the files given, a press checked on the ui socket).
     """
     from agent_runtimes.apps.sessions import (
@@ -2980,7 +2980,7 @@ async def session_agui(agent: str, request: Request) -> Any:
     set_request_user_jwt(bearer or None)
     thread = str(body.get("threadId") or "")
     forwarded = body.get("forwardedProps")
-    loop = forwarded.get("loop") if isinstance(forwarded, dict) else None
+    agent_props = forwarded.get("agent") if isinstance(forwarded, dict) else None
     # What they said as sound, sent to be kept with their consent:
     # taken out before anything else reads the run, never given to a model.
     said = _said_sound(forwarded)
@@ -2996,7 +2996,9 @@ async def session_agui(agent: str, request: Request) -> Any:
             user = _signed_user(
                 app,
                 instance,
-                loop.get("user_token") if isinstance(loop, dict) else None,
+                agent_props.get("user_token")
+                if isinstance(agent_props, dict)
+                else None,
             )
             _prune()
             live = new_session(
@@ -3012,7 +3014,7 @@ async def session_agui(agent: str, request: Request) -> Any:
             raise SessionRefused(404, f"No session {thread} of {agent} is held here.")
         else:
             live.acts_as = await _acts_as(instance, authorized.caller, bearer, app)
-        streamed = live.run_agui(body, loop=loop or {}, bearer=bearer)
+        streamed = live.run_agui(body, agent_props=agent_props or {}, bearer=bearer)
         if said is not None and authorized.caller.kind == "person":
             live.keep_said_later(*said)
         return _stream(streamed)

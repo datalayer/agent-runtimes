@@ -6,7 +6,7 @@
 /**
  * A link in a message: underlined in every theme, coloured as
  * the theme says through `--theme-message-link` — the accent, or plain in
- * `loop` — and the accent where no theme says anything.
+ * `agent` — and the accent where no theme says anything.
  */
 
 import { describe, expect, it } from 'vitest';

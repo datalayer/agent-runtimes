@@ -5,7 +5,7 @@
 
 /**
  * The Python editor of an application written in Python: its `app.py`, as
- * `loop apps push` keeps it beside its Appspec, in a code editor — a line
+ * `agent apps push` keeps it beside its Appspec, in a code editor — a line
  * asked for (a link of the Canvas, where its code decides something) marked
  * and brought into view.
  *

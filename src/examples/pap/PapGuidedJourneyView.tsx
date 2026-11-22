@@ -394,7 +394,7 @@ const runJourney = async (): Promise<
     );
   };
   const securityPlugin = definePlugin({
-    name: '@datalayer/loop-example-pap-guided-security',
+    name: '@datalayer/agent-example-pap-guided-security',
     contributes: [
       contribution(
         SessionSigners,

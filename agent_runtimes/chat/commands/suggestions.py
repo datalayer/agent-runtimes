@@ -45,7 +45,7 @@ async def execute(tux: "CliTux") -> Optional[str]:
     """Fetch suggestions from the running agent spec, display them numbered,
     and let the user choose one to use as the next prompt.
 
-    Under ``loop --prompt`` (``tux.scripted``) they are listed and nothing
+    Under ``agent --prompt`` (``tux.scripted``) they are listed and nothing
     is asked: the next line is the next prompt, not a choice.
 
     Returns:

@@ -56,7 +56,7 @@ const PapSessionLifecycleView: React.FC = () => {
           });
     };
     const securityPlugin = definePlugin({
-      name: '@datalayer/loop-example-pap-session-security',
+      name: '@datalayer/agent-example-pap-session-security',
       contributes: [
         contribution(
           SessionSigners,

@@ -210,7 +210,7 @@ class RuntimesClient:
             IAM grants its reservation no more than
             the tree has left, and refuses it once the tree has nothing.
         app_uid : Optional[str]
-            The LOOP application the runtime runs for.
+            The Agent application the runtime runs for.
         deployment_uid : Optional[str]
             The deployment of that application it runs for — a scheduled
             tick's or an event's session. The Operator writes both on the

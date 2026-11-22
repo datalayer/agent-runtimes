@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-agent-monitoring` — the capacity, as a plugin.
+ * `@datalayer/agent-plugin-agent-monitoring` — the capacity, as a plugin.
  *
  * Mounts the `example-monitoring` agent and offers what it is worth asking. Cast
  * from the shared capacity mould; see `apps/plugins/agent-capacity`.
@@ -17,7 +17,7 @@
 import { defineAgentCapacityPlugin } from '../agent-capacity';
 
 export const AGENT_MONITORING_PLUGIN_NAME =
-  '@datalayer/loop-plugin-agent-monitoring';
+  '@datalayer/agent-plugin-agent-monitoring';
 
 export const AgentMonitoringPlugin = defineAgentCapacityPlugin({
   key: 'monitoring',

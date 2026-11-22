@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-trip-itinerary` — the Traveller's itinerary, day by
+ * `@datalayer/agent-plugin-trip-itinerary` — the Traveller's itinerary, day by
  * day: each stop with its time and place, and the place on a map. Draws
  * `show_itinerary`.
  *
@@ -25,7 +25,7 @@ import {
 import { readItinerary } from './read';
 
 export const TRIP_ITINERARY_PLUGIN_NAME =
-  '@datalayer/loop-plugin-trip-itinerary';
+  '@datalayer/agent-plugin-trip-itinerary';
 
 export const TRIP_ITINERARY_WORDS = {
   title: 'Itinerary',

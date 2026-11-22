@@ -7,7 +7,7 @@
  * AgentA2AExample
  *
  * Delegation to separate agents over the A2A protocol. The orchestrator runs
- * on the local agent-runtimes server, created there by the Loop from the
+ * on the local agent-runtimes server, created there by the Agent from the
  * `example-a2a` blueprint; its researcher and writer are not subagents inside
  * its process but agents of their own, launched on the first delegation —
  * beside the orchestrator on the local server, or on Datalayer runtimes when
@@ -27,7 +27,7 @@ import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
-import { LoopEmbed } from '../apps';
+import { AgentEmbed } from '../apps';
 import { AgentA2APlugin } from '../apps/plugins/agent-a2a';
 import { A2ASidebarPlugin } from '../apps/plugins/a2a-sidebar';
 import { getAgentspecs } from '../specs/agents';
@@ -74,14 +74,14 @@ const AgentA2AExample: React.FC = () => {
           </Label>
         </Box>
 
-        {/* The Loop creates the orchestrator on the Local target from the
+        {/* The Agent workspace creates the orchestrator on the Local target from the
             capacity plugin's blueprint, the way the hooks example does. The
-            agent-target switch stays visible: with it hidden the Loop pins the
+            agent-target switch stays visible: with it hidden the Agent pins the
             agent to the page, and the delegation over A2A happens on the
-            server, so the agent must run there. The sidebar is a Loop plugin
+            server, so the agent must run there. The sidebar is an Agent plugin
             and renders in the workspace's own sidebar column. */}
         <Box flex={1} minHeight={0}>
-          <LoopEmbed
+          <AgentEmbed
             serverUrl={resolveExampleAgentRuntimesUrl('local')}
             target="local"
             showAgentVariants

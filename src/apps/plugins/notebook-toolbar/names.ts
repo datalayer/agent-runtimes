@@ -13,4 +13,4 @@
  */
 
 export const NOTEBOOK_TOOLBAR_PLUGIN_NAME =
-  '@datalayer/loop-plugin-notebook-toolbar';
+  '@datalayer/agent-plugin-notebook-toolbar';

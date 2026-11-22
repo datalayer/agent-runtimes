@@ -29,7 +29,7 @@ uses to reach an agent, and helps you choose.
 | UCP, Universal Commerce Protocol | Commerce | 2026-08-25 (partial) | shopper, test merchant | [UCP](./ucp) |
 | Agentic Commerce Protocol | Commerce | 2026-04-17 (partial) | buyer, test seller | [Agentic Commerce](./agentic-commerce) |
 
-A running runtime says this for itself: `loop apps protocols` and
+A running runtime says this for itself: `agent apps protocols` and
 `GET /api/v1/protocols` list what its protocol plugins describe, each with its
 version, roles and state. That list has the seven plugins, from MCP down, without
 TAP, which is a profile of Web Bot Auth; the protocols of the UI layer are served
@@ -71,7 +71,7 @@ over ACP and the MCP-UI chat routes in any case.
 ## AG-UI (Agent UI Protocol)
 
 A lightweight protocol for chat interfaces: events over SSE, tool approvals, and
-what the `loop` terminal uses. See [AG-UI](./ag-ui).
+what the `agent` terminal uses. See [AG-UI](./ag-ui).
 
 **Endpoint:** `POST /api/v1/ag-ui/{agent_id}/`
 

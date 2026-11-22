@@ -28,7 +28,7 @@
  * it does inline; the chrome told by the workspace what it is doing and
  * what it last said, for the balloon and the blink.
  *
- * In its theme (`loop` unless it names one) with the application's accent
+ * In its theme (`agent` unless it names one) with the application's accent
  * over it, whichever theme, which the
  * host may override with the face and the mode — around the
  * conversation and inside it, where the chat sets its theme again.
@@ -87,7 +87,7 @@ import {
 import type { DatalayerVisitors } from '../apps/visitorToken';
 import { floatingViewOf, type EmbedColorMode } from './embedConfig';
 import { hostPlugin, hostUserRunProps, type AppEmbedHost } from './hostBridge';
-import { LoopRunProps } from '../core';
+import { AgentRunProps } from '../core';
 import { embedThemeOverrides, embedThemeStyles } from './embedTheme';
 import {
   WINDOW_NOT_YET,
@@ -98,7 +98,7 @@ import {
   sessionKeeper,
   visitOfToken,
 } from './embedSession';
-import { onLoopWindowMessage } from '../../chat/base/loopWindow';
+import { onAgentWindowMessage } from '../../chat/base/agentWindow';
 import { ChatLanguage, useChatWords } from '../../chat/ChatLanguage';
 
 export type AppEmbedProps = {
@@ -168,7 +168,7 @@ export type AppEmbedProps = {
    * no theme of its own around it unless its Appspec names one
    * (`interface.theme`) or the host says a mode or a face — the page's
    * primer-addons theme, the application's accent over it in its
-   * conversation. Off, in its own theme (`loop` unless it names one), as the
+   * conversation. Off, in its own theme (`agent` unless it names one), as the
    * element draws it in its shadow root.
    */
   followHost?: boolean;
@@ -202,7 +202,7 @@ export type AppEmbedProps = {
   ownPortal?: boolean;
   /**
    * The host's plugins, for the assistant's character: what they contribute
-   * to `loop.assistant.character` is there beside Datalayer's four. The
+   * to `agent.assistant.character` is there beside Datalayer's four. The
    * element passes none.
    */
   plugins?: PluginRef[];
@@ -452,13 +452,13 @@ export function useHostBridge(
     const runProps = hostUserRunProps(app, () => hostRef.current ?? {});
     return runProps
       ? (definePlugin({
-          name: `loop-host-user-${app.id}`,
+          name: `agent-host-user-${app.id}`,
           displayName: `${app.name}: who its user is`,
           description: `The token naming its user that the host's server signed, sent with every run of ${app.name}.`,
           octicon: 'person',
           emoji: '\u{1F464}',
           contributes: [
-            contribution(LoopRunProps, runProps, { id: 'host-user' }),
+            contribution(AgentRunProps, runProps, { id: 'host-user' }),
           ],
         }) as PluginRef)
       : undefined;
@@ -475,7 +475,7 @@ export function useHostBridge(
   // What its code tells the page during a turn, raised on it.
   useEffect(
     () =>
-      onLoopWindowMessage(data =>
+      onAgentWindowMessage(data =>
         hostRef.current?.onEvent?.({
           type: 'window-message',
           detail: { data },
@@ -729,7 +729,7 @@ function useSystemMode(): 'light' | 'dark' {
   return dark ? 'dark' : 'light';
 }
 
-/** The application's theme (`loop` unless it names one), with its (or the host's) accent and face. */
+/** The application's theme (`agent` unless it names one), with its (or the host's) accent and face. */
 export function EmbedThemed({
   accent,
   colorMode,
@@ -864,9 +864,9 @@ export function AppEmbed({
   // In the host's theme (a React host's `AIApplication`): the page's, unless
   // the application names one or the host says a mode or a face.
   const hostThemed = followHost && !app.interface.theme && !colorMode && !font;
-  // The theme the application names, `loop` when none; its mode
+  // The theme the application names, `agent` when none; its mode
   // the host's, else the application's, else the visitor's system's.
-  const variant = app.interface.theme?.variant ?? 'loop';
+  const variant = app.interface.theme?.variant ?? 'agent';
   const asked = colorMode ?? app.interface.theme?.mode ?? 'auto';
   const resolvedMode = asked === 'auto' ? system : asked;
   const view = floatingViewOf(shownAs);

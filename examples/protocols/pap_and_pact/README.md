@@ -22,7 +22,7 @@ proof or receipt signature is in it, nor in the answer the model reads.
 
 ```bash
 python examples/protocols/pap_and_pact/app.py
-loop apps run examples/protocols/pap_and_pact/app.py
+agent apps run examples/protocols/pap_and_pact/app.py
 ```
 
 prints both answers, then nine record entries (`company discovered`,

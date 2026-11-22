@@ -9,7 +9,7 @@
  * A scene — the contact card, the restaurant menu, the components gallery —
  * is a canned set of A2UI protocol messages rendered as a surface, no agent
  * behind it. The capacity, factored once here, is *showing such a scene as
- * a workspace view*: the plugin contributes one `LoopViewType` entry whose
+ * a workspace view*: the plugin contributes one `AgentViewType` entry whose
  * component loads lazily, ordered ahead of the chat so the workspace opens
  * on the scene with the conversation one tab away.
  *
@@ -25,7 +25,7 @@ import {
   definePlugin,
   type ReactorPlugin,
 } from '@datalayer/reactor';
-import { LoopViewType, type LoopViewProps } from '../../core';
+import { AgentViewType, type AgentViewProps } from '../../core';
 
 export type A2uiSceneOptions = {
   /** Short slug: `contact-card`, … names the plugin `…-a2ui-scene-<key>`. */
@@ -37,7 +37,7 @@ export type A2uiSceneOptions = {
   emoji?: string;
   icon?: ComponentType<{ size?: number }>;
   /** The scene view, loaded when first shown. */
-  load: () => Promise<{ default: ComponentType<LoopViewProps> }>;
+  load: () => Promise<{ default: ComponentType<AgentViewProps> }>;
 };
 
 export function defineA2uiScenePlugin(
@@ -45,14 +45,14 @@ export function defineA2uiScenePlugin(
 ): ReactorPlugin<Record<string, never>, unknown, unknown> {
   const { key, title, description, icon, load } = options;
   return definePlugin({
-    name: `@datalayer/loop-plugin-a2ui-scene-${key}`,
+    name: `@datalayer/agent-plugin-a2ui-scene-${key}`,
     displayName: title,
     description,
     octicon: options.octicon ?? 'browser',
     emoji: options.emoji,
     contributes: [
       contribution(
-        LoopViewType,
+        AgentViewType,
         {
           viewType: `a2ui-scene-${key}`,
           title,

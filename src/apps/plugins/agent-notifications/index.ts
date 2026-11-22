@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-agent-notifications` — the capacity, as a plugin.
+ * `@datalayer/agent-plugin-agent-notifications` — the capacity, as a plugin.
  *
  * Mounts the `example-notifications` agent and offers what it is worth asking. Cast
  * from the shared capacity mould; see `apps/plugins/agent-capacity`.
@@ -17,7 +17,7 @@
 import { defineAgentCapacityPlugin } from '../agent-capacity';
 
 export const AGENT_NOTIFICATIONS_PLUGIN_NAME =
-  '@datalayer/loop-plugin-agent-notifications';
+  '@datalayer/agent-plugin-agent-notifications';
 
 export const AgentNotificationsPlugin = defineAgentCapacityPlugin({
   key: 'notifications',

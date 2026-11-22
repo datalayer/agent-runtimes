@@ -256,7 +256,7 @@ def test_the_session_settings_take_no_model(
         headers=as_("ada"),
         json={
             **agui("thread-settings-1"),
-            "forwardedProps": {"loop": {"settings": {"model": OPUS}}},
+            "forwardedProps": {"agent": {"settings": {"model": OPUS}}},
         },
     )
     assert run.status_code == 422

@@ -4,13 +4,13 @@
  */
 
 /**
- * A scene's spec, `loop.scene/v1`, as text: how it is read and how it is
+ * A scene's spec, `agent.scene/v1`, as text: how it is read and how it is
  * written — what `appspec.ts` is for an application.
  *
  * agentspecs writes a scene in its own spelling (`talks_to`, `runs_in`) and
  * agent-runtimes' `SceneSpec` in its own (`talksTo`, `runsIn`); a text in
  * either reads (`sceneOfYaml`) and is written back in agentspecs' spelling
- * (`sceneYamlOf`), so that what an editor saves is what `loop` reads. What is
+ * (`sceneYamlOf`), so that what an editor saves is what `agent` reads. What is
  * read *off* a scene rather than written into one — its `setup`, its recorded
  * `played` — is never written into the text and never erased by an edit of it
  * (`SCENE_DERIVED_KEYS`, `sceneWithDerived`). A text's own refusals are the
@@ -37,7 +37,7 @@ import { sceneShapeSays } from './sceneShape';
 export type { SceneSpec };
 
 /** What a scene spec says of itself. */
-export const SCENE_SCHEMA = 'loop.scene/v1';
+export const SCENE_SCHEMA = 'agent.scene/v1';
 
 /** A spec with nothing said yet: signed-in people may watch, the transcript shows everything. */
 export const emptySceneSpec = (): SceneSpec => ({
@@ -186,7 +186,7 @@ export function sceneYamlOf(spec: SceneSpec): string {
 
 /**
  * The scene the text says, in the words the problem is said with when it
- * says none: not YAML, not a mapping, not `loop.scene/v1`. A spec that is
+ * says none: not YAML, not a mapping, not `agent.scene/v1`. A spec that is
  * one is laid over the empty spec, as one read from its item is.
  */
 export function sceneOfYaml(text: string): {
@@ -213,7 +213,7 @@ export function sceneOfYaml(text: string): {
       problem: `The text is not a scene: it says schema ${JSON.stringify(parsed.schema ?? '')}, and a scene says ${SCENE_SCHEMA}.`,
     };
   }
-  // A scene of the wrong shape is refused as `loop` refuses it, before it is
+  // A scene of the wrong shape is refused as `agent` refuses it, before it is
   // read into a spec: read into one, a cast written as one word made the
   // reader throw (`sceneShape`, 2026-10-10). Checked as agentspecs spells it.
   const shape = sceneShapeSays(respelled(parsed, SPEC_KEYS));

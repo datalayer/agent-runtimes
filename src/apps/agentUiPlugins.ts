@@ -17,7 +17,7 @@
  * one tool or one fact, so an agent that names it gets it and every other
  * chat stays as it was.
  *
- * - `loopPlugins` adds them for `uiPlugins`, or for the spec it creates
+ * - `agentPlugins` adds them for `uiPlugins`, or for the spec it creates
  *   (`datalayerAgentSpecId`, `localAgentSpec`);
  * - `appPreset` adds them for an application's `ui`;
  * - `Chat` mounts them on a platform of its own for `uiPlugins`.
@@ -129,9 +129,9 @@ export type AgentUiPlugin = {
    * conversation (a deck, a sheet built in the page), when it can go there.
    */
   side?: (side: SidePlacement) => PluginRef;
-  /** Its plugin for a chrome placement, when it has one (a Loop workspace). */
+  /** Its plugin for a chrome placement, when it has one (an Agent workspace). */
   chrome?: (placement: ChromePlacement) => PluginRef;
-  /** What it draws in the chat's chrome (`Chat`, outside a Loop workspace). */
+  /** What it draws in the chat's chrome (`Chat`, outside an Agent workspace). */
   Chrome?: ComponentType<ChromeComponentProps>;
 };
 
@@ -222,7 +222,7 @@ export const AGENT_UI_PLUGINS: Readonly<Record<string, AgentUiPlugin>> = {
    * Each seed agent's title bar (18 November 2026): buttons, drop-downs and
    * indicators, declared by its UI spec's `header` and set by the agent with
    * the header's frontend tool (`toolCards/headerItems`). None needs a
-   * connection of the person's: a visitor's demo has them. A Loop
+   * connection of the person's: a visitor's demo has them. An Agent
    * workspace's (an Application's); `Chat` does not draw them.
    */
   'social-header': { needsConnection: false, chrome: socialHeaderPlugin },
@@ -281,7 +281,7 @@ export const AGENT_UI_PLUGINS: Readonly<Record<string, AgentUiPlugin>> = {
   },
   /*
    * The plugins of the page, from a button in the footer (the user,
-   * 21 November 2026): Reactor's plugins manager in a dialog. A Loop
+   * 21 November 2026): Reactor's plugins manager in a dialog. An Agent
    * workspace's only — it lists the workspace's platform; a `Chat` outside
    * one has no platform of the page's to list, so no `Chrome`. Nothing needs
    * a connection: a visitor has it.
@@ -293,7 +293,7 @@ export const AGENT_UI_PLUGINS: Readonly<Record<string, AgentUiPlugin>> = {
 
 /**
  * UI the preset mounts in every chat, which a spec may still name: never
- * mounted twice. `browser-session` is drawn by its own plugin in a Loop
+ * mounted twice. `browser-session` is drawn by its own plugin in the Agent workspace
  * workspace and by `Chat` itself (its button) once a spec brings it.
  */
 export const PRESET_UI = new Set([
@@ -462,7 +462,7 @@ export function lockedUiOf(
 
 /**
  * For a visitor, the plugin drawing these UIs' locked chips in the chat's
- * title bar (`@datalayer/loop-plugin-locked-ui`); none when nothing is
+ * title bar (`@datalayer/agent-plugin-locked-ui`); none when nothing is
  * locked.
  */
 export function lockedUiPluginsFor(

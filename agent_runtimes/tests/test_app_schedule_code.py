@@ -8,7 +8,7 @@ among the application's triggers; on the runtime it opens a session of the
 deployment's agent on the session API, said to be woken. An application
 written in Python whose code declared the schedule at that position runs that
 handler, with the session, in the opener's place — as a command's code runs,
-from what the registry holds for it (``loop.app.schedule``). Nobody is
+from what the registry holds for it (``agent.app.schedule``). Nobody is
 present: its rules know it, on the agent the runtime makes as in
 process. Everything runs in process: the runtime's real routes, a model that
 says what it was given, nothing reached over the network.
@@ -47,7 +47,7 @@ def digest() -> tuple[Application, List[str]]:
     """An application with a schedule declared after another trigger, and one in code."""
     application = Application.from_spec(
         {
-            "schema": "loop.app/v1",
+            "schema": "agent.app/v1",
             "id": "digest",
             "name": "Digest",
             "kind": "worker",
@@ -303,7 +303,7 @@ from agent_runtimes.apps import Application, Session
 
 app = Application.from_spec(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "r14-tick",
         "version": "0.0.1",
         "name": "R-14 tick",
@@ -326,7 +326,7 @@ TICK_DEPLOYMENT = {"app_uid": "app-14", "deployment_uid": "dep-14", "version": 2
 
 
 def tick_spec() -> Dict[str, Any]:
-    """The Appspec `loop apps push` builds from the code: its schedule at position 1."""
+    """The Appspec `agent apps push` builds from the code: its schedule at position 1."""
     from agent_runtimes.apps.application import load_application_source
 
     return load_application_source(TICK_SOURCE, "app.py").document
@@ -858,7 +858,7 @@ def _kept_answering(answers_itself: bool) -> Application:
     """A deployment's code kept always on: it answers by itself, or its agent does."""
     application = Application.from_spec(
         {
-            "schema": "loop.app/v1",
+            "schema": "agent.app/v1",
             "id": "p24-kept",
             "name": "Kept Desk",
             "kind": "chat",

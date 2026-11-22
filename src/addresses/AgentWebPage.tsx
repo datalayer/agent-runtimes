@@ -392,7 +392,7 @@ export function AgentWebPage({
   const system = useSystemColorMode();
   const mode = view.interface.theme?.mode;
   const colorMode = mode === 'light' || mode === 'dark' ? mode : system;
-  const variant = (view.interface.theme?.variant || 'loop') as AppThemeVariant;
+  const variant = (view.interface.theme?.variant || 'agent') as AppThemeVariant;
   const accent = (view.interface.accent || undefined) as AppAccent | undefined;
   const { agent } = view;
   return (

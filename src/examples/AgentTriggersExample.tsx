@@ -49,7 +49,7 @@ import { AuthRequiredView, ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { LoopEmbed } from '../apps';
+import { AgentEmbed } from '../apps';
 import { AgentTriggersPlugin } from '../apps/plugins/agent-triggers';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { waitForAgent } from './utils/waitForAgent';
@@ -71,7 +71,7 @@ import { type AgentStreamToolApprovalPayload } from '../types/stream';
 import { AGUIAdapter, VercelAIAdapter } from '../protocols';
 import { createUserMessage } from '../types/messages';
 
-const LOOP_PLUGINS_AGENTTRI = [AgentTriggersPlugin];
+const AGENT_PLUGINS_AGENTTRI = [AgentTriggersPlugin];
 
 const queryClient = new QueryClient();
 
@@ -374,7 +374,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
 
   const createAgent = useCallback(async (): Promise<boolean> => {
     setHookError(null);
-    // Mounting the Loop is what creates the agent: it builds it from the
+    // Mounting the Agent is what creates the agent: it builds it from the
     // triggers capacity plugin's blueprint — so the page is "ready" at once,
     // and only waits for the server to have the agent before it fires
     // triggers at it.
@@ -457,7 +457,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
       finalAssistantText: string | null;
       pendingApproval: boolean;
     }> => {
-      // Two agents, two doors: the trigger agent is the Loop's and speaks
+      // Two agents, two doors: the trigger agent is the Agent's and speaks
       // AG-UI; the approval agent the page makes itself speaks Vercel AI,
       // whose adapter can carry a deferred tool call through an approval.
       const viaVercel = targetAgentId === approvalAgentName;
@@ -1185,14 +1185,14 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
           {/* Left: Chat */}
           <Box flex={1} minWidth={0}>
             {isReady ? (
-              <LoopEmbed
+              <AgentEmbed
                 serverUrl={agentBaseUrl}
                 target="local"
                 showAgentVariants
                 agentId={agentId}
                 editors={false}
                 showHeader
-                plugins={LOOP_PLUGINS_AGENTTRI}
+                plugins={AGENT_PLUGINS_AGENTTRI}
               />
             ) : (
               <Box

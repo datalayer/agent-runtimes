@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""`loop apps deploy`: the Studio's deployments, from a terminal."""
+"""`agent apps deploy`: the Studio's deployments, from a terminal."""
 
 import json
 from typing import Any
@@ -31,7 +31,11 @@ class FakeSpacer:
                 "name_t": "Web Research",
                 "metadata_s": json.dumps({"space": "space-1"}),
                 "model_s": json.dumps(
-                    {"format": "loop.app.item/v1", "spec": {}, "state": {"revision": 3}}
+                    {
+                        "format": "agent.app.item/v1",
+                        "spec": {},
+                        "state": {"revision": 3},
+                    }
                 ),
             }
         }
@@ -171,7 +175,7 @@ def test_a_deployment_is_read_as_ai_agents_answers():
     assert (parsed.version, parsed.state, parsed.target) == (2, "paused", "hosted")
     assert deployment_of(None).version == 1
     assert (
-        version_of_model('{"format": "loop.app.item/v1", "state": {"revision": 4}}')
+        version_of_model('{"format": "agent.app.item/v1", "state": {"revision": 4}}')
         == 4
     )
     # Another form is refused, not guessed at.
@@ -183,7 +187,7 @@ def test_a_deployment_is_read_as_ai_agents_answers():
 # --- a session of a deployment, woken by its trigger ----------------
 
 DIGEST = {
-    "schema": "loop.app/v1",
+    "schema": "agent.app/v1",
     "id": "digest",
     "name": "Digest",
     "kind": "worker",
@@ -280,7 +284,7 @@ def _sse(*events: dict) -> bytes:
     return b"".join(f"data: {json.dumps(event)}\n\n".encode() for event in events)
 
 
-SESSION_SAID = {"type": "CUSTOM", "name": "loop.session", "value": {"uid": "s-1"}}
+SESSION_SAID = {"type": "CUSTOM", "name": "agent.session", "value": {"uid": "s-1"}}
 
 
 def test_a_woken_session_creates_its_agent_then_opens_a_session_woken():

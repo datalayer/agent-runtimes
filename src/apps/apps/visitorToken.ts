@@ -41,7 +41,7 @@ export type DatalayerVisitors = {
 };
 
 /** The id this tab keeps for its visitor. */
-const VISITOR_KEY = 'datalayer-loop-visitor';
+const VISITOR_KEY = 'datalayer-agent-visitor';
 
 /** Minted again this long before the token runs out. */
 const MARGIN_MS = 30_000;

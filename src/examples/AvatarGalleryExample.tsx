@@ -6,7 +6,7 @@
 /**
  * Every avatar of the floating assistant, as a gallery:
  * each one — Datalayer's four, the owl an example plugin
- * contributes to `loop.assistant.character`, a test sprite read through
+ * contributes to `agent.assistant.character`, a test sprite read through
  * the clippy.js reader, the 3D robot drawn with three.js, and, when asked,
  * the characters clippy.js publishes, fetched from jsDelivr — in each state
  * it acts, stepped aside, with its
@@ -270,7 +270,7 @@ function InModes({
   children: (mode: 'light' | 'dark') => React.ReactNode;
 }): JSX.Element {
   const { theme } = useExampleThemeStore();
-  const config = themeConfigs[theme] ?? themeConfigs.loop;
+  const config = themeConfigs[theme] ?? themeConfigs.agent;
   const shown: ('light' | 'dark')[] =
     modes === 'both' ? ['light', 'dark'] : [modes];
   return (

@@ -12,7 +12,7 @@ SHELL=/bin/bash
 	docker-build docker-push docker-release agent-runtime-docker-build agent-runtime-docker-push agent-runtime-docker-release node-agent-artifact-build node-agent-docker-build agent-node-docker-build agent-node-docker-push agent-node-docker-start agent-node-docker-stop agent-node-docker-logs \
 	agents list-specs specs specs-clone specs-generate specs-format \
 	specs-sandbox-variants specs-manifests specs-manifests-check \
-	loop loop-simple loop-data-acquisition loop-financial loop-demo loop-example-nocodemode
+	agent-full agent-simple agent-data-acquisition agent-financial agent-demo agent-example-nocodemode
 
 AGENTSPECS_REPO ?= https://github.com/datalayer/agentspecs.git
 AGENTSPECS_DIR ?= agentspecs
@@ -405,27 +405,27 @@ agents: # agents
 	  --host 0.0.0.0 \
 	  --port 8765
 
-loop: # loop
+agent-full: # agent-full
 	@$(BEDROCK_ENV) \
-		loop --eggs --agentspec-id example-full
+		agent --eggs --agentspec-id example-full
 
-loop-simple: # loop-simple
+agent-simple: # agent-simple
 	@$(BEDROCK_ENV) \
-		loop --eggs --agentspec-id example-simple
+		agent --eggs --agentspec-id example-simple
 
-loop-demo-codemode: # loop-demo-codemode
+agent-demo-codemode: # agent-demo-codemode
 	@$(BEDROCK_ENV) \
 	GOOGLE_OAUTH_CLIENT_ID=${OPENTEAMS_DEMO_GOOGLE_CLIENT_ID} \
 	GOOGLE_OAUTH_CLIENT_SECRET=${OPENTEAMS_DEMO_GOOGLE_CLIENT_SECRET} \
-		loop \
+		agent \
 		  --suggestions "List files located in the sales-data folder of my Google Drive account (eric@datalayer.io),Aggregate all CSV files located in the sales-data folder of my Google Drive account (eric@datalayer.io) into a single file named sales_21-25.csv and save this aggregated file in the sales-data directory of the echarles/openteams-codemode-demo repository." \
 		  --agentspec-id gallery-information-routing
 
-loop-demo-nocodemode: # loop-demo-nocodemode
+agent-demo-nocodemode: # agent-demo-nocodemode
 	@$(BEDROCK_ENV) \
 	GOOGLE_OAUTH_CLIENT_ID=${OPENTEAMS_DEMO_GOOGLE_CLIENT_ID} \
 	GOOGLE_OAUTH_CLIENT_SECRET=${OPENTEAMS_DEMO_GOOGLE_CLIENT_SECRET} \
-		loop \
+		agent \
 		--agentspec-id gallery-information-routing \
 		--suggestions "List files located in the sales-data folder of my Google Drive account (eric@datalayer.io),Aggregate all CSV files located in the sales-data folder of my Google Drive account (eric@datalayer.io) into a single file named sales_21-25.csv and save this aggregated file in the sales-data directory of the echarles/openteams-codemode-demo repository." \
 		--no-codemode

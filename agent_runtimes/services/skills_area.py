@@ -481,6 +481,6 @@ class SkillsArea:
 # NOTE
 # ---------------------------------------------------------------------------
 #
-# Agent-scoped skill state is now managed in ``agent_runtimes.streams.loop``.
+# Agent-scoped skill state is now managed in ``agent_runtimes.streams.pubsub``.
 # This module retains the ``SkillsArea`` class as a reusable utility, but the
 # global singleton store has been removed to avoid multiple state backends.

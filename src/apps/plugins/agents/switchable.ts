@@ -109,7 +109,7 @@ export function heldTargetReason(
   if (fixed && target !== fixed) {
     return `This session runs on ${TARGET_SPECS[fixed].label}: it cannot be moved from here.`;
   }
-  // A host that names its own agent-runtimes server — `app.mount`, `loop apps
+  // A host that names its own agent-runtimes server — `app.mount`, `agent apps
   // run --web` — is not asking for the reader's machine:
   // Local is that server, and it is offered. Held, every message of a page
   // served by its own server went to the visitors' runtime instead
@@ -455,7 +455,7 @@ export function createSwitchableSandboxService({
           // instead, and the console has the reason.
           if (!cancelled) {
             server.setState('error');
-            console.error('[loop] Local agent could not be started:', error);
+            console.error('[agent] Local agent could not be started:', error);
           }
         },
       );

@@ -14,7 +14,7 @@
  * with the A2UI surface plugin's `InlineSurface`, Datalayer's catalog, in
  * the page's theme. A button pressed is the reader's answer to the member
  * that showed it: its words as the next request and its action beside them
- * (`pressedOf`, the `loop.action` the runtime reads), so that an option
+ * (`pressedOf`, the `agent.action` the runtime reads), so that an option
  * that does more than read is decided by the member's rules — and refused
  * to a visitor in a sentence. What came back is said under the surface.
  *

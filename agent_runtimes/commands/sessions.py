@@ -1,12 +1,12 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Sessions: `loop sessions …`.
+"""Sessions: `agent sessions …`.
 
-With nothing else, `loop sessions` is the picker: your sessions in two
+With nothing else, `agent sessions` is the picker: your sessions in two
 groups, **On this machine** and **On Datalayer**, one to choose and resume
 where it lives, pause, end, transfer, export, delete or start over
-(`agent_runtimes.loop.picker`); without a terminal, or with `--json`, the
+(`agent_runtimes.agent.picker`); without a terminal, or with `--json`, the
 same two groups printed. A session on this machine is a folder of
 ``~/.datalayer/sessions`` named by its uid; one on Datalayer is in the
 account's record. `transfer` moves one between the two under the same uid,
@@ -22,7 +22,7 @@ token ``datalayer login`` left (or ``DATALAYER_API_KEY``), for a runtime on
 Datalayer. The session id is the same in both, because the record is one.
 
 Progress goes to standard error, the answers to standard output, as
-``loop --prompt`` does; every refusal is the runtime's sentence, and the
+``agent --prompt`` does; every refusal is the runtime's sentence, and the
 command exits 1 on it.
 """
 
@@ -55,8 +55,8 @@ DEFAULT_SERVER = "http://localhost:8000"
 
 #: The old verbs, retired: each answers with this sentence.
 RETIRED = {
-    "threads": "`loop apps threads` is retired: list your conversations with `loop sessions list [--app <id>]`.",
-    "feedback": "`loop apps feedback` is retired: read what people said of a conversation with `loop sessions feedback <uid>`.",
+    "threads": "`agent apps threads` is retired: list your conversations with `agent sessions list [--app <id>]`.",
+    "feedback": "`agent apps feedback` is retired: read what people said of a conversation with `agent sessions feedback <uid>`.",
 }
 
 
@@ -95,7 +95,7 @@ def _client(server: Optional[str], cloud: bool) -> Any:
     )
     headers: Dict[str, str] = {}
     if cloud:
-        from agent_runtimes.loop.launch import NotSignedIn, make_client
+        from agent_runtimes.agent.launch import NotSignedIn, make_client
 
         try:
             _, token = make_client()
@@ -160,9 +160,9 @@ def _record_listing(params: Dict[str, Any]) -> Dict[str, Any]:
         return _clients["record"](params)
     import asyncio
 
+    from agent_runtimes.agent.launch import NotSignedIn, make_client
     from agent_runtimes.apps.callers import VERIFIER
     from agent_runtimes.apps.session_store import SessionStoreError, _list_sessions
-    from agent_runtimes.loop.launch import NotSignedIn, make_client
 
     try:
         _, token = make_client()
@@ -185,7 +185,7 @@ def _exit(refused: Exception) -> None:
 
 
 def session_line(session: Dict[str, Any]) -> str:
-    """One session as `loop sessions list` prints it (§5 of the session model)."""
+    """One session as `agent sessions list` prints it (§5 of the session model)."""
     turns = int(session.get("turns") or 0)
     runs_on = session.get("runs_on") or {}
     where = (
@@ -225,7 +225,7 @@ def print_sessions_table(sessions: List[Dict[str, Any]], out: Any = None) -> Non
     to its width — the title with an ellipsis, a row one line; piped, with
     nothing cut.
     """
-    from agent_runtimes.loop.session_table import cells_of_session, table_lines
+    from agent_runtimes.agent.session_table import cells_of_session, table_lines
 
     out = out or console
     rows = [
@@ -244,7 +244,7 @@ def print_sessions_table(sessions: List[Dict[str, Any]], out: Any = None) -> Non
 
 
 def show_lines(session: Dict[str, Any]) -> List[str]:
-    """A session, field by field, as `loop sessions show` prints it."""
+    """A session, field by field, as `agent sessions show` prints it."""
     lines = [
         f"uid        {session.get('uid')}",
         f"title      {session.get('title') or '(none)'}",
@@ -272,7 +272,7 @@ def show_lines(session: Dict[str, Any]) -> List[str]:
 
 def _token() -> str:
     """The person's Datalayer token, or ``""`` signed out."""
-    from agent_runtimes.loop.launch import make_client
+    from agent_runtimes.agent.launch import make_client
 
     try:
         _, token = make_client()
@@ -285,7 +285,7 @@ def every_session(token: str, **stubs: Any) -> List[Any]:
     """Every session of the person, of every state, newest first: those on
     this machine and, signed in, those on Datalayer.
     """
-    from agent_runtimes.loop.paused import STATES, paused_sessions
+    from agent_runtimes.agent.paused import STATES, paused_sessions
 
     return paused_sessions(
         token=token,
@@ -297,10 +297,10 @@ def every_session(token: str, **stubs: Any) -> List[Any]:
 
 def listed_sessions(token: str, **stubs: Any) -> List[Any]:
     """The sessions the picker lists: those that run and those that can be
-    gone on with (`agent_runtimes.loop.paused.is_listed`), newest first. An
+    gone on with (`agent_runtimes.agent.paused.is_listed`), newest first. An
     ended session is not among them: `every_session` reads it.
     """
-    from agent_runtimes.loop.paused import LISTED_STATES, listed, paused_sessions
+    from agent_runtimes.agent.paused import LISTED_STATES, listed, paused_sessions
 
     return listed(
         paused_sessions(
@@ -313,8 +313,8 @@ def listed_sessions(token: str, **stubs: Any) -> List[Any]:
 
 
 def _place_of(row: Any, token: str) -> Any:
-    from agent_runtimes.loop.paused import ON_THIS_MACHINE
-    from agent_runtimes.loop.transfer import OnDatalayer, ThisMachine
+    from agent_runtimes.agent.paused import ON_THIS_MACHINE
+    from agent_runtimes.agent.transfer import OnDatalayer, ThisMachine
 
     return ThisMachine() if row.where == ON_THIS_MACHINE else OnDatalayer(token)
 
@@ -326,7 +326,7 @@ def resume_command(row: Any) -> List[str]:
 
 def start_over_command(row: Any) -> List[str]:
     """What opens a new session of the same agent or application, where this one lives."""
-    from agent_runtimes.loop.paused import ON_DATALAYER
+    from agent_runtimes.agent.paused import ON_DATALAYER
 
     place = "--cloud" if row.where == ON_DATALAYER else "--local"
     if row.kind == "agent":
@@ -335,8 +335,8 @@ def start_over_command(row: Any) -> List[str]:
 
 
 def _run_loop(arguments: List[str]) -> None:
-    """Go on as `loop <arguments>`: this process becomes it."""
-    console.print(f"loop {' '.join(arguments)}", markup=False, style="dim")
+    """Go on as `agent <arguments>`: this process becomes it."""
+    console.print(f"agent {' '.join(arguments)}", markup=False, style="dim")
     os.execvp(sys.argv[0], [sys.argv[0], *arguments])
 
 
@@ -393,9 +393,9 @@ def delete_session(uid: str, token: str, where: str = "") -> str:
     """
     import asyncio
 
+    from agent_runtimes.agent.paused import ON_DATALAYER, ON_THIS_MACHINE
+    from agent_runtimes.agent.transfer import OnDatalayer
     from agent_runtimes.apps.session_store import FileSessionStore, SessionStoreError
-    from agent_runtimes.loop.paused import ON_DATALAYER, ON_THIS_MACHINE
-    from agent_runtimes.loop.transfer import OnDatalayer
 
     store = FileSessionStore()
     if where != ON_DATALAYER and store.delete(uid):
@@ -458,13 +458,13 @@ def transfer_session(
     """A session moved to ``cloud`` or to ``local``, asked first unless ``yes``."""
     import asyncio
 
-    from agent_runtimes.loop.transfer import TransferRefused, places, transfer
+    from agent_runtimes.agent.transfer import TransferRefused, places, transfer
 
     try:
         source, destination = places(to, token)
         confirm = None
         if not yes:
-            from agent_runtimes.loop.launch import interactive
+            from agent_runtimes.agent.launch import interactive
 
             if ask is None and not interactive():
                 raise TransferRefused(
@@ -487,7 +487,7 @@ def _confirm(question: str) -> bool:
 
 def perform(action: str, row: Any, token: str) -> str:
     """Do to a session what the picker was asked, and say what was done."""
-    from agent_runtimes.loop.paused import ON_DATALAYER, ON_THIS_MACHINE
+    from agent_runtimes.agent.paused import ON_DATALAYER, ON_THIS_MACHINE
 
     if action == "export":
         return export_to_file(row, token)
@@ -526,22 +526,22 @@ def run_picker(
     launch: Sequence[Tuple[str, str]] = (),
     highlighted: str = "",
 ) -> Optional[Tuple[str, Any]]:
-    """The sessions screen, for `loop sessions`, `loop --resume` and the
-    start of `loop`: the picker in a terminal, the two groups printed
+    """The sessions screen, for `agent sessions`, `agent --resume` and the
+    start of `agent`: the picker in a terminal, the two groups printed
     otherwise — each a markdown table. Listed: the sessions that run and
     those that can be gone on with; ``everything`` lists the ended ones too.
 
-    ``launch``, from the start of `loop`: its launch rows ``(id, label)``,
+    ``launch``, from the start of `agent`: its launch rows ``(id, label)``,
     drawn above the sessions, ``highlighted`` (an id) the one Enter picks.
     Then what was chosen is answered, nothing run: ``(id, None)`` for a
-    launch row, ``("resume", session)`` for a session, which `loop` resumes
-    as `loop --resume <uid>` does, with its own flags; ``None`` when the
+    launch row, ``("resume", session)`` for a session, which `agent` resumes
+    as `agent --resume <uid>` does, with its own flags; ``None`` when the
     person left. With no session listed, the highlighted launch row is
     answered at once, unasked. Without ``launch``, Enter goes on as
-    `loop --resume <uid>` and this process becomes it.
+    `agent --resume <uid>` and this process becomes it.
     """
-    from agent_runtimes.loop.launch import interactive
-    from agent_runtimes.loop.picker import (
+    from agent_runtimes.agent.launch import interactive
+    from agent_runtimes.agent.picker import (
         NOT_LISTED,
         Launch,
         Picker,
@@ -658,7 +658,7 @@ def transfer_command(
         _exit(refused)
         return
     console.print(done.said, markup=False)
-    console.print(f"Go on with it: `loop --resume {uid}`.", markup=False)
+    console.print(f"Go on with it: `agent --resume {uid}`.", markup=False)
 
 
 @app.command(name="delete")
@@ -700,10 +700,10 @@ def delete_command(
 
 
 def _delete_each() -> None:
-    """`loop sessions delete` with no uid: every session, asked of in turn."""
+    """`agent sessions delete` with no uid: every session, asked of in turn."""
     import questionary
 
-    from agent_runtimes.loop.paused import ON_THIS_MACHINE, paused_line
+    from agent_runtimes.agent.paused import ON_THIS_MACHINE, paused_line
 
     token = _token()
     rows = every_session(token)
@@ -790,16 +790,16 @@ def list_sessions(
             f"No {what}"
             + (f" of {app_id}" if app_id else "")
             + "."
-            + ("" if state else " Ended ones: `loop sessions list --state ended`."),
+            + ("" if state else " Ended ones: `agent sessions list --state ended`."),
             markup=False,
         )
         return
     print_sessions_table(sessions)
     if answer.get("has_more"):
-        errors.print(f"More: `loop sessions list --limit {limit * 2}`.")
+        errors.print(f"More: `agent sessions list --limit {limit * 2}`.")
     if not state:
         errors.print(
-            "Ended sessions are not listed: `loop sessions list --state ended`.",
+            "Ended sessions are not listed: `agent sessions list --state ended`.",
             markup=False,
             style="dim",
         )
@@ -901,7 +901,7 @@ def pause(
     said = remembered_line(answer.get("remembered") or {})
     if said:
         console.print(said, markup=False)
-    console.print(f"Resume it: loop sessions resume {answer.get('uid')}", markup=False)
+    console.print(f"Resume it: agent sessions resume {answer.get('uid')}", markup=False)
 
 
 @app.command(name="swap")
@@ -960,7 +960,7 @@ def clone(
     console.print(
         f"Cloned as {answer['uid']} (paused, {answer['turns']} turn{'s' if answer['turns'] != 1 else ''}"
         + (f", on {answer['agent']}" if agent else "")
-        + f"). Resume it: loop sessions resume {answer['uid']}",
+        + f"). Resume it: agent sessions resume {answer['uid']}",
         markup=False,
     )
     if answer.get("said"):
@@ -1047,7 +1047,7 @@ def import_(
             if versions and versions.get("file") != versions.get("current")
             else ""
         )
-        + f"). Resume it: loop sessions resume {answer['uid']}",
+        + f"). Resume it: agent sessions resume {answer['uid']}",
         markup=False,
     )
 
@@ -1097,7 +1097,7 @@ def feedback(
 
 
 def retired(verb: str) -> str:
-    """The sentence a retired `loop apps` verb answers with."""
+    """The sentence a retired `agent apps` verb answers with."""
     return RETIRED[verb]
 
 

@@ -19,18 +19,18 @@ import { contribution, definePlugin } from '@datalayer/reactor';
 import type { ChatAnonymous } from '../../../chat/anonymous/anonymousMode';
 import type { ToolbarItem } from '@datalayer/primer-addons';
 import {
-  LoopAgentGate,
-  LoopChatComposer,
-  LoopChatExtras,
-  LoopChatHeader,
-  LoopChatSuggestion,
-  LoopChatTurn,
-  LoopCommand,
-  LoopFrontendTool,
-  LoopDocumentToolbarItem,
-  LoopNotebookToolbarItem,
-  LoopSessionAction,
-  LoopViewType,
+  AgentGate,
+  AgentChatComposer,
+  AgentChatExtras,
+  AgentChatHeader,
+  AgentChatSuggestion,
+  AgentChatTurn,
+  AgentCommand,
+  AgentFrontendTool,
+  AgentDocumentToolbarItem,
+  AgentNotebookToolbarItem,
+  AgentSessionAction,
+  AgentViewType,
   type EditorToolbarContext,
 } from '../../core';
 import { createTurnFeed, feedWriters } from './turnState';
@@ -116,7 +116,7 @@ export type ChatSaid = {
 export type ChatPluginConfig = {
   /**
    * The theme the conversation wears, by name: the person's unless said. An
-   * application says `loop` — the conversation then takes
+   * application says `agent` — the conversation then takes
    * the theme's bubbles, pills and colours whatever the page around it wears.
    */
   themeVariant?: string;
@@ -145,7 +145,7 @@ export type ChatPluginConfig = {
    * prompt closed while the key is checked and once the turns or the minutes
    * are spent. The limited preview itself (the turns left, *Sign in*) is the
    * limited-preview plugin's indicator beside the composer, mounted by the
-   * preset (20 November 2026). Set from `runAsAnonymous` (`loopPlugins`).
+   * preset (20 November 2026). Set from `runAsAnonymous` (`agentPlugins`).
    */
   anonymous?: ChatAnonymous;
   /**
@@ -246,7 +246,7 @@ export type ChatPluginConfig = {
    * `floating` takes it out of the layout entirely: the same composer — the
    * lexical editor, the tools/skills/model footer, all of it — in a draggable
    * card over the workspace, bottom-centre until somebody moves it. For a
-   * shell that is mostly canvas. `loopPlugins({ floatingPrompt: true })` asks
+   * shell that is mostly canvas. `agentPlugins({ floatingPrompt: true })` asks
    * for it together with the `/prompt` command that focuses it.
    *
    * `top` puts it above everything — a horizontal bar across the workspace,
@@ -301,7 +301,7 @@ export type ChatPluginConfig = {
   fullScreenTopOffset: number | string;
 };
 
-export const CHAT_PLUGIN_NAME = '@datalayer/loop-plugin-chat';
+export const CHAT_PLUGIN_NAME = '@datalayer/agent-plugin-chat';
 
 export const ChatPlugin = definePlugin<ChatPluginConfig>({
   name: CHAT_PLUGIN_NAME,
@@ -323,24 +323,24 @@ export const ChatPlugin = definePlugin<ChatPluginConfig>({
   },
   // Declared, not merely used: the registry knows who contributed to a point,
   // it cannot know who opened it, and a point nobody has filled yet is exactly
-  // when knowing it exists is most useful. `LoopFrontendTool` is the chat's
+  // when knowing it exists is most useful. `AgentFrontendTool` is the chat's
   // own opening: the tools its agent is handed, filled by the notebook, the
   // document, and whoever else owns a capability. The composer and the title
   // bar are openings too: the chat assembles their props, and the
   // input-prompt and chat-header plugins render them.
   contributionPoints: [
-    LoopAgentGate,
-    LoopFrontendTool,
-    LoopChatComposer,
-    LoopChatHeader,
-    LoopChatSuggestion,
-    LoopChatExtras,
-    LoopChatTurn,
+    AgentGate,
+    AgentFrontendTool,
+    AgentChatComposer,
+    AgentChatHeader,
+    AgentChatSuggestion,
+    AgentChatExtras,
+    AgentChatTurn,
   ],
   /*
    * The current turn, contributed at build so it is one per reactor.
    *
-   * The chat both opens `LoopChatTurn` and fills it: the point is how anyone
+   * The chat both opens `AgentChatTurn` and fills it: the point is how anyone
    * else reads the turn (the page layout's panel under the prompt), and the
    * chat view is what keeps it current. The feed's writers travel with the
    * contribution so the view can find its own reactor's feed without a
@@ -349,7 +349,7 @@ export const ChatPlugin = definePlugin<ChatPluginConfig>({
   build: ctx => {
     const feed = createTurnFeed();
     ctx.contribute(
-      LoopChatTurn,
+      AgentChatTurn,
       {
         id: 'chat-turn',
         turn: feed.turn,
@@ -365,13 +365,13 @@ export const ChatPlugin = definePlugin<ChatPluginConfig>({
     // The thread's menu entries: each says with `when` whether it
     // applies; the chat draws what the registry holds, a host adds its own.
     ...CHAT_SESSION_ACTIONS.map(entry =>
-      contribution(LoopSessionAction, entry, {
+      contribution(AgentSessionAction, entry, {
         id: entry.id,
         order: entry.order,
       }),
     ),
     contribution(
-      LoopViewType,
+      AgentViewType,
       {
         viewType: 'chat',
         title: 'Chat',
@@ -382,7 +382,7 @@ export const ChatPlugin = definePlugin<ChatPluginConfig>({
       { id: 'chat', order: 0 },
     ),
     contribution(
-      LoopCommand,
+      AgentCommand,
       {
         name: 'chat',
         description: 'Show the conversation',
@@ -399,11 +399,11 @@ export const ChatPlugin = definePlugin<ChatPluginConfig>({
     // With the toolbar plugin switched off there is no bar, so these have
     // nowhere to sit and are not drawn — which is the honest outcome.
     contribution(
-      LoopNotebookToolbarItem,
+      AgentNotebookToolbarItem,
       {
         items: (context: EditorToolbarContext) => [
           agentAction(context, {
-            key: 'loop-compact',
+            key: 'agent-compact',
             ariaLabel: 'Compact this notebook',
             title:
               'Ask @NotebookCompactor to shorten it without changing results',
@@ -413,7 +413,7 @@ export const ChatPlugin = definePlugin<ChatPluginConfig>({
               '@NotebookCompactor compact this notebook without changing what it computes.',
           }),
           agentAction(context, {
-            key: 'loop-reproduce',
+            key: 'agent-reproduce',
             ariaLabel: 'Check reproducibility',
             title: 'Ask @NotebookReproducer to run it on a fresh sandbox',
             icon: SyncIcon,
@@ -428,11 +428,11 @@ export const ChatPlugin = definePlugin<ChatPluginConfig>({
     // And on the document's, which had no agent actions at all before there
     // was a point to put them on.
     contribution(
-      LoopDocumentToolbarItem,
+      AgentDocumentToolbarItem,
       {
         items: (context: EditorToolbarContext) => [
           agentAction(context, {
-            key: 'loop-summarise',
+            key: 'agent-summarise',
             ariaLabel: 'Summarise this document',
             title: 'Ask the agent for a summary of what this document says',
             icon: SparkleFillIcon,

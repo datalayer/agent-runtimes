@@ -25,7 +25,7 @@ from agent_runtimes.apps.plugins import (
 from agent_runtimes.specs.apps import APP_CATALOGUE
 
 EDITED = {
-    "schema": "loop.app/v1",
+    "schema": "agent.app/v1",
     "id": "web-research",
     "name": "Web research, edited",
     "kind": "chat",
@@ -50,7 +50,7 @@ def test_an_application_of_its_own_wins_over_the_catalogue_and_goes_away() -> No
     registry = PluginPlatform()
     edited = load_app(EDITED)
     manifest = register_app(edited, registry)
-    assert manifest.name == app_plugin_name("web-research") == "loop-app-web-research"
+    assert manifest.name == app_plugin_name("web-research") == "agent-app-web-research"
     assert (manifest.display_name, manifest.emoji) == (
         "Web research, edited",
         "\U0001f9ed",

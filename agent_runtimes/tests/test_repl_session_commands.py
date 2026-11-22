@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """The REPL's session commands: `/sessions`, `/resume <uid>`,
-`/swap <agent>`, `/clone [turn]`, `/export [file]` through `LoopSession`,
+`/swap <agent>`, `/clone [turn]`, `/export [file]` through `AgentSession`,
 each against a fake session; `/swap` shows the sentence; `/browser` unchanged.
 """
 
@@ -17,11 +17,11 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
+from agent_runtimes.agent.session import AgentSession
 from agent_runtimes.apps import sessions
 from agent_runtimes.apps.session_store import FileSessionStore, use_session_store
 from agent_runtimes.chat.commands import clone, export, resume, swap
 from agent_runtimes.chat.commands import sessions as sessions_command
-from agent_runtimes.loop.session import LoopSession
 from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
     ASSISTANT,
     Runtime,
@@ -78,7 +78,7 @@ def tux(
         return None
 
     sessions.use_rebinder(rebound)
-    session = LoopSession(
+    session = AgentSession(
         server_url="http://runtime", agent_id="notes-assistant", token="ada"
     )
     made = SimpleNamespace(

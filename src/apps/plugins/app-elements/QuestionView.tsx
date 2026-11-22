@@ -4,7 +4,7 @@
  */
 
 /**
- * What an application's code asks, drawn from its display: `application/vnd.datalayer.loop.question+json`, shown under the
+ * What an application's code asks, drawn from its display: `application/vnd.datalayer.agent.question+json`, shown under the
  * message that asks it in words. A choice is its buttons — a rule's prompt
  * is Allow and Refuse — the words a field, a form its fields; each press of
  * it is `reactor.answer`, through the display's `act`, which the chat sends
@@ -25,7 +25,7 @@ import type { RendererProps } from '@datalayer/reactor/ui/react';
 
 /** The display type of what an application's code asks (`QuestionShown`). */
 export const QUESTION_DISPLAY_TYPE =
-  'application/vnd.datalayer.loop.question+json';
+  'application/vnd.datalayer.agent.question+json';
 
 const SchemaForm = lazy(
   () => import('../../../components/a2ui/datalayer/SchemaForm'),

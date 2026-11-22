@@ -82,8 +82,8 @@ describes four it does not offer, `gemini-cli`, `fast-agent`, `goose` and
 `openhands`, each with `enabled: false` and an `unavailable_because` sentence
 (a harness that is not offered says why, and an offered one says nothing: the
 spec is refused at load otherwise). Naming one of the three is refused with
-that sentence by the runtime (`harness_agent`), by `loop --harness`, by
-`GET /api/v1/harnesses/{id}` and by the Studio's checks; `loop harnesses` and
+that sentence by the runtime (`harness_agent`), by `agent --harness`, by
+`GET /api/v1/harnesses/{id}` and by the Studio's checks; `agent harnesses` and
 the reference page list them apart. **`custom`** is the one harness with no
 `acp` block, whose command an organization's own harness spec names; the
 shared catalogue refuses it to any agent. The reference page of every harness,
@@ -242,8 +242,8 @@ what needs the runtime.
   the displays, `datalayer.harness.<plan|commands|mode|tool_call>` custom
   events), `acp` and `a2a`; `vercel-ai` is refused in a sentence (it reads a
   pydantic-ai agent).
-- **`loop --harness <id>`** runs a harness on this machine over stdio, the
-  directory `loop` runs from as its workspace, the platform's default policy, the record
+- **`agent --harness <id>`** runs a harness on this machine over stdio, the
+  directory `agent` runs from as its workspace, the platform's default policy, the record
   in the terminal; a missing adapter, secret or workspace is refused before
   anything starts, each in a sentence — *OpenCode's adapter opencode-ai@1.19.0
   is not installed: neither ~/.agent-shield/harnesses/opencode@1.19.0/node_modules/.bin/opencode
@@ -251,7 +251,7 @@ what needs the runtime.
   and so is a harness the catalogue does not offer (*The harness 'goose'
   (goose) is not offered: …*). The adapter is installed into the Shield's
   prefix by `agent-shield setup --harness <id>` (an `npm install --prefix`,
-  pinned), never fetched by `npx -y` at first run. **`loop harnesses`** lists
+  pinned), never fetched by `npx -y` at first run. **`agent harnesses`** lists
   the offered harnesses with each one's adapter, credential, third-party
   serving, licence and capabilities, then the ones not offered with why.
 - **The orchestrator's channel** (the agent-runtimes part):
@@ -278,7 +278,7 @@ is what a local run needs; a runtime reads none of it). So a subscription login
 is never offered (a browser flow no pod has, and Claude Code's and Codex's
 terms), nor is a key of Datalayer's own lent to a harness.
 
-| Harness | On Datalayer (a runtime pod) | On your machine (`loop --harness`, Desktop, VS Code) |
+| Harness | On Datalayer (a runtime pod) | On your machine (`agent --harness`, Desktop, VS Code) |
 | --- | --- | --- |
 | Claude Code | ai-inference's Anthropic-shaped route, answered from Bedrock, through the runtime, which holds its token (below) | `ANTHROPIC_API_KEY` from the environment, or set once for the Shield |
 | OpenCode | ai-inference's chat completions: its configuration given inline (`OPENCODE_CONFIG_CONTENT`), one `datalayer` provider on `@ai-sdk/openai-compatible`, every other provider off | `ANTHROPIC_API_KEY` (the provider it is configured with) from the environment |
@@ -363,7 +363,7 @@ the runtime its token. It waits up to 30 seconds
 (`AGENT_RUNTIMES_INFERENCE_TOKEN_WAIT`, in seconds); with still no token it is
 refused in a sentence that says how long it waited, and a token that has
 already expired is refused at once. Elsewhere — a runtime started by
-hand, `loop --harness` — Claude Code takes `ANTHROPIC_API_KEY` from the
+hand, `agent --harness` — Claude Code takes `ANTHROPIC_API_KEY` from the
 environment, as above. The route is `adapters/harness_inference.py`.
 
 ## In the runtime image (the four since image 0.0.66, 28 October 2026)
@@ -397,7 +397,7 @@ image pruner's keep-list know the tags.
 
 ## On r1 (drilled 15 October 2026, runtime image 0.0.44 on agent-runtimes 1.5.33)
 
-- **The platform path.** `loop --cloud -a example-harness-claude-code -q …`
+- **The platform path.** `agent --cloud -a example-harness-claude-code -q …`
   got a fresh 0.0.44 pool pod, and the companion's `configure-from-spec`,
   asking the runtime which secrets its specs declare, was told the harness's
   key; the account holds none, so the runtime was refused in a sentence before
@@ -431,7 +431,7 @@ printed in the folder's README and run by `test_the_shield_examples.py`:
 
 | Script | What it shows |
 | --- | --- |
-| `harness_on_the_runtime.py` | what `loop --harness <id>` starts — the runtime, the harness made at startup, one AG-UI turn — with the Shield's decisions and the diff; `--harness claude-code` with the adapter and a funded key; `--serve` for the web chat |
+| `harness_on_the_runtime.py` | what `agent --harness <id>` starts — the runtime, the harness made at startup, one AG-UI turn — with the Shield's decisions and the diff; `--harness claude-code` with the adapter and a funded key; `--serve` for the web chat |
 | `proxy_from_python.py` | `agent-shield run` driven from Python as an editor drives it: an edit done, a push asked and refused, a read outside refused, the audit read back |
 | `session_rule.py` | a rule added to a running session holding from the next action, one that would loosen the organization's refused, the rule taken back |
 | `audit_read_back.py` | the application's record of a turn: the decisions, the approval, the diff and the terminal kept whole, a key redacted everywhere |

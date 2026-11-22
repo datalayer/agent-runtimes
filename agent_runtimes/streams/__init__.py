@@ -3,7 +3,8 @@
 
 """Websocket stream message models and pub/sub loop."""
 
-from .loop import (
+from .messages import AgentMonitoringSnapshotPayload, AgentStreamMessage
+from .pubsub import (
     build_codemode_status,
     build_context_snapshot,
     build_full_context,
@@ -15,7 +16,6 @@ from .loop import (
     subscribe_stream,
     unsubscribe_stream,
 )
-from .messages import AgentMonitoringSnapshotPayload, AgentStreamMessage
 
 __all__ = [
     "AgentMonitoringSnapshotPayload",

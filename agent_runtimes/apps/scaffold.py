@@ -1,11 +1,11 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A new application's folder: what ``loop apps init`` writes.
+"""A new application's folder: what ``agent apps init`` writes.
 
 A folder named by the application's id, holding its Appspec, ``app.yaml``,
 and — written in Python — the ``app.py`` that is its source, the spec beside
-it built from it (`loop apps build`), so the two agree from the start:
+it built from it (`agent apps build`), so the two agree from the start:
 
 - **blank**: a chat or a widget, its agent the one a blank application starts
   with in the Studio (``example-simple``) — written in Python, the blank
@@ -24,7 +24,7 @@ in Python, the ``app.py`` still builds the spec committed beside it.
 Its test conversations themselves are asked of a model by a validation run,
 on the Validate tab once the application is pushed.
 
-Every folder written is checked as `loop apps validate` checks a file: a
+Every folder written is checked as `agent apps validate` checks a file: a
 scaffold that would not validate is refused, never written.
 """
 
@@ -109,11 +109,11 @@ def _blank_python(app_id: str, kind: str) -> str:
     """The ``app.py`` of a blank application: its agent answers each message."""
     return f'''"""{app_id}: an application written in Python.
 
-Written by `loop apps init`. This file is the application's source:
+Written by `agent apps init`. This file is the application's source:
 
-    loop apps run app.py --watch            # here, rebuilt on every change
-    loop apps build app.py --out app.yaml   # its Appspec, after a change
-    loop apps validate app.py               # the instant checks
+    agent apps run app.py --watch            # here, rebuilt on every change
+    agent apps build app.py --out app.yaml   # its Appspec, after a change
+    agent apps validate app.py               # the instant checks
 """
 
 from agent_runtimes.apps import Application, Session
@@ -138,12 +138,12 @@ async def reply(session: Session, text: str) -> None:
 
 
 def _python_of_spec(
-    text: str, app_id: str, example: str, *, by: str = "loop apps init"
+    text: str, app_id: str, example: str, *, by: str = "agent apps init"
 ) -> str:
     """An ``app.py`` holding a spec — an example's, or one ejected — ready for code."""
     origin = (
         f"the `{example}` example"
-        if by == "loop apps init"
+        if by == "agent apps init"
         else f"`{example}`, its spec until then"
     )
     if '"""' in text or "\\" in text:
@@ -156,9 +156,9 @@ Written by `{by}` from {origin}, written as a spec:
 its spec is held below, ready for code; with no reaction of its own, its agent
 answers. This file is the application's source:
 
-    loop apps run app.py --watch            # here, rebuilt on every change
-    loop apps build app.py --out app.yaml   # its Appspec, after a change
-    loop apps validate app.py               # the instant checks
+    agent apps run app.py --watch            # here, rebuilt on every change
+    agent apps build app.py --out app.yaml   # its Appspec, after a change
+    agent apps validate app.py               # the instant checks
 """
 
 import yaml
@@ -178,20 +178,20 @@ def _tests(app_id: str, python: bool) -> str:
         f'''
 
 def test_app_py_builds_the_spec_committed_beside_it() -> None:
-    # The app.py is the source: after a change, `loop apps build app.py --out app.yaml`.
+    # The app.py is the source: after a change, `agent apps build app.py --out app.yaml`.
     assert build(FOLDER / "{PYTHON_FILE}").text == SPEC.read_text()
 '''
         if python
         else ""
     )
     imports = "\nfrom agent_runtimes.apps.build import build\n" if python else ""
-    return f'''"""{app_id}: the checks its CI runs, `pytest tests` (written by `loop apps init`).
+    return f'''"""{app_id}: the checks its CI runs, `pytest tests` (written by `agent apps init`).
 
 The instant checks of its spec, and that each of its test conversations says
 what it is asked and what it should do. The conversations themselves are
-asked of a model by a validation run: `loop apps push {SPEC_FILE}`, then
+asked of a model by a validation run: `agent apps push {SPEC_FILE}`, then
 *Run its tests* on its Validate tab. The safety set every application
-answers: `loop apps validate {SPEC_FILE} --safety --local`.
+answers: `agent apps validate {SPEC_FILE} --safety --local`.
 """
 
 from pathlib import Path
@@ -261,7 +261,7 @@ def _blank(folder: Path, app_id: str, kind: str, python: bool) -> List[str]:
         default_flow_style=False,
     )
     (folder / SPEC_FILE).write_text(
-        "# Written by `loop apps init`: its Appspec, reviewed like code.\n" + body
+        "# Written by `agent apps init`: its Appspec, reviewed like code.\n" + body
     )
     return [SPEC_FILE]
 
@@ -284,7 +284,7 @@ def _from_example(folder: Path, app_id: str, example: str, python: bool) -> List
     if python:
         return _write_python(folder, _python_of_spec(text, app_id, example))
     (folder / SPEC_FILE).write_text(
-        f"# Written by `loop apps init` from the `{example}` example.\n" + text
+        f"# Written by `agent apps init` from the `{example}` example.\n" + text
     )
     return [SPEC_FILE]
 
@@ -307,7 +307,7 @@ def eject(spec_path: Path, out: Optional[Path] = None, *, force: bool = False) -
     Parameters
     ----------
     spec_path : Path
-        The application's Appspec (``loop apps pull`` writes it).
+        The application's Appspec (``agent apps pull`` writes it).
     out : Path, optional
         The file written; ``app.py`` beside the spec when unsaid.
     force : bool
@@ -335,7 +335,7 @@ def eject(spec_path: Path, out: Optional[Path] = None, *, force: bool = False) -
     target = out or spec_path.with_name(PYTHON_FILE)
     if target.exists() and not force:
         raise InitRefused(f"{target} is there already; --force overwrites it.")
-    source = _python_of_spec(text, loaded["id"], spec_path.name, by="loop apps eject")
+    source = _python_of_spec(text, loaded["id"], spec_path.name, by="agent apps eject")
     with tempfile.TemporaryDirectory() as scratch:
         staged = Path(scratch) / target.name
         staged.write_text(source)
@@ -360,7 +360,7 @@ class Ejected:
     """The ``app.py`` that holds its spec, ready for code."""
 
     spec: str
-    """The Appspec that file builds, as `loop apps build` writes it."""
+    """The Appspec that file builds, as `agent apps build` writes it."""
 
 
 def eject_text(spec: str) -> Ejected:

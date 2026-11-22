@@ -53,8 +53,8 @@ import {
 } from '@datalayer/reactor/ui/react';
 import type { ToolCallRenderContext } from '../../types/chat';
 import type { FrontendToolDefinition } from '../../types/tools';
-import { LoopChatExtras, type LoopChatExtrasValue } from '../core';
-import type { LoopSidePanelProps } from '../shell/SidePanel';
+import { AgentChatExtras, type AgentChatExtrasValue } from '../core';
+import type { AgentSidePanelProps } from '../shell/SidePanel';
 import { CHROME_SLOTS, SIDE_PANEL_ORDER, type SidePlacement } from './chrome';
 import {
   encodeFormSubmission,
@@ -88,7 +88,7 @@ export function submitCard(
 
 /**
  * The platform of an agent's own UI plugins, for a `Chat` that is not inside
- * a Loop workspace (`Chat uiPlugins`): its transcript draws the tool calls
+ * an Agent workspace (`Chat uiPlugins`): its transcript draws the tool calls
  * those plugins bind from it rather than from the page's reactor.
  */
 export const AgentUiPlatformContext = createContext<ReactorPlatform | null>(
@@ -407,12 +407,12 @@ export type ToolCardPluginOptions = {
    * the conversation keeping a line per call (`useCardSide`). The panel
    * opens with its tools' first call.
    */
-  Panel?: ComponentType<LoopSidePanelProps>;
+  Panel?: ComponentType<AgentSidePanelProps>;
   /** The width its panel needs, in pixels. */
   panelWidth?: number;
   /**
    * Components it draws in the workspace's slots besides its cards (the
-   * notices over the view, `LoopSlots.viewOverlay`).
+   * notices over the view, `AgentSlots.viewOverlay`).
    */
   components?: ReadonlyArray<{
     slot: string;
@@ -434,9 +434,9 @@ export function useCardSide(): SidePlacement | undefined {
   return useContext(CardSideContext);
 }
 
-/** The plugin's name: `@datalayer/loop-plugin-<id>`. */
+/** The plugin's name: `@datalayer/agent-plugin-<id>`. */
 export const toolCardPluginName = (id: string): string =>
-  `@datalayer/loop-plugin-${id}`;
+  `@datalayer/agent-plugin-${id}`;
 
 /** The display type a tool card plugin renders. */
 export const toolCardType = (id: string): string =>
@@ -490,10 +490,10 @@ export function defineToolCardPlugin(
       ...(options.frontendTools?.length
         ? [
             contribution(
-              LoopChatExtras,
+              AgentChatExtras,
               {
                 id: `${options.id}-tools`,
-                extras: signal<LoopChatExtrasValue>({
+                extras: signal<AgentChatExtrasValue>({
                   frontendTools: options.frontendTools,
                 }),
               },

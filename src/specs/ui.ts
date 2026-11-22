@@ -22,7 +22,7 @@ export const A2UI_SURFACE_UI_0_0_1: UISpec = {
     'Forms, tables and cards the agent draws in the conversation; what you fill in goes back to it.',
   emoji: '🪟',
   octicon: 'browser',
-  plugin: '@datalayer/loop-plugin-a2ui-surface',
+  plugin: '@datalayer/agent-plugin-a2ui-surface',
   folder: 'a2ui-surface',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -31,7 +31,7 @@ export const A2UI_SURFACE_UI_0_0_1: UISpec = {
     kind: 'plugin',
   },
   contributions: {
-    slots: ['loop.chatHeader'],
+    slots: ['agent.chatHeader'],
     points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
     commands: [],
   },
@@ -1118,7 +1118,7 @@ export const A2UI_VIEW_UI_0_0_1: UISpec = {
     'The last result of the code, shown as a page you can use rather than as raw output.',
   emoji: '🖼',
   octicon: 'browser',
-  plugin: '@datalayer/loop-plugin-a2ui',
+  plugin: '@datalayer/agent-plugin-a2ui',
   folder: 'a2ui',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -1128,7 +1128,7 @@ export const A2UI_VIEW_UI_0_0_1: UISpec = {
   },
   contributions: {
     slots: [],
-    points: ['loop.command', 'loop.viewType'],
+    points: ['agent.command', 'agent.viewType'],
     commands: ['a2ui'],
   },
   contributionPoints: [],
@@ -1146,7 +1146,7 @@ export const AGENTSPECS_UI_0_0_1: UISpec = {
   description: 'Choose which agent answers in this conversation.',
   emoji: '🤖',
   octicon: 'people',
-  plugin: '@datalayer/loop-plugin-agentspecs',
+  plugin: '@datalayer/agent-plugin-agentspecs',
   folder: 'agentspecs',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -1155,8 +1155,8 @@ export const AGENTSPECS_UI_0_0_1: UISpec = {
     kind: 'plugin',
   },
   contributions: {
-    slots: ['loop.header'],
-    points: ['loop.command'],
+    slots: ['agent.header'],
+    points: ['agent.command'],
     commands: ['agents'],
   },
   contributionPoints: [],
@@ -1175,7 +1175,7 @@ export const ANALYSIS_HEADER_UI_0_0_1: UISpec = {
     "The Functional Analyst's title bar: what is being analysed, whether its diagrams parse, and a button that asks for it on the canvas.",
   emoji: '📐',
   octicon: 'workflow',
-  plugin: '@datalayer/loop-plugin-analysis-header',
+  plugin: '@datalayer/agent-plugin-analysis-header',
   folder: 'analysis-header',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -1184,8 +1184,8 @@ export const ANALYSIS_HEADER_UI_0_0_1: UISpec = {
     kind: 'factory',
   },
   contributions: {
-    slots: ['loop.chatHeader'],
-    points: ['loop.chat.extras'],
+    slots: ['agent.chatHeader'],
+    points: ['agent.chat.extras'],
     commands: [],
   },
   contributionPoints: [],
@@ -1237,7 +1237,7 @@ export const APP_ACTIVITY_UI_0_0_1: UISpec = {
     'What your application did, is doing, and is about to do, beside its page.',
   emoji: '🕘',
   octicon: 'pulse',
-  plugin: '@datalayer/loop-plugin-app-activity',
+  plugin: '@datalayer/agent-plugin-app-activity',
   folder: 'app-activity',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -1247,7 +1247,7 @@ export const APP_ACTIVITY_UI_0_0_1: UISpec = {
   },
   per: 'application',
   contributions: {
-    slots: ['loop.sidebar'],
+    slots: ['agent.sidebar'],
     points: [],
     commands: [],
   },
@@ -1267,7 +1267,7 @@ export const APP_COMPONENTS_UI_0_0_1: UISpec = {
     "The components your application's developer wrote, on its page and in its answers.",
   emoji: '🧩',
   octicon: 'apps',
-  plugin: '@datalayer/loop-plugin-app-components',
+  plugin: '@datalayer/agent-plugin-app-components',
   folder: 'app-components',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -1278,7 +1278,7 @@ export const APP_COMPONENTS_UI_0_0_1: UISpec = {
   per: 'application',
   contributions: {
     slots: [],
-    points: ['loop.a2ui.component', 'loop.canvas.block'],
+    points: ['agent.a2ui.component', 'agent.canvas.block'],
     commands: [],
   },
   contributionPoints: [],
@@ -1297,7 +1297,7 @@ export const APP_COMPUTER_UI_0_0_1: UISpec = {
     'The computer your application works on: what ran there, its files, and taking it over.',
   emoji: '🖥️',
   octicon: 'device-desktop',
-  plugin: '@datalayer/loop-plugin-app-computer',
+  plugin: '@datalayer/agent-plugin-app-computer',
   folder: 'app-computer',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -1307,7 +1307,7 @@ export const APP_COMPUTER_UI_0_0_1: UISpec = {
   },
   per: 'application',
   contributions: {
-    slots: ['loop.sidebar'],
+    slots: ['agent.sidebar'],
     points: [],
     commands: [],
   },
@@ -1327,7 +1327,7 @@ export const APP_ELEMENTS_UI_0_0_1: UISpec = {
     'What your application opens beside the conversation: a side panel, a page of its own, a question for you.',
   emoji: '🗂️',
   octicon: 'sidebar-expand',
-  plugin: '@datalayer/loop-plugin-app-elements',
+  plugin: '@datalayer/agent-plugin-app-elements',
   folder: 'app-elements',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -1355,7 +1355,7 @@ export const APP_PAGE_UI_0_0_1: UISpec = {
   description: "Your application's page, drawn beside its conversation.",
   emoji: '📈',
   octicon: 'browser',
-  plugin: '@datalayer/loop-plugin-app-page',
+  plugin: '@datalayer/agent-plugin-app-page',
   folder: 'app-page',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -1366,7 +1366,7 @@ export const APP_PAGE_UI_0_0_1: UISpec = {
   per: 'application',
   contributions: {
     slots: [],
-    points: ['loop.chat.surface'],
+    points: ['agent.chat.surface'],
     commands: [],
   },
   contributionPoints: [],
@@ -1385,7 +1385,7 @@ export const APP_RULES_UI_0_0_1: UISpec = {
     'When your application acts alone, when it asks you, and the approvals waiting for your yes.',
   emoji: '🛡️',
   octicon: 'shield-check',
-  plugin: '@datalayer/loop-plugin-app-rules',
+  plugin: '@datalayer/agent-plugin-app-rules',
   folder: 'app-rules',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -1395,7 +1395,7 @@ export const APP_RULES_UI_0_0_1: UISpec = {
   },
   per: 'application',
   contributions: {
-    slots: ['loop.sidebar'],
+    slots: ['agent.sidebar'],
     points: [],
     commands: [],
   },
@@ -1415,7 +1415,7 @@ export const AWS_HEADER_UI_0_0_1: UISpec = {
     "The Steward's title bar: the monthly savings it found, a drop-down for the region it looks at, and how much of the compute Savings Plans cover.",
   emoji: '💸',
   octicon: 'graph',
-  plugin: '@datalayer/loop-plugin-aws-header',
+  plugin: '@datalayer/agent-plugin-aws-header',
   folder: 'aws-header',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -1424,8 +1424,8 @@ export const AWS_HEADER_UI_0_0_1: UISpec = {
     kind: 'factory',
   },
   contributions: {
-    slots: ['loop.chatHeader'],
-    points: ['loop.chat.extras', 'loop.runProps'],
+    slots: ['agent.chatHeader'],
+    points: ['agent.chat.extras', 'agent.runProps'],
     commands: [],
   },
   contributionPoints: [],
@@ -1503,7 +1503,7 @@ export const AWS_SAVINGS_BADGE_UI_0_0_1: UISpec = {
     "This session's estimated monthly savings and the AWS account they were found in, in the chat's title bar, read from the recommendations recorded (record_recommendation, list_recommendations).",
   emoji: '💸',
   octicon: 'graph',
-  plugin: '@datalayer/loop-plugin-aws-savings-badge',
+  plugin: '@datalayer/agent-plugin-aws-savings-badge',
   folder: 'aws-savings-badge',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -1512,7 +1512,7 @@ export const AWS_SAVINGS_BADGE_UI_0_0_1: UISpec = {
     kind: 'factory',
   },
   contributions: {
-    slots: ['loop.chatHeader'],
+    slots: ['agent.chatHeader'],
     points: [],
     commands: [],
   },
@@ -1532,7 +1532,7 @@ export const AWS_SAVINGS_UI_0_0_1: UISpec = {
     'The recommended savings, largest first, each with its evidence, its state and its estimated monthly saving, and their sum (list_recommendations).',
   emoji: '💸',
   octicon: 'list-ordered',
-  plugin: '@datalayer/loop-plugin-aws-savings',
+  plugin: '@datalayer/agent-plugin-aws-savings',
   folder: 'aws-savings',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -1561,7 +1561,7 @@ export const BANK_RECONCILIATION_UI_0_0_1: UISpec = {
     'Bank lines beside the invoices they would settle, with the difference and how sure the agent is; you tick the matches you approve and send them back (show_reconciliation).',
   emoji: '🧾',
   octicon: 'git-compare',
-  plugin: '@datalayer/loop-plugin-bank-reconciliation',
+  plugin: '@datalayer/agent-plugin-bank-reconciliation',
   folder: 'bank-reconciliation',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -1590,7 +1590,7 @@ export const BASKET_TOTAL_UI_0_0_1: UISpec = {
     "The basket the agent is putting together, in the chat's title bar: how many items and its total, read from the last basket it showed (show_basket).",
   emoji: '🛒',
   octicon: 'package',
-  plugin: '@datalayer/loop-plugin-basket-total',
+  plugin: '@datalayer/agent-plugin-basket-total',
   folder: 'basket-total',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -1599,7 +1599,7 @@ export const BASKET_TOTAL_UI_0_0_1: UISpec = {
     kind: 'factory',
   },
   contributions: {
-    slots: ['loop.chatHeader'],
+    slots: ['agent.chatHeader'],
     points: [],
     commands: [],
   },
@@ -1619,7 +1619,7 @@ export const BLUESKY_POST_PREVIEW_UI_0_0_1: UISpec = {
     'A post or reply on Bluesky as it will stand there, with its length against the 300 characters Bluesky takes and its images, above its approval (post_to_bluesky, reply_on_bluesky).',
   emoji: '🦋',
   octicon: 'megaphone',
-  plugin: '@datalayer/loop-plugin-bluesky-post-preview',
+  plugin: '@datalayer/agent-plugin-bluesky-post-preview',
   folder: 'bluesky-post-preview',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -1648,7 +1648,7 @@ export const BOOKS_HEADER_UI_0_0_1: UISpec = {
     "The Accountant's title bar: a drop-down for the period it reads, how many payments are still to match, and the invoices still open.",
   emoji: '🧮',
   octicon: 'book',
-  plugin: '@datalayer/loop-plugin-books-header',
+  plugin: '@datalayer/agent-plugin-books-header',
   folder: 'books-header',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -1657,8 +1657,8 @@ export const BOOKS_HEADER_UI_0_0_1: UISpec = {
     kind: 'factory',
   },
   contributions: {
-    slots: ['loop.chatHeader'],
-    points: ['loop.chat.extras', 'loop.runProps'],
+    slots: ['agent.chatHeader'],
+    points: ['agent.chat.extras', 'agent.runProps'],
     commands: [],
   },
   contributionPoints: [],
@@ -1728,7 +1728,7 @@ export const BROWSER_SESSION_UI_0_0_1: UISpec = {
     "Sign in to LinkedIn in your runtime's own browser, from the chat, so that its MCP server reads and acts through your session (the user, 15 November 2026).",
   emoji: '🌐',
   octicon: 'browser',
-  plugin: '@datalayer/loop-plugin-browser-session',
+  plugin: '@datalayer/agent-plugin-browser-session',
   folder: 'browser-session',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -1737,7 +1737,7 @@ export const BROWSER_SESSION_UI_0_0_1: UISpec = {
     kind: 'plugin',
   },
   contributions: {
-    slots: ['loop.chatHeader'],
+    slots: ['agent.chatHeader'],
     points: [],
     commands: [],
   },
@@ -1757,7 +1757,7 @@ export const CANVAS_BLOCKS_UI_0_0_1: UISpec = {
     "The blocks you place on your application's page in the visual editor, one set for each part that draws them.",
   emoji: '🧱',
   octicon: 'apps',
-  plugin: '@datalayer/loop-plugin-ui',
+  plugin: '@datalayer/agent-plugin-ui',
   folder: 'canvas-blocks',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -1768,7 +1768,7 @@ export const CANVAS_BLOCKS_UI_0_0_1: UISpec = {
   per: 'ui',
   contributions: {
     slots: [],
-    points: ['loop.canvas.block'],
+    points: ['agent.canvas.block'],
     commands: [],
   },
   contributionPoints: [],
@@ -1787,7 +1787,7 @@ export const CANVAS_PARTS_UI_0_0_1: UISpec = {
     'What you drop on your agent in the visual editor: connections, skills, models, rules, tests and events.',
   emoji: '🧰',
   octicon: 'package',
-  plugin: '@datalayer/loop-plugin-parts',
+  plugin: '@datalayer/agent-plugin-parts',
   folder: 'canvas-parts',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -1798,7 +1798,7 @@ export const CANVAS_PARTS_UI_0_0_1: UISpec = {
   per: 'source',
   contributions: {
     slots: [],
-    points: ['loop.canvas.part'],
+    points: ['agent.canvas.part'],
     commands: [],
   },
   contributionPoints: [],
@@ -1817,7 +1817,7 @@ export const CHAT_EXTRAS_UI_0_0_1: UISpec = {
     'A live banner over the conversation and a status line under it, set by the page around it.',
   emoji: '📣',
   octicon: 'megaphone',
-  plugin: '@datalayer/loop-plugin-chat-extras',
+  plugin: '@datalayer/agent-plugin-chat-extras',
   folder: 'chat-extras',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -1827,7 +1827,7 @@ export const CHAT_EXTRAS_UI_0_0_1: UISpec = {
   },
   contributions: {
     slots: [],
-    points: ['loop.chat.extras'],
+    points: ['agent.chat.extras'],
     commands: [],
   },
   contributionPoints: [],
@@ -1846,7 +1846,7 @@ export const CHAT_HEADER_UI_0_0_1: UISpec = {
     "The conversation's title bar: who answers, what it runs on, and its actions.",
   emoji: '🏷️',
   octicon: 'rows',
-  plugin: '@datalayer/loop-plugin-chat-header',
+  plugin: '@datalayer/agent-plugin-chat-header',
   folder: 'chat-header',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -1856,7 +1856,7 @@ export const CHAT_HEADER_UI_0_0_1: UISpec = {
   },
   contributions: {
     slots: [],
-    points: ['loop.chat.header'],
+    points: ['agent.chat.header'],
     commands: [],
   },
   contributionPoints: [],
@@ -1874,7 +1874,7 @@ export const CHAT_VIEW_UI_0_0_1: UISpec = {
   description: 'Back to the conversation alone, from under the composer.',
   emoji: '💬',
   octicon: 'comment-discussion',
-  plugin: '@datalayer/loop-plugin-chat-view',
+  plugin: '@datalayer/agent-plugin-chat-view',
   folder: 'chat-view',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -1883,7 +1883,7 @@ export const CHAT_VIEW_UI_0_0_1: UISpec = {
     kind: 'plugin',
   },
   contributions: {
-    slots: ['loop.promptAction'],
+    slots: ['agent.promptAction'],
     points: [],
     commands: [],
   },
@@ -1903,7 +1903,7 @@ export const CHAT_UI_0_0_1: UISpec = {
     'The conversation: what you ask, what it answers, and the work it opens beside it.',
   emoji: '💬',
   octicon: 'comment-discussion',
-  plugin: '@datalayer/loop-plugin-chat',
+  plugin: '@datalayer/agent-plugin-chat',
   folder: 'chat',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -1914,23 +1914,23 @@ export const CHAT_UI_0_0_1: UISpec = {
   contributions: {
     slots: [],
     points: [
-      'loop.chat.turn',
-      'loop.command',
-      'loop.document.toolbar.item',
-      'loop.notebook.toolbar.item',
-      'loop.session.action',
-      'loop.viewType',
+      'agent.chat.turn',
+      'agent.command',
+      'agent.document.toolbar.item',
+      'agent.notebook.toolbar.item',
+      'agent.session.action',
+      'agent.viewType',
     ],
     commands: ['chat'],
   },
   contributionPoints: [
-    'loop.agent.available',
-    'loop.chat.composer',
-    'loop.chat.extras',
-    'loop.chat.header',
-    'loop.chat.suggestion',
-    'loop.chat.turn',
-    'loop.frontendTool',
+    'agent.available',
+    'agent.chat.composer',
+    'agent.chat.extras',
+    'agent.chat.header',
+    'agent.chat.suggestion',
+    'agent.chat.turn',
+    'agent.frontendTool',
   ],
   settings: {
     type: 'object',
@@ -2029,16 +2029,16 @@ export const COMMANDS_UI_0_0_1: UISpec = {
   description: 'Every command at hand, with Ctrl-K.',
   emoji: '⌘',
   octicon: 'command-palette',
-  plugin: '@datalayer/loop-plugin-commands',
+  plugin: '@datalayer/agent-plugin-commands',
   folder: 'commands',
   implementation: {
     package: '@datalayer/agent-runtimes',
     module: 'lib/apps/plugins/commands',
-    export: 'LoopCommandsPlugin',
+    export: 'AgentCommandsPlugin',
     kind: 'plugin',
   },
   contributions: {
-    slots: ['loop.status'],
+    slots: ['agent.status'],
     points: [],
     commands: [],
   },
@@ -2058,7 +2058,7 @@ export const COMPOSER_PORTAL_UI_0_0_1: UISpec = {
     "A button in the chat's toolbar that opens the application's Composer full screen: its Canvas, its spec and its Python, read only. Every application's chat has it, listed in its `ui` or not, unless its spec leaves it out (`interface.composer_portal_disabled: true`). Needs no connection: an anonymous visitor has it.",
   emoji: '🧱',
   octicon: 'pencil',
-  plugin: '@datalayer/loop-plugin-composer-portal',
+  plugin: '@datalayer/agent-plugin-composer-portal',
   folder: 'composer-portal',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -2067,7 +2067,7 @@ export const COMPOSER_PORTAL_UI_0_0_1: UISpec = {
     kind: 'factory',
   },
   contributions: {
-    slots: ['loop.promptAction'],
+    slots: ['agent.promptAction'],
     points: [],
     commands: [],
   },
@@ -2086,7 +2086,7 @@ export const DOCUMENT_TOOLBAR_UI_0_0_1: UISpec = {
   description: "Shows what the document's code blocks run on.",
   emoji: '🔵',
   octicon: 'circle',
-  plugin: '@datalayer/loop-plugin-document-toolbar',
+  plugin: '@datalayer/agent-plugin-document-toolbar',
   folder: 'document-toolbar',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -2096,10 +2096,10 @@ export const DOCUMENT_TOOLBAR_UI_0_0_1: UISpec = {
   },
   contributions: {
     slots: [],
-    points: ['loop.document.toolbar'],
+    points: ['agent.document.toolbar'],
     commands: [],
   },
-  contributionPoints: ['loop.document.toolbar.item'],
+  contributionPoints: ['agent.document.toolbar.item'],
   settings: {},
   renderers: [],
   placements: [],
@@ -2114,7 +2114,7 @@ export const DOCUMENT_VIEW_UI_0_0_1: UISpec = {
   description: 'The document beside the conversation, from under the composer.',
   emoji: '📄',
   octicon: 'file',
-  plugin: '@datalayer/loop-plugin-document-view',
+  plugin: '@datalayer/agent-plugin-document-view',
   folder: 'document-view',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -2123,7 +2123,7 @@ export const DOCUMENT_VIEW_UI_0_0_1: UISpec = {
     kind: 'plugin',
   },
   contributions: {
-    slots: ['loop.promptAction'],
+    slots: ['agent.promptAction'],
     points: [],
     commands: [],
   },
@@ -2142,7 +2142,7 @@ export const DOCUMENT_UI_0_0_1: UISpec = {
   description: 'A document beside the conversation, written with the agent.',
   emoji: '📄',
   octicon: 'file',
-  plugin: '@datalayer/loop-plugin-document',
+  plugin: '@datalayer/agent-plugin-document',
   folder: 'document',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -2152,10 +2152,10 @@ export const DOCUMENT_UI_0_0_1: UISpec = {
   },
   contributions: {
     slots: [],
-    points: ['loop.chat.surface', 'loop.command'],
+    points: ['agent.chat.surface', 'agent.command'],
     commands: ['document'],
   },
-  contributionPoints: ['loop.document.opening', 'loop.document.toolbar'],
+  contributionPoints: ['agent.document.opening', 'agent.document.toolbar'],
   settings: {},
   renderers: [],
   placements: [],
@@ -2171,7 +2171,7 @@ export const EARTH_AREA_UI_0_0_1: UISpec = {
     "The area and the dates Terra searched, in the chat's title bar, read from its last scene search (search_earth_datagranules, show_scenes).",
   emoji: '🗺️',
   octicon: 'location',
-  plugin: '@datalayer/loop-plugin-earth-area',
+  plugin: '@datalayer/agent-plugin-earth-area',
   folder: 'earth-area',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -2180,7 +2180,7 @@ export const EARTH_AREA_UI_0_0_1: UISpec = {
     kind: 'factory',
   },
   contributions: {
-    slots: ['loop.chatHeader'],
+    slots: ['agent.chatHeader'],
     points: [],
     commands: [],
   },
@@ -2200,7 +2200,7 @@ export const EARTH_HEADER_UI_0_0_1: UISpec = {
     "Terra's title bar: a drop-down for the sensor it searches, and the cloud cover of the scene it is reading.",
   emoji: '🛰️',
   octicon: 'globe',
-  plugin: '@datalayer/loop-plugin-earth-header',
+  plugin: '@datalayer/agent-plugin-earth-header',
   folder: 'earth-header',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -2209,8 +2209,8 @@ export const EARTH_HEADER_UI_0_0_1: UISpec = {
     kind: 'factory',
   },
   contributions: {
-    slots: ['loop.chatHeader'],
-    points: ['loop.chat.extras', 'loop.runProps'],
+    slots: ['agent.chatHeader'],
+    points: ['agent.chat.extras', 'agent.runProps'],
     commands: [],
   },
   contributionPoints: [],
@@ -2270,7 +2270,7 @@ export const EARTH_INDEX_UI_0_0_1: UISpec = {
     'An index computed from the pixels (NDVI, NDWI, NBR) over an area on each date, the change between the dates, its map and what limits the reading (show_index_result).',
   emoji: '🌿',
   octicon: 'graph',
-  plugin: '@datalayer/loop-plugin-earth-index',
+  plugin: '@datalayer/agent-plugin-earth-index',
   folder: 'earth-index',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -2299,7 +2299,7 @@ export const EARTH_SCENES_UI_0_0_1: UISpec = {
     'The satellite scenes found, by date, each with its collection, sensor and cloud cover as the catalogue gave them (show_scenes).',
   emoji: '🛰️',
   octicon: 'globe',
-  plugin: '@datalayer/loop-plugin-earth-scenes',
+  plugin: '@datalayer/agent-plugin-earth-scenes',
   folder: 'earth-scenes',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -2327,7 +2327,7 @@ export const INPUT_PROMPT_UI_0_0_1: UISpec = {
   description: 'Where you write to the agent, under or over the conversation.',
   emoji: '✏️',
   octicon: 'pencil',
-  plugin: '@datalayer/loop-plugin-input-prompt',
+  plugin: '@datalayer/agent-plugin-input-prompt',
   folder: 'input-prompt',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -2337,10 +2337,10 @@ export const INPUT_PROMPT_UI_0_0_1: UISpec = {
   },
   contributions: {
     slots: [],
-    points: ['loop.chat.composer'],
+    points: ['agent.chat.composer'],
     commands: [],
   },
-  contributionPoints: ['loop.prompt.panel'],
+  contributionPoints: ['agent.prompt.panel'],
   settings: {},
   renderers: [],
   placements: [],
@@ -2356,7 +2356,7 @@ export const LINKEDIN_LINK_UI_0_0_1: UISpec = {
     "Link LinkedIn in Settings, in the chat's title bar, while your LinkedIn is not linked through Datalayer or its 60-day grant lapsed; brought by the datalayer-social LinkedIn tools, never for an anonymous visitor.",
   emoji: '🔗',
   octicon: 'link',
-  plugin: '@datalayer/loop-plugin-linkedin-link',
+  plugin: '@datalayer/agent-plugin-linkedin-link',
   folder: 'linkedin-link',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -2365,7 +2365,7 @@ export const LINKEDIN_LINK_UI_0_0_1: UISpec = {
     kind: 'factory',
   },
   contributions: {
-    slots: ['loop.chatBanner'],
+    slots: ['agent.chatBanner'],
     points: [],
     commands: [],
   },
@@ -2385,7 +2385,7 @@ export const LINKEDIN_POST_PREVIEW_UI_0_0_1: UISpec = {
     'A post or comment on LinkedIn as it will stand there, with its length and its image, above its approval (post_to_linkedin, comment_on_linkedin).',
   emoji: '💼',
   octicon: 'megaphone',
-  plugin: '@datalayer/loop-plugin-linkedin-post-preview',
+  plugin: '@datalayer/agent-plugin-linkedin-post-preview',
   folder: 'linkedin-post-preview',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -2413,7 +2413,7 @@ export const MODELS_UI_0_0_1: UISpec = {
   description: 'Which model answers, and the models you may choose from.',
   emoji: '🧠',
   octicon: 'cpu',
-  plugin: '@datalayer/loop-plugin-models',
+  plugin: '@datalayer/agent-plugin-models',
   folder: 'models',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -2423,7 +2423,7 @@ export const MODELS_UI_0_0_1: UISpec = {
   },
   contributions: {
     slots: [],
-    points: ['loop.command'],
+    points: ['agent.command'],
     commands: ['models'],
   },
   contributionPoints: [],
@@ -2442,7 +2442,7 @@ export const NOTEBOOK_HEADER_UI_0_0_1: UISpec = {
     "The Jupyter Data Analyst's title bar: the dataset it works on, what has run, and a button that asks for a profile of the data.",
   emoji: '📓',
   octicon: 'table',
-  plugin: '@datalayer/loop-plugin-notebook-header',
+  plugin: '@datalayer/agent-plugin-notebook-header',
   folder: 'notebook-header',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -2451,8 +2451,8 @@ export const NOTEBOOK_HEADER_UI_0_0_1: UISpec = {
     kind: 'factory',
   },
   contributions: {
-    slots: ['loop.chatHeader'],
-    points: ['loop.chat.extras'],
+    slots: ['agent.chatHeader'],
+    points: ['agent.chat.extras'],
     commands: [],
   },
   contributionPoints: [],
@@ -2503,7 +2503,7 @@ export const NOTEBOOK_TOOLBAR_UI_0_0_1: UISpec = {
   description: 'Shows what the notebook is running on.',
   emoji: '🟢',
   octicon: 'circle',
-  plugin: '@datalayer/loop-plugin-notebook-toolbar',
+  plugin: '@datalayer/agent-plugin-notebook-toolbar',
   folder: 'notebook-toolbar',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -2513,10 +2513,10 @@ export const NOTEBOOK_TOOLBAR_UI_0_0_1: UISpec = {
   },
   contributions: {
     slots: [],
-    points: ['loop.notebook.toolbar'],
+    points: ['agent.notebook.toolbar'],
     commands: [],
   },
-  contributionPoints: ['loop.notebook.toolbar.item'],
+  contributionPoints: ['agent.notebook.toolbar.item'],
   settings: {},
   renderers: [],
   placements: [],
@@ -2531,7 +2531,7 @@ export const NOTEBOOK_VIEW_UI_0_0_1: UISpec = {
   description: 'The notebook beside the conversation, from under the composer.',
   emoji: '📓',
   octicon: 'rows',
-  plugin: '@datalayer/loop-plugin-notebook-view',
+  plugin: '@datalayer/agent-plugin-notebook-view',
   folder: 'notebook-view',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -2540,7 +2540,7 @@ export const NOTEBOOK_VIEW_UI_0_0_1: UISpec = {
     kind: 'plugin',
   },
   contributions: {
-    slots: ['loop.promptAction'],
+    slots: ['agent.promptAction'],
     points: [],
     commands: [],
   },
@@ -2559,7 +2559,7 @@ export const NOTEBOOK_UI_0_0_1: UISpec = {
   description: 'A notebook beside the conversation, its code run as you go.',
   emoji: '📓',
   octicon: 'rows',
-  plugin: '@datalayer/loop-plugin-notebook',
+  plugin: '@datalayer/agent-plugin-notebook',
   folder: 'notebook',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -2569,10 +2569,10 @@ export const NOTEBOOK_UI_0_0_1: UISpec = {
   },
   contributions: {
     slots: [],
-    points: ['loop.chat.surface', 'loop.command'],
+    points: ['agent.chat.surface', 'agent.command'],
     commands: ['notebook'],
   },
-  contributionPoints: ['loop.notebook.opening', 'loop.notebook.toolbar'],
+  contributionPoints: ['agent.notebook.opening', 'agent.notebook.toolbar'],
   settings: {},
   renderers: [],
   placements: [],
@@ -2588,7 +2588,7 @@ export const NOTICES_UI_0_0_1: UISpec = {
     'A short notice the agent slides in from an edge of the chat for a few seconds: info, success, warning or error, a title and a line, said to come from the agent.',
   emoji: '🔔',
   octicon: 'bell',
-  plugin: '@datalayer/loop-plugin-notices',
+  plugin: '@datalayer/agent-plugin-notices',
   folder: 'notices',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -2597,9 +2597,9 @@ export const NOTICES_UI_0_0_1: UISpec = {
     kind: 'plugin',
   },
   contributions: {
-    slots: ['loop.viewOverlay'],
+    slots: ['agent.viewOverlay'],
     points: [
-      'loop.chat.extras',
+      'agent.chat.extras',
       'reactor.ui.renderer',
       'reactor.ui.toolBinding',
     ],
@@ -2621,7 +2621,7 @@ export const ODOO_CONTEXT_UI_0_0_1: UISpec = {
     "The Odoo company the agent works in and the period it reads, in the chat's title bar, from what Odoo answered (odoo_get_context) and the balances it showed.",
   emoji: '🏢',
   octicon: 'briefcase',
-  plugin: '@datalayer/loop-plugin-odoo-context',
+  plugin: '@datalayer/agent-plugin-odoo-context',
   folder: 'odoo-context',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -2630,7 +2630,7 @@ export const ODOO_CONTEXT_UI_0_0_1: UISpec = {
     kind: 'factory',
   },
   contributions: {
-    slots: ['loop.chatHeader'],
+    slots: ['agent.chatHeader'],
     points: [],
     commands: [],
   },
@@ -2650,7 +2650,7 @@ export const PAGE_DECK_UI_0_0_1: UISpec = {
     'A deck the agent builds in the conversation, slide by slide, with tools run in the page: shown as it is built, its notes under it, presented full screen.',
   emoji: '🎞️',
   octicon: 'project',
-  plugin: '@datalayer/loop-plugin-page-deck',
+  plugin: '@datalayer/agent-plugin-page-deck',
   folder: 'page-deck',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -2661,7 +2661,7 @@ export const PAGE_DECK_UI_0_0_1: UISpec = {
   contributions: {
     slots: [],
     points: [
-      'loop.chat.extras',
+      'agent.chat.extras',
       'reactor.ui.renderer',
       'reactor.ui.toolBinding',
     ],
@@ -2683,7 +2683,7 @@ export const PAGE_EXCALIDRAW_UI_0_0_1: UISpec = {
     'Drawings the agent makes in the conversation on an Excalidraw canvas, with tools run in the page: shown as they are drawn, editable by the person, its shapes bound so they move together.',
   emoji: '🖌️',
   octicon: 'paintbrush',
-  plugin: '@datalayer/loop-plugin-page-excalidraw',
+  plugin: '@datalayer/agent-plugin-page-excalidraw',
   folder: 'page-excalidraw',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -2694,7 +2694,7 @@ export const PAGE_EXCALIDRAW_UI_0_0_1: UISpec = {
   contributions: {
     slots: [],
     points: [
-      'loop.chat.extras',
+      'agent.chat.extras',
       'reactor.ui.renderer',
       'reactor.ui.toolBinding',
     ],
@@ -2716,17 +2716,17 @@ export const PAGE_LAYOUT_UI_0_0_1: UISpec = {
     'The work on a centred sheet like a document, the composer above it and the conversation in a panel beside it; or the conversation and the work side by side.',
   emoji: '📄',
   octicon: 'file',
-  plugin: '@datalayer/loop-plugin-page-layout',
+  plugin: '@datalayer/agent-plugin-page-layout',
   folder: 'page-layout',
   implementation: {
     package: '@datalayer/agent-runtimes',
     module: 'lib/apps/plugins/page-layout',
-    export: 'LoopPageLayoutPlugin',
+    export: 'AgentPageLayoutPlugin',
     kind: 'plugin',
   },
   contributions: {
-    slots: ['loop.header'],
-    points: ['loop.chat.layout', 'loop.prompt.panel'],
+    slots: ['agent.header'],
+    points: ['agent.chat.layout', 'agent.prompt.panel'],
     commands: [],
   },
   contributionPoints: [],
@@ -2812,7 +2812,7 @@ export const PAGE_MERMAID_UI_0_0_1: UISpec = {
     "Mermaid diagrams the agent writes in the conversation, with tools run in the page: each source checked by Mermaid's parser before it is shown, drawn in the page's colours, its source a click away.",
   emoji: '🧜',
   octicon: 'workflow',
-  plugin: '@datalayer/loop-plugin-page-mermaid',
+  plugin: '@datalayer/agent-plugin-page-mermaid',
   folder: 'page-mermaid',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -2823,7 +2823,7 @@ export const PAGE_MERMAID_UI_0_0_1: UISpec = {
   contributions: {
     slots: [],
     points: [
-      'loop.chat.extras',
+      'agent.chat.extras',
       'reactor.ui.renderer',
       'reactor.ui.toolBinding',
     ],
@@ -2845,7 +2845,7 @@ export const PAGE_SHEET_UI_0_0_1: UISpec = {
     'A spreadsheet the agent fills in the conversation, with tools run in the page: shown as it is built, editable by the person, its formulas computed by Datalayer Cells, exported as CSV.',
   emoji: '📑',
   octicon: 'table',
-  plugin: '@datalayer/loop-plugin-page-sheet',
+  plugin: '@datalayer/agent-plugin-page-sheet',
   folder: 'page-sheet',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -2856,7 +2856,7 @@ export const PAGE_SHEET_UI_0_0_1: UISpec = {
   contributions: {
     slots: [],
     points: [
-      'loop.chat.extras',
+      'agent.chat.extras',
       'reactor.ui.renderer',
       'reactor.ui.toolBinding',
     ],
@@ -2878,7 +2878,7 @@ export const PAP_PURCHASE_UI_0_0_1: UISpec = {
     "A company's operation you approve, in the chat: the company, its summary and every term, the exact revision and until when it holds, above the chat's own approval (pap_confirm).",
   emoji: '💳',
   octicon: 'credit-card',
-  plugin: '@datalayer/loop-plugin-pap-purchase',
+  plugin: '@datalayer/agent-plugin-pap-purchase',
   folder: 'pap-purchase',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -2907,7 +2907,7 @@ export const PAP_SIGN_IN_UI_0_0_1: UISpec = {
     'Where your agent asks you to sign in at a company: its page, the code, and until when.',
   emoji: '🔑',
   octicon: 'sign-in',
-  plugin: '@datalayer/loop-plugin-pap-sign-in',
+  plugin: '@datalayer/agent-plugin-pap-sign-in',
   folder: 'pap-sign-in',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -2916,7 +2916,7 @@ export const PAP_SIGN_IN_UI_0_0_1: UISpec = {
     kind: 'plugin',
   },
   contributions: {
-    slots: ['loop.chatHeader'],
+    slots: ['agent.chatHeader'],
     points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
     commands: [],
   },
@@ -2933,10 +2933,10 @@ export const PLUGIN_MANAGER_UI_0_0_1: UISpec = {
   version: '0.0.1',
   name: 'Plugins',
   description:
-    "A plug button in the chat's footer, in its row under the prompt (`loop.promptStatus`, usable while the prompt is closed), that opens the plugins manager in a dialog over the page: every plugin of the application's platform, filtered by name, each with a switch to turn it off and back on while the application runs. Every application has it, listed in its `ui` or not, unless its spec leaves it out (`interface.plugin_manager_disabled: true`). Needs no connection: an anonymous visitor has it.",
+    "A plug button in the chat's footer, in its row under the prompt (`agent.promptStatus`, usable while the prompt is closed), that opens the plugins manager in a dialog over the page: every plugin of the application's platform, filtered by name, each with a switch to turn it off and back on while the application runs. Every application has it, listed in its `ui` or not, unless its spec leaves it out (`interface.plugin_manager_disabled: true`). Needs no connection: an anonymous visitor has it.",
   emoji: '🔌',
   octicon: 'plug',
-  plugin: '@datalayer/loop-plugin-plugin-manager',
+  plugin: '@datalayer/agent-plugin-plugin-manager',
   folder: 'plugin-manager',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -2945,7 +2945,7 @@ export const PLUGIN_MANAGER_UI_0_0_1: UISpec = {
     kind: 'factory',
   },
   contributions: {
-    slots: ['loop.promptStatus'],
+    slots: ['agent.promptStatus'],
     points: [],
     commands: [],
   },
@@ -2965,7 +2965,7 @@ export const PRODUCT_CARDS_UI_0_0_1: UISpec = {
     "Products as cards — photo, title, price, rating and stock, a grid for a list — and a quote or a test order with each product's photo and the total (list_products, find_products, get_product, quote_basket, place_test_order).",
   emoji: '🛍️',
   octicon: 'apps',
-  plugin: '@datalayer/loop-plugin-product-cards',
+  plugin: '@datalayer/agent-plugin-product-cards',
   folder: 'product-cards',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -2994,7 +2994,7 @@ export const PRODUCT_COMPARISON_UI_0_0_1: UISpec = {
     'The products the agent compared, side by side — price, variant, availability, rating, seller and photo — and the one it would pick with why (show_comparison).',
   emoji: '📊',
   octicon: 'table',
-  plugin: '@datalayer/loop-plugin-product-comparison',
+  plugin: '@datalayer/agent-plugin-product-comparison',
   folder: 'product-comparison',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -3023,7 +3023,7 @@ export const PROMPT_UI_0_0_1: UISpec = {
     'The composer in a card you move over the page, and the commands that bring it back or start over.',
   emoji: '🪶',
   octicon: 'paper-airplane',
-  plugin: '@datalayer/loop-plugin-prompt',
+  plugin: '@datalayer/agent-plugin-prompt',
   folder: 'prompt',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -3032,8 +3032,8 @@ export const PROMPT_UI_0_0_1: UISpec = {
     kind: 'plugin',
   },
   contributions: {
-    slots: ['loop.promptAction'],
-    points: ['loop.command'],
+    slots: ['agent.promptAction'],
+    points: ['agent.command'],
     commands: ['new', 'prompt'],
   },
   contributionPoints: [],
@@ -3052,7 +3052,7 @@ export const SHOP_HEADER_UI_0_0_1: UISpec = {
     "The Shopper's title bar: the basket it is putting together (items and total), a budget drop-down, and whether a purchase waits for the person's approval.",
   emoji: '🛍️',
   octicon: 'package',
-  plugin: '@datalayer/loop-plugin-shop-header',
+  plugin: '@datalayer/agent-plugin-shop-header',
   folder: 'shop-header',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -3061,8 +3061,8 @@ export const SHOP_HEADER_UI_0_0_1: UISpec = {
     kind: 'factory',
   },
   contributions: {
-    slots: ['loop.chatHeader'],
-    points: ['loop.chat.extras', 'loop.runProps'],
+    slots: ['agent.chatHeader'],
+    points: ['agent.chat.extras', 'agent.runProps'],
     commands: [],
   },
   contributionPoints: [],
@@ -3134,7 +3134,7 @@ export const SHOPPING_BASKET_UI_0_0_1: UISpec = {
     'The basket the agent put together: each item with its photo, its seller and price, the shipping and the total summed by the tool; nothing is bought from it (show_basket).',
   emoji: '🛒',
   octicon: 'package',
-  plugin: '@datalayer/loop-plugin-shopping-basket',
+  plugin: '@datalayer/agent-plugin-shopping-basket',
   folder: 'shopping-basket',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -3163,7 +3163,7 @@ export const SIDE_PANELS_UI_0_0_1: UISpec = {
     "The agent opens and closes the chat's left and right panels, where its UI placed there shows: the deck it builds, the sheet it fills, its title bar's controls.",
   emoji: '🗂️',
   octicon: 'sidebar-expand',
-  plugin: '@datalayer/loop-plugin-side-panels',
+  plugin: '@datalayer/agent-plugin-side-panels',
   folder: 'side-panels',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -3174,7 +3174,7 @@ export const SIDE_PANELS_UI_0_0_1: UISpec = {
   contributions: {
     slots: [],
     points: [
-      'loop.chat.extras',
+      'agent.chat.extras',
       'reactor.ui.renderer',
       'reactor.ui.toolBinding',
     ],
@@ -3196,7 +3196,7 @@ export const SOCIAL_ACCOUNTS_UI_0_0_1: UISpec = {
     'Which of X, Bluesky and LinkedIn you linked, as whom, and whether each posts, reads or needs connecting again: drawn where the Marketer reads your accounts (social_accounts).',
   emoji: '🪪',
   octicon: 'person',
-  plugin: '@datalayer/loop-plugin-social-accounts',
+  plugin: '@datalayer/agent-plugin-social-accounts',
   folder: 'social-accounts',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -3205,7 +3205,7 @@ export const SOCIAL_ACCOUNTS_UI_0_0_1: UISpec = {
     kind: 'factory',
   },
   contributions: {
-    slots: ['loop.chatHeader'],
+    slots: ['agent.chatHeader'],
     points: [],
     commands: [],
   },
@@ -3225,7 +3225,7 @@ export const SOCIAL_HEADER_UI_0_0_1: UISpec = {
     "The Marketer's title bar: a drop-down for the network it drafts for, and how many drafts wait for the person's approval.",
   emoji: '📣',
   octicon: 'megaphone',
-  plugin: '@datalayer/loop-plugin-social-header',
+  plugin: '@datalayer/agent-plugin-social-header',
   folder: 'social-header',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -3234,8 +3234,8 @@ export const SOCIAL_HEADER_UI_0_0_1: UISpec = {
     kind: 'factory',
   },
   contributions: {
-    slots: ['loop.chatHeader'],
-    points: ['loop.chat.extras', 'loop.runProps'],
+    slots: ['agent.chatHeader'],
+    points: ['agent.chat.extras', 'agent.runProps'],
     commands: [],
   },
   contributionPoints: [],
@@ -3301,7 +3301,7 @@ export const SPREADSHEET_VIEW_UI_0_0_1: UISpec = {
     'The spreadsheet beside the conversation, from under the composer.',
   emoji: '🧮',
   octicon: 'table',
-  plugin: '@datalayer/loop-plugin-spreadsheet-view',
+  plugin: '@datalayer/agent-plugin-spreadsheet-view',
   folder: 'spreadsheet-view',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -3310,7 +3310,7 @@ export const SPREADSHEET_VIEW_UI_0_0_1: UISpec = {
     kind: 'plugin',
   },
   contributions: {
-    slots: ['loop.promptAction'],
+    slots: ['agent.promptAction'],
     points: [],
     commands: [],
   },
@@ -3329,7 +3329,7 @@ export const SPREADSHEET_UI_0_0_1: UISpec = {
   description: 'A workbook beside the conversation, drawn by Datalayer Cells.',
   emoji: '🧮',
   octicon: 'table',
-  plugin: '@datalayer/loop-plugin-spreadsheet',
+  plugin: '@datalayer/agent-plugin-spreadsheet',
   folder: 'spreadsheet',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -3339,7 +3339,7 @@ export const SPREADSHEET_UI_0_0_1: UISpec = {
   },
   contributions: {
     slots: [],
-    points: ['loop.chat.surface', 'loop.command'],
+    points: ['agent.chat.surface', 'agent.command'],
     commands: ['spreadsheet'],
   },
   contributionPoints: [],
@@ -3358,7 +3358,7 @@ export const STRIPE_CHECKOUT_UI_0_0_1: UISpec = {
     "A Stripe Checkout Session the agent created, as an A2UI card: its line items, total and currency, test mode said; Checkout opens Stripe's own page, where the person pays — no card data is ever typed in the chat — and the session's status (paid, open or expired) shows when they are back. A live session is refused.",
   emoji: '💳',
   octicon: 'credit-card',
-  plugin: '@datalayer/loop-plugin-stripe-checkout',
+  plugin: '@datalayer/agent-plugin-stripe-checkout',
   folder: 'stripe-checkout',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -3387,7 +3387,7 @@ export const SUBAGENT_ACTIVITY_UI_0_0_1: UISpec = {
     'The face of an agent yours handed work to, pulsing while it works.',
   emoji: '👥',
   octicon: 'people',
-  plugin: '@datalayer/loop-plugin-subagent-activity',
+  plugin: '@datalayer/agent-plugin-subagent-activity',
   folder: 'subagent-activity',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -3396,7 +3396,7 @@ export const SUBAGENT_ACTIVITY_UI_0_0_1: UISpec = {
     kind: 'plugin',
   },
   contributions: {
-    slots: ['loop.inpromptMenu'],
+    slots: ['agent.inpromptMenu'],
     points: [],
     commands: [],
   },
@@ -3416,7 +3416,7 @@ export const TRIAL_BALANCE_UI_0_0_1: UISpec = {
     "Each account's debit, credit and balance for a period, with the totals and whether they agree (show_trial_balance).",
   emoji: '⚖️',
   octicon: 'law',
-  plugin: '@datalayer/loop-plugin-trial-balance',
+  plugin: '@datalayer/agent-plugin-trial-balance',
   folder: 'trial-balance',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -3445,7 +3445,7 @@ export const TRIP_BUDGET_UI_0_0_1: UISpec = {
     'What the trip costs, line by line, quotes apart from estimates, the total and what is left of your budget (show_trip_budget).',
   emoji: '💰',
   octicon: 'credit-card',
-  plugin: '@datalayer/loop-plugin-trip-budget',
+  plugin: '@datalayer/agent-plugin-trip-budget',
   folder: 'trip-budget',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -3474,7 +3474,7 @@ export const TRIP_HEADER_UI_0_0_1: UISpec = {
     "The Traveller's title bar: the trip being planned (where and when), a drop-down for how many travel, and how many options are ready to compare.",
   emoji: '🧭',
   octicon: 'paper-airplane',
-  plugin: '@datalayer/loop-plugin-trip-header',
+  plugin: '@datalayer/agent-plugin-trip-header',
   folder: 'trip-header',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -3483,8 +3483,8 @@ export const TRIP_HEADER_UI_0_0_1: UISpec = {
     kind: 'factory',
   },
   contributions: {
-    slots: ['loop.chatHeader'],
-    points: ['loop.chat.extras', 'loop.runProps'],
+    slots: ['agent.chatHeader'],
+    points: ['agent.chat.extras', 'agent.runProps'],
     commands: [],
   },
   contributionPoints: [],
@@ -3555,7 +3555,7 @@ export const TRIP_ITINERARY_UI_0_0_1: UISpec = {
     'The trip day by day: each stop with its time and place, and the place on a map (show_itinerary).',
   emoji: '🗺️',
   octicon: 'calendar',
-  plugin: '@datalayer/loop-plugin-trip-itinerary',
+  plugin: '@datalayer/agent-plugin-trip-itinerary',
   folder: 'trip-itinerary',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -3584,7 +3584,7 @@ export const TRIP_MAP_UI_0_0_1: UISpec = {
     "The places of each trip option on a map — numbered by day, one option at a time — over Overture Maps' open basemap, with its attribution (show_trip_map). The map library loads only when the card is drawn.",
   emoji: '🗺️',
   octicon: 'location',
-  plugin: '@datalayer/loop-plugin-trip-map',
+  plugin: '@datalayer/agent-plugin-trip-map',
   folder: 'trip-map',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -3613,7 +3613,7 @@ export const TRIP_OPTIONS_UI_0_0_1: UISpec = {
     'Up to three trips side by side, each with its dates, price and highlights; you choose one and the choice goes back to the agent (show_trip_options).',
   emoji: '🧳',
   octicon: 'briefcase',
-  plugin: '@datalayer/loop-plugin-trip-options',
+  plugin: '@datalayer/agent-plugin-trip-options',
   folder: 'trip-options',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -3642,7 +3642,7 @@ export const TRIP_SUMMARY_UI_0_0_1: UISpec = {
     "The trip being planned, in the chat's title bar: where and when, and its budget so far, read from the trip the agent showed (show_itinerary, show_trip_options, show_trip_budget).",
   emoji: '🧭',
   octicon: 'paper-airplane',
-  plugin: '@datalayer/loop-plugin-trip-summary',
+  plugin: '@datalayer/agent-plugin-trip-summary',
   folder: 'trip-summary',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -3651,7 +3651,7 @@ export const TRIP_SUMMARY_UI_0_0_1: UISpec = {
     kind: 'factory',
   },
   contributions: {
-    slots: ['loop.chatHeader'],
+    slots: ['agent.chatHeader'],
     points: [],
     commands: [],
   },
@@ -3671,7 +3671,7 @@ export const VAT_SUMMARY_UI_0_0_1: UISpec = {
     "The VAT return's boxes for a period, what is due and deductible, and the net to pay or to be refunded; nothing is filed from it (show_vat_summary).",
   emoji: '💶',
   octicon: 'checklist',
-  plugin: '@datalayer/loop-plugin-vat-summary',
+  plugin: '@datalayer/agent-plugin-vat-summary',
   folder: 'vat-summary',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -3700,7 +3700,7 @@ export const WINDOW_FRAME_UI_0_0_1: UISpec = {
     'Draws the editor as a window, with room in its title bar for controls and actions.',
   emoji: '🪟',
   octicon: 'browser',
-  plugin: '@datalayer/loop-plugin-window-frame',
+  plugin: '@datalayer/agent-plugin-window-frame',
   folder: 'window-frame',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -3709,7 +3709,7 @@ export const WINDOW_FRAME_UI_0_0_1: UISpec = {
     kind: 'plugin',
   },
   contributions: {
-    slots: ['loop.header', 'loop.window.controls'],
+    slots: ['agent.header', 'agent.window.controls'],
     points: [],
     commands: [],
   },
@@ -3729,7 +3729,7 @@ export const X_BUDGET_UI_0_0_1: UISpec = {
     "What is left of your X budget today, in the chat's title bar, read from the agent's X budget guardrail (x-api-budget); never for an anonymous visitor.",
   emoji: '💲',
   octicon: 'meter',
-  plugin: '@datalayer/loop-plugin-x-budget',
+  plugin: '@datalayer/agent-plugin-x-budget',
   folder: 'x-budget',
   implementation: {
     package: '@datalayer/agent-runtimes',
@@ -3738,7 +3738,7 @@ export const X_BUDGET_UI_0_0_1: UISpec = {
     kind: 'factory',
   },
   contributions: {
-    slots: ['loop.chatHeader'],
+    slots: ['agent.chatHeader'],
     points: [],
     commands: [],
   },
@@ -3758,7 +3758,7 @@ export const X_POST_PREVIEW_UI_0_0_1: UISpec = {
     'A post or reply on X as it will stand there, with its length against the 280 characters X takes and its images, above its approval (post_to_x, reply_on_x).',
   emoji: '𝕏',
   octicon: 'megaphone',
-  plugin: '@datalayer/loop-plugin-x-post-preview',
+  plugin: '@datalayer/agent-plugin-x-post-preview',
   folder: 'x-post-preview',
   implementation: {
     package: '@datalayer/agent-runtimes',

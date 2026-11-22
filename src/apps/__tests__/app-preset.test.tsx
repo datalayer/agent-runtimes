@@ -24,8 +24,8 @@ import {
 } from '../plugins/app-page';
 import { CANVAS_BLOCK_PLUGINS } from '../plugins/canvas-blocks';
 import { CHAT_PLUGIN_NAME } from '../plugins/chat';
-import { LoopViewType } from '../core';
-import { loopPlugins } from '../presets';
+import { AgentViewType } from '../core';
+import { agentPlugins } from '../presets';
 import { APP_CATALOGUE } from '../../specs/apps';
 import { listUI } from '../../specs/ui';
 import type { AppSpec } from '../../types/agentspecs';
@@ -64,18 +64,18 @@ describe('the preset per kind', () => {
     expect(names(preset.plugins)).toEqual([
       // Its page plugin, named as its runtime's is, and what tells
       // it which of them its runtime holds.
-      'loop-app-web-research',
-      '@datalayer/loop-plugin-app-runtime',
+      'agent-app-web-research',
+      '@datalayer/agent-plugin-app-runtime',
       // Its code in the browser's sandbox, when it turns in the page.
-      '@datalayer/loop-plugin-app-browser-sandbox-web-research',
-      '@datalayer/loop-plugin-app-feedback-web-research',
-      '@datalayer/loop-plugin-app-elements',
+      '@datalayer/agent-plugin-app-browser-sandbox-web-research',
+      '@datalayer/agent-plugin-app-feedback-web-research',
+      '@datalayer/agent-plugin-app-elements',
       // The Composer's button, every application's unless it leaves it out
       // (21 November 2026).
-      '@datalayer/loop-plugin-composer-portal',
+      '@datalayer/agent-plugin-composer-portal',
       // The plugins manager's button, every application's unless it leaves
       // it out (21 November 2026).
-      '@datalayer/loop-plugin-plugin-manager',
+      '@datalayer/agent-plugin-plugin-manager',
     ]);
     expect(preset.workspace).toEqual({
       editors: false,
@@ -98,7 +98,7 @@ describe('the preset per kind', () => {
       pluginsOff: ['a2ui'],
     });
     expect(names(preset.plugins)).not.toContain(
-      '@datalayer/loop-plugin-ui-a2ui',
+      '@datalayer/agent-plugin-ui-a2ui',
     );
     expect(names(preset.plugins)).toContain(
       `${APP_PAGE_PLUGIN_NAME}-quote-calculator`,
@@ -114,7 +114,9 @@ describe('the preset per kind', () => {
     const reactor = buildReactorFromPlugins(preset.plugins);
     reactor.start();
     expect(
-      reactor.getContributions(LoopViewType).map(entry => entry.value.viewType),
+      reactor
+        .getContributions(AgentViewType)
+        .map(entry => entry.value.viewType),
     ).toEqual([APP_HOST_PAGE_VIEW]);
   });
 
@@ -129,12 +131,12 @@ describe('the preset per kind', () => {
 
 describe('a workspace without a conversation', () => {
   it('mounts no chat, no agents and no editors', () => {
-    const mounted = names(loopPlugins({ conversation: false }));
+    const mounted = names(agentPlugins({ conversation: false }));
     expect(mounted).not.toContain(CHAT_PLUGIN_NAME);
     expect(
       mounted.some(name => /agents|notebook|document|models/.test(name)),
     ).toBe(false);
-    expect(mounted).toContain('@datalayer/loop-plugin-shell');
+    expect(mounted).toContain('@datalayer/agent-plugin-shell');
   });
 });
 
@@ -173,7 +175,7 @@ describe('a decision, on the workspace', () => {
 
 /**
  * The UI plugins (R8) a workspace mounts for an application: its
- * preset's plugins and the workspace's own (`loopPlugins`) as its layout
+ * preset's plugins and the workspace's own (`agentPlugins`) as its layout
  * says, each read as the UI spec it registers under — once per application,
  * source or UI when the spec says so (`<plugin>-<id>`).
  */
@@ -181,7 +183,7 @@ function uiDrawnWith(app: AppSpec): Set<string> {
   const preset = appPreset(app, { page: DecisionPage });
   const mounted = names([
     ...preset.plugins,
-    ...loopPlugins({ ...preset.workspace }),
+    ...agentPlugins({ ...preset.workspace }),
   ]);
   return new Set(
     listUI()

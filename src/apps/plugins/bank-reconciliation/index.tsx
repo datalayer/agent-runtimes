@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-bank-reconciliation` — the Accountant's proposed
+ * `@datalayer/agent-plugin-bank-reconciliation` — the Accountant's proposed
  * matches, as a message drawn by the A2UI renderer: each bank line beside the
  * invoice it would settle, the difference computed here, how sure the agent
  * is, and **Approve** per match. Each press sends that match back as the
@@ -30,7 +30,7 @@ import { A2uiCard, type CardSpec } from '../../toolCards/a2uiCard';
 import { readReconciliation, type Reconciliation } from './read';
 
 export const BANK_RECONCILIATION_PLUGIN_NAME =
-  '@datalayer/loop-plugin-bank-reconciliation';
+  '@datalayer/agent-plugin-bank-reconciliation';
 
 export const BANK_RECONCILIATION_WORDS = {
   title: 'Bank lines and invoices',

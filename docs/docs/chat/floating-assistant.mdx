@@ -89,7 +89,7 @@ conversation, where it is.
   where every approval of the application is answered (the Tool Approvals
   page, its rules card, its page, the channels): over the ai-agents `/ws`,
   where each decision is broadcast, so an approval answered in the balloon
-  leaves every list. In a LOOP workspace the assistant reads them as the
+  leaves every list. In an Agent workspace the assistant reads them as the
   rules card does, by the application's id (`appId` in its config) and only
   signed in; the chat's own floating assistant answers with the chat's own
   `pendingApprovals`, `onApproveApproval` and `onRejectApproval`. Without
@@ -131,7 +131,7 @@ That is the `history` display. The other one is `current`.
 
 **How the balloon shows the conversation is a setting of its own**,
 `balloonDisplay` on `ChatFloating` and `AssistantStage`, `balloon` in the
-LOOP assistant plugin's config, and `interface.balloon` in an application's
+Agent assistant plugin's config, and `interface.balloon` in an application's
 Appspec (`history` or `current`; the page's own when unsaid):
 
 | | `history` | `current` |
@@ -139,7 +139,7 @@ Appspec (`history` or `current`; the page's own when unsaid):
 | Closed | every message of the conversation, the person's and the agent's, under *Conversation · 6*, scrolled to the newest (a peek of the newest words when the host gives no messages) | **Now**, then what is said or done now — the answer as it is written, whole (four lines at most, nothing to scroll), or the tool it calls |
 | Open | the whole conversation under *Conversation · 6*, scrolled, the composer last | that one line over the composer, 230px tall, no header, no history |
 | Looks | the plain balloon, the theme's border | a compact speech bubble edged with the theme's accent, *Now* with a dot that breathes while the agent works (still under reduced motion) |
-| Default for | the floating chat (`ChatFloating`), the LOOP workspace's assistant | a team's members (`A2ATeamGraph`) |
+| Default for | the floating chat (`ChatFloating`), the Agent workspace's assistant | a team's members (`A2ATeamGraph`) |
 
 **The balloon draws with the chat's own components**: its history is the
 chat's items as the chat holds them (`DisplayItem`s: messages and tool
@@ -216,7 +216,7 @@ has one (`Current Time` for `current_time`), else its name without its MCP
 server's prefix; the mark beside it is the catalogue's (its MCP server's,
 skill's or tool set's, `SpecMark`), a tool otherwise. Where the runtime says
 what a tool does in its own words, those are its card's summary (*Writing a
-notebook…*, *Asking Accounting…*); a LOOP turn's `activity`, which names no
+notebook…*, *Asking Accounting…*); an Agent turn's `activity`, which names no
 tool, is the agent's message saying it.
 
 - **Closed**, in either display, the peek is the tool line while the call
@@ -231,7 +231,7 @@ it ends**, politely, from a live region of its own — never while it runs,
 nor at every redraw (`toolAnnouncement`).
 
 The lines are read from the chat's items (`newestToolLine`: the newest item,
-when it is a tool call), from a LOOP turn's `activity`, or, in a team, from
+when it is a tool call), from an Agent turn's `activity`, or, in a team, from
 the steps a peer tells over A2A (`toolLineOfStep`).
 
 ### In a team
@@ -306,7 +306,7 @@ entries it supports:
 | --- | --- |
 | Inspect the agent… | `inspector`: the Agent Inspector in a large dialog, loaded only then |
 | Agent Details… | `about`: the agent's `AgentDetails` in a dialog, loaded only then. On a runtime (`about.agentId` and `about.apiBase`; the floating chat fills them from its `endpoint`) it reads the spec, MCP servers and codemode there; an agent in the page shows its spec, model, description and where it runs |
-| Code Sandbox Details… | `sandbox`: where the agent's code runs (Pyodide in the page, a local or remote Jupyter server, a Datalayer runtime, the runtime's own `eval`), its URL without tokens, its kernel, and its variables (jupyter-react's `KernelVariables`, with its renderers; ipywidgets live where the page talks to the kernel). The floating chat takes it from the runtime's codemode status, the Loop from its sandbox, a team's entry from the notebook open under the graph |
+| Code Sandbox Details… | `sandbox`: where the agent's code runs (Pyodide in the page, a local or remote Jupyter server, a Datalayer runtime, the runtime's own `eval`), its URL without tokens, its kernel, and its variables (jupyter-react's `KernelVariables`, with its renderers; ipywidgets live where the page talks to the kernel). The floating chat takes it from the runtime's codemode status, the Agent from its sandbox, a team's entry from the notebook open under the graph |
 | Open / Close the conversation | always, unless `conversationLabel={false}`; a host may rename it (*Ask Sales*) |
 | Stop the turn | `onStop`, while the agent works |
 | New conversation, Clear the conversation | `onNewChat`, `onClear` |
@@ -319,9 +319,9 @@ entries it supports:
 | Send away | always: for now, for this session, or for good, as the hover × does |
 
 A host or a plugin adds its own entries with `contextMenu`
-(`{id, label, onSelect, checked?, disabled?, group?}`). In the LOOP
-workspace, plugins contribute them to `loop.assistant.menu`
-(`LoopAssistantMenu`).
+(`{id, label, onSelect, checked?, disabled?, group?}`). In the Agent
+workspace, plugins contribute them to `agent.assistant.menu`
+(`AgentAssistantMenu`).
 
 `ChatFloating` keeps the balloon display chosen in the menu, and tells the
 host with `onBalloonDisplayChange`. It records its agent into `inspector`
@@ -345,7 +345,7 @@ of `GET /api/v1/agents/{agent_id}`); for an agent whose spec names no
 decisions, nothing is offered. The form says which model decides (*Decided by
 Jev (cloudflare:wrk/typesafe/jev)*) and offers only the question types its
 decisions spec answers. It is beside the
-composer in the open conversation; in a LOOP workspace, whose conversation
+composer in the open conversation; in an Agent workspace, whose conversation
 is the workspace's own, in the character's peek. It opens a small form:
 
 - **Situation**: the text the question is about — a ticket, a message, a
@@ -374,8 +374,8 @@ decided: …*). While the form or its answer is on screen, the balloon stays,
 hovered or not; *Cancel* (or Escape) puts it away, *Ask another* clears the
 answer.
 
-The floating assistant of a chat takes the runtime as `decisions`; in a LOOP
-workspace, `LoopAssistantPlugin` takes it in its config. Without it, the
+The floating assistant of a chat takes the runtime as `decisions`; in an Agent
+workspace, `AgentAssistantPlugin` takes it in its config. Without it, the
 balloon does not offer to ask:
 
 ```tsx
@@ -385,7 +385,7 @@ balloon does not offer to ask:
   {...chatProps}
 />
 
-configurePlugin(LoopAssistantPlugin, {
+configurePlugin(AgentAssistantPlugin, {
   app: app.interface.avatar,
   decisions: { serverUrl: runtimeUrl, token },
 });
@@ -393,7 +393,7 @@ configurePlugin(LoopAssistantPlugin, {
 
 `token` is sent as a bearer when the runtime needs one; the machine's own
 server does not. `agentId` names the agent asking; unsaid, it is the one of
-the chat's endpoint (in a LOOP workspace, the workspace's agent). The route
+the chat's endpoint (in an Agent workspace, the workspace's agent). The route
 refuses an agent that does not decide in a sentence (`Nothing was decided:
 the agent … does not decide, its spec names no decisions. …`). See [The decide tool](../cli#the-decide-tool) for
 `/decisions`, the same route from the terminal.
@@ -405,7 +405,7 @@ the agent … does not decide, its spec names no decisions. …`). See [The deci
 agent `example-simple`, which names `decisions: jev:0.0.1` and so has the
 `decide` tool, instructions to answer by
 asking a typed decision, decision questions as its starters, and one rule —
-deciding is a read, done without asking) in the LOOP workspace on the Local
+deciding is a read, done without asking) in the Agent workspace on the Local
 target, with the floating assistant beside it. Ask in the chat (*Is this
 ticket urgent? 'Help! My payouts have been failing for 3 days.'*) and the agent
 calls `decide`; or hover the character and *Ask a decision* from its balloon.
@@ -488,7 +488,7 @@ pictures, in the light and the dark mode, that `npm run test:pictures`
 takes in Chrome and compares with the ones kept in `pictures/baselines/`. A
 change in how the assistant is drawn fails that run with a picture of the
 difference; see *Pictures as tests* in `TESTING.md` to accept it. So are the
-wizard, the cat, the L👀P eyes and a character contributed by a plugin (the
+wizard, the cat, the Agent eyes and a character contributed by a plugin (the
 owl below), each idle in its light and its dark drawing:
 `npm run test:pictures -- -g "assistant|character"` takes only these.
 And the gallery's grid below, every character in every state, is one picture
@@ -501,7 +501,7 @@ in the examples' *Avatar* group) shows every avatar of the assistant,
 from static data — no agent, no server, no sign-in:
 
 - **every avatar**: Datalayer's four, the owl the example plugin
-  contributes to `loop.assistant.character`, *Pixel*, a small test sprite
+  contributes to `agent.assistant.character`, *Pixel*, a small test sprite
   of our own read through the clippy.js reader (`readClippyCharacter`), and
   the 3D robot drawn with three.js (`MODEL_3D_CHARACTER`);
 - **every state**: idle, greeting, thinking, working, waiting (the approval in
@@ -547,7 +547,7 @@ Four characters are drawn for this assistant and owned by Datalayer
 | `paperclip` | Paper clip (the default) |
 | `wizard` | Wizard |
 | `cat` | Cat |
-| `eyes` | L👀P eyes |
+| `eyes` | Agent eyes |
 
 Each is an SVG drawing that names its moving parts — `assistant-body`,
 `assistant-pupils`, `assistant-lids`, `assistant-mouth` — and the stage
@@ -560,15 +560,15 @@ Each character has a drawing of its own for the dark page, not the light
 drawing on black. The stage reads the chat's colour mode from the theme
 (Primer's `colorScheme`) and draws the matching one (`Drawing({ size,
 mode })`, `mode` being `'light'` or `'dark'`). The dark drawings take the
-`loop` theme's dark tokens: lines that were ink become the dark mode's ink
-(`loopColors.inkDark`), the paper clip's steel and the wizard's violets go
+`agent` theme's dark tokens: lines that were ink become the dark mode's ink
+(`agentColors.inkDark`), the paper clip's steel and the wizard's violets go
 lighter, the cat's whiskers turn light and its outline gives way to its fur,
-and the L👀P eyes keep their whites with a near-black pupil (`loopColors.black`)
+and the Agent eyes keep their whites with a near-black pupil (`agentColors.black`)
 and a grey lid so a blink still shows.
 
 Both drawings are tested for contrast as the theme's own faces are
 (`assistant-characters-contrast.test.tsx`, after primer-addons'
-`loopContrast.test.ts`): each character names its key colours by mode
+`agentContrast.test.ts`): each character names its key colours by mode
 (`keyColours`) — every colour along its edge, and its eyes — and the test
 holds them at **3 to 1**, WCAG's threshold for graphics and the parts of an
 interface one must see (SC 1.4.11, non-text contrast; 4.5 to 1 is for body
@@ -581,8 +581,8 @@ outline.
 
 ## A character from a plugin
 
-The characters are a contribution point, `loop.assistant.character`
-(`LoopAssistantCharacter` in `apps/core`): the catalogue is what the enabled
+The characters are a contribution point, `agent.assistant.character`
+(`AgentAssistantCharacter` in `apps/core`): the catalogue is what the enabled
 plugins contribute and nothing else. Datalayer's four come from their own
 plugin (`AssistantCharactersPlugin`, `apps/plugins/assistant-characters`);
 disabled, they leave the catalogue. A plugin contributes a character — a
@@ -590,7 +590,7 @@ drawing, as Datalayer's are, or a character read from a file — under an id:
 
 ```tsx
 import { contribution, definePlugin } from '@datalayer/reactor';
-import { LoopAssistantCharacter } from '@datalayer/agent-runtimes/lib/apps/core';
+import { AgentAssistantCharacter } from '@datalayer/agent-runtimes/lib/apps/core';
 import type { AssistantCharacter } from '@datalayer/agent-runtimes/lib/chat/assistant/characters';
 
 const OWL: AssistantCharacter = {
@@ -604,7 +604,7 @@ const OWL: AssistantCharacter = {
 export const OwlCharacterPlugin = definePlugin({
   name: '@datalayer/example-plugin-owl-character',
   contributes: [
-    contribution(LoopAssistantCharacter, { id: 'owl', character: OWL }, { id: 'owl' }),
+    contribution(AgentAssistantCharacter, { id: 'owl', character: OWL }, { id: 'owl' }),
   ],
 });
 ```
@@ -651,24 +651,24 @@ host's plugins contribute (`AppEmbed`'s `plugins`; the element takes none, so
 it draws one of the four). An id nothing contributes is said in the element's
 place. See [Embedding](../apps/embedding).
 
-### In the LOOP workspace
+### In the Agent workspace
 
-`LoopAssistantPlugin` (`apps/plugins/assistant`) draws the assistant over a
-LOOP workspace — the `loop` page, an application's page, its Preview —
+`AgentAssistantPlugin` (`apps/plugins/assistant`) draws the assistant over a
+Agent workspace — the `agent` page, an application's page, its Preview —
 through the workspace's `root` slot, from what the enabled plugins contribute.
 It is configured with the application's character and the person's:
 
 ```tsx
 import { configurePlugin } from '@datalayer/reactor';
 import { AssistantCharactersPlugin } from '@datalayer/agent-runtimes/lib/apps/plugins/assistant-characters';
-import { LoopAssistantPlugin } from '@datalayer/agent-runtimes/lib/apps/plugins/assistant';
+import { AgentAssistantPlugin } from '@datalayer/agent-runtimes/lib/apps/plugins/assistant';
 
 <AppRenderer
   app={app}
   plugins={[
     AssistantCharactersPlugin,
     OwlCharacterPlugin,
-    configurePlugin(LoopAssistantPlugin, {
+    configurePlugin(AgentAssistantPlugin, {
       app: app.interface.avatar,
       person: 'cat',
       appId: app.id,
@@ -678,7 +678,7 @@ import { LoopAssistantPlugin } from '@datalayer/agent-runtimes/lib/apps/plugins/
 ```
 
 It acts out what the application is doing as its chat says it
-(`LoopChatTurn`'s `presence`: thinking, working while a tool runs, waiting
+(`AgentChatTurn`'s `presence`: thinking, working while a tool runs, waiting
 for the person, paused when its deployment is, idle) and speaks while the
 answer is written; it says the agent's newest words in its balloon while the
 conversation is out of sight, holds there the approvals the application
@@ -737,7 +737,7 @@ one `.acs`; an `.acf` with its `.aca` files; or a clippy.js character's
 `CHARACTER_FILES_ACCEPT` is what a file input should accept. Once read, a
 character joins the others as a plugin of its own,
 `defineAssistantCharacterPlugin(id, character)`, contributed to
-`loop.assistant.character` under the id it is chosen by — that is how
+`agent.assistant.character` under the id it is chosen by — that is how
 Datalayer's *Settings → Appearance* offers a person their own character on
 the pages of their applications, kept in their browser and never sent.
 
@@ -773,7 +773,7 @@ is skipped with a warning in the console.
 The chat's `description` is what the character says on a hover before
 anything else has been said.
 
-A host that draws the conversation itself — the Loop workspace, as an
+A host that draws the conversation itself — the Agent workspace, as an
 embedded application does — passes it as `conversation`:
 `{ body, presence, saying, answering }`. The window holds `body` under its own
 header, and the character acts `presence` and says `saying` as it would its
@@ -863,10 +863,10 @@ Each character's dark drawing and its contrast, light and dark, are tested
 chat's mode; a character contributed by a plugin is drawn in the
 *Avatar* example and pictured (`character-owl-*.png`). The choice of a
 character — the application's over the person's over the paper clip, an
-unknown id said and not replaced — and the assistant in a LOOP workspace,
+unknown id said and not replaced — and the assistant in an Agent workspace,
 drawn from a plugin's character and acting out the chat's turn, dozing while
 paused and holding an approval of its application in its balloon — answered
-there, never another application's — are tested (`loop-assistant.test.tsx`;
+there, never another application's — are tested (`agent-assistant.test.tsx`;
 the chat's own assistant in `chat-floating-conversation.test.tsx`); an Appspec naming a plugin's character is read,
 and a wrongly shaped id refused (`app-checks.test.ts`).
 

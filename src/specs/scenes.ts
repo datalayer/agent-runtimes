@@ -16,7 +16,7 @@
 import type { SceneSpec } from '../types/scenes';
 
 export const BUY_FROM_A_SHOP_SCENE_0_0_1: SceneSpec = {
-  schema: 'loop.scene/v1',
+  schema: 'agent.scene/v1',
   id: 'buy-from-a-shop',
   version: '0.0.1',
   name: 'Buy from a shop',
@@ -276,7 +276,7 @@ export const BUY_FROM_A_SHOP_SCENE_0_0_1: SceneSpec = {
 };
 
 export const CODING_AGENT_BEHIND_THE_SHIELD_SCENE_0_0_1: SceneSpec = {
-  schema: 'loop.scene/v1',
+  schema: 'agent.scene/v1',
   id: 'coding-agent-behind-the-shield',
   version: '0.0.1',
   name: 'A Coding Agent Behind the Shield',
@@ -460,7 +460,7 @@ export const CODING_AGENT_BEHIND_THE_SHIELD_SCENE_0_0_1: SceneSpec = {
 };
 
 export const CROP_MONITORING_SCENE_0_0_1: SceneSpec = {
-  schema: 'loop.scene/v1',
+  schema: 'agent.scene/v1',
   id: 'crop-monitoring',
   version: '0.0.1',
   name: 'Crop Monitoring',
@@ -792,7 +792,7 @@ export const CROP_MONITORING_SCENE_0_0_1: SceneSpec = {
 };
 
 export const DISASTER_ASSESSMENT_SCENE_0_0_1: SceneSpec = {
-  schema: 'loop.scene/v1',
+  schema: 'agent.scene/v1',
   id: 'disaster-assessment',
   version: '0.0.1',
   name: 'Disaster Assessment',
@@ -1244,7 +1244,7 @@ export const DISASTER_ASSESSMENT_SCENE_0_0_1: SceneSpec = {
 };
 
 export const MONTH_END_CLOSE_SCENE_0_0_1: SceneSpec = {
-  schema: 'loop.scene/v1',
+  schema: 'agent.scene/v1',
   id: 'month-end-close',
   version: '0.0.1',
   name: 'Month-end Close',
@@ -1572,7 +1572,7 @@ export const MONTH_END_CLOSE_SCENE_0_0_1: SceneSpec = {
 };
 
 export const PACT_A_PERSONAL_AGENT_AT_A_BUSINESS_SCENE_0_0_1: SceneSpec = {
-  schema: 'loop.scene/v1',
+  schema: 'agent.scene/v1',
   id: 'pact-a-personal-agent-at-a-business',
   version: '0.0.1',
   name: 'A Personal Agent at a Business',
@@ -1743,7 +1743,7 @@ export const PACT_A_PERSONAL_AGENT_AT_A_BUSINESS_SCENE_0_0_1: SceneSpec = {
 };
 
 export const PAP_A_PERSON_AND_A_COMPANY_SCENE_0_0_1: SceneSpec = {
-  schema: 'loop.scene/v1',
+  schema: 'agent.scene/v1',
   id: 'pap-a-person-and-a-company',
   version: '0.0.1',
   name: 'A Person and a Company',
@@ -1911,7 +1911,7 @@ export const PAP_A_PERSON_AND_A_COMPANY_SCENE_0_0_1: SceneSpec = {
 };
 
 export const PAP_APPROVE_ONCE_SCENE_0_0_1: SceneSpec = {
-  schema: 'loop.scene/v1',
+  schema: 'agent.scene/v1',
   id: 'pap-approve-once',
   version: '0.0.1',
   name: 'A Change, Approved Once',
@@ -2057,7 +2057,7 @@ export const PAP_APPROVE_ONCE_SCENE_0_0_1: SceneSpec = {
 };
 
 export const PAP_TWO_COMPANIES_SCENE_0_0_1: SceneSpec = {
-  schema: 'loop.scene/v1',
+  schema: 'agent.scene/v1',
   id: 'pap-two-companies',
   version: '0.0.1',
   name: 'Two Companies Together',
@@ -2241,7 +2241,7 @@ export const PAP_TWO_COMPANIES_SCENE_0_0_1: SceneSpec = {
 };
 
 export const PAP_YOUR_APPLICATION_A_COMPANY_SCENE_0_0_1: SceneSpec = {
-  schema: 'loop.scene/v1',
+  schema: 'agent.scene/v1',
   id: 'pap-your-application-a-company',
   version: '0.0.1',
   name: 'Your Application, a Company',
@@ -2411,7 +2411,7 @@ export const PAP_YOUR_APPLICATION_A_COMPANY_SCENE_0_0_1: SceneSpec = {
 };
 
 export const SALES_AND_ACCOUNTING_SCENE_0_0_1: SceneSpec = {
-  schema: 'loop.scene/v1',
+  schema: 'agent.scene/v1',
   id: 'sales-and-accounting',
   version: '0.0.1',
   name: 'Sales & Accounting',
@@ -2805,7 +2805,7 @@ export const SALES_AND_ACCOUNTING_SCENE_0_0_1: SceneSpec = {
 };
 
 export const UCP_A_PURCHASE_APPROVED_SCENE_0_0_1: SceneSpec = {
-  schema: 'loop.scene/v1',
+  schema: 'agent.scene/v1',
   id: 'ucp-a-purchase-approved',
   version: '0.0.1',
   name: 'A Purchase, Approved',

@@ -31,7 +31,7 @@ const CHAT_VIEW = readFileSync(
   'utf8',
 );
 const SHELL = readFileSync(
-  join(__dirname, '..', 'shell', 'LoopWorkspace.tsx'),
+  join(__dirname, '..', 'shell', 'AgentWorkspace.tsx'),
   'utf8',
 );
 /* The machinery itself, extracted so the workspace header's icon and the
@@ -58,8 +58,8 @@ describe('entering full screen', () => {
     // lines and did, which failed an assertion that had pinned the whitespace
     // rather than the behaviour.
     expect(HOOK).toContain('.closest(');
-    expect(HOOK).toContain("'[data-loop-workspace]'");
-    expect(SHELL).toContain('data-loop-workspace');
+    expect(HOOK).toContain("'[data-agent-workspace]'");
+    expect(SHELL).toContain('data-agent-workspace');
   });
 
   it('keeps a covering overlay for where the API is refused', () => {

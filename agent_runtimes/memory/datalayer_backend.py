@@ -5,7 +5,7 @@
 
 An agent that remembers with mem0 keeps, on a Datalayer runtime, what it
 learns of its person in the platform's memory store. Run on their own
-machine — ``loop`` with a local server — with their Datalayer API key
+machine — ``agent`` with a local server — with their Datalayer API key
 (``DATALAYER_API_KEY``), it remembers in that same store, through the
 runtimes service (``/api/runtimes/v1/memories``): what it learned on the
 platform it reads here, and what it learns here a runtime there reads back.

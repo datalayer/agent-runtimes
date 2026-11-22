@@ -19,7 +19,7 @@ its own.
 `datalayer.reactor.extensions`; its plugin contributes the harness read from
 `aider.yaml` — the catalogue's schema: `acp.command`, `requires`, `terms`,
 `capabilities` — with the ACP adapter every ACP harness is driven by. Once
-installed, `loop harnesses` lists _Aider_ with its terms and capabilities,
+installed, `agent harnesses` lists _Aider_ with its terms and capabilities,
 and an agent spec may say `harness: aider`. The yaml launches the ACP SDK's
 fake agent of the tests, so the example needs no key.
 
@@ -33,7 +33,7 @@ contributing `aider` is refused by name. Nothing in agent-runtimes is edited.
 importer reads another tool's `session_meta` + `item` lines into the record's
 entries (a `message` item a `turn`, a `function_call` a `tool_call`, the rest
 refused by kind, in a sentence), its exporter the inverse.
-`loop sessions import --format omnigent-jsonl/1 file.jsonl` and
+`agent sessions import --format omnigent-jsonl/1 file.jsonl` and
 `POST /sessions/import?format=omnigent-jsonl/1` reach it; the built-in
 `datalayer-session/1` is contributed the same way.
 

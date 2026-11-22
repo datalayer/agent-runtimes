@@ -7,7 +7,7 @@ On a Datalayer runtime (it routes its inference through ai-inference:
 ``AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE=datalayer`` and
 ``DATALAYER_AI_INFERENCE_URL``), every model call goes through ai-inference,
 to Bedrock or Alibaba, paid in the account's credits, on no key of the
-account's. Run locally (``loop --harness``, the CLI, a laptop demo), a harness
+account's. Run locally (``agent --harness``, the CLI, a laptop demo), a harness
 takes the person's own key from the environment, as its spec declares.
 
 **A harness holds no token.** Its commands run as its user and read its
@@ -561,7 +561,7 @@ def refusal(harness: Any, environment: Mapping[str, str] | None = None) -> str |
     return (
         f"{harness.name} is not offered on Datalayer: its model calls would not "
         "go through ai-inference. "
-        f"Run it locally on your own key with `loop --harness {harness.id}`."
+        f"Run it locally on your own key with `agent --harness {harness.id}`."
     )
 
 

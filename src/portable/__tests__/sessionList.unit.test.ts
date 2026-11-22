@@ -234,7 +234,7 @@ describe('the rows of two places', () => {
     ).toThrow(/no session state "stopped"/);
   });
 
-  it('describes each row as loop sessions list prints it', () => {
+  it('describes each row as agent sessions list prints it', () => {
     const [open, clone] = listedSessionsOf(RECORDED);
     const [held] = listedSessionsOf(HELD);
     expect(rowLabel(open!.row)).toBe('The refactor');

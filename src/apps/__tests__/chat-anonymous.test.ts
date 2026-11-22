@@ -18,14 +18,14 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { buildReactorFromPlugins } from '@datalayer/reactor';
 import { CHAT_PLUGIN_NAME, type ChatPluginConfig } from '../plugins/chat';
-import { limitedPreviewDisabled, loopPlugins } from '../presets';
+import { limitedPreviewDisabled, agentPlugins } from '../presets';
 import { appPreset } from '../apps/AppRenderer';
 import { APP_CATALOGUE } from '../../specs/apps';
 import { agentUiChoicesOf, disabledUiOf } from '../agentUiPlugins';
 import { LIMITED_PREVIEW_PLUGIN_NAME } from '../plugins/limited-preview';
 
 const chatConfig = (options = {}) =>
-  buildReactorFromPlugins(loopPlugins(options)).getConfig<ChatPluginConfig>(
+  buildReactorFromPlugins(agentPlugins(options)).getConfig<ChatPluginConfig>(
     CHAT_PLUGIN_NAME,
   );
 
@@ -55,7 +55,7 @@ describe('the preset’s runAsAnonymous', () => {
 });
 
 const pluginNames = (options = {}) =>
-  buildReactorFromPlugins(loopPlugins(options)).listPlugins();
+  buildReactorFromPlugins(agentPlugins(options)).listPlugins();
 
 describe('the limited preview', () => {
   it('is an indicator plugin for a visitor, with its page tools', () => {

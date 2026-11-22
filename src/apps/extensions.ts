@@ -4,7 +4,7 @@
  */
 
 /**
- * The Loop plugins, grouped the way they are installed.
+ * The Agent plugins, grouped the way they are installed.
  *
  * Splitting the editors from their toolbars bought a real thing — a toolbar
  * can be switched off, and the chat can fill one without the editor knowing —
@@ -34,7 +34,7 @@ import { NotebookToolbarPlugin } from './plugins/notebook-toolbar';
  * something it merely relies on — the whole workspace runs on that sandbox.
  */
 export const NotebookExtension = defineExtension({
-  name: '@datalayer/loop-extension-notebook',
+  name: '@datalayer/agent-extension-notebook',
   displayName: 'Notebooks',
   description:
     'A notebook beside the chat, and the toolbar that reports on it.',
@@ -45,7 +45,7 @@ export const NotebookExtension = defineExtension({
 
 /** The document capability: the same arrangement, for prose. */
 export const DocumentExtension = defineExtension({
-  name: '@datalayer/loop-extension-document',
+  name: '@datalayer/agent-extension-document',
   displayName: 'Documents',
   description:
     'A rich-text document beside the chat, and the toolbar that reports on it.',

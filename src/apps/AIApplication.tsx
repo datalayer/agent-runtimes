@@ -50,7 +50,7 @@
  * default) — the page's colours and mode, the application's accent over
  * them in its conversation — unless its Appspec names a theme
  * (`interface.theme`) or the host says a mode or a face; `theme: 'own'`
- * draws it in its own theme (`loop` unless it names one), as the element
+ * draws it in its own theme (`agent` unless it names one), as the element
  * does. Inline, it fills its container (`height`, `100%` by default); `mode`
  * floats it as a bubble, a panel or an avatar instead. `renderer` hands its
  * renderer what a host's own page adds: its plugins, the UI plugins its
@@ -300,7 +300,7 @@ export function agentAppspec(
   if (spec.emoji) {
     app.emoji = spec.emoji;
   }
-  // How it presents itself, for a host that adds a panel for it (`LoopSlots.leftPanel`).
+  // How it presents itself, for a host that adds a panel for it (`AgentSlots.leftPanel`).
   if (spec.presentation) {
     app.presentation = spec.presentation;
   }

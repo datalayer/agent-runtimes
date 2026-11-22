@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-agent-otel` — observability, as a capacity.
+ * `@datalayer/agent-plugin-agent-otel` — observability, as a capacity.
  *
  * Mounts the `example-otel` agent: a conversation over the workspace's own
  * traces, logs and metrics. Cast from the shared capacity mould.
@@ -16,7 +16,7 @@
 
 import { defineAgentCapacityPlugin } from '../agent-capacity';
 
-export const AGENT_OTEL_PLUGIN_NAME = '@datalayer/loop-plugin-agent-otel';
+export const AGENT_OTEL_PLUGIN_NAME = '@datalayer/agent-plugin-agent-otel';
 
 export const AgentOtelPlugin = defineAgentCapacityPlugin({
   key: 'otel',

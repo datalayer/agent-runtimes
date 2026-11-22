@@ -100,7 +100,7 @@ async def answered(live: sessions.LiveSession, key: str) -> List[Dict[str, Any]]
             chunk
             async for chunk in live.run_agui(
                 {"runId": f"run-{key}", "messages": []},
-                loop={"press": key},
+                agent_props={"press": key},
                 bearer="",
             )
         ]
@@ -115,7 +115,7 @@ async def test_a_choice_is_shown_with_buttons_and_a_press_answers_it() -> None:
     # The run ends on the question, its result saying what it asks.
     assert events[-1]["type"] == "RUN_FINISHED"
     assert events[-1]["result"]["asking"]["kind"] == "choice"
-    assert "loop.ask" not in json.dumps(events)
+    assert "agent.ask" not in json.dumps(events)
     display = asked_display(live)
     assert display["type"] == sessions.QUESTION_DISPLAY_TYPE
     assert display["text"] == "May this be recorded?"
@@ -172,7 +172,7 @@ async def test_an_answer_not_among_what_was_asked_is_refused_and_it_still_waits(
                 "runId": "r",
                 "messages": [{"id": "u", "role": "user", "content": "Team"}],
             },
-            loop={},
+            agent_props={},
             bearer="",
         )
     assert typed.value.status == 409

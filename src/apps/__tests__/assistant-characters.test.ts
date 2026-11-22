@@ -21,7 +21,7 @@ import {
   assistantCharactersOf,
   defineAssistantCharacterPlugin,
 } from '../plugins/assistant-characters';
-import { LoopAssistantCharacter } from '../core';
+import { AgentAssistantCharacter } from '../core';
 
 const robot = {
   name: 'Robot',
@@ -34,7 +34,7 @@ const RobotPlugin = definePlugin({
   name: 'test-robot-character',
   contributes: [
     contribution(
-      LoopAssistantCharacter,
+      AgentAssistantCharacter,
       { id: 'robot', character: robot },
       { id: 'robot' },
     ),

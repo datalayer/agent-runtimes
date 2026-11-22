@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""`loop apps init`: a new application's folder."""
+"""`agent apps init`: a new application's folder."""
 
 import asyncio
 import subprocess
@@ -174,7 +174,7 @@ def test_eject_writes_an_app_py_that_builds_the_same_spec(tmp_path: Path) -> Non
     spec_path = written.folder / "app.yaml"
     code = eject(spec_path)
     assert code == written.folder / "app.py"
-    assert "Written by `loop apps eject` from `app.yaml`" in code.read_text()
+    assert "Written by `agent apps eject` from `app.yaml`" in code.read_text()
     assert build(code).document == yaml.safe_load(spec_path.read_text())
     application = load_application(code)
     assert application.spec.id == "desk"
@@ -192,7 +192,7 @@ def test_eject_refuses_what_is_not_a_spec_that_validates(tmp_path: Path) -> None
     with pytest.raises(InitRefused, match="is not an application's spec"):
         eject(stray)
     held = tmp_path / "held.yaml"
-    held.write_text('schema: loop.app/v1\nid: held\nname: "A \\\\ B"\nkind: chat\n')
+    held.write_text('schema: agent.app/v1\nid: held\nname: "A \\\\ B"\nkind: chat\n')
     with pytest.raises(InitRefused):
         eject(held)
     assert not (tmp_path / "app.py").exists()
@@ -211,4 +211,4 @@ def test_the_command_says_eject_is_one_way_and_asks(tmp_path: Path) -> None:
     assert done.exit_code == 0, done.output
     assert "Its versions so far are kept." in done.output
     assert (written.folder / "app.py").exists()
-    assert "loop apps push app.py --app" in done.output
+    assert "agent apps push app.py --app" in done.output

@@ -7,8 +7,8 @@
  * The chat, in three plugins: the view, the composer, the title bar.
  *
  * What is pinned: the chat view *assembles* the composer's and header's
- * props and renders whatever was contributed to `LoopChatComposer` and
- * `LoopChatHeader` — it no longer draws either surface itself — and the
+ * props and renders whatever was contributed to `AgentChatComposer` and
+ * `AgentChatHeader` — it no longer draws either surface itself — and the
  * preset mounts the two standard takers so a stock workspace looks exactly
  * as it did. Untick the input-prompt plugin and the box goes; untick the
  * chat-header plugin and the title bar goes; the transcript stays.
@@ -17,7 +17,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { loopPlugins } from '../presets';
+import { agentPlugins } from '../presets';
 import {
   InputPromptPlugin,
   INPUT_PROMPT_PLUGIN_NAME,
@@ -26,7 +26,7 @@ import {
   ChatHeaderPlugin,
   CHAT_HEADER_PLUGIN_NAME,
 } from '../plugins/chat-header';
-import { LoopChatComposer, LoopChatHeader } from '../core';
+import { AgentChatComposer, AgentChatHeader } from '../core';
 import { ChatViewPlugin } from '../plugins/chat-view';
 import { NotebookViewPlugin } from '../plugins/notebook-view';
 import { DocumentViewPlugin } from '../plugins/document-view';
@@ -37,7 +37,7 @@ const chatViewSource = () =>
 
 describe('the chat split', () => {
   it('mounts the composer and header plugins in the standard preset', () => {
-    const names = loopPlugins({})
+    const names = agentPlugins({})
       .map(entry =>
         typeof entry === 'object' && entry !== null && 'plugin' in entry
           ? (entry as { plugin: { name: string } }).plugin.name
@@ -50,7 +50,7 @@ describe('the chat split', () => {
 
   it('has each plugin contribute a component to its point', () => {
     const composer = InputPromptPlugin.contributes?.find(
-      entry => entry.point === LoopChatComposer,
+      entry => entry.point === AgentChatComposer,
     );
     expect(composer).toBeDefined();
     expect((composer?.value as { Component?: unknown })?.Component).toBeTypeOf(
@@ -58,7 +58,7 @@ describe('the chat split', () => {
     );
 
     const header = ChatHeaderPlugin.contributes?.find(
-      entry => entry.point === LoopChatHeader,
+      entry => entry.point === AgentChatHeader,
     );
     expect(header).toBeDefined();
     expect((header?.value as { Component?: unknown })?.Component).toBeTypeOf(
@@ -70,8 +70,8 @@ describe('the chat split', () => {
     const source = chatViewSource();
     // The view assembles props and asks the points; it draws neither surface
     // itself any more.
-    expect(source).toContain('useContributions(LoopChatComposer)');
-    expect(source).toContain('useContributions(LoopChatHeader)');
+    expect(source).toContain('useContributions(AgentChatComposer)');
+    expect(source).toContain('useContributions(AgentChatHeader)');
     expect(source).not.toMatch(/<InputPrompt\b/);
     expect(source).toContain('const prompt = ComposerComponent ? (');
     // The header only shows when a plugin took the point (and the host did
@@ -109,7 +109,7 @@ describe('the view plugins', () => {
         contribute: (() => {}) as never,
         state: {} as never,
       } as never) as { components?: { slot: string }[] };
-      expect(output?.components?.[0]?.slot).toBe('loop.promptAction');
+      expect(output?.components?.[0]?.slot).toBe('agent.promptAction');
     }
   });
 });

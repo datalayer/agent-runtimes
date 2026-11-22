@@ -4,7 +4,7 @@
  */
 
 /**
- * The decks plugin in a Loop: it contributes the surface and follows the
+ * The decks plugin in the Agent workspace: it contributes the surface and follows the
  * decks, and declares no tools of its own — the decks plugin's bundle, run
  * through the chat's command adapter, is the whole of what an agent gets.
  */
@@ -20,8 +20,8 @@ import {
   resetDecksState,
 } from '@datalayer/decks/plugin';
 import { agentBundleTools } from '../../tools/adapters/commands';
-import { LoopEditorView, LoopFrontendTool } from '../core';
-import { DECK_SURFACE_ID, LoopDecksPlugin } from '../plugins/decks';
+import { AgentEditorView, AgentFrontendTool } from '../core';
+import { DECK_SURFACE_ID, AgentDecksPlugin } from '../plugins/decks';
 
 const spec = (title: string, slides = 3): DeckSpec =>
   ({
@@ -60,10 +60,10 @@ describe('the deck tools an agent gets', () => {
     'decks_print',
   ];
 
-  it('are the decks plugin’s bundle, data and screen alike, and nothing of the Loop’s', () => {
+  it('are the decks plugin’s bundle, data and screen alike, and nothing of the Agent’s', () => {
     expect(DECKS_AGENT_TOOLS.commands.map(tool => tool.name)).toEqual(EXPECTED);
-    const contributes = LoopDecksPlugin.contributes ?? [];
-    expect(contributes.some(entry => entry.point === LoopFrontendTool)).toBe(
+    const contributes = AgentDecksPlugin.contributes ?? [];
+    expect(contributes.some(entry => entry.point === AgentFrontendTool)).toBe(
       false,
     );
   });
@@ -127,11 +127,11 @@ describe('the deck tools an agent gets', () => {
   });
 });
 
-describe('LoopDecksPlugin', () => {
+describe('AgentDecksPlugin', () => {
   it('brings the deck surface on screen whenever decks are asked for', async () => {
     const editorChoice = await import('../plugins/shell/editorChoice');
     const choose = vi.spyOn(editorChoice, 'chooseEditor').mockReturnValue(true);
-    const reactor = buildReactorFromPlugins([LoopDecksPlugin]);
+    const reactor = buildReactorFromPlugins([AgentDecksPlugin]);
     reactor.start();
     await reactor.whenReady();
     const { closeDeck, openDeck } = await import('@datalayer/decks/plugin');
@@ -149,12 +149,12 @@ describe('LoopDecksPlugin', () => {
   });
 
   it('contributes the deck surface, and depends on the decks plugin and the composer', () => {
-    const contributes = LoopDecksPlugin.contributes ?? [];
-    const surface = contributes.find(entry => entry.point === LoopEditorView);
+    const contributes = AgentDecksPlugin.contributes ?? [];
+    const surface = contributes.find(entry => entry.point === AgentEditorView);
     expect(surface?.value).toMatchObject({
       surfaceId: DECK_SURFACE_ID,
       title: 'Deck',
     });
-    expect(LoopDecksPlugin.dependencies?.length).toBe(2);
+    expect(AgentDecksPlugin.dependencies?.length).toBe(2);
   });
 });

@@ -199,7 +199,7 @@ def policies_of(
     Parameters
     ----------
     app : AppSpec, optional
-        The application; none for an agent run outside one (``loop --harness``).
+        The application; none for an agent run outside one (``agent --harness``).
     lent : Sequence[str]
         The gateway toolsets it connects, by name (``mcp.allow``).
     managed : Sequence[Policy], optional

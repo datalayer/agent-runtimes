@@ -16,7 +16,7 @@ Each command module exports:
     execute(tux) -> Optional[str] - async handler, returns optional next prompt
 
 The modules are the built-in commands. They are no longer the *only* commands:
-they are registered into a :class:`~agent_runtimes.loop.SlashCommandRegistry`,
+they are registered into a :class:`~agent_runtimes.agent.SlashCommandRegistry`,
 alongside whatever plugins the reactor discovers, so a package outside this
 repository can ship a slash command without editing this file.
 """
@@ -26,14 +26,14 @@ from __future__ import annotations
 from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, Iterator, Optional, TypeAlias
 
-from agent_runtimes.loop.commands import (
+from agent_runtimes.agent.commands import (
     CommandArgSpec,
     CommandCollisionError,
     SlashCommandRegistry,
     SlashCommandSpec,
     spec_from_module,
 )
-from agent_runtimes.loop.discovery import discover_slash_commands
+from agent_runtimes.agent.discovery import discover_slash_commands
 
 if TYPE_CHECKING:
     from ..tux import CliTux

@@ -6,7 +6,7 @@
 /**
  * The notebook a member of the team gave, on the browser sandbox.
  *
- * What the loop's notebook view does (`apps/plugins/notebook/NotebookView`),
+ * What the Agent's notebook view does (`apps/plugins/notebook/NotebookView`),
  * for a notebook that arrived over A2A: the browser sandbox
  * (`createBrowserSandboxService`, a JupyterLite Pyodide kernel in the page)
  * is started, and `EphemeralNotebook` is bound to its manager and its
@@ -152,7 +152,7 @@ export function TeamNotebookView({
           sx={{
             height,
             minHeight: 0,
-            // As the loop's notebook view pins them: Lumino sizes these
+            // As the Agent's notebook view pins them: Lumino sizes these
             // itself, and a resize it never hears of leaves them at zero.
             '& .jp-NotebookPanel': {
               height: '100% !important',

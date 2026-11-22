@@ -144,7 +144,7 @@ function getProtocolType(
  * What a host lends the thread's `⋯` menu: the ways an
  * entry may use that only the page has — a file saved, a pick, a file
  * picked — and what it is told. The menu itself is drawn from the
- * `loop.session.action` registry of the Reactor registered on the page
+ * `agent.session.action` registry of the Reactor registered on the page
  * (`SessionActionsMenu`, the one the apps' chat view draws): nothing of it
  * is copied here, and no Reactor registered means no menu.
  */
@@ -200,7 +200,7 @@ export interface ChatProps extends ChatCommonProps {
    * (`apps/agentUiPlugins`): the Marketer's linked accounts, X budget and
    * post previews, the Shopper's basket, the Accountant's reconciliation…
    * Mounted on a platform of the chat's own, so the transcript draws their
-   * tools and the header their chips without a Loop workspace around it.
+   * tools and the header their chips without an Agent workspace around it.
    * With `uiPluginsAnonymous`, only those that need no connection.
    */
   uiPlugins?: readonly string[];
@@ -744,7 +744,7 @@ export function Chat({
       : '';
 
   /*
-   * The thread's menu: the `loop.session.action` entries of the
+   * The thread's menu: the `agent.session.action` entries of the
    * Reactor registered on the page, for the session the thread is — the
    * uid the next message goes to, as the chat says it (`onSendReady`'s
    * `thread`), kept here so the menu follows the header's +.

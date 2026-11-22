@@ -61,11 +61,11 @@ without one — the cautious answer is written beside it, and the read or write
 itself is decided again with its path when the runtime answers it
 (`harness_on_the_runtime.py` shows both rows).
 
-## Sessions, the sidecar, `loop`
+## Sessions, the sidecar, `agent`
 
 The harness's session is kept in the protocol state store; a restarted
 runtime loads it when the harness advertises `loadSession`, and otherwise
-**says** it starts over. `loop --harness <id>` runs a harness on this machine
+**says** it starts over. `agent --harness <id>` runs a harness on this machine
 (`harness_on_the_runtime.py` starts the same runtime from Python); with the
 operator's `AGENT_RUNTIMES_HARNESS_SIDECAR_URL` (1.5.38, the operator's flag
 off by default) the harness runs in the pod's `datalayer-harnesses` sidecar

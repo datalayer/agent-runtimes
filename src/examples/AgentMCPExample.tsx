@@ -33,7 +33,7 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { waitForAgent } from './utils/waitForAgent';
-import { LoopEmbed } from '../apps';
+import { AgentEmbed } from '../apps';
 import { AgentMcpPlugin } from '../apps/plugins/agent-mcp';
 import { createChatExtrasPlugin } from '../apps/plugins/chat-extras';
 import { useAIAgentsWebSocket } from '../hooks';
@@ -317,7 +317,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
       setIsReconnectedAgent(false);
 
       try {
-        // The Loop creates the agent from the capacity plugin's blueprint as
+        // The Agent workspace creates the agent from the capacity plugin's blueprint as
         // it mounts; the page only waits until the server has it, so its own
         // sockets and reads address an agent that exists.
         const found = await waitForAgent(agentBaseUrl, agentName, {
@@ -542,7 +542,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const totalTools = mcpServers.reduce((sum, s) => sum + s.toolsCount, 0);
   const aggregate = deriveAggregate(mcpStatusData?.servers ?? []);
 
-  // The chat column is the shared loop; the live MCP status the footer shows
+  // The chat column is the shared Agent; the live MCP status the footer shows
   // reaches it through the chat-extras channel. The server panel on the right
   // is the example's own.
   const { plugin: extrasPlugin, setExtras } = useMemo(
@@ -578,7 +578,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
       <Box flex={1} minHeight={0} display="flex">
         <Box flex={1} minWidth={0}>
-          <LoopEmbed
+          <AgentEmbed
             serverUrl={agentBaseUrl}
             target="local"
             showAgentVariants

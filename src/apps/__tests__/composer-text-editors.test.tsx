@@ -134,7 +134,7 @@ describe('AppYamlEditor', () => {
 describe('AppPythonEditor', () => {
   const code = {
     file: 'app.py',
-    text: 'from loop import App\n\napp = App()\n',
+    text: 'from agent import App\n\napp = App()\n',
   };
 
   it('draws the file, what its host says and its host’s controls', () => {

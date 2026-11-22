@@ -20,7 +20,7 @@ export type MemberHarness = { id: string; name: string };
 /** The agent loop in the page: a member in the browser, whatever its spec names. */
 export const BROWSER_HARNESS: MemberHarness = {
   id: 'browser',
-  name: 'Datalayer Loop',
+  name: 'Datalayer Agent',
 };
 
 /** What an agent spec runs on when it names no harness. */

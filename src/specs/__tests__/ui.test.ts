@@ -21,7 +21,7 @@ describe('the UI catalogue', () => {
     );
     for (const plugin of listUI()) {
       expect(plugin.name).toBeTruthy();
-      expect(plugin.plugin).toMatch(/^@datalayer\/loop-plugin-/);
+      expect(plugin.plugin).toMatch(/^@datalayer\/agent-plugin-/);
       expect(UI_RENDERER_CATALOGUE[plugin.id]).toBeUndefined();
       for (const renderer of plugin.renderers) {
         expect(getUiRenderer(renderer)).toBeDefined();

@@ -121,7 +121,7 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 # AWS's SDK says at INFO where it found its credentials, over whatever the
-# command prints (`loop sessions`): shown when asked for, its warnings always.
+# command prints (`agent sessions`): shown when asked for, its warnings always.
 if not asked_verbose(sys.argv[1:], os.environ):
     quiet_loggers(AWS_LOGGERS)
 logger = logging.getLogger(__name__)
@@ -379,7 +379,7 @@ def main_callback(
         "--resume",
         help=(
             "Go on with the session of this uid, where it lives — on this machine "
-            "or on Datalayer; with no uid, pick one, as `loop sessions` does."
+            "or on Datalayer; with no uid, pick one, as `agent sessions` does."
         ),
     ),
     environment: str | None = typer.Option(
@@ -428,7 +428,7 @@ def main_callback(
         help=(
             "Run a harness of the catalogue (claude-code, codex, …) on this machine "
             "over ACP, in the directory you run from; "
-            "`loop harnesses` lists them."
+            "`agent harnesses` lists them."
         ),
     ),
     voice: bool = typer.Option(
@@ -515,13 +515,13 @@ def main_callback(
         os.environ["DATALAYER_ACCOUNT_HANDLE"] = resolved_handle
 
     # When no subcommand is given, default to the interactive `chat` command
-    # so that running `loop` behaves like running `loop chat`.
+    # so that running `agent` behaves like running `agent chat`.
     if ctx.invoked_subcommand is None:
-        # Four console scripts share this callback. `loop` and `l` open the
+        # Four console scripts share this callback. `agent` and `a` open the
         # interactive workspace; `agent-runtimes` and `datalayer-agents` print
         # help, so scripts and documentation calling them keep behaving as they
         # read. Anything with a subcommand routes normally either way.
-        from agent_runtimes.loop.entrypoint import opens_workspace
+        from agent_runtimes.agent.entrypoint import opens_workspace
 
         if not opens_workspace():
             typer.echo(ctx.get_help())
@@ -577,8 +577,8 @@ def main_callback(
             chat_args.append("--voice")
         if speak:
             chat_args.append("--speak")
-        # Forward any additional CLI args to chat so `loop --<chat-option>`
-        # behaves like `loop chat --<chat-option>`.
+        # Forward any additional CLI args to chat so `agent --<chat-option>`
+        # behaves like `agent chat --<chat-option>`.
         chat_args.extend(ctx.args)
         chat_app(args=chat_args)
 
@@ -622,7 +622,7 @@ def harnesses_command() -> None:
 
     A harness — Claude Code, Codex, OpenCode, Gemini CLI, or any program
     speaking the Agent Client Protocol — runs on this machine with
-    `loop --harness <id>`, in the directory you run from; one the catalogue
+    `agent --harness <id>`, in the directory you run from; one the catalogue
     describes and does not offer is listed with why.
     """
     from agent_runtimes.chat.cli import harnesses

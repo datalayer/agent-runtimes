@@ -1392,7 +1392,7 @@ class CreateAgentRequest(BaseModel):
     app_spec: dict[str, Any] | None = Field(
         default=None,
         description=(
-            "An application's Appspec (`loop.app/v1`), when the agent is the one "
+            "An application's Appspec (`agent.app/v1`), when the agent is the one "
             "an application runs: it reaches only the MCP servers the application "
             "connects to, its instructions are added, and its rules are enforced "
             "before every tool call in place of the default approvals (R-03, R-05)."
@@ -1808,7 +1808,7 @@ async def create_agent(
             # Use the model from the spec if the request still has the default,
             # or none at all: a caller that sends `model: ''` means the spec's
             # model, not a model named ''. The spec forwarded with the request
-            # names it before the library's: a switch (loop's `/models`, the
+            # names it before the library's: a switch (`agent`'s `/models`, the
             # chat's menu) is the library spec with another model.
             forwarded_model = _spec_value("model")
             spec_model = (
@@ -2689,7 +2689,7 @@ async def create_agent(
                 logger.info(f"Added AgentSkillsToolset for agent {agent_id}")
 
             # Initialize per-agent skills state in stream layer (single source of truth).
-            from ..streams.loop import (
+            from ..streams.pubsub import (
                 get_agent_enabled_skill_ids,
                 get_agent_skills_snapshot,
                 set_agent_enabled_skills,
@@ -4045,7 +4045,7 @@ async def delete_agent(
 
     # Fallback cleanup in case any protocol-specific unregister step failed.
     try:
-        from ..streams.loop import purge_agent_stream_state
+        from ..streams.pubsub import purge_agent_stream_state
 
         purge_agent_stream_state(agent_id)
     except Exception as e:
@@ -4768,7 +4768,7 @@ async def _start_mcp_servers_background(
     finally:
         # Always broadcast a snapshot so the frontend MCP indicator updates.
         try:
-            from ..streams.loop import publish_stream_event
+            from ..streams.pubsub import publish_stream_event
 
             await publish_stream_event(
                 event_type="agent.mcp.ready",
@@ -4786,7 +4786,7 @@ async def _start_mcp_servers_background(
 async def _say_mcp_status(agent_id: str) -> None:
     """Send the page a snapshot: an MCP server's start has ended."""
     try:
-        from ..streams.loop import publish_stream_event
+        from ..streams.pubsub import publish_stream_event
 
         await publish_stream_event(
             event_type="agent.mcp.ready",
@@ -5846,7 +5846,7 @@ class ConfigureFromSpecRequest(BaseModel):
     model: str | None = None
     """The model, when it is not the agent spec's own."""
     agent_id: str = "default"
-    """The agent to (re)create: ``default``, or the one ``loop`` talks to."""
+    """The agent to (re)create: ``default``, or the one ``agent`` talks to."""
     launch_app_spec: dict[str, Any] | None = None
     """The Appspec of the application the runtime was launched for, passed by
     the Operator: declared with this spec, so its agent made later finds its

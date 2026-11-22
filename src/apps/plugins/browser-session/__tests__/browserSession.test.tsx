@@ -30,7 +30,7 @@ import {
   type BrowserSessionStatus,
 } from '..';
 import { BROWSER_SESSION_DIALOG_SX } from '../BrowserSessionButton';
-import { loopPlugins } from '../../../presets';
+import { agentPlugins } from '../../../presets';
 
 afterEach(cleanup);
 
@@ -95,7 +95,7 @@ describe('the session the chat asks for', () => {
   });
 
   it('is in the preset, in the chat’s title bar', () => {
-    const names = loopPlugins().map(
+    const names = agentPlugins().map(
       plugin => (plugin as unknown as { name?: string }).name,
     );
     expect(names).toContain(BROWSER_SESSION_PLUGIN_NAME);

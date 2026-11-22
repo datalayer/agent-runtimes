@@ -12,7 +12,7 @@ turned into the session's steps — the run, each model call, each tool call
 with its input and output — which the chat shows and the record keeps;
 its answer is the session's message.
 
-Its rules still decide every tool call LOOP can see:
+Its rules still decide every tool call Agent can see:
 
 - **LangChain and LangGraph** — every tool goes through LangChain's
   callbacks: a handler (`raise_error`) decides each call in ``on_tool_start``,
@@ -20,11 +20,11 @@ Its rules still decide every tool call LOOP can see:
 - **A LlamaIndex agent** — its tools are called through the agent's
   ``_call_tool``, which is taken over when the agent is given to the
   application: each call is decided there, in a session, and refused outside one.
-- **A plain function and a LlamaIndex workflow** — LOOP sees no tool call of
-  theirs: no rule decides one. ``loop apps validate`` says so, and the Canvas
+- **A plain function and a LlamaIndex workflow** — Agent sees no tool call of
+  theirs: no rule decides one. ``agent apps validate`` says so, and the Canvas
   shows what the agent is.
 
-A tool LOOP sees is decided as a tool of its code is: by what
+A tool Agent sees is decided as a tool of its code is: by what
 ``tools=`` says it does, or by a rule that names it; one it is not told of is
 left to the person, and so refused. The built-in checks and the Gates run on
 each call, and on the answer: a credential is withheld as the answer
@@ -69,7 +69,7 @@ FRAMEWORKS: Dict[str, str] = {
     "llamaindex-workflow": "a LlamaIndex workflow",
 }
 
-#: The kinds whose tool calls LOOP sees, and so decides.
+#: The kinds whose tool calls Agent sees, and so decides.
 DECIDED = ("langgraph", "langchain", "llamaindex-agent")
 
 #: The extra of agent-runtimes that installs each framework, by the module
@@ -87,7 +87,7 @@ NO_PARAMETERS: Dict[str, Any] = {"type": "object", "properties": {}}
 
 
 class FrameworkCallRefused(GuardrailBlockedError):
-    """A tool call of a framework's agent that LOOP could not decide: refused."""
+    """A tool call of a framework's agent that Agent could not decide: refused."""
 
 
 def missing_framework(error: BaseException) -> Optional[str]:
@@ -160,7 +160,7 @@ def framework_of(target: Any) -> str:
         return "llamaindex-workflow"
     module = type(target).__module__.split(".")[0]
     if module in EXTRAS:
-        # Its framework is here in part only: the module that LOOP reads it with is not.
+        # Its framework is here in part only: the module that Agent reads it with is not.
         said = missing_framework(ImportError(name=module)) or ""
         raise TypeError(f"{type(target).__name__} cannot be read here. {said}")
     if inspect.isroutine(target) or (callable(target) and not isinstance(target, type)):
@@ -184,7 +184,7 @@ class FoundTool:
 
 
 def _langchain_tool(tool: Any) -> FoundTool:
-    """A LangChain tool, as LOOP declares it."""
+    """A LangChain tool, as Agent declares it."""
     schema: Dict[str, Any] = {}
     try:
         made = getattr(tool, "tool_call_schema", None) or getattr(
@@ -204,7 +204,7 @@ def _langchain_tool(tool: Any) -> FoundTool:
 
 
 def _llama_tool(tool: Any) -> FoundTool:
-    """A LlamaIndex tool, or a plain function an agent takes, as LOOP declares it."""
+    """A LlamaIndex tool, or a plain function an agent takes, as Agent declares it."""
     metadata = getattr(tool, "metadata", None)
     if metadata is None:
         # A plain function, as a LlamaIndex agent takes one.
@@ -299,7 +299,7 @@ class CodeAgent:
 
     @property
     def decides_tools(self) -> bool:
-        """Whether LOOP sees its tool calls, and so its rules decide them."""
+        """Whether Agent sees its tool calls, and so its rules decide them."""
         return self.framework in DECIDED
 
     def note(self) -> Optional[str]:
@@ -307,9 +307,9 @@ class CodeAgent:
         if self.decides_tools:
             return None
         return (
-            f"Its agent is {self.words}, {self.name}: LOOP sees none of the tools "
+            f"Its agent is {self.words}, {self.name}: Agent sees none of the tools "
             "it may call, so its rules decide none of them. Give it its tools "
-            "through LOOP (@app.tool, a connection) or as a LangGraph graph or "
+            "through Agent (@app.tool, a connection) or as a LangGraph graph or "
             "LlamaIndex agent, whose tool calls the rules decide."
         )
 
@@ -348,7 +348,7 @@ def code_agent_of(
     Raises
     ------
     TypeError, ValueError
-        When it is no agent LOOP runs, or its tools are not said, in a sentence.
+        When it is not an agent the runtime runs, or its tools are not said, in a sentence.
     """
     from agentspecs.actions import ActionClass
 
@@ -363,7 +363,7 @@ def code_agent_of(
     said = dict(tools or {})
     if framework not in DECIDED and said:
         raise ValueError(
-            f"Its agent is {FRAMEWORKS[framework]}: LOOP sees none of its tool "
+            f"Its agent is {FRAMEWORKS[framework]}: Agent sees none of its tool "
             "calls, so there is nothing to say tools= of."
         )
     classes = {item.value for item in ActionClass}
@@ -419,7 +419,7 @@ def code_agent_of(
 def code_agent_problems(app: AppSpec, agent: CodeAgent) -> List[str]:
     """What an application asks of its agent that an agent of its code is not given.
 
-    Its connections, skills, backend tools, documents and saving are tools LOOP
+    Its connections, skills, backend tools, documents and saving are tools Agent
     gives an agent of the catalogue; a graph, an agent or a function brings
     its own and is given none of them.
     """
@@ -437,7 +437,7 @@ def code_agent_problems(app: AppSpec, agent: CodeAgent) -> List[str]:
     ):
         if present:
             problems.append(
-                f"{app.id} has {what}, which LOOP gives an agent of the catalogue, "
+                f"{app.id} has {what}, which Agent gives an agent of the catalogue, "
                 f"not its agent {agent.name} ({agent.words}): give them to it in "
                 "its own code, or leave app.agent out."
             )
@@ -449,7 +449,7 @@ def code_agent_problems(app: AppSpec, agent: CodeAgent) -> List[str]:
 #: The run of a framework's agent the current task belongs to: what a LlamaIndex
 #: agent's tool calls are decided by.
 _RUN: contextvars.ContextVar[Optional["_Run"]] = contextvars.ContextVar(
-    "loop_framework_run", default=None
+    "agent_framework_run", default=None
 )
 
 
@@ -461,7 +461,7 @@ def _install_guard(target: Any, framework: str) -> None:
     if framework != "llamaindex-agent":
         return
     _require("llama_index.core")
-    if getattr(target, "__dict__", {}).get("_loop_guarded"):
+    if getattr(target, "__dict__", {}).get("_agent_guarded"):
         return
     original = type(target)._call_tool
 
@@ -480,7 +480,7 @@ def _install_guard(target: Any, framework: str) -> None:
     # The agent is a pydantic model: its own attribute, past its validation.
     object.__setattr__(target, "_call_tool", decided_call_tool)
     # An `AgentWorkflow` calls its agents' tools through its own `_call_tool`.
-    object.__setattr__(target, "_loop_guarded", True)
+    object.__setattr__(target, "_agent_guarded", True)
 
 
 @dataclass
@@ -1143,7 +1143,7 @@ def _langchain_handler(run: _Run) -> Any:
     """
     from langchain_core.callbacks import BaseCallbackHandler
 
-    class LoopToolRules(BaseCallbackHandler):
+    class AgentToolRules(BaseCallbackHandler):
         raise_error = True
 
         def on_tool_start(
@@ -1160,7 +1160,7 @@ def _langchain_handler(run: _Run) -> Any:
             args = dict(inputs) if isinstance(inputs, Mapping) else {"input": input_str}
             run.decide_from_thread(name, args)
 
-    return LoopToolRules()
+    return AgentToolRules()
 
 
 def framework_agent_maker(code: CodeAgent) -> Callable[[Any], FrameworkAgent]:

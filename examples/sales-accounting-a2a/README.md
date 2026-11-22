@@ -19,7 +19,7 @@ side is the `AgentA2ATeamExample` of the examples app. The documentation is
   the `ScenesExample` reads the same ports unless `VITE_A2A_<MEMBER>_URL` says
   otherwise. A member whose setup is incomplete is not served, and what it
   needs is printed; `--only` and `--no-start` narrow it.
-- `loop apps run agentspecs/agentspecs/apps/accounting.yaml --cloud --a2a --keep`
+- `agent apps run agentspecs/agentspecs/apps/accounting.yaml --cloud --a2a --keep`
   launches a cloud runtime, or uses a running one with `-r <uid>`. It serves
   Accounting there and prints its A2A address.
 - `make_temp_key.py --runtime <uid> --url <A2A address>` mints a key for that

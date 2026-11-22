@@ -5,12 +5,12 @@
 
 /**
  * The Composer's own content, where its host contributes none
- * (`LoopSlots.composerView`): the application read three ways under one
+ * (`AgentSlots.composerView`): the application read three ways under one
  * switch, as a Composer has them — its **Canvas** (`AppCanvasEditor` as a
  * picture: the agent and its parts on their graph, a part selected shows its
  * properties, nothing dropped is kept), its **YAML** (the Appspec written out,
  * `writeAppspecYaml`, in `AppYamlEditor`) and its **Python** (its own
- * `app.py` when it was built in Python, otherwise the file `loop apps eject`
+ * `app.py` when it was built in Python, otherwise the file `agent apps eject`
  * writes from its spec, as the catalogue generates it: `APP_PYTHON`, in
  * `AppPythonEditor`). Read only. Each editor loads when its view is first
  * chosen.

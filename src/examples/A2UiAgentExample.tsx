@@ -44,7 +44,7 @@ import {
 } from '../apps/plugins/a2ui-surface';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import { uniqueAgentId } from './utils/agentId';
-import { LoopEmbed } from '../apps';
+import { AgentEmbed } from '../apps';
 import { AgentA2uiPlugin } from '../apps/plugins/agent-a2ui';
 
 setupPrimerPortals();
@@ -150,7 +150,7 @@ const A2UiAgentExample: React.FC = () => {
     useA2uiProcessor(handleAction);
 
   /*
-   * The transcript's surfaces are the loop's own — the preset's surface
+   * The transcript's surfaces are the Agent's own — the preset's surface
    * plugin draws, checks and submits them. This example asks for an instance
    * of its own so the canvas beside the chat can mirror what was drawn, and
    * the "Submitted values" panel can record what went back to the agent.
@@ -408,7 +408,7 @@ const A2UiAgentExample: React.FC = () => {
                 </Text>
               </Box>
             ) : (
-              <LoopEmbed
+              <AgentEmbed
                 serverUrl={baseUrl}
                 target="local"
                 // What lets the target take: without the choice the agents

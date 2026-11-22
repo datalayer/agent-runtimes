@@ -3,7 +3,7 @@
 
 """An application that extends with Reactor's vocabulary.
 
-It is a Reactor plugin, ``loop-app-support-desk-plus``, and its author
+It is a Reactor plugin, ``agent-app-support-desk-plus``, and its author
 extends it as any Reactor plugin is extended:
 
 - it **declares a point** of its own, ``support-desk-plus.greetings``, that
@@ -19,8 +19,8 @@ extends it as any Reactor plugin is extended:
 
 Run it::
 
-    loop apps run app.py              # in the terminal: /hours, /lookup ada@example.com
-    loop apps run app.py --web        # and GET http://127.0.0.1:<port>/app/health
+    agent apps run app.py              # in the terminal: /hours, /lookup ada@example.com
+    agent apps run app.py --web        # and GET http://127.0.0.1:<port>/app/health
 """
 
 import sys

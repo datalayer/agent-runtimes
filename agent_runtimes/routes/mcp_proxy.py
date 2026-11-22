@@ -184,7 +184,7 @@ async def _try_codemode_tool_call(
     the normal 404 handling).
     """
     try:
-        from agent_runtimes.streams.loop import _iter_codemode_registries
+        from agent_runtimes.streams.pubsub import _iter_codemode_registries
     except Exception:
         return None
 

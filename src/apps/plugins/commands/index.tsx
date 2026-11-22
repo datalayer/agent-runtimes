@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-commands` — the workspace's commands, in the palette.
+ * `@datalayer/agent-plugin-commands` — the workspace's commands, in the palette.
  *
  * A thin adapter over the reusable `@datalayer/reactor-commands`: that plugin
  * draws a Ctrl-K palette over the reactor's command registry and knows nothing
@@ -12,7 +12,7 @@
  * registry. Keeping them apart is what lets the palette stay generic — it is
  * the same palette in a music store and in an agent workspace.
  *
- * Every command a plugin already contributes to {@link LoopCommand} appears,
+ * Every command a plugin already contributes to {@link AgentCommand} appears,
  * rather than each plugin declaring its actions twice. A slash command and a
  * palette entry are the same intent reached two ways, and a plugin that wrote
  * them separately would eventually have them disagree — a `/models` that shows
@@ -34,14 +34,14 @@ import { useContributions } from '@datalayer/reactor/react';
 import { CommandsPlugin } from '@datalayer/reactor-commands';
 import { ThemePlugin } from '@datalayer/primer-addons/lib/reactor';
 import {
-  LoopCommand,
-  LoopSlots,
+  AgentCommand,
+  AgentSlots,
   type CommandContribution,
-  type LoopWorkspaceContext,
+  type AgentWorkspaceContext,
 } from '../../core';
 import { uiManifestOf } from '../../uiManifest';
 
-export const COMMANDS_PLUGIN_NAME = '@datalayer/loop-plugin-commands';
+export const COMMANDS_PLUGIN_NAME = '@datalayer/agent-plugin-commands';
 
 /** How a slash command's group becomes a palette category. */
 const DEFAULT_CATEGORY = 'Workspace';
@@ -59,13 +59,13 @@ const GROUP_EMOJI: Record<string, string> = {
   Workspace: '\u{1FA9F}',
 };
 
-export type LoopCommandBridgeProps = {
+export type AgentCommandBridgeProps = {
   /** Handed by the slot; the commands run against it. */
-  workspace?: LoopWorkspaceContext;
+  workspace?: AgentWorkspaceContext;
   /** Registers the current set, and returns what undoes it. */
   sync: (
     commands: Contribution<CommandContribution>[],
-    workspace: LoopWorkspaceContext | undefined,
+    workspace: AgentWorkspaceContext | undefined,
   ) => void;
 };
 
@@ -76,18 +76,18 @@ export type LoopCommandBridgeProps = {
  * contributions arrive as plugins activate — a plugin switched on from the
  * sidebar has to show up in the palette without a reload.
  */
-export function LoopCommandBridge({
+export function AgentCommandBridge({
   workspace,
   sync,
-}: LoopCommandBridgeProps): null {
-  const commands = useContributions(LoopCommand);
+}: AgentCommandBridgeProps): null {
+  const commands = useContributions(AgentCommand);
   useEffect(() => {
     sync(commands, workspace);
   }, [commands, workspace, sync]);
   return null;
 }
 
-export const LoopCommandsPlugin = definePlugin<
+export const AgentCommandsPlugin = definePlugin<
   Record<string, never>,
   unknown,
   ReactorReactOutput
@@ -114,11 +114,11 @@ export const LoopCommandsPlugin = definePlugin<
      * away from the cause.
      */
     let signature = '';
-    let lastWorkspace: LoopWorkspaceContext | undefined;
+    let lastWorkspace: AgentWorkspaceContext | undefined;
 
     const sync = (
       commands: Contribution<CommandContribution>[],
-      workspace: LoopWorkspaceContext | undefined,
+      workspace: AgentWorkspaceContext | undefined,
     ) => {
       const next = workspace
         ? commands.map(entry => `${entry.plugin}:${entry.value.name}`).join('|')
@@ -151,7 +151,7 @@ export const LoopCommandsPlugin = definePlugin<
           ctx.registerCommand({
             // Namespaced, because a palette is shared with every other plugin
             // and `chat` is not a name anyone else has to avoid.
-            id: `loop.${command.name}`,
+            id: `agent.${command.name}`,
             name: command.description,
             // The slash form is what a person may already know it by, so it is
             // worth showing beside the description rather than instead of it.
@@ -175,12 +175,12 @@ export const LoopCommandsPlugin = definePlugin<
     return {
       components: [
         {
-          id: 'loop-command-bridge',
+          id: 'agent-command-bridge',
           // Rendered where the workspace already passes itself down, and
           // invisible: the palette is the surface, this only feeds it.
-          slot: LoopSlots.status,
-          Component: ({ workspace }: { workspace?: LoopWorkspaceContext }) => (
-            <LoopCommandBridge workspace={workspace} sync={sync} />
+          slot: AgentSlots.status,
+          Component: ({ workspace }: { workspace?: AgentWorkspaceContext }) => (
+            <AgentCommandBridge workspace={workspace} sync={sync} />
           ),
         },
       ],
@@ -188,4 +188,4 @@ export const LoopCommandsPlugin = definePlugin<
   },
 });
 
-export default LoopCommandsPlugin;
+export default AgentCommandsPlugin;

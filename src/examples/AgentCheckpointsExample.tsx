@@ -63,7 +63,7 @@ import { Box } from '@datalayer/primer-addons';
 import { AuthRequiredView, ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { LoopEmbed } from '../apps';
+import { AgentEmbed } from '../apps';
 import { AgentCheckpointsPlugin } from '../apps/plugins/agent-checkpoints';
 import { CheckpointsSidebarPlugin } from '../apps/plugins/checkpoints-sidebar';
 import { uniqueAgentId } from './utils/agentId';
@@ -79,7 +79,7 @@ import { useAgentLifecycle } from '../hooks/useCheckpoints';
 import { AGENT_STATUS_COLORS } from '../types/agents';
 import type { CheckpointRecord } from '../types/checkpoints';
 
-const LOOP_PLUGINS_AGENTCHE = [AgentCheckpointsPlugin];
+const AGENT_PLUGINS_AGENTCHE = [AgentCheckpointsPlugin];
 
 const queryClient = new QueryClient();
 
@@ -947,13 +947,13 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
             </Box>
           ) : (isReady || runtimeStatus === 'resumed') &&
             runtimeStatus !== 'paused' ? (
-            <LoopEmbed
+            <AgentEmbed
               serverUrl={agentBaseUrl}
               target="local"
               agentId={agentId}
               defaultEditor="none"
               showHeader
-              plugins={LOOP_PLUGINS_AGENTCHE}
+              plugins={AGENT_PLUGINS_AGENTCHE}
             />
           ) : (
             <Box
@@ -1050,7 +1050,7 @@ const RuntimeCheckpointsExample: React.FC = () => {
   );
 };
 
-// ─── Conversation checkpoints: the Loop, the capacity and its sidebar ───────
+// ─── Conversation checkpoints: the Agent, the capacity and its sidebar ───────
 
 const LOCAL_AGENT_NAME = 'checkpoints-example-agent';
 
@@ -1085,12 +1085,12 @@ const ConversationCheckpointsExample: React.FC = () => {
           <Label variant="accent">local</Label>
           <Label variant="accent">conversation checkpoints</Label>
         </Box>
-        {/* The Loop creates the agent on the Local target from the capacity
+        {/* The Agent workspace creates the agent on the Local target from the capacity
             plugin's blueprint; the variants stay visible so the agent is not
-            pinned to the page. The sidebar is a Loop plugin and renders in
+            pinned to the page. The sidebar is an Agent plugin and renders in
             the workspace's own sidebar column. */}
         <Box flex={1} minHeight={0}>
-          <LoopEmbed
+          <AgentEmbed
             serverUrl={resolveExampleAgentRuntimesUrl('local')}
             target="local"
             showAgentVariants

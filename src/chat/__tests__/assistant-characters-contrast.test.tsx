@@ -5,15 +5,15 @@
 
 /**
  * Datalayer's characters, tested for contrast on the page, as
- * the `loop` theme's faces are (primer-addons'
- * `theme/__tests__/loopContrast.test.ts`): the same WCAG measure, applied to
+ * the `agent` theme's faces are (primer-addons'
+ * `theme/__tests__/agentContrast.test.ts`): the same WCAG measure, applied to
  * each character's key parts in each mode — its edge against the page, its
  * eyes against what they sit on — on the light page and on the dark one.
  *
  * The threshold is **3 to 1**, WCAG 2.x's for graphics and the parts of an
  * interface one must see to understand them (SC 1.4.11, non-text contrast),
  * and not 4.5 to 1, which is for body text. The page is the theme's
- * canvas (`loopColors.white`, `loopColors.black`) and every accent's stage,
+ * canvas (`agentColors.white`, `agentColors.black`) and every accent's stage,
  * the background an application's page lays behind its chat.
  */
 
@@ -25,7 +25,7 @@ import { ThemeProvider } from '@primer/react';
 import {
   themeAccentNames,
   themeAccents,
-  loopColors,
+  agentColors,
 } from '@datalayer/primer-addons/lib/theme';
 import {
   ASSISTANT_CHARACTERS,
@@ -59,11 +59,11 @@ const MODES: AssistantColorMode[] = ['light', 'dark'];
 /** The pages a character stands on, in each mode. */
 const PAGES: Record<AssistantColorMode, string[]> = {
   light: [
-    loopColors.white,
+    agentColors.white,
     ...themeAccentNames.map(name => themeAccents[name].stage.light),
   ],
   dark: [
-    loopColors.black,
+    agentColors.black,
     ...themeAccentNames.map(name => themeAccents[name].stage.dark),
   ],
 };

@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""`loop apps pull` and `push`: the same file in a repository and in the Studio."""
+"""`agent apps pull` and `push`: the same file in a repository and in the Studio."""
 
 import json
 
@@ -12,8 +12,8 @@ from agent_runtimes.apps.deployments import DeployRefused
 from agent_runtimes.apps.store import APP_ITEM_FORMAT, AppStore, pull, push
 from agent_runtimes.tests.test_apps_deployments import FakeSpacer
 
-SOURCE = "# The desk.\nschema: loop.app/v1\nid: desk\nname: Desk\nkind: chat\n"
-SPEC = {"schema": "loop.app/v1", "id": "desk", "name": "Desk", "kind": "chat"}
+SOURCE = "# The desk.\nschema: agent.app/v1\nid: desk\nname: Desk\nkind: chat\n"
+SPEC = {"schema": "agent.app/v1", "id": "desk", "name": "Desk", "kind": "chat"}
 
 
 class Spacer(FakeSpacer):
@@ -111,7 +111,7 @@ CODE = {"file": "app.py", "text": "from agent_runtimes.apps import Application\n
 
 
 def test_an_app_py_is_kept_beside_its_spec_and_versioned_with_it(store, spacer):
-    built = "# Built from app.py by `loop apps build`\n" + SOURCE
+    built = "# Built from app.py by `agent apps build`\n" + SOURCE
     assert push(store, "app-1", built, code=CODE) == (4, "saved")
     assert spacer.model()["code"] == CODE
     assert pull(store, "app-1") == (built, 4, CODE)

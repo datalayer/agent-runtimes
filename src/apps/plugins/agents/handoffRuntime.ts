@@ -7,7 +7,7 @@
  * Where a session handed over from the terminal runs, and the Agents
  * plugin's configuration that keeps it there.
  *
- * `/browser` mints a handoff carrying `runtime` (`routes/loop.py`); the LOOP
+ * `/browser` mints a handoff carrying `runtime` (`routes/handoff.py`); the Agent
  * page redeems it and configures this plugin from it, so the switch shows the
  * session's place selected and every other place held.
  *

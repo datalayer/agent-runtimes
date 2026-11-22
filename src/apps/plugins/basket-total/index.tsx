@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-basket-total` — the Shopper's basket in the chat's
+ * `@datalayer/agent-plugin-basket-total` — the Shopper's basket in the chat's
  * title bar (or under the prompt): how many items and its total, read from
  * the last basket it showed (`show_basket`); nothing before one. Brought by
  * the `show-basket` tool.

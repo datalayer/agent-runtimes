@@ -7,11 +7,11 @@
 The runtime's own routes, in this process, on an application whose agent is
 a model that answers what it was told (no key, nothing running); the
 sessions kept in a file store of this run's own. What a person does on the
-web or with `loop sessions` is done here over the session API::
+web or with `agent sessions` is done here over the session API::
 
     python sessions_in_process.py
 
-Against Datalayer, the same verbs are `loop sessions … --cloud --server <the
+Against Datalayer, the same verbs are `agent sessions … --cloud --server <the
 deployment's runtime>`; the session id is the same in both because the record
 is one.
 
@@ -66,7 +66,7 @@ from agent_runtimes.transports import AGUITransport  # noqa: E402
 
 #: The application: a chat, its conversations kept.
 NOTES: Dict[str, Any] = {
-    "schema": "loop.app/v1",
+    "schema": "agent.app/v1",
     "id": "notes",
     "name": "Notes",
     "kind": "chat",

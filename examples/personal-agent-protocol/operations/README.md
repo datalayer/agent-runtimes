@@ -10,7 +10,7 @@ The tool returns what the user was asked, the changed term paths, and what the b
 said it came to, as written. Tokens stay in the host.
 
 ```bash
-loop apps run examples/personal-agent-protocol/operations/app.py
+agent apps run examples/personal-agent-protocol/operations/app.py
 ```
 
 Read the [Operations guide](https://personalagentprotocol.org/docs/guides/operations)

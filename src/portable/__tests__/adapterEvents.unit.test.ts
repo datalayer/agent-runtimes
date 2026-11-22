@@ -269,7 +269,7 @@ describe('an adapter event, as the reducer reads it', () => {
   it('says an activity as a custom event: a session’s is the session', () => {
     const state = said([
       at('activity', {
-        activity: { type: 'loop.session', data: { uid: 's1' } },
+        activity: { type: 'agent.session', data: { uid: 's1' } },
       }),
       at('activity', { activity: { type: 'a2ui', data: {} } }),
     ]);

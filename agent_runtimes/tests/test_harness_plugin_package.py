@@ -6,7 +6,7 @@
 The worked example as a test: ``examples/plugins/aider-harness`` installed
 with pip into a folder of its own (no dependencies: agent-runtimes is the
 one running), put on the path, discovered by its entry point under the
-reactor's group, listed by `loop harnesses`, resolved by `harness_agent`,
+reactor's group, listed by `agent harnesses`, resolved by `harness_agent`,
 and refused — naming the plugin — when its yaml lacks `terms`; the second
 package's format reached through `format_named`.
 """
@@ -114,7 +114,7 @@ def test_the_package_is_discovered_listed_and_resolved(
     out = re.sub(r"\x1b\[[0-9;]*m", "", capsys.readouterr().out)
     assert (
         "Aider" in out
-        and "loop --harness aider" in out
+        and "agent --harness aider" in out
         and "Contributed by: aider-harness" in out
     )
     agent = harness_agent(

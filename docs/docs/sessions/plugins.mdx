@@ -23,7 +23,7 @@ harness or a format from a pip package by the same route.
 **Fail fast at the seam.** A contribution whose value is not the point's
 shape, or whose id another plugin contributed first, is refused with the
 plugin's name and the reason — the host runs with the rest, and
-`loop plugins` says what was refused. A `session.store` configured with two
+`agent plugins` says what was refused. A `session.store` configured with two
 active stores refuses to start. A hook that raises stops the operation,
 naming the hook.
 
@@ -51,7 +51,7 @@ contributions.contribute(
 
 the yaml beside it in the same schema as the catalogue's
 (`acp.command`, `requires`, `terms`, `capabilities`). Installed beside
-agent-runtimes, `loop harnesses` lists *aider* with its terms and
+agent-runtimes, `agent harnesses` lists *aider* with its terms and
 capabilities, an agent spec says `harness: aider` and the runtime resolves it
 through the registry; a session on it swaps, clones and exports like any
 other. A yaml missing `terms` is refused at start — *a harness whose terms
@@ -64,7 +64,7 @@ refused by name. Nothing in agent-runtimes is edited.
 `omnigent-jsonl/1`: its importer reads another tool's `session_meta` +
 `item` lines into the record's entries (a `message` item a `turn`, a
 `function_call` a `tool_call`, the rest refused by kind, in a sentence), its
-exporter the inverse. `loop sessions import --format omnigent-jsonl/1 file.jsonl`
+exporter the inverse. `agent sessions import --format omnigent-jsonl/1 file.jsonl`
 and `POST /sessions/import?format=` reach it; the built-in format is
 contributed the same way, so the second is no special case of the first.
 

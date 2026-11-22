@@ -3,6 +3,6 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-// Moved into the library, beside the surface components: the loop's own
+// Moved into the library, beside the surface components: the Agent's own
 // surface plugin needs the same context the examples had.
 export { A2uiMarkdownProvider } from '../../components/a2ui';

@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-agent-codemode` — codemode, as a capacity.
+ * `@datalayer/agent-plugin-agent-codemode` — codemode, as a capacity.
  *
  * Two plugins from one mould, because codemode is best understood as a
  * comparison: {@link AgentCodemodePlugin} mounts the `example-codemode`
@@ -22,9 +22,9 @@
 import { defineAgentCapacityPlugin } from '../agent-capacity';
 
 export const AGENT_CODEMODE_PLUGIN_NAME =
-  '@datalayer/loop-plugin-agent-codemode';
+  '@datalayer/agent-plugin-agent-codemode';
 export const AGENT_NO_CODEMODE_PLUGIN_NAME =
-  '@datalayer/loop-plugin-agent-no-codemode';
+  '@datalayer/agent-plugin-agent-no-codemode';
 
 export const AgentCodemodePlugin = defineAgentCapacityPlugin({
   key: 'codemode',

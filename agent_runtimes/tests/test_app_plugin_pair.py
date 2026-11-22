@@ -4,7 +4,7 @@
 """An application's two plugins, named once.
 
 The runtime's plugin and the page's share the application's name,
-``loop-app-<id>``; the runtime's manifest names the page's as what it cannot be
+``agent-app-<id>``; the runtime's manifest names the page's as what it cannot be
 used without, both are delivered as one extension of that name, and the page
 follows what the runtime holds through ``/api/v1/apps/<id>/plugins/state``.
 Written as a spec or ejected to an ``app.py``, an application is the same pair
@@ -48,7 +48,7 @@ def _pair(manifest) -> tuple:
 def test_the_pair_has_one_name_declared_each_way() -> None:
     for app in APP_CATALOGUE.values():
         name = app_plugin_name(app.id)
-        assert name == f"loop-app-{app.id}"
+        assert name == f"agent-app-{app.id}"
         assert _pair(manifest_of(app)) == (name, (name,), name)
 
 
@@ -62,20 +62,20 @@ def test_the_state_says_the_applications_own_plugin_once_it_is_held() -> None:
     held = app_plugins_state(app.id, registry)
     assert held["plugins"] == [
         {
-            "name": "loop-app-web-research",
+            "name": "agent-app-web-research",
             "enabled": True,
             "activated": True,
             "display_name": app.name,
             "emoji": app.emoji,
-            "extension": "loop-app-web-research",
-            "frontend_dependencies": ["loop-app-web-research"],
+            "extension": "agent-app-web-research",
+            "frontend_dependencies": ["agent-app-web-research"],
         }
     ]
     assert held["revision"] > before["revision"]
     # Nothing of another application, held or not.
     register_app(APP_CATALOGUE["inbox-triage"], registry)
     assert [p["name"] for p in app_plugins_state(app.id, registry)["plugins"]] == [
-        "loop-app-web-research"
+        "agent-app-web-research"
     ]
     assert app_plugins_state("support-desk", registry)["plugins"] == []
     revision = revision_of(registry)
@@ -98,7 +98,7 @@ def test_the_routes_answer_reactors_shape_for_one_application() -> None:
         assert state == {"revision": revision_of(PLATFORM), "plugins": []}
         register_app(app)
         state = client.get(f"/api/v1/apps/{app.id}/plugins/state").json()
-        assert [p["name"] for p in state["plugins"]] == ["loop-app-web-research"]
+        assert [p["name"] for p in state["plugins"]] == ["agent-app-web-research"]
         streamed = client.get(
             f"/api/v1/apps/{app.id}/events/stream",
             params={"poll_seconds": 0.01, "max_seconds": 0.05},
@@ -117,7 +117,7 @@ def test_the_routes_answer_reactors_shape_for_one_application() -> None:
 
 def test_a_spec_and_the_app_py_eject_writes_give_the_same_pair(tmp_path: Path) -> None:
     """The runtime's half: the spec, and the ``app.py`` that
-    ``loop apps eject`` writes from it, are the same plugin pair."""
+    ``agent apps eject`` writes from it, are the same plugin pair."""
     written = init("desk", tmp_path, example="support-desk")
     spec_path = written.folder / "app.yaml"
     from_spec = manifest_of(load_app(yaml.safe_load(spec_path.read_text())))
@@ -127,8 +127,8 @@ def test_a_spec_and_the_app_py_eject_writes_give_the_same_pair(tmp_path: Path) -
         _pair(from_spec)
         == _pair(from_python)
         == (
-            "loop-app-desk",
-            ("loop-app-desk",),
-            "loop-app-desk",
+            "agent-app-desk",
+            ("agent-app-desk",),
+            "agent-app-desk",
         )
     )

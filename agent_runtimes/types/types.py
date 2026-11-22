@@ -2186,7 +2186,7 @@ class Agentspec(BaseModel):
         default=True,
         description=(
             "Whether the pickers offer the agent (the new agent page, the chats, "
-            "the assign menu, loop's pickers): an enabled agent that is not "
+            "the assign menu, `agent`'s pickers): an enabled agent that is not "
             "listed runs by id and as a default, without being offered"
         ),
     )
@@ -3941,7 +3941,7 @@ class AppSpec(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     schema_: str = Field(
-        default="loop.app/v1", alias="schema", description="The version of the spec"
+        default="agent.app/v1", alias="schema", description="The version of the spec"
     )
     id: str = Field(..., description="Unique application identifier")
     version: str = Field(default="0.0.1", description="Application version")
@@ -4475,7 +4475,7 @@ class TeamSpec(BaseModel):
 
 
 # ============================================================================
-# Scenes (agentspecs `scenes`, `schema: loop.scene/v1`)
+# Scenes (agentspecs `scenes`, `schema: agent.scene/v1`)
 # ============================================================================
 
 
@@ -4695,7 +4695,7 @@ class ScenePlayedBeatSpec(BaseModel):
 
 
 class ScenePlayedSpec(BaseModel):
-    """What came of the last rehearsal `loop scenes rehearse --cloud` played.
+    """What came of the last rehearsal `agent scenes rehearse --cloud` played.
 
     Kept beside the specs in ``<id>/rehearsal.json``, written by the command
     and never by hand. A scene is *Live* when it ``passed``; one that did not
@@ -4774,7 +4774,7 @@ class SceneSpec(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     schema_: str = Field(
-        default="loop.scene/v1", alias="schema", description="The version of the spec"
+        default="agent.scene/v1", alias="schema", description="The version of the spec"
     )
     id: str = Field(..., description="Unique scene identifier")
     version: str = Field(default="0.0.1")

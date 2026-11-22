@@ -21,7 +21,7 @@ import { Button, Heading, Label, Select, Text, TextInput } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { useIAMStore } from '@datalayer/core/lib/state/substates/IAMState';
 import type { AppRuleSpec, AppSpec } from '../../../types/agentspecs';
-import { agentServerOf, type LoopWorkspaceContext } from '../../core';
+import { agentServerOf, type AgentWorkspaceContext } from '../../core';
 import { BEHAVIOUR_WORDS, coverOf } from '../../apps/rules';
 import {
   FILE_AND_SHELL_RULES,
@@ -385,7 +385,7 @@ export function SessionRules({
  * its session on the runtime. None before a message is sent.
  */
 export function sessionUidOf(
-  workspace?: Pick<LoopWorkspaceContext, 'conversationId' | 'thread'>,
+  workspace?: Pick<AgentWorkspaceContext, 'conversationId' | 'thread'>,
 ): string | undefined {
   return workspace?.conversationId || workspace?.thread || undefined;
 }
@@ -396,7 +396,7 @@ export function AppRulesCard({
 }: {
   app: AppSpec;
   /** The workspace the card sits in, when the slot gives it: names the session running. */
-  workspace?: LoopWorkspaceContext;
+  workspace?: AgentWorkspaceContext;
 }): JSX.Element {
   const token = useIAMStore(state => state.token) ?? '';
   const signedIn = Boolean(token);

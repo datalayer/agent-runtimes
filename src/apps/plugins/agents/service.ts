@@ -6,7 +6,7 @@
 /**
  * The sandbox, owned in one place.
  *
- * Nothing else in LOOP talks to a sandbox directly. The notebook and the
+ * Nothing else in Agent talks to a sandbox directly. The notebook and the
  * document ask this service whether there is a kernel to bind to; the A2UI
  * plugin asks it what executed. That is the point of a base plugin: one owner
  * for a fact that several views need, rather than four components each opening

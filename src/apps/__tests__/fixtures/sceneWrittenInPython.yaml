@@ -1,5 +1,5 @@
-# Built from scene.py by `loop scenes build`: the file is the source; edit it there.
-schema: loop.scene/v1
+# Built from scene.py by `agent scenes build`: the file is the source; edit it there.
+schema: agent.scene/v1
 id: desk-and-sales
 name: Desk & Sales
 description: The support desk takes a question about selling and asks Sales.

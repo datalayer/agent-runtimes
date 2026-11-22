@@ -82,7 +82,7 @@ describe('the opening document', () => {
   });
 
   it('is what the document view opens on, unless a host contributes its own', () => {
-    expect(VIEW).toContain('useContributions(LoopOpeningDocument)');
+    expect(VIEW).toContain('useContributions(AgentOpeningDocument)');
     expect(VIEW).toContain('contributedOpening?.document ?? openingDocument');
     expect(VIEW).toContain('content={opening}');
   });

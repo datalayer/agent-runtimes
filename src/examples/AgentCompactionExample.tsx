@@ -34,7 +34,7 @@ import {
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
-import { LoopEmbed } from '../apps';
+import { AgentEmbed } from '../apps';
 import { createAgentCompactionPlugin } from '../apps/plugins/agent-compaction';
 import { useAgentRuntimeCompaction, agentRuntimeStore } from '../stores';
 import { getAgentspecs } from '../specs/agents';
@@ -181,7 +181,7 @@ const AgentCompactionInner: React.FC = () => {
     null,
   );
 
-  // The capacity for the chosen budget: the Loop creates the agent from its
+  // The capacity for the chosen budget: the Agent creates the agent from its
   // blueprint, compaction budget included, once the budget is picked.
   const plugins = useMemo(
     () =>
@@ -290,9 +290,9 @@ const AgentCompactionInner: React.FC = () => {
 
       <Box flex={1} minHeight={0} display="flex">
         <Box flex={1} minWidth={0}>
-          {/* The variants stay visible: hidden, the Loop pins the agent to
+          {/* The variants stay visible: hidden, the Agent pins the agent to
               the page, and compaction happens in the server-side loop. */}
-          <LoopEmbed
+          <AgentEmbed
             key={launchedMaxTokens}
             serverUrl={agentBaseUrl}
             target="local"

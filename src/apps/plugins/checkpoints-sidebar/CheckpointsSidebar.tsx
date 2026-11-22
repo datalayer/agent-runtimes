@@ -40,7 +40,7 @@ import {
   VersionsIcon,
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
-import type { LoopWorkspaceContext } from '../../core';
+import type { AgentWorkspaceContext } from '../../core';
 import {
   deleteConversationCheckpoint,
   isAutoCheckpoint,
@@ -106,7 +106,7 @@ export function afterNextSnapshot(timeoutMs = SNAPSHOT_WAIT_MS): Promise<void> {
 
 export interface CheckpointsSidebarProps {
   /** Forwarded by the shell: where the agent runs and which one it is. */
-  workspace?: LoopWorkspaceContext;
+  workspace?: AgentWorkspaceContext;
 }
 
 function SectionHeading({ children }: { children: React.ReactNode }) {

@@ -222,9 +222,9 @@ def test_build_marks_each_as_code_and_a_spec_alone_says_what_it_lacks(
     )
     built = build(source)
     assert [mark.line() for mark in built.marks] == [
-        "# loop:code tool lookup_order: lookup_order (app.py:3)",
-        "# loop:code check no_prices: no_prices (app.py:7)",
-        "# loop:code test greets: greets (app.py:10)",
+        "# agent:code tool lookup_order: lookup_order (app.py:3)",
+        "# agent:code check no_prices: no_prices (app.py:7)",
+        "# agent:code test greets: greets (app.py:10)",
     ]
     assert [mark.moment for mark in code_marks(built.application)][
         0

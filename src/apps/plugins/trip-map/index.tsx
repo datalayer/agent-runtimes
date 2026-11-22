@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-trip-map` — the Traveller's options on a map: each
+ * `@datalayer/agent-plugin-trip-map` — the Traveller's options on a map: each
  * option's places numbered in the order they are visited, one option at a
  * time with a switch between them, over Overture Maps' open basemap, the
  * places listed under the map with their links and the attribution of the
@@ -28,7 +28,7 @@ import {
 } from '../../toolCards/kit';
 import { OVERTURE_BASEMAP_ATTRIBUTION, readTripMap } from './read';
 
-export const TRIP_MAP_PLUGIN_NAME = '@datalayer/loop-plugin-trip-map';
+export const TRIP_MAP_PLUGIN_NAME = '@datalayer/agent-plugin-trip-map';
 
 export const TRIP_MAP_WORDS = {
   title: 'On the map',

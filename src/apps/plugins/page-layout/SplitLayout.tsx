@@ -109,7 +109,7 @@ export function SplitLayout({
   const percent = Math.round(share * 100);
   return (
     <Box
-      data-testid="loop-split-layout"
+      data-testid="agent-split-layout"
       flex="1 1 auto"
       minHeight={0}
       display="flex"
@@ -126,7 +126,7 @@ export function SplitLayout({
         overflow="hidden"
       >
         <Box
-          data-testid="loop-split-conversation"
+          data-testid="agent-split-conversation"
           flex={hasEditor ? `0 0 ${percent}%` : '1 1 auto'}
           minWidth={0}
           minHeight={0}
@@ -180,7 +180,7 @@ export function SplitLayout({
           />
         ) : null}
         <Box
-          data-testid="loop-split-page"
+          data-testid="agent-split-page"
           sx={
             hasEditor
               ? {

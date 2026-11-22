@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Banner and animation utilities for theLoop assistant."""
+"""Banner and animation utilities for the Agent assistant."""
 
 import io
 import random
@@ -54,17 +54,17 @@ RESET = "\033[0m"
 # via ``print_goodbye`` so the message stays consistent.
 GOODBYE_URL = "https://datalayer.ai"
 
-#: The Loop's wordmark, as the terminal writes it — the eyes are the two
-#: O's, which is the whole joke; it is one string so the banner, the panel
-#: title and the about screen cannot drift apart. The emoji is two columns
-#: wide in a terminal, so the banner's own padding counts it as two.
-LOOP_WORDMARK = "L\U0001f440P"
-#: The same mark as a verb, for a line that reads as a sentence.
-LOOP_WORDMARK_VERB = "L\U0001f440PING"
+#: The Agent's wordmark, as the terminal writes it — the name, then its eyes;
+#: it is one string so the banner, the panel title and the about screen cannot
+#: drift apart. The emoji is two columns wide in a terminal, so the banner's
+#: own padding counts it as two.
+AGENT_WORDMARK = "AGENT \U0001f440"
+#: What the goodbye line wishes, for a line that reads as a sentence.
+AGENT_WORDMARK_VERB = "GOING"
 #: The version the terminal shows: the library's own, so it cannot drift from
 #: what is installed. (`agent_runtimes.__init__` does not import this package,
 #: so reading it here is no cycle.)
-LOOP_VERSION = __import__("agent_runtimes").__version__
+AGENT_VERSION = __import__("agent_runtimes").__version__
 
 #: Datalayer's mark, before the wordmark in the prompt's header.
 DATALAYER_MARK = "\u2630"
@@ -124,7 +124,7 @@ def drawn_cells(glyph: str) -> int:
 TOKENS_UP = "\u25b2"
 TOKENS_DOWN = "\u25bc"
 GOODBYE_MESSAGE = (
-    f"Keep {LOOP_WORDMARK_VERB} — Your agents stay warm. See you at ☰ Datalayer"
+    f"Keep {AGENT_WORDMARK_VERB} — Your agents stay warm. See you at ☰ Datalayer"
 )
 
 
@@ -160,7 +160,7 @@ def print_goodbye(console: Any = None) -> None:
 BANNER = f"""
 {GREEN_MEDIUM}{BOLD}╔═══════════════════════════════════════════════════════════════╗
 ║                                                               ║
-║   {GREEN_LIGHT}{BOLD}{LOOP_WORDMARK}{WHITE}                                                        {GREEN_MEDIUM}║
+║   {GREEN_LIGHT}{BOLD}{AGENT_WORDMARK}{WHITE}                                                    {GREEN_MEDIUM}║
 ║                                                               ║
 ║   {GREEN_MEDIUM}AI-Powered Data Assistant                                   {GREEN_MEDIUM}║
 ║                                                               ║
@@ -411,7 +411,7 @@ BANNER_HEIGHT = BANNER.count("\n") + 2  # +2 for the "Powered by" line and extra
 
 
 def show_banner(splash: bool = False, splash_all: bool = False) -> None:
-    """Display theLoop welcome banner with optional animations.
+    """Display the Agent welcome banner with optional animations.
 
     Args:
         splash: If True, show Matrix rain animation before banner.

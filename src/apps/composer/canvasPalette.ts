@@ -5,7 +5,7 @@
 
 /**
  * The Canvas's palette, read from Reactor: the blocks the enabled
- * plugins contribute to `loop.canvas.block` (agent-runtimes'
+ * plugins contribute to `agent.canvas.block` (agent-runtimes'
  * `apps/plugins/canvas-blocks`), and nothing else — what the palette lists and
  * what *Add* offers.
  *

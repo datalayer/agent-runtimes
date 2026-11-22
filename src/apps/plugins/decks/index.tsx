@@ -4,11 +4,11 @@
  */
 
 /**
- * Decks in a Loop: a deck beside the chat.
+ * Decks in an Agent: a deck beside the chat.
  *
  * The plugin pulls `@datalayer/decks`'s own reactor plugin in as a dependency,
- * pointed at the Loop's slots — the list of decks in the sidebar, the "new
- * deck" dialog at the root — and adds what only a Loop can know:
+ * pointed at the Agent's slots — the list of decks in the sidebar, the "new
+ * deck" dialog at the root — and adds what only an Agent can know:
  *
  * - a **Deck** editor surface, one entry in the shell's editor selector, that
  *   shows the open deck in the column beside the conversation;
@@ -43,9 +43,9 @@ import {
   subscribeDecksState,
 } from '@datalayer/decks/plugin';
 import {
-  LoopCommand,
-  LoopEditorView,
-  LoopSlots,
+  AgentCommand,
+  AgentEditorView,
+  AgentSlots,
   requestSurface,
 } from '../../core';
 import { InputPromptPlugin } from '../input-prompt';
@@ -56,15 +56,15 @@ import { DECK_SURFACE_ID } from './surface';
 
 export { DECK_SURFACE_ID } from './surface';
 
-export const DECKS_PLUGIN_NAME = '@datalayer/loop-plugin-decks';
+export const DECKS_PLUGIN_NAME = '@datalayer/agent-plugin-decks';
 
 /**
  * A slot nobody renders: the decks plugin's main view is shown through the
  * Deck surface instead, so the plugin's own `slot` output must land nowhere.
  */
-export const DECKS_UNUSED_SLOT = 'loop.decks.unused';
+export const DECKS_UNUSED_SLOT = 'agent.decks.unused';
 
-export const LoopDecksPlugin = definePlugin<
+export const AgentDecksPlugin = definePlugin<
   Record<string, never>,
   unknown,
   ReactorReactOutput
@@ -79,11 +79,11 @@ export const LoopDecksPlugin = definePlugin<
   emoji: '\u{1F4CA}',
   dependencies: [
     configurePlugin(DecksPlugin, {
-      listSlot: LoopSlots.sidebar,
+      listSlot: AgentSlots.sidebar,
       // Above the plugins panel, which puts itself last.
       listOrder: 10,
       slot: DECKS_UNUSED_SLOT,
-      dialogSlot: LoopSlots.root,
+      dialogSlot: AgentSlots.root,
       shellView: false,
     }),
     // The menu sits in the composer's action row; without the composer there
@@ -92,7 +92,7 @@ export const LoopDecksPlugin = definePlugin<
   ],
   contributes: [
     contribution(
-      LoopEditorView,
+      AgentEditorView,
       {
         surfaceId: DECK_SURFACE_ID,
         title: 'Deck',
@@ -103,7 +103,7 @@ export const LoopDecksPlugin = definePlugin<
       { id: DECK_SURFACE_ID, order: 30 },
     ),
     contribution(
-      LoopCommand,
+      AgentCommand,
       {
         name: 'deck',
         description: 'Open the deck beside the chat',
@@ -136,7 +136,7 @@ export const LoopDecksPlugin = definePlugin<
       }
       seen = revealed;
       if (!chooseEditor(DECK_SURFACE_ID)) {
-        console.warn('[loop] No chat is on screen to show the deck beside.');
+        console.warn('[agent] No chat is on screen to show the deck beside.');
       }
     });
   },
@@ -144,7 +144,7 @@ export const LoopDecksPlugin = definePlugin<
     components: [
       {
         id: 'decks-menu',
-        slot: LoopSlots.promptAction,
+        slot: AgentSlots.promptAction,
         order: 40,
         Component: DecksMenu,
       },
@@ -165,4 +165,4 @@ export const DeckViewPlugin = defineViewPlugin({
   order: 12,
 });
 
-export default LoopDecksPlugin;
+export default AgentDecksPlugin;

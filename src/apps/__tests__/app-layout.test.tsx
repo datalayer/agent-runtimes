@@ -22,10 +22,10 @@ import {
   hasAppPage,
   surfaceUnshown,
 } from '../plugins/app-page';
-import { LoopChatLayout, LoopPromptPanel } from '../core';
-import { loopPlugins } from '../presets';
+import { AgentChatLayout, AgentPromptPanel } from '../core';
+import { agentPlugins } from '../presets';
 import {
-  LOOP_PAGE_LAYOUT_PLUGIN_NAME,
+  AGENT_PAGE_LAYOUT_PLUGIN_NAME,
   SPLIT_DEFAULT_SHARE,
   SPLIT_MAX_SHARE,
   SPLIT_MIN_SHARE,
@@ -42,8 +42,8 @@ const seen = vi.hoisted(() => ({
 
 // The workspace itself is stood in for: what is tested is what the
 // application hands it.
-vi.mock('../embed/LoopEmbed', () => ({
-  LoopEmbed: (props: Record<string, any>) => {
+vi.mock('../embed/AgentEmbed', () => ({
+  AgentEmbed: (props: Record<string, any>) => {
     seen.embed.push(props);
     return <div data-testid="workspace" />;
   },
@@ -197,26 +197,26 @@ describe('the renderer and the embed', () => {
 describe('the split, on the page-layout plugin', () => {
   it('is contributed in place of the sheet, with no turn panel and no toggle', async () => {
     const reactor = buildReactorFromPlugins(
-      loopPlugins({ pageLayout: true, pageLayoutArrangement: 'split' }),
+      agentPlugins({ pageLayout: true, pageLayoutArrangement: 'split' }),
     );
     await reactor.start();
-    const layouts = reactor.getContributions(LoopChatLayout);
+    const layouts = reactor.getContributions(AgentChatLayout);
     expect(layouts.map(entry => entry.value.id)).toEqual(['split-layout']);
     expect(layouts[0].value.prompt).toBe('docked');
     expect(
-      reactor.getContributions(LoopPromptPanel).map(entry => entry.value.id),
+      reactor.getContributions(AgentPromptPanel).map(entry => entry.value.id),
     ).not.toContain('page-layout-turn');
     expect(
-      reactor.getConfig<{ arrangement: string }>(LOOP_PAGE_LAYOUT_PLUGIN_NAME)
+      reactor.getConfig<{ arrangement: string }>(AGENT_PAGE_LAYOUT_PLUGIN_NAME)
         ?.arrangement,
     ).toBe('split');
   });
 
   it('keeps the page arrangement by default', async () => {
-    const reactor = buildReactorFromPlugins(loopPlugins({ pageLayout: true }));
+    const reactor = buildReactorFromPlugins(agentPlugins({ pageLayout: true }));
     await reactor.start();
     expect(
-      reactor.getContributions(LoopChatLayout).map(entry => entry.value.id),
+      reactor.getContributions(AgentChatLayout).map(entry => entry.value.id),
     ).toEqual(['page-layout']);
   });
 
@@ -245,9 +245,9 @@ describe('the split, on the page-layout plugin', () => {
   it('draws the conversation on the left, the page on the right, a hairline between', async () => {
     const { container, root } = await render(<SplitLayout {...parts(true)} />);
     const conversation = container.querySelector(
-      '[data-testid="loop-split-conversation"]',
+      '[data-testid="agent-split-conversation"]',
     )!;
-    const page = container.querySelector('[data-testid="loop-split-page"]')!;
+    const page = container.querySelector('[data-testid="agent-split-page"]')!;
     const separator = container.querySelector('[role="separator"]')!;
     expect(conversation.textContent).toBe('the conversationthe composer');
     expect(page.textContent).toBe('the page');
@@ -258,7 +258,7 @@ describe('the split, on the page-layout plugin', () => {
           ? 'hairline'
           : child.getAttribute('data-testid'),
       ),
-    ).toEqual(['loop-split-conversation', 'hairline', 'loop-split-page']);
+    ).toEqual(['agent-split-conversation', 'hairline', 'agent-split-page']);
     expect(separator.getAttribute('aria-valuenow')).toBe('40');
     await act(async () => root.unmount());
   });

@@ -46,7 +46,7 @@ describe('withUploadedFiles', () => {
       }),
     );
     const given = {
-      loop: {
+      agent: {
         settings: { tone: 'Warm' },
         files: [held('orders.csv', 'text/csv', 'a,b\n1,2\n'), kept],
       },
@@ -55,7 +55,7 @@ describe('withUploadedFiles', () => {
     expect(namesFiles(given)).toBe(true);
     const sent = await withUploadedFiles(given, upload);
     expect(sent).toEqual({
-      loop: {
+      agent: {
         settings: { tone: 'Warm' },
         files: [
           {
@@ -72,18 +72,18 @@ describe('withUploadedFiles', () => {
     expect(JSON.stringify(sent)).not.toContain('data:');
     const [[uploaded]] = upload.mock.calls;
     expect(await textOf(uploaded)).toBe('a,b\n1,2\n');
-    expect(namesFiles({ loop: {} })).toBe(false);
+    expect(namesFiles({ agent: {} })).toBe(false);
     expect(namesFiles(undefined)).toBe(false);
   });
 
   it('refuses what is neither, and says an upload refused', async () => {
     await expect(
-      withUploadedFiles({ loop: { files: [{ name: 'x' }] } }, vi.fn()),
+      withUploadedFiles({ agent: { files: [{ name: 'x' }] } }, vi.fn()),
     ).rejects.toThrow('neither the page’s nor a ref');
     await expect(
       withUploadedFiles(
         {
-          loop: { files: [held('big.bin', 'application/octet-stream', 'xx')] },
+          agent: { files: [held('big.bin', 'application/octet-stream', 'xx')] },
         },
         async () => {
           throw new Error('big.bin is 2 bytes: a file is at most 1');

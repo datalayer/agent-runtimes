@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """What the session commands of the REPL share: the session API of the
-runtime the REPL talks to, reached as `LoopSession` reaches it, and the
+runtime the REPL talks to, reached as `AgentSession` reaches it, and the
 sentence said when this conversation is no session yet.
 
 The prompt's turns go to its agent's AG-UI endpoint whose threads are
@@ -30,8 +30,8 @@ NOT_A_SESSION = (
 
 
 def session_of(tux: "CliTux") -> Any:
-    """The REPL's `LoopSession`, whichever attribute the front-end keeps it under."""
-    return getattr(tux, "loop_session", None) or getattr(tux, "session", None)
+    """The REPL's `AgentSession`, whichever attribute the front-end keeps it under."""
+    return getattr(tux, "agent_session", None) or getattr(tux, "session", None)
 
 
 def ask(tux: "CliTux", method: str, path: str, **kwargs: Any) -> httpx.Response:
@@ -65,7 +65,7 @@ def ask(tux: "CliTux", method: str, path: str, **kwargs: Any) -> httpx.Response:
 
 def signing_headers(tux: "CliTux") -> Dict[str, str]:
     """What the prompt signs its calls to its runtime with: the session's
-    token; else the key `datalayer login` left, as `loop sessions` signs
+    token; else the key `datalayer login` left, as `agent sessions` signs
     its calls — a runtime on this machine writes and reads the platform's
     record with it, in the person's name. Nothing without either.
     """
@@ -92,7 +92,7 @@ async def load_conversation(
     A prompt that does not send its turns to an agent's sessions — one
     connected to an address of another kind — loads nothing.
     """
-    from agent_runtimes.loop.session import is_session_agui_url
+    from agent_runtimes.agent.session import is_session_agui_url
 
     agent_url = str(getattr(tux, "agent_url", "") or "")
     if not is_session_agui_url(agent_url):

@@ -273,7 +273,7 @@ def test_every_agent_the_runtime_makes_withholds_credentials_last(
 
 
 APP = {
-    "schema": "loop.app/v1",
+    "schema": "agent.app/v1",
     "id": "r19-probe",
     "name": "R-19 probe",
     "kind": "chat",
@@ -451,8 +451,8 @@ def test_a_step_is_shown_with_its_credential_withheld(secret: str) -> None:
 
 
 def test_the_stage_s_span_of_a_tool_call_holds_no_credential(secret: str) -> None:
+    from agent_runtimes.agent.scenes.stage import Recording, StageMember, _SpanRecorder
     from agent_runtimes.apps.loading import load_app
-    from agent_runtimes.loop.scenes.stage import Recording, StageMember, _SpanRecorder
 
     recording = Recording()
     recorder = _SpanRecorder(

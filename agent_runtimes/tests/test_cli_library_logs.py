@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """A command's output is not written over by a library's INFO lines: AWS's
-SDK says where it found its credentials before `loop sessions` prints
+SDK says where it found its credentials before `agent sessions` prints
 anything. Nothing is disabled — the root logger keeps its level, the
 library's warnings are shown, and its INFO lines are when asked for.
 """
@@ -110,8 +110,8 @@ def test_one_list_of_quiet_loggers() -> None:
 PROBE = (
     """
 import logging, sys
-sys.argv = ["loop", *sys.argv[1:]]
-import agent_runtimes.main  # the `loop` entry point: agent_runtimes.main:main
+sys.argv = ["agent", *sys.argv[1:]]
+import agent_runtimes.main  # the `agent` entry point: agent_runtimes.main:main
 assert logging.getLogger().getEffectiveLevel() == logging.INFO
 log = logging.getLogger("botocore.credentials")
 log.info("%s")

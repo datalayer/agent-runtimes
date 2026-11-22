@@ -5,9 +5,9 @@
 
 /**
  * `app-components` — the components an application's developer wrote, registered as that application's A2UI contributions: each a block
- * of its Canvas's palette (`loop.canvas.block`, as a UI's components
+ * of its Canvas's palette (`agent.canvas.block`, as a UI's components
  * are) and a renderer of the catalog its page, its elements and its answers
- * are drawn with (`loop.a2ui.component`). One plugin per application, in its
+ * are drawn with (`agent.a2ui.component`). One plugin per application, in its
  * workspace's preset only: the catalog grows for it, it does not open.
  *
  * Its components are reviewed before they get here — `checkAppspec` refuses
@@ -25,13 +25,13 @@ import {
 import type { AppSpec } from '../../../types/agentspecs';
 import { customImplementation } from '../../../components/a2ui/custom';
 import { customComponentEntry } from '../../apps/customComponents';
-import { LoopA2uiComponent } from '../../core/a2uiComponents';
-import { LoopCanvasBlock } from '../../core/canvasBlocks';
+import { AgentA2uiComponent } from '../../core/a2uiComponents';
+import { AgentCanvasBlock } from '../../core/canvasBlocks';
 import { uiManifestOf } from '../../uiManifest';
 
 /** The name of the plugin that contributes an application's own components. */
 export const appComponentsPluginName = (appId: string): string =>
-  `@datalayer/loop-plugin-app-components-${appId}`;
+  `@datalayer/agent-plugin-app-components-${appId}`;
 
 /** Whether an application's developer wrote components of its own. */
 export const hasCustomComponents = (app: Pick<AppSpec, 'interface'>): boolean =>
@@ -58,7 +58,7 @@ export function defineAppComponentsPlugin(
     octicon: 'apps',
     contributes: own.flatMap(component => [
       contribution(
-        LoopCanvasBlock,
+        AgentCanvasBlock,
         {
           id: component.name,
           ui: `app:${app.id}`,
@@ -67,7 +67,7 @@ export function defineAppComponentsPlugin(
         { id: component.name },
       ),
       contribution(
-        LoopA2uiComponent,
+        AgentA2uiComponent,
         {
           id: component.name,
           app: app.id,

@@ -6,7 +6,7 @@
 /**
  * A minimal runner for the examples-shell tests.
  *
- * Same reason as `vitest.loop.config.ts`: the repository's main vitest config
+ * Same reason as `vitest.agent.config.ts`: the repository's main vitest config
  * fails to transform its setup file under the installed vite/vitest pair, and
  * these tests do not need that setup.
  */

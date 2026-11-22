@@ -22,7 +22,7 @@ IAM answers those beside the Frames, as ``disabled``, and an IAM that does not
 yet answers none. An application naming a disabled context is not refused: it
 runs without it, without what a context it names inherits from it, and that
 is said (`frames_left_out`): logged here, kept in the record of each session
-(`guards.AppChecks.preflight`), and reported by `loop apps validate`.
+(`guards.AppChecks.preflight`), and reported by `agent apps validate`.
 """
 
 from __future__ import annotations

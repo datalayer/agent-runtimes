@@ -87,7 +87,7 @@ The plugin contributes one `AgentTools` bundle to the reactor it is mounted in
 one entry per command an agent may call, with the name the model uses, the
 command id, a description and the argument's JSON Schema. A command answers
 with a value, and that value is the tool's result — so "list the decks" is a
-command that returns the list, in the same registry as "next slide". The Loop
+command that returns the list, in the same registry as "next slide". The Agent
 reads every mounted plugin's bundle (`useAgentCommandTools`) and hands the
 agent one client tool per command, executed with `reactor.executeCommand` on
 the page the person is looking at; the plugin saves to its server when it was

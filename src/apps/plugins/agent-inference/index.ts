@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-agent-inference` — the inference provider, as a capacity.
+ * `@datalayer/agent-plugin-agent-inference` — the inference provider, as a capacity.
  *
  * Mounts the `example-inference` agent on a given inference provider — the
  * server's own model access, or Datalayer's inference service. Cast from the
@@ -16,7 +16,7 @@
 import { defineAgentCapacityPlugin } from '../agent-capacity';
 
 export const AGENT_INFERENCE_PLUGIN_NAME =
-  '@datalayer/loop-plugin-agent-inference';
+  '@datalayer/agent-plugin-agent-inference';
 
 /** Where the agent's model calls go. */
 export type InferenceProviderKind = 'local' | 'datalayer';

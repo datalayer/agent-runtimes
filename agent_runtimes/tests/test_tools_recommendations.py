@@ -889,7 +889,9 @@ async def test_the_weeks_report_is_written_as_a_page_of_the_space_it_may_write(
     assert written["state"] == _example()["document"]
     # Who wrote it: the application, on its own, for nobody — and which report.
     about = written["about"]
-    assert about["saved_by"] == "loop.app" and about["app"]["id"] == "aws-steward-agent"
+    assert (
+        about["saved_by"] == "agent.app" and about["app"]["id"] == "aws-steward-agent"
+    )
     assert (about["deployment"], about["on_its_own"], about["for"]) == (
         "dep-1",
         True,
@@ -917,7 +919,7 @@ async def test_the_same_week_reported_again_is_the_same_page(reporting: dict) ->
     again = await recommendations.recommendations_report()
     one, two = reporting["spacer"].calls
     assert one["key"] == two["key"] and one["key"].startswith(
-        "loop:app-1:report:dep-1:"
+        "agent:app-1:report:dep-1:"
     )
     assert again["document"] == first["document"]
     # Another week is another page.

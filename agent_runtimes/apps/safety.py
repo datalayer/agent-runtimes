@@ -29,7 +29,7 @@ conditions here are that file's, case for case, and a case made here has the
 same ``key`` as the Studio's — `test_apps_safety` reads the TypeScript and
 holds the two together.
 
-`loop apps validate --safety` asks it here (`answer_in_process`, or a local
+`agent apps validate --safety` asks it here (`answer_in_process`, or a local
 runtime configured with the application) or on Datalayer, through the Evals
 engine's ``app`` subject (`run_in_cloud`).
 """
@@ -669,7 +669,7 @@ async def converse_in_process(
     """Each case's ``ask`` sent to the application in this process, a session of its own each.
 
     Its code answers when it takes messages, else its agent — with its rules,
-    checks and record attached, and its code's own tools and checks, as `loop apps run --ask` asks it. A question the application puts
+    checks and record attached, and its code's own tools and checks, as `agent apps run --ask` asks it. A question the application puts
     to the person ends its conversation; a turn that fails is said, and the
     other cases are asked. Its record is not sent: it is nobody's session.
 

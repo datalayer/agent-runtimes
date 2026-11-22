@@ -3,17 +3,17 @@
 
 """Desk & Sales: a scene and its stage written in Python.
 
-    loop scenes rehearse scene.py                 # played here, beat by beat
-    loop scenes build scene.py --out scene.yaml   # the scene spec, loop.scene/v1
-    loop scenes push scene.py --space <space id>  # kept in your Space: the Studio opens it
+    agent scenes rehearse scene.py                 # played here, beat by beat
+    agent scenes build scene.py --out scene.yaml   # the scene spec, agent.scene/v1
+    agent scenes push scene.py --space <space id>  # kept in your Space: the Studio opens it
 
 Two applications of the catalogue: the support desk takes the audience's
 question and asks Sales, over A2A, which answers.
 """
 
-from agent_runtimes import loop
+from agent_runtimes import agent
 
-scene = loop.scene(
+scene = agent.scene(
     "desk-and-sales",
     "Desk & Sales",
     emoji="🎬",
@@ -70,7 +70,7 @@ beat.rehearse(
 # The stage: where each plays, where each stands, who may watch. Both play in
 # the browser, so the scene is rehearsed on this machine; put Sales on a
 # runtime ("runtime") to play it on Datalayer with --cloud.
-loop.stage(
+agent.stage(
     scene,
     runs_in={"desk": "browser", "sales": "browser"},
     positions={"desk": (0.25, 0.5), "sales": (0.75, 0.5)},

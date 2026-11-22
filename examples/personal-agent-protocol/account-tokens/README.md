@@ -15,7 +15,7 @@ access tokens, client assertions, and Session JWTs stay in the host's Reactor
 stores.
 
 ```bash
-loop apps run examples/personal-agent-protocol/account-tokens/app.py
+agent apps run examples/personal-agent-protocol/account-tokens/app.py
 ```
 
 Read the [refresh tokens guide](https://personalagentprotocol.org/docs/guides/account-tokens)

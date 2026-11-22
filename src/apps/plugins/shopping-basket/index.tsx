@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-shopping-basket` — the Shopper's basket, as a
+ * `@datalayer/agent-plugin-shopping-basket` — the Shopper's basket, as a
  * message drawn by the A2UI renderer: each item with its seller, quantity
  * and price, the shipping, the total summed here. **Buy** sends *buy this
  * basket* as the person's next turn: the agent then proposes the purchase at
@@ -33,7 +33,7 @@ import { PhotoStrip } from '../../toolCards/productPhoto';
 import { readBasket, type Basket } from './read';
 
 export const SHOPPING_BASKET_PLUGIN_NAME =
-  '@datalayer/loop-plugin-shopping-basket';
+  '@datalayer/agent-plugin-shopping-basket';
 
 export const SHOPPING_BASKET_WORDS = {
   title: 'Your basket',

@@ -27,7 +27,7 @@ function randomSlug(length = 6): string {
  * agent id.  This is required for server-side per-agent state (enabled
  * tools, approved tools, approved skills, codemode status…) to survive a
  * page reload — those maps are keyed by ``agent_id`` in
- * ``agent_runtimes.streams.loop``.
+ * ``agent_runtimes.streams.pubsub``.
  *
  * A fresh tab (or a ``sessionStorage.clear()``) produces a new id, which
  * preserves the original "clean telemetry per run" guarantee.

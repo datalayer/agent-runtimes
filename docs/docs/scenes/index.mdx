@@ -6,7 +6,7 @@ title: Scenes
 
 A **scene** is a team of agents put on a stage: who is on it, what they say
 to each other, and what the audience sees. A scene is written as a scene
-spec (`schema: loop.scene/v1`) in [agentspecs](https://agentspecs.datalayer.tech/docs/scenes);
+spec (`schema: agent.scene/v1`) in [agentspecs](https://agentspecs.datalayer.tech/docs/scenes);
 this page is about how a scene looks once it plays: its backdrop, the three
 ways to read its messages, and the drill-down into one message.
 
@@ -66,7 +66,7 @@ The three views show the same lines. Filter them by member or by kind, keep
 only what failed (*Failed only*) or put it first (*Failed first*), and copy
 the view: the lines as text, the table as Markdown, the diagram as its
 mermaid source. *Export JSON* saves the lines as a file you can read back,
-in a test or with `loop`.
+in a test or with `agent`.
 
 A coding agent's steps are lines too. When a member is a coding agent
 working behind the Shield, each file it reads and each edit it tries is a

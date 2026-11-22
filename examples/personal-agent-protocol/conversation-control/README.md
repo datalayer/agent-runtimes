@@ -12,7 +12,7 @@ The tool returns statuses, event types, and the company's answers. Tokens,
 user codes, and proofs stay in the host.
 
 ```bash
-loop apps run examples/personal-agent-protocol/conversation-control/app.py
+agent apps run examples/personal-agent-protocol/conversation-control/app.py
 ```
 
 Read the [conversations guide](https://personalagentprotocol.org/docs/guides/conversations)

@@ -34,7 +34,7 @@ import {
   useAnonymousSession,
   useAnonymousSessionStore,
 } from '../../../runtimes/browser/anonymousToken';
-import type { LoopWorkspaceContext } from '../../core';
+import type { AgentWorkspaceContext } from '../../core';
 import { targetRunsAgentInPage, type SandboxTarget } from './switchable';
 import type { AgentsConfig } from './plugin';
 import { AGENTS_PLUGIN_NAME } from './pluginName';
@@ -53,7 +53,7 @@ import { visitorForOf } from './visitorFor';
 export function AnonymousKeyHeaderBadge({
   workspace,
 }: {
-  workspace: LoopWorkspaceContext;
+  workspace: AgentWorkspaceContext;
 }): JSX.Element {
   return (
     <Box order={1} display="inline-flex" alignItems="center">
@@ -65,7 +65,7 @@ export function AnonymousKeyHeaderBadge({
 export function AnonymousKeyBadge({
   workspace,
 }: {
-  workspace: LoopWorkspaceContext;
+  workspace: AgentWorkspaceContext;
 }): JSX.Element | null {
   // The key of what this workspace runs (`visitorForOf`), as its chat asks it.
   const visitorFor = visitorForOf(

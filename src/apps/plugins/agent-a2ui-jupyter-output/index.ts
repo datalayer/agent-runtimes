@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-agent-a2ui-jupyter-output` — Jupyter outputs on
+ * `@datalayer/agent-plugin-agent-a2ui-jupyter-output` — Jupyter outputs on
  * A2UI surfaces, as a capacity.
  *
  * Mounts the `example-a2ui-jupyter-output` agent: each demonstration runs
@@ -19,7 +19,7 @@
 import { defineAgentCapacityPlugin } from '../agent-capacity';
 
 export const AGENT_A2UI_JUPYTER_OUTPUT_PLUGIN_NAME =
-  '@datalayer/loop-plugin-agent-a2ui-jupyter-output';
+  '@datalayer/agent-plugin-agent-a2ui-jupyter-output';
 
 export const AgentA2uiJupyterOutputPlugin = defineAgentCapacityPlugin({
   key: 'a2ui-jupyter-output',

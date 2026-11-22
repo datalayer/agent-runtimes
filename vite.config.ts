@@ -447,8 +447,8 @@ export default defineConfig(({ mode, command }) => {
       'agent-node': path.resolve(__dirname, 'html/agent-node.html'),
       'agent-notebook': path.resolve(__dirname, 'html/agent-notebook.html'),
       'agent-document': path.resolve(__dirname, 'html/agent-document.html'),
-      loop: path.resolve(__dirname, 'html/loop.html'),
-      'loop-example': path.resolve(__dirname, 'html/loop-example.html'),
+      'agent-workspace': path.resolve(__dirname, 'html/agent-workspace.html'),
+      'agent-example': path.resolve(__dirname, 'html/agent-example.html'),
       // An agent's page at its address ({name}.web.<domain>, port 8768).
       'agent-web': path.resolve(__dirname, 'html/agent-web.html'),
     };
@@ -465,7 +465,7 @@ export default defineConfig(({ mode, command }) => {
       'react-is',
       // Hoisted to the workspace root, so Vite sees these as *linked* deps
       // and serves them file by file over @fs — @primer/react alone was 72
-      // waterfall requests standing between the Loop shell and its first
+      // waterfall requests standing between the Agent shell and its first
       // paint. Naming them here forces pre-bundling: one request each.
       '@primer/react',
       '@primer/react/experimental',

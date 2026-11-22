@@ -25,7 +25,7 @@ import { iamStore } from '@datalayer/core/lib/state/substates/IAMState';
 import { contribution, definePlugin } from '@datalayer/reactor';
 import { themeAccentVars } from '@datalayer/primer-addons';
 import { emptyAppspec, dumpAppspec } from '../apps/appspec';
-import { LoopAssistantCharacter } from '../core';
+import { AgentAssistantCharacter } from '../core';
 import { ASSISTANT_CHARACTERS } from '../../chat/assistant/characters';
 import type { AppSpec } from '../../types/agentspecs';
 
@@ -166,7 +166,7 @@ describe('AppEmbed, the React component', () => {
       name: 'test-owl',
       contributes: [
         contribution(
-          LoopAssistantCharacter,
+          AgentAssistantCharacter,
           { id: 'owl', character: owl },
           { id: 'owl' },
         ),
@@ -435,7 +435,7 @@ describe('the element', () => {
       functions: Record<string, unknown>;
     };
     element.innerHTML = `<script type="application/yaml">
-schema: loop.app/v1
+schema: agent.app/v1
 id: shop-help
 name: Shop help
 kind: chat
@@ -487,7 +487,7 @@ deployment:
       userToken: string;
     };
     element.innerHTML = `<script type="application/yaml">
-schema: loop.app/v1
+schema: agent.app/v1
 id: shop-orders
 name: Shop orders
 kind: chat
@@ -515,12 +515,12 @@ deployment:
       contributes: Array<{ value: { props: () => unknown } }>;
     };
     const props = () => plugin.contributes[0].value.props();
-    expect(props()).toEqual({ loop: { user_token: 'signed.by.host' } });
+    expect(props()).toEqual({ agent: { user_token: 'signed.by.host' } });
     // A new one goes with the next run, and nothing is drawn again for it.
     element.userToken = 'renewed.by.host';
     await settle();
     expect(seen.renderer.length).toBe(drawn);
-    expect(props()).toEqual({ loop: { user_token: 'renewed.by.host' } });
+    expect(props()).toEqual({ agent: { user_token: 'renewed.by.host' } });
     expect(element.getAttribute('user-token')).toBe('renewed.by.host');
     element.userToken = '';
     expect(props()).toEqual({});
@@ -531,7 +531,7 @@ deployment:
     iamStore.setState({ token: 'jwt' } as never);
     const element = document.createElement('datalayer-app');
     element.innerHTML = `<script type="application/yaml">
-schema: loop.app/v1
+schema: agent.app/v1
 id: support-desk
 name: Support Desk
 kind: chat

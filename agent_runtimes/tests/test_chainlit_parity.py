@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """The parity check: Chainlit's cookbook examples rebuilt with
-LOOP's API (``examples/chainlit-parity``) do what Chainlit's do — each run
+Agent's API (``examples/chainlit-parity``) do what Chainlit's do — each run
 through an `AppHost`, its model scripted, its words, steps, components,
 actions and window messages checked against the example it rebuilds.
 """

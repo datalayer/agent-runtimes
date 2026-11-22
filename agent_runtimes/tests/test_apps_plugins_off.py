@@ -30,7 +30,7 @@ ORG = "01ORGANIZATION"
 IAM = "https://iam.test"
 
 APP = {
-    "schema": "loop.app/v1",
+    "schema": "agent.app/v1",
     "id": "desk",
     "name": "Desk",
     "kind": "chat",
@@ -139,7 +139,7 @@ class TestTheSetupNotes:
         ]
 
 
-class TestLoopAppsValidate:
+class TestAgentAppsValidate:
     def test_a_block_of_a_plugin_off_is_a_setup_note(self, tmp_path: Path) -> None:
         path = write(tmp_path)
         assert TABLE_OFF not in validate_file(path).setup
@@ -163,7 +163,7 @@ class TestLoopAppsValidate:
     def test_the_organizations_list_is_read_from_iam(
         self, tmp_path: Path, monkeypatch
     ) -> None:
-        from agent_runtimes.loop import launch
+        from agent_runtimes.agent import launch
 
         client = SimpleNamespace(urls=SimpleNamespace(iam_url=IAM))
         monkeypatch.setattr(launch, "make_client", lambda: (client, "t"))
@@ -188,7 +188,7 @@ class TestLoopAppsValidate:
     def test_signed_out_the_run_says_none_is_off(
         self, tmp_path: Path, monkeypatch
     ) -> None:
-        from agent_runtimes.loop import launch
+        from agent_runtimes.agent import launch
 
         def signed_out():
             raise launch.NotSignedIn("No Datalayer credentials were found.")

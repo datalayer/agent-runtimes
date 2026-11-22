@@ -3,7 +3,7 @@
 
 """Which of an application's plugins a runtime holds.
 
-An application is two Reactor plugins of one name, ``loop-app-<id>``: the
+An application is two Reactor plugins of one name, ``agent-app-<id>``: the
 page's, which declares the runtime's as required (``requiredBackendPlugins``),
 and the runtime's, registered when the runtime is configured with it. The page
 follows the runtime's with Reactor's ``useBackendPluginStream``, which reads
@@ -16,8 +16,8 @@ follows the runtime's with Reactor's ``useBackendPluginStream``, which reads
   events, one whenever the revision moves;
 - ``GET /api/v1/apps/<id>/plugins/frontend-extensions``: its page side when
   its package is installed here, as Reactor's route of that name
-  answers — none, or the extension ``loop-app-<id>``;
-- ``GET /api/v1/apps/<id>/reactor-extensions/loop-app-<id>/<path>``: a file
+  answers — none, or the extension ``agent-app-<id>``;
+- ``GET /api/v1/apps/<id>/reactor-extensions/agent-app-<id>/<path>``: a file
   of it, as Reactor's route of that name serves one.
 
 Answered to anybody, as Reactor's are — a browser's ``EventSource`` sends no

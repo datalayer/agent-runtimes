@@ -13,10 +13,10 @@ import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import { ErrorView } from './components';
-import { LoopEmbed } from '../apps';
+import { AgentEmbed } from '../apps';
 import { AgentParametersPlugin } from '../apps/plugins/agent-parameters';
 
-const LOOP_PLUGINS_AGENTPAR = [AgentParametersPlugin];
+const AGENT_PLUGINS_AGENTPAR = [AgentParametersPlugin];
 
 setupPrimerPortals();
 
@@ -375,14 +375,14 @@ const AgentParametersExample: React.FC = () => {
   }
 
   return (
-    <LoopEmbed
+    <AgentEmbed
       serverUrl={baseUrl}
       target="local"
       showAgentVariants
       agentId={agentId}
       editors={false}
       showHeader
-      plugins={LOOP_PLUGINS_AGENTPAR}
+      plugins={AGENT_PLUGINS_AGENTPAR}
     />
   );
 };

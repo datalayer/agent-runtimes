@@ -28,7 +28,7 @@ catalogue: neither has run with a real model, and each says so in its spec
 ## 1. Start from an example
 
 ```bash
-loop apps init interview --from customer-interview
+agent apps init interview --from customer-interview
 cd interview
 ```
 
@@ -56,7 +56,7 @@ app.rule("Send the summary by email", applies_to="send", behaviour="ask_first")
 
 `Application.from_spec` attaches code to a spec; the plain calls after it add
 to that spec what the Canvas would: suggested questions, settings, a rule.
-Everything declared is the Appspec `loop apps build` writes.
+Everything declared is the Appspec `agent apps build` writes.
 
 ### What it reacts to
 
@@ -128,7 +128,7 @@ as its spec's `record.include` says.
 ### Try it
 
 ```bash
-loop apps run app.py --local --watch
+agent apps run app.py --local --watch
 ```
 
 The terminal is the application's host: `start` runs as the session opens,
@@ -152,7 +152,7 @@ At the end of an interview, show the insights as a table under the answer
 ## 3. Report from a File: a widget
 
 ```bash
-loop apps init report --from report-from-a-file
+agent apps init report --from report-from-a-file
 ```
 
 A widget is a page with inputs and an output. Its settings are what the page
@@ -189,16 +189,16 @@ async def run(session: Session, text: str) -> None:
 ## 4. Check it, and save it on Datalayer
 
 ```bash
-loop apps validate app.py                 # the instant checks, on the spec it builds
-loop apps build app.py --out app.yaml     # its Appspec, its code marked at the top
-loop apps push app.py --app <its id>      # saved as the application's next version
+agent apps validate app.py                 # the instant checks, on the spec it builds
+agent apps build app.py --out app.yaml     # its Appspec, its code marked at the top
+agent apps push app.py --app <its id>      # saved as the application's next version
 ```
 
 `push` keeps the file itself in the application's item, beside its spec, and
 versions it with it; the Studio shows it in the **Python** tab, and the
-Canvas links what the code decides to its line. `loop apps pull <its id>`
+Canvas links what the code decides to its line. `agent apps pull <its id>`
 writes both back. See [Where the file lives](./python-applications#from-the-command-line).
 
 An application built by spec or on the Canvas comes to Python the other way:
-`loop apps eject app.yaml` writes the `app.py` that builds it — one way, and
+`agent apps eject app.yaml` writes the `app.py` that builds it — one way, and
 said before it is done.

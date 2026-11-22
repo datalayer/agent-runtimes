@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""``loop``'s ``/models <id>`` on an agent created from a library agentspec.
+"""``agent``'s ``/models <id>`` on an agent created from a library agentspec.
 
 Driven through the runtime's own routes — ``/configure/models``, the agent's
 creation spec and ``configure-from-spec`` — on ``example-simple``, whose
@@ -117,7 +117,7 @@ def _configure(app: FastAPI, **body: Any) -> dict[str, Any]:
 
 
 def _tux(app: FastAPI, monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
-    """Return ``loop``'s session, talking to the runtime's routes."""
+    """Return ``agent``'s session, talking to the runtime's routes."""
     real = httpx.AsyncClient
     monkeypatch.setattr(
         httpx,
@@ -129,7 +129,7 @@ def _tux(app: FastAPI, monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
         server_url="http://runtime",
         agent_id=AGENT,
         where=None,
-        loop_session=SimpleNamespace(model=SONNET),
+        agent_session=SimpleNamespace(model=SONNET),
     )
 
 
@@ -229,7 +229,7 @@ def test_a_library_agent_off_the_default_model_is_switched_too(
     assert agents_route._agentspecs[AGENT]["model"] == QWEN
 
     tux = _tux(runtime, monkeypatch)
-    tux.loop_session.model = QWEN
+    tux.agent_session.model = QWEN
     assert "Model: Bedrock Claude Sonnet 4.6" in _models(tux, SONNET)
     assert agents_route._agentspecs[AGENT]["model"] == SONNET
     assert creation_spy["pydantic_model"] == SONNET

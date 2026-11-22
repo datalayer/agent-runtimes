@@ -67,7 +67,7 @@ import type { FrontendToolDefinition } from '../../../types/tools';
  * The document's frontend tools, built without React.
  *
  * The plain twin of `useLexicalTools`, for the document plugin contributing
- * to the chat's `LoopFrontendTool` point. The executor reads the lexical
+ * to the chat's `AgentFrontendTool` point. The executor reads the lexical
  * store's live state through its methods; no reactivity needed.
  */
 export function createLexicalTools(

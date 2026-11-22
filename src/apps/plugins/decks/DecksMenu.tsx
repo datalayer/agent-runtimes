@@ -46,7 +46,7 @@ export default function DecksMenu(): JSX.Element | null {
   }
   const show = () => {
     if (!chooseEditor(DECK_SURFACE_ID)) {
-      console.warn('[loop] No chat is on screen to show the deck beside.');
+      console.warn('[agent] No chat is on screen to show the deck beside.');
     }
   };
   return (

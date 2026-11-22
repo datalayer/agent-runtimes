@@ -4,11 +4,11 @@
  */
 
 /**
- * `@datalayer/loop-plugin-chat-header` — the chat's title bar, as a plugin.
+ * `@datalayer/agent-plugin-chat-header` — the chat's title bar, as a plugin.
  *
  * The chat assembles the bar's full props — the agent's name, the kernel
  * indicator, the runtime status, the actions row — and offers them through
- * the {@link LoopChatHeader} point. This plugin is the standard taker: it
+ * the {@link AgentChatHeader} point. This plugin is the standard taker: it
  * renders them with the chat's own `ChatBaseHeader`, loaded lazily so the
  * plugin's module stays a manifest.
  *
@@ -22,15 +22,15 @@
 import type { JSX } from 'react';
 import { Suspense, lazy } from 'react';
 import { contribution, definePlugin } from '@datalayer/reactor';
-import { LoopChatHeader, type LoopChatHeaderProps } from '../../core';
+import { AgentChatHeader, type AgentChatHeaderProps } from '../../core';
 import { uiManifestOf } from '../../uiManifest';
 
-export const CHAT_HEADER_PLUGIN_NAME = '@datalayer/loop-plugin-chat-header';
+export const CHAT_HEADER_PLUGIN_NAME = '@datalayer/agent-plugin-chat-header';
 
 const LazyHeaderView = lazy(() => import('./HeaderView'));
 
 /** The lazy boundary, so the point's consumers need no Suspense of theirs. */
-function HeaderView(props: LoopChatHeaderProps): JSX.Element {
+function HeaderView(props: AgentChatHeaderProps): JSX.Element {
   return (
     <Suspense fallback={null}>
       <LazyHeaderView {...props} />
@@ -43,7 +43,7 @@ export const ChatHeaderPlugin = definePlugin({
   ...uiManifestOf('chat-header'),
   contributes: [
     contribution(
-      LoopChatHeader,
+      AgentChatHeader,
       { id: 'chat-header', Component: HeaderView },
       { id: 'chat-header' },
     ),

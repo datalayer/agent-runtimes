@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-product-cards` — products as cards, each with its
+ * `@datalayer/agent-plugin-product-cards` — products as cards, each with its
  * photo, title, price, rating and stock, a grid for a list; a quote or a test
  * order as its lines, each with its photo, and the total. Draws the demo
  * shop's tools (`list_products`, `find_products`, `get_product`,
@@ -31,7 +31,8 @@ import {
 import { ProductPhoto } from '../../toolCards/productPhoto';
 import { readProductCards, type OrderLine, type ProductCardItem } from './read';
 
-export const PRODUCT_CARDS_PLUGIN_NAME = '@datalayer/loop-plugin-product-cards';
+export const PRODUCT_CARDS_PLUGIN_NAME =
+  '@datalayer/agent-plugin-product-cards';
 
 export const PRODUCT_CARDS_WORDS = {
   products: 'Products',

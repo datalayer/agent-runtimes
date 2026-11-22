@@ -193,7 +193,7 @@ export interface EphemeralDocumentProps {
   /**
    * Render without wrapping the content in a theme provider.
    *
-   * For a host that already owns one — the LOOP workspace, where the entry
+   * For a host that already owns one — the Agent workspace, where the entry
    * point provides the theme and the views inherit it. Nested providers fight
    * over `BaseStyles` and font tokens, and the inner one wins for the wrong
    * reasons.
@@ -204,7 +204,7 @@ export interface EphemeralDocumentProps {
   /**
    * Whether to draw a toolbar at all. Defaults to true.
    *
-   * For a host where the toolbar is somebody's to provide — the LOOP
+   * For a host where the toolbar is somebody's to provide — the Agent
    * workspace, where a plugin owns it and can be switched off. `false` draws
    * no bar rather than an empty one: an empty bar still costs a row and a
    * border, and reads as broken rather than as absent.

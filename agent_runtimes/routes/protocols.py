@@ -6,7 +6,7 @@
 ``GET {prefix}/protocols``: each protocol plugin's description, as it
 contributed it to ``protocols.description`` — its id, name, layer, the
 version it implements, its roles, its state, its specification and its
-contribution points. Studio and ``loop apps protocols`` read it; nothing is
+contribution points. Studio and ``agent apps protocols`` read it; nothing is
 listed that no plugin contributed.
 """
 

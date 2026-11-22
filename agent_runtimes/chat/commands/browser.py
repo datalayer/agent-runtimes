@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, Optional
 
 import httpx
 
-from agent_runtimes.loop.commands import CommandArgSpec
+from agent_runtimes.agent.commands import CommandArgSpec
 
 from ..pages import split_jupyter_url
 
@@ -37,7 +37,7 @@ ARGS = (
     ),
 )
 
-#: Pages that exist today, per view, until the LOOP workspace lands.
+#: Pages that exist today, per view, until the Agent workspace lands.
 _LEGACY_PAGES = {
     "chat": "agent.html",
     "notebook": "agent-notebook.html",
@@ -80,7 +80,7 @@ async def _mint_handoff(tux: "CliTux", view: str) -> Optional[str]:
     Returns the code, or ``None`` when the server is too old to know about
     handoffs — in which case the browser still opens, just without continuity.
     """
-    session = getattr(tux, "loop_session", None)
+    session = getattr(tux, "agent_session", None)
     session_id = (
         getattr(session, "conversation_id", None)
         or getattr(tux, "conversation_id", None)
@@ -99,7 +99,7 @@ async def _mint_handoff(tux: "CliTux", view: str) -> Optional[str]:
     try:
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                f"{tux.server_url}/api/v1/loop/sessions/{session_id}/handoff",
+                f"{tux.server_url}/api/v1/agent/sessions/{session_id}/handoff",
                 json=body,
                 timeout=10.0,
             )
@@ -131,7 +131,7 @@ async def execute(tux: "CliTux", argv: str = "") -> Optional[str]:
         return None
 
     if code:
-        url = f"{tux.server_url}/loop?handoff={code}"
+        url = f"{tux.server_url}/agent?handoff={code}"
         if view != "chat":
             url += f"&view={view}"
     else:

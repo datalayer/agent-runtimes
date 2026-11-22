@@ -281,7 +281,7 @@ def test_a_file_given_and_a_rule_added_are_on_the_record(
                 "messages": [{"id": "m1", "role": "user", "content": "Read it"}],
                 "tools": [],
                 "context": [],
-                "forwardedProps": {"loop": {"files": refs}},
+                "forwardedProps": {"agent": {"files": refs}},
             },
         )
     )

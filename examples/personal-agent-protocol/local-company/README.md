@@ -19,5 +19,5 @@ the host's own page (`approve_device`). In Datalayer the same company is
 answered at its agent host, `<slug>.agent.datalayer.ai`, from the runtime it is kept on.
 
 ```bash
-loop apps run examples/personal-agent-protocol/local-company/app.py
+agent apps run examples/personal-agent-protocol/local-company/app.py
 ```

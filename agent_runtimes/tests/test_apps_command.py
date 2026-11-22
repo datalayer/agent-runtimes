@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""`loop apps validate`: the instant checks of an Appspec, in a terminal and in CI."""
+"""`agent apps validate`: the instant checks of an Appspec, in a terminal and in CI."""
 
 import json
 from pathlib import Path
@@ -33,7 +33,7 @@ def write(tmp_path: Path, data: dict, name: str = "app.yaml") -> Path:
 
 
 BASE = {
-    "schema": "loop.app/v1",
+    "schema": "agent.app/v1",
     "id": "desk",
     "name": "Desk",
     "kind": "chat",

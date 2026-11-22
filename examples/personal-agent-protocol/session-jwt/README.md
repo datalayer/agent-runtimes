@@ -11,7 +11,7 @@ policy evidence. The Session JWT, delegation, token, JWK, `jti`, Session ID,
 User ID, and private keys never enter model context.
 
 ```bash
-loop apps run examples/personal-agent-protocol/session-jwt/app.py
+agent apps run examples/personal-agent-protocol/session-jwt/app.py
 ```
 
 See the canonical [JOSE guide](https://personalagentprotocol.org/docs/guides/cryptography).

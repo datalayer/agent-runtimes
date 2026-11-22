@@ -25,7 +25,7 @@ A local company offers its `agent` interface alone. On Datalayer the same
 shop also answers at its MCP, API and web addresses.
 
 ```bash
-loop apps run examples/personal-agent-protocol/shop/app.py
+agent apps run examples/personal-agent-protocol/shop/app.py
 ```
 
 Read the [Operations guide](https://personalagentprotocol.org/docs/guides/operations).

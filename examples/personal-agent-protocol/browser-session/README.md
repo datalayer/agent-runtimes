@@ -24,7 +24,7 @@ Join codes, Session JWTs, and the company's cookies never enter model context: t
 tool returns statuses and booleans.
 
 ```bash
-loop apps run examples/personal-agent-protocol/browser-session/app.py
+agent apps run examples/personal-agent-protocol/browser-session/app.py
 ```
 
 Read the [Browser Session flow](https://personalagentprotocol.org/examples/browser-session/).

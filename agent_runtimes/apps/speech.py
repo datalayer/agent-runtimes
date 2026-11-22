@@ -4,7 +4,7 @@
 """What an application hears: ``@app.audio``.
 
 A turn's sound comes in chunks and is heard by the engines a page's and
-``loop --voice``'s are: a WAV recording on this machine when the pinned
+``agent --voice``'s are: a WAV recording on this machine when the pinned
 Whisper and faster-whisper are here (``voice.cli.Hearing``), else by
 Datalayer's speech service with the person's token (``POST
 /speech/transcriptions``, as protocol clients' audio is heard,

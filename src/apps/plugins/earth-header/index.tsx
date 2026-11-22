@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-earth-header` — Terra's title bar: a Sensor drop-
+ * `@datalayer/agent-plugin-earth-header` — Terra's title bar: a Sensor drop-
  * down (any, Sentinel-2, Landsat) told to the agent with every turn, and the
  * cloud cover of the scene it reads as a meter.
  *
@@ -17,7 +17,7 @@
 
 import { defineHeaderPlugin } from '../../toolCards/headerItems';
 
-export const EARTH_HEADER_PLUGIN_NAME = '@datalayer/loop-plugin-earth-header';
+export const EARTH_HEADER_PLUGIN_NAME = '@datalayer/agent-plugin-earth-header';
 
 /** The plugin, built for a workspace: what a person picked is that workspace's. */
 export const earthHeaderPlugin = defineHeaderPlugin({

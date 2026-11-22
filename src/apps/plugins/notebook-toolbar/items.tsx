@@ -66,12 +66,12 @@ function NotebookKernelIndicator({
 export function notebookToolbarItems(notebookId: string): ToolbarItem[] {
   return [
     {
-      key: 'loop-kernel-indicator-spacer',
+      key: 'agent-kernel-indicator-spacer',
       type: 'spacer',
       order: KERNEL_INDICATOR_ORDER - 1,
     },
     {
-      key: 'loop-kernel-indicator',
+      key: 'agent-kernel-indicator',
       type: 'custom',
       order: KERNEL_INDICATOR_ORDER,
       group: 'kernel',

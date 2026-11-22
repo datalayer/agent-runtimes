@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-books-header` — the Accountant's title bar: a
+ * `@datalayer/agent-plugin-books-header` — the Accountant's title bar: a
  * Period drop-down told to the agent with every turn, how many payments are
  * still to match, and the open invoices with their total due.
  *
@@ -17,7 +17,7 @@
 
 import { defineHeaderPlugin } from '../../toolCards/headerItems';
 
-export const BOOKS_HEADER_PLUGIN_NAME = '@datalayer/loop-plugin-books-header';
+export const BOOKS_HEADER_PLUGIN_NAME = '@datalayer/agent-plugin-books-header';
 
 /** The plugin, built for a workspace: what a person picked is that workspace's. */
 export const booksHeaderPlugin = defineHeaderPlugin({

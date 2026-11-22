@@ -42,13 +42,13 @@ import { waitForAgent } from './utils/waitForAgent';
 
 const queryClient = new QueryClient();
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { LoopEmbed } from '../apps';
+import { AgentEmbed } from '../apps';
 import { AgentMemoryPlugin } from '../apps/plugins/agent-memory';
 import { listRuntimeMemories } from '../api/runtimes/runtimes';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { useRuntimeTargetStore } from './utils/runtimeTargetStore';
 
-const LOOP_PLUGINS_AGENTMEM = [AgentMemoryPlugin];
+const AGENT_PLUGINS_AGENTMEM = [AgentMemoryPlugin];
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -113,7 +113,7 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
       setHookError(null);
 
       try {
-        // The Loop creates the agent from the capacity plugin's blueprint as
+        // The Agent workspace creates the agent from the capacity plugin's blueprint as
         // it mounts; the page only waits until the server has it, so its own
         // sockets and reads address an agent that exists.
         const found = await waitForAgent(agentBaseUrl, agentName, {
@@ -292,14 +292,14 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
           borderRight="1px solid"
           borderColor="border.default"
         >
-          <LoopEmbed
+          <AgentEmbed
             serverUrl={agentBaseUrl}
             target="local"
             showAgentVariants
             agentId={agentId}
             editors={false}
             showHeader
-            plugins={LOOP_PLUGINS_AGENTMEM}
+            plugins={AGENT_PLUGINS_AGENTMEM}
           />
         </Box>
 

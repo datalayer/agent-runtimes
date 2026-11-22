@@ -6,7 +6,7 @@
 /**
  * An application, as the designer authors it: its
  * parts on the surface, the toolbox of parts to place on it — what
- * the plugins contribute to `loop.canvas.part`, each arriving with its
+ * the plugins contribute to `agent.canvas.part`, each arriving with its
  * example filled in — and its events, chosen among the ones
  * contributed: what happens when, and what it does.
  *

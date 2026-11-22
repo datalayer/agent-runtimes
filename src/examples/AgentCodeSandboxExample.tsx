@@ -9,7 +9,7 @@
  * The code sandbox: the agent runs Python through `execute_code` in a sandbox
  * the server manages, and the page shows that sandbox.
  *
- * - The Loop creates the `example-code-sandbox` agent on the Local target
+ * - The Agent workspace creates the `example-code-sandbox` agent on the Local target
  * - A control above the chat switches this agent's sandbox variant (eval /
  *   jupyter) live, through `/agents/{id}/sandbox/ensure`
  * - A sidebar follows the sandbox over `/configure/sandbox/ws`: its variant,
@@ -46,7 +46,7 @@ import {
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
-import { LoopEmbed } from '../apps';
+import { AgentEmbed } from '../apps';
 import { AgentCodeSandboxPlugin } from '../apps/plugins/agent-code-sandbox';
 import type { SandboxWsStatus } from '../types/sandbox';
 import { SANDBOX_STATUS_COLORS, SANDBOX_STATUS_LABELS } from '../types/sandbox';
@@ -174,7 +174,7 @@ const AgentCodeSandboxInner: React.FC = () => {
   );
 
   // ── WebSocket lifecycle: follows the sandbox from the start; the server
-  //    admits the socket once the Loop has created the agent, and until then
+  //    admits the socket once the Agent workspace has created the agent, and until then
   //    the reconnect loop simply tries again. ──
   useEffect(() => {
     let disposed = false;
@@ -550,11 +550,11 @@ const AgentCodeSandboxInner: React.FC = () => {
                 </SegmentedControl>
                 {pendingVariant && <Spinner size="small" />}
               </Box>
-              {/* The Loop creates the agent on the Local target from the
+              {/* The Agent workspace creates the agent on the Local target from the
                   capacity plugin's blueprint; the variants stay visible so
                   the agent is not pinned to the page. */}
               <Box flex={1} minHeight={0}>
-                <LoopEmbed
+                <AgentEmbed
                   serverUrl={agentBaseUrl}
                   target="local"
                   showAgentVariants

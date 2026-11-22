@@ -28,7 +28,7 @@ import {
 } from '@datalayer/reactor';
 import { APP_CATALOGUE } from '../../../specs/apps';
 import type { AppSpec, UISpec } from '../../../types/agentspecs';
-import { LoopCommand } from '../../core';
+import { AgentCommand } from '../../core';
 import { CHROME_SLOTS } from '../../toolCards/chrome';
 
 /** An application of the catalogue with a page, and a component of its developer's. */
@@ -143,15 +143,15 @@ export const NOT_UI: Record<string, string> = {
   'shield-displays':
     "A coding agent's diffs and terminals, drawn where its tool results carry them in the chat, the embed and Activity: renderers, not a part of the interface an application chooses (SH-16).",
   decks:
-    'The deck editor, mounted by the decks package and not by the Loop editor.',
+    'The deck editor, mounted by the decks package and not by the Agent editor.',
   assistant:
-    'The floating assistant, a host of its own rather than a part of the Loop editor.',
+    'The floating assistant, a host of its own rather than a part of the Agent editor.',
   'assistant-characters':
     'The floating assistant’s characters, offered as parts of an agent on the Canvas.',
   'a2a-sidebar':
-    'A sidebar of the A2A example, not mounted by the Loop editor or an application.',
+    'A sidebar of the A2A example, not mounted by the Agent editor or an application.',
   'checkpoints-sidebar':
-    'A sidebar of the checkpoints example, not mounted by the Loop editor or an application.',
+    'A sidebar of the checkpoints example, not mounted by the Agent editor or an application.',
   'a2ui-scene': 'A scene of the A2UI examples, cast per example.',
   'pap-example': 'A page of the PAP examples, cast per example.',
   'locked-ui':
@@ -216,7 +216,7 @@ export type Registration = {
   points: string[];
   /**
    * The Commands it adds: the Reactor Commands it registers, by id, and the
-   * composer's `/` commands it contributes (`loop.command`), by name.
+   * composer's `/` commands it contributes (`agent.command`), by name.
    */
   commands: string[];
   /** The Contribution Points it offers. */
@@ -303,7 +303,7 @@ export async function registrationOf(mount: Mount): Promise<Registration> {
         .filter(command => mine.has(command.plugin))
         .map(command => command.id),
       ...reactor
-        .getContributions(LoopCommand)
+        .getContributions(AgentCommand)
         .filter(entry => mine.has(entry.plugin))
         .map(entry => entry.value.name),
     ]),

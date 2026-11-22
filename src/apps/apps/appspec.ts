@@ -86,7 +86,7 @@ import { UI_RENDERER_CATALOGUE } from '../../specs/uiRenderers';
 import { DEFAULT_MAX_FILES, DEFAULT_UPLOAD_MB } from './uploads';
 
 /** The version of the spec itself. */
-export const APP_SCHEMA = 'loop.app/v1';
+export const APP_SCHEMA = 'agent.app/v1';
 
 /** The language an application's own words are in, unless it says. */
 export const DEFAULT_LANGUAGE = 'en';
@@ -119,7 +119,7 @@ export const APP_THEME_VARIANTS: AppThemeVariant[] = [
   'sand',
   'ivory',
   'sun',
-  'loop',
+  'agent',
   'vscode',
 ];
 

@@ -13,9 +13,9 @@
 import { describe, expect, it } from 'vitest';
 import { APP_CATALOGUE } from '../../specs/apps';
 import {
-  LoopAgentBlueprint,
-  LoopChatExtras,
-  LoopRunProps,
+  AgentBlueprint,
+  AgentChatExtras,
+  AgentRunProps,
   runForwardedProps,
 } from '../core';
 import {
@@ -35,7 +35,7 @@ import {
 import { formUiProblems, SETTING_INPUTS } from '../apps/settingsInputs';
 
 const BASE = {
-  schema: 'loop.app/v1',
+  schema: 'agent.app/v1',
   id: 'desk',
   name: 'Desk',
   kind: 'chat',
@@ -174,26 +174,26 @@ describe('profiles, starters and settings', () => {
   it('send the profile with every run, keep it once the conversation starts, and offer its starters live', () => {
     const app = parseAppspec(DESK).app;
     const plugin = defineAppComposerPlugin(app);
-    const [profileProps] = contributed(plugin, LoopRunProps).filter(
+    const [profileProps] = contributed(plugin, AgentRunProps).filter(
       item => item.value.id === 'app-profile',
     );
-    const [extras] = contributed(plugin, LoopChatExtras);
+    const [extras] = contributed(plugin, AgentChatExtras);
     expect(extras.value.extras.value.openers).toEqual([
       { text: 'Refund', message: 'I want a refund.', group: 'Billing' },
       { text: 'Hello', message: 'Hello!' },
     ]);
-    const modes = contributed(plugin, LoopRunProps).find(
+    const modes = contributed(plugin, AgentRunProps).find(
       item => item.value.id === 'app-modes',
     );
     expect(
       runForwardedProps([profileProps.value as never, modes!.value as never]),
-    ).toEqual({ loop: { profile: 'support', modes: { depth: 'quick' } } });
+    ).toEqual({ agent: { profile: 'support', modes: { depth: 'quick' } } });
     // Through its blueprint, an agent turned in the page applies it too.
     const [first] = appPreset(app).plugins as Array<{
       contributes?: Array<{ point?: unknown; value: Record<string, any> }>;
     }>;
     const blueprint = first.contributes?.find(
-      item => item.point === LoopAgentBlueprint,
+      item => item.point === AgentBlueprint,
     )?.value;
     expect(blueprint?.modeEffect({}, 'sales').model).toBe('bedrock:sales-one');
     // Only one with profiles, modes, commands or uploads gets the plugin.
@@ -202,7 +202,7 @@ describe('profiles, starters and settings', () => {
         item => (item as { name: string }).name,
       );
     expect(names({ ...BASE, interface: { profiles: PROFILES } })).toContain(
-      '@datalayer/loop-plugin-app-composer-desk',
+      '@datalayer/agent-plugin-app-composer-desk',
     );
   });
 

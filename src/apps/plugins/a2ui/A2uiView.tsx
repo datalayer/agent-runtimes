@@ -30,7 +30,7 @@ import {
   A2uiSurfaceComposed,
   datalayerCatalog,
 } from '../../../components/a2ui';
-import type { LoopViewProps } from '../../core';
+import type { AgentViewProps } from '../../core';
 import { useSandboxService } from '../agents';
 
 type Surface = SurfaceModel<ReactComponentImplementation>;
@@ -48,7 +48,7 @@ const INHERIT_THEME: CSSProperties = {
   ['--a2ui-color-outline' as never]: 'var(--borderColor-default)',
 };
 
-export default function A2uiView({ workspace }: LoopViewProps): JSX.Element {
+export default function A2uiView({ workspace }: AgentViewProps): JSX.Element {
   const service = useSandboxService();
   const lastExecution = useSignalValue(service.lastExecution);
   const [surfaces, setSurfaces] = useState<Surface[]>([]);

@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-spreadsheet` — a workbook beside the chat.
+ * `@datalayer/agent-plugin-spreadsheet` — a workbook beside the chat.
  *
  * The same shape as the notebook and document plugins, contributed to the
  * same point: an editor the conversation is about, drawn by Datalayer Cells.
@@ -20,10 +20,10 @@
 
 import { TableIcon } from '@primer/octicons-react';
 import { contribution, definePlugin } from '@datalayer/reactor';
-import { LoopCommand, LoopEditorView, requestSurface } from '../../core';
+import { AgentCommand, AgentEditorView, requestSurface } from '../../core';
 import { uiManifestOf } from '../../uiManifest';
 
-export const SPREADSHEET_PLUGIN_NAME = '@datalayer/loop-plugin-spreadsheet';
+export const SPREADSHEET_PLUGIN_NAME = '@datalayer/agent-plugin-spreadsheet';
 
 /** The editor's surface id: what `/editor spreadsheet` and the selector name. */
 export const SPREADSHEET_SURFACE_ID = 'spreadsheet';
@@ -33,7 +33,7 @@ export const SpreadsheetPlugin = definePlugin({
   ...uiManifestOf('spreadsheet'),
   contributes: [
     contribution(
-      LoopEditorView,
+      AgentEditorView,
       {
         surfaceId: SPREADSHEET_SURFACE_ID,
         title: 'Spreadsheet',
@@ -45,7 +45,7 @@ export const SpreadsheetPlugin = definePlugin({
       { id: SPREADSHEET_SURFACE_ID, order: 25 },
     ),
     contribution(
-      LoopCommand,
+      AgentCommand,
       {
         name: 'spreadsheet',
         description: 'Open the spreadsheet beside the chat',

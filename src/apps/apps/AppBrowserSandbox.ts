@@ -19,7 +19,7 @@
 
 import { definePlugin } from '@datalayer/reactor';
 import type { AppSpec } from '../../types/agentspecs';
-import { LoopFrontendTool } from '../core';
+import { AgentFrontendTool } from '../core';
 import {
   AGENTS_PLUGIN_NAME,
   AgentsPlugin,
@@ -28,7 +28,7 @@ import {
 import { browserCodeTool } from './browserSandbox';
 
 export const APP_BROWSER_SANDBOX_PLUGIN_NAME =
-  '@datalayer/loop-plugin-app-browser-sandbox';
+  '@datalayer/agent-plugin-app-browser-sandbox';
 
 /**
  * The plugin, for one application. Made once per application — a new plugin
@@ -55,7 +55,7 @@ export function defineAppBrowserSandboxPlugin(
       // kernel once, before its first run.
       const tool = browserCodeTool(app, code => sandbox.execute(code));
       return contribute(
-        LoopFrontendTool,
+        AgentFrontendTool,
         {
           id: `app-browser-sandbox-${app.id}`,
           tools: workspace =>

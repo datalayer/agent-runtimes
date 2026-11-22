@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-page-deck` — a deck the agent builds in the
+ * `@datalayer/agent-plugin-page-deck` — a deck the agent builds in the
  * conversation, slide by slide, with frontend tools run in the page (the
  * user, 18 November 2026: "add to the marketer the frontend tools to create
  * slides").
@@ -44,7 +44,7 @@ import {
 import type { SidePlacement } from '../../toolCards/chrome';
 import { PAGE_DECK, pageDeckTools } from './store';
 
-export const PAGE_DECK_PLUGIN_NAME = '@datalayer/loop-plugin-page-deck';
+export const PAGE_DECK_PLUGIN_NAME = '@datalayer/agent-plugin-page-deck';
 
 const DeckStage = lazy(() => import('./DeckStage'));
 

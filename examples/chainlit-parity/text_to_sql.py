@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Text to SQL — Chainlit's cookbook ``bigquery``, rebuilt with LOOP's API.
+"""Text to SQL — Chainlit's cookbook ``bigquery``, rebuilt with Agent's API.
 
 Chainlit runs a chain of three steps for each question about an ``order``
 table: a model writes the SQL, the query runs, and a model explains the

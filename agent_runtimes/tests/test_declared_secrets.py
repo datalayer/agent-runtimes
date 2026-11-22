@@ -616,7 +616,7 @@ def test_a_launch_waiting_for_its_set_up_says_why_it_was_refused(
 ) -> None:
     import httpx
 
-    from agent_runtimes.loop import launch
+    from agent_runtimes.agent import launch
 
     said = "Crop Monitoring is not set up: the MCP server earthdata needs DATALAYER_API_KEY."
     monkeypatch.setattr(
@@ -655,7 +655,7 @@ def test_what_a_server_s_scripts_read_is_offered_to_the_kernel_never_required() 
 # --- the application the runtime was launched for ------------------------------
 
 WEB_APP = {
-    "schema": "loop.app/v1",
+    "schema": "agent.app/v1",
     "id": "web-research",
     "name": "Web Research",
     "kind": "chat",

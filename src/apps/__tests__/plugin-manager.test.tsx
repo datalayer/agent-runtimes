@@ -8,7 +8,7 @@
  * a plugin plugin-manager to list, enable, disable the plugins ... when user
  * will click on that icon in the footer the overlay will be shown"): its
  * plugin is an agent UI a visitor has, in the footer by default and only in
- * a Loop workspace; its button draws nothing where no platform runs, opens a
+ * an Agent workspace; its button draws nothing where no platform runs, opens a
  * labelled dialog holding Reactor's list of the page's plugins, whose
  * switches call the platform, its own and the manager's fixed on; Escape
  * closes it, the focus back on the button.
@@ -38,7 +38,7 @@ import {
   agentUiChromeOf,
   agentUiPluginsFor,
 } from '../agentUiPlugins';
-import { LoopSlots } from '../core';
+import { AgentSlots } from '../core';
 import {
   PLUGIN_MANAGER_PLUGIN_NAME,
   PLUGIN_MANAGER_PROTECTED,
@@ -84,7 +84,7 @@ function withPlatform(plugins: PluginRef[]) {
 }
 
 describe('the plugins manager’s plugin', () => {
-  it('is an agent UI a visitor has, in a Loop workspace’s footer by default', () => {
+  it('is an agent UI a visitor has, in an Agent workspace’s footer by default', () => {
     const entry = AGENT_UI_PLUGINS['plugin-manager'];
     expect(entry.needsConnection).toBe(false);
     // No `Chat` chrome: outside a workspace there is no platform of the page's.
@@ -100,13 +100,13 @@ describe('the plugins manager’s plugin', () => {
     // In the row under the prompt, beside its controls, usable while the
     // prompt is closed — not a row of its own below it (22 November 2026).
     expect(footer.getManifest(PLUGIN_MANAGER_PLUGIN_NAME)?.slots).toEqual([
-      LoopSlots.promptStatus,
+      AgentSlots.promptStatus,
     ]);
     const drawn = footer.getOutput(PLUGIN_MANAGER_PLUGIN_NAME) as {
       components: { slot: string }[];
     };
     expect(drawn.components.map(component => component.slot)).toEqual([
-      LoopSlots.promptStatus,
+      AgentSlots.promptStatus,
     ]);
     // The manifest says the spec's default; the header placement's component
     // goes in the title bar.
@@ -116,14 +116,14 @@ describe('the plugins manager’s plugin', () => {
       components: { slot: string }[];
     };
     expect(output.components.map(component => component.slot)).toEqual([
-      LoopSlots.chatHeader,
+      AgentSlots.chatHeader,
     ]);
   });
 
-  it('protects itself, the Loop’s panel and Reactor’s manager', () => {
+  it('protects itself, the Agent’s panel and Reactor’s manager', () => {
     expect(PLUGIN_MANAGER_PROTECTED).toEqual([
       PLUGIN_MANAGER_PLUGIN_NAME,
-      '@datalayer/loop-plugin-plugins-panel',
+      '@datalayer/agent-plugin-plugins-panel',
       '@datalayer/reactor-manager',
     ]);
   });

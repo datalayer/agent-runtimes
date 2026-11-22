@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """`datalayer executions`, mirrored into agent-runtimes' own CLI:
-reused, not rebuilt, so `agent-runtimes`/`datalayer-agents`/`loop`/`l`
+reused, not rebuilt, so `agent-runtimes`/`datalayer-agents`/`agent`/`a`
 — which have no `executions` group of their own — reach the same commands the
 `datalayer` CLI does, over the one implementation core already has.
 """

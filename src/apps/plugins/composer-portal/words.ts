@@ -25,7 +25,7 @@ export const COMPOSER_PORTAL_WORDS = {
   specSays: 'The whole application written out, every part of it.',
   pythonBuilt: 'Built in Python: its own app.py.',
   pythonEjected:
-    'Written as a spec: this is the app.py `loop apps eject` writes from it, its spec ready for code.',
+    'Written as a spec: this is the app.py `agent apps eject` writes from it, its spec ready for code.',
   pythonNone:
     'Written as a spec, and not one of the catalogue’s: its app.py is written when it is ejected in the Studio.',
 } as const;

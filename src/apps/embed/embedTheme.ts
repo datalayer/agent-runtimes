@@ -4,19 +4,19 @@
  */
 
 /**
- * The `loop` theme, carried inside the embed.
+ * The `agent` theme, carried inside the embed.
  *
  * The element draws the application in a shadow root: the host's styles do
  * not reach in, and the application's do not reach out. The theme travels
  * with it as CSS custom properties, set on the theme provider's own element
- * inside that root — the `loop` theme's, with the application's accent over
+ * inside that root — the `agent` theme's, with the application's accent over
  * it — and the theme's own stylesheet (its controls as pills) is
  * written into the root, scoped to that element, since a stylesheet in the
  * host's `<head>` does not cross into a shadow tree.
  *
  * What a host may change is three things, and nothing else needs changing
  * for it to look at home: the accent, the face and the mode. The face is
- * swapped wherever the theme names its own (`loopFontFamily`): the body, the
+ * swapped wherever the theme names its own (`agentFontFamily`): the body, the
  * font stacks and every font shorthand.
  *
  * @module apps/embed/embedTheme
@@ -25,7 +25,7 @@
 import type { CSSProperties } from 'react';
 import {
   getThemeConfig,
-  loopFontFamily,
+  agentFontFamily,
   scopeThemeCss,
   THEME_SCOPE_ATTRIBUTE,
   themeAccentVars,
@@ -51,13 +51,13 @@ function withFace(
   );
 }
 
-/** The face a theme names in a mode: `loop`'s own, or the theme's `fontFamily`. */
+/** The face a theme names in a mode: `agent`'s own, or the theme's `fontFamily`. */
 function faceOf(
   variant: AppThemeVariant,
   styles: Record<string, unknown>,
 ): string {
-  if (variant === 'loop') {
-    return loopFontFamily;
+  if (variant === 'agent') {
+    return agentFontFamily;
   }
   return typeof styles.fontFamily === 'string' ? styles.fontFamily : '';
 }
@@ -73,14 +73,14 @@ const accentOver = (
 ): Record<string, string> => (accent ? themeAccentVars(accent, which) : {});
 
 /**
- * The theme as the embed wears it — `loop`, or the one the application
+ * The theme as the embed wears it — `agent`, or the one the application
  * names — with the application's accent over it in both modes,
  * and the host's face when it named one.
  */
 export function embedThemeStyles({
   accent,
   font = '',
-  variant = 'loop',
+  variant = 'agent',
 }: {
   accent?: AppAccent;
   font?: string;
@@ -112,7 +112,7 @@ export function embedThemeStyles({
 export function embedThemeOverrides({
   accent,
   font = '',
-  variant = 'loop',
+  variant = 'agent',
 }: {
   accent?: AppAccent;
   font?: string;

@@ -102,7 +102,6 @@ RESERVED_PREFIXES: Tuple[str, ...] = (
     "ATE_",
     "RUNTIME_",
     "RUNTIMES_",
-    "LOOP_",
     "AG_CHAT_",
     "CODEAI_",
     "OTEL_",

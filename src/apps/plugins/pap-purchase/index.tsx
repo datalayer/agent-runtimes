@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-pap-purchase` — a company's operation the person
+ * `@datalayer/agent-plugin-pap-purchase` — a company's operation the person
  * approves, in the chat: the company by its name and domain, its own
  * summary, every term, what the terms check found, the operation and its
  * exact revision, until when it holds. Drawn above the chat's own approval
@@ -35,7 +35,7 @@ import {
 } from '../../toolCards/kit';
 import { PhotoStrip } from '../../toolCards/productPhoto';
 
-export const PAP_PURCHASE_PLUGIN_NAME = '@datalayer/loop-plugin-pap-purchase';
+export const PAP_PURCHASE_PLUGIN_NAME = '@datalayer/agent-plugin-pap-purchase';
 
 export const PAP_PURCHASE_WORDS = {
   title: (company: string) => `Approve at ${company}`,

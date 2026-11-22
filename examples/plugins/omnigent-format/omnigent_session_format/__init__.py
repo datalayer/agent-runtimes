@@ -9,7 +9,7 @@ the record's entries — a ``message`` item is a ``turn`` (two messages, the
 person's then the agent's, one turn), a ``function_call`` a ``tool_call``;
 any other item kind is refused, in a sentence — and the exporter writes the
 inverse. Contributed to ``session.format``, it is reached with
-``loop sessions import --format omnigent-jsonl/1`` and ``?format=``; the
+``agent sessions import --format omnigent-jsonl/1`` and ``?format=``; the
 built-in format is contributed the same way.
 """
 

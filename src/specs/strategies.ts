@@ -34,7 +34,7 @@ export type StrategyId = (typeof Strategies)[keyof typeof Strategies];
 export const DATA_ANALYSIS_STRATEGY_0_0_1: StrategySpec = {
   id: 'data-analysis',
   version: '0.0.1',
-  name: 'Data Analysis Loop',
+  name: 'Data Analysis Agent',
   description:
     'A generic iterative loop for data analysis. Each iteration the agent observes the current runtime state, decides the next step, executes code in the notebook, and evaluates the result against the objective. Intermediate state (dataframes, charts, tables) is stored outside the model so each LLM call stays small, focused, and inexpensive.',
   objective:
@@ -111,7 +111,7 @@ export const HUMAN_IN_THE_LOOP_STRATEGY_0_0_1: StrategySpec = {
 export const OODA_STRATEGY_0_0_1: StrategySpec = {
   id: 'ooda',
   version: '0.0.1',
-  name: 'OODA Loop',
+  name: 'OODA Agent',
   description:
     'A generic Observe → Orient → Decide → Act control loop. The agent observes the current state, orients by interpreting it in the context of the goal, decides on the next action, and acts. The loop is well suited to decision-oriented and monitoring tasks over a changing environment.',
   objective:

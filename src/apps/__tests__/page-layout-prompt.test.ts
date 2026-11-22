@@ -12,15 +12,15 @@
 
 import { describe, expect, it } from 'vitest';
 import { buildReactorFromPlugins } from '@datalayer/reactor';
-import { loopPlugins } from '../presets';
-import { LoopChatLayout, LoopPromptPanel } from '../core';
+import { agentPlugins } from '../presets';
+import { AgentChatLayout, AgentPromptPanel } from '../core';
 import {
-  LOOP_PAGE_LAYOUT_PLUGIN_NAME,
-  type LoopPageLayoutConfig,
+  AGENT_PAGE_LAYOUT_PLUGIN_NAME,
+  type AgentPageLayoutConfig,
 } from '../plugins/page-layout';
 
-async function started(options: Parameters<typeof loopPlugins>[0]) {
-  const reactor = buildReactorFromPlugins(loopPlugins(options));
+async function started(options: Parameters<typeof agentPlugins>[0]) {
+  const reactor = buildReactorFromPlugins(agentPlugins(options));
   await reactor.start();
   return reactor;
 }
@@ -29,10 +29,10 @@ describe('the page layout composer', () => {
   it('docks the composer above the sheet by default', async () => {
     const reactor = await started({ pageLayout: true });
     expect(
-      reactor.getConfig<LoopPageLayoutConfig>(LOOP_PAGE_LAYOUT_PLUGIN_NAME)
+      reactor.getConfig<AgentPageLayoutConfig>(AGENT_PAGE_LAYOUT_PLUGIN_NAME)
         ?.prompt,
     ).toBe('docked');
-    const layouts = reactor.getContributions(LoopChatLayout);
+    const layouts = reactor.getContributions(AgentChatLayout);
     expect(layouts).toHaveLength(1);
     expect(layouts[0].value.prompt).toBe('docked-top');
   });
@@ -43,10 +43,10 @@ describe('the page layout composer', () => {
       pageLayoutPrompt: 'floating',
     });
     expect(
-      reactor.getConfig<LoopPageLayoutConfig>(LOOP_PAGE_LAYOUT_PLUGIN_NAME)
+      reactor.getConfig<AgentPageLayoutConfig>(AGENT_PAGE_LAYOUT_PLUGIN_NAME)
         ?.prompt,
     ).toBe('floating');
-    expect(reactor.getContributions(LoopChatLayout)[0].value.prompt).toBe(
+    expect(reactor.getContributions(AgentChatLayout)[0].value.prompt).toBe(
       'floating-top',
     );
   });
@@ -56,7 +56,7 @@ describe('the page layout composer', () => {
       pageLayout: true,
       pageLayoutPrompt: 'floating',
     });
-    expect(top.getContributions(LoopChatLayout)[0].value.prompt).toBe(
+    expect(top.getContributions(AgentChatLayout)[0].value.prompt).toBe(
       'floating-top',
     );
 
@@ -65,20 +65,20 @@ describe('the page layout composer', () => {
       pageLayoutPrompt: 'floating',
       pageLayoutPromptAnchor: 'bottom',
     });
-    expect(bottom.getContributions(LoopChatLayout)[0].value.prompt).toBe(
+    expect(bottom.getContributions(AgentChatLayout)[0].value.prompt).toBe(
       'floating-bottom',
     );
     // The live stance follows the edge the build asked for, so a composer
     // sent to the panel and brought back lands where it started.
     expect(
-      bottom.getContributions(LoopChatLayout)[0].value.promptStance?.value,
+      bottom.getContributions(AgentChatLayout)[0].value.promptStance?.value,
     ).toBe('floating-bottom');
   });
 
   it('sizes the sheet freely unless a paper is asked for', async () => {
     const free = await started({ pageLayout: true });
     expect(
-      free.getConfig<LoopPageLayoutConfig>(LOOP_PAGE_LAYOUT_PLUGIN_NAME)
+      free.getConfig<AgentPageLayoutConfig>(AGENT_PAGE_LAYOUT_PLUGIN_NAME)
         ?.pageSize,
     ).toBeUndefined();
 
@@ -87,7 +87,7 @@ describe('the page layout composer', () => {
       pageLayoutSize: { format: 'letter' },
     });
     expect(
-      letter.getConfig<LoopPageLayoutConfig>(LOOP_PAGE_LAYOUT_PLUGIN_NAME)
+      letter.getConfig<AgentPageLayoutConfig>(AGENT_PAGE_LAYOUT_PLUGIN_NAME)
         ?.pageSize,
     ).toEqual({ format: 'letter' });
   });
@@ -96,7 +96,7 @@ describe('the page layout composer', () => {
     const withPanel = await started({ pageLayout: true });
     expect(
       withPanel
-        .getContributions(LoopPromptPanel)
+        .getContributions(AgentPromptPanel)
         .some(entry => entry.id === 'page-layout-turn'),
     ).toBe(true);
 
@@ -106,7 +106,7 @@ describe('the page layout composer', () => {
     });
     expect(
       without
-        .getContributions(LoopPromptPanel)
+        .getContributions(AgentPromptPanel)
         .some(entry => entry.id === 'page-layout-turn'),
     ).toBe(false);
   });

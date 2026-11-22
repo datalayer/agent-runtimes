@@ -50,7 +50,7 @@ function itemsOf(
     // The notebook is the work, the toolbar is furniture: one plugin with a
     // broken item must not cost the reader their editor.
     console.warn(
-      `[loop] The plugin ${entry.plugin} failed to build its toolbar items.`,
+      `[agent] The plugin ${entry.plugin} failed to build its toolbar items.`,
       error,
     );
     return [];

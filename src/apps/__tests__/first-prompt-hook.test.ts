@@ -12,7 +12,7 @@
  * in the chat view's own `handleSend`, not inside the composer that plugin
  * renders. Three different things reach `handleSend` — the composer's own
  * submit, a suggestion chip clicked, and a host's own
- * `suggestLoopPrompt(text, {submit: true})` arriving through the prompt store
+ * `suggestAgentPrompt(text, {submit: true})` arriving through the prompt store
  * — and the composer sees only the first of them. Watching from inside it
  * would miss a CTA that opens the workspace and submits its own suggestion in
  * one step, which is exactly the case this hook exists for.
@@ -26,11 +26,11 @@ import {
   INPUT_PROMPT_PLUGIN_NAME,
   type InputPromptPluginConfig,
 } from '../plugins/input-prompt';
-import { loopPlugins } from '../presets';
+import { agentPlugins } from '../presets';
 
 const inputPromptConfig = (options = {}) =>
   buildReactorFromPlugins(
-    loopPlugins(options),
+    agentPlugins(options),
   ).getConfig<InputPromptPluginConfig>(INPUT_PROMPT_PLUGIN_NAME);
 
 describe('the preset option', () => {

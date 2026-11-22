@@ -429,7 +429,9 @@ class TestTheComponents:
         def pressed(does: str) -> dict[str, Any]:
             return {
                 "metadata": {
-                    "loop": {"action": {"name": "Post them", "payload": {"does": does}}}
+                    "agent": {
+                        "action": {"name": "Post them", "payload": {"does": does}}
+                    }
                 }
             }
 
@@ -454,7 +456,7 @@ class TestTheComponents:
         assert formats.SHOW_COMPONENTS in rules.get_toolset().tools
 
     def test_the_rehearsal_reads_the_kinds_the_components_show(self) -> None:
-        from agent_runtimes.loop.scenes.stage import kind_of_words, shown_kinds
+        from agent_runtimes.agent.scenes.stage import kind_of_words, shown_kinds
 
         surface = formats.surface_of_components(
             "x",

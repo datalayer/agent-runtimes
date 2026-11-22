@@ -25,7 +25,7 @@ import { useSignalValue } from '@datalayer/reactor/react';
 import { AgentSummary } from '../../../components/agents/AgentSummary';
 import type { AgentSummaryData } from '../../../components/agents/AgentSummary';
 import { AGENTSPECS } from '../../../specs/agents/agents';
-import type { LoopWorkspaceContext } from '../../core';
+import type { AgentWorkspaceContext } from '../../core';
 import { TARGET_SPECS, type SandboxTarget } from './switchable';
 import { useSandboxService } from './useSandboxService';
 import type { TeamMember } from './team';
@@ -45,7 +45,7 @@ const NO_MEMBER: ReadonlySignal<TeamMember | undefined> = {
 export function AgentSummaryPanel({
   workspace,
 }: {
-  workspace: LoopWorkspaceContext;
+  workspace: AgentWorkspaceContext;
 }): JSX.Element | null {
   const service = useSandboxService();
   const target = useSignalValue(service?.target ?? NO_TARGET);

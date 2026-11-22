@@ -48,9 +48,9 @@ def remembered_line(remembered: Dict[str, Any]) -> str:
 def resume_line(tux: "CliTux", uid: str, agent: str) -> str:
     """How the session is gone on with, in a sentence."""
     on_datalayer = bool(getattr(tux, "cloud_runtime", None))
-    start = f"loop{' --cloud' if on_datalayer else ''} -a {agent}"
+    start = f"agent{' --cloud' if on_datalayer else ''} -a {agent}"
     return (
-        f"Resume it: `loop` lists it as it starts; or `loop --resume {uid}`; "
+        f"Resume it: `agent` lists it as it starts; or `agent --resume {uid}`; "
         f"or `{start}`, then `/resume {uid}`."
     )
 
@@ -98,7 +98,7 @@ async def execute(tux: "CliTux", argv: str = "") -> Optional[str]:
     runtime = getattr(tux, "cloud_runtime", None)
     if runtime:
         # Its runtime is given back as the prompt ends, without asking.
-        from agent_runtimes.loop.launch import give_back
+        from agent_runtimes.agent.launch import give_back
 
         give_back(str(runtime))
     client = getattr(tux, "_agui_client", None)

@@ -268,7 +268,7 @@ async def test_on_a_runtime_a_tool_call_of_the_codes_agent_reaches_the_chat_as_a
     None
 ):
     """The agent a runtime made (``agent_maker``), called by the code: each
-    call is said on the session API's stream as ``loop.step``."""
+    call is said on the session API's stream as ``agent.step``."""
     from agent_runtimes.apps.agent import AppAgent
 
     application = Application(id="order-desk", kind="chat", agent=BLANK_PYTHON_AGENT)

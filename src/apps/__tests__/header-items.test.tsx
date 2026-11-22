@@ -12,7 +12,7 @@
  *   agentspecs' `header_tool_parameters`);
  * - a call of the tool, once answered in the conversation, changes the
  *   indicator on screen — and a conversation started over forgets it;
- * - a drop-down's option goes with the next run (`loop.header`);
+ * - a drop-down's option goes with the next run (`agent.header`);
  * - a button says its message as the person;
  * - each part is named, has its role, and an indicator is a polite live
  *   region.
@@ -37,9 +37,9 @@ import {
   withoutSuperseded,
 } from '../agentUiPlugins';
 import {
-  LoopChatExtras,
-  LoopRunProps,
-  LoopSlots,
+  AgentChatExtras,
+  AgentRunProps,
+  AgentSlots,
   mergeChatExtras,
   runForwardedProps,
 } from '../core';
@@ -115,7 +115,7 @@ const mount = (ui: string, send = vi.fn()) => {
   const plugin = AGENT_UI_PLUGINS[ui].chrome!('header');
   const reactor = buildReactorFromPlugins([plugin]);
   reactor.start();
-  const name = `@datalayer/loop-plugin-${ui}`;
+  const name = `@datalayer/agent-plugin-${ui}`;
   const components =
     reactor.getOutput<{
       components: {
@@ -177,7 +177,7 @@ describe('a header UI in the catalogue', () => {
       agentUiPluginsFor([ui], { anonymous: true }).map(
         plugin => (plugin as { name: string }).name,
       ),
-    ).toEqual([`@datalayer/loop-plugin-${ui}`]);
+    ).toEqual([`@datalayer/agent-plugin-${ui}`]);
   });
 
   it.each(Object.keys(SEED))(
@@ -190,7 +190,7 @@ describe('a header UI in the catalogue', () => {
         agentUiPluginsFor(app.ui).map(
           plugin => (plugin as { name: string }).name,
         ),
-      ).toContain(`@datalayer/loop-plugin-${ui}`);
+      ).toContain(`@datalayer/agent-plugin-${ui}`);
     },
   );
 
@@ -199,7 +199,7 @@ describe('a header UI in the catalogue', () => {
       agentUiPluginsFor(ids, { anonymous }).map(
         plugin => (plugin as { name: string }).name,
       );
-    // A Loop workspace mounts the header, and not the chip it stands in for.
+    // An Agent workspace mounts the header, and not the chip it stands in for.
     for (const agent of [
       'worker-shopper',
       'worker-traveller',
@@ -212,16 +212,16 @@ describe('a header UI in the catalogue', () => {
       const mounted = agentUiPluginsFor(agentUiChoicesOf(agent)).map(
         plugin => (plugin as { name: string }).name,
       );
-      expect(mounted).toContain(`@datalayer/loop-plugin-${ui}`);
-      expect(mounted).not.toContain(`@datalayer/loop-plugin-${chip}`);
+      expect(mounted).toContain(`@datalayer/agent-plugin-${ui}`);
+      expect(mounted).not.toContain(`@datalayer/agent-plugin-${chip}`);
     }
     // Whoever brought it, and in whatever order.
     expect(names(['basket-total', 'shop-header'])).toEqual([
-      '@datalayer/loop-plugin-shop-header',
+      '@datalayer/agent-plugin-shop-header',
     ]);
     // A chat without the header keeps its chip.
     expect(names(['basket-total'])).toEqual([
-      '@datalayer/loop-plugin-basket-total',
+      '@datalayer/agent-plugin-basket-total',
     ]);
     expect(
       withoutSuperseded([{ plugin: 'basket-total' }, { plugin: 'chat' }]),
@@ -512,9 +512,9 @@ describe('a header UI’s plugin', () => {
   it('fills the title bar’s slot with one entry per item', () => {
     const { components } = mount('shop-header');
     expect(components.map(each => each.slot)).toEqual([
-      LoopSlots.chatHeader,
-      LoopSlots.chatHeader,
-      LoopSlots.chatHeader,
+      AgentSlots.chatHeader,
+      AgentSlots.chatHeader,
+      AgentSlots.chatHeader,
     ]);
     expect(components.map(each => each.id)).toEqual([
       'shop-header-basket',
@@ -526,7 +526,7 @@ describe('a header UI’s plugin', () => {
   it('hands its tool to the chat', () => {
     const { reactor } = mount('trip-header');
     const tools = reactor
-      .getContributions(LoopChatExtras)
+      .getContributions(AgentChatExtras)
       .flatMap(entry => entry.value.extras.value.frontendTools ?? []);
     expect(tools.map(tool => tool.name)).toEqual(['set_trip_header']);
   });
@@ -593,12 +593,12 @@ describe('a header UI’s plugin', () => {
     const { reactor } = mount('trip-header');
     const runProps = () =>
       runForwardedProps(
-        reactor.getContributions(LoopRunProps).map(entry => entry.value),
-        { loop: { modes: { depth: 'quick' } } },
+        reactor.getContributions(AgentRunProps).map(entry => entry.value),
+        { agent: { modes: { depth: 'quick' } } },
       );
     // Its default, from the first run.
     expect(runProps()).toEqual({
-      loop: {
+      agent: {
         header: { 'trip-header': { travellers: '2' } },
         modes: { depth: 'quick' },
       },
@@ -612,7 +612,7 @@ describe('a header UI’s plugin', () => {
     expect(
       screen.getByRole('button', { name: 'Travellers: 4 travellers' }),
     ).toBeTruthy();
-    expect(runProps()?.loop).toMatchObject({
+    expect(runProps()?.agent).toMatchObject({
       header: { 'trip-header': { travellers: '4' } },
     });
     // The person says "we are three" and the agent sets it: the drop-down follows.
@@ -620,7 +620,7 @@ describe('a header UI’s plugin', () => {
     expect(
       screen.getByRole('button', { name: 'Travellers: 3 travellers' }),
     ).toBeTruthy();
-    expect(runProps()?.loop).toMatchObject({
+    expect(runProps()?.agent).toMatchObject({
       header: { 'trip-header': { travellers: '3' } },
     });
   });
@@ -631,18 +631,18 @@ describe('a header UI’s plugin', () => {
         {
           id: 'a',
           props: () => ({
-            loop: { header: { 'shop-header': { budget: '50' } } },
+            agent: { header: { 'shop-header': { budget: '50' } } },
           }),
         },
         {
           id: 'b',
           props: () => ({
-            loop: { header: { 'earth-header': { sensor: 'landsat' } } },
+            agent: { header: { 'earth-header': { sensor: 'landsat' } } },
           }),
         },
       ]),
     ).toEqual({
-      loop: {
+      agent: {
         header: {
           'shop-header': { budget: '50' },
           'earth-header': { sensor: 'landsat' },
@@ -658,6 +658,6 @@ describe('a header UI’s plugin', () => {
       'Profile every column — types, missing values, and ranges that look wrong.',
     );
     // No drop-down: nothing goes with its runs.
-    expect(reactor.getContributions(LoopRunProps)).toHaveLength(0);
+    expect(reactor.getContributions(AgentRunProps)).toHaveLength(0);
   });
 });

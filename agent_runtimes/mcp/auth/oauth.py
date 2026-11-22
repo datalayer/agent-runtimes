@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 from .cimd import client_id_metadata_url
 
 #: What the CLI calls itself when registering dynamically.
-CLIENT_NAME = "Datalayer LOOP"
+CLIENT_NAME = "Datalayer Agent"
 CLIENT_URI = "https://datalayer.io"
 
 #: Scopes asked for when a server does not say what it supports.

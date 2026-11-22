@@ -27,7 +27,7 @@ Jupyter server), *Jupyter* (an anonymous Jupyter server, no agent) and
 an example reads the choice (`useRuntimeTargetStore`) and brings no selector
 of its own. A target an example cannot run on stays in the selector, disabled,
 why in its tooltip (`unavailableTargets` in its registry entry): the *AI
-Application* and *Loop Computer* have no Browser or Jupyter target, since
+Application* and *Agent Computer* have no Browser or Jupyter target, since
 an application needs an agent-runtimes server or a Datalayer runtime.
 
 ## The page never scrolls
@@ -68,8 +68,8 @@ keeps `100vh`/`100vw` out of the examples.
 
 | Group | What it holds |
 | --- | --- |
-| Loop | The Loop shells and workspace, an application beside its computer (Loop Computer), the Loop Application, the strategy. |
-| Agents | Agent Specifications (the Agentspecs library), Agent Scenes (the catalogue's scenes listed on the left, the one chosen on the right), Agent Decks (the decks plugin in a Loop, an agent writing presentations). |
+| Agent | The Agent shells and workspace, an application beside its computer (Agent Computer), the Agent Application, the strategy. |
+| Agents | Agent Specifications (the Agentspecs library), Agent Scenes (the catalogue's scenes listed on the left, the one chosen on the right), Agent Decks (the decks plugin in the Agent workspace, an agent writing presentations). |
 | Avatar | The floating assistant and the gallery of its characters. |
 | A2UI, A2A, Personal Agent Protocol, Agent protocols, Shield, AG-UI | One protocol each. |
 | Chat | The chat components, the voice chat. |
@@ -78,9 +78,9 @@ keeps `100vh`/`100vw` out of the examples.
 | CopilotKit | CopilotKit beside the notebook and the document. |
 | Navigation | Core's navigation hooks (`useNavigate`, `useLocation`, `useParams`, `useHistory`) inside a React Router and without one. |
 
-## The Loop Application example
+## The Agent Application example
 
-*Loop Application* (`LoopApplicationExample.tsx`) is an extensible application
+*Agent Application* (`AgentApplicationExample.tsx`) is an extensible application
 drawn by [`AIApplication`](./ai-application.mdx):
 
 - **what** it shows: an Appspec written in the page (Web Research of the

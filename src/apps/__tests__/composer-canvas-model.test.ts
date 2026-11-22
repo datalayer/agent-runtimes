@@ -796,7 +796,7 @@ describe('what each kind gives its layout and takes from it', () => {
 
 describe('one spec for the Canvas and the YAML', () => {
   const YAML = [
-    'schema: loop.app/v1',
+    'schema: agent.app/v1',
     'id: helper',
     'version: 0.0.1',
     'name: Helper',

@@ -11,7 +11,7 @@ Text deltas are display only (`actionable` is always false). The tool returns
 counts and the company's complete message; tokens and proofs stay in the host.
 
 ```bash
-loop apps run examples/personal-agent-protocol/conversation-streaming/app.py
+agent apps run examples/personal-agent-protocol/conversation-streaming/app.py
 ```
 
 Read the [conversations guide](https://personalagentprotocol.org/docs/guides/conversations)

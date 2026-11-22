@@ -34,7 +34,7 @@ import { Box } from '@datalayer/primer-addons';
 import { useReactorPlatform } from '@datalayer/reactor/react';
 import { useIAMStore } from '../../../state';
 import { CHAT_PLUGIN_NAME, type ChatPluginConfig } from '../chat';
-import { agentServerOf, type LoopWorkspaceContext } from '../../core';
+import { agentServerOf, type AgentWorkspaceContext } from '../../core';
 import {
   BROWSER_SESSION_SETTINGS,
   BROWSER_SESSION_WORDS as WORDS,
@@ -61,14 +61,14 @@ const REFRESH_MS = 1200;
 const STATUS_MS = 30_000;
 
 /**
- * The button in a LOOP workspace's chat title bar (`LoopSlots.chatHeader`):
+ * The button in an Agent workspace's chat title bar (`AgentSlots.chatHeader`):
  * the runtime its agent is on, asked with the person's token; nothing for an
  * anonymous visitor's chat.
  */
 export function BrowserSessionSlot({
   workspace,
 }: {
-  workspace?: LoopWorkspaceContext;
+  workspace?: AgentWorkspaceContext;
 }): JSX.Element | null {
   const reactor = useReactorPlatform();
   const anonymous = Boolean(

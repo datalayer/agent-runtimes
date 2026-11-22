@@ -314,7 +314,7 @@ class TestModelsCommand:
                     )
                 # The agent's creation spec, as the runtime answers it.
                 return FakeResponse(
-                    {"agent_spec_id": "loop-shell", "model": "openai:gpt-4o"}
+                    {"agent_spec_id": "agent-shell", "model": "openai:gpt-4o"}
                 )
 
             async def post(self, url: str, json: dict, timeout: float = 0):
@@ -324,7 +324,7 @@ class TestModelsCommand:
         return SimpleNamespace(
             console=FakeConsole(),
             server_url="http://server",
-            agent_id="loop-shell",
+            agent_id="agent-shell",
             session=SimpleNamespace(model="openai:gpt-4o"),
             _client=FakeClient,
         )
@@ -345,7 +345,10 @@ class TestModelsCommand:
         body = self._switch(monkeypatch, "ollama:llama3.1:8b")
 
         # The agent loop talks to, recreated from the spec it came from.
-        assert (body["agent_spec_id"], body["agent_id"]) == ("loop-shell", "loop-shell")
+        assert (body["agent_spec_id"], body["agent_id"]) == (
+            "agent-shell",
+            "agent-shell",
+        )
         # D5: the code stays where the tokens do.
         assert body["agent_spec"]["model"] == "ollama:llama3.1:8b"
         assert body["agent_spec"]["sandbox_variant"] == LOCAL_SANDBOX_VARIANT

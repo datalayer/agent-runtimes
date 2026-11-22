@@ -6,25 +6,25 @@
 /**
  * An application's commands and modes in the composer.
  *
- * - Each of its **commands** is a workspace command (`LoopCommand`), listed
+ * - Each of its **commands** is a workspace command (`AgentCommand`), listed
  *   in the composer's `/` menu (`composer`): picking it writes `/<name> `,
  *   and sending runs it — its prompt goes to the agent, the words typed
  *   after it in place of `{input}`.
- * - Its **modes** are switches beside the composer (`LoopSlots.promptAction`),
+ * - Its **modes** are switches beside the composer (`AgentSlots.promptAction`),
  *   one menu each; the option picked goes with every run as
- *   `forwardedProps.loop.modes` (`LoopRunProps`), and the runtime tells the
+ *   `forwardedProps.agent.modes` (`AgentRunProps`), and the runtime tells the
  *   agent its instructions, on the model it names, for that run.
  * - What a person may **send** without being asked
  *   (`interface.uploads`): a paper clip beside the composer takes images,
  *   files and recordings of the kinds and sizes the Appspec says — one it
  *   does not take is refused in a sentence and never read — and the files
- *   held go with the next message as `forwardedProps.loop.files`, then are
+ *   held go with the next message as `forwardedProps.agent.files`, then are
  *   let go. The runtime refuses again what was sent all the same.
  * - Its **profiles** (`interface.profiles`): a picker beside the
  *   composer, on the first unless another is picked. The profile picked goes
- *   with every run as `forwardedProps.loop.profile`, and its starters (else
+ *   with every run as `forwardedProps.agent.profile`, and its starters (else
  *   the application's) are what the empty chat offers, by category
- *   (`LoopChatExtras.openers`). Once the first message is sent, the
+ *   (`AgentChatExtras.openers`). Once the first message is sent, the
  *   conversation keeps its profile: the picker says so and picks no other.
  *
  * Given the application as the person reads it (`translatedAppspec`),
@@ -50,12 +50,12 @@ import {
   type GivenFile,
 } from '../../components/a2ui/datalayer/FileUpload';
 import {
-  LoopChatExtras,
-  LoopCommand,
-  LoopRunProps,
-  LoopSlots,
+  AgentChatExtras,
+  AgentCommand,
+  AgentRunProps,
+  AgentSlots,
   type ChatSuggestionItem,
-  type LoopChatExtrasValue,
+  type AgentChatExtrasValue,
 } from '../core';
 import {
   commandPrompt,
@@ -100,7 +100,7 @@ export async function holdUploads(
 }
 
 /** The plugin's name, before the application's id. */
-export const APP_COMPOSER_PLUGIN_NAME = '@datalayer/loop-plugin-app-composer';
+export const APP_COMPOSER_PLUGIN_NAME = '@datalayer/agent-plugin-app-composer';
 
 /** Starters as the empty chat offers them: each under its category. */
 export function startersAsOpeners(
@@ -133,7 +133,7 @@ export function defineAppComposerPlugin(app: AppSpec) {
   /** The profile picked, and whether the conversation has started with it. */
   const profile = signal<string | undefined>(profileChoice(app)?.id);
   const started = signal(false);
-  const openers = computed<LoopChatExtrasValue>(() => ({
+  const openers = computed<AgentChatExtrasValue>(() => ({
     openers: startersAsOpeners(startersFor(app, profile.value)),
   }));
 
@@ -311,19 +311,19 @@ export function defineAppComposerPlugin(app: AppSpec) {
       ...(profiles.length > 0
         ? [
             contribution(
-              LoopRunProps,
+              AgentRunProps,
               {
                 id: 'app-profile',
                 // Sent with every run; from the first, the conversation keeps it.
                 props: () => {
                   started.value = true;
-                  return { loop: { profile: profile.peek() } };
+                  return { agent: { profile: profile.peek() } };
                 },
               },
               { id: 'app-profile' },
             ),
             contribution(
-              LoopChatExtras,
+              AgentChatExtras,
               { id: 'app-profile-starters', extras: openers },
               { id: 'app-profile-starters' },
             ),
@@ -331,7 +331,7 @@ export function defineAppComposerPlugin(app: AppSpec) {
         : []),
       ...(app.interface.commands ?? []).map(command =>
         contribution(
-          LoopCommand,
+          AgentCommand,
           {
             name: command.name,
             description: command.description,
@@ -345,10 +345,10 @@ export function defineAppComposerPlugin(app: AppSpec) {
       ...(modes.length > 0
         ? [
             contribution(
-              LoopRunProps,
+              AgentRunProps,
               {
                 id: 'app-modes',
-                props: () => ({ loop: { modes: { ...chosen.peek() } } }),
+                props: () => ({ agent: { modes: { ...chosen.peek() } } }),
               },
               { id: 'app-modes' },
             ),
@@ -357,7 +357,7 @@ export function defineAppComposerPlugin(app: AppSpec) {
       ...(uploads
         ? [
             contribution(
-              LoopRunProps,
+              AgentRunProps,
               {
                 id: 'app-uploads',
                 // The files held go with this message, once, and are let go.
@@ -367,7 +367,7 @@ export function defineAppComposerPlugin(app: AppSpec) {
                     return {};
                   }
                   held.value = { files: [], refused: null };
-                  return { loop: { files } };
+                  return { agent: { files } };
                 },
               },
               { id: 'app-uploads' },
@@ -381,7 +381,7 @@ export function defineAppComposerPlugin(app: AppSpec) {
           ? [
               {
                 id: 'app-profile',
-                slot: LoopSlots.promptAction,
+                slot: AgentSlots.promptAction,
                 order: 3,
                 Component: ProfilePicker,
               },
@@ -391,7 +391,7 @@ export function defineAppComposerPlugin(app: AppSpec) {
           ? [
               {
                 id: 'app-modes',
-                slot: LoopSlots.promptAction,
+                slot: AgentSlots.promptAction,
                 order: 5,
                 Component: ModeSwitches,
               },
@@ -401,7 +401,7 @@ export function defineAppComposerPlugin(app: AppSpec) {
           ? [
               {
                 id: 'app-uploads',
-                slot: LoopSlots.promptAction,
+                slot: AgentSlots.promptAction,
                 order: 4,
                 Component: Attach,
               },

@@ -18,7 +18,7 @@ group into whichever one it already has by that name (``_ExtensionHost`` in
 ``datalayer_core.cli.__main__``) — every command here is already
 ``datalayer``'s own, so nothing is added there, and this module earns its
 keep on the standalone entry points (``agent-runtimes``, ``datalayer-agents``,
-``loop``, ``l``), which have no ``executions`` group of their own to merge
+``agent``, ``a``), which have no ``executions`` group of their own to merge
 into.
 """
 

@@ -1,18 +1,18 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An ``app.py`` to its Appspec: what ``loop apps build`` writes.
+"""An ``app.py`` to its Appspec: what ``agent apps build`` writes.
 
 The Appspec a file amounts to is `Application.spec`, as YAML. What the code
 decides — a reaction the spec cannot say in its fields — is marked as code in
 the spec, in comments the YAML keeps and a reader sees::
 
-    # Built from app.py by `loop apps build`: the file is the source; edit it there.
-    # loop:code start: opening (app.py:14)
-    # loop:code message: reply (app.py:18)
-    # loop:code action save: save (app.py:23)
-    # loop:code tool lookup_order: lookup_order (app.py:30)
-    # loop:code pap company manzanita.example: company_connection (app.py:9)
+    # Built from app.py by `agent apps build`: the file is the source; edit it there.
+    # agent:code start: opening (app.py:14)
+    # agent:code message: reply (app.py:18)
+    # agent:code action save: save (app.py:23)
+    # agent:code tool lookup_order: lookup_order (app.py:30)
+    # agent:code pap company manzanita.example: company_connection (app.py:9)
 
 A spec forbids fields it does not define, so the marks are comments: the same
 file validates, is pushed and is deployed as any Appspec is, and a spec without
@@ -33,10 +33,10 @@ from agent_runtimes.apps.application import EVENTS, Application, load_applicatio
 from agent_runtimes.apps.loading import AppNotRunnable
 
 #: The prefix of a line that marks what the code decides.
-CODE_MARK = "# loop:code "
+CODE_MARK = "# agent:code "
 
 _MARK = re.compile(
-    r"^# loop:code (?P<moment>[^:]+): (?P<handler>\S+) \((?P<where>[^)]*)\)"
+    r"^# agent:code (?P<moment>[^:]+): (?P<handler>\S+) \((?P<where>[^)]*)\)"
 )
 
 
@@ -186,7 +186,7 @@ def spec_text(
     import yaml
 
     lines = [
-        f"# Built from {source} by `loop apps build`: the file is the source; edit it there."
+        f"# Built from {source} by `agent apps build`: the file is the source; edit it there."
     ]
     if marks:
         lines.append("# What its code decides; without the file, its agent answers:")
@@ -308,7 +308,7 @@ APART_SECONDS = 60.0
 APART_LIMIT = 200_000
 
 #: The line the process apart answers on, before its JSON.
-_APART_ANSWER = "loop-apps-built:"
+_APART_ANSWER = "agent-apps-built:"
 
 _APART_CHILD = (
     "import sys; from agent_runtimes.apps.build import _apart_child; _apart_child()"
@@ -372,7 +372,7 @@ def build_apart(file: str, text: str, timeout: float = APART_SECONDS) -> str:
     if len(text) > APART_LIMIT:
         raise AppNotRunnable(
             [
-                f"{file} is longer than {APART_LIMIT:,} characters: build it with `loop apps build`."
+                f"{file} is longer than {APART_LIMIT:,} characters: build it with `agent apps build`."
             ]
         )
     try:

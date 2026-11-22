@@ -33,7 +33,7 @@ process: the example shows the declared scopes and the level the runtime
 grants.
 
 ```bash
-loop apps run examples/personal-agent-protocol/company-connection/app.py
+agent apps run examples/personal-agent-protocol/company-connection/app.py
 ```
 
 See the PAP [Sessions guide](https://personal-agent-protocol.datalayer.tech/guides/sessions/).

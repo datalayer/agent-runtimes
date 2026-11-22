@@ -80,7 +80,7 @@ dependencies = [
     # 1.6.70 with datalayer-skills 0.6.1: the email skill's unconfirmed delivery said as such.
     # datalayer-skills 0.7.0: the stock image skill (image-stock), every key optional, one enough.
     "datalayer-skills>=0.7.0",  # the Traveller's travel skills (travel-planning, fare-and-stay-comparison, dining)
-    # The Appspec and its checks (`loop apps validate`): one validation, the spec's own.
+    # The Appspec and its checks (`agent apps validate`): one validation, the spec's own.
     # The scene spec: agentspecs.scenes; components in answers.
     # An Appspec's `samples`: an older one refuses the field.
     # An Appspec's `a2a` extensions: an older one refuses the field.
@@ -98,7 +98,7 @@ dependencies = [
     # agentspecs 0.0.127: PAP draft 0.3 in the pap block (company scopes with descriptions and hints, excluded tasks, the web interface) and pap_feedback classed send.
     # agentspecs 0.0.128: Inbox triage offered — google-workspace, worker-mail-triage and inbox-triage enabled.
     # agentspecs 0.0.130 (0.0.129 unpublished): the catalogue offers four harnesses (Claude Code, Codex, OpenCode, Gemini CLI); a harness
-    # not offered says why (unavailable_because, offered_refusal), which the runtime, loop and the Studio say.
+    # not offered says why (unavailable_because, offered_refusal), which the runtime, `agent` and the Studio say.
     # agentspecs 0.0.132: the fourth harness is pi (pi-acp 0.0.34), Gemini CLI described and not offered; the
     # catalogue's Python applications import agent_runtimes.apps.
     # agentspecs 0.0.137: the coding-agent-behind-the-shield scene and code-explainer, scene recordings, stage.backdrop.
@@ -301,7 +301,7 @@ acp = [
 # machine, faster-whisper to hear and Kokoro to say answers here; never a
 # default dependency. `python -m agent_runtimes.voice.store` fills the store
 # (whisper-small, kokoro-82m) from Datalayer's CDN, hash-checked; without it,
-# or when `loop` runs on Datalayer, the person's token hears and says on
+# or when `agent` runs on Datalayer, the person's token hears and says on
 # Datalayer's servers. kokoro-onnx brings eSpeak NG (GPL-3.0) through
 # espeakng-loader, and faster-whisper FFmpeg (LGPL) through av: installed by
 # the person on their own machine, never in a browser bundle
@@ -370,7 +370,7 @@ cli = [
     "requests",
     "rich>=13.0.0",
     "textual",
-    # `loop apps package` builds an application's wheel.
+    # `agent apps package` builds an application's wheel.
     "build",
     "hatchling",
 ]
@@ -439,8 +439,8 @@ test = [
 [project.scripts]
 datalayer-agents = "agent_runtimes.main:main"
 agent-runtimes = "agent_runtimes.main:main"
-loop = "agent_runtimes.main:main"
-l = "agent_runtimes.main:main"
+agent = "agent_runtimes.main:main"
+a = "agent_runtimes.main:main"
 agent-runtimes-ate = "agent_runtimes.ate.cli:main"
 
 # The Datalayer CLI discovers its extensions through this group: installing

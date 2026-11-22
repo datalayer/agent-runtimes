@@ -7,7 +7,7 @@
 
 import React, { useMemo } from 'react';
 import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
-import { LoopEmbed } from '../apps';
+import { AgentEmbed } from '../apps';
 import { definePapExamplePlugin } from '../apps/plugins/pap-example';
 import { ThemedProvider } from './utils/themedProvider';
 
@@ -26,9 +26,9 @@ const PapMediatedSignInExample: React.FC = () => {
   return (
     <ThemedProvider>
       <Box height="100%" minHeight={0}>
-        <LoopEmbed
+        <AgentEmbed
           target="browser"
-          agentId="loop-shell"
+          agentId="agent-shell"
           defaultEditor="none"
           showHeader
           plugins={plugins}

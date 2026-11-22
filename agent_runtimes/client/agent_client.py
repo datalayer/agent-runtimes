@@ -774,7 +774,7 @@ def _turn_in_words(turn: dict[str, Any]) -> str:
 
 
 def _session_offers(lines: list[str]) -> dict[str, dict[str, Any]]:
-    """The actions a session offers, by name, as its ``loop.session`` event
+    """The actions a session offers, by name, as its ``agent.session`` event
     says them: each with the display that offers it and its
     token.
     """
@@ -789,7 +789,7 @@ def _session_offers(lines: list[str]) -> dict[str, dict[str, Any]]:
         if (
             isinstance(event, dict)
             and event.get("type") == "CUSTOM"
-            and event.get("name") == "loop.session"
+            and event.get("name") == "agent.session"
         ):
             for offer in (event.get("value") or {}).get("actions") or []:
                 offers[str(offer["name"])] = offer
@@ -835,7 +835,7 @@ def run_cloud_app_conversation(
     lines: list[str] = []
     said: list[dict[str, Any]] = []
     # What the session offers of its code's actions, with their tokens: each
-    # stream starts with what the session is (``loop.session``).
+    # stream starts with what the session is (``agent.session``).
     offered: dict[str, dict[str, Any]] = {}
 
     def failed(kind: str, message: str, detail: str, url: str) -> dict[str, Any]:
@@ -1138,10 +1138,10 @@ class AgentClient(
         app_spec : Optional[dict[str, Any]], optional
             The Appspec of the application the runtime is launched for: its
             connections' secrets are given to it before its agent is made,
-            as `loop apps run --cloud` launches one.
+            as `agent apps run --cloud` launches one.
         agent_setup : Optional[dict[str, Any]], optional
             How its agent is configured at launch: ``without_mcp_servers``,
-            ``without_skills`` (``loop --without-mcp-servers``).
+            ``without_skills`` (``agent --without-mcp-servers``).
         client_id : Optional[str], optional
             What asked for the runtime, and ``agent_uid`` the agent it runs
             for in that client's naming (``kagent`` and

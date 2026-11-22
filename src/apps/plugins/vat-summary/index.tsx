@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-vat-summary` — the Accountant's VAT for a period:
+ * `@datalayer/agent-plugin-vat-summary` — the Accountant's VAT for a period:
  * each box of the return with its base and its tax, what is due, what is
  * deductible, and the net to pay or to be refunded, summed here. Draws
  * `show_vat_summary`. Nothing is filed from it.
@@ -26,7 +26,7 @@ import {
 } from '../../toolCards/kit';
 import { readVatSummary, type VatBox } from './read';
 
-export const VAT_SUMMARY_PLUGIN_NAME = '@datalayer/loop-plugin-vat-summary';
+export const VAT_SUMMARY_PLUGIN_NAME = '@datalayer/agent-plugin-vat-summary';
 
 export const VAT_SUMMARY_WORDS = {
   title: (period: string, country: string) =>

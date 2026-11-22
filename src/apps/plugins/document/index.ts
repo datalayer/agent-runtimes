@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-document` — a rich-text editor, beside the chat.
+ * `@datalayer/agent-plugin-document` — a rich-text editor, beside the chat.
  *
  * The same shape as the notebook plugin, contributed to the same point: an
  * editor the conversation is about, not an alternative to it.
@@ -15,17 +15,17 @@
 import { FileIcon } from '@primer/octicons-react';
 import { contribution, definePlugin } from '@datalayer/reactor';
 import {
-  LoopCommand,
-  LoopEditorView,
-  LoopFrontendTool,
+  AgentCommand,
+  AgentEditorView,
+  AgentFrontendTool,
   requestSurface,
-  LoopDocumentToolbar,
-  LoopOpeningDocument,
+  AgentDocumentToolbar,
+  AgentOpeningDocument,
 } from '../../core';
 import { AgentsPlugin } from '../agents';
 import { uiManifestOf } from '../../uiManifest';
 
-export const DOCUMENT_PLUGIN_NAME = '@datalayer/loop-plugin-document';
+export const DOCUMENT_PLUGIN_NAME = '@datalayer/agent-plugin-document';
 
 export const DocumentPlugin = definePlugin({
   name: DOCUMENT_PLUGIN_NAME,
@@ -39,12 +39,12 @@ export const DocumentPlugin = definePlugin({
   // filled it — which is exactly when knowing it exists is most useful.
   // And the opening document: what the editor holds before anyone types,
   // for a host with a story of its own to open on.
-  contributionPoints: [LoopDocumentToolbar, LoopOpeningDocument],
+  contributionPoints: [AgentDocumentToolbar, AgentOpeningDocument],
   contributes: [
     // The editor: one entry in the shell's segmented control, one view in
     // the editor column.
     contribution(
-      LoopEditorView,
+      AgentEditorView,
       {
         surfaceId: 'document',
         title: 'Document',
@@ -60,7 +60,7 @@ export const DocumentPlugin = definePlugin({
       { id: 'document', order: 20 },
     ),
     contribution(
-      LoopCommand,
+      AgentCommand,
       {
         name: 'document',
         description: 'Open the document beside the chat',
@@ -96,7 +96,7 @@ export const DocumentPlugin = definePlugin({
     void import('../../../tools/adapters/agent-runtimes/lexicalHooks').then(
       ({ createLexicalTools }) => {
         ctx.contribute(
-          LoopFrontendTool,
+          AgentFrontendTool,
           {
             id: 'document-tools',
             tools: workspace => createLexicalTools(workspace.surfaceId),

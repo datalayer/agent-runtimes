@@ -26,7 +26,7 @@ class SkillsGuardrailCapability(AbstractCapability[Any]):
 
     def _enabled_skill_ids(self) -> set[str]:
         try:
-            from agent_runtimes.streams.loop import get_agent_enabled_skill_ids
+            from agent_runtimes.streams.pubsub import get_agent_enabled_skill_ids
 
             return get_agent_enabled_skill_ids(self.agent_id)
         except Exception:
@@ -34,7 +34,7 @@ class SkillsGuardrailCapability(AbstractCapability[Any]):
 
     def _tracked_skill_ids(self) -> set[str]:
         try:
-            from agent_runtimes.streams.loop import get_agent_tracked_skill_ids
+            from agent_runtimes.streams.pubsub import get_agent_tracked_skill_ids
 
             return get_agent_tracked_skill_ids(self.agent_id)
         except Exception:
@@ -42,7 +42,7 @@ class SkillsGuardrailCapability(AbstractCapability[Any]):
 
     def _approved_skill_ids(self) -> set[str]:
         try:
-            from agent_runtimes.streams.loop import get_agent_approved_skill_ids
+            from agent_runtimes.streams.pubsub import get_agent_approved_skill_ids
 
             return get_agent_approved_skill_ids(self.agent_id)
         except Exception:
@@ -50,7 +50,7 @@ class SkillsGuardrailCapability(AbstractCapability[Any]):
 
     def _skills_snapshot(self) -> list[dict[str, Any]]:
         try:
-            from agent_runtimes.streams.loop import get_agent_skills_snapshot
+            from agent_runtimes.streams.pubsub import get_agent_skills_snapshot
 
             return get_agent_skills_snapshot(self.agent_id)
         except Exception:

@@ -8,7 +8,7 @@
  * `Chat` on its own, outside any reactor): its host's view, handed through
  * React's context rather than a slot (the user, 21 November 2026: every
  * Datalayer page shows the Studio's own views, a host's agent page too).
- * A slot's contribution (`LoopSlots.composerView`) comes first; with
+ * A slot's contribution (`AgentSlots.composerView`) comes first; with
  * neither, the portal draws its own (`ComposerSource`).
  *
  * @module apps/plugins/composer-portal/context

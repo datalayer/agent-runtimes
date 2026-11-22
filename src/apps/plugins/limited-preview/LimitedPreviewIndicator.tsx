@@ -17,7 +17,7 @@
  * signed-in person never sees it. It publishes the preview to its plugin's
  * board for the page tools (`preview_status`), and withdraws it when it goes.
  *
- * It stands in `LoopSlots.promptStatus`, outside the composer's disabled
+ * It stands in `AgentSlots.promptStatus`, outside the composer's disabled
  * region: once no turn is left the composer closes, and the indicator still
  * opens onto the refusal and *Sign in*.
  *

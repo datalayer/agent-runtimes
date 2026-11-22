@@ -413,7 +413,7 @@ def unregister_agent(agent_id: str) -> None:
     if agent_id in _agents:
         del _agents[agent_id]
     try:
-        from ..streams.loop import purge_agent_stream_state
+        from ..streams.pubsub import purge_agent_stream_state
 
         purge_agent_stream_state(agent_id)
     except Exception as e:

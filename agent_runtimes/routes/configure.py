@@ -541,7 +541,7 @@ async def ask_decisions(body: DecisionsRequest) -> dict[str, Any]:
     ``decisions``); an agent whose spec names none does not decide, and is
     refused in a sentence. Through this runtime's ai-inference, with the
     token its models are called with: on Datalayer the user's, narrowed to
-    ai-inference. ``loop``'s ``/decisions`` and the chat's *Ask a decision*
+    ai-inference. ``agent``'s ``/decisions`` and the chat's *Ask a decision*
     ask here.
 
     Parameters
@@ -1892,7 +1892,7 @@ async def get_codemode_status(
     commands) so they can query a single source of truth instead of relying on
     in-process state from a separate CLI process.
     """
-    from agent_runtimes.streams.loop import build_codemode_status
+    from agent_runtimes.streams.pubsub import build_codemode_status
 
     status = build_codemode_status(agent_id=agent_id)
     if status is None:

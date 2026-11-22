@@ -4,9 +4,9 @@
  */
 
 /**
- * `@datalayer/loop-plugin-window-frame` — Loop in a window.
+ * `@datalayer/agent-plugin-window-frame` — Agent in a window.
  *
- * The frame a page puts around an embedded Loop, and the two slots that make
+ * The frame a page puts around an embedded Agent, and the two slots that make
  * its title bar extensible. The plugin itself contributes only the window
  * controls; everything else in the bar is somebody's contribution.
  *
@@ -22,10 +22,10 @@
  * knows — how much of its page to give away.
  *
  * ```tsx
- * const reactor = buildLoopReactor([...loopPlugins(), WindowFramePlugin]);
+ * const reactor = buildAgentReactor([...agentPlugins(), WindowFramePlugin]);
  *
- * <WindowFrame title="Loop" height="60vh">
- *   <LoopWorkspace reactor={reactor} … />
+ * <WindowFrame title="Agent" height="60vh">
+ *   <AgentWorkspace reactor={reactor} … />
  * </WindowFrame>
  * ```
  *
@@ -35,7 +35,7 @@
 import { definePlugin } from '@datalayer/reactor';
 import type { ReactorReactOutput } from '@datalayer/reactor/react';
 import { Box } from '@datalayer/primer-addons';
-import { LoopSlots } from '../../core';
+import { AgentSlots } from '../../core';
 import { WorkspaceFullScreenAction } from '../../shell/WorkspaceFullScreenAction';
 import { WINDOW_CONTROLS_SLOT } from './slots';
 import { uiManifestOf } from '../../uiManifest';
@@ -43,7 +43,7 @@ import { uiManifestOf } from '../../uiManifest';
 export { WindowFrame, type WindowFrameProps } from './WindowFrame';
 export { WINDOW_ACTIONS_SLOT, WINDOW_CONTROLS_SLOT } from './slots';
 
-export const WINDOW_FRAME_PLUGIN_NAME = '@datalayer/loop-plugin-window-frame';
+export const WINDOW_FRAME_PLUGIN_NAME = '@datalayer/agent-plugin-window-frame';
 
 /**
  * The three dots.
@@ -92,7 +92,7 @@ export const WindowFramePlugin = definePlugin<
       // the far trailing edge of the row.
       {
         id: 'full-screen',
-        slot: LoopSlots.header,
+        slot: AgentSlots.header,
         Component: WorkspaceFullScreenAction,
       },
     ],

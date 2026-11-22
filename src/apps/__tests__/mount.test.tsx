@@ -24,8 +24,8 @@ import {
   definePlugin,
   onView,
 } from '@datalayer/reactor';
-import { LoopViewType } from '../core';
-import { LoopWorkspace } from '../shell/LoopWorkspace';
+import { AgentViewType } from '../core';
+import { AgentWorkspace } from '../shell/AgentWorkspace';
 import { AgentsPlugin } from '../plugins/agents';
 import { NotebookPlugin } from '../plugins/notebook';
 import { DocumentPlugin } from '../plugins/document';
@@ -47,7 +47,7 @@ async function mount(
   await act(async () => {
     root.render(
       <ErrorBoundary onError={error => errors.push(error)}>
-        <LoopWorkspace serverUrl="" agentId="a" reactor={reactor} />
+        <AgentWorkspace serverUrl="" agentId="a" reactor={reactor} />
       </ErrorBoundary>,
     );
   });
@@ -222,7 +222,7 @@ describe('the open view', () => {
       name: '@test/views',
       contributes: [
         contribution(
-          LoopViewType,
+          AgentViewType,
           {
             viewType: 'notebook',
             title: 'Notebook',
@@ -241,7 +241,7 @@ describe('the open view', () => {
 
     await act(async () => {
       root.render(
-        <LoopWorkspace
+        <AgentWorkspace
           serverUrl=""
           agentId="a"
           reactor={reactor}
@@ -257,7 +257,7 @@ describe('the open view', () => {
     expect(reactor.getManifest('@test/notebook-only')?.activated).toBe(true);
 
     await act(async () => {
-      reactor.getContributions(LoopViewType);
+      reactor.getContributions(AgentViewType);
       await reactor.fire(onView('chat'));
     });
 

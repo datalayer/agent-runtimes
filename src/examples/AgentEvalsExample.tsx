@@ -56,12 +56,12 @@ import {
 } from './utils/runtimeTargetStore';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { useCoreStore } from '@datalayer/core';
-import { LoopEmbed } from '../apps';
+import { AgentEmbed } from '../apps';
 import { AgentEvalsPlugin } from '../apps/plugins/agent-evals';
 import { getAgentspecs } from '../specs/agents';
 import { useExampleAgentRuntimes as useAgentRuntimes } from './hooks/useExampleAgentRuntimes';
 
-const LOOP_PLUGINS_AGENTEVA = [AgentEvalsPlugin];
+const AGENT_PLUGINS_AGENTEVA = [AgentEvalsPlugin];
 
 const queryClient = new QueryClient();
 
@@ -271,7 +271,7 @@ const AgentEvalsInner: React.FC<{
       setLocalError(null);
 
       try {
-        // The Loop creates the agent from the capacity plugin's blueprint as
+        // The Agent workspace creates the agent from the capacity plugin's blueprint as
         // it mounts; the page waits until the server has it before it talks
         // to the eval API about it.
         const found = await waitForAgent(agentBaseUrl, agentName, {
@@ -471,7 +471,7 @@ const AgentEvalsInner: React.FC<{
 
   // ── Loading / Error ───────────────────────────────────────────────────
 
-  // Local: the Loop must mount to create the agent, so no waiting screen.
+  // Local: the Agent must mount to create the agent, so no waiting screen.
   if (executionTarget !== 'local' && !isAgentReady && agentStatus !== 'error') {
     return (
       <Box
@@ -556,14 +556,14 @@ const AgentEvalsInner: React.FC<{
       <Box flex={1} minHeight={0} display="flex">
         {/* Left: Chat */}
         <Box flex={1} minWidth={0}>
-          <LoopEmbed
+          <AgentEmbed
             serverUrl={agentBaseUrl}
             target="local"
             showAgentVariants
             agentId={agentId}
             editors={false}
             showHeader
-            plugins={LOOP_PLUGINS_AGENTEVA}
+            plugins={AGENT_PLUGINS_AGENTEVA}
           />
         </Box>
 

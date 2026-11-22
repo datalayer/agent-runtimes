@@ -29,7 +29,7 @@ link or the code (it did not); it returns neither itself. A scripted model
 stands in for an LLM: no network, no key.
 
 ```bash
-loop apps run examples/personal-agent-protocol/sign-in-display/app.py
+agent apps run examples/personal-agent-protocol/sign-in-display/app.py
 ```
 
 See the PAP [Sign-in guides](https://personal-agent-protocol.datalayer.tech/guides/device-sign-in/).

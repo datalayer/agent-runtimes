@@ -260,9 +260,9 @@ def test_the_computer_browser_still_clicks_and_types_at_once(
 
     async def scenario() -> None:
         await browser.click_at(10.0, 20.0)
-        await browser.type_text("loop")
+        await browser.type_text("agent")
 
     asyncio.run(scenario())
     mouse = [p["type"] for m, p in connection.sent if m == "Input.dispatchMouseEvent"]
     assert mouse == ["mouseMoved", "mousePressed", "mouseReleased"]
-    assert ("Input.insertText", {"text": "loop"}) in connection.sent
+    assert ("Input.insertText", {"text": "agent"}) in connection.sent

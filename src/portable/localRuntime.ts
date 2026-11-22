@@ -9,12 +9,12 @@
  * shares — the VS Code extension host and Datalayer Desktop's main process
  * alike import it as `@datalayer/agent-runtimes/lib/portable/localRuntime`.
  *
- * - **Finding `loop`.** No host bundles Python or Agent Runtimes: `loop` is a
+ * - **Finding `agent`.** No host bundles Python or Agent Runtimes: `agent` is a
  *   prerequisite, found where the person installed it (a path the host's
  *   settings name, else `PATH`, then `uv tool`'s and `pipx`'s bins), checked
- *   to be at least {@link LOOP_MIN_VERSION}, and refused in a sentence naming
+ *   to be at least {@link AGENT_MIN_VERSION}, and refused in a sentence naming
  *   the install line when it is absent, too old or does not answer.
- * - **Starting it.** A local runtime is `loop serve --host 127.0.0.1 --port 0`
+ * - **Starting it.** A local runtime is `agent serve --host 127.0.0.1 --port 0`
  *   for one folder, its port read from the first line that names it. The
  *   process is given a trimmed environment plus the credentials the
  *   harnesses declare by name (the environment first, the host's secret
@@ -28,21 +28,21 @@
  *   person's credential is refused in the register's words.
  *
  * The sentences name the host through {@link LocalRuntimeHost}: what the
- * host is called, how a path to `loop` is set by hand, where a credential is
+ * host is called, how a path to `agent` is set by hand, where a credential is
  * kept and how it is given. Pure: no host API, no child process, no file
  * system — the host does the I/O.
  *
  * @module portable/localRuntime
  */
 
-/** The oldest Agent Runtimes whose `loop` a host starts: the release that keeps the folder's instructions file, serves `GET /api/v1/harnesses` and binds the Shield's subject right. */
-export const LOOP_MIN_VERSION = '1.5.70';
+/** The oldest Agent Runtimes whose `agent` a host starts: the release that keeps the folder's instructions file, serves `GET /api/v1/harnesses` and binds the Shield's subject right. */
+export const AGENT_MIN_VERSION = '1.5.70';
 
-/** The one line that installs `loop` with the Shield. */
+/** The one line that installs `agent` with the Shield. */
 export const INSTALL_LINE = "uv tool install 'agent-runtimes[shield]'";
 
 /** How a local runtime is started: loopback, a free port picked by the server. */
-export const LOOP_SERVE_ARGUMENTS: readonly string[] = [
+export const AGENT_SERVE_ARGUMENTS: readonly string[] = [
   'serve',
   '--host',
   '127.0.0.1',
@@ -91,8 +91,8 @@ export const TRIMMED_VARIABLES: readonly string[] = [
 export interface LocalRuntimeHost {
   /** *this extension*, *Datalayer Desktop*: the subject of *needs 1.5.70 or later*. */
   name: string;
-  /** How a path to `loop` is set by hand: *set datalayer.local.loopPath to where it is*. */
-  loopPathHint: string;
+  /** How a path to `agent` is set by hand: *set datalayer.local.agentPath to where it is*. */
+  agentPathHint: string;
   /** Where a credential given to the host is kept: *VS Code's secret storage*, *the app's keychain*. */
   secretStore: string;
   /** How a credential is given once: *Datalayer: Set a harness credential*. */
@@ -102,7 +102,7 @@ export interface LocalRuntimeHost {
 /** The VS Code extension's words. */
 export const VSCODE_HOST: LocalRuntimeHost = {
   name: 'this extension',
-  loopPathHint: 'set datalayer.local.loopPath to where it is',
+  agentPathHint: 'set datalayer.local.agentPath to where it is',
   secretStore: "VS Code's secret storage",
   credentialCommand: 'Datalayer: Set a harness credential',
 };
@@ -110,7 +110,7 @@ export const VSCODE_HOST: LocalRuntimeHost = {
 /** Datalayer Desktop's words. */
 export const DESKTOP_HOST: LocalRuntimeHost = {
   name: 'Datalayer Desktop',
-  loopPathHint: "set the path to loop in Desktop's settings",
+  agentPathHint: "set the path to agent in Desktop's settings",
   secretStore: "the app's keychain",
   credentialCommand: 'Sessions: Set a credential…',
 };
@@ -128,18 +128,18 @@ export interface DetectHost {
 }
 
 /**
- * Where `loop` may be, in the order it is looked for: the configured path,
+ * Where `agent` may be, in the order it is looked for: the configured path,
  * each `PATH` entry, then `uv tool`'s and `pipx`'s bins under the home.
  *
  * @param host - The host's platform, home, `PATH` and configured path.
  *
- * @returns Candidate paths, the first that exists being `loop`.
+ * @returns Candidate paths, the first that exists being `agent`.
  */
-export function candidateLoopPaths(host: DetectHost): string[] {
+export function candidateAgentPaths(host: DetectHost): string[] {
   const windows = host.platform === 'win32';
   const separator = windows ? ';' : ':';
   const slash = windows ? '\\' : '/';
-  const names = windows ? ['loop.exe', 'loop.cmd', 'loop'] : ['loop'];
+  const names = windows ? ['agent.exe', 'agent.cmd', 'agent'] : ['agent'];
   const candidates: string[] = [];
   const configured = host.configured.trim();
   if (configured) {
@@ -178,7 +178,7 @@ export function candidateLoopPaths(host: DetectHost): string[] {
 const ANSI = /\u001b\[[0-9;]*[A-Za-z]/g;
 
 /**
- * The version `loop --version` printed (`Agent Runtimes Chat v1.5.70`,
+ * The version `agent --version` printed (`Agent Runtimes Chat v1.5.70`,
  * `agent_runtimes: 1.5.70`, colours stripped), or null when none is in it.
  *
  * @param output - What the command wrote, stdout and stderr together.
@@ -212,23 +212,23 @@ export function compareVersions(a: string, b: string): number {
 }
 
 /** What was found on the machine, before it is judged. */
-export interface LoopFound {
+export interface AgentFound {
   /** The path that exists. */
   path: string;
-  /** What `loop --version` wrote, or null when it could not be run. */
+  /** What `agent --version` wrote, or null when it could not be run. */
   versionOutput: string | null;
   /** Why it could not be run, when it could not. */
   failure?: string;
 }
 
-/** Why `loop` is not started. */
-export type LoopRefusalReason =
+/** Why `agent` is not started. */
+export type AgentRefusalReason =
   'absent' | 'too-old' | 'unanswered' | 'disabled';
 
-/** `loop` found and good, or the sentence that refuses it. */
-export type LoopDetection =
+/** `agent` found and good, or the sentence that refuses it. */
+export type AgentDetection =
   | { ok: true; path: string; version: string }
-  | { ok: false; reason: LoopRefusalReason; sentence: string };
+  | { ok: false; reason: AgentRefusalReason; sentence: string };
 
 /**
  * Judges what was found: present, answering and at least the minimum.
@@ -239,18 +239,18 @@ export type LoopDetection =
  *
  * @returns The path and version, or the refusal naming the install line.
  */
-export function loopDetection(
-  found: LoopFound | null,
+export function agentDetection(
+  found: AgentFound | null,
   host: LocalRuntimeHost,
-  minimum: string = LOOP_MIN_VERSION,
-): LoopDetection {
+  minimum: string = AGENT_MIN_VERSION,
+): AgentDetection {
   if (!found) {
     return {
       ok: false,
       reason: 'absent',
       sentence:
-        "`loop` was not found on this machine (not on PATH, nor under uv tool's or pipx's bins): " +
-        `install it with \`${INSTALL_LINE}\`, or ${host.loopPathHint}.`,
+        "`agent` was not found on this machine (not on PATH, nor under uv tool's or pipx's bins): " +
+        `install it with \`${INSTALL_LINE}\`, or ${host.agentPathHint}.`,
     };
   }
   const version = found.versionOutput ? versionOf(found.versionOutput) : null;
@@ -264,7 +264,7 @@ export function loopDetection(
       ok: false,
       reason: 'unanswered',
       sentence:
-        `\`loop\` at ${found.path} did not answer \`loop --version\`` +
+        `\`agent\` at ${found.path} did not answer \`agent --version\`` +
         (why ? ` (${why})` : '') +
         `: its Python may be gone — reinstall it with \`${INSTALL_LINE}\`.`,
     };
@@ -274,7 +274,7 @@ export function loopDetection(
       ok: false,
       reason: 'too-old',
       sentence:
-        `\`loop\` at ${found.path} is agent-runtimes ${version}, and ${host.name} needs ${minimum} or later: ` +
+        `\`agent\` at ${found.path} is agent-runtimes ${version}, and ${host.name} needs ${minimum} or later: ` +
         `update it with \`${INSTALL_LINE}\`.`,
     };
   }
@@ -282,7 +282,7 @@ export function loopDetection(
 }
 
 /**
- * The port a `loop serve` line names: `Auto-selected free port 41231`,
+ * The port a `agent serve` line names: `Auto-selected free port 41231`,
  * `Uvicorn running on http://127.0.0.1:41231`, `API docs available at http://127.0.0.1:41231/docs`.
  *
  * @param line - One line of the process's output.

@@ -297,7 +297,7 @@ async def get_servers() -> list[dict[str, Any]]:
         mcp_manager = get_mcp_manager()
         fallback_servers = mcp_manager.get_servers()
 
-        from agent_runtimes.streams.loop import get_codemode_mcp_tools_detailed
+        from agent_runtimes.streams.pubsub import get_codemode_mcp_tools_detailed
 
         codemode_tools_by_server = get_codemode_mcp_tools_detailed()
 

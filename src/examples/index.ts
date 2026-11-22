@@ -9,15 +9,15 @@ export { default as A2UiContactCardExample } from './A2UiContactCardExample';
 export { default as A2UiRestaurantExample } from './A2UiRestaurantExample';
 export { default as A2UiAgentExample } from './A2UiAgentExample';
 export { default as A2UiViewerExample } from './A2UiViewerExample';
-export { default as LoopShellExample } from './LoopShellExample';
-export { default as LoopWorkspaceExample } from './LoopWorkspaceExample';
+export { default as AgentShellExample } from './AgentShellExample';
+export { default as AgentWorkspaceExample } from './AgentWorkspaceExample';
 // The same workspace with the lazy loading, the preload and the error
 // boundary a host would otherwise write for itself.
 export {
-  default as LoopWorkspaceEmbed,
-  preloadLoopWorkspace,
-  type LoopWorkspaceEmbedProps,
-} from './LoopWorkspaceEmbed';
+  default as AgentWorkspaceEmbed,
+  preloadAgentWorkspace,
+  type AgentWorkspaceEmbedProps,
+} from './AgentWorkspaceEmbed';
 export { default as A2UiJupyterOutputExample } from './A2UiJupyterOutputExample';
 export { default as AgUiAgenticExample } from './AgUiAgenticExample';
 export { default as AgUiBackendToolRenderingExample } from './AgUiBackendToolRenderingExample';
@@ -59,7 +59,7 @@ export { default as AgentEvalsExample } from './AgentEvalsExample';
 export { default as AgentGuardrailsExample } from './AgentGuardrailsExample';
 export { default as AgentHooksExample } from './AgentHooksExample';
 export { default as AgentInferenceProviderExample } from './AgentInferenceProviderExample';
-export { default as LoopStrategyExample } from './LoopStrategyExample';
+export { default as AgentStrategyExample } from './AgentStrategyExample';
 export { default as AgentToolApprovalsExample } from './AgentToolApprovalsExample';
 export { default as AgentMemoryExample } from './AgentMemoryExample';
 export { default as AgentOtelExample } from './AgentOtelExample';
@@ -75,7 +75,7 @@ export { default as LexicalAgentSidebarExample } from './LexicalAgentSidebarExam
 export { default as NotebookAgentExample } from './NotebookAgentExample';
 export { default as NotebookAgentSidebarExample } from './NotebookAgentSidebarExample';
 export { default as NotebookExample } from './NotebookExample';
-export { default as LoopApplicationExample } from './LoopApplicationExample';
+export { default as AgentApplicationExample } from './AgentApplicationExample';
 export { default as DatalayerNotebookExample } from './DatalayerNotebookExample';
 export { default as NotebookMutationsKernel } from './NotebookMutationsKernel';
 export { default as NotebookMutationsServiceManager } from './NotebookMutationsServiceManager';

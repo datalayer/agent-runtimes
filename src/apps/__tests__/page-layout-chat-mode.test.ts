@@ -12,16 +12,16 @@
 import { describe, expect, it } from 'vitest';
 import { buildReactorFromPlugins } from '@datalayer/reactor';
 import { pageLayoutPanelOpen } from '@datalayer/primer-addons/lib/reactor';
-import { loopPlugins } from '../presets';
-import { LoopChatLayout } from '../core';
+import { agentPlugins } from '../presets';
+import { AgentChatLayout } from '../core';
 import {
   pageLayoutChatMode,
   pageLayoutForChatMode,
   setPageLayoutChatMode,
 } from '../plugins/page-layout';
 
-async function started(options: Parameters<typeof loopPlugins>[0]) {
-  const reactor = buildReactorFromPlugins(loopPlugins(options));
+async function started(options: Parameters<typeof agentPlugins>[0]) {
+  const reactor = buildReactorFromPlugins(agentPlugins(options));
   await reactor.start();
   return reactor;
 }
@@ -51,7 +51,7 @@ describe('the page layout chat modes', () => {
       pageLayout: true,
       pageLayoutPrompt: 'floating',
     });
-    const layout = reactor.getContributions(LoopChatLayout)[0].value;
+    const layout = reactor.getContributions(AgentChatLayout)[0].value;
     setPageLayoutChatMode('floating-draggable');
     pageLayoutPanelOpen.value = false;
     expect(layout.prompt).toBe('floating-top');
@@ -72,7 +72,7 @@ describe('the page layout chat modes', () => {
       pageLayoutPrompt: 'floating',
       pageLayoutPromptAnchor: 'bottom',
     });
-    const layout = reactor.getContributions(LoopChatLayout)[0].value;
+    const layout = reactor.getContributions(AgentChatLayout)[0].value;
     setPageLayoutChatMode('sidebar');
     expect(layout.promptStance?.value).toBe('docked-top');
     setPageLayoutChatMode('floating-draggable');
@@ -81,7 +81,7 @@ describe('the page layout chat modes', () => {
 
   it('leave a docked composer alone: no live stance', async () => {
     const reactor = await started({ pageLayout: true });
-    const layout = reactor.getContributions(LoopChatLayout)[0].value;
+    const layout = reactor.getContributions(AgentChatLayout)[0].value;
     expect(layout.prompt).toBe('docked-top');
     expect(layout.promptStance).toBeUndefined();
   });

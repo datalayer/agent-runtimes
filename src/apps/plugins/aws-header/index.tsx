@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-aws-header` — the Steward's title bar: the savings
+ * `@datalayer/agent-plugin-aws-header` — the Steward's title bar: the savings
  * found (a counter: recommendations, and their monthly sum as its words), a
  * Region drop-down told to the agent with every turn, and the Savings Plans
  * coverage as a meter. Stands in for `aws-savings-badge`: until the agent's
@@ -22,7 +22,7 @@ import { useLatestToolCall, useToolCalls } from '../../toolCards/toolResults';
 import { money } from '../../toolCards/kit';
 import { savingsFoundOf } from '../aws-savings-badge';
 
-export const AWS_HEADER_PLUGIN_NAME = '@datalayer/loop-plugin-aws-header';
+export const AWS_HEADER_PLUGIN_NAME = '@datalayer/agent-plugin-aws-header';
 
 /** The savings of the recommendations listed or recorded, for the indicator its tool has not set. */
 function useFoundSavings() {

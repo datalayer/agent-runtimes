@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The `agentcore` runtime target and `loop agentcore`,
+"""The `agentcore` runtime target and `agent agentcore`,
 against stubbed boto3 clients: every call's parameters asserted.
 """
 
@@ -536,7 +536,7 @@ def test_stop_and_destroy(control, data) -> None:
     assert deployment.status == "DELETING"
 
 
-# --- loop agentcore -------------------------------------------------------------
+# --- agent agentcore -------------------------------------------------------------
 
 
 @pytest.fixture()
@@ -552,7 +552,7 @@ def cli(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, control, data):
     return CliRunner(), control_stub, data_stub, tmp_path / "agentcore.json"
 
 
-def test_loop_agentcore_deploy_status_invoke_sessions_destroy(cli) -> None:
+def test_agent_agentcore_deploy_status_invoke_sessions_destroy(cli) -> None:
     from agent_runtimes.__main__ import app
 
     runner, control_stub, data_stub, state = cli
@@ -708,7 +708,7 @@ def test_loop_agentcore_deploy_status_invoke_sessions_destroy(cli) -> None:
     )
 
 
-def test_loop_agentcore_refuses_an_unknown_agentspec_and_a_lone_audience(cli) -> None:
+def test_agent_agentcore_refuses_an_unknown_agentspec_and_a_lone_audience(cli) -> None:
     from agent_runtimes.__main__ import app
 
     runner, _, _, _ = cli

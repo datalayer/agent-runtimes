@@ -16,16 +16,16 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('../plugins/agents/host', () => ({ insideJupyterLab: () => true }));
 import { buildReactorFromPlugins, configurePlugin } from '@datalayer/reactor';
 import {
-  LoopChatSurface,
-  LoopCommand,
-  LoopViewType,
+  AgentChatSurface,
+  AgentCommand,
+  AgentViewType,
   canOpenView,
   createPromptChannel,
   onSurfaceRequest,
-  LoopFrontendTool,
-  LoopEditorView,
+  AgentFrontendTool,
+  AgentEditorView,
 } from '../core';
-import type { LoopWorkspaceContext } from '../core';
+import type { AgentWorkspaceContext } from '../core';
 import {
   AGENTS_PLUGIN_NAME,
   AgentsPlugin,
@@ -39,8 +39,8 @@ import { ShellPlugin } from '../plugins/shell';
 import { ChatPlugin } from '../plugins/chat';
 
 function workspaceWith(
-  state: LoopWorkspaceContext['sandbox'],
-): LoopWorkspaceContext {
+  state: AgentWorkspaceContext['sandbox'],
+): AgentWorkspaceContext {
   return {
     serverUrl: 'http://server',
     agentId: 'default',
@@ -154,12 +154,12 @@ describe('the editor plugins', () => {
     const reactor = buildReactorFromPlugins([NotebookPlugin, DocumentPlugin]);
     reactor.start();
 
-    expect(reactor.getContributions(LoopChatSurface).map(v => v.id)).toEqual([
+    expect(reactor.getContributions(AgentChatSurface).map(v => v.id)).toEqual([
       'notebook',
       'document',
     ]);
     // And nothing of theirs lands in the workspace's own view point.
-    expect(reactor.getContributions(LoopViewType).map(v => v.id)).toEqual([
+    expect(reactor.getContributions(AgentViewType).map(v => v.id)).toEqual([
       'sandbox',
     ]);
   });
@@ -168,7 +168,7 @@ describe('the editor plugins', () => {
     const reactor = buildReactorFromPlugins([NotebookPlugin, DocumentPlugin]);
     reactor.start();
 
-    const surfaces = reactor.getContributions(LoopChatSurface);
+    const surfaces = reactor.getContributions(AgentChatSurface);
     const notebook = surfaces.find(v => v.id === 'notebook')!.value;
     const document = surfaces.find(v => v.id === 'document')!.value;
 
@@ -187,7 +187,7 @@ describe('the editor plugins', () => {
     const reactor = buildReactorFromPlugins([NotebookPlugin, DocumentPlugin]);
     reactor.start();
 
-    expect(reactor.getContributions(LoopChatSurface).map(v => v.id)).toEqual([
+    expect(reactor.getContributions(AgentChatSurface).map(v => v.id)).toEqual([
       'notebook',
       'document',
     ]);
@@ -198,7 +198,7 @@ describe('the editor plugins', () => {
     reactor.start();
 
     const surface = reactor
-      .getContributions(LoopViewType)
+      .getContributions(AgentViewType)
       .find(v => v.id === 'a2ui')!.value;
 
     expect(canOpenView(surface, workspaceWith({ state: 'idle' }))).toBe(false);
@@ -222,7 +222,7 @@ describe('the editor plugins', () => {
     const surfaces: string[] = [];
     const stop = onSurfaceRequest(id => surfaces.push(id));
 
-    for (const entry of reactor.getContributions(LoopCommand)) {
+    for (const entry of reactor.getContributions(AgentCommand)) {
       await entry.value.run({ workspace, argv: '' });
     }
     stop();
@@ -239,9 +239,9 @@ describe('the editor plugins', () => {
     const reactor = buildReactorFromPlugins([NotebookPlugin, DocumentPlugin]);
     reactor.start();
 
-    reactor.disable('@datalayer/loop-plugin-document');
+    reactor.disable('@datalayer/agent-plugin-document');
 
-    expect(reactor.getContributions(LoopChatSurface).map(v => v.id)).toEqual([
+    expect(reactor.getContributions(AgentChatSurface).map(v => v.id)).toEqual([
       'notebook',
     ]);
   });
@@ -256,7 +256,7 @@ describe('the chat plugin', () => {
     // before anything has contributed to it. The editor point moved to the
     // shell plugin — the chat's own opening is the agent's toolset.
     expect(reactor.getManifest(ChatPlugin.name)?.contributionPoints).toContain(
-      LoopFrontendTool.id,
+      AgentFrontendTool.id,
     );
   });
 
@@ -264,7 +264,7 @@ describe('the chat plugin', () => {
     const reactor = buildReactorFromPlugins([ShellPlugin]);
     reactor.start();
     expect(reactor.getManifest(ShellPlugin.name)?.contributionPoints).toContain(
-      LoopEditorView.id,
+      AgentEditorView.id,
     );
   });
 
@@ -274,7 +274,7 @@ describe('the chat plugin', () => {
     const withoutChat = buildReactorFromPlugins([NotebookPlugin]);
     withoutChat.start();
     expect(
-      withoutChat.getContributions(LoopViewType).map(v => v.id),
+      withoutChat.getContributions(AgentViewType).map(v => v.id),
     ).not.toContain('chat');
   });
 });
@@ -419,7 +419,7 @@ describe('moving the sandbox', () => {
       reactor.start();
       const sandbox =
         reactor.getOutput<AgentsOutput>(AGENTS_PLUGIN_NAME)!.sandbox;
-      const disconnect = sandbox.connect('loop-workspace');
+      const disconnect = sandbox.connect('agent-workspace');
 
       await sandbox.setTarget('local');
       disconnect();
@@ -438,13 +438,13 @@ describe('moving the sandbox', () => {
      * Saying "colocated" out loud is what makes it so.
      */
     expect(asked.map(call => `${call.method} ${call.url}`)).toEqual([
-      'GET http://server/api/v1/agents/loop-workspace',
+      'GET http://server/api/v1/agents/agent-workspace',
       'POST http://server/api/v1/agents',
       'POST http://server/api/v1/agents/sandbox/configure',
       'POST http://server/api/v1/agents/sandbox/restart',
     ]);
     expect(asked[1].body).toMatchObject({
-      name: 'loop-workspace',
+      name: 'agent-workspace',
       transport: 'ag-ui',
       agent_spec_id: 'example-simple',
       sandbox_variant: 'jupyter-server',
@@ -490,7 +490,7 @@ describe('moving the sandbox', () => {
       reactor.start();
       const sandbox =
         reactor.getOutput<AgentsOutput>(AGENTS_PLUGIN_NAME)!.sandbox;
-      const disconnect = sandbox.connect('loop-workspace');
+      const disconnect = sandbox.connect('agent-workspace');
       // Starting there is not a switch, and used to create nothing: the
       // header said running and the first message came back 404.
       expect(sandbox.snapshot.peek().state).toBe('starting');
@@ -505,11 +505,11 @@ describe('moving the sandbox', () => {
     // The agent, and nothing about the sandbox: no previous target to move
     // away from, and an existing agent's kernel is left alone.
     expect(asked.map(call => `${call.method} ${call.url}`)).toEqual([
-      'GET http://server/api/v1/agents/loop-workspace',
+      'GET http://server/api/v1/agents/agent-workspace',
       'POST http://server/api/v1/agents',
     ]);
     expect(asked[1].body).toMatchObject({
-      name: 'loop-workspace',
+      name: 'agent-workspace',
       transport: 'ag-ui',
       agent_spec_id: 'example-simple',
     });
@@ -553,7 +553,7 @@ describe('moving the sandbox', () => {
     const reactor = buildReactorFromPlugins([A2uiPlugin]);
     reactor.start();
     const surface = reactor
-      .getContributions(LoopViewType)
+      .getContributions(AgentViewType)
       .find(v => v.id === 'a2ui')!.value;
 
     const browser = workspaceWith({ state: 'running', variant: 'pyodide' });
@@ -573,7 +573,7 @@ describe('moving the sandbox', () => {
     const reactor = buildReactorFromPlugins([NotebookPlugin]);
     reactor.start();
     const notebook = reactor
-      .getContributions(LoopChatSurface)
+      .getContributions(AgentChatSurface)
       .find(v => v.id === 'notebook')!.value;
 
     // The notebook does not care where the kernel lives.
@@ -611,10 +611,10 @@ describe('toggling the sandbox plugin', () => {
     reactor.start();
 
     reactor.disable(AGENTS_PLUGIN_NAME);
-    expect(reactor.getContributions(LoopViewType)).toHaveLength(0);
+    expect(reactor.getContributions(AgentViewType)).toHaveLength(0);
 
     reactor.enable(AGENTS_PLUGIN_NAME);
-    expect(reactor.getContributions(LoopViewType).map(v => v.id)).toEqual([
+    expect(reactor.getContributions(AgentViewType).map(v => v.id)).toEqual([
       'sandbox',
     ]);
   });
@@ -699,9 +699,9 @@ describe('the agent picker', () => {
   });
 });
 
-describe('the Loop workspace example', () => {
+describe('the Agent workspace example', () => {
   const source = readFileSync(
-    join(__dirname, '..', '..', 'examples', 'LoopWorkspaceExample.tsx'),
+    join(__dirname, '..', '..', 'examples', 'AgentWorkspaceExample.tsx'),
     'utf8',
   );
 

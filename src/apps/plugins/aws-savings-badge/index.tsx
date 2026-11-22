@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-aws-savings-badge` — the savings the Steward found
+ * `@datalayer/agent-plugin-aws-savings-badge` — the savings the Steward found
  * in this session, in the chat's title bar: the estimated monthly sum and the
  * AWS account, from the last `list_recommendations`, else summed over the
  * recommendations recorded (`record_recommendation`). Nothing before one.

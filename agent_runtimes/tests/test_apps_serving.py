@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""`loop apps run --web`: an application served on this machine in
+"""`agent apps run --web`: an application served on this machine in
 the embed's page, and built again when its file changes — the page told to
 reload, or why the change was refused while the application runs on as it was.
 """
@@ -61,7 +61,7 @@ def served(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> Iterator[Dict[str, Any]]:
-    """An app.py served as `loop apps run --web --watch` serves it, the embed from a folder."""
+    """An app.py served as `agent apps run --web --watch` serves it, the embed from a folder."""
     made: List[Dict[str, Any]] = []
 
     async def create(app: Any, payload: Dict[str, Any], api_prefix: str) -> None:
@@ -112,7 +112,7 @@ def test_the_page_is_the_embed_served_here_with_its_reload(
     assert client.get("/embed/datalayer-app.js").text == "/* the embed */"
     # Its agent on this server; a new conversation at each reload.
     assert '<datalayer-app server="http://testserver/app" resume="false">' in page
-    assert 'new EventSource("/app/_loop/reload")' in page
+    assert 'new EventSource("/app/_agent/reload")' in page
     assert spec_in(page)["name"] == "Echo Desk"
     # Its code answers its sessions, as on a runtime.
     started = events_of(

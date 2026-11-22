@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-linkedin-post-preview` — a post on the person's LinkedIn, as it
+ * `@datalayer/agent-plugin-linkedin-post-preview` — a post on the person's LinkedIn, as it
  * will stand there, above the chat's approval row: the text, its length
  * against what LinkedIn takes, the images, the post it answers, and the link
  * once out (`toolCards/postPreview`). Draws `post_to_linkedin` and `comment_on_linkedin`.
@@ -18,7 +18,7 @@ import { defineToolCardPlugin } from '../../toolCards/kit';
 import { PostPreviewCard } from '../../toolCards/postPreview';
 
 export const LINKEDIN_POST_PREVIEW_PLUGIN_NAME =
-  '@datalayer/loop-plugin-linkedin-post-preview';
+  '@datalayer/agent-plugin-linkedin-post-preview';
 
 export function LinkedInPostPreviewCard({
   context,

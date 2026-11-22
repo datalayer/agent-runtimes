@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import asyncio
 
-from agent_runtimes.loop import SessionSync
+from agent_runtimes.agent import SessionSync
 
 
 def _history(*messages: tuple[str, str]) -> list[dict]:
@@ -117,7 +117,7 @@ class TestFailure:
 
 class TestUrl:
     def test_it_reads_the_shared_history(self) -> None:
-        sync = SessionSync(server_url="http://server/", agent_id="loop-shell")
+        sync = SessionSync(server_url="http://server/", agent_id="agent-shell")
 
         assert sync.history_url == "http://server/api/v1/history"
-        assert sync.agent_id == "loop-shell"
+        assert sync.agent_id == "agent-shell"

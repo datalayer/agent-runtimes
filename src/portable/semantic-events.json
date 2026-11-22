@@ -23,7 +23,7 @@
     "table": "a Markdown table in the answer (src/portable/semantic.ts answerParts); no AG-UI event carries one",
     "file": "none in agent-runtimes 1.5.45: reserved, rendered as a safe HTTPS link when produced",
     "citation": "an HTTPS Markdown link in the answer (answerParts); no AG-UI event carries one",
-    "ask": "AG-UI RUN_FINISHED with result.asking (agent_runtimes/apps/sessions.py question_of); the run stream carries no loop.ask event",
+    "ask": "AG-UI RUN_FINISHED with result.asking (agent_runtimes/apps/sessions.py question_of); the run stream carries no agent.ask event",
     "completion": "AG-UI RUN_FINISHED without asking",
     "stop": "the host itself, after its own Stop: a stopped session's stream ends without RUN_FINISHED or RUN_ERROR (agent_runtimes/apps/sessions.py stop, _close); no AG-UI event carries it",
     "error": "AG-UI RUN_ERROR message",
@@ -322,7 +322,7 @@
       "agui": [
         {
           "type": "CUSTOM",
-          "name": "loop.turn",
+          "name": "agent.turn",
           "value": {
             "turn": "t1",
             "external_event_id": "Ev1",
@@ -351,7 +351,7 @@
       "agui": [
         {
           "type": "CUSTOM",
-          "name": "loop.session",
+          "name": "agent.session",
           "value": {
             "uid": "S1"
           }
@@ -377,7 +377,7 @@
       "agui": [
         {
           "type": "CUSTOM",
-          "name": "loop.turn",
+          "name": "agent.turn",
           "value": {
             "session": "S1",
             "turn": "t1",
@@ -393,7 +393,7 @@
       "agui": [
         {
           "type": "CUSTOM",
-          "name": "loop.turn",
+          "name": "agent.turn",
           "value": {
             "session": "S1",
             "turn": "t1",
@@ -409,7 +409,7 @@
       "agui": [
         {
           "type": "CUSTOM",
-          "name": "loop.page",
+          "name": "agent.page",
           "value": {
             "inputs": {},
             "outputs": {}

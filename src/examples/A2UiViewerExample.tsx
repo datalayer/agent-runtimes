@@ -14,7 +14,7 @@
  * with an agent of their own. It used to be pinned to the browser — there is
  * no agent behind the scene, so the page was the cheapest place — which left
  * the header's *Local* selected and ignored: the sandbox stayed in the page.
- * On Local the loop asks the local agent-runtimes server for its shell agent
+ * On Local the Agent asks the local agent-runtimes server for its shell agent
  * and the Jupyter server that agent starts beside itself, which is what
  * choosing Local means everywhere else here.
  *
@@ -24,7 +24,7 @@
 import React, { useMemo } from 'react';
 import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
-import { LoopEmbed } from '../apps';
+import { AgentEmbed } from '../apps';
 import { useRuntimeTargetStore } from './utils/runtimeTargetStore';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { defineA2uiScenePlugin } from '../apps/plugins/a2ui-scene';
@@ -44,7 +44,7 @@ const AGENTSPEC_ID = 'example-a2ui-viewer';
 const A2UiViewerExample: React.FC = () => {
   /*
    * The agent's surfaces, and what pressing their Submit does, are the
-   * loop's own: its spec binds `render_a2ui_surface` to the `a2ui-surface`
+   * Agent's own: its spec binds `render_a2ui_surface` to the `a2ui-surface`
    * renderer, and the preset's surface plugin draws, checks and submits.
    * Nothing here but the scene.
    */
@@ -55,7 +55,7 @@ const A2UiViewerExample: React.FC = () => {
   return (
     <ThemedProvider>
       <Box height="100%" minHeight={0}>
-        <LoopEmbed
+        <AgentEmbed
           target={target}
           // An in-page agent has no server to ask; the others need to know
           // where theirs is.

@@ -25,7 +25,7 @@ import {
 } from '../../../components/outputs/spreadsheetOutput';
 
 export const AGENT_OUTPUTS_XLSX_PLUGIN_NAME =
-  '@datalayer/loop-plugin-agent-outputs-xlsx';
+  '@datalayer/agent-plugin-agent-outputs-xlsx';
 
 /** A ```xlsx block of an answer, drawn read-only as its workbook in the message. */
 export const AgentOutputsXlsxPlugin = definePlugin({

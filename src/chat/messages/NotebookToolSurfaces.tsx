@@ -6,7 +6,7 @@
 /**
  * Notebook tool results, shown in the transcript as surfaces.
  *
- * A chat whose agent works a notebook the reader cannot see — the Loop Shell
+ * A chat whose agent works a notebook the reader cannot see — the Agent Shell
  * mounts one hidden; any headless-notebook host is in the same position —
  * used to leave the tool row as the only trace: "ran cell 3" with nothing to
  * look at. This renders the trace itself. A cell that was inserted, updated
@@ -17,7 +17,7 @@
  * agent's means, the output is the result.
  *
  * Part of the chat rather than of any workspace: `ChatBase` turns it on for
- * a given notebook via `notebookToolSurfacesId`, and the LOOP chat sets that
+ * a given notebook via `notebookToolSurfacesId`, and the Agent chat sets that
  * only while no editor is on screen — with the notebook open beside the
  * chat, the change is already visible where it happened.
  *

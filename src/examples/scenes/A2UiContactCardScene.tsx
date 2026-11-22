@@ -5,7 +5,7 @@
 
 /*
  * Scene extracted from the A2UiContactCardExample page: the same canned A2UI
- * messages, rendered as a Loop workspace view. The page itself now mounts
+ * messages, rendered as an Agent workspace view. The page itself now mounts
  * a reactor application with this scene as a plugin.
  */
 

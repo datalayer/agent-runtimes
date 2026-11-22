@@ -68,7 +68,7 @@ describe('a thread opened from the history', () => {
       )
       .mockResolvedValueOnce(
         stream(
-          { type: 'CUSTOM', name: 'loop.session', value: { uid: 's-1' } },
+          { type: 'CUSTOM', name: 'agent.session', value: { uid: 's-1' } },
           { type: 'MESSAGES_SNAPSHOT', messages: SAID },
           { type: 'RUN_FINISHED' },
         ),

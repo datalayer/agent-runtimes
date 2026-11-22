@@ -12,7 +12,7 @@
  */
 
 export const EXAMPLE_GROUP_ORDER = [
-  'Loop',
+  'Agent',
   'Agents',
   'Avatar',
   'A2UI',
@@ -30,11 +30,20 @@ export const EXAMPLE_GROUP_ORDER = [
   'Navigation',
 ] as const;
 
+/** The Agent group: the shells, the workspace, an application beside its computer, the Agent Application, the strategy. */
+const AGENT_EXAMPLES = new Set([
+  'AgentShellExample',
+  'AgentWorkspaceExample',
+  'AgentComputerExample',
+  'AgentApplicationExample',
+  'AgentStrategyExample',
+]);
+
 export const getExampleGroup = (id: string): string => {
-  // The Loop examples together, first (the user, 22 November 2026): the
-  // shells, the workspace, an application beside its computer, the Loop
+  // The Agent examples together, first (the user, 22 November 2026): the
+  // shells, the workspace, an application beside its computer, the Agent
   // Application, the strategy.
-  if (id.startsWith('Loop')) return 'Loop';
+  if (AGENT_EXAMPLES.has(id)) return 'Agent';
   // The library of specs, the scenes of the catalogue and the decks: the
   // Agents group (the user, 22 November 2026, renamed from Applications).
   if (

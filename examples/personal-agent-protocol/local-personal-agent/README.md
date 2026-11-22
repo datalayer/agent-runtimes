@@ -20,5 +20,5 @@ Every answer is a summary (`PapAnswer`, `PapSignInSummary`,
 id. In Datalayer the same journey runs through the gateway's `pap` toolset.
 
 ```bash
-loop apps run examples/personal-agent-protocol/local-personal-agent/app.py
+agent apps run examples/personal-agent-protocol/local-personal-agent/app.py
 ```

@@ -49,7 +49,7 @@ HANGING = MCPServer(
 )
 
 APP = {
-    "schema": "loop.app/v1",
+    "schema": "agent.app/v1",
     "id": "web-research",
     "name": "Web Research",
     "kind": "chat",

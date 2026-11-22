@@ -347,12 +347,12 @@ export function meterShare(
   return max > 0 ? Math.min(1, Math.max(0, value / max)) : 0;
 }
 
-/** What goes with a run for a header: `forwardedProps.loop.header.<ui id>`. */
+/** What goes with a run for a header: `forwardedProps.agent.header.<ui id>`. */
 export function headerRunProps(
   uiId: string,
   chosen: Record<string, string>,
 ): Record<string, unknown> {
   return Object.keys(chosen).length > 0
-    ? { loop: { header: { [uiId]: chosen } } }
+    ? { agent: { header: { [uiId]: chosen } } }
     : {};
 }

@@ -18,7 +18,7 @@ import {
   canvasPartsReactor,
   canvasPartsReactorOf,
 } from '../plugins/canvas-parts';
-import { LoopCanvasPart, type CanvasPartContribution } from '../core';
+import { AgentCanvasPart, type CanvasPartContribution } from '../core';
 import { dumpAppspec, emptyAppspec } from '../apps/appspec';
 import { checkAppspec } from '../apps/checks';
 import { MCP_SERVER_LIBRARY } from '../../specs/mcpServers';
@@ -198,7 +198,7 @@ describe('the toolbox is what the enabled plugins contribute', () => {
 
   it('reads a part a plugin of its own contributes, and nothing it does not', () => {
     const reactor = canvasPartsReactor([], []);
-    expect(reactor.getContributions(LoopCanvasPart)).toEqual([]);
+    expect(reactor.getContributions(AgentCanvasPart)).toEqual([]);
   });
 });
 

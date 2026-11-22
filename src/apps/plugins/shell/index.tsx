@@ -4,19 +4,19 @@
  */
 
 /**
- * `@datalayer/loop-plugin-shell` — the loop's face of the generic shell.
+ * `@datalayer/agent-plugin-shell` — the Agent's face of the generic shell.
  *
  * The machinery lives in `@datalayer/reactor-shell` now: the view choice
  * store, the segmented selector that shows nothing until plugins contribute,
- * the cycle command. This plugin is what makes it *the loop's*:
+ * the cycle command. This plugin is what makes it *the Agent's*:
  *
- * - it points the generic plugin at {@link LoopEditorView} — the editor
- *   point the notebook and document fill — and declares the loop's points;
+ * - it points the generic plugin at {@link AgentEditorView} — the editor
+ *   point the notebook and document fill — and declares the Agent's points;
  * - it teaches the selector to read a {@link ChatSurfaceContribution},
  *   gating against the live workspace the header slot passes;
  * - it wires the announcer to `requestSurface`, so a choice reaches the chat
  *   through the same channel `/notebook` and `/document` use;
- * - it keeps the `/editor` slash command, in the loop's own registry.
+ * - it keeps the `/editor` slash command, in the Agent's own registry.
  *
  * @module apps/plugins/shell
  */
@@ -33,14 +33,14 @@ import {
   type ShellViewDescriptor,
 } from '@datalayer/reactor-shell';
 import {
-  LoopCommand,
-  LoopEditorView,
-  LoopSlots,
-  LoopViewType,
+  AgentCommand,
+  AgentEditorView,
+  AgentSlots,
+  AgentViewType,
   canOpenView,
   requestSurface,
   type ChatSurfaceContribution,
-  type LoopWorkspaceContext,
+  type AgentWorkspaceContext,
 } from '../../core';
 import {
   NONE_EDITOR,
@@ -51,7 +51,7 @@ import {
 } from './editorChoice';
 import { useEditorPreviews } from './useEditorPreviews';
 
-export const SHELL_PLUGIN_NAME = '@datalayer/loop-plugin-shell';
+export const SHELL_PLUGIN_NAME = '@datalayer/agent-plugin-shell';
 
 export type ShellPluginConfig = {
   /**
@@ -59,7 +59,7 @@ export type ShellPluginConfig = {
    *
    * A preference, not a demand, exactly like the chat's `defaultSurface` — a
    * named editor whose plugin is not mounted leaves the selector on `'none'`.
-   * The two configs should agree; `loopPlugins` sets both from one option.
+   * The two configs should agree; `agentPlugins` sets both from one option.
    */
   defaultEditor: string;
   /**
@@ -71,10 +71,10 @@ export type ShellPluginConfig = {
   showSelector: boolean;
 };
 
-/** How a loop editor contribution reads as the generic selector's view. */
+/** How an Agent editor contribution reads as the generic selector's view. */
 function describeEditor(value: unknown, context: unknown): ShellViewDescriptor {
   const surface = value as ChatSurfaceContribution;
-  const workspace = (context as { workspace?: LoopWorkspaceContext })
+  const workspace = (context as { workspace?: AgentWorkspaceContext })
     ?.workspace;
   const openable = workspace ? canOpenView(surface, workspace) : true;
   return {
@@ -90,11 +90,11 @@ function describeEditor(value: unknown, context: unknown): ShellViewDescriptor {
   };
 }
 
-/** The generic selector, dressed for the loop's header. */
+/** The generic selector, dressed for the Agent's header. */
 function EditorSelectorComponent(
   slotProps: Record<string, unknown>,
 ): JSX.Element | null {
-  const workspace = (slotProps as { workspace?: LoopWorkspaceContext })
+  const workspace = (slotProps as { workspace?: AgentWorkspaceContext })
     .workspace;
   /*
    * Live figures for the labels — "Notebook (4)" — and the hover cards
@@ -111,7 +111,7 @@ function EditorSelectorComponent(
   };
   return (
     <ViewSelector
-      point={LoopEditorView}
+      point={AgentEditorView}
       describe={describe}
       context={slotProps}
       // "Chat", not "None": with no editor beside it the conversation IS the
@@ -126,9 +126,9 @@ function EditorSelectorComponent(
 export const ShellPlugin = definePlugin<ShellPluginConfig>({
   name: SHELL_PLUGIN_NAME,
   // Named apart from the reactor's own `Shell` plugin, which sits beside it
-  // in the plugins panel: this is the Loop workspace's.
-  displayName: 'Loop shell',
-  description: 'The Loop workspace’s extension points, and the editor choice.',
+  // in the plugins panel: this is the Agent workspace's.
+  displayName: 'Agent shell',
+  description: 'The Agent workspace’s extension points, and the editor choice.',
   octicon: 'columns',
   emoji: '\u{1F4D1}',
   config: {
@@ -136,19 +136,19 @@ export const ShellPlugin = definePlugin<ShellPluginConfig>({
     showSelector: true,
   },
   /*
-   * The generic shell, configured for the loop. The selector is rendered by
+   * The generic shell, configured for the Agent. The selector is rendered by
    * *this* plugin (below) rather than the generic one, because which slot it
-   * sits in and whether it shows are loop configuration; the generic
-   * keybinding is stood down so the loop's `/editor` keeps `Mod+Alt+E`
+   * sits in and whether it shows are the Agent's configuration; the generic
+   * keybinding is stood down so the Agent's `/editor` keeps `Mod+Alt+E`
    * without two commands fighting over one chord.
    */
   dependencies: [
     configurePlugin(ReactorShellPlugin, {
-      point: LoopEditorView,
+      point: AgentEditorView,
       describe: describeEditor,
       showSelector: false,
       announce: (viewId: string) => requestSurface(viewId),
-      commandId: 'loop.shell.cycleEditor',
+      commandId: 'agent.shell.cycleEditor',
       // Named for what it cycles here: the palette said "Switch the view" and
       // a person looking for the notebook did not recognise it.
       commandName: 'Switch the editor',
@@ -160,10 +160,10 @@ export const ShellPlugin = definePlugin<ShellPluginConfig>({
   // Declared, not merely used: the registry knows who contributed to a
   // point, it cannot know who opened it — and these two are what makes this
   // the plugin the others extend.
-  contributionPoints: [LoopViewType, LoopEditorView],
+  contributionPoints: [AgentViewType, AgentEditorView],
   contributes: [
     contribution(
-      LoopCommand,
+      AgentCommand,
       {
         name: 'editor',
         aliases: ['editors'],
@@ -206,7 +206,7 @@ export const ShellPlugin = definePlugin<ShellPluginConfig>({
         ? [
             {
               id: 'editor-selector',
-              slot: LoopSlots.header,
+              slot: AgentSlots.header,
               // The component holds itself to the trailing edge of the header
               // row with `marginLeft: 'auto'`, wherever the slot renders it.
               Component: EditorSelectorComponent,
@@ -226,7 +226,7 @@ export {
   setEditorOptions,
   subscribeEditorChoice,
 } from './editorChoice';
-/** The loop's selector, for a host that renders it somewhere of its own. */
+/** The Agent's selector, for a host that renders it somewhere of its own. */
 export { EditorSelectorComponent as EditorSelector };
 
 /** @deprecated The editors plugin grew into the shell plugin; same object. */

@@ -12,7 +12,7 @@ goes back to the caller, who stops. The tool returns only lifecycle evidence; th
 User ID, `sid`, keys, delegation, and Session JWTs remain host-only.
 
 ```bash
-loop apps run examples/personal-agent-protocol/session-lifecycle/app.py
+agent apps run examples/personal-agent-protocol/session-lifecycle/app.py
 ```
 
 See the canonical [Sessions guide](https://personalagentprotocol.org/docs/guides/sessions).

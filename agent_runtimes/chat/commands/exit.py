@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 NAME = "exit"
 ALIASES = ["quit", "q"]
-DESCRIPTION = "Exit loop"
+DESCRIPTION = "Exit agent"
 SHORTCUT = "escape q"
 
 
@@ -25,7 +25,7 @@ async def execute(tux: "CliTux") -> Optional[str]:
     uid = getattr(getattr(tux, "session", None), "session_uid", None)
     if uid:
         tux.console.print(
-            f"Session {uid} is kept: paused as its runtime stops. `loop` lists it as it "
+            f"Session {uid} is kept: paused as its runtime stops. `agent` lists it as it "
             f"starts, and `/resume {uid}` goes on with it.",
             markup=False,
         )

@@ -16,12 +16,12 @@ import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it } from 'vitest';
 import { buildReactorFromPlugins } from '@datalayer/reactor';
 import { ShieldCheckIcon } from '@primer/octicons-react';
-import { LoopSlots } from '../core';
+import { AgentSlots } from '../core';
 import {
   railChoiceAfter,
   railItemsOf,
   SidebarRail,
-  type LoopSidebarComponent,
+  type AgentSidebarComponent,
 } from '../shell/SidebarRail';
 import { paneOpenAnimation, paneOpening } from '../shell/paneMotion';
 import { defineAppRulesPlugin } from '../plugins/app-rules';
@@ -40,9 +40,9 @@ afterEach(() => {
 });
 
 const mounted: string[] = [];
-const panel = (id: string): LoopSidebarComponent => ({
+const panel = (id: string): AgentSidebarComponent => ({
   id,
-  slot: LoopSlots.sidebar,
+  slot: AgentSlots.sidebar,
   Component: () => {
     React.useEffect(() => {
       mounted.push(id);
@@ -52,7 +52,7 @@ const panel = (id: string): LoopSidebarComponent => ({
   rail: { label: id[0].toUpperCase() + id.slice(1), icon: ShieldCheckIcon },
 });
 
-function render(components: LoopSidebarComponent[]) {
+function render(components: AgentSidebarComponent[]) {
   host = document.createElement('div');
   document.body.appendChild(host);
   const root = createRoot(host);
@@ -66,7 +66,7 @@ describe('the rail', () => {
   it('names each panel by its rail, or by its id under a generic icon', () => {
     const items = railItemsOf([
       panel('rules'),
-      { id: 'bare', slot: LoopSlots.sidebar, Component: () => null },
+      { id: 'bare', slot: AgentSlots.sidebar, Component: () => null },
     ]);
     expect(items.map(item => item.label)).toEqual(['Rules', 'bare']);
     expect(items[0].icon).toBe(ShieldCheckIcon);
@@ -83,7 +83,7 @@ describe('the rail', () => {
     mounted.length = 0;
     const el = render([panel('rules'), panel('activity')]);
     const buttons = Array.from(
-      el.querySelectorAll<HTMLButtonElement>('[data-loop-rail-item]'),
+      el.querySelectorAll<HTMLButtonElement>('[data-agent-rail-item]'),
     );
     expect(buttons.map(button => button.getAttribute('aria-label'))).toEqual([
       'Rules',
@@ -93,7 +93,7 @@ describe('the rail', () => {
     expect(buttons[1].getAttribute('aria-pressed')).toBe('false');
     expect(mounted.sort()).toEqual(['activity', 'rules']);
     const region = (id: string) =>
-      el.querySelector<HTMLElement>(`#loop-rail-panel-${id}`)!;
+      el.querySelector<HTMLElement>(`#agent-rail-panel-${id}`)!;
     expect(region('rules').hidden).toBe(false);
     expect(region('activity').hidden).toBe(true);
 
@@ -106,8 +106,8 @@ describe('the rail', () => {
 
     // The chosen one again: the column closes, the rail stays.
     act(() => buttons[1].click());
-    expect(el.querySelector('[data-loop-rail-panel]')).toBeNull();
-    expect(el.querySelectorAll('[data-loop-rail-item]')).toHaveLength(2);
+    expect(el.querySelector('[data-agent-rail-panel]')).toBeNull();
+    expect(el.querySelectorAll('[data-agent-rail-item]')).toHaveLength(2);
     expect(buttons.every(b => b.getAttribute('aria-pressed') === 'false')).toBe(
       true,
     );
@@ -124,9 +124,9 @@ describe('the rail', () => {
     reactor.start();
     const rails = plugins.map(plugin => {
       const output = reactor.getOutput<{
-        components?: LoopSidebarComponent[];
+        components?: AgentSidebarComponent[];
       }>((plugin as unknown as { name: string }).name);
-      return output?.components?.find(c => c.slot === LoopSlots.sidebar)?.rail
+      return output?.components?.find(c => c.slot === AgentSlots.sidebar)?.rail
         ?.label;
     });
     reactor.stop();
@@ -137,11 +137,11 @@ describe('the rail', () => {
 describe('a pane opening', () => {
   it("moves by the theme's pane duration and easing, none when motion is reduced", () => {
     expect(paneOpenAnimation('right')).toBe(
-      'loopPaneOpenRight var(--theme-motion-pane, 0ms) var(--theme-motion-easing, ease) both',
+      'agentPaneOpenRight var(--theme-motion-pane, 0ms) var(--theme-motion-easing, ease) both',
     );
     const styles = paneOpening('left');
     expect(styles.animation).toBe(paneOpenAnimation('left'));
-    expect(styles['@keyframes loopPaneOpenLeft']).toEqual({
+    expect(styles['@keyframes agentPaneOpenLeft']).toEqual({
       from: { opacity: 0, transform: 'translateX(-12px)' },
       to: { opacity: 1, transform: 'none' },
     });

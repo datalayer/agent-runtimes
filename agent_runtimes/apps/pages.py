@@ -22,7 +22,7 @@ drawn at ``/outputs/<name>`` with its component; one ``result``, in words,
 when none is. As an input changes, the page sends them all as the ``page``
 action of its session; the runtime checks them against the form (422 and a
 sentence), runs the function on them, and answers its outputs as a
-``loop.page`` event, which the page shows in place.
+``agent.page`` event, which the page shows in place.
 
 Pure, but for `run_page`, which calls the application's code.
 """
@@ -43,7 +43,7 @@ from agent_runtimes.types import AppPageOutputSpec, AppSpec
 PAGE_ACTION = "page"
 
 #: The ``CUSTOM`` event that says what a page shows: ``{inputs, outputs}``.
-LOOP_PAGE = "loop.page"
+AGENT_PAGE = "agent.page"
 
 #: What each component an output is drawn with shows its value as.
 OUTPUT_SHOWS: Dict[str, str] = {
@@ -346,7 +346,7 @@ async def run_page(
 
 
 __all__ = [
-    "LOOP_PAGE",
+    "AGENT_PAGE",
     "OUTPUT_SHOWS",
     "PAGE_ACTION",
     "RESULT_OUTPUT",

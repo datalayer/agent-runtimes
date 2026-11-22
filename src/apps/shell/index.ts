@@ -10,10 +10,10 @@
  */
 
 export {
-  LoopWorkspace,
-  buildLoopReactor,
-  type LoopWorkspaceProps,
-} from './LoopWorkspace';
+  AgentWorkspace,
+  buildAgentReactor,
+  type AgentWorkspaceProps,
+} from './AgentWorkspace';
 export { ViewSwitcher, type ViewSwitcherProps } from './ViewSwitcher';
 export { PluginToggles, type PluginTogglesProps } from './PluginToggles';
 export {
@@ -27,8 +27,8 @@ export {
   RAIL_WIDTH,
   railChoiceAfter,
   railItemsOf,
-  type LoopSidebarComponent,
-  type LoopSidebarRail,
+  type AgentSidebarComponent,
+  type AgentSidebarRail,
   type RailItem,
   type SidebarRailProps,
 } from './SidebarRail';
@@ -48,9 +48,9 @@ export {
   useLeftPanel,
   type LeftPanelProps,
   type LeftPanelState,
-  type LoopLeftPanel,
-  type LoopLeftPanelComponent,
-  type LoopLeftPanelProps,
+  type AgentLeftPanel,
+  type AgentLeftPanelComponent,
+  type AgentLeftPanelProps,
 } from './LeftPanel';
 export {
   CLOSE_SIDE_PANEL,
@@ -70,9 +70,9 @@ export {
   sidePanelWidth,
   useSidePanel,
   useSidePanels,
-  type LoopSidePanel,
-  type LoopSidePanelComponent,
-  type LoopSidePanelProps,
+  type AgentSidePanel,
+  type AgentSidePanelComponent,
+  type AgentSidePanelProps,
   type SidePanelEvent,
   type SidePanelSide,
   type SidePanelState,

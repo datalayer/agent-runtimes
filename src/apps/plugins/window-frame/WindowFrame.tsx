@@ -10,9 +10,9 @@
  * one: a rounded, shadowed card with a title bar carrying window controls on
  * the leading edge, a name, and whatever the host offers on the trailing edge.
  *
- * It exists so that a page embedding Loop does not have to draw one. The
+ * It exists so that a page embedding Agent does not have to draw one. The
  * landing page had this markup, which is the wrong side of the boundary for it
- * to live on — a change to how Loop presents itself would have had to be made
+ * to live on — a change to how Agent presents itself would have had to be made
  * in a repository that only renders it.
  *
  * Both edges are reactor slots, so what goes in them is contributed rather
@@ -44,7 +44,7 @@ export type WindowFrameProps = {
   /**
    * How tall the body stands. Any CSS length.
    *
-   * The host's call rather than the frame's: how much of the page Loop should
+   * The host's call rather than the frame's: how much of the page Agent should
    * take is a question about the page.
    *
    * Omitted, the frame fills whatever it was given and the body takes what the

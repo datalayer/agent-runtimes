@@ -26,7 +26,7 @@
  * takes only a token the host's **server** signed with the deployment's
  * secret (HS256: `sub`, `name`, `exp` at most an hour away), which the page
  * hands over as `userToken` (the element's `user-token`). It goes with every
- * run as `forwardedProps.loop.user_token` (`hostUserRunProps`); the runtime
+ * run as `forwardedProps.agent.user_token` (`hostUserRunProps`); the runtime
  * verifies it where the session opens, refuses the session without it, and
  * answers `host_context`'s `user` with the user it names. The secret never
  * reaches the page.
@@ -62,8 +62,8 @@ import {
 } from '@datalayer/reactor';
 import type { AppBehaviour, AppSpec } from '../../types/agentspecs';
 import {
-  LoopChatExtras,
-  type LoopChatExtrasValue,
+  AgentChatExtras,
+  type AgentChatExtrasValue,
   type RunPropsContribution,
 } from '../core';
 import { behaviourFor } from '../apps/rules';
@@ -329,10 +329,10 @@ export function hostPlugin(
   }
   const extras = {
     id: `host-${app.id}`,
-    extras: signal<LoopChatExtrasValue>({ agentToolBundles: [bundle.id] }),
+    extras: signal<AgentChatExtrasValue>({ agentToolBundles: [bundle.id] }),
   };
   return definePlugin({
-    name: `loop-host-${app.id}`,
+    name: `agent-host-${app.id}`,
     displayName: `${app.name}: its host page`,
     description: `The values the page passes ${app.name} and the functions it offers, as commands and agent tools.`,
     octicon: 'browser',
@@ -340,14 +340,14 @@ export function hostPlugin(
     commands: hostCommands(app, host),
     contributes: [
       contribution(AgentTools, bundle, { id: bundle.id }),
-      contribution(LoopChatExtras, extras, { id: extras.id }),
+      contribution(AgentChatExtras, extras, { id: extras.id }),
     ],
   });
 }
 
 /**
  * What goes with every run for the host's user: the token the
- * host's server signed, as `forwardedProps.loop.user_token`, for an
+ * host's server signed, as `forwardedProps.agent.user_token`, for an
  * application that says `user: signed` — read at each run, so that the
  * newest is sent; nothing when the page gives none, and the runtime refuses
  * the session in a sentence. `undefined` for an application that takes what
@@ -364,7 +364,7 @@ export function hostUserRunProps(
     id: 'host-user',
     props: () => {
       const token = host().userToken?.()?.trim();
-      return token ? { loop: { user_token: token } } : {};
+      return token ? { agent: { user_token: token } } : {};
     },
   };
 }
@@ -377,7 +377,7 @@ export type SignedUserToken = { token: string; exp: number };
  * user, with their own token: what a
  * surface that has no host server holding the deployment's secret — the
  * VS Code extension, Jupyter AI Agents, Datalayer Desktop — sends as
- * `forwardedProps.loop.user_token` with the runs of an application that
+ * `forwardedProps.agent.user_token` with the runs of an application that
  * says `user: signed`. HS256 with the deployment's secret, `sub` the
  * person's uid, `name` theirs, fifteen minutes; refused (`403`) for an
  * application's principal or a narrowed token, and for a person the

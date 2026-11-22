@@ -26,7 +26,7 @@ import { coverOf, BEHAVIOUR_WORDS } from '../apps/rules';
 import { entryOf, entrySaid, sessionSentence } from '../apps/records';
 import { RUN_END_WORDS } from '../../portable/records';
 import { SAVE_TOOL, SAVE_WORDS, draftOfApproval } from '../apps/saved';
-import { LoopSlots } from '../core';
+import { AgentSlots } from '../core';
 import { APP_CATALOGUE } from '../../specs/apps';
 import type { AppSpec } from '../../types/agentspecs';
 
@@ -108,15 +108,15 @@ describe('the preset, asked for the sidebar', () => {
     const preset = appPreset(app(), { sidebar: true, appUid: 'app-1' });
     expect(names(preset.plugins)).toEqual(
       expect.arrayContaining([
-        '@datalayer/loop-plugin-app-rules-web-research',
-        '@datalayer/loop-plugin-app-activity-web-research',
+        '@datalayer/agent-plugin-app-rules-web-research',
+        '@datalayer/agent-plugin-app-activity-web-research',
       ]),
     );
     const reactor = buildReactorFromPlugins(preset.plugins);
     await reactor.start();
     const slots = [
-      '@datalayer/loop-plugin-app-rules-web-research',
-      '@datalayer/loop-plugin-app-activity-web-research',
+      '@datalayer/agent-plugin-app-rules-web-research',
+      '@datalayer/agent-plugin-app-activity-web-research',
     ]
       .flatMap(
         name =>
@@ -124,7 +124,7 @@ describe('the preset, asked for the sidebar', () => {
             components?: Array<{ id: string; slot: string }>;
           }>(name)?.components ?? [],
       )
-      .filter(component => component.slot === LoopSlots.sidebar)
+      .filter(component => component.slot === AgentSlots.sidebar)
       .map(component => component.id);
     expect(slots).toEqual(['app-rules', 'app-activity']);
   });
@@ -132,7 +132,7 @@ describe('the preset, asked for the sidebar', () => {
   it('mounts its computer alone when asked for it alone (its owner and editors at its address)', () => {
     const mounted = names(appPreset(app(), { computer: true }).plugins);
     expect(mounted).toContain(
-      '@datalayer/loop-plugin-app-computer-web-research',
+      '@datalayer/agent-plugin-app-computer-web-research',
     );
     expect(mounted.some(name => /app-rules|app-activity/.test(name))).toBe(
       false,

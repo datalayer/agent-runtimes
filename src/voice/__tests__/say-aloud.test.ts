@@ -34,7 +34,7 @@ describe('A line the agent says aloud', () => {
   });
 
   it('is nothing for another event, an empty line, or no text', () => {
-    expect(lineToSay({ type: 'loop.session', data: { text: 'x' } })).toBe(
+    expect(lineToSay({ type: 'agent.session', data: { text: 'x' } })).toBe(
       undefined,
     );
     expect(lineToSay({ type: VOICE_SAY_EVENT, data: { text: '  ' } })).toBe(

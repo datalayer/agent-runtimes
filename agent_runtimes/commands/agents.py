@@ -19,6 +19,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from agent_runtimes.agent.launch import stopped_said, stopping_said
 from agent_runtimes.client import AgentClient
 from agent_runtimes.client.agent_client import (
     DEFAULT_LOCAL_AGENT_NAME,
@@ -29,7 +30,6 @@ from agent_runtimes.client.agent_client import (
     start_local_agent_runtime,
     terminate_local_agent_runtime,
 )
-from agent_runtimes.loop.launch import stopped_said, stopping_said
 
 DEFAULT_AGENT_SPEC_ID = "example-simple"
 

@@ -127,7 +127,7 @@ def idempotency_key(
     digest = hashlib.sha256(
         json.dumps([space, title, content], ensure_ascii=False).encode("utf-8")
     ).hexdigest()[:40]
-    return f"loop:{app}:{session or 'none'}:{digest}"[:200]
+    return f"agent:{app}:{session or 'none'}:{digest}"[:200]
 
 
 def authorship(
@@ -148,7 +148,7 @@ def authorship(
     ``sub`` and ``name``, kept as ``for_user``.
     """
     about: Dict[str, Any] = {
-        "saved_by": "loop.app",
+        "saved_by": "agent.app",
         "app": {
             "id": app.id,
             "uid": app_uid,

@@ -13,7 +13,7 @@
  *
  * - `HeaderAction`: a button; pressing it says its message as the person.
  * - `HeaderChoice`: a drop-down (an `ActionMenu`, one option chosen); the
- *   option goes with every run (`LoopRunProps`: `loop.header.<ui>.<item>`).
+ *   option goes with every run (`AgentRunProps`: `agent.header.<ui>.<item>`).
  * - `HeaderIndicator`: what the agent shows — words (`label`), a number and
  *   its words (`counter`), a dot and its words (`status`), a small bar
  *   (`meter`) — a polite live region, drawn only once the agent said it.
@@ -60,11 +60,11 @@ import { contribution, definePlugin, signal } from '@datalayer/reactor';
 import type { ReactorPlugin, Signal } from '@datalayer/reactor';
 import { useSignalValue } from '@datalayer/reactor/react';
 import {
-  LoopChatExtras,
-  LoopRunProps,
-  LoopSlots,
-  type LoopChatExtrasValue,
-  type LoopWorkspaceContext,
+  AgentChatExtras,
+  AgentRunProps,
+  AgentSlots,
+  type AgentChatExtrasValue,
+  type AgentWorkspaceContext,
 } from '../core';
 import { UI_CATALOGUE } from '../../specs/ui';
 import type {
@@ -442,7 +442,7 @@ export type HeaderPluginOptions = {
   derive?: Readonly<Record<string, HeaderDerive>>;
 };
 
-type SlotProps = { workspace?: LoopWorkspaceContext };
+type SlotProps = { workspace?: AgentWorkspaceContext };
 
 /** A header UI's declaration, from the catalogue. */
 export function headerSpecOf(id: string): UiHeaderSpec {
@@ -559,7 +559,7 @@ export function HeaderItemsPanel({
 }
 
 /**
- * A header UI's plugin: `@datalayer/loop-plugin-<id>`. Built per workspace,
+ * A header UI's plugin: `@datalayer/agent-plugin-<id>`. Built per workspace,
  * so that what a person picked is that workspace's. In the chat's title bar
  * (`header`), each item its own entry; placed in a side panel (`left`,
  * `right`), the items stacked under its name.
@@ -576,7 +576,7 @@ export function defineHeaderPlugin(
     const tool = headerToolOf(id);
     const toolNames = tool ? [tool.name] : [];
     const picked: Signal<Record<string, HeaderPick>> = signal({});
-    const extras = signal<LoopChatExtrasValue>(
+    const extras = signal<AgentChatExtrasValue>(
       tool ? { frontendTools: [tool] } : {},
     );
     const hasChoice = header.items.some(item => item.kind === 'choice');
@@ -658,25 +658,25 @@ export function defineHeaderPlugin(
           },
         ]
       : parts.map(({ item, Item }) => ({
-          slot: LoopSlots.chatHeader,
+          slot: AgentSlots.chatHeader,
           id: `${id}-${item.id}`,
           Component: Item as ComponentType<SlotProps> as never,
         }));
 
     return definePlugin({
-      name: `@datalayer/loop-plugin-${id}`,
+      name: `@datalayer/agent-plugin-${id}`,
       octicon: 'rows',
       ...uiManifestOf(id),
       contributes: [
         contribution(
-          LoopChatExtras,
+          AgentChatExtras,
           { id: `${id}-tool`, extras },
           { id: `${id}-tool` },
         ),
         ...(hasChoice
           ? [
               contribution(
-                LoopRunProps,
+                AgentRunProps,
                 {
                   id: `${id}-choices`,
                   // The options the title bar shows, with every run.

@@ -8,7 +8,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Optional
 
-from agent_runtimes.loop.commands import CommandArgSpec
+from agent_runtimes.agent.commands import CommandArgSpec
 
 from .sessions_shared import ask, load_conversation, session_of
 
@@ -52,7 +52,7 @@ async def execute(tux: "CliTux", argv: str = "") -> Optional[str]:
                 "or give the session's id."
             )
             tux.console.print(said, markup=False)
-            # Lines run after it (`loop --prompt`) would start afresh: stopped.
+            # Lines run after it (`agent --prompt`) would start afresh: stopped.
             tux.last_error = said
             return None
         uid = listed[int(uid) - 1]
@@ -65,10 +65,10 @@ async def execute(tux: "CliTux", argv: str = "") -> Optional[str]:
         tux.console.print(f"[red]{refused}[/red]")
         tux.last_error = str(refused)
         if "is not a session of" in str(refused):
-            # Another agent's or application's: `loop` starts what it is a
+            # Another agent's or application's: `agent` starts what it is a
             # session of when it is picked as it starts.
             tux.console.print(
-                "Start `loop` with nothing else and pick it among your paused sessions: "
+                "Start `agent` with nothing else and pick it among your paused sessions: "
                 "its agent, or its application, is started and it is resumed there.",
                 markup=False,
             )

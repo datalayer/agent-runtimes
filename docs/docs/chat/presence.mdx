@@ -16,7 +16,7 @@ Appspec. In its chat:
 
 - the **header** shows the face beside the name, with the line of status;
 - the **empty state** shows the face at the page's size, 72px (the largest
-  of the three sizes a face is drawn at, `--loop-face-large`), the name as its
+  of the three sizes a face is drawn at, `--agent-face-large`), the name as its
   heading, and the welcome under it — the first thing a person reads, before
   anyone writes — with the application's starters as chips;
 - the token and context counters under the prompt are **off**: a person
@@ -90,7 +90,7 @@ reduced motion, the ring does not breathe.
 
 ## `ChatPresence`, for a host
 
-The chat plugin of the [Loop workspace](/apps) takes who is answering as
+The chat plugin of the [Agent workspace](/apps) takes who is answering as
 `presence` (`ChatPresence`, in `apps/plugins/chat`):
 
 ```ts
@@ -109,16 +109,16 @@ interface ChatPresence {
 ```
 
 The chat also hands the state to whoever reads its turn
-(`LoopChatTurn`'s `presence` signal): the [floating
+(`AgentChatTurn`'s `presence` signal): the [floating
 assistant](./floating-assistant.mdx) acts it out from there.
 
-`LoopEmbed` passes `presence` and `showTokenUsage` through to the plugin. A
+`AgentEmbed` passes `presence` and `showTokenUsage` through to the plugin. A
 chat without `presence` keeps its header as it is: the agent's name and
 mark, no line of status.
 
 `AppRenderer` sets all of this from the application itself — its name, its
 emoji, its welcome (or its description), with the counters off and the
-conversation in the `loop` theme. A host only adds `onPresence` when it
+conversation in the `agent` theme. A host only adds `onPresence` when it
 wants to know, and `paused` when the deployment it shows is paused.
 
 ## `onPresence`: a host that frames the face itself

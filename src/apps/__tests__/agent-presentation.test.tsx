@@ -36,7 +36,7 @@ vi.mock('@datalayer/core/lib/components/emoji', () => ({
 
 import { buildReactorFromPlugins } from '@datalayer/reactor';
 import { PlayIcon } from '@primer/octicons-react';
-import { LoopSlots } from '../core';
+import { AgentSlots } from '../core';
 import { AgentPresentation } from '../plugins/agent-presentation/AgentPresentation';
 import {
   AGENT_PRESENTATION_COMPONENT,
@@ -239,7 +239,7 @@ describe('the plugin', () => {
         agentPresentationPlugin({ open: () => false }) as never,
       ]).listPlugins(),
     ).toContain(AGENT_PRESENTATION_PLUGIN_NAME);
-    expect(AGENT_PRESENTATION_COMPONENT.slot).toBe(LoopSlots.leftPanel);
+    expect(AGENT_PRESENTATION_COMPONENT.slot).toBe(AgentSlots.leftPanel);
     expect(presentationLabel(marketer)).toBe('Marketer: what it does');
     expect(AGENT_PRESENTATION_COMPONENT.panel?.when?.(marketer)).toBe(true);
     expect(
@@ -263,13 +263,13 @@ describe('the plugin', () => {
           application={marketer}
           close={close}
           open
-          panelId="loop-left-panel-x"
+          panelId="agent-left-panel-x"
           toggle={() => undefined}
         />,
       );
     });
     const cross = screen.getByRole('button', { name: 'Close' });
-    expect(cross.hasAttribute('data-loop-left-panel-close')).toBe(true);
+    expect(cross.hasAttribute('data-agent-left-panel-close')).toBe(true);
     fireEvent.click(cross);
     expect(close).toHaveBeenCalledTimes(1);
     expect(AGENT_PRESENTATION_COMPONENT.panel?.closes).toBe(true);

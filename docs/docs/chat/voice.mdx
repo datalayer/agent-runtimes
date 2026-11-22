@@ -99,7 +99,7 @@ text stays on screen.
 
 ## At the terminal
 
-`loop --voice` listens with the machine's microphone: **`Ctrl`+`T`** (or
+`agent --voice` listens with the machine's microphone: **`Ctrl`+`T`** (or
 `/voice`) starts listening — *Listening… (Ctrl+T or /voice to stop)* — and
 the next press stops it and hears what was said; the words go **on the prompt
 line**, to edit or send. The message is sent marked as said — with the
@@ -112,8 +112,8 @@ press listens a minute at most.
 It needs the `voice` extra (sounddevice, faster-whisper and kokoro-onnx, MIT;
 kokoro-onnx brings eSpeak NG, GPL-3.0, and faster-whisper brings FFmpeg, LGPL,
 onto your machine), which is never a default dependency, beside `cli` for
-`loop` itself and `aws` for the Bedrock model its own agent runs by default —
-`pip install 'agent-runtimes[cli,voice,aws]'`. With `voice` alone, `loop`
+`agent` itself and `aws` for the Bedrock model its own agent runs by default —
+`pip install 'agent-runtimes[cli,voice,aws]'`. With `voice` alone, `agent`
 stops on a missing `boto3`. The models are copied into the pinned
 store (`DATALAYER_SPEECH_MODELS_DIR`, `~/.cache/voice-work/store` by default)
 from Datalayer's CDN, each file checked against the hash the catalogue pins:
@@ -132,7 +132,7 @@ and the answers are said by Datalayer's speech service instead. A voice is
 given its own language — `fr` is said as French (`fr-FR`) by a French voice,
 and a language the voice does not speak is refused in a sentence.
 
-When `loop` runs its agent **on Datalayer** (`loop --cloud`), what you say is
+When `agent` runs its agent **on Datalayer** (`agent --cloud`), what you say is
 heard and answers are said **on Datalayer's servers**, whatever this machine
 has. Without the extra or the store, both happen there too. The servers need
 your token: `DATALAYER_TOKEN` or `DATALAYER_API_KEY`, or the one `datalayer

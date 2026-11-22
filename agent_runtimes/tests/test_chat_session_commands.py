@@ -9,7 +9,7 @@ sessions; `/pause` pauses this one, says what its memory was given and how
 to resume it, and ends the prompt (on Datalayer, its runtime is given back
 without asking); `/resume <uid>` in a new prompt rebuilds it from its record
 on the prompt's agent and loads its conversation, so the next message goes
-on with it; `loop sessions pause <uid>` pauses one from the shell.
+on with it; `agent sessions pause <uid>` pauses one from the shell.
 """
 
 from __future__ import annotations
@@ -23,16 +23,16 @@ import pytest
 from fastapi.testclient import TestClient
 from typer.testing import CliRunner
 
+from agent_runtimes.agent import launch
+from agent_runtimes.agent.session import (
+    AgentSession,
+    is_session_agui_url,
+    session_agui_url,
+)
 from agent_runtimes.apps import sessions
 from agent_runtimes.chat.commands import _BUILTIN_GROUPS, pause, resume
 from agent_runtimes.chat.commands import sessions as sessions_command
 from agent_runtimes.commands import sessions as command
-from agent_runtimes.loop import launch
-from agent_runtimes.loop.session import (
-    LoopSession,
-    is_session_agui_url,
-    session_agui_url,
-)
 from agent_runtimes.memory.registry import register_memory_backend
 from agent_runtimes.tests.test_agent_sessions import (  # noqa: F401 - fixtures
     AGENT,
@@ -63,7 +63,7 @@ class Console:
 
 
 def _prompt(cloud_runtime: str = "") -> Any:
-    """A prompt of the agent, as `loop` makes it: its turns sent to the session path."""
+    """A prompt of the agent, as `agent` makes it: its turns sent to the session path."""
     agent_url = session_agui_url("http://runtime", AGENT)
     return SimpleNamespace(
         console=Console(),
@@ -73,7 +73,7 @@ def _prompt(cloud_runtime: str = "") -> Any:
         cloud_runtime=cloud_runtime or None,
         running=True,
         _agui_client=None,
-        session=LoopSession(server_url="http://runtime", agent_id=AGENT, token="ada"),
+        session=AgentSession(server_url="http://runtime", agent_id=AGENT, token="ada"),
     )
 
 
@@ -151,7 +151,7 @@ def test_the_prompt_sends_its_turns_to_its_agents_sessions() -> None:
     assert url == "http://127.0.0.1:8123/api/v1/apps/agents/default/ag-ui/"
     assert is_session_agui_url(url)
     assert not is_session_agui_url("http://127.0.0.1:8123/api/v1/ag-ui/default/")
-    session = LoopSession(server_url="http://127.0.0.1:8123", agent_id="default")
+    session = AgentSession(server_url="http://127.0.0.1:8123", agent_id="default")
     assert session.session_agui_url == url
 
 
@@ -195,8 +195,8 @@ def test_sessions_pause_a_new_prompt_and_resume_go_on_with_the_conversation(
     assert said == [
         f"Paused {uid} ({SPEC}, 2 turns): it is kept in the record.",
         "Its memory was given 4 messages of the conversation.",
-        f"Resume it: `loop` lists it as it starts; or `loop --resume {uid}`; "
-        f"or `loop -a {SPEC}`, then `/resume {uid}`.",
+        f"Resume it: `agent` lists it as it starts; or `agent --resume {uid}`; "
+        f"or `agent -a {SPEC}`, then `/resume {uid}`.",
     ]
     # The prompt ends; nothing is given back on this machine.
     assert tux.running is False and tux._agui_client is None
@@ -248,15 +248,15 @@ def test_a_session_of_another_agent_is_refused_in_a_sentence(
 def test_on_datalayer_pause_gives_the_runtime_back_without_asking(
     wired: TestClient,
 ) -> None:
-    from agent_runtimes.tests.test_loop_launch import FakeClient, _launched
+    from agent_runtimes.tests.test_agent_launch import FakeClient, _launched
 
     tux = _prompt(cloud_runtime="runtime-1")
     _say(wired, tux, "One")
     uid = tux.session.session_uid
     said = _run(pause, tux)
     assert said[-2] == (
-        f"Resume it: `loop` lists it as it starts; or `loop --resume {uid}`; "
-        f"or `loop --cloud -a {SPEC}`, then `/resume {uid}`."
+        f"Resume it: `agent` lists it as it starts; or `agent --resume {uid}`; "
+        f"or `agent --cloud -a {SPEC}`, then `/resume {uid}`."
     )
     # Kept in the platform's record: where it is on the web.
     assert (
@@ -278,7 +278,7 @@ def test_on_datalayer_pause_gives_the_runtime_back_without_asking(
     assert launch._GIVEN_BACK == set()
 
 
-def test_loop_sessions_pause(wired: TestClient, marketer: Said) -> None:  # noqa: F811
+def test_agent_sessions_pause(wired: TestClient, marketer: Said) -> None:  # noqa: F811
     register_memory_backend(AGENT, Memory())  # type: ignore[arg-type]
     tux = _prompt()
     _say(wired, tux, "One")
@@ -297,7 +297,7 @@ def test_loop_sessions_pause(wired: TestClient, marketer: Said) -> None:  # noqa
         assert paused.output.splitlines() == [
             f"Paused {uid} ({SPEC}, 1 turn).",
             "Its memory was given 2 messages of the conversation.",
-            f"Resume it: loop sessions resume {uid}",
+            f"Resume it: agent sessions resume {uid}",
         ]
         again = runner.invoke(command.app, ["pause", uid])
         assert again.exit_code == 1 and "is paused already" in again.output
@@ -311,7 +311,7 @@ def test_an_older_runtime_is_talked_to_as_before_and_said() -> None:
     runtime says whether it keeps agent sessions; its version is no proof (a
     checkout says a stale one).
     """
-    from agent_runtimes.loop.session import LoopRefused, conversation_url
+    from agent_runtimes.agent.session import AgentRefused, conversation_url
 
     class Answer:
         def __init__(self, status: int, body: Dict[str, Any]) -> None:
@@ -338,7 +338,7 @@ def test_an_older_runtime_is_talked_to_as_before_and_said() -> None:
         "conversation goes on as before, and is not listed, paused or resumed."
     )
     # Nothing is guessed of a runtime that does not answer.
-    with pytest.raises(LoopRefused, match="did not say what it runs"):
+    with pytest.raises(AgentRefused, match="did not say what it runs"):
         conversation_url("http://runtime", "default", get=says(503, {}))
 
 
@@ -388,8 +388,8 @@ def test_transfer_pauses_moves_and_goes_on_where_it_was_sent(
     wired: TestClient,
     marketer: Said,  # noqa: F811 - the fixture
 ) -> None:
+    from agent_runtimes.agent.transfer import Transferred
     from agent_runtimes.chat.commands import transfer as transfer_command
-    from agent_runtimes.loop.transfer import Transferred
 
     assert "transfer" in dict(_BUILTIN_GROUPS)["Sessions"]
     tux = _prompt()
@@ -433,9 +433,9 @@ def test_transfer_pauses_moves_and_goes_on_where_it_was_sent(
     assert said[-2:] == [
         f"Transferred {uid} to Datalayer: 1 turn, 3 entries. It lives on Datalayer now, "
         "under the same uid, and is ended where it was.",
-        f"Going on with it on Datalayer: `loop --resume {uid}`.",
+        f"Going on with it on Datalayer: `agent --resume {uid}`.",
     ]
-    # The prompt ends, and `loop --resume <uid>` goes on with it there.
+    # The prompt ends, and `agent --resume <uid>` goes on with it there.
     assert tux.running is False and went == [["--resume", uid]]
     # Signed out, it says so.
     tux.running = True

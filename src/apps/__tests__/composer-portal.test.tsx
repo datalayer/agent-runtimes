@@ -39,7 +39,7 @@ import {
   agentUiIdsOf,
   agentUiPluginsFor,
 } from '../agentUiPlugins';
-import { LoopSlots } from '../core';
+import { AgentSlots } from '../core';
 import { applicationPlugin } from '../apps/AppRenderer';
 import {
   COMPOSER_PORTAL_PLUGIN_NAME,
@@ -165,7 +165,7 @@ describe('the Composer’s button', () => {
           components: [
             {
               id: 'host-composer',
-              slot: LoopSlots.composerView,
+              slot: AgentSlots.composerView,
               Component: HostComposer as never,
             },
           ],

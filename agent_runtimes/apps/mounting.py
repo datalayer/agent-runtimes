@@ -24,7 +24,7 @@ developer's own FastAPI:
   mount registers it on — as the application was when mounted: a route
   changed under ``--watch`` is mounted again on the next start.
 
-``loop apps run --web`` serves an application the same way on
+``agent apps run --web`` serves an application the same way on
 this machine, with a `HotReload` (`agent_runtimes.apps.serving`): the
 page reads the application as it is now, and is told to reload when its file
 changed.
@@ -183,11 +183,11 @@ def _reload_script(events: str) -> str:
     """
     address = json.dumps(events)
     return f"""
-    <div id="loop-reload-refused" role="alert" hidden
+    <div id="agent-reload-refused" role="alert" hidden
       style="position:fixed;left:0;right:0;bottom:0;z-index:2147483647;margin:0;padding:12px 16px;font:14px/1.5 system-ui,sans-serif;background:#fff1f0;color:#82071e;border-top:2px solid #cf222e;white-space:pre-wrap"></div>
     <script>
       (function () {{
-        var refused = document.getElementById('loop-reload-refused');
+        var refused = document.getElementById('agent-reload-refused');
         var events = new EventSource({address});
         events.addEventListener('reloaded', function () {{ window.location.reload(); }});
         events.addEventListener('refused', function (event) {{
@@ -236,12 +236,12 @@ def mount(
         server; none for a page only the machine itself opens.
     embed_origin : str
         Where the embed's script is served; empty for the server the page is
-        served by (``loop apps run --web --embed-dir``).
+        served by (``agent apps run --web --embed-dir``).
     config : ServerConfig, optional
         The runtime's configuration; its defaults when unsaid.
     hot_reload : HotReload, optional
         What builds the application again when its file changed: the page reads the application it holds, listens to its
-        events at ``<path>/_loop/reload``, and its watch runs while ``api``
+        events at ``<path>/_agent/reload``, and its watch runs while ``api``
         does.
 
     Returns
@@ -263,7 +263,7 @@ def mount(
     runtime = create_app(settings)
     serve_code(application)
 
-    events = f"{path}/_loop/reload" if hot_reload is not None else ""
+    events = f"{path}/_agent/reload" if hot_reload is not None else ""
 
     async def page(request: Request) -> HTMLResponse:
         """The application, embedded, its agent on this runtime."""

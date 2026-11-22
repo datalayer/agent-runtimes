@@ -8,7 +8,7 @@
  *
  * The code sandbox variants, one agent each: choose where Python should run
  * — in-process eval, a Jupyter kernel, a container, a cloud runtime — and the
- * Loop creates an agent on that sandbox from the variant's capacity plugin.
+ * Agent creates an agent on that sandbox from the variant's capacity plugin.
  * Its first opener asks the code where it ran, which is the proof.
  *
  * @module examples/AgentCodeSandboxesExample
@@ -23,7 +23,7 @@ import { CodespacesIcon, SyncIcon } from '@primer/octicons-react';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
-import { LoopEmbed } from '../apps';
+import { AgentEmbed } from '../apps';
 import {
   SANDBOX_CAPACITIES,
   SandboxCapacityPlugins,
@@ -171,11 +171,11 @@ const AgentCodeSandboxesInner: React.FC = () => {
           Change sandbox
         </Button>
       </Box>
-      {/* The Loop creates the agent on the Local target from the variant's
+      {/* The Agent workspace creates the agent on the Local target from the variant's
           capacity plugin; a new launch is a new agent, hence the key. The
           variants stay visible so the agent is not pinned to the page. */}
       <Box flex={1} minHeight={0}>
-        <LoopEmbed
+        <AgentEmbed
           key={launched.agentId}
           serverUrl={serverUrl}
           target="local"

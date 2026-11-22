@@ -77,12 +77,12 @@ describe('the runtime selector, on every example', () => {
     }
   });
 
-  it('is what the Loop examples and the Loop Application run on', () => {
+  it('is what the Agent examples and the Agent Application run on', () => {
     for (const file of [
-      'LoopWorkspaceExample.tsx',
-      'LoopShellExample.tsx',
-      'LoopComputerExample.tsx',
-      'LoopApplicationExample.tsx',
+      'AgentWorkspaceExample.tsx',
+      'AgentShellExample.tsx',
+      'AgentComputerExample.tsx',
+      'AgentApplicationExample.tsx',
     ]) {
       expect(source(file), file).toContain(
         'useRuntimeTargetStore(state => state.target)',
@@ -106,12 +106,12 @@ describe('each example is the one it says', () => {
     }
   });
 
-  it('says the Loop Application’s words in the Loop Application only', () => {
+  it('says the Agent Application’s words in the Agent Application only', () => {
     const files = readdirSync(examplesDir).filter(file => /\.tsx?$/.test(file));
     const saying = files.filter(file =>
       source(file).includes('Added by this page'),
     );
-    expect(saying).toEqual(['LoopApplicationExample.tsx']);
+    expect(saying).toEqual(['AgentApplicationExample.tsx']);
   });
 
   it('never mounts a load that lands after another was asked', () => {

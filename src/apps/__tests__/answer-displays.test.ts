@@ -25,7 +25,7 @@ const display = (
   messageId: string,
   text = 'Bot showed Table runs',
 ): Display => ({
-  type: 'application/vnd.datalayer.loop.answer+json',
+  type: 'application/vnd.datalayer.agent.answer+json',
   version: 1,
   id,
   text,

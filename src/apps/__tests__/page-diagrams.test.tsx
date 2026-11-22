@@ -21,7 +21,7 @@ import { act, cleanup } from '@testing-library/react';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { excalidrawToolDefinitions } from '@datalayer/reactor-excalidraw';
 import { mermaidToolDefinitions } from '@datalayer/reactor-mermaid';
-import { LoopChatExtras } from '../core';
+import { AgentChatExtras } from '../core';
 import { PAGE_TOOL_RESULTS } from '../toolCards/toolResults';
 import {
   PageExcalidrawPlugin,
@@ -98,7 +98,7 @@ const toolsOf = (plugin: unknown): Tool[] => {
   const contributes = (
     plugin as { contributes: { point: unknown; value: unknown }[] }
   ).contributes;
-  const extras = contributes.find(entry => entry.point === LoopChatExtras);
+  const extras = contributes.find(entry => entry.point === AgentChatExtras);
   return (extras?.value as { extras: { value: { frontendTools: Tool[] } } })
     .extras.value.frontendTools;
 };

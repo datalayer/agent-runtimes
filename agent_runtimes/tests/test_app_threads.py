@@ -5,7 +5,7 @@
 ``session.title``, ``session.tags``, ``session.metadata`` — kept as a
 ``thread`` entry of its record; ``@app.feedback`` hearing a person's word on
 an answer; and a person's threads and a thread's feedback read from
-ai-agents, as `loop apps threads` and `loop apps feedback` print them.
+ai-agents, as `agent apps threads` and `agent apps feedback` print them.
 """
 
 from typing import Any, Dict, List
@@ -212,15 +212,15 @@ def test_a_persons_threads_and_a_threads_feedback_are_read() -> None:
         thread_feedback(_ai_agents([], status=403), "s-1")
 
 
-def test_loop_apps_threads_and_feedback_are_retired_naming_the_session_verbs() -> None:
-    """`loop apps threads|feedback` are retired: each answers
-    a sentence naming `loop sessions …`, and forwards to nothing."""
+def test_agent_apps_threads_and_feedback_are_retired_naming_the_session_verbs() -> None:
+    """`agent apps threads|feedback` are retired: each answers
+    a sentence naming `agent sessions …`, and forwards to nothing."""
     from agent_runtimes.commands import apps as commands
 
     runner = CliRunner()
     listed = runner.invoke(commands.app, ["threads"])
     assert listed.exit_code != 0
-    assert "loop sessions list" in listed.output
+    assert "agent sessions list" in listed.output
     feedback = runner.invoke(commands.app, ["feedback"])
     assert feedback.exit_code != 0
-    assert "loop sessions feedback" in feedback.output
+    assert "agent sessions feedback" in feedback.output

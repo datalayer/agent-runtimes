@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """File analysis — Chainlit's cookbook ``openai-data-analyst``, rebuilt with
-LOOP's API.
+Agent's API.
 
 Chainlit hands the files a user sends with a message to an OpenAI Assistant
 with its code interpreter, streams its steps, and shows the images it draws
@@ -26,7 +26,7 @@ AGENT = "example-blank:0.0.1"
 
 app = Application.from_spec(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "file-analysis",
         "name": "File Analysis",
         "kind": "chat",

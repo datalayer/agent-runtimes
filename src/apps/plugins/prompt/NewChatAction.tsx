@@ -7,7 +7,7 @@
  * The + in the prompt's footer: start the conversation over.
  *
  * The chat header carries the same control, and a workspace that hides that
- * header — the Loop Shell does — used to lose the only way to reset. This one
+ * header — the Agent Shell does — used to lose the only way to reset. This one
  * lives with the composer, which is on screen in every placement.
  *
  * It presses the `/new` command rather than reaching into the chat, so the
@@ -20,12 +20,12 @@
 import type { JSX } from 'react';
 import { IconButton } from '@primer/react';
 import { PlusIcon } from '@primer/octicons-react';
-import type { LoopWorkspaceContext } from '../../core';
+import type { AgentWorkspaceContext } from '../../core';
 
 export function NewChatAction({
   workspace,
 }: {
-  workspace?: LoopWorkspaceContext;
+  workspace?: AgentWorkspaceContext;
 }): JSX.Element | null {
   if (!workspace) {
     return null;

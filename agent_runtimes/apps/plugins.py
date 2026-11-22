@@ -3,7 +3,7 @@
 
 """Applications as Reactor plugins, on the runtime's side.
 
-An application runs as two Reactor plugins of one name, ``loop-app-<id>``:
+An application runs as two Reactor plugins of one name, ``agent-app-<id>``:
 the page's (`defineAppPlugin`, in `src/apps/apps/AppRenderer.tsx`)
 and this one. Each declares the other — the page's ``requiredBackendPlugins``,
 this manifest's ``frontend_dependencies`` — and both say the same
@@ -11,12 +11,12 @@ this manifest's ``frontend_dependencies`` — and both say the same
 application. The page follows what this runtime holds through
 `app_plugins_state` (``GET /api/v1/apps/<id>/plugins/state``). Whichever
 editor wrote it — a spec, the Canvas, an `app.py` — the runtime knows an
-application only as a contribution to the ``loop.app`` point:
+application only as a contribution to the ``agent.app`` point:
 
 - every application of the catalogue is contributed by agent-runtimes' own
   plugin, ``agent-runtimes``;
 - an application a runtime is configured with is contributed by a plugin of
-  its own, ``loop-app-<id>``, registered when it is configured and disposed
+  its own, ``agent-app-<id>``, registered when it is configured and disposed
   when another takes its place;
 - what decides its tool calls — the rules capability — is an *extension* of
   its contribution, so that a plugin can wrap or replace it without the host
@@ -27,7 +27,7 @@ a runtime configured with an edited *Web research* runs the edit.
 
 An application written in Python is the same plugin with its code:
 each of its decorators — ``@app.start``, ``@app.message``, ``@app.action``,
-``@app.schedule`` and the rest — is a contribution to a ``loop.app.<moment>``
+``@app.schedule`` and the rest — is a contribution to a ``agent.app.<moment>``
 point, beside its spec, disposed with the plugin (`register_application`). An
 `AppHost` loads the application so and calls what the points hold: a later
 contribution — another plugin's — to the same moment of the same application
@@ -55,7 +55,7 @@ from agent_runtimes.types import AppSpec
 
 #: The applications this runtime knows, one contribution each, keyed by the
 #: application's id.
-APP_POINT: ContributionPoint[AppSpec] = define_contribution_point("loop.app")
+APP_POINT: ContributionPoint[AppSpec] = define_contribution_point("agent.app")
 
 #: What extends an application's contribution to decide its tool calls: a
 #: factory from the application, and the agent that runs it, to its capability.
@@ -102,7 +102,7 @@ NAMED_REACTIONS: Tuple[str, ...] = (
     "test",
 )
 REACTION_POINTS: Dict[str, ContributionPoint[Callable[..., Any]]] = {
-    reaction: define_contribution_point(f"loop.app.{reaction}")
+    reaction: define_contribution_point(f"agent.app.{reaction}")
     for reaction in REACTIONS
 }
 
@@ -128,7 +128,7 @@ def app_plugin_name(app_id: str) -> str:
     """The one name of an application's two plugins, the page's and the runtime's:
     ``src/apps/apps/pluginPair.ts`` says the same.
     """
-    return f"loop-app-{app_id}"
+    return f"agent-app-{app_id}"
 
 
 def manifest_of(app: AppSpec) -> PluginManifest:
@@ -143,7 +143,7 @@ def manifest_of(app: AppSpec) -> PluginManifest:
         description=app.description,
         display_name=app.name,
         emoji=app.emoji,
-        tags=["loop", "app", app.kind],
+        tags=["agent", "app", app.kind],
         extension=name,
         frontend_dependencies=[name],
     )
@@ -168,7 +168,7 @@ def app_plugins_state(
 
     Asked for one application, by whoever already knows its id — the page
     running it — so that a runtime shared by several (the visitors' runtime)
-    says nothing of the others. Its own plugin, ``loop-app-<id>``, when the
+    says nothing of the others. Its own plugin, ``agent-app-<id>``, when the
     runtime was configured with it, as the platform holds it — enabled and
     activated, or not; nothing otherwise: the page's plugin of that name then
     stands down until it is.
@@ -231,7 +231,7 @@ class CataloguePlugin:
     """The plugin of agent-runtimes itself: every application of the catalogue."""
 
     def provide_contributions(self, contributions: PluginContributions) -> None:
-        """Contribute each application of the catalogue to ``loop.app``."""
+        """Contribute each application of the catalogue to ``agent.app``."""
         from agent_runtimes.specs.apps import APP_CATALOGUE
 
         for app in APP_CATALOGUE.values():
@@ -252,8 +252,8 @@ class SpecPlugin:
 class AppPlugin:
     """The plugin of an application written in Python.
 
-    Its implementation, as Reactor activates it: its spec on ``loop.app``,
-    each reaction of its code on its ``loop.app.<moment>`` point, and what its
+    Its implementation, as Reactor activates it: its spec on ``agent.app``,
+    each reaction of its code on its ``agent.app.<moment>`` point, and what its
     author contributes in Reactor's vocabulary — to any point
     (`Application.contribute`), to one contribution of a point
     (`Application.extend`), its commands (`Application.reactor_command`) and
@@ -367,7 +367,7 @@ def contribute_catalogue(platform: Optional[PluginPlatform] = None) -> int:
             version="1.0.0",
             description="The applications of agent-runtimes' catalogue.",
             display_name="Agent runtimes",
-            tags=["loop", "catalogue"],
+            tags=["agent", "catalogue"],
             contribution_points=[
                 APP_POINT.id,
                 *(p.id for p in REACTION_POINTS.values()),
@@ -410,7 +410,7 @@ def register_application(
 ) -> PluginManifest:
     """Register an application written in Python as its Reactor extension:
     the extensions it uses first, then its own —
-    ``loop-app-<id>``, the plugins it composes and its own plugin, whose
+    ``agent-app-<id>``, the plugins it composes and its own plugin, whose
     spec, reactions and contributions Reactor collects as it activates. An
     earlier registration of the same application is taken away first.
 

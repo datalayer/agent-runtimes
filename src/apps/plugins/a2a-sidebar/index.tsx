@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-a2a-sidebar` — the agents reached over A2A, at the
+ * `@datalayer/agent-plugin-a2a-sidebar` — the agents reached over A2A, at the
  * side of the workspace.
  *
  * The chat boxes a delegated run under its tool card; this keeps the same box
@@ -16,10 +16,10 @@
 
 import { definePlugin } from '@datalayer/reactor';
 import type { ReactorReactOutput } from '@datalayer/reactor/react';
-import { LoopSlots, type LoopWorkspaceContext } from '../../core';
+import { AgentSlots, type AgentWorkspaceContext } from '../../core';
 import { A2ASidebar } from './A2ASidebar';
 
-export const A2A_SIDEBAR_PLUGIN_NAME = '@datalayer/loop-plugin-a2a-sidebar';
+export const A2A_SIDEBAR_PLUGIN_NAME = '@datalayer/agent-plugin-a2a-sidebar';
 
 export const A2ASidebarPlugin = definePlugin<
   Record<string, never>,
@@ -35,10 +35,10 @@ export const A2ASidebarPlugin = definePlugin<
     components: [
       {
         id: 'a2a-sidebar',
-        slot: LoopSlots.sidebar,
+        slot: AgentSlots.sidebar,
         // Part of the work, so above the plugins panel (900).
         order: 100,
-        Component: ({ workspace }: { workspace?: LoopWorkspaceContext }) => (
+        Component: ({ workspace }: { workspace?: AgentWorkspaceContext }) => (
           <A2ASidebar workspace={workspace} />
         ),
       },

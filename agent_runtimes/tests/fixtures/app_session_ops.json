@@ -60,7 +60,7 @@
         "id": "id-3",
         "op": "show",
         "body": {
-          "type": "application/vnd.datalayer.loop.step+json",
+          "type": "application/vnd.datalayer.agent.step+json",
           "version": 1,
           "id": "id-3",
           "text": "tool step gen_query running",
@@ -121,7 +121,7 @@
         "id": "id-3",
         "op": "show",
         "body": {
-          "type": "application/vnd.datalayer.loop.step+json",
+          "type": "application/vnd.datalayer.agent.step+json",
           "version": 1,
           "id": "id-3",
           "text": "tool step gen_query ended",
@@ -148,7 +148,7 @@
         "id": "id-4",
         "op": "show",
         "body": {
-          "type": "application/vnd.datalayer.loop.answer+json",
+          "type": "application/vnd.datalayer.agent.answer+json",
           "version": 1,
           "id": "id-4",
           "text": "Runs showed Text Three runs",

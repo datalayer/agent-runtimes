@@ -520,7 +520,7 @@ def write_lent_files(
     harness : HarnessSpec
         The harness: where its skills go, what its instructions file is named.
     app : AppSpec
-        The application; ``None`` writes nothing (``loop --harness`` outside one).
+        The application; ``None`` writes nothing (``agent --harness`` outside one).
     lent : Sequence[str]
         The gateway toolsets it is lent, named in the instructions.
 

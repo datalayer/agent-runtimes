@@ -8,7 +8,7 @@
  * on Datalayer (the record, through ai-agents) and on this machine
  * (a local runtime's `GET /api/v1/apps/sessions`, which lists every local
  * session since the file store is one) — grouped by place then application,
- * each row as `loop sessions list` prints it (title, state with the turn
+ * each row as `agent sessions list` prints it (title, state with the turn
  * phase, agent and harness, turns, lineage, *not held*), filtered by
  * application, state and title, the archived hidden; the person's team runs
  * with their seats.
@@ -18,7 +18,7 @@
  * Code, a terminal) and is not resumed from here until it is `paused`.
  *
  * Pure: no host API, no network. The host fetches and draws; the verbs are
- * the chat's (`loop.session.action`).
+ * the chat's (`agent.session.action`).
  *
  * @module portable/sessionList
  */
@@ -304,7 +304,7 @@ export function rowLabel(row: SessionRow): string {
 }
 
 /**
- * A row's description, as `loop sessions list` prints it: the state with the
+ * A row's description, as `agent sessions list` prints it: the state with the
  * turn phase, the agent with its harness, the turns, the lineage, *not held*
  * for an open session whose runtime is gone.
  *

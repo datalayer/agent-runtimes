@@ -102,7 +102,7 @@ def built_of(specs_dir: Path, identity: str, app: Any) -> str:
 def python_of(specs_dir: Path, identity: str) -> str:
     """Each application in Python, as the example pages show it.
 
-    Its own ``app.py`` when it was built in Python; otherwise the file `loop
+    Its own ``app.py`` when it was built in Python; otherwise the file `agent
     apps eject` writes from its spec, so every example can be read in Python.
     """
     from agent_runtimes.apps.scaffold import eject_text  # noqa: PLC0415
@@ -460,7 +460,7 @@ def generate_typescript_code(
             "",
             "/**",
             " * Each application in Python: its own `app.py` when it was built in",
-            " * Python, otherwise the file `loop apps eject` writes from its spec.",
+            " * Python, otherwise the file `agent apps eject` writes from its spec.",
             " */",
             "export const APP_PYTHON: Record<string, string> = "
             + json.dumps(python, indent=2, ensure_ascii=False)

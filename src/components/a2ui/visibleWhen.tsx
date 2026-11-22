@@ -121,7 +121,7 @@ export const datalayerCatalog = new Catalog<ReactComponentImplementation>(
 
 /**
  * Datalayer's catalog narrowed to the components named — what the enabled
- * plugins contribute as blocks (`loop.canvas.block`), so that an
+ * plugins contribute as blocks (`agent.canvas.block`), so that an
  * application's page draws what its Canvas can place and nothing else. Under
  * the same id; a name the catalog does not draw is an error.
  *

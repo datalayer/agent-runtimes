@@ -35,7 +35,7 @@ class MonitoringCapability(AbstractCapability[Any]):
     """Broadcast a monitoring snapshot after every agent run.
 
     The snapshot is assembled by the existing
-    :func:`~agent_runtimes.streams.loop.build_monitoring_snapshot_payload`
+    :func:`~agent_runtimes.streams.pubsub.build_monitoring_snapshot_payload`
     helper and pushed to all WebSocket subscribers of *agent_id*.
 
     Parameters
@@ -75,11 +75,11 @@ class MonitoringCapability(AbstractCapability[Any]):
 
     async def _push_snapshot(self, event_type: str = "agent.snapshot") -> None:
         """Build and broadcast a fresh monitoring snapshot."""
-        from agent_runtimes.streams.loop import (
+        from agent_runtimes.streams.messages import AgentStreamMessage
+        from agent_runtimes.streams.pubsub import (
             build_monitoring_snapshot_payload,
             enqueue_stream_message,
         )
-        from agent_runtimes.streams.messages import AgentStreamMessage
 
         try:
             snapshot_payload = (

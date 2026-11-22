@@ -55,7 +55,7 @@ pytest.importorskip("agentspecs.apps")
 DIMS = 4
 
 TRIAGE = {
-    "schema": "loop.app/v1",
+    "schema": "agent.app/v1",
     "id": "inbox-triage",
     "name": "Inbox triage",
     "kind": "chat",

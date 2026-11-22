@@ -57,7 +57,7 @@ def listener() -> Application:
     """A Python application that answers what it hears, and is spoken over."""
     application = Application.from_spec(
         {
-            "schema": "loop.app/v1",
+            "schema": "agent.app/v1",
             "id": "listener",
             "name": "Listener",
             "kind": "chat",
@@ -126,7 +126,7 @@ def test_a_turn_said_is_heard_and_given_to_app_audio_streamed(
             headers={"Content-Type": "audio/wav"},
         )
     )
-    assert types_of(answered)[:2] == ["CUSTOM:loop.session", "RUN_STARTED"]
+    assert types_of(answered)[:2] == ["CUSTOM:agent.session", "RUN_STARTED"]
     assert types_of(answered)[-1] == "RUN_FINISHED"
     assert answer_of(answered) == f"You said: {SAID} (device)"
     # The WAV's samples were heard, its header read.
@@ -344,14 +344,14 @@ async def test_spoken_over_the_turn_s_reader_is_told_then_its_stream_ends() -> N
 async def test_at_the_terminal_voice_gives_the_sound_to_app_audio(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """``loop`` running an application whose code hears:
+    """``agent`` running an application whose code hears:
     ``/voice`` twice, and the turn's sound goes to ``@app.audio``, heard
-    where ``loop --voice`` hears — not to the prompt line.
+    where ``agent --voice`` hears — not to the prompt line.
     """
     from rich.console import Console
 
     from agent_runtimes.apps.terminal import AppTux
-    from agent_runtimes.tests.test_loop_voice import Stream
+    from agent_runtimes.tests.test_agent_voice import Stream
 
     monkeypatch.setattr(
         voice_cli, "microphone_problem", lambda query_devices=None: None

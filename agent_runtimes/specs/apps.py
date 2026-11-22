@@ -20,7 +20,7 @@ from agent_runtimes.types import AppSpec
 
 ACCOUNTING_APP_0_0_2 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "accounting",
         "version": "0.0.2",
         "name": "Accounting",
@@ -177,7 +177,7 @@ ACCOUNTING_APP_0_0_2 = AppSpec.model_validate(
 
 AWS_STEWARD_AGENT_APP_0_0_1 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "aws-steward-agent",
         "version": "0.0.1",
         "name": "Datalayer Steward for AWS",
@@ -392,7 +392,7 @@ AWS_STEWARD_AGENT_APP_0_0_1 = AppSpec.model_validate(
 
 BOOKKEEPING_DESK_APP_0_0_3 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "bookkeeping-desk",
         "version": "0.0.3",
         "name": "Bookkeeping Desk",
@@ -588,7 +588,7 @@ BOOKKEEPING_DESK_APP_0_0_3 = AppSpec.model_validate(
 
 CHANGE_DETECTION_APP_0_0_2 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "change-detection",
         "version": "0.0.2",
         "name": "Change detection",
@@ -755,7 +755,7 @@ CHANGE_DETECTION_APP_0_0_2 = AppSpec.model_validate(
 
 CODE_EXPLAINER_APP_0_0_1 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "code-explainer",
         "version": "0.0.1",
         "name": "Code Explainer",
@@ -894,7 +894,7 @@ CODE_EXPLAINER_APP_0_0_1 = AppSpec.model_validate(
 
 CROP_MONITORING_APP_0_0_2 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "crop-monitoring",
         "version": "0.0.2",
         "name": "Crop Monitoring",
@@ -1065,7 +1065,7 @@ CROP_MONITORING_APP_0_0_2 = AppSpec.model_validate(
 
 CUSTOMER_INTERVIEW_APP_0_0_3 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "customer-interview",
         "version": "0.0.3",
         "name": "Customer Interview",
@@ -1285,7 +1285,7 @@ CUSTOMER_INTERVIEW_APP_0_0_3 = AppSpec.model_validate(
 
 DATA_QUALITY_APP_0_0_3 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "data-quality",
         "version": "0.0.3",
         "name": "Data Quality Investigation",
@@ -1474,7 +1474,7 @@ DATA_QUALITY_APP_0_0_3 = AppSpec.model_validate(
 
 DECIDE_APP_0_0_2 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "decide",
         "version": "0.0.2",
         "name": "Decide",
@@ -1605,7 +1605,7 @@ DECIDE_APP_0_0_2 = AppSpec.model_validate(
 
 DECK_MAKER_APP_0_0_1 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "deck-maker",
         "version": "0.0.1",
         "name": "Deck Maker",
@@ -1710,7 +1710,7 @@ DECK_MAKER_APP_0_0_1 = AppSpec.model_validate(
 
 DEMO_ACCOUNTANT_APP_0_0_9 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "demo-accountant",
         "version": "0.0.9",
         "name": "Accountant",
@@ -1861,7 +1861,7 @@ DEMO_ACCOUNTANT_APP_0_0_9 = AppSpec.model_validate(
 
 DEMO_AWS_STEWARD_APP_0_0_10 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "demo-aws-steward",
         "version": "0.0.10",
         "name": "Steward for AWS",
@@ -1997,7 +1997,7 @@ DEMO_AWS_STEWARD_APP_0_0_10 = AppSpec.model_validate(
 
 DEMO_FUNCTIONAL_ANALYST_APP_0_0_2 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "demo-functional-analyst",
         "version": "0.0.2",
         "name": "Functional Analyst",
@@ -2138,7 +2138,7 @@ DEMO_FUNCTIONAL_ANALYST_APP_0_0_2 = AppSpec.model_validate(
 
 DEMO_JUPYTER_DATA_ANALYST_APP_0_0_6 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "demo-jupyter-data-analyst",
         "version": "0.0.6",
         "name": "Jupyter Data Analyst",
@@ -2278,7 +2278,7 @@ DEMO_JUPYTER_DATA_ANALYST_APP_0_0_6 = AppSpec.model_validate(
 
 DEMO_MARKETER_APP_0_0_8 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "demo-marketer",
         "version": "0.0.8",
         "name": "Marketer",
@@ -2414,7 +2414,7 @@ DEMO_MARKETER_APP_0_0_8 = AppSpec.model_validate(
 
 DEMO_SHOP_APP_0_0_1 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "demo-shop",
         "version": "0.0.1",
         "name": "Demo Shop",
@@ -2893,7 +2893,7 @@ DEMO_SHOP_APP_0_0_1 = AppSpec.model_validate(
 
 DEMO_SHOPPER_APP_0_0_13 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "demo-shopper",
         "version": "0.0.13",
         "name": "Shopper",
@@ -3082,7 +3082,7 @@ DEMO_SHOPPER_APP_0_0_13 = AppSpec.model_validate(
 
 DEMO_TERRA_APP_0_0_8 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "demo-terra",
         "version": "0.0.8",
         "name": "Terra",
@@ -3224,7 +3224,7 @@ DEMO_TERRA_APP_0_0_8 = AppSpec.model_validate(
 
 DEMO_TRAVELLER_APP_0_0_8 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "demo-traveller",
         "version": "0.0.8",
         "name": "Traveller",
@@ -3381,7 +3381,7 @@ DEMO_TRAVELLER_APP_0_0_8 = AppSpec.model_validate(
 
 DISASTER_ASSESSMENT_APP_0_0_2 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "disaster-assessment",
         "version": "0.0.2",
         "name": "Disaster Assessment",
@@ -3548,7 +3548,7 @@ DISASTER_ASSESSMENT_APP_0_0_2 = AppSpec.model_validate(
 
 ERRAND_RUNNER_APP_0_0_2 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "errand-runner",
         "version": "0.0.2",
         "name": "Errand Runner",
@@ -3683,7 +3683,7 @@ ERRAND_RUNNER_APP_0_0_2 = AppSpec.model_validate(
 
 EVENT_RESPONSE_APP_0_0_3 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "event-response",
         "version": "0.0.3",
         "name": "Event response",
@@ -3828,7 +3828,7 @@ EVENT_RESPONSE_APP_0_0_3 = AppSpec.model_validate(
 
 EXCHANGE_DESK_APP_0_0_3 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "exchange-desk",
         "version": "0.0.3",
         "name": "Exchange Desk",
@@ -4060,7 +4060,7 @@ EXCHANGE_DESK_APP_0_0_3 = AppSpec.model_validate(
 
 GUEST_DESK_APP_0_0_2 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "guest-desk",
         "version": "0.0.2",
         "name": "Guest Desk",
@@ -4199,7 +4199,7 @@ GUEST_DESK_APP_0_0_2 = AppSpec.model_validate(
 
 INBOX_TRIAGE_APP_0_0_2 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "inbox-triage",
         "version": "0.0.2",
         "name": "Inbox Triage",
@@ -4406,7 +4406,7 @@ INBOX_TRIAGE_APP_0_0_2 = AppSpec.model_validate(
 
 LIVE_SHOP_CHAT_APP_0_0_2 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "live-shop-chat",
         "version": "0.0.2",
         "name": "Live Shop Chat",
@@ -4581,7 +4581,7 @@ LIVE_SHOP_CHAT_APP_0_0_2 = AppSpec.model_validate(
 
 MARKETER_APP_0_0_1 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "marketer",
         "version": "0.0.1",
         "name": "Marketer",
@@ -4769,7 +4769,7 @@ MARKETER_APP_0_0_1 = AppSpec.model_validate(
 
 MODEL_CHOICE_APP_0_0_3 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "model-choice",
         "version": "0.0.3",
         "name": "Model Choice",
@@ -5024,7 +5024,7 @@ MODEL_CHOICE_APP_0_0_3 = AppSpec.model_validate(
 
 MONTH_END_CLOSE_APP_0_0_2 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "month-end-close",
         "version": "0.0.2",
         "name": "Month-end Close",
@@ -5188,7 +5188,7 @@ MONTH_END_CLOSE_APP_0_0_2 = AppSpec.model_validate(
 
 ORDER_DESK_APP_0_0_2 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "order-desk",
         "version": "0.0.2",
         "name": "Order Desk",
@@ -5368,7 +5368,7 @@ ORDER_DESK_APP_0_0_2 = AppSpec.model_validate(
 
 ORDER_TRACKER_APP_0_0_2 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "order-tracker",
         "version": "0.0.2",
         "name": "Order Tracker",
@@ -5539,7 +5539,7 @@ ORDER_TRACKER_APP_0_0_2 = AppSpec.model_validate(
 
 PIPELINE_REPORT_APP_0_0_2 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "pipeline-report",
         "version": "0.0.2",
         "name": "Weekly Pipeline Report",
@@ -5812,7 +5812,7 @@ PIPELINE_REPORT_APP_0_0_2 = AppSpec.model_validate(
 
 PLAYER_APP_0_0_1 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "player",
         "version": "0.0.1",
         "name": "Player",
@@ -5917,7 +5917,7 @@ PLAYER_APP_0_0_1 = AppSpec.model_validate(
 
 QUOTE_CALCULATOR_APP_0_0_6 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "quote-calculator",
         "version": "0.0.6",
         "name": "Quote Calculator",
@@ -6156,7 +6156,7 @@ QUOTE_CALCULATOR_APP_0_0_6 = AppSpec.model_validate(
 
 REPORT_FROM_A_FILE_APP_0_0_5 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "report-from-a-file",
         "version": "0.0.5",
         "name": "Report from a File",
@@ -6400,7 +6400,7 @@ REPORT_FROM_A_FILE_APP_0_0_5 = AppSpec.model_validate(
 
 RETURNS_DESK_APP_0_0_2 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "returns-desk",
         "version": "0.0.2",
         "name": "Returns Desk",
@@ -6580,7 +6580,7 @@ RETURNS_DESK_APP_0_0_2 = AppSpec.model_validate(
 
 SALES_APP_0_0_3 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "sales",
         "version": "0.0.3",
         "name": "Sales",
@@ -6718,7 +6718,7 @@ SALES_APP_0_0_3 = AppSpec.model_validate(
 
 SHEET_MAKER_APP_0_0_1 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "sheet-maker",
         "version": "0.0.1",
         "name": "Sheet Maker",
@@ -6825,7 +6825,7 @@ SHEET_MAKER_APP_0_0_1 = AppSpec.model_validate(
 
 SHIP_OR_FIX_APP_0_0_3 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "ship-or-fix",
         "version": "0.0.3",
         "name": "Ship or Fix",
@@ -7050,7 +7050,7 @@ SHIP_OR_FIX_APP_0_0_3 = AppSpec.model_validate(
 
 SHOP_CONCIERGE_APP_0_0_2 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "shop-concierge",
         "version": "0.0.2",
         "name": "Shop Concierge",
@@ -7224,7 +7224,7 @@ SHOP_CONCIERGE_APP_0_0_2 = AppSpec.model_validate(
 
 SHOPPER_APP_0_0_2 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "shopper",
         "version": "0.0.2",
         "name": "Shopper",
@@ -7350,7 +7350,7 @@ SHOPPER_APP_0_0_2 = AppSpec.model_validate(
 
 SHOPPING_DESK_APP_0_0_2 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "shopping-desk",
         "version": "0.0.2",
         "name": "Shopping Desk",
@@ -7512,7 +7512,7 @@ SHOPPING_DESK_APP_0_0_2 = AppSpec.model_validate(
 
 SIGN_IN_DESK_APP_0_0_2 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "sign-in-desk",
         "version": "0.0.2",
         "name": "Sign-in Desk",
@@ -7683,7 +7683,7 @@ SIGN_IN_DESK_APP_0_0_2 = AppSpec.model_validate(
 
 SIGNED_READER_APP_0_0_2 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "signed-reader",
         "version": "0.0.2",
         "name": "Signed Reader",
@@ -7823,7 +7823,7 @@ SIGNED_READER_APP_0_0_2 = AppSpec.model_validate(
 
 SUPPLIER_COMPARISON_APP_0_0_3 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "supplier-comparison",
         "version": "0.0.3",
         "name": "Supplier Comparison",
@@ -8035,7 +8035,7 @@ SUPPLIER_COMPARISON_APP_0_0_3 = AppSpec.model_validate(
 
 SUPPORT_DESK_APP_0_0_5 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "support-desk",
         "version": "0.0.5",
         "name": "Support Desk",
@@ -8321,7 +8321,7 @@ SUPPORT_DESK_APP_0_0_5 = AppSpec.model_validate(
 
 TRAVEL_DESK_APP_0_0_2 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "travel-desk",
         "version": "0.0.2",
         "name": "Travel Desk",
@@ -8476,7 +8476,7 @@ TRAVEL_DESK_APP_0_0_2 = AppSpec.model_validate(
 
 WEB_RESEARCH_APP_0_0_2 = AppSpec.model_validate(
     {
-        "schema": "loop.app/v1",
+        "schema": "agent.app/v1",
         "id": "web-research",
         "version": "0.0.2",
         "name": "Web Research",

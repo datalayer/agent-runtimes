@@ -921,7 +921,7 @@ export interface ChatBaseProps {
    *
    * `pendingPrompt` deliberately sends a given text only once, which makes it
    * unusable as a live input channel: a user asking the same question twice
-   * would be ignored the second time. A host that owns the input box — the LOOP
+   * would be ignored the second time. A host that owns the input box — the Agent
    * workspace, whose prompt is the shell — needs a channel with no such memory.
    *
    * Called again with `null` when the chat can no longer send.
@@ -1319,7 +1319,7 @@ export interface ChatBaseProps {
    *
    * Called instead of the built-in `ChatBaseHeader` whenever `showHeader` is
    * true — with everything the built-in would have received: title, kernel
-   * indicator, runtime status, the actions row. The loop's chat-header
+   * indicator, runtime status, the actions row. The Agent's chat-header
    * plugin hangs off this: the bar then arrives as a plugin without this
    * component giving up any of what only it knows.
    */

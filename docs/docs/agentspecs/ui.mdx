@@ -5,7 +5,7 @@ title: UI plugins and Components
 # UI plugins, UI renderers and the catalog of visual components
 
 The interface of an application is made of **UI plugins**: the Reactor plugins of
-`src/apps/plugins/` the Loop editor assembles — the chat and its composer and title
+`src/apps/plugins/` the Agent editor assembles — the chat and its composer and title
 bar, the notebook and its toolbar, the document and its toolbar, the surfaces drawn in
 the conversation, an application's page, its rules and approvals, its activity, the
 *Sign in at a company* card, the page layout… **A UI spec is one of them**
@@ -43,7 +43,7 @@ not the application's. The mapping is one function, `uiFor` (`uiOf` reads it off
 spec) in `src/apps/apps/appspec.ts`, and agentspecs' `ui_for` is the same: both are held
 to `agent_runtimes/tests/fixtures/app_ui.json` (`src/apps/__tests__/app-ui.test.ts`,
 `agent_runtimes/tests/test_app_ui.py`). `emptyAppspec(kind)` — the Studio's *Start
-blank* — and `loop apps init` seed a new application's `ui` with it.
+blank* — and `agent apps init` seed a new application's `ui` with it.
 `src/apps/__tests__/app-preset.test.tsx` holds each catalogue application's `ui` to
 what its preset mounts, and agentspecs' `test_ui.py` to what its spec says.
 
@@ -91,7 +91,7 @@ edit them by hand:
 renders is `None` / `undefined`.
 
 The Canvas's palette is a plugin per UI plugin that renders components
-(`canvas-blocks`, `@datalayer/loop-plugin-ui-<id>`), and an organization turns one off
+(`canvas-blocks`, `@datalayer/agent-plugin-ui-<id>`), and an organization turns one off
 by the UI plugin's id (`plugins_off` in IAM: `a2ui-surface`).
 
 A `ComponentSpec` says:
@@ -208,4 +208,4 @@ disagree, so a component added to the catalog without a renderer fails at once.
 On an application's page, a chat publishes its conversation at `/messages` for a
 `Chat` block, and a widget takes a `FileUpload`'s files at `/files` and hands a text
 file's contents to its agent when it is run (`upload` runs it at once): see *An
-application's page* on the Loop page.
+application's page* on the Agent page.

@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """The runtime's plugin host for the session: the points read, the
-refusals kept, ``loop plugins`` answered.
+refusals kept, ``agent plugins`` answered.
 
 The platform is the runtime's own (``apps.plugins.PLATFORM``, one per
 process) with the ``agent-runtimes`` reactor extension registered on it, as
@@ -14,7 +14,7 @@ entry point and the error (Omnigent's ``extensions doctor``, borrowed); the
 host runs with the rest.
 
 A point is read through :func:`accepted`: what passed :func:`points.check`,
-in order; what did not is in :func:`refusals` and said by ``loop plugins``.
+in order; what did not is in :func:`refusals` and said by ``agent plugins``.
 """
 
 from __future__ import annotations
@@ -131,7 +131,7 @@ def refusals(platform: PluginPlatform) -> List[Refusal]:
 
 
 def describe_plugins(platform: PluginPlatform, name: str = "") -> Dict[str, Any]:
-    """What ``loop plugins [<name>]`` says: every extension, its plugins and
+    """What ``agent plugins [<name>]`` says: every extension, its plugins and
     their contributions, and what was refused — one name given, that
     extension (or that failed entry point) alone.
     """
@@ -198,7 +198,7 @@ def describe_plugins(platform: PluginPlatform, name: str = "") -> Dict[str, Any]
 
 
 def plugins_lines(description: Dict[str, Any]) -> List[str]:
-    """The description, as ``loop plugins`` prints it."""
+    """The description, as ``agent plugins`` prints it."""
     lines: List[str] = []
     for extension in description["extensions"]:
         lines.append(

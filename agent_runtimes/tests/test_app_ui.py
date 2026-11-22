@@ -6,7 +6,7 @@
 agentspecs' ``ui_for`` and agent-runtimes' ``uiFor`` (``src/apps/apps/appspec.ts``)
 are held to the same cases, the fixture ``fixtures/app_ui.json``, which the
 TypeScript test (``src/apps/__tests__/app-ui.test.ts``) reads too. A new blank
-application starts with its kind's: ``loop apps init`` writes them.
+application starts with its kind's: ``agent apps init`` writes them.
 """
 
 from __future__ import annotations

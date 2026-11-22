@@ -13,7 +13,7 @@
  * 1. AG-UI mode: When `endpoint` is provided
  * 2. Store mode: When `useStore` is true
  * 3. Any protocol supported by ChatBase (AG-UI, A2A, ACP, Vercel AI)
- * 4. A conversation its host draws (`conversation`): the LOOP workspace,
+ * 4. A conversation its host draws (`conversation`): the Agent workspace,
  *    which the embed's bubble, panel and assistant hold — the
  *    floating chrome around it, told by the host what it is doing and what
  *    it last said
@@ -128,7 +128,7 @@ import { useChatWords } from './ChatLanguage';
 
 /**
  * A conversation the host draws in the floating window, in place of the
- * chat: the LOOP workspace. The window keeps its chrome — the
+ * chat: the Agent workspace. The window keeps its chrome — the
  * button, its blink and its balloon, the panel, the assistant, dragging and
  * dismissing — and is told by the host what the conversation is doing and
  * what it last said, which it would otherwise read from its own chat.
@@ -310,7 +310,7 @@ export interface ChatFloatingProps extends ChatCommonProps {
 
   /**
    * A conversation the host draws in the window instead of the chat — the
-   * LOOP workspace, as the embed's floating modes do. The chat's
+   * Agent workspace, as the embed's floating modes do. The chat's
    * own props (`protocol`, `suggestions`, …) are then not read.
    */
   conversation?: FloatingConversation;

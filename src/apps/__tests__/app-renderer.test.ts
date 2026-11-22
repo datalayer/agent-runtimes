@@ -4,13 +4,13 @@
  */
 
 /**
- * An application in a LOOP workspace: the agent created with the
+ * An application in an Agent workspace: the agent created with the
  * application in its payload, and the application's starters on the empty
  * chat.
  */
 
 import { describe, expect, it } from 'vitest';
-import { LoopAgentBlueprint, LoopChatSuggestion } from '../core';
+import { AgentBlueprint, AgentChatSuggestion } from '../core';
 import { APP_CATALOGUE } from '../../specs/apps';
 import { themeAccentVars } from '@datalayer/primer-addons';
 import {
@@ -35,7 +35,7 @@ describe('the application plugin', () => {
   const plugin = defineAppPlugin(research);
 
   it('creates the application’s agent with the application in its payload', () => {
-    const [blueprint] = contributed(plugin, LoopAgentBlueprint);
+    const [blueprint] = contributed(plugin, AgentBlueprint);
     expect(blueprint.value.specId).toBe('cog-crawler');
     expect(blueprint.value.createPayload.name).toBe('web-research');
     expect(blueprint.value.createPayload.app_spec).toEqual(
@@ -62,7 +62,7 @@ describe('the application plugin', () => {
   });
 
   it('offers the application’s starters on the empty chat', () => {
-    const [suggestions] = contributed(plugin, LoopChatSuggestion);
+    const [suggestions] = contributed(plugin, AgentChatSuggestion);
     expect(suggestions.value.suggestions).toEqual(
       research.interface.starters.map(starter => ({
         text: starter.label,
@@ -76,10 +76,10 @@ describe('the application plugin', () => {
       ...research,
       interface: { ...research.interface, starters: [] },
     });
-    expect(contributed(plain, LoopChatSuggestion)).toEqual([]);
+    expect(contributed(plain, AgentChatSuggestion)).toEqual([]);
     // The name of the pair, which the runtime's plugin has too.
-    expect(plugin.name).toBe('loop-app-web-research');
-    expect(plugin.requiredBackendPlugins).toEqual(['loop-app-web-research']);
+    expect(plugin.name).toBe('agent-app-web-research');
+    expect(plugin.requiredBackendPlugins).toEqual(['agent-app-web-research']);
     expect(plugin.displayName).toBe('Web Research');
   });
 

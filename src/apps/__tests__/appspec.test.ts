@@ -86,7 +86,7 @@ describe('reading an Appspec', () => {
 
   it('opens a draft whole, and says what is wrong with it', () => {
     const { app, problems } = parseAppspec({
-      schema: 'loop.app/v9',
+      schema: 'agent.app/v9',
       kind: 'robot',
       colour: 'red',
       record: { keep_for: 'forever' },
@@ -95,7 +95,7 @@ describe('reading an Appspec', () => {
     });
     expect(problems).toEqual([
       '`colour` is not a field of the spec.',
-      'This reads loop.app/v1; the application is written in loop.app/v9.',
+      'This reads agent.app/v1; the application is written in agent.app/v9.',
       '`robot` is not a kind: chat, widget, decision or worker.',
       'Cannot read the retention `forever`: write 90_days, 18_months or 1_years.',
     ]);

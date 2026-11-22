@@ -193,7 +193,7 @@ async def test_approved_it_is_saved_as_a_page_of_the_space_and_its_link_answered
         "name": "Weekly Digest",
         "emoji": "👀",
     }
-    assert key.startswith("loop:app-1:")
+    assert key.startswith("agent:app-1:")
     assert returned == ["Saved as “Weekly digest”: /eric/notes/documents/doc-1"]
 
 
@@ -291,17 +291,17 @@ async def test_it_writes_through_spacer_under_its_key(monkeypatch) -> None:
     monkeypatch.setenv("DATALAYER_SPACER_URL", "https://spacer.test")
     assert urls.DatalayerURLs.from_environment().spacer_url == "https://spacer.test"
     written = await write_on_spacer(
-        "sp-notes", "T", {"root": {}}, "loop:k", {"saved_by": "loop.app"}, token="tok"
+        "sp-notes", "T", {"root": {}}, "agent:k", {"saved_by": "agent.app"}, token="tok"
     )
     assert written["document"]["uid"] == "doc-9"
     assert seen[0].url.path == "/api/spacer/v1/spaces/sp-notes"
     post = seen[1]
     assert post.headers["Authorization"] == "Bearer tok"
     body = post.content.decode()
-    assert 'name="idempotencyKey"' in body and "loop:k" in body
+    assert 'name="idempotencyKey"' in body and "agent:k" in body
     assert 'name="documentType"' in body and "lexical" in body
     # Who wrote it, in the document's metadata.
-    assert 'name="metadata"' in body and "loop.app" in body
+    assert 'name="metadata"' in body and "agent.app" in body
 
 
 async def test_a_refusal_of_spacer_is_said(monkeypatch) -> None:
@@ -365,7 +365,7 @@ def test_the_page_names_the_application_and_the_person_it_acted_for() -> None:
         on_its_own=False,
         session="s-1",
     ) == {
-        "saved_by": "loop.app",
+        "saved_by": "agent.app",
         "app": {
             "id": "weekly-digest",
             "uid": "app-1",

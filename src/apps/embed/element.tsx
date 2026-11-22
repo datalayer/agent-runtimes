@@ -711,7 +711,7 @@ export function defineDatalayerAppElement(
         }
       }
       this.setAttribute('data-embed-mode', look.mode);
-      // The theme's own stylesheet: `loop`'s, or the one the application
+      // The theme's own stylesheet: `agent`'s, or the one the application
       // names.
       const shadow = this.skeleton(
         getThemeConfig(look.variant).themeStyles.css,

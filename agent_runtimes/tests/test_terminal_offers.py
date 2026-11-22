@@ -14,11 +14,11 @@ from pathlib import Path
 
 import agent_runtimes
 from agent_runtimes.chat.banner import (
+    AGENT_VERSION,
+    AGENT_WORDMARK,
+    AGENT_WORDMARK_VERB,
     BANNER,
     GOODBYE_MESSAGE,
-    LOOP_VERSION,
-    LOOP_WORDMARK,
-    LOOP_WORDMARK_VERB,
     TOKENS_DOWN,
     TOKENS_UP,
 )
@@ -103,13 +103,13 @@ class TestTerminalConstruction:
 
 
 class TestWordmark:
-    def test_the_terminal_writes_the_loop_with_eyes(self) -> None:
-        assert LOOP_WORDMARK == "L\U0001f440P"
-        assert LOOP_WORDMARK in BANNER
+    def test_the_terminal_writes_the_agent_with_eyes(self) -> None:
+        assert AGENT_WORDMARK == "AGENT \U0001f440"
+        assert AGENT_WORDMARK in BANNER
 
     def test_the_wordmark_is_written_in_one_place(self) -> None:
         for path in CHAT_DIR.rglob("*.py"):
-            assert "LOOP ⟳" not in path.read_text(), path
+            assert "AGENT ⟳" not in path.read_text(), path
 
     def test_the_banner_box_stays_square(self) -> None:
         # The eyes take two terminal columns; the padding beside them counts
@@ -126,19 +126,19 @@ class TestVersionShown:
     def test_the_terminal_shows_the_version_of_the_library_it_is_part_of(self) -> None:
         # It used to show the chat package's own number, frozen at 0.0.2,
         # which said nothing about what was installed.
-        assert LOOP_VERSION == agent_runtimes.__version__
+        assert AGENT_VERSION == agent_runtimes.__version__
 
     def test_no_version_is_typed_into_a_panel_title(self) -> None:
         for path in CHAT_DIR.rglob("*.py"):
             source = path.read_text()
             assert "0.0.2" not in source, path
-            assert "{LOOP_WORDMARK} 0." not in source, path
+            assert "{AGENT_WORDMARK} 0." not in source, path
 
 
 class TestGoodbye:
-    def test_it_keeps_looping_with_the_eyes(self) -> None:
-        assert LOOP_WORDMARK_VERB == "L\U0001f440PING"
-        assert LOOP_WORDMARK_VERB in GOODBYE_MESSAGE
+    def test_it_keeps_going(self) -> None:
+        assert AGENT_WORDMARK_VERB == "GOING"
+        assert AGENT_WORDMARK_VERB in GOODBYE_MESSAGE
         assert "\u27f3" not in GOODBYE_MESSAGE
         assert "looping" not in GOODBYE_MESSAGE
         # The bars sit with the name at the end, not in front of the line.

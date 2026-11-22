@@ -21,7 +21,7 @@ import {
   contribution,
   definePlugin,
 } from '@datalayer/reactor';
-import { LoopWorkspace } from '../shell/LoopWorkspace';
+import { AgentWorkspace } from '../shell/AgentWorkspace';
 import {
   ShellPlugin,
   SHELL_PLUGIN_NAME,
@@ -32,9 +32,9 @@ import {
 } from '../plugins/shell';
 import { PROMPT_PLUGIN_NAME } from '../plugins/prompt';
 import {
-  LoopChatSurface,
-  LoopCommand,
-  LoopEditorView,
+  AgentChatSurface,
+  AgentCommand,
+  AgentEditorView,
   onSurfaceRequest,
 } from '../core';
 import {
@@ -42,14 +42,14 @@ import {
   SPREADSHEET_SURFACE_ID,
 } from '../plugins/spreadsheet';
 import { CHAT_PLUGIN_NAME, type ChatPluginConfig } from '../plugins/chat';
-import { loopPlugins } from '../presets';
+import { agentPlugins } from '../presets';
 
 /** Two surfaces, the way the notebook and document plugins contribute them. */
 const SurfacesPlugin = definePlugin({
   name: '@tests/surfaces',
   contributes: [
     contribution(
-      LoopChatSurface,
+      AgentChatSurface,
       {
         surfaceId: 'notebook',
         title: 'Notebook',
@@ -59,7 +59,7 @@ const SurfacesPlugin = definePlugin({
       { id: 'notebook', order: 10 },
     ),
     contribution(
-      LoopChatSurface,
+      AgentChatSurface,
       {
         surfaceId: 'document',
         title: 'Document',
@@ -76,7 +76,7 @@ const SurfacesPlugin = definePlugin({
 /** The command a plugin contributes, by name. */
 function commandOf(plugin: { contributes?: readonly any[] }, name: string) {
   const record = (plugin.contributes ?? []).find(
-    entry => entry.point === LoopCommand && entry.value.name === name,
+    entry => entry.point === AgentCommand && entry.value.name === name,
   );
   return record?.value;
 }
@@ -87,7 +87,7 @@ async function mount(plugins: Parameters<typeof buildReactorFromPlugins>[0]) {
   document.body.appendChild(container);
   const root = createRoot(container);
   await act(async () => {
-    root.render(<LoopWorkspace serverUrl="" agentId="a" reactor={reactor} />);
+    root.render(<AgentWorkspace serverUrl="" agentId="a" reactor={reactor} />);
   });
   return { container, root };
 }
@@ -203,7 +203,7 @@ describe('the /editor command', () => {
     const editor = commandOf(SpreadsheetPlugin, 'spreadsheet');
     expect(editor?.keybinding).toBe('Mod+Alt+S');
     const view = (SpreadsheetPlugin.contributes ?? []).find(
-      entry => entry.point === LoopEditorView,
+      entry => entry.point === AgentEditorView,
     )!.value as { load: () => Promise<{ default: React.ComponentType<any> }> };
     const { default: SpreadsheetView, spreadsheetWorkbook } =
       (await view.load()) as typeof import('../plugins/spreadsheet/SpreadsheetView');
@@ -261,7 +261,7 @@ describe('the /editor command', () => {
 describe('the preset switch', () => {
   it('mounts the selector and stands the chat strip down, together', () => {
     const reactor = buildReactorFromPlugins(
-      loopPlugins({ editorSelector: true, defaultEditor: 'none' }),
+      agentPlugins({ editorSelector: true, defaultEditor: 'none' }),
     );
     expect(reactor.hasPlugin(SHELL_PLUGIN_NAME)).toBe(true);
     // Two controls offering the same choice would eventually disagree.

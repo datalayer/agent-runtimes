@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-agent-code-sandbox` — the code sandbox, as a capacity.
+ * `@datalayer/agent-plugin-agent-code-sandbox` — the code sandbox, as a capacity.
  *
  * Mounts the `example-code-sandbox` agent: Python run through `execute_code`
  * in a sandbox the server manages, whose variant can be switched live. Cast
@@ -16,7 +16,7 @@
 import { defineAgentCapacityPlugin } from '../agent-capacity';
 
 export const AGENT_CODE_SANDBOX_PLUGIN_NAME =
-  '@datalayer/loop-plugin-agent-code-sandbox';
+  '@datalayer/agent-plugin-agent-code-sandbox';
 
 export const AgentCodeSandboxPlugin = defineAgentCapacityPlugin({
   key: 'code-sandbox',

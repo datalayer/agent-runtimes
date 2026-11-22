@@ -20,7 +20,7 @@
 import type { JSX } from 'react';
 import { AppsIcon } from '@primer/octicons-react';
 import { EntityAvatar } from '@datalayer/primer-addons';
-import { loopShapeVars } from '@datalayer/primer-addons/lib/theme';
+import { agentShapeVars } from '@datalayer/primer-addons/lib/theme';
 import {
   PRINCIPAL_BANNERS,
   PrincipalAvatar,
@@ -48,14 +48,14 @@ export type AppFace = {
 
 /**
  * The three sizes of a face, and no other: the page, a header or
- * a card, a line of a list — read from the `loop` theme's tokens.
+ * a card, a line of a list — read from the `agent` theme's tokens.
  */
 export type FaceSize = 'large' | 'medium' | 'small';
 
 export const FACE_SIZES: Record<FaceSize, number> = {
-  large: parseInt(loopShapeVars['--loop-face-large'] ?? '72', 10),
-  medium: parseInt(loopShapeVars['--loop-face-medium'] ?? '40', 10),
-  small: parseInt(loopShapeVars['--loop-face-small'] ?? '20', 10),
+  large: parseInt(agentShapeVars['--agent-face-large'] ?? '72', 10),
+  medium: parseInt(agentShapeVars['--agent-face-medium'] ?? '40', 10),
+  small: parseInt(agentShapeVars['--agent-face-small'] ?? '20', 10),
 };
 
 /** The avatar chosen, when it is one (an emoji or a drawing of the set); otherwise none. */

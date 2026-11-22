@@ -4,7 +4,7 @@
 
 """A coding agent behind the Shield, on the local runtime.
 
-What ``loop --harness <id>`` starts, started here in the same way: the
+What ``agent --harness <id>`` starts, started here in the same way: the
 runtime's server on this machine, the harness made at startup through the
 create route (``AGENT_RUNTIMES_HARNESS``), the directory it guards as its
 workspace (``AGENT_RUNTIMES_WORKSPACE_ROOT``). The script then talks to it the
@@ -130,12 +130,12 @@ async def main(argv: list[str] | None = None) -> int:
     )
 
     # What the runtime would refuse at startup, refused here first in its
-    # sentence, as `loop --harness` does: no such harness, its adapter not
+    # sentence, as `agent --harness` does: no such harness, its adapter not
     # installed, its key missing.
     spec = harnesses.HARNESS_CATALOGUE.get(arguments.harness)
     if spec is None:
         print(
-            f"There is no harness named {arguments.harness!r}: `loop harnesses` lists them."
+            f"There is no harness named {arguments.harness!r}: `agent harnesses` lists them."
         )
         return 2
     try:

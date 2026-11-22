@@ -4,7 +4,7 @@
 """What the chat's title bar tells the agent: the drop-downs of a header UI.
 
 The page sends the option each drop-down is on with every run
-(``forwardedProps.loop.header``: an option id by item id, by UI id); the
+(``forwardedProps.agent.header``: an option id by item id, by UI id); the
 runtime tells the agent the sentences its UI spec declares, for that run
 only, and refuses what the catalogue does not have.
 """
@@ -104,7 +104,7 @@ def test_the_header_follows_the_runs_other_instructions() -> None:
 def test_a_plain_ag_ui_run_reads_it_from_forwarded_props() -> None:
     body = {
         "forwardedProps": {
-            "loop": {"header": {"books-header": {"period": "this-quarter"}}}
+            "agent": {"header": {"books-header": {"period": "this-quarter"}}}
         }
     }
     assert header_of_run(body).startswith(
@@ -116,7 +116,7 @@ def test_a_plain_ag_ui_run_reads_it_from_forwarded_props() -> None:
         header_of_run(
             {
                 "forwardedProps": {
-                    "loop": {"header": {"books-header": {"period": "1999"}}}
+                    "agent": {"header": {"books-header": {"period": "1999"}}}
                 }
             }
         )

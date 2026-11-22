@@ -48,7 +48,7 @@ from agent_runtimes.routes.tool_approvals import (
     _decide_approval_via_ws,
     _list_approvals,
 )
-from agent_runtimes.streams import loop as streams
+from agent_runtimes.streams import pubsub as streams
 
 SHIPPED = "shop-shipped"
 PREVIEW = "shop-preview"

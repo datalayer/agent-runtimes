@@ -28,7 +28,7 @@ describe('specSubagents', () => {
   });
 
   it('has nothing for a spec without subagents, or no spec', () => {
-    expect(specSubagents(getAgentspecs('loop-shell'))).toEqual([]);
+    expect(specSubagents(getAgentspecs('agent-shell'))).toEqual([]);
     expect(specSubagents(undefined)).toEqual([]);
   });
 });

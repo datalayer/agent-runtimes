@@ -10,9 +10,9 @@
  * workspace's side, always the same two statements: *which agent* answers
  * (an agentspec id and the create-payload details its server needs) and
  * *what it is worth asking* (the openers on the empty chat). This factory
- * turns those statements into a reactor plugin: an `LoopAgentBlueprint`
+ * turns those statements into a reactor plugin: an `AgentBlueprint`
  * contribution the agents plugin reads when its Local target creates the
- * agent, and an optional `LoopChatSuggestion` contribution the chat shows
+ * agent, and an optional `AgentChatSuggestion` contribution the chat shows
  * ahead of the spec's own.
  *
  * One folder per capacity under `apps/plugins/agent-*`, each a few lines of
@@ -28,8 +28,8 @@ import {
   type ReactorPlugin,
 } from '@datalayer/reactor';
 import {
-  LoopAgentBlueprint,
-  LoopChatSuggestion,
+  AgentBlueprint,
+  AgentChatSuggestion,
   type AgentBlueprintContribution,
   type ChatSuggestionItem,
 } from '../../core';
@@ -57,7 +57,7 @@ export type AgentCapacityOptions = {
   /** What its modes tell a run turned in the page. */
   modeEffect?: AgentBlueprintContribution['modeEffect'];
   /**
-   * Its own name in place of `@datalayer/loop-plugin-agent-<key>`: an
+   * Its own name in place of `@datalayer/agent-plugin-agent-<key>`: an
    * application's, the name its runtime's plugin has too.
    */
   name?: string;
@@ -85,7 +85,7 @@ export function defineAgentCapacityPlugin(
     requiredBackendPlugins,
   } = options;
   return definePlugin({
-    name: name ?? `@datalayer/loop-plugin-agent-${key}`,
+    name: name ?? `@datalayer/agent-plugin-agent-${key}`,
     ...(requiredBackendPlugins ? { requiredBackendPlugins } : {}),
     displayName,
     description,
@@ -93,7 +93,7 @@ export function defineAgentCapacityPlugin(
     emoji,
     contributes: [
       contribution(
-        LoopAgentBlueprint,
+        AgentBlueprint,
         {
           id: key,
           specId,
@@ -112,7 +112,7 @@ export function defineAgentCapacityPlugin(
       ...(suggestions && suggestions.length > 0
         ? [
             contribution(
-              LoopChatSuggestion,
+              AgentChatSuggestion,
               { id: key, suggestions },
               { id: key },
             ),

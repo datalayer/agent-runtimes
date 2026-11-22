@@ -228,7 +228,7 @@ class TestCodeSandboxManagerSidecarGuard:
 class TestSandboxStatusCarriesConnectionDetails:
     """What a browser needs to reach the sandbox it is being told about.
 
-    The editors of the LOOP workspace connect to the sandbox's Jupyter server
+    The editors of the Agent workspace connect to the sandbox's Jupyter server
     directly. Reporting the URL and withholding the token told them where to go
     and not how to get in: every request came back 403, and because Jupyter
     rejects a cross-origin write before attaching CORS headers, the browser

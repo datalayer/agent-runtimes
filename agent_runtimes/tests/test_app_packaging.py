@@ -3,7 +3,7 @@
 
 """An application's page side packaged as a Reactor extension.
 
-`loop apps package` writes the distribution of an app.py whose component is a
+`agent apps package` writes the distribution of an app.py whose component is a
 file of its folder and builds its wheel; installed, the wheel is found by the
 application's name and its page side is served beside the application's
 plugin state, as Reactor's routes serve an extension's.
@@ -64,39 +64,39 @@ def test_a_file_of_the_folder_is_told_from_an_address() -> None:
     assert is_folder_file("gauge.js") and is_folder_file("./components/gauge.mjs")
     for source in ("https://e.example.com/g.js", "../g.js", "/srv/g.js", "g.css"):
         assert not is_folder_file(source)
-    assert module_name_of("dial-desk") == "loop_app_dial_desk"
-    assert page_side_plugin_name("dial-desk") == "loop-app-dial-desk/page"
+    assert module_name_of("dial-desk") == "agent_app_dial_desk"
+    assert page_side_plugin_name("dial-desk") == "agent-app-dial-desk/page"
 
 
 def test_the_page_side_module_says_where_its_files_are_and_nothing_else() -> None:
     text = page_side_module("dial-desk")
     assert "import " not in text.replace("import.meta.url", "")
     assert "new URL('./', import.meta.url)" in text
-    assert '"loop.app.files"' in text and '"loop-app-dial-desk/page"' in text
+    assert '"agent.app.files"' in text and '"agent-app-dial-desk/page"' in text
 
 
 def test_its_project_carries_the_application_and_the_files_it_names(
     folder: Path, tmp_path: Path
 ) -> None:
     packaged = write_project(folder / "app.py", tmp_path / "out")
-    assert packaged.name == "loop-app-dial-desk"
+    assert packaged.name == "agent-app-dial-desk"
     assert packaged.files == ["components/dial.js"]
     project = packaged.project
     pyproject = (project / "pyproject.toml").read_text()
     assert '[project.entry-points."datalayer.reactor.extensions"]' in pyproject
-    assert '"loop-app-dial-desk" = "loop_app_dial_desk:extension"' in pyproject
-    share = project / "share/datalayer/reactor/extensions/loop-app-dial-desk"
+    assert '"agent-app-dial-desk" = "agent_app_dial_desk:extension"' in pyproject
+    share = project / "share/datalayer/reactor/extensions/agent-app-dial-desk"
     assert (share / "components/dial.js").read_text() == DIAL_JS
     assert (share / "index.js").is_file()
     # Its application is its module: nothing said of it beside.
-    assert sorted(p.name for p in (project / "loop_app_dial_desk").iterdir()) == [
+    assert sorted(p.name for p in (project / "agent_app_dial_desk").iterdir()) == [
         "__init__.py",
         "app.py",
     ]
-    assert (project / "loop_app_dial_desk/app.py").read_text() == APP_PY
+    assert (project / "agent_app_dial_desk/app.py").read_text() == APP_PY
     assert (
         "return packaged_extension(__file__)"
-        in (project / "loop_app_dial_desk/__init__.py").read_text()
+        in (project / "agent_app_dial_desk/__init__.py").read_text()
     )
     with pytest.raises(NotPackageable, match="is there already; --force"):
         write_project(folder / "app.py", tmp_path / "out")
@@ -131,10 +131,10 @@ def installed(folder: Path, tmp_path: Path, monkeypatch) -> Iterator[Path]:
         wheel.extractall(site)
     data = next(site.glob("*.data"))
     shutil.move(str(data / "data" / "share"), str(prefix / "share"))
-    assert "loop_app_dial_desk/app.py" in names
+    assert "agent_app_dial_desk/app.py" in names
     monkeypatch.syspath_prepend(str(site))
     yield site
-    for module in [m for m in sys.modules if m.startswith("loop_app_dial_desk")]:
+    for module in [m for m in sys.modules if m.startswith("agent_app_dial_desk")]:
         del sys.modules[module]
 
 
@@ -149,25 +149,28 @@ def test_the_installed_page_side_is_served_beside_its_plugin_state(
 ) -> None:
     client = _client()
     records = client.get("/api/v1/apps/dial-desk/plugins/frontend-extensions").json()
-    assert [record["name"] for record in records] == ["loop-app-dial-desk"]
+    assert [record["name"] for record in records] == ["agent-app-dial-desk"]
     record = records[0]
     # Reactor's address for it, its version in the query.
-    assert record["entry"].startswith("/reactor-extensions/loop-app-dial-desk/index.js")
-    assert record["backendPlugins"] == ["loop-app-dial-desk"]
+    assert record["entry"].startswith(
+        "/reactor-extensions/agent-app-dial-desk/index.js"
+    )
+    assert record["backendPlugins"] == ["agent-app-dial-desk"]
     (plugin,) = record["plugins"]
-    assert plugin["name"] == "loop-app-dial-desk/page"
-    assert plugin["requiredBackendPlugins"] == ["loop-app-dial-desk"]
-    base = "/api/v1/apps/dial-desk/reactor-extensions/loop-app-dial-desk"
+    assert plugin["name"] == "agent-app-dial-desk/page"
+    assert plugin["requiredBackendPlugins"] == ["agent-app-dial-desk"]
+    base = "/api/v1/apps/dial-desk/reactor-extensions/agent-app-dial-desk"
     dial = client.get(f"{base}/components/dial.js")
     assert dial.status_code == 200 and dial.text == DIAL_JS
     assert dial.headers["content-type"].startswith("text/javascript")
-    assert "loop.app.files" in client.get(f"{base}/index.js").text
+    assert "agent.app.files" in client.get(f"{base}/index.js").text
     # Nothing outside its directory, and nothing of another application.
     assert (
-        client.get(f"{base}/../../../site/loop_app_dial_desk/app.py").status_code == 404
+        client.get(f"{base}/../../../site/agent_app_dial_desk/app.py").status_code
+        == 404
     )
     assert client.get(f"{base}/missing.js").status_code == 404
-    other = "/api/v1/apps/other/reactor-extensions/loop-app-dial-desk/index.js"
+    other = "/api/v1/apps/other/reactor-extensions/agent-app-dial-desk/index.js"
     assert client.get(other).status_code == 404
 
 
@@ -183,19 +186,21 @@ def test_the_entry_point_advertises_the_applications_own_extension(
     from agent_runtimes.apps.plugins import AppPlugin
 
     (entry,) = entry_points(
-        group=EXTENSION_ENTRY_POINT_GROUP, name="loop-app-dial-desk"
+        group=EXTENSION_ENTRY_POINT_GROUP, name="agent-app-dial-desk"
     )
     extension = entry.load()()
-    assert extension.name == "loop-app-dial-desk"
+    assert extension.name == "agent-app-dial-desk"
     ((manifest, plugin),) = extension.plugins
-    assert manifest.name == "loop-app-dial-desk" and isinstance(plugin, AppPlugin)
+    assert manifest.name == "agent-app-dial-desk" and isinstance(plugin, AppPlugin)
     assert plugin.application.spec.id == "dial-desk"
     assert extension.frontend is not None
     assert extension.frontend.resolve("components/dial.js") is not None
     # A host registers it with Reactor's public API, and takes it away.
     platform = PluginPlatform()
-    assert platform.register_extension_object(extension) == ["loop-app-dial-desk"]
-    assert platform.unregister_extension("loop-app-dial-desk") == ["loop-app-dial-desk"]
+    assert platform.register_extension_object(extension) == ["agent-app-dial-desk"]
+    assert platform.unregister_extension("agent-app-dial-desk") == [
+        "agent-app-dial-desk"
+    ]
 
 
 def test_an_application_with_no_package_installed_has_no_page_side() -> None:
@@ -203,7 +208,7 @@ def test_an_application_with_no_package_installed_has_no_page_side() -> None:
     assert client.get("/api/v1/apps/dial-desk/plugins/frontend-extensions").json() == []
     assert (
         client.get(
-            "/api/v1/apps/dial-desk/reactor-extensions/loop-app-dial-desk/index.js"
+            "/api/v1/apps/dial-desk/reactor-extensions/agent-app-dial-desk/index.js"
         ).status_code
         == 404
     )

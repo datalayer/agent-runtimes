@@ -190,7 +190,7 @@ class TestSubagentRefs:
             default_model=None,
         )
         capability = build_subagents_capability(
-            config, "bedrock:model", agent_id="loop-shell"
+            config, "bedrock:model", agent_id="agent-shell"
         )
         assert capability is not None
 

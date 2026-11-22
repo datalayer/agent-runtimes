@@ -120,7 +120,7 @@ describe('a visitor’s application', () => {
   it('runs an example the visitors’ runtime does not keep at the address of its name, drawn from the bundle’s Appspec, never the deployment’s copy (the landing’s demo-marketer)', async () => {
     // The deployment's copy: an older version, without the title bar's items.
     const deployed = {
-      schema: 'loop.app/v1',
+      schema: 'agent.app/v1',
       id: 'demo-marketer',
       version: '0.0.3',
       name: 'Marketer (deployed copy)',
@@ -174,7 +174,7 @@ describe('a visitor’s application', () => {
         fetcher: answer(
           200,
           opened({
-            schema: 'loop.app/v1',
+            schema: 'agent.app/v1',
             id,
             name: 'Old',
             kind: 'chat',
@@ -274,7 +274,7 @@ describe('a visitor’s application', () => {
 
   it('reads an address from ai-agents without a token, and runs it on the visitors’ runtime as at:<slug>', async () => {
     const spec = {
-      schema: 'loop.app/v1',
+      schema: 'agent.app/v1',
       id: 'research',
       name: 'Research',
       kind: 'chat',
@@ -307,7 +307,7 @@ describe('a visitor’s application', () => {
 
   it('runs an address with code of its own on its always-on runtime, never the visitors’', async () => {
     const spec = {
-      schema: 'loop.app/v1',
+      schema: 'agent.app/v1',
       id: 'research',
       name: 'Research',
       kind: 'chat',
@@ -338,7 +338,7 @@ describe('a visitor’s application', () => {
   });
 
   it('does not run an address with code and no runtime, or one that does not say (fail fast)', async () => {
-    const spec = { schema: 'loop.app/v1', id: 'r', kind: 'chat', agent: 'a' };
+    const spec = { schema: 'agent.app/v1', id: 'r', kind: 'chat', agent: 'a' };
     const none = await readVisitorApp({
       app: 'research',
       fetcher: answer(200, opened(spec, { runs_code: true })),
@@ -365,7 +365,12 @@ describe('a visitor’s application', () => {
       fetcher: answer(
         200,
         opened(
-          { schema: 'loop.app/v1', id: 'accounting', kind: 'chat', agent: 'a' },
+          {
+            schema: 'agent.app/v1',
+            id: 'accounting',
+            kind: 'chat',
+            agent: 'a',
+          },
           {
             session: {
               opens: false,
@@ -400,7 +405,7 @@ describe('a visitor’s application', () => {
       app: 'laptops',
       fetcher: answer(
         200,
-        opened({ schema: 'loop.app/v1', id: 'laptops', kind: 'decision' }),
+        opened({ schema: 'agent.app/v1', id: 'laptops', kind: 'decision' }),
       ),
       catalogue: () => undefined,
     });

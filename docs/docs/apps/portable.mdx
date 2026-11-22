@@ -38,7 +38,7 @@ The contract is `semantic-events.json`, beside them: the reducer reduces every
 case of it, and `agent_runtimes/tests/test_semantic_events_contract.py` holds
 the cases to what the runtime emits, so a case never stands for an event the
 runtime does not send. Two follow from that: a question is read from
-`RUN_FINISHED`'s `result.asking` only (the run stream carries no `loop.ask`),
+`RUN_FINISHED`'s `result.asking` only (the run stream carries no `agent.ask`),
 and `stop` is said by the host that pressed Stop, since a stopped session's
 stream ends without a run end.
 
@@ -61,7 +61,7 @@ What every chat host shares, so that Slack and Discord carry no copy of it:
   host's event id, its stream reduced, its session mapped to the host's
   thread. A turn without a `sessionId` opens a new session whose uid the
   runtime mints (a ULID, as every session's) and names in the turn's
-  `loop.turn` event, a retry's replay included; the host keeps it against its
+  `agent.turn` event, a retry's replay included; the host keeps it against its
   thread (`TurnStream.sessionId`) and sends the next turns to it. What is the
   host's own is injected as a `HostShape`: the place Datalayer checks the
   channel policy against, the delivery target, and the turn's `provenance`

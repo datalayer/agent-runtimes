@@ -12,7 +12,7 @@ names no User and no Company. The Session JWT that the delegated key signs names
 those (`sub`, `aud`), and the Session (`sid`), for one request.
 
 ```bash
-loop apps run examples/personal-agent-protocol/delegation/app.py
+agent apps run examples/personal-agent-protocol/delegation/app.py
 ```
 
 See the canonical [Sessions guide](https://personalagentprotocol.org/docs/guides/sessions).

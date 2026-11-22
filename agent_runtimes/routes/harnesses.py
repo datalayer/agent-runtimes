@@ -3,7 +3,7 @@
 
 """The harness catalogue over HTTP.
 
-``GET /api/v1/harnesses`` answers what ``loop harnesses`` prints: each
+``GET /api/v1/harnesses`` answers what ``agent harnesses`` prints: each
 harness the ``harness`` contribution point accepts — the catalogue's and a
 third party's, an organization's own left out as the command leaves them
 out — with its terms, its register entry (the adapter pinned, the
@@ -32,7 +32,7 @@ def _described(contribution: Any) -> Dict[str, Any]:
 
 
 def served_harnesses() -> List[Dict[str, Any]]:
-    """The harnesses served to everybody, in the point's order (what ``loop harnesses`` prints)."""
+    """The harnesses served to everybody, in the point's order (what ``agent harnesses`` prints)."""
     from agent_runtimes.adapters import harness_inference
     from agent_runtimes.plugins.host import accepted, session_platform
     from agent_runtimes.plugins.points import HARNESSES

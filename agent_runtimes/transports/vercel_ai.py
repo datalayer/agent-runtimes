@@ -44,7 +44,7 @@ from ..otel.prompt_turn_metrics import (
     extract_user_id_from_jwt,
     record_prompt_turn_completion,
 )
-from ..streams.loop import get_agent_enabled_mcp_tool_names, get_known_mcp_tool_names
+from ..streams.pubsub import get_agent_enabled_mcp_tool_names, get_known_mcp_tool_names
 from .base import BaseTransport
 from .vercel_displays import DisplayVercelAIAdapter as VercelAIAdapter
 
@@ -1167,7 +1167,7 @@ class VercelAITransport(BaseTransport):
 
         # Apply per-turn enablement to backend guardrail state.
         try:
-            from agent_runtimes.streams.loop import (
+            from agent_runtimes.streams.pubsub import (
                 set_agent_enabled_mcp_tool_names,
                 set_agent_turn_enabled_skills,
             )

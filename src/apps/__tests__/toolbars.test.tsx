@@ -22,13 +22,13 @@ import {
   onContributionPoint,
 } from '@datalayer/reactor';
 import {
-  LoopDocumentToolbar,
-  LoopDocumentToolbarItem,
-  LoopNotebookToolbar,
-  LoopNotebookToolbarItem,
+  AgentDocumentToolbar,
+  AgentDocumentToolbarItem,
+  AgentNotebookToolbar,
+  AgentNotebookToolbarItem,
   createPromptChannel,
   type EditorToolbarContext,
-  type LoopWorkspaceContext,
+  type AgentWorkspaceContext,
 } from '../core';
 import { ChatPlugin } from '../plugins/chat';
 import { DocumentPlugin } from '../plugins/document';
@@ -37,7 +37,7 @@ import { DocumentExtension, NotebookExtension } from '../extensions';
 import { NOTEBOOK_TOOLBAR_PLUGIN_NAME } from '../plugins/notebook-toolbar/names';
 import { DOCUMENT_TOOLBAR_PLUGIN_NAME } from '../plugins/document-toolbar/names';
 
-function workspace(): LoopWorkspaceContext {
+function workspace(): AgentWorkspaceContext {
   return {
     serverUrl: 'http://server',
     agentId: 'default',
@@ -52,7 +52,7 @@ function workspace(): LoopWorkspaceContext {
 }
 
 function context(): EditorToolbarContext {
-  return { workspace: workspace(), editorId: 'loop-default' };
+  return { workspace: workspace(), editorId: 'agent-default' };
 }
 
 describe('the editors', () => {
@@ -64,10 +64,10 @@ describe('the editors', () => {
     // plugin graph, which is when knowing it exists is most useful.
     expect(
       reactor.getManifest(NotebookPlugin.name)?.contributionPoints,
-    ).toContain('loop.notebook.toolbar');
+    ).toContain('agent.notebook.toolbar');
     expect(
       reactor.getManifest(DocumentPlugin.name)?.contributionPoints,
-    ).toContain('loop.document.toolbar');
+    ).toContain('agent.document.toolbar');
   });
 
   it('have no toolbar at all when no plugin provides one', () => {
@@ -76,8 +76,8 @@ describe('the editors', () => {
 
     // Not an empty bar — no bar. An editor with no toolbar plugin is still a
     // working editor.
-    expect(reactor.getContributions(LoopNotebookToolbar)).toEqual([]);
-    expect(reactor.getContributions(LoopDocumentToolbar)).toEqual([]);
+    expect(reactor.getContributions(AgentNotebookToolbar)).toEqual([]);
+    expect(reactor.getContributions(AgentDocumentToolbar)).toEqual([]);
   });
 });
 
@@ -87,12 +87,12 @@ describe('the chat', () => {
     reactor.start();
 
     const items = reactor
-      .getContributions(LoopNotebookToolbarItem)
+      .getContributions(AgentNotebookToolbarItem)
       .flatMap(entry => entry.value.items(context()));
 
     expect(items.map(item => item.key)).toEqual([
-      'loop-compact',
-      'loop-reproduce',
+      'agent-compact',
+      'agent-reproduce',
     ]);
   });
 
@@ -108,9 +108,9 @@ describe('the chat', () => {
     });
 
     const items = reactor
-      .getContributions(LoopNotebookToolbarItem)
+      .getContributions(AgentNotebookToolbarItem)
       .flatMap(entry => entry.value.items(ctx));
-    const compact = items.find(item => item.key === 'loop-compact');
+    const compact = items.find(item => item.key === 'agent-compact');
     (compact as { onClick: () => void }).onClick();
 
     // Through the same channel a person types into: a button that reached an
@@ -123,13 +123,13 @@ describe('the chat', () => {
   it('takes its buttons off the toolbar when it is switched off', () => {
     const reactor = buildReactorFromPlugins([ChatPlugin, NotebookPlugin]);
     reactor.start();
-    expect(reactor.getContributions(LoopNotebookToolbarItem)).toHaveLength(1);
+    expect(reactor.getContributions(AgentNotebookToolbarItem)).toHaveLength(1);
 
     reactor.disable(ChatPlugin.name);
 
     // The whole claim of the split, in one assertion: the notebook keeps
     // working and loses only what the chat was putting there.
-    expect(reactor.getContributions(LoopNotebookToolbarItem)).toEqual([]);
+    expect(reactor.getContributions(AgentNotebookToolbarItem)).toEqual([]);
     expect(reactor.isEnabled(NotebookPlugin.name)).toBe(true);
   });
 
@@ -138,10 +138,10 @@ describe('the chat', () => {
     reactor.start();
 
     const items = reactor
-      .getContributions(LoopDocumentToolbarItem)
+      .getContributions(AgentDocumentToolbarItem)
       .flatMap(entry => entry.value.items(context()));
 
-    expect(items.map(item => item.key)).toEqual(['loop-summarise']);
+    expect(items.map(item => item.key)).toEqual(['agent-summarise']);
   });
 });
 
@@ -179,7 +179,7 @@ describe('the toolbar plugins', () => {
       activated: false,
     });
     expect(manifest?.activationEvents).toEqual([
-      'onContributionPoint:loop.notebook.toolbar',
+      'onContributionPoint:agent.notebook.toolbar',
     ]);
   });
 
@@ -205,9 +205,9 @@ describe('an extension', () => {
   });
 
   it('refuses to group nothing', () => {
-    expect(() => defineExtension({ name: '@loop/empty', plugins: [] })).toThrow(
-      /at least one plugin/,
-    );
+    expect(() =>
+      defineExtension({ name: '@agent/empty', plugins: [] }),
+    ).toThrow(/at least one plugin/);
   });
 });
 
@@ -229,10 +229,10 @@ describe('switching the toolbar plugin off', () => {
    */
   const StandInToolbar = definePlugin({
     name: '@test/notebook-toolbar',
-    contributionPoints: [LoopNotebookToolbarItem],
+    contributionPoints: [AgentNotebookToolbarItem],
     contributes: [
       contribution(
-        LoopNotebookToolbar,
+        AgentNotebookToolbar,
         { items: () => [{ key: 'stand-in', type: 'spacer' as const }] },
         { id: 'toolbar' },
       ),
@@ -246,13 +246,13 @@ describe('switching the toolbar plugin off', () => {
       StandInToolbar,
     ]);
     reactor.start();
-    expect(reactor.getContributions(LoopNotebookToolbar)).toHaveLength(1);
+    expect(reactor.getContributions(AgentNotebookToolbar)).toHaveLength(1);
 
     reactor.disable(StandInToolbar.name);
 
     // Nothing provides the bar, so the view draws none — the assertion the old
     // arrangement could not make, because the editor drew it unconditionally.
-    expect(reactor.getContributions(LoopNotebookToolbar)).toEqual([]);
+    expect(reactor.getContributions(AgentNotebookToolbar)).toEqual([]);
     // And the editor is untouched.
     expect(reactor.isEnabled(NotebookPlugin.name)).toBe(true);
   });
@@ -263,7 +263,7 @@ describe('switching the toolbar plugin off', () => {
     reactor.disable(StandInToolbar.name);
     reactor.enable(StandInToolbar.name);
 
-    expect(reactor.getContributions(LoopNotebookToolbar)).toHaveLength(1);
+    expect(reactor.getContributions(AgentNotebookToolbar)).toHaveLength(1);
   });
 
   it('leaves the document with no toolbar to draw — the real plugin', async () => {
@@ -274,12 +274,12 @@ describe('switching the toolbar plugin off', () => {
     // the plugin that fills it. Fired directly here because a read schedules
     // the load on a microtask and a dynamic import takes an unknown number of
     // them; that a read fires it is the reactor's own test.
-    await reactor.fire(onContributionPoint(LoopDocumentToolbar));
-    expect(reactor.getContributions(LoopDocumentToolbar)).toHaveLength(1);
+    await reactor.fire(onContributionPoint(AgentDocumentToolbar));
+    expect(reactor.getContributions(AgentDocumentToolbar)).toHaveLength(1);
 
     reactor.disable(DOCUMENT_TOOLBAR_PLUGIN_NAME);
 
-    expect(reactor.getContributions(LoopDocumentToolbar)).toEqual([]);
+    expect(reactor.getContributions(AgentDocumentToolbar)).toEqual([]);
     expect(reactor.isEnabled(DocumentPlugin.name)).toBe(true);
   });
 
@@ -291,14 +291,14 @@ describe('switching the toolbar plugin off', () => {
     ]);
     reactor.start();
     // The chat still contributes — it does not know the bar has gone.
-    expect(reactor.getContributions(LoopNotebookToolbarItem)).toHaveLength(1);
+    expect(reactor.getContributions(AgentNotebookToolbarItem)).toHaveLength(1);
 
     reactor.disable(StandInToolbar.name);
 
     // What matters is what the editor draws, and with no provider that is
     // nothing at all: `useEditorToolbar` returns no items in this state. The
     // contribution surviving is correct, and invisible.
-    expect(reactor.getContributions(LoopNotebookToolbar)).toEqual([]);
-    expect(reactor.getContributions(LoopNotebookToolbarItem)).toHaveLength(1);
+    expect(reactor.getContributions(AgentNotebookToolbar)).toEqual([]);
+    expect(reactor.getContributions(AgentNotebookToolbarItem)).toHaveLength(1);
   });
 });

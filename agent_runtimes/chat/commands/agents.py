@@ -12,7 +12,7 @@ import httpx
 if TYPE_CHECKING:
     from ..tux import CliTux
 
-from agent_runtimes.loop.commands import CommandArgSpec
+from agent_runtimes.agent.commands import CommandArgSpec
 
 from .decisions import header_value
 
@@ -42,17 +42,17 @@ ARGS = (
 
 async def _use(tux: "CliTux", agent_id: str) -> None:
     """Swap this session's agent in place, through the session route."""
-    from agent_runtimes.loop.session import LoopRefused
+    from agent_runtimes.agent.session import AgentRefused
 
     from ..tux import STYLE_MUTED, STYLE_PRIMARY
 
-    session = getattr(tux, "loop_session", None) or getattr(tux, "session", None)
+    session = getattr(tux, "agent_session", None) or getattr(tux, "session", None)
     if session is None:
         tux.console.print("[red]No session to swap.[/red]")
         return
     try:
         session.with_agent(agent_id)
-    except LoopRefused as refused:
+    except AgentRefused as refused:
         tux.console.print(f"[red]{refused}[/red]")
         return
     tux.agent_id = session.agent_id

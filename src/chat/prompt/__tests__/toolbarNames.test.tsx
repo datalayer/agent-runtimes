@@ -155,7 +155,7 @@ describe('the composer’s toolbar, read by name', () => {
 
   it('names an application’s mode switch by its mode and the option it is on', () => {
     const app = parseAppspec({
-      schema: 'loop.app/v1',
+      schema: 'agent.app/v1',
       id: 'desk',
       name: 'Desk',
       kind: 'chat',

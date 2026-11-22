@@ -115,11 +115,11 @@ against a local test counterpart; none needs an account.
 | `python examples/protocols/agentic_commerce/checkout.py --yes` | an ACP checkout approved once | [Agentic Commerce](./agentic-commerce#example) |
 | `python examples/protocols/pact/personal_agent.py` | a personal agent at a Brand, both profiles | [PACT](./pact#examples) |
 | `python examples/protocols/pap_and_pact/app.py` | a PAP company and a PACT Brand, one record | [PAP and PACT](./pap-and-pact) |
-| `loop apps protocols agentspecs/agentspecs/apps/accounting.yaml` | what the runtime speaks, and what an application uses | below |
+| `agent apps protocols agentspecs/agentspecs/apps/accounting.yaml` | what the runtime speaks, and what an application uses | below |
 | the fixtures of *Conformance* above | the same bytes in both languages | above |
 | `EXAMPLE=ProtocolSignedRequestsExample npm run dev`, `EXAMPLE=ProtocolUcpCheckoutExample npm run dev` | the gallery's *Agent protocols*: a request signed in the browser, a UCP checkout approved on a card | [Web Bot Auth](./web-bot-auth#in-the-browser), [UCP](./ucp#in-the-browser) |
 
-`loop apps protocols [APP]` (and `GET /api/v1/protocols`, `listProtocols()`
+`agent apps protocols [APP]` (and `GET /api/v1/protocols`, `listProtocols()`
 in TypeScript) prints each plugin's description — name, id, version, layer,
 roles, state — and, given an Appspec or an `app.py`, marks what the
 application uses with a sentence each: the MCP servers it reaches, the PAP

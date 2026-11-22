@@ -4,11 +4,11 @@
  */
 
 /**
- * `@datalayer/loop-plugin-app-page` — an application's page, as a plugin.
+ * `@datalayer/agent-plugin-app-page` — an application's page, as a plugin.
  *
  * A chat, a widget or a worker runs as its conversation; its page — its
  * A2UI surface, or the default page of its kind when none is composed — is
- * contributed as the editor beside the chat (`LoopEditorView`), the place a
+ * contributed as the editor beside the chat (`AgentEditorView`), the place a
  * notebook or a document takes in other workspaces. `AppRenderer` mounts it
  * for an application that has one (`hasAppPage`) and opens the chat on it.
  *
@@ -17,7 +17,7 @@
  * A page the workspace does not draw itself — a decision's, whose page is
  * its host's (the Studio's run page, its hosted address, its embed) — is
  * contributed by the host through `defineAppHostPagePlugin`, as the
- * workspace's one view (`LoopViewType`), in a workspace without a
+ * workspace's one view (`AgentViewType`), in a workspace without a
  * conversation.
  *
  * @module apps/plugins/app-page
@@ -32,16 +32,16 @@ import {
 } from '@datalayer/reactor';
 import type { AppSpec } from '../../../types/agentspecs';
 import {
-  LoopEditorView,
-  LoopViewType,
+  AgentEditorView,
+  AgentViewType,
   type ChatSurfaceProps,
-  type LoopWorkspaceContext,
+  type AgentWorkspaceContext,
 } from '../../core';
 import { AppPage } from './AppPage';
 import { APP_PAGE_SURFACE } from './appPageModel';
 import { uiManifestOf } from '../../uiManifest';
 
-export const APP_PAGE_PLUGIN_NAME = '@datalayer/loop-plugin-app-page';
+export const APP_PAGE_PLUGIN_NAME = '@datalayer/agent-plugin-app-page';
 
 /** The plugin that draws an application's page beside its conversation. */
 export function defineAppPagePlugin(
@@ -60,7 +60,7 @@ export function defineAppPagePlugin(
     emoji: app.emoji || undefined,
     contributes: [
       contribution(
-        LoopEditorView,
+        AgentEditorView,
         {
           surfaceId: APP_PAGE_SURFACE,
           title: app.name,
@@ -85,7 +85,7 @@ export const APP_HOST_PAGE_VIEW = 'app-page';
 /** What a host's page is given: the application, and the workspace it is the view of. */
 export type AppHostPageProps = {
   app: AppSpec;
-  workspace: LoopWorkspaceContext;
+  workspace: AgentWorkspaceContext;
 };
 
 /**
@@ -103,7 +103,7 @@ export function defineAppHostPagePlugin(
     workspace,
   }: {
     viewType: string;
-    workspace: LoopWorkspaceContext;
+    workspace: AgentWorkspaceContext;
   }): JSX.Element {
     return <Page app={app} workspace={workspace} />;
   }
@@ -116,7 +116,7 @@ export function defineAppHostPagePlugin(
     emoji: app.emoji || undefined,
     contributes: [
       contribution(
-        LoopViewType,
+        AgentViewType,
         {
           viewType: APP_HOST_PAGE_VIEW,
           title: app.name,

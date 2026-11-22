@@ -6,7 +6,7 @@
 The AG-UI transport runs a pydantic-ai agent through pydantic-ai's own
 adapter; an agent that is not one — a harness driven over ACP — has only
 ``BaseAgent.stream``. This module turns that stream into the AG-UI events the
-web chat, the terminal (``loop``) and the embed read:
+web chat, the terminal (``agent``) and the embed read:
 
 - ``text`` → ``TEXT_MESSAGE_START`` / ``CONTENT`` / ``END``, one message per
   run of text;

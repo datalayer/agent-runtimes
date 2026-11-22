@@ -4,7 +4,7 @@
 """A harness served over the runtime's transports, and the orchestrator's stdio channel.
 
 - AG-UI: ``BaseAgent.stream`` as AG-UI events, what the
-  terminal (``loop``) and the web chat read;
+  terminal (``agent``) and the web chat read;
 - the orchestration adapter's ``ShieldChannel`` (the agent-runtimes
   part): ``stdio:<command>`` launches the agent through ``agent_shield.acp``,
   and the adapter's four verbs hold.
@@ -328,7 +328,7 @@ class TestShieldChannel:
 
 
 class TestTheRuntimeStartedWithAHarness:
-    """``loop --harness``: the runtime makes the harness's agent at startup
+    """``agent --harness``: the runtime makes the harness's agent at startup
     through the create route, serves it over AG-UI, and ends its process with it.
     """
 

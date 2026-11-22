@@ -103,7 +103,7 @@ def deployment_of(raw: Any) -> Deployment:
     )
 
 
-APP_ITEM_FORMAT = "loop.app.item/v1"
+APP_ITEM_FORMAT = "agent.app.item/v1"
 
 
 def version_of_model(model: Any) -> int:
@@ -398,7 +398,7 @@ def event_prompt(trigger: EventTrigger, details: Mapping[str, str]) -> str:
 
 def code_carried(code: Optional[Mapping[str, Any]]) -> Optional[dict[str, str]]:
     """The ``app.py`` of the version a deployment runs, ``{file, text}``,
-    checked: what `loop apps push` kept in the item (``model.code``), as
+    checked: what `agent apps push` kept in the item (``model.code``), as
     `store.code_of` reads it, and as the runtime reads it from the deployment
     (`GET /apps/deployments/{uid}/code`). ``None`` for a version written as a
     spec. `DeployRefused` for a shape that is not one.
@@ -802,7 +802,7 @@ def session_result(lines: Iterable[str]) -> tuple[str, dict[str, Any]]:
         if not isinstance(event, Mapping):
             continue
         kind = event.get("type")
-        if kind == "CUSTOM" and event.get("name") == "loop.session" and not uid:
+        if kind == "CUSTOM" and event.get("name") == "agent.session" and not uid:
             uid = str((event.get("value") or {}).get("uid") or "")
         elif kind == "RUN_FINISHED" and isinstance(event.get("result"), Mapping):
             # A run that ended on a question says it in its result.

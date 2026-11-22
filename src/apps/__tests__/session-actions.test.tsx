@@ -5,7 +5,7 @@
 
 /**
  * The thread's menu entries as contributions: the
- * `loop.session.action` point, the chat's five entries in the preset, and
+ * `agent.session.action` point, the chat's five entries in the preset, and
  * the menu drawn from the registry — what applies to the session as it
  * stands, by each entry's `when`; no *Resume* on an open thread. On a
  * turn's row, *Clone from here* names the turn; the header says the
@@ -24,7 +24,7 @@ import {
 } from '@datalayer/reactor';
 import { useReactor } from '@datalayer/reactor/react';
 import {
-  LoopSessionAction,
+  AgentSessionAction,
   sessionActionsFor,
   type SessionActionContribution,
   type SessionFacts,
@@ -79,7 +79,7 @@ afterEach(async () => {
   }
 });
 
-describe('the loop.session.action point', () => {
+describe('the agent.session.action point', () => {
   it('holds the chat plugin’s six entries, in their order', async () => {
     // The chat plugin alone: the preset pulls the notebook's JupyterLab in,
     // which this runner cannot load (the other preset specs fail the same
@@ -87,7 +87,7 @@ describe('the loop.session.action point', () => {
     const reactor = buildReactorFromPlugins([ChatPlugin]);
     await reactor.start();
     expect(
-      reactor.getContributions(LoopSessionAction).map(entry => entry.value.id),
+      reactor.getContributions(AgentSessionAction).map(entry => entry.value.id),
     ).toEqual([
       'switch-agent',
       'clone-from-here',
@@ -395,7 +395,7 @@ describe('the loop.session.action point', () => {
     const HostPlugin = definePlugin({
       name: '@test/host-panel',
       contributes: [
-        contribution(LoopSessionAction, panelled, {
+        contribution(AgentSessionAction, panelled, {
           id: panelled.id,
           order: 95,
         }),
@@ -449,7 +449,7 @@ describe('the loop.session.action point', () => {
     const HostPlugin = definePlugin({
       name: '@test/host-session-action',
       contributes: [
-        contribution(LoopSessionAction, studio, { id: studio.id, order: 90 }),
+        contribution(AgentSessionAction, studio, { id: studio.id, order: 90 }),
       ],
     });
     const reactor = buildReactorFromPlugins([ChatPlugin, HostPlugin]);

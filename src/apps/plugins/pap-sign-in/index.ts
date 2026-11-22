@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/loop-plugin-pap-sign-in` — *Sign in at a company*, drawn where
+ * `@datalayer/agent-plugin-pap-sign-in` — *Sign in at a company*, drawn where
  * the gateway's `pap_sign_in` answers.
  *
  * Its own renderer, for its own display type
@@ -32,12 +32,12 @@ import {
   type RendererProps,
 } from '@datalayer/reactor/ui/react';
 import type { ToolCallRenderContext } from '../../../types/chat';
-import { LoopSlots, type LoopWorkspaceContext } from '../../core';
+import { AgentSlots, type AgentWorkspaceContext } from '../../core';
 import { PapSignInCard } from './PapSignInCard';
 import { PAP_SIGN_IN_TOOL } from './signIn';
 import { uiManifestOf } from '../../uiManifest';
 
-export const PAP_SIGN_IN_PLUGIN_NAME = '@datalayer/loop-plugin-pap-sign-in';
+export const PAP_SIGN_IN_PLUGIN_NAME = '@datalayer/agent-plugin-pap-sign-in';
 
 /** The display type of a sign-in waiting for the person. */
 export const PAP_SIGN_IN_TYPE = 'application/vnd.datalayer.pap.sign-in+json';
@@ -74,7 +74,7 @@ export function createPapSignInPlugin(): ReactorPlugin<
   function Capture({
     workspace,
   }: {
-    workspace?: LoopWorkspaceContext;
+    workspace?: AgentWorkspaceContext;
   }): JSX.Element | null {
     const workspaceSend = workspace?.viewControls.send;
     useEffect(() => {
@@ -128,7 +128,7 @@ export function createPapSignInPlugin(): ReactorPlugin<
       return {
         components: [
           {
-            slot: LoopSlots.chatHeader,
+            slot: AgentSlots.chatHeader,
             id: 'pap-sign-in',
             Component: Capture as never,
           },
