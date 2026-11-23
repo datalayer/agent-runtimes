@@ -2847,6 +2847,37 @@ PAGE_MERMAID_UI_0_0_1 = UISpec(
     components=[],
 )
 
+PAGE_NOTEBOOK_UI_0_0_1 = UISpec(
+    id="page-notebook",
+    version="0.0.1",
+    name="Notebook in the page",
+    description="A live Jupyter notebook the agent reads, writes and runs in a named side-panel tab.",
+    emoji="📓",
+    octicon="rows",
+    plugin="@datalayer/agent-plugin-page-notebook",
+    folder="page-notebook",
+    implementation=UiImplementationSpec(
+        package="@datalayer/agent-runtimes",
+        module="lib/apps/plugins/page-notebook",
+        export="PageNotebookPlugin",
+        kind="plugin",
+    ),
+    per=None,
+    contributions=UiContributionsSpec(
+        slots=[],
+        points=["agent.chat.extras", "reactor.ui.renderer", "reactor.ui.toolBinding"],
+        commands=[],
+    ),
+    contribution_points=[],
+    settings={},
+    renderers=[],
+    placements=["message", "right", "left"],
+    header=None,
+    supersedes=[],
+    catalog="",
+    components=[],
+)
+
 PAGE_REACT_FLOW_UI_0_0_1 = UISpec(
     id="page-react-flow",
     version="0.0.1",
@@ -3901,6 +3932,7 @@ UI_CATALOGUE: Dict[str, UISpec] = {
     "page-excalidraw": PAGE_EXCALIDRAW_UI_0_0_1,
     "page-layout": PAGE_LAYOUT_UI_0_0_1,
     "page-mermaid": PAGE_MERMAID_UI_0_0_1,
+    "page-notebook": PAGE_NOTEBOOK_UI_0_0_1,
     "page-react-flow": PAGE_REACT_FLOW_UI_0_0_1,
     "page-sheet": PAGE_SHEET_UI_0_0_1,
     "pap-purchase": PAP_PURCHASE_UI_0_0_1,

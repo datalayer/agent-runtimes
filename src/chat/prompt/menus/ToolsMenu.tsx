@@ -33,10 +33,14 @@ import {
  * direct children, and one wrapped in a component of ours was not found —
  * drawn in the label instead, the mark on one line and the name under it.
  */
-function leadingMark(marks: Marks) {
-  return hasMark(marks) ? (
+function leadingMark(marks: Marks, fallback = false) {
+  return hasMark(marks) || fallback ? (
     <ActionList.LeadingVisual>
-      <SpecMark icon={marks.icon} emoji={marks.emoji} size={16} />
+      {hasMark(marks) ? (
+        <SpecMark icon={marks.icon} emoji={marks.emoji} size={16} />
+      ) : (
+        <ToolsIcon size={16} aria-hidden="true" />
+      )}
     </ActionList.LeadingVisual>
   ) : null;
 }
@@ -110,8 +114,11 @@ export function ToolsMenu({
               <ActionList.Group title="Frontend tools">
                 {availableFrontendTools.map(tool => (
                   <ActionList.Item key={tool.id} disabled>
-                    {leadingMark(marksOfFrontendTool(tool.name))}
+                    {leadingMark(marksOfFrontendTool(tool.name), true)}
                     {tool.name}
+                    <ActionList.Description variant="block">
+                      {tool.description || 'Runs in this page.'}
+                    </ActionList.Description>
                   </ActionList.Item>
                 ))}
               </ActionList.Group>

@@ -23,6 +23,7 @@ import type {
   FrontendToolDefinition,
   ToolStreamEvent,
 } from '../../../types/tools';
+import { frontendToolName } from '../../frontendToolNames';
 
 /**
  * Deduplication cache to prevent executing the same operation multiple times
@@ -107,12 +108,16 @@ export function createAgentRuntimesTool(
   definition: ToolDefinition,
   operation: ToolOperation<unknown, unknown>,
   context: ToolExecutionContext,
+  domain?: string,
 ): FrontendToolDefinition {
   // Create runner instance for this tool
   const runner = new OperationRunner();
 
   return {
-    name: definition.toolReferenceName || definition.name,
+    name: frontendToolName(
+      definition.toolReferenceName || definition.name,
+      domain,
+    ),
     description: definition.description,
     parameters: definition.parameters,
     // A tool that streams: subscribed through its
@@ -178,6 +183,7 @@ export function createAllAgentRuntimesTools(
   definitions: ToolDefinition[],
   operations: Record<string, ToolOperation<unknown, unknown>>,
   context: ToolExecutionContext,
+  domain?: string,
 ): FrontendToolDefinition[] {
   const tools: FrontendToolDefinition[] = [];
 
@@ -191,7 +197,12 @@ export function createAllAgentRuntimesTools(
       continue;
     }
 
-    const tool = createAgentRuntimesTool(definition, operation, context);
+    const tool = createAgentRuntimesTool(
+      definition,
+      operation,
+      context,
+      domain,
+    );
     tools.push(tool);
   }
 

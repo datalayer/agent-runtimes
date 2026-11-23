@@ -2870,6 +2870,39 @@ export const PAGE_MERMAID_UI_0_0_1: UISpec = {
   components: [],
 };
 
+export const PAGE_NOTEBOOK_UI_0_0_1: UISpec = {
+  id: 'page-notebook',
+  version: '0.0.1',
+  name: 'Notebook in the page',
+  description:
+    'A live Jupyter notebook the agent reads, writes and runs in a named side-panel tab.',
+  emoji: '📓',
+  octicon: 'rows',
+  plugin: '@datalayer/agent-plugin-page-notebook',
+  folder: 'page-notebook',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/page-notebook',
+    export: 'PageNotebookPlugin',
+    kind: 'plugin',
+  },
+  contributions: {
+    slots: [],
+    points: [
+      'agent.chat.extras',
+      'reactor.ui.renderer',
+      'reactor.ui.toolBinding',
+    ],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  placements: ['message', 'right', 'left'],
+  catalog: '',
+  components: [],
+};
+
 export const PAGE_REACT_FLOW_UI_0_0_1: UISpec = {
   id: 'page-react-flow',
   version: '0.0.1',
@@ -3927,6 +3960,7 @@ export const UI_CATALOGUE: Record<string, UISpec> = {
   'page-excalidraw': PAGE_EXCALIDRAW_UI_0_0_1,
   'page-layout': PAGE_LAYOUT_UI_0_0_1,
   'page-mermaid': PAGE_MERMAID_UI_0_0_1,
+  'page-notebook': PAGE_NOTEBOOK_UI_0_0_1,
   'page-react-flow': PAGE_REACT_FLOW_UI_0_0_1,
   'page-sheet': PAGE_SHEET_UI_0_0_1,
   'pap-purchase': PAP_PURCHASE_UI_0_0_1,

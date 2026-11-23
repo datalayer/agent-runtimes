@@ -28,13 +28,14 @@ import { openingCode, openingNotebook } from './openingNotebook';
 import { useSandboxService } from '../agents';
 
 export default function NotebookView({
+  surfaceId,
   workspace,
 }: ChatSurfaceProps): JSX.Element {
   const service = useSandboxService();
   const snapshot = useSignalValue(service.snapshot);
   // Named once: it identifies the notebook to its store, and it is what a
   // toolbar item is handed so it can report on *this* notebook.
-  const notebookId = workspace.surfaceId;
+  const notebookId = surfaceId;
 
   // The toolbar is not this view's to draw. It offers the point, and a plugin
   // provides the bar; with that plugin switched off there is no toolbar here

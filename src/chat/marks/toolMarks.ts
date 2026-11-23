@@ -19,6 +19,7 @@ import { MCP_SERVER_LIBRARY } from '../../specs/mcpServers';
 import { SKILLS_CATALOG } from '../../specs/skills';
 import { FRONTEND_TOOL_CATALOG } from '../../specs/frontendTools';
 import { BACKEND_TOOL_CATALOG } from '../../specs/backendTools';
+import { frontendToolName } from '../../tools/frontendToolNames';
 
 /** The two marks of a catalogue entry. */
 export interface Marks {
@@ -83,6 +84,10 @@ function frontendTools(): Map<string, { id: string } & Marks> {
       for (const name of Array.isArray(spec.toolset) ? spec.toolset : []) {
         if (!frontendIndex.has(name)) {
           frontendIndex.set(name, { id: spec.id, ...marksOf(spec) });
+        }
+        const publicName = frontendToolName(name);
+        if (!frontendIndex.has(publicName)) {
+          frontendIndex.set(publicName, { id: spec.id, ...marksOf(spec) });
         }
       }
     }
@@ -149,7 +154,17 @@ export function registerFrontendToolset(
 
 /** A frontend tool's marks, by its name. */
 export function marksOfFrontendTool(toolName: string): Marks {
-  return marksOf(frontendTools().get(toolName));
+  const indexed = frontendTools().get(toolName);
+  if (indexed) {
+    return marksOf(indexed);
+  }
+  if (toolName.startsWith('notebook')) {
+    return marksOf(FRONTEND_TOOL_CATALOG['jupyter-notebook']);
+  }
+  if (toolName.startsWith('document')) {
+    return marksOf(FRONTEND_TOOL_CATALOG['lexical-document']);
+  }
+  return {};
 }
 
 /** A runtime tool's marks, by the name it is registered under. */

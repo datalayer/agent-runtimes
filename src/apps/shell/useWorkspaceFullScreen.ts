@@ -352,6 +352,31 @@ export function useWorkspaceFullScreen(
     return node ? holdOverlaysInside(node) : undefined;
   }, [anchorRef, fullScreen]);
 
+  /*
+   * Primer's anchored overlays cache the anchor geometry. Entering either
+   * kind of full screen changes that geometry without necessarily resizing
+   * `window`, so a footer menu opened afterwards could reuse the position it
+   * had in the card. Announce the completed layout change after paint; the
+   * overlay positioning layer already listens to resize and measures again.
+   */
+  useEffect(() => {
+    if (!fullScreen) {
+      return undefined;
+    }
+    let second = 0;
+    const first = requestAnimationFrame(() => {
+      second = requestAnimationFrame(() =>
+        window.dispatchEvent(new Event('resize')),
+      );
+    });
+    return () => {
+      cancelAnimationFrame(first);
+      if (second) {
+        cancelAnimationFrame(second);
+      }
+    };
+  }, [fullScreen, topOffsetPx]);
+
   return { fullScreen, usingApi, toggle, topOffsetPx };
 }
 

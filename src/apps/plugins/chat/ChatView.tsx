@@ -71,6 +71,7 @@ import {
   resolveAgentspec,
 } from '../../apps/agent';
 import type { ProtocolConfig } from '../../../types/protocol';
+import { namedFrontendTools } from '../../../tools/frontendToolNames';
 import {
   targetRunsAgentInPage,
   type SandboxTarget,
@@ -1353,13 +1354,13 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
   const commandTools = useAgentCommandTools();
   const agentTools = useMemo(() => {
     if (commandTools.length === 0) {
-      return notebookTools;
+      return namedFrontendTools(notebookTools);
     }
     const taken = new Set(notebookTools.map(tool => tool.name));
-    return [
+    return namedFrontendTools([
       ...notebookTools,
       ...commandTools.filter(tool => !taken.has(tool.name)),
-    ];
+    ]);
   }, [notebookTools, commandTools]);
   /*
    * The frontend tools for an agent on a server: the active surface's
@@ -1377,14 +1378,17 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
   const pageTools = useMemo(() => {
     const own = notebookTools;
     if (!handedBundles?.length) {
-      return own;
+      return namedFrontendTools(own);
     }
     const handed = agentBundleToolDefinitions(
       bundles.filter(bundle => handedBundles.includes(bundle.id)),
       reactor,
     );
     const taken = new Set(own.map(tool => tool.name));
-    return [...own, ...handed.filter(tool => !taken.has(tool.name))];
+    return namedFrontendTools([
+      ...own,
+      ...handed.filter(tool => !taken.has(tool.name)),
+    ]);
   }, [notebookTools, handedBundles, bundles, reactor]);
   // The page's sandbox, while the agent turned here runs its code in it.
   pageSandboxRef.current =

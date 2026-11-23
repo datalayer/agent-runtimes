@@ -77,6 +77,7 @@ import { notebookHeaderPlugin } from './plugins/notebook-header';
 import { analysisHeaderPlugin } from './plugins/analysis-header';
 import { OdooContextChip, odooContextPlugin } from './plugins/odoo-context';
 import { NoticesPlugin } from './plugins/notices';
+import { pageNotebookSidePlugin } from './plugins/page-notebook';
 import {
   PageDocumentPlugin,
   pageDocumentSidePlugin,
@@ -146,6 +147,10 @@ export type AgentUiPlugin = {
 
 /** Each agent UI plugin, by its UI spec's id. */
 export const AGENT_UI_PLUGINS: Readonly<Record<string, AgentUiPlugin>> = {
+  'page-notebook': {
+    needsConnection: false,
+    side: pageNotebookSidePlugin,
+  },
   // Every public seed agent can browse the public Library. Publishing still
   // needs the signed-in owner and a confirmation in the page.
   'public-library': {

@@ -252,16 +252,22 @@ describe('AIApplication in visitor mode', () => {
 });
 
 describe('AIApplication in runtime mode', () => {
-  it('opens a notebook beside an agent whose injected UI contributes a chat surface', () => {
+  it('keeps a notebook placed in a side-panel tab out of the middle editor column', () => {
     const spec = getAgentspecs('worker-data-analyst');
-    expect(spec?.ui?.map(choice => choice.plugin)).toContain('notebook');
+    expect(spec?.ui?.map(choice => choice.plugin)).toContain('page-notebook');
     expect(spec?.frontendTools?.map(tool => tool.id)).toContain(
       'jupyter-notebook',
     );
     const app = agentAppspec(spec!);
 
-    expect(app.interface.layout).toBe('split');
-    expect(app.ui.map(choice => choice.plugin)).toContain('notebook');
+    expect(app.interface.layout).toBe('chat');
+    expect(app.ui).toContainEqual(
+      expect.objectContaining({
+        plugin: 'page-notebook',
+        placement: 'right',
+        tab: 'Notebook',
+      }),
+    );
   });
 
   it('does not infer a work surface from a frontend tool declaration alone', () => {

@@ -135,6 +135,8 @@ export interface BuiltinTool {
   id: string;
   /** Display name for the tool */
   name: string;
+  /** What the tool does, shown in the tools overlay when known. */
+  description?: string;
 }
 
 /**

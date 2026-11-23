@@ -317,10 +317,12 @@ export function agentAppspec(
   // Reactor UI whose catalogue entry contributes `agent.chat.surface` gets a
   // split work area. There is no coupling here to a notebook, document, tool
   // id or handler; each plugin owns those details.
-  const hasWorkSurface = ownUi.some(choice =>
-    UI_CATALOGUE[choice.plugin]?.contributions.points.includes(
-      'agent.chat.surface',
-    ),
+  const hasWorkSurface = ownUi.some(
+    choice =>
+      choice.placement === 'message' &&
+      UI_CATALOGUE[choice.plugin]?.contributions.points.includes(
+        'agent.chat.surface',
+      ),
   );
   app.interface.layout = hasWorkSurface ? 'split' : 'chat';
   app.interface.welcome = spec.welcomeMessage || spec.description;

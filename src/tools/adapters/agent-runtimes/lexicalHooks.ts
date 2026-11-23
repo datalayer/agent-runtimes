@@ -84,12 +84,17 @@ export function createLexicalTools(
   // is the one that keeps up as they come and go.
   const { definitions, operations } = getLexicalTools(documentId);
   registerFrontendToolset('lexical-document', definitions);
-  return createAllAgentRuntimesTools(definitions, operations, {
-    documentId,
-    executor,
-    format: 'toon',
-    ...contextOverrides,
-  });
+  return createAllAgentRuntimesTools(
+    definitions,
+    operations,
+    {
+      documentId,
+      executor,
+      format: 'toon',
+      ...contextOverrides,
+    },
+    'document',
+  );
 }
 
 export function useLexicalTools(
@@ -139,6 +144,7 @@ export function useLexicalTools(
       bundle.definitions,
       bundle.operations,
       context,
+      'document',
     );
   }, [bundle, context]);
 }
