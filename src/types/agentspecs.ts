@@ -279,6 +279,8 @@ export interface UiChoice {
   /** Where in the chat it goes, one of its spec's `placements`; its default unsaid. */
   placement?:
     'header' | 'toolbar' | 'footer' | 'banner' | 'left' | 'right' | 'message';
+  /** Its visible name in a left or right panel tab; the UI spec's name unsaid. */
+  tab?: string;
 }
 
 /** The layer of an agent's visit a protocol answers. */

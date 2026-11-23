@@ -2838,6 +2838,22 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           description:
             "Where in the chat it goes, one of its spec's `placements`; its default unsaid",
         },
+        tab: {
+          anyOf: [
+            {
+              maxLength: 40,
+              minLength: 1,
+              type: 'string',
+            },
+            {
+              type: 'null',
+            },
+          ],
+          default: null,
+          description:
+            "Its visible name in a left or right panel tab; the UI spec's name unsaid",
+          title: 'Tab',
+        },
       },
       required: ['plugin'],
       title: 'UiChoice',

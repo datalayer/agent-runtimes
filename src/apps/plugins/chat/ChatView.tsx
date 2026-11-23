@@ -2507,13 +2507,19 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
     decisions,
     selectedModel: activeModel,
     onModelSelect: model => void selectModel(model),
-    showToolsMenu: !presence,
+    // An anonymous application still explains all the equipment its fixed
+    // agent may use. The list belongs in the footer; only the compact dots in
+    // the writing area stand down below.
+    showToolsMenu:
+      config?.showToolsMenu ?? (anonymousConfig ? true : !presence),
     availableTools: offeredTools.runtime,
     availableFrontendTools: offeredTools.frontend,
     mcpServers: configQuery.data?.mcpServers ?? [],
     mcpStatusData: mcpStatus,
-    showMcpMenu: true,
-    showSkillsMenu: true,
+    showMcpMenu: config?.showMcpMenu ?? true,
+    showSkillsMenu: config?.showSkillsMenu ?? true,
+    showInlineEquipmentMenus:
+      config?.showInlineEquipmentMenus ?? !anonymousConfig,
     skills: skillsQuery.data?.skills ?? [],
     skillsLoading: skillsQuery.isLoading,
     enabledSkills,

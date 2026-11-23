@@ -236,6 +236,14 @@ export type AgentPresetOptions = {
   callToAction?: ChatCallToAction;
   /** Whether the counters are shown under the prompt; on unless said. */
   showTokenUsage?: boolean;
+  /** Whether the footer shows the MCP server menu; on unless said. */
+  showMcpMenu?: boolean;
+  /** Whether the footer shows the skills menu; on unless said. */
+  showSkillsMenu?: boolean;
+  /** Whether MCP and skills shortcuts are repeated inside the input box. */
+  showInlineEquipmentMenus?: boolean;
+  /** Whether the footer lists runtime and frontend tools. */
+  showToolsMenu?: boolean;
   /** Its voice, when it has one: the chat's `voice`. */
   voice?: ChatPluginConfig['voice'];
   /** The conversation to go on with: an embed's session after a reload. */
@@ -393,6 +401,10 @@ export function agentPlugins(options: AgentPresetOptions = {}): PluginRef[] {
     onSignIn,
     callToAction,
     showTokenUsage,
+    showMcpMenu,
+    showSkillsMenu,
+    showInlineEquipmentMenus,
+    showToolsMenu,
     voice,
     thread,
     floatingPrompt = false,
@@ -458,6 +470,10 @@ export function agentPlugins(options: AgentPresetOptions = {}): PluginRef[] {
           }
         : {}),
       showTokenUsage,
+      showMcpMenu,
+      showSkillsMenu,
+      showInlineEquipmentMenus,
+      showToolsMenu,
       ...(voice ? { voice } : {}),
       ...(thread ? { thread } : {}),
     }),

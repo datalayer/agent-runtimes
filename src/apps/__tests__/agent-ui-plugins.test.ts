@@ -213,6 +213,15 @@ describe('where each UI goes', () => {
     );
     expect(chrome.banner).toEqual(['linkedin-link']);
     expect(agentUiChromeOf(marketer, { anonymous: true }).header).toEqual([]);
+    expect(
+      agentUiChoicesOf('worker-functional-analyst')
+        .filter(choice => choice.placement === 'right')
+        .map(choice => [choice.plugin, choice.tab]),
+    ).toEqual([
+      ['page-excalidraw', 'Excalidraw'],
+      ['page-mermaid', 'Mermaid'],
+      ['page-react-flow', 'React Flow'],
+    ]);
   });
 
   it('takes a UI out of its slot when its server goes', () => {

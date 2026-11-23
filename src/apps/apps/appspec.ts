@@ -360,6 +360,7 @@ const uiChoices = (value: unknown): UiChoice[] =>
         ...(text(item.placement)
           ? { placement: text(item.placement) as UiChoice['placement'] }
           : {}),
+        ...(text(item.tab) ? { tab: text(item.tab) } : {}),
       }))
     : [];
 
@@ -1764,6 +1765,17 @@ export function uiProblems(
         );
       }
     }
+    const resolvedPlacement =
+      choice.placement ?? spec.placements?.[0] ?? 'message';
+    if (
+      choice.tab !== undefined &&
+      resolvedPlacement !== 'left' &&
+      resolvedPlacement !== 'right'
+    ) {
+      problems.push(
+        `The UI plugin ${spec.name} ('${id}') names a \`tab\`, but it goes in the chat's ${resolvedPlacement}, not its left or right panel.`,
+      );
+    }
     if (choice.renderer === undefined) {
       continue;
     }
@@ -2270,6 +2282,7 @@ export function dumpAppspec(app: AppSpec): Data {
         plugin: choice.plugin,
         ...(choice.renderer ? { renderer: choice.renderer } : {}),
         ...(choice.placement ? { placement: choice.placement } : {}),
+        ...(choice.tab ? { tab: choice.tab } : {}),
       })),
     )
     .part('pap', dumpPap(app.pap))

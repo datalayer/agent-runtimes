@@ -148,7 +148,10 @@ const PAGE_MERMAID_CARD: ToolCardPluginOptions = {
 export const PageMermaidPlugin = defineToolCardPlugin(PAGE_MERMAID_CARD);
 
 /** Placed in a side panel (`right`, `left`): the diagrams there, a line per call here. */
-export const pageMermaidSidePlugin = (side: SidePlacement) =>
-  defineToolCardPlugin(PAGE_MERMAID_CARD, side);
+export const pageMermaidSidePlugin = (side: SidePlacement, tab?: string) =>
+  defineToolCardPlugin(
+    { ...PAGE_MERMAID_CARD, ...(tab ? { panelLabel: tab } : {}) },
+    side,
+  );
 
 export default PageMermaidPlugin;

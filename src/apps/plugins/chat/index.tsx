@@ -158,6 +158,14 @@ export type ChatPluginConfig = {
    * On unless said: a person using an application is not asking.
    */
   showTokenUsage?: boolean;
+  /** Whether the composer footer shows the MCP server menu; on unless said. */
+  showMcpMenu?: boolean;
+  /** Whether the composer footer shows the skills menu; on unless said. */
+  showSkillsMenu?: boolean;
+  /** Whether MCP and skills shortcuts are repeated inside the input box. */
+  showInlineEquipmentMenus?: boolean;
+  /** Whether the footer lists runtime and frontend tools. */
+  showToolsMenu?: boolean;
   /**
    * Its voice: a microphone in the composer,
    * the words written in it as they are heard, and the answers said by

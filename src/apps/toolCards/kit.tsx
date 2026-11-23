@@ -408,6 +408,8 @@ export type ToolCardPluginOptions = {
    * opens with its tools' first call.
    */
   Panel?: ComponentType<AgentSidePanelProps>;
+  /** Its concise visible tab name; the display name when unsaid. */
+  panelLabel?: string;
   /** The width its panel needs, in pixels. */
   panelWidth?: number;
   /**
@@ -516,7 +518,7 @@ export function defineToolCardPlugin(
                       Component: Panel as never,
                       order: SIDE_PANEL_ORDER,
                       panel: {
-                        label: options.displayName,
+                        label: options.panelLabel ?? options.displayName,
                         follows: options.tools,
                         ...(options.panelWidth
                           ? { width: options.panelWidth }

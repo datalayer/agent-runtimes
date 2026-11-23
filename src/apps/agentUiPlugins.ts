@@ -86,6 +86,10 @@ import {
   PageMermaidPlugin,
   pageMermaidSidePlugin,
 } from './plugins/page-mermaid';
+import {
+  PageReactFlowPlugin,
+  pageReactFlowSidePlugin,
+} from './plugins/page-react-flow';
 import { PageSheetPlugin, pageSheetSidePlugin } from './plugins/page-sheet';
 import { PapPurchasePlugin } from './plugins/pap-purchase';
 import { ProductCardsPlugin } from './plugins/product-cards';
@@ -128,9 +132,9 @@ export type AgentUiPlugin = {
    * Its card's live view in a side panel, its calls a line each in the
    * conversation (a deck, a sheet built in the page), when it can go there.
    */
-  side?: (side: SidePlacement) => PluginRef;
+  side?: (side: SidePlacement, tab?: string) => PluginRef;
   /** Its plugin for a chrome placement, when it has one (an Agent workspace). */
-  chrome?: (placement: ChromePlacement) => PluginRef;
+  chrome?: (placement: ChromePlacement, tab?: string) => PluginRef;
   /** What it draws in the chat's chrome (`Chat`, outside an Agent workspace). */
   Chrome?: ComponentType<ChromeComponentProps>;
 };
@@ -261,6 +265,11 @@ export const AGENT_UI_PLUGINS: Readonly<Record<string, AgentUiPlugin>> = {
     message: PageMermaidPlugin,
     side: pageMermaidSidePlugin,
   },
+  'page-react-flow': {
+    needsConnection: false,
+    message: PageReactFlowPlugin,
+    side: pageReactFlowSidePlugin,
+  },
   /*
    * Every agent's: it opens and closes the side panels (`side-panels`), and
    * slides a short notice in from an edge (`notices`), with frontend tools
@@ -383,12 +392,12 @@ export function agentUiPluginsFor(
     if (choice.placement === 'message') {
       plugin = entry.message;
     } else if (isSidePlacement(choice.placement) && entry.side) {
-      plugin = entry.side(choice.placement);
+      plugin = entry.side(choice.placement, choice.tab);
     } else if (
       isChromePlacement(choice.placement) &&
       CHROME_SLOTS[choice.placement]
     ) {
-      plugin = entry.chrome?.(choice.placement);
+      plugin = entry.chrome?.(choice.placement, choice.tab);
     }
     if (plugin) {
       seen.add(choice.plugin);

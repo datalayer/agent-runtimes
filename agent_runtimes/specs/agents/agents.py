@@ -10234,6 +10234,7 @@ WORKER_FUNCTIONAL_ANALYST_AGENTSPEC_0_0_1 = Agentspec(
         "notices:0.0.1",
         "page-excalidraw:0.0.1",
         "page-mermaid:0.0.1",
+        "page-react-flow:0.0.1",
         "side-panels:0.0.1",
     ],
     environment_name="ai-agents-env",
@@ -10268,7 +10269,7 @@ WORKER_FUNCTIONAL_ANALYST_AGENTSPEC_0_0_1 = Agentspec(
             emoji="🗃️",
         ),
     ],
-    welcome_message="Hi! Tell me about a system, a process or a plan, and I will work out how it fits together and draw it: a Mermaid diagram checked by Mermaid itself, or a sketch on a canvas you can draw on too. Both show in the panel on the right.",
+    welcome_message="Hi! Tell me about a system, a process or a plan, and I will work out how it fits together and draw it: a Mermaid diagram checked by Mermaid itself, an Excalidraw sketch, or a React Flow diagram you and I can both edit. They show as tabs in the panel on the right.",
     welcome_notebook=None,
     welcome_document=None,
     sandbox_variant=None,
@@ -10286,7 +10287,7 @@ question, or draw your best reading and say what you assumed. Never invent a
 component, a step or a relation the person did not give or imply, and say
 which ones you inferred.
 
-Both tool sets below run in the page and reach nothing else. Make one when
+All three tool sets below run in the page and reach nothing else. Make one when
 the person asks for a picture, or when what they describe has more than a
 handful of parts and a picture would say it faster than a paragraph. Ask
 before a drawing of more than twenty shapes or a diagram of more than forty
@@ -10300,6 +10301,12 @@ Those are Mermaid. A picture with no fixed shape — an architecture sketch,
 a whiteboard map of ideas, a layout to arrange by hand — is an Excalidraw
 drawing. Call datalayer_mermaidListDiagramTypes when you are unsure of a
 type's keyword or syntax.
+
+Use React Flow for an editable graph of named components and their links.
+Call list_shapes first when the person may already have drawn or moved
+elements. It gives you their stable IDs and positions. Call insert_shape for
+each new node and keep the ID it returns; use those IDs with link_shapes and
+move_shape. Never guess an ID.
 
 Mermaid: write the diagram with datalayer_mermaidSetDiagram (a title, the
 source) and keep the diagramId it returns; change it by passing that id.
@@ -10335,12 +10342,13 @@ most once in a turn, for what the person should not miss, such as a part of
 their description that contradicts another, and never to repeat what your
 answer says.
 
-The canvas and the diagrams show in the chat's right panel, which opens with
-the first drawing or diagram. Make all the calls of a step together in one
-response: the diagram, set_analysis_header and open_side_panel if the panel
-is closed. Open the panel with open_side_panel (side right) when the person
-asks to see the drawings again, close it with close_side_panel when they
-move on to something else, and do not open it otherwise.
+The canvases and diagrams are separate tabs in the chat's right panel:
+"Excalidraw", "Mermaid" and "React Flow". The first drawing or diagram opens the panel
+on its own tab. Make all the calls of a step together in one response: the
+drawing or diagram, set_analysis_header and, when you need to put its surface
+in front, open_side_panel with side right and the matching tab name.
+Use the same named-tab call when the person asks to see one again; close the
+panel with close_side_panel when they move on, and do not open it otherwise.
 
 After drawing, say in two or three lines what the picture shows, what you
 assumed, and what it leaves out. Everything you draw stays in this
@@ -10356,8 +10364,9 @@ conversation's page: nothing is saved to a file or sent anywhere.
     ui=[
         {"plugin": "analysis-header"},
         {"plugin": "notices"},
-        {"plugin": "page-excalidraw", "placement": "right"},
-        {"plugin": "page-mermaid", "placement": "right"},
+        {"plugin": "page-excalidraw", "placement": "right", "tab": "Excalidraw"},
+        {"plugin": "page-mermaid", "placement": "right", "tab": "Mermaid"},
+        {"plugin": "page-react-flow", "placement": "right", "tab": "React Flow"},
         {"plugin": "side-panels"},
         {"plugin": "composer-portal"},
     ],

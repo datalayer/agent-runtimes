@@ -63,6 +63,7 @@ import {
 import { IconButton } from '@primer/react';
 import { SidebarExpandIcon, XIcon } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
+import { ViewTabs } from '@datalayer/core/lib/components/tabs';
 import {
   useContributions,
   useSlotComponents,
@@ -121,6 +122,14 @@ export type AgentSidePanel = {
    * server's prefix is allowed.
    */
   follows?: readonly string[];
+};
+
+/** A component as the panel and the agent name it in the tabs. */
+export type SidePanelTab = {
+  /** Stable Reactor component id; accepted by `open_side_panel`. */
+  id: string;
+  /** The tab's visible name; accepted by `open_side_panel` too. */
+  label: string;
 };
 
 /** What a component of a side panel is rendered with. */
@@ -284,6 +293,12 @@ export type SidePanelState = {
   width: number;
   /** The event that made it as it is: what decides between two panels. */
   latest: SidePanelEvent | undefined;
+  /** The contribution shown in the panel. */
+  activeTab: string;
+  /** The contributions as tabs, in slot order. */
+  tabs: SidePanelTab[];
+  /** Show another contribution, as the person or the agent asks. */
+  setActiveTab: (id: string) => void;
 };
 
 /**
@@ -365,6 +380,77 @@ export function useSidePanel(side: SidePanelSide): SidePanelState {
   const open = sidePanelOpen(fromCalls, person);
   const latest =
     person && (!fromCalls || laterThan(person, fromCalls)) ? person : fromCalls;
+  const tabs = useMemo<SidePanelTab[]>(
+    () =>
+      components.map(component => {
+        const label = component.panel?.label;
+        return {
+          id: component.id,
+          label:
+            (typeof label === 'function' ? label(application) : label) ||
+            component.id,
+        };
+      }),
+    [components, application],
+  );
+  const requested = useMemo(() => {
+    for (const call of [...calls].sort((a, b) => b.order - a.order)) {
+      if (!succeeded(call)) {
+        continue;
+      }
+      if (
+        toolPattern(OPEN_SIDE_PANEL).test(call.toolName) &&
+        call.args.side === side &&
+        typeof call.args.tab === 'string'
+      ) {
+        const named = call.args.tab.trim().toLocaleLowerCase();
+        const tab = tabs.find(
+          candidate =>
+            candidate.id.toLocaleLowerCase() === named ||
+            candidate.label.toLocaleLowerCase() === named,
+        );
+        if (tab) {
+          return { id: tab.id, order: call.order };
+        }
+      }
+      // What a contribution builds belongs on its own tab: its first or
+      // latest successful tool call both opens the panel and selects it.
+      const component = components.find(candidate =>
+        candidate.panel?.follows?.some(pattern =>
+          toolPattern(pattern).test(call.toolName),
+        ),
+      );
+      if (component) {
+        return { id: component.id, order: call.order };
+      }
+    }
+    return undefined;
+  }, [calls, side, tabs, components]);
+  const [tabFromPerson, setTabFromPerson] = useState<{
+    id: string;
+    event: SidePanelEvent;
+    generation: number;
+  }>();
+  const personTab =
+    tabFromPerson && tabFromPerson.generation === generation
+      ? tabFromPerson
+      : undefined;
+  const activeTab =
+    personTab && (!requested || personTab.event.order >= requested.order)
+      ? personTab.id
+      : (requested?.id ?? tabs[0]?.id ?? '');
+  const setActiveTab = useCallback(
+    (id: string) => {
+      if (!tabs.some(tab => tab.id === id)) return;
+      PERSON_SEQ += 1;
+      setTabFromPerson({
+        id,
+        event: { open: true, order: latestOrder, seq: PERSON_SEQ },
+        generation,
+      });
+    },
+    [tabs, latestOrder, generation],
+  );
   return {
     side,
     components,
@@ -378,6 +464,9 @@ export function useSidePanel(side: SidePanelSide): SidePanelState {
     toggleRef,
     width: sidePanelWidth(components),
     latest,
+    activeTab,
+    tabs,
+    setActiveTab,
   };
 }
 
@@ -425,7 +514,7 @@ export function bothFit(
  * the agent's `open_side_panel` is answered from (a panel with nothing in it
  * is not opened, and the agent is told so).
  */
-export const SIDE_PANELS_SHOWN: Record<SidePanelSide, string[]> = {
+export const SIDE_PANELS_SHOWN: Record<SidePanelSide, SidePanelTab[]> = {
   left: [],
   right: [],
 };
@@ -440,15 +529,18 @@ export function useSidePanels(rowRef: RefObject<HTMLElement | null>): {
   const right = useSidePanel('right');
   const width = useWidth(rowRef);
   const narrow = width > 0 && width < SIDE_PANEL_NARROW;
-  const leftNames = left.components.map(component => component.id).join(',');
-  const rightNames = right.components.map(component => component.id).join(',');
+  const leftNames = left.tabs.map(tab => `${tab.id}:${tab.label}`).join(',');
+  const rightNames = right.tabs.map(tab => `${tab.id}:${tab.label}`).join(',');
   useEffect(() => {
-    SIDE_PANELS_SHOWN.left = leftNames ? leftNames.split(',') : [];
-    SIDE_PANELS_SHOWN.right = rightNames ? rightNames.split(',') : [];
+    SIDE_PANELS_SHOWN.left = left.tabs;
+    SIDE_PANELS_SHOWN.right = right.tabs;
     return () => {
       SIDE_PANELS_SHOWN.left = [];
       SIDE_PANELS_SHOWN.right = [];
     };
+    // The names carry both stable ids and labels; the arrays themselves may
+    // be re-exposed by Reactor while their contents stay the same.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leftNames, rightNames]);
   if (left.open && right.open && width > 0 && !bothFit(width, left, right)) {
     // The one opened last stays.
@@ -514,7 +606,16 @@ export function SidePanel({
   narrow,
   props,
 }: SidePanelProps): JSX.Element | null {
-  const { components, open, setOpen, toggleRef, side, width } = panel;
+  const {
+    components,
+    open,
+    setOpen,
+    toggleRef,
+    side,
+    width,
+    activeTab,
+    setActiveTab,
+  } = panel;
   const panelRef = useRef<HTMLElement | null>(null);
   // Mounted on the first opening, and kept: a panel nobody opens loads nothing.
   const [opened, setOpened] = useState(false);
@@ -647,23 +748,35 @@ export function SidePanel({
             />
           </Box>
         ) : null}
+        {components.length > 1 ? (
+          <ViewTabs
+            tabs={panel.tabs}
+            value={activeTab}
+            onChange={setActiveTab}
+            label={`${panel.label} views`}
+            mb={0}
+            data-testid={`agent-${side}-panel-tabs`}
+          />
+        ) : null}
         {/* Rendered with the opening itself, so that the focus finds its Close control. */}
         {opened || open
-          ? components.map(component => {
-              const { Component } = component;
-              return (
-                <Component
-                  key={component.id}
-                  {...props}
-                  application={panel.application}
-                  side={side}
-                  open={open}
-                  close={close}
-                  toggle={toggle}
-                  panelId={panel.panelId}
-                />
-              );
-            })
+          ? components
+              .filter(component => component.id === activeTab)
+              .map(component => {
+                const { Component } = component;
+                return (
+                  <Component
+                    key={component.id}
+                    {...props}
+                    application={panel.application}
+                    side={side}
+                    open={open}
+                    close={close}
+                    toggle={toggle}
+                    panelId={panel.panelId}
+                  />
+                );
+              })
           : null}
       </Box>
     </Box>

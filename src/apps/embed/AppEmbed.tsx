@@ -224,13 +224,22 @@ export type AppEmbedProps = {
  * What else a host gives the application's renderer: its own plugins in the
  * workspace (cards, panels, actions of its menus), the UI plugins its
  * organization turned off, its computer or its builder's sidebar beside its
- * page, whether its composer takes the caret — Datalayer's own page at an
- * application's address passes these (`AIApplication`'s `renderer`).
+ * page, whether its composer takes the caret, and where its capability menus
+ * are drawn — Datalayer's own page at an application's address passes these
+ * (`AIApplication`'s `renderer`).
  */
 export type AppRendererExtras = Partial<
   Pick<
     AppRendererProps,
-    'plugins' | 'pluginsOff' | 'computer' | 'sidebar' | 'autoFocusPrompt'
+    | 'plugins'
+    | 'pluginsOff'
+    | 'computer'
+    | 'sidebar'
+    | 'autoFocusPrompt'
+    | 'showMcpMenu'
+    | 'showSkillsMenu'
+    | 'showInlineEquipmentMenus'
+    | 'showToolsMenu'
   >
 >;
 

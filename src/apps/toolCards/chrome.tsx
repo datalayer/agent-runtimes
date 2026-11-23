@@ -104,9 +104,10 @@ export function defineChromePlugin(
   options: ChromePluginOptions,
 ): (
   placement: ChromePlacement,
+  tab?: string,
 ) => ReactorPlugin<Record<string, never>, unknown, unknown> {
   const { Component } = options;
-  return placement => {
+  return (placement, tab) => {
     const slot = options.slots?.[placement] ?? CHROME_SLOTS[placement];
     function Slotted(): JSX.Element {
       return <Component placement={placement} />;
@@ -131,7 +132,7 @@ export function defineChromePlugin(
                   ...(isSidePlacement(placement)
                     ? {
                         order: SIDE_PANEL_ORDER,
-                        panel: { label: options.displayName },
+                        panel: { label: tab ?? options.displayName },
                       }
                     : {}),
                 },

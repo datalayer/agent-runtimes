@@ -2837,6 +2837,39 @@ export const PAGE_MERMAID_UI_0_0_1: UISpec = {
   components: [],
 };
 
+export const PAGE_REACT_FLOW_UI_0_0_1: UISpec = {
+  id: 'page-react-flow',
+  version: '0.0.1',
+  name: 'React Flow in the page',
+  description:
+    'An editable node-and-link diagram shared by the person and the agent, with stable element IDs: the agent can read shapes the person drew, then insert, move and link them.',
+  emoji: '🔀',
+  octicon: 'workflow',
+  plugin: '@datalayer/agent-plugin-page-react-flow',
+  folder: 'page-react-flow',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/page-react-flow',
+    export: 'PageReactFlowPlugin',
+    kind: 'plugin',
+  },
+  contributions: {
+    slots: [],
+    points: [
+      'agent.chat.extras',
+      'reactor.ui.renderer',
+      'reactor.ui.toolBinding',
+    ],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  placements: ['message', 'right', 'left'],
+  catalog: '',
+  components: [],
+};
+
 export const PAGE_SHEET_UI_0_0_1: UISpec = {
   id: 'page-sheet',
   version: '0.0.1',
@@ -3160,7 +3193,7 @@ export const SIDE_PANELS_UI_0_0_1: UISpec = {
   version: '0.0.1',
   name: 'Side panels',
   description:
-    "The agent opens and closes the chat's left and right panels, where its UI placed there shows: the deck it builds, the sheet it fills, its title bar's controls.",
+    "The agent opens and closes the chat's left and right panels and selects a named tab when several UI components are placed there: the deck it builds, the sheet it fills, its diagrams or controls.",
   emoji: '🗂️',
   octicon: 'sidebar-expand',
   plugin: '@datalayer/agent-plugin-side-panels',
@@ -3827,6 +3860,7 @@ export const UI_CATALOGUE: Record<string, UISpec> = {
   'page-excalidraw': PAGE_EXCALIDRAW_UI_0_0_1,
   'page-layout': PAGE_LAYOUT_UI_0_0_1,
   'page-mermaid': PAGE_MERMAID_UI_0_0_1,
+  'page-react-flow': PAGE_REACT_FLOW_UI_0_0_1,
   'page-sheet': PAGE_SHEET_UI_0_0_1,
   'pap-purchase': PAP_PURCHASE_UI_0_0_1,
   'pap-sign-in': PAP_SIGN_IN_UI_0_0_1,

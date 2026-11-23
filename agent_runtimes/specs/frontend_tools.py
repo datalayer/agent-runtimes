@@ -236,6 +236,18 @@ PAGE_MERMAID_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
     emoji="🧜",
 )
 
+PAGE_REACT_FLOW_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
+    id="page-react-flow",
+    version="0.0.1",
+    name="React Flow in the page",
+    description="Build and edit a node-and-link diagram in the page with stable shape IDs shared with the person — list the current canvas, insert and move shapes, and link them.",
+    tags=["frontend", "react-flow", "diagrams", "page"],
+    enabled=True,
+    toolset=["list_shapes", "insert_shape", "link_shapes", "move_shape"],
+    icon="@primer/octicons-react:workflow",
+    emoji="🔀",
+)
+
 PAGE_SHEET_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
     id="page-sheet",
     version="0.0.1",
@@ -261,7 +273,7 @@ SIDE_PANELS_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
     id="side-panels",
     version="0.0.1",
     name="Side panels",
-    description="Open and close the chat's left and right panels, where the UI placed there shows — run in the page, changing nothing else.",
+    description="Open and close the chat's left and right panels, selecting a named component tab when several UIs are placed there — run in the page, changing nothing else.",
     tags=["frontend", "page", "panels"],
     enabled=True,
     toolset=["open_side_panel", "close_side_panel"],
@@ -287,6 +299,7 @@ FRONTEND_TOOL_CATALOG: Dict[str, FrontendToolSpec] = {
     "page-deck": PAGE_DECK_FRONTEND_TOOL_SPEC_0_0_1,
     "page-excalidraw": PAGE_EXCALIDRAW_FRONTEND_TOOL_SPEC_0_0_1,
     "page-mermaid": PAGE_MERMAID_FRONTEND_TOOL_SPEC_0_0_1,
+    "page-react-flow": PAGE_REACT_FLOW_FRONTEND_TOOL_SPEC_0_0_1,
     "page-sheet": PAGE_SHEET_FRONTEND_TOOL_SPEC_0_0_1,
     "side-panels": SIDE_PANELS_FRONTEND_TOOL_SPEC_0_0_1,
 }

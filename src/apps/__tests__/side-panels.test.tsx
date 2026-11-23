@@ -261,7 +261,9 @@ describe('the deck placed in the right panel', () => {
 
   it('opens with the first slide, and the conversation keeps a line per call', async () => {
     mount(placed());
-    expect(SIDE_PANELS_SHOWN.right).toEqual(['page-deck-right']);
+    expect(SIDE_PANELS_SHOWN.right).toEqual([
+      { id: 'page-deck-right', label: 'Deck in the page' },
+    ]);
     // The handler builds the deck in the page; the transcript records the call.
     await act(async () => {
       PAGE_DECK.set({
@@ -418,12 +420,25 @@ describe('the agent’s tools for the side panels', () => {
   const [open, close] = sidePanelsTools();
 
   it('open a side that has something placed in it, and say so of one that has not', async () => {
-    SIDE_PANELS_SHOWN.right = ['page-deck-right'];
+    SIDE_PANELS_SHOWN.right = [
+      { id: 'page-deck-right', label: 'Deck in the page' },
+      { id: 'page-sheet-right', label: 'Spreadsheet' },
+    ];
     SIDE_PANELS_SHOWN.left = [];
     await expect(open.handler!({ side: 'right' })).resolves.toEqual({
       side: 'right',
       open: true,
     });
+    await expect(
+      open.handler!({ side: 'right', tab: 'Spreadsheet' }),
+    ).resolves.toEqual({
+      side: 'right',
+      open: true,
+      tab: 'page-sheet-right',
+    });
+    await expect(
+      open.handler!({ side: 'right', tab: 'Unknown' }),
+    ).rejects.toThrow('Choose one of: Deck in the page, Spreadsheet');
     await expect(open.handler!({ side: 'left' })).rejects.toThrow(
       'Nothing is placed in the left panel of this chat',
     );
@@ -437,7 +452,61 @@ describe('the agent’s tools for the side panels', () => {
     expect(open.summaryOf!({ side: 'right' }, {})).toBe(
       'Opened the right panel',
     );
+    expect(open.summaryOf!({ side: 'right', tab: 'Spreadsheet' }, {})).toBe(
+      'Opened the right panel on Spreadsheet',
+    );
     SIDE_PANELS_SHOWN.right = [];
+  });
+});
+
+describe('several components in one side panel', () => {
+  const placed = () =>
+    agentUiPluginsFor([
+      { plugin: 'page-excalidraw', placement: 'right', tab: 'Excalidraw' },
+      { plugin: 'page-mermaid', placement: 'right', tab: 'Mermaid' },
+      { plugin: 'page-react-flow', placement: 'right', tab: 'React Flow' },
+      { plugin: 'side-panels', placement: 'message' },
+    ]);
+
+  it('shows one named component at a time and lets the agent select it', () => {
+    mount(placed());
+    act(() => rightToggle()!.click());
+    const excalidraw = screen.getByRole('tab', { name: 'Excalidraw' });
+    const mermaid = screen.getByRole('tab', { name: 'Mermaid' });
+    const reactFlow = screen.getByRole('tab', { name: 'React Flow' });
+    expect(excalidraw.getAttribute('aria-selected')).toBe('true');
+    expect(mermaid.getAttribute('aria-selected')).toBe('false');
+    expect(reactFlow.getAttribute('aria-selected')).toBe('false');
+    expect(
+      rightPanel()!.querySelector(
+        '[data-page-tool-panel-empty="page-excalidraw"]',
+      ),
+    ).not.toBeNull();
+    expect(
+      rightPanel()!.querySelector(
+        '[data-page-tool-panel-empty="page-mermaid"]',
+      ),
+    ).toBeNull();
+
+    act(() => mermaid.click());
+    expect(mermaid.getAttribute('aria-selected')).toBe('true');
+    expect(
+      rightPanel()!.querySelector(
+        '[data-page-tool-panel-empty="page-mermaid"]',
+      ),
+    ).not.toBeNull();
+
+    recorded(
+      'open_side_panel',
+      { side: 'right', tab: 'Excalidraw' },
+      { side: 'right', open: true, tab: 'page-excalidraw-right' },
+    );
+    expect(excalidraw.getAttribute('aria-selected')).toBe('true');
+    expect(
+      rightPanel()!.querySelector(
+        '[data-page-tool-panel-empty="page-excalidraw"]',
+      ),
+    ).not.toBeNull();
   });
 });
 

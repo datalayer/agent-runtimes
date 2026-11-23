@@ -47,8 +47,13 @@ ACCOUNTING_APP_0_0_2 = AppSpec.model_validate(
         ],
         "protocols": [],
         "ui": [
-            {"plugin": "chat", "renderer": None, "placement": None},
-            {"plugin": "a2ui-surface", "renderer": "a2ui", "placement": None},
+            {"plugin": "chat", "renderer": None, "placement": None, "tab": None},
+            {
+                "plugin": "a2ui-surface",
+                "renderer": "a2ui",
+                "placement": None,
+                "tab": None,
+            },
         ],
         "pair": None,
         "rules": [
@@ -196,10 +201,15 @@ AWS_STEWARD_AGENT_APP_0_0_1 = AppSpec.model_validate(
         "connections": [],
         "protocols": [],
         "ui": [
-            {"plugin": "chat", "renderer": None, "placement": None},
-            {"plugin": "page-layout", "renderer": None, "placement": None},
-            {"plugin": "app-page", "renderer": None, "placement": None},
-            {"plugin": "canvas-blocks", "renderer": None, "placement": None},
+            {"plugin": "chat", "renderer": None, "placement": None, "tab": None},
+            {"plugin": "page-layout", "renderer": None, "placement": None, "tab": None},
+            {"plugin": "app-page", "renderer": None, "placement": None, "tab": None},
+            {
+                "plugin": "canvas-blocks",
+                "renderer": None,
+                "placement": None,
+                "tab": None,
+            },
         ],
         "pair": None,
         "rules": [
@@ -422,8 +432,8 @@ BOOKKEEPING_DESK_APP_0_0_3 = AppSpec.model_validate(
         "connections": [],
         "protocols": ["pap"],
         "ui": [
-            {"plugin": "chat", "renderer": None, "placement": None},
-            {"plugin": "pap-sign-in", "renderer": None, "placement": None},
+            {"plugin": "chat", "renderer": None, "placement": None, "tab": None},
+            {"plugin": "pap-sign-in", "renderer": None, "placement": None, "tab": None},
         ],
         "pap": {
             "profile": "draft-01",
@@ -615,8 +625,13 @@ CHANGE_DETECTION_APP_0_0_2 = AppSpec.model_validate(
         ],
         "protocols": [],
         "ui": [
-            {"plugin": "chat", "renderer": None, "placement": None},
-            {"plugin": "a2ui-surface", "renderer": "a2ui", "placement": None},
+            {"plugin": "chat", "renderer": None, "placement": None, "tab": None},
+            {
+                "plugin": "a2ui-surface",
+                "renderer": "a2ui",
+                "placement": None,
+                "tab": None,
+            },
         ],
         "pair": None,
         "rules": [
@@ -773,7 +788,7 @@ CODE_EXPLAINER_APP_0_0_1 = AppSpec.model_validate(
         "contents": ["The repository it is lent, read only"],
         "connections": [],
         "protocols": [],
-        "ui": [{"plugin": "chat", "renderer": None, "placement": None}],
+        "ui": [{"plugin": "chat", "renderer": None, "placement": None, "tab": None}],
         "pair": None,
         "rules": [
             {
@@ -921,8 +936,13 @@ CROP_MONITORING_APP_0_0_2 = AppSpec.model_validate(
         ],
         "protocols": [],
         "ui": [
-            {"plugin": "chat", "renderer": None, "placement": None},
-            {"plugin": "a2ui-surface", "renderer": "a2ui", "placement": None},
+            {"plugin": "chat", "renderer": None, "placement": None, "tab": None},
+            {
+                "plugin": "a2ui-surface",
+                "renderer": "a2ui",
+                "placement": None,
+                "tab": None,
+            },
         ],
         "pair": None,
         "rules": [
@@ -1083,7 +1103,7 @@ CUSTOMER_INTERVIEW_APP_0_0_3 = AppSpec.model_validate(
         "contents": [],
         "connections": [],
         "protocols": [],
-        "ui": [{"plugin": "chat", "renderer": None, "placement": None}],
+        "ui": [{"plugin": "chat", "renderer": None, "placement": None, "tab": None}],
         "pair": None,
         "rules": [
             {
@@ -1303,7 +1323,9 @@ DATA_QUALITY_APP_0_0_3 = AppSpec.model_validate(
         "contents": ["The dataset under investigation"],
         "connections": [],
         "protocols": [],
-        "ui": [{"plugin": "app-page", "renderer": None, "placement": None}],
+        "ui": [
+            {"plugin": "app-page", "renderer": None, "placement": None, "tab": None}
+        ],
         "pair": None,
         "rules": [],
         "permissions": {
@@ -1492,7 +1514,7 @@ DECIDE_APP_0_0_2 = AppSpec.model_validate(
         "contents": [],
         "connections": [],
         "protocols": [],
-        "ui": [{"plugin": "chat", "renderer": None, "placement": None}],
+        "ui": [{"plugin": "chat", "renderer": None, "placement": None, "tab": None}],
         "pair": None,
         "rules": [
             {"action": "Ask a decision", "applies_to": ["decide"], "behaviour": "do_it"}
@@ -1623,7 +1645,7 @@ DECK_MAKER_APP_0_0_1 = AppSpec.model_validate(
         "contents": [],
         "connections": [],
         "protocols": [],
-        "ui": [{"plugin": "chat", "renderer": None, "placement": None}],
+        "ui": [{"plugin": "chat", "renderer": None, "placement": None, "tab": None}],
         "pair": None,
         "rules": [],
         "permissions": {
@@ -1737,12 +1759,27 @@ DEMO_ACCOUNTANT_APP_0_0_9 = AppSpec.model_validate(
         ],
         "protocols": [],
         "ui": [
-            {"plugin": "chat", "renderer": None, "placement": None},
-            {"plugin": "books-header", "renderer": None, "placement": None},
-            {"plugin": "page-sheet", "renderer": None, "placement": "right"},
-            {"plugin": "side-panels", "renderer": None, "placement": None},
-            {"plugin": "notices", "renderer": None, "placement": None},
-            {"plugin": "composer-portal", "renderer": None, "placement": None},
+            {"plugin": "chat", "renderer": None, "placement": None, "tab": None},
+            {
+                "plugin": "books-header",
+                "renderer": None,
+                "placement": None,
+                "tab": None,
+            },
+            {
+                "plugin": "page-sheet",
+                "renderer": None,
+                "placement": "right",
+                "tab": None,
+            },
+            {"plugin": "side-panels", "renderer": None, "placement": None, "tab": None},
+            {"plugin": "notices", "renderer": None, "placement": None, "tab": None},
+            {
+                "plugin": "composer-portal",
+                "renderer": None,
+                "placement": None,
+                "tab": None,
+            },
         ],
         "pair": None,
         "rules": [
@@ -1880,12 +1917,22 @@ DEMO_AWS_STEWARD_APP_0_0_10 = AppSpec.model_validate(
         "connections": [],
         "protocols": [],
         "ui": [
-            {"plugin": "chat", "renderer": None, "placement": None},
-            {"plugin": "aws-header", "renderer": None, "placement": None},
-            {"plugin": "notices", "renderer": None, "placement": None},
-            {"plugin": "page-sheet", "renderer": None, "placement": "right"},
-            {"plugin": "side-panels", "renderer": None, "placement": None},
-            {"plugin": "composer-portal", "renderer": None, "placement": None},
+            {"plugin": "chat", "renderer": None, "placement": None, "tab": None},
+            {"plugin": "aws-header", "renderer": None, "placement": None, "tab": None},
+            {"plugin": "notices", "renderer": None, "placement": None, "tab": None},
+            {
+                "plugin": "page-sheet",
+                "renderer": None,
+                "placement": "right",
+                "tab": None,
+            },
+            {"plugin": "side-panels", "renderer": None, "placement": None, "tab": None},
+            {
+                "plugin": "composer-portal",
+                "renderer": None,
+                "placement": None,
+                "tab": None,
+            },
         ],
         "pair": None,
         "rules": [],
@@ -2016,12 +2063,27 @@ DEMO_DATA_ANALYST_APP_0_0_6 = AppSpec.model_validate(
         "connections": [],
         "protocols": [],
         "ui": [
-            {"plugin": "chat", "renderer": None, "placement": None},
-            {"plugin": "notebook-header", "renderer": None, "placement": None},
-            {"plugin": "notices", "renderer": None, "placement": None},
-            {"plugin": "page-sheet", "renderer": None, "placement": "right"},
-            {"plugin": "side-panels", "renderer": None, "placement": None},
-            {"plugin": "composer-portal", "renderer": None, "placement": None},
+            {"plugin": "chat", "renderer": None, "placement": None, "tab": None},
+            {
+                "plugin": "notebook-header",
+                "renderer": None,
+                "placement": None,
+                "tab": None,
+            },
+            {"plugin": "notices", "renderer": None, "placement": None, "tab": None},
+            {
+                "plugin": "page-sheet",
+                "renderer": None,
+                "placement": "right",
+                "tab": None,
+            },
+            {"plugin": "side-panels", "renderer": None, "placement": None, "tab": None},
+            {
+                "plugin": "composer-portal",
+                "renderer": None,
+                "placement": None,
+                "tab": None,
+            },
         ],
         "pair": None,
         "rules": [],
@@ -2146,7 +2208,7 @@ DEMO_FUNCTIONAL_ANALYST_APP_0_0_2 = AppSpec.model_validate(
         "owner": "Datalayer <info@datalayer.io>",
         "agent": "worker-functional-analyst:0.0.1",
         "team": "",
-        "instructions": "This is Datalayer's public demo of the Functional Analyst. You have no memory, no files and no server here; your tools all run in the visitor's page and reach nothing. Draw what the visitor describes. When they have nothing in mind, offer the example system below, and say once that it is an example. The example: Harbor & Pine Roasters, a fictional coffee roaster in Lisbon, sells online. A customer orders on the web shop; the shop takes the payment through a payment provider, then puts the order on a queue; a fulfilment worker reads the queue, reserves the stock in the warehouse system, books a courier and emails the customer a tracking link. When the payment is refused, the shop shows an error and nothing is queued; when the stock is short, the worker puts the order on hold and emails the customer. Orders, customers, products and shipments are the four tables: a customer places many orders, an order has many lines, each line one product, and an order one shipment. The Mermaid tools are datalayer_mermaidSetDiagram, datalayer_mermaidReadDiagram, datalayer_mermaidListDiagrams, datalayer_mermaidValidate, datalayer_mermaidRenderSvg and datalayer_mermaidListDiagramTypes; the Excalidraw tools are datalayer_excalidrawInsertNode, datalayer_excalidrawFromMermaid, datalayer_excalidrawListDrawings, datalayer_excalidrawReadScene, datalayer_excalidrawAddElements, datalayer_excalidrawUpdateElements, datalayer_excalidrawConnectElements, datalayer_excalidrawDeleteElements, datalayer_excalidrawSetAppState, datalayer_excalidrawResize and datalayer_excalidrawClearScene. All of them are tools you use here: they run in the page of the visitor, reach nothing and change nothing outside it. Draw from the visitor's description or the example only. Every Mermaid source is checked by Mermaid's parser before it is shown: when one is refused, fix the line it names and call again, and never say a diagram is drawn when it was refused. Give Excalidraw shapes ids and labels and bind arrows to them with startId and endId. The canvas and the diagrams show in the right panel of the visitor's chat, which opens with the first one; open_side_panel and close_side_panel (side right) open and close it, and they too are tools you use here. The chat's title bar shows what you are analysing and whether its diagrams parse, through set_analysis_header: with your first diagram, call it with subject (a few words, such as \"Order fulfilment\") and check (such as \"1 diagram valid\", tone success). show_notice slides a short notice in from an edge of the visitor's chat: a title and a line, info, success, warning or error. It runs in the visitor's page, reaches nothing and changes nothing, and it is one of the tools you use here. Use a notice at most once in a turn, for what the visitor should not miss, such as two parts of their description that contradict each other. Make all the calls of a step together in one response: the diagram, set_analysis_header and open_side_panel if the panel is closed. Then say in two or three lines what the picture shows, what you assumed and what it leaves out. Never invent a part the visitor did not give or imply, and say which ones you inferred. Nothing you draw is kept beyond this page.",
+        "instructions": 'This is Datalayer\'s public demo of the Functional Analyst. You have no memory, no files and no server here; your tools all run in the visitor\'s page and reach nothing. Draw what the visitor describes. When they have nothing in mind, offer the example system below, and say once that it is an example. The example: Harbor & Pine Roasters, a fictional coffee roaster in Lisbon, sells online. A customer orders on the web shop; the shop takes the payment through a payment provider, then puts the order on a queue; a fulfilment worker reads the queue, reserves the stock in the warehouse system, books a courier and emails the customer a tracking link. When the payment is refused, the shop shows an error and nothing is queued; when the stock is short, the worker puts the order on hold and emails the customer. Orders, customers, products and shipments are the four tables: a customer places many orders, an order has many lines, each line one product, and an order one shipment. The Mermaid tools are datalayer_mermaidSetDiagram, datalayer_mermaidReadDiagram, datalayer_mermaidListDiagrams, datalayer_mermaidValidate, datalayer_mermaidRenderSvg and datalayer_mermaidListDiagramTypes; the Excalidraw tools are datalayer_excalidrawInsertNode, datalayer_excalidrawFromMermaid, datalayer_excalidrawListDrawings, datalayer_excalidrawReadScene, datalayer_excalidrawAddElements, datalayer_excalidrawUpdateElements, datalayer_excalidrawConnectElements, datalayer_excalidrawDeleteElements, datalayer_excalidrawSetAppState, datalayer_excalidrawResize and datalayer_excalidrawClearScene. The React Flow tools are list_shapes, insert_shape, link_shapes and move_shape. Call list_shapes before changing a canvas the visitor may have edited; keep the stable ID returned by insert_shape and use it in later link_shapes or move_shape calls. Never guess an ID. All of them are tools you use here: they run in the page of the visitor, reach nothing and change nothing outside it. Draw from the visitor\'s description or the example only. Every Mermaid source is checked by Mermaid\'s parser before it is shown: when one is refused, fix the line it names and call again, and never say a diagram is drawn when it was refused. Give Excalidraw shapes ids and labels and bind arrows to them with startId and endId. The canvases and diagrams are separate tabs in the right panel of the visitor\'s chat: "Excalidraw", "Mermaid" and "React Flow". The first one opens the panel on its own tab. open_side_panel (side right, with one of those tab names) selects and opens it; close_side_panel closes it. They too are tools you use here. The chat\'s title bar shows what you are analysing and whether its diagrams parse, through set_analysis_header: with your first diagram, call it with subject (a few words, such as "Order fulfilment") and check (such as "1 diagram valid", tone success). show_notice slides a short notice in from an edge of the visitor\'s chat: a title and a line, info, success, warning or error. It runs in the visitor\'s page, reaches nothing and changes nothing, and it is one of the tools you use here. Use a notice at most once in a turn, for what the visitor should not miss, such as two parts of their description that contradict each other. Make all the calls of a step together in one response: the diagram, set_analysis_header and open_side_panel naming its tab when it should be in front. Then say in two or three lines what the picture shows, what you assumed and what it leaves out. Never invent a part the visitor did not give or imply, and say which ones you inferred. Nothing you draw is kept beyond this page.',
         "model": "",
         "skills": [],
         "backend_tools": [],
@@ -2156,13 +2218,39 @@ DEMO_FUNCTIONAL_ANALYST_APP_0_0_2 = AppSpec.model_validate(
         "connections": [],
         "protocols": [],
         "ui": [
-            {"plugin": "chat", "renderer": None, "placement": None},
-            {"plugin": "analysis-header", "renderer": None, "placement": None},
-            {"plugin": "notices", "renderer": None, "placement": None},
-            {"plugin": "page-excalidraw", "renderer": None, "placement": "right"},
-            {"plugin": "page-mermaid", "renderer": None, "placement": "right"},
-            {"plugin": "side-panels", "renderer": None, "placement": None},
-            {"plugin": "composer-portal", "renderer": None, "placement": None},
+            {"plugin": "chat", "renderer": None, "placement": None, "tab": None},
+            {
+                "plugin": "analysis-header",
+                "renderer": None,
+                "placement": None,
+                "tab": None,
+            },
+            {"plugin": "notices", "renderer": None, "placement": None, "tab": None},
+            {
+                "plugin": "page-excalidraw",
+                "renderer": None,
+                "placement": "right",
+                "tab": "Excalidraw",
+            },
+            {
+                "plugin": "page-mermaid",
+                "renderer": None,
+                "placement": "right",
+                "tab": "Mermaid",
+            },
+            {
+                "plugin": "page-react-flow",
+                "renderer": None,
+                "placement": "right",
+                "tab": "React Flow",
+            },
+            {"plugin": "side-panels", "renderer": None, "placement": None, "tab": None},
+            {
+                "plugin": "composer-portal",
+                "renderer": None,
+                "placement": None,
+                "tab": None,
+            },
         ],
         "pair": None,
         "rules": [],
@@ -2297,12 +2385,27 @@ DEMO_MARKETER_APP_0_0_8 = AppSpec.model_validate(
         "connections": [],
         "protocols": [],
         "ui": [
-            {"plugin": "chat", "renderer": None, "placement": None},
-            {"plugin": "social-header", "renderer": None, "placement": None},
-            {"plugin": "page-deck", "renderer": None, "placement": "right"},
-            {"plugin": "side-panels", "renderer": None, "placement": None},
-            {"plugin": "notices", "renderer": None, "placement": None},
-            {"plugin": "composer-portal", "renderer": None, "placement": None},
+            {"plugin": "chat", "renderer": None, "placement": None, "tab": None},
+            {
+                "plugin": "social-header",
+                "renderer": None,
+                "placement": None,
+                "tab": None,
+            },
+            {
+                "plugin": "page-deck",
+                "renderer": None,
+                "placement": "right",
+                "tab": None,
+            },
+            {"plugin": "side-panels", "renderer": None, "placement": None, "tab": None},
+            {"plugin": "notices", "renderer": None, "placement": None, "tab": None},
+            {
+                "plugin": "composer-portal",
+                "renderer": None,
+                "placement": None,
+                "tab": None,
+            },
         ],
         "pair": None,
         "rules": [],
@@ -2733,7 +2836,7 @@ DEMO_SHOP_APP_0_0_1 = AppSpec.model_validate(
         "contents": [],
         "connections": [],
         "protocols": ["pap"],
-        "ui": [{"plugin": "chat", "renderer": None, "placement": None}],
+        "ui": [{"plugin": "chat", "renderer": None, "placement": None, "tab": None}],
         "pap": {
             "profile": "draft-01",
             "connections": [],
@@ -2920,11 +3023,16 @@ DEMO_SHOPPER_APP_0_0_13 = AppSpec.model_validate(
         ],
         "protocols": ["pap"],
         "ui": [
-            {"plugin": "chat", "renderer": None, "placement": None},
-            {"plugin": "pap-sign-in", "renderer": None, "placement": None},
-            {"plugin": "shop-header", "renderer": None, "placement": None},
-            {"plugin": "notices", "renderer": None, "placement": None},
-            {"plugin": "composer-portal", "renderer": None, "placement": None},
+            {"plugin": "chat", "renderer": None, "placement": None, "tab": None},
+            {"plugin": "pap-sign-in", "renderer": None, "placement": None, "tab": None},
+            {"plugin": "shop-header", "renderer": None, "placement": None, "tab": None},
+            {"plugin": "notices", "renderer": None, "placement": None, "tab": None},
+            {
+                "plugin": "composer-portal",
+                "renderer": None,
+                "placement": None,
+                "tab": None,
+            },
         ],
         "pap": {
             "profile": "draft-01",
@@ -3109,10 +3217,20 @@ DEMO_TERRA_APP_0_0_8 = AppSpec.model_validate(
         ],
         "protocols": [],
         "ui": [
-            {"plugin": "chat", "renderer": None, "placement": None},
-            {"plugin": "earth-header", "renderer": None, "placement": None},
-            {"plugin": "notices", "renderer": None, "placement": None},
-            {"plugin": "composer-portal", "renderer": None, "placement": None},
+            {"plugin": "chat", "renderer": None, "placement": None, "tab": None},
+            {
+                "plugin": "earth-header",
+                "renderer": None,
+                "placement": None,
+                "tab": None,
+            },
+            {"plugin": "notices", "renderer": None, "placement": None, "tab": None},
+            {
+                "plugin": "composer-portal",
+                "renderer": None,
+                "placement": None,
+                "tab": None,
+            },
         ],
         "pair": None,
         "rules": [],
@@ -3265,10 +3383,15 @@ DEMO_TRAVELLER_APP_0_0_9 = AppSpec.model_validate(
         ],
         "protocols": [],
         "ui": [
-            {"plugin": "chat", "renderer": None, "placement": None},
-            {"plugin": "trip-header", "renderer": None, "placement": None},
-            {"plugin": "notices", "renderer": None, "placement": None},
-            {"plugin": "composer-portal", "renderer": None, "placement": None},
+            {"plugin": "chat", "renderer": None, "placement": None, "tab": None},
+            {"plugin": "trip-header", "renderer": None, "placement": None, "tab": None},
+            {"plugin": "notices", "renderer": None, "placement": None, "tab": None},
+            {
+                "plugin": "composer-portal",
+                "renderer": None,
+                "placement": None,
+                "tab": None,
+            },
         ],
         "pair": None,
         "rules": [],
@@ -3408,8 +3531,13 @@ DISASTER_ASSESSMENT_APP_0_0_2 = AppSpec.model_validate(
         ],
         "protocols": [],
         "ui": [
-            {"plugin": "chat", "renderer": None, "placement": None},
-            {"plugin": "a2ui-surface", "renderer": "a2ui", "placement": None},
+            {"plugin": "chat", "renderer": None, "placement": None, "tab": None},
+            {
+                "plugin": "a2ui-surface",
+                "renderer": "a2ui",
+                "placement": None,
+                "tab": None,
+            },
         ],
         "pair": None,
         "rules": [
@@ -3566,7 +3694,7 @@ ERRAND_RUNNER_APP_0_0_2 = AppSpec.model_validate(
         "contents": [],
         "connections": [],
         "protocols": ["pact"],
-        "ui": [{"plugin": "chat", "renderer": None, "placement": None}],
+        "ui": [{"plugin": "chat", "renderer": None, "placement": None, "tab": None}],
         "pair": {"id": "guest-desk", "role": "personal_agent"},
         "rules": [
             {
@@ -3701,7 +3829,7 @@ EVENT_RESPONSE_APP_0_0_3 = AppSpec.model_validate(
         "contents": [],
         "connections": [],
         "protocols": [],
-        "ui": [{"plugin": "chat", "renderer": None, "placement": None}],
+        "ui": [{"plugin": "chat", "renderer": None, "placement": None, "tab": None}],
         "pair": None,
         "rules": [],
         "permissions": {
@@ -3910,7 +4038,7 @@ EXCHANGE_DESK_APP_0_0_3 = AppSpec.model_validate(
         "contents": [],
         "connections": [],
         "protocols": ["pap"],
-        "ui": [{"plugin": "chat", "renderer": None, "placement": None}],
+        "ui": [{"plugin": "chat", "renderer": None, "placement": None, "tab": None}],
         "pap": {
             "profile": "draft-01",
             "connections": [],
@@ -4078,7 +4206,7 @@ GUEST_DESK_APP_0_0_2 = AppSpec.model_validate(
         "contents": [],
         "connections": [],
         "protocols": ["pact"],
-        "ui": [{"plugin": "chat", "renderer": None, "placement": None}],
+        "ui": [{"plugin": "chat", "renderer": None, "placement": None, "tab": None}],
         "pact": {
             "connections": [],
             "business": {
@@ -4226,10 +4354,15 @@ INBOX_TRIAGE_APP_0_0_2 = AppSpec.model_validate(
         ],
         "protocols": [],
         "ui": [
-            {"plugin": "chat", "renderer": None, "placement": None},
-            {"plugin": "page-layout", "renderer": None, "placement": None},
-            {"plugin": "app-page", "renderer": None, "placement": None},
-            {"plugin": "canvas-blocks", "renderer": None, "placement": None},
+            {"plugin": "chat", "renderer": None, "placement": None, "tab": None},
+            {"plugin": "page-layout", "renderer": None, "placement": None, "tab": None},
+            {"plugin": "app-page", "renderer": None, "placement": None, "tab": None},
+            {
+                "plugin": "canvas-blocks",
+                "renderer": None,
+                "placement": None,
+                "tab": None,
+            },
         ],
         "pair": None,
         "rules": [
@@ -4425,8 +4558,8 @@ LIVE_SHOP_CHAT_APP_0_0_2 = AppSpec.model_validate(
         "connections": [],
         "protocols": ["pap"],
         "ui": [
-            {"plugin": "chat", "renderer": None, "placement": None},
-            {"plugin": "pap-sign-in", "renderer": None, "placement": None},
+            {"plugin": "chat", "renderer": None, "placement": None, "tab": None},
+            {"plugin": "pap-sign-in", "renderer": None, "placement": None, "tab": None},
         ],
         "pap": {
             "profile": "draft-01",
@@ -4607,7 +4740,7 @@ MARKETER_APP_0_0_1 = AppSpec.model_validate(
             }
         ],
         "protocols": [],
-        "ui": [{"plugin": "chat", "renderer": None, "placement": None}],
+        "ui": [{"plugin": "chat", "renderer": None, "placement": None, "tab": None}],
         "pair": None,
         "rules": [
             {
@@ -4790,7 +4923,9 @@ MODEL_CHOICE_APP_0_0_3 = AppSpec.model_validate(
         ],
         "connections": [],
         "protocols": [],
-        "ui": [{"plugin": "app-page", "renderer": None, "placement": None}],
+        "ui": [
+            {"plugin": "app-page", "renderer": None, "placement": None, "tab": None}
+        ],
         "pair": None,
         "rules": [],
         "permissions": {
@@ -5051,8 +5186,13 @@ MONTH_END_CLOSE_APP_0_0_2 = AppSpec.model_validate(
         ],
         "protocols": [],
         "ui": [
-            {"plugin": "chat", "renderer": None, "placement": None},
-            {"plugin": "a2ui-surface", "renderer": "a2ui", "placement": None},
+            {"plugin": "chat", "renderer": None, "placement": None, "tab": None},
+            {
+                "plugin": "a2ui-surface",
+                "renderer": "a2ui",
+                "placement": None,
+                "tab": None,
+            },
         ],
         "pair": None,
         "rules": [
@@ -5207,8 +5347,8 @@ ORDER_DESK_APP_0_0_2 = AppSpec.model_validate(
         "connections": [],
         "protocols": ["pap"],
         "ui": [
-            {"plugin": "chat", "renderer": None, "placement": None},
-            {"plugin": "pap-sign-in", "renderer": None, "placement": None},
+            {"plugin": "chat", "renderer": None, "placement": None, "tab": None},
+            {"plugin": "pap-sign-in", "renderer": None, "placement": None, "tab": None},
         ],
         "pap": {
             "profile": "draft-01",
@@ -5387,8 +5527,8 @@ ORDER_TRACKER_APP_0_0_2 = AppSpec.model_validate(
         "connections": [],
         "protocols": ["pap"],
         "ui": [
-            {"plugin": "chat", "renderer": None, "placement": None},
-            {"plugin": "pap-sign-in", "renderer": None, "placement": None},
+            {"plugin": "chat", "renderer": None, "placement": None, "tab": None},
+            {"plugin": "pap-sign-in", "renderer": None, "placement": None, "tab": None},
         ],
         "pap": {
             "profile": "draft-01",
@@ -5558,10 +5698,15 @@ PIPELINE_REPORT_APP_0_0_2 = AppSpec.model_validate(
         "connections": [],
         "protocols": [],
         "ui": [
-            {"plugin": "chat", "renderer": None, "placement": None},
-            {"plugin": "page-layout", "renderer": None, "placement": None},
-            {"plugin": "app-page", "renderer": None, "placement": None},
-            {"plugin": "canvas-blocks", "renderer": None, "placement": None},
+            {"plugin": "chat", "renderer": None, "placement": None, "tab": None},
+            {"plugin": "page-layout", "renderer": None, "placement": None, "tab": None},
+            {"plugin": "app-page", "renderer": None, "placement": None, "tab": None},
+            {
+                "plugin": "canvas-blocks",
+                "renderer": None,
+                "placement": None,
+                "tab": None,
+            },
         ],
         "pair": None,
         "rules": [
@@ -5830,7 +5975,7 @@ PLAYER_APP_0_0_1 = AppSpec.model_validate(
         "contents": [],
         "connections": [],
         "protocols": [],
-        "ui": [{"plugin": "chat", "renderer": None, "placement": None}],
+        "ui": [{"plugin": "chat", "renderer": None, "placement": None, "tab": None}],
         "pair": None,
         "rules": [],
         "permissions": {
@@ -5936,10 +6081,15 @@ QUOTE_CALCULATOR_APP_0_0_6 = AppSpec.model_validate(
         "connections": [],
         "protocols": [],
         "ui": [
-            {"plugin": "chat", "renderer": None, "placement": None},
-            {"plugin": "page-layout", "renderer": None, "placement": None},
-            {"plugin": "app-page", "renderer": None, "placement": None},
-            {"plugin": "canvas-blocks", "renderer": None, "placement": None},
+            {"plugin": "chat", "renderer": None, "placement": None, "tab": None},
+            {"plugin": "page-layout", "renderer": None, "placement": None, "tab": None},
+            {"plugin": "app-page", "renderer": None, "placement": None, "tab": None},
+            {
+                "plugin": "canvas-blocks",
+                "renderer": None,
+                "placement": None,
+                "tab": None,
+            },
         ],
         "pair": None,
         "rules": [],
@@ -6175,10 +6325,15 @@ REPORT_FROM_A_FILE_APP_0_0_5 = AppSpec.model_validate(
         "connections": [],
         "protocols": [],
         "ui": [
-            {"plugin": "chat", "renderer": None, "placement": None},
-            {"plugin": "page-layout", "renderer": None, "placement": None},
-            {"plugin": "app-page", "renderer": None, "placement": None},
-            {"plugin": "canvas-blocks", "renderer": None, "placement": None},
+            {"plugin": "chat", "renderer": None, "placement": None, "tab": None},
+            {"plugin": "page-layout", "renderer": None, "placement": None, "tab": None},
+            {"plugin": "app-page", "renderer": None, "placement": None, "tab": None},
+            {
+                "plugin": "canvas-blocks",
+                "renderer": None,
+                "placement": None,
+                "tab": None,
+            },
         ],
         "pair": None,
         "rules": [
@@ -6419,8 +6574,8 @@ RETURNS_DESK_APP_0_0_2 = AppSpec.model_validate(
         "connections": [],
         "protocols": ["pap"],
         "ui": [
-            {"plugin": "chat", "renderer": None, "placement": None},
-            {"plugin": "pap-sign-in", "renderer": None, "placement": None},
+            {"plugin": "chat", "renderer": None, "placement": None, "tab": None},
+            {"plugin": "pap-sign-in", "renderer": None, "placement": None, "tab": None},
         ],
         "pap": {
             "profile": "draft-01",
@@ -6598,7 +6753,7 @@ SALES_APP_0_0_3 = AppSpec.model_validate(
         "contents": [],
         "connections": [],
         "protocols": [],
-        "ui": [{"plugin": "chat", "renderer": None, "placement": None}],
+        "ui": [{"plugin": "chat", "renderer": None, "placement": None, "tab": None}],
         "pair": None,
         "rules": [],
         "permissions": {
@@ -6736,7 +6891,7 @@ SHEET_MAKER_APP_0_0_1 = AppSpec.model_validate(
         "contents": [],
         "connections": [],
         "protocols": [],
-        "ui": [{"plugin": "chat", "renderer": None, "placement": None}],
+        "ui": [{"plugin": "chat", "renderer": None, "placement": None, "tab": None}],
         "pair": None,
         "rules": [],
         "permissions": {
@@ -6843,7 +6998,9 @@ SHIP_OR_FIX_APP_0_0_3 = AppSpec.model_validate(
         "contents": ["The benchmark run: task results, traces, cost and latency"],
         "connections": [],
         "protocols": [],
-        "ui": [{"plugin": "app-page", "renderer": None, "placement": None}],
+        "ui": [
+            {"plugin": "app-page", "renderer": None, "placement": None, "tab": None}
+        ],
         "pair": None,
         "rules": [],
         "permissions": {
@@ -7069,8 +7226,8 @@ SHOP_CONCIERGE_APP_0_0_2 = AppSpec.model_validate(
         "connections": [],
         "protocols": ["pap"],
         "ui": [
-            {"plugin": "chat", "renderer": None, "placement": None},
-            {"plugin": "pap-sign-in", "renderer": None, "placement": None},
+            {"plugin": "chat", "renderer": None, "placement": None, "tab": None},
+            {"plugin": "pap-sign-in", "renderer": None, "placement": None, "tab": None},
         ],
         "pap": {
             "profile": "draft-01",
@@ -7242,7 +7399,7 @@ SHOPPER_APP_0_0_2 = AppSpec.model_validate(
         "contents": [],
         "connections": [],
         "protocols": [],
-        "ui": [{"plugin": "chat", "renderer": None, "placement": None}],
+        "ui": [{"plugin": "chat", "renderer": None, "placement": None, "tab": None}],
         "pair": None,
         "rules": [],
         "permissions": {
@@ -7368,7 +7525,7 @@ SHOPPING_DESK_APP_0_0_2 = AppSpec.model_validate(
         "contents": [],
         "connections": [],
         "protocols": ["ucp", "acp"],
-        "ui": [{"plugin": "chat", "renderer": None, "placement": None}],
+        "ui": [{"plugin": "chat", "renderer": None, "placement": None, "tab": None}],
         "commerce": {
             "merchants": [
                 {
@@ -7531,8 +7688,8 @@ SIGN_IN_DESK_APP_0_0_2 = AppSpec.model_validate(
         "connections": [],
         "protocols": ["pap"],
         "ui": [
-            {"plugin": "chat", "renderer": None, "placement": None},
-            {"plugin": "pap-sign-in", "renderer": None, "placement": None},
+            {"plugin": "chat", "renderer": None, "placement": None, "tab": None},
+            {"plugin": "pap-sign-in", "renderer": None, "placement": None, "tab": None},
         ],
         "pap": {
             "profile": "draft-01",
@@ -7701,7 +7858,7 @@ SIGNED_READER_APP_0_0_2 = AppSpec.model_validate(
         "contents": [],
         "connections": [],
         "protocols": ["web-bot-auth"],
-        "ui": [{"plugin": "chat", "renderer": None, "placement": None}],
+        "ui": [{"plugin": "chat", "renderer": None, "placement": None, "tab": None}],
         "signed_fetch": {
             "sites": [
                 {"id": "example-verifier", "site": "verify.examples.datalayer.run"}
@@ -7841,7 +7998,9 @@ SUPPLIER_COMPARISON_APP_0_0_3 = AppSpec.model_validate(
         "contents": ["Order history", "Supplier price lists", "Delivery records"],
         "connections": [],
         "protocols": [],
-        "ui": [{"plugin": "app-page", "renderer": None, "placement": None}],
+        "ui": [
+            {"plugin": "app-page", "renderer": None, "placement": None, "tab": None}
+        ],
         "pair": None,
         "rules": [],
         "permissions": {
@@ -8054,10 +8213,15 @@ SUPPORT_DESK_APP_0_0_5 = AppSpec.model_validate(
         "connections": [],
         "protocols": [],
         "ui": [
-            {"plugin": "chat", "renderer": None, "placement": None},
-            {"plugin": "page-layout", "renderer": None, "placement": None},
-            {"plugin": "app-page", "renderer": None, "placement": None},
-            {"plugin": "canvas-blocks", "renderer": None, "placement": None},
+            {"plugin": "chat", "renderer": None, "placement": None, "tab": None},
+            {"plugin": "page-layout", "renderer": None, "placement": None, "tab": None},
+            {"plugin": "app-page", "renderer": None, "placement": None, "tab": None},
+            {
+                "plugin": "canvas-blocks",
+                "renderer": None,
+                "placement": None,
+                "tab": None,
+            },
         ],
         "pair": None,
         "rules": [],
@@ -8339,7 +8503,7 @@ TRAVEL_DESK_APP_0_0_2 = AppSpec.model_validate(
         "contents": [],
         "connections": [],
         "protocols": ["pact"],
-        "ui": [{"plugin": "chat", "renderer": None, "placement": None}],
+        "ui": [{"plugin": "chat", "renderer": None, "placement": None, "tab": None}],
         "pact": {
             "connections": [
                 {
@@ -8502,7 +8666,7 @@ WEB_RESEARCH_APP_0_0_2 = AppSpec.model_validate(
             }
         ],
         "protocols": [],
-        "ui": [{"plugin": "chat", "renderer": None, "placement": None}],
+        "ui": [{"plugin": "chat", "renderer": None, "placement": None, "tab": None}],
         "pair": None,
         "rules": [],
         "permissions": {

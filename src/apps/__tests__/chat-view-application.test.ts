@@ -21,6 +21,7 @@ const chat = readFileSync(
   join(__dirname, '..', 'plugins/chat/ChatView.tsx'),
   'utf8',
 );
+const presets = readFileSync(join(__dirname, '..', 'presets.ts'), 'utf8');
 
 describe('an application in the chat', () => {
   it('draws its face in the empty state at the page’s size', () => {
@@ -32,13 +33,22 @@ describe('an application in the chat', () => {
     expect(chat).not.toContain('fontSize: 48');
   });
 
-  it('keeps no chooser under its composer, and lists its servers and skills to switch', () => {
-    for (const control of ['showAgentsMenu', 'showToolsMenu']) {
-      expect(chat).toContain(`${control}: !presence,`);
-    }
-    // Its MCP servers and skills: the same overlays as the dots open.
-    expect(chat).toContain('showMcpMenu: true,');
-    expect(chat).toContain('showSkillsMenu: true,');
+  it('keeps application equipment in the footer and anonymous prompt indicators out of the input', () => {
+    expect(chat).toContain('showAgentsMenu: !presence,');
+    expect(chat).toMatch(
+      /showToolsMenu:\s+config\?\.showToolsMenu \?\? \(anonymousConfig \? true : !presence\),/,
+    );
+    // MCP servers, skills and frontend tools stay available in the footer.
+    expect(chat).toContain('showMcpMenu: config?.showMcpMenu ?? true,');
+    expect(chat).toContain('showSkillsMenu: config?.showSkillsMenu ?? true,');
+    expect(chat).toContain(
+      'config?.showInlineEquipmentMenus ?? !anonymousConfig',
+    );
+    expect(presets).toContain('showMcpMenu?: boolean;');
+    expect(presets).toContain('showSkillsMenu?: boolean;');
+    expect(presets).toContain('showInlineEquipmentMenus?: boolean;');
+    expect(presets).toContain('showToolsMenu?: boolean;');
+    expect(presets).toContain('showMcpMenu,\n      showSkillsMenu,');
     expect(chat).toContain('showModelSelector: !presence && !ownRoutesOnly,');
   });
 
