@@ -14,12 +14,20 @@
 
 // @vitest-environment jsdom
 import React from 'react';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+} from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { BaseStyles, ThemeProvider } from '@primer/react';
 import {
   AnonymousChatProvider,
   AnonymousToolSignIn,
+  useAnonymousTurns,
   type AnonymousChatState,
 } from '../AnonymousChat';
 
@@ -80,5 +88,30 @@ describe('a tool refused for want of an account', () => {
       </AnonymousChatProvider>,
     );
     expect(screen.queryByRole('button')).toBeNull();
+  });
+});
+
+describe('an address with unlimited turns', () => {
+  it('starts the conversation clock without changing the stored daily count', () => {
+    const day = new Date().toISOString().slice(0, 10);
+    window.localStorage.setItem(
+      'datalayer-agent-visitor-turns',
+      JSON.stringify({ day, taken: 10 }),
+    );
+    const { result } = renderHook(() =>
+      useAnonymousTurns(undefined, 15, false),
+    );
+
+    act(() => result.current.take());
+
+    expect(result.current.refused).toBe('');
+    expect(result.current.startedAt).not.toBeNull();
+    expect(result.current.taken).toBe(10);
+    expect(
+      JSON.parse(
+        window.localStorage.getItem('datalayer-agent-visitor-turns') ?? '{}',
+      ),
+    ).toEqual({ day, taken: 10 });
+    window.localStorage.clear();
   });
 });

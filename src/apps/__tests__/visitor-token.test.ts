@@ -55,6 +55,7 @@ describe('a visitor token', () => {
       token: 'visitor-token',
       visitor: 'made-by-ai-inference-01',
       expires_in: 300,
+      turns_unlimited: true,
     });
     const minted = await fetchVisitorToken(
       'https://prod1.datalayer.run/',
@@ -63,6 +64,7 @@ describe('a visitor token', () => {
       fetcher,
     );
     expect(minted.token).toBe('visitor-token');
+    expect(minted.turnsUnlimited).toBe(true);
     expect(keptVisitorId()).toBe('made-by-ai-inference-01');
     const [url, init] = (fetcher as unknown as { mock: { calls: unknown[][] } })
       .mock.calls[0] as [string, RequestInit];

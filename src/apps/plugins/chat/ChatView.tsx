@@ -1544,7 +1544,19 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
    * the turns the host counts or the conversation's minutes are spent.
    */
   const anonymousConfig = config?.anonymous;
-  const anonymousTurns = useAnonymousTurns(anonymousConfig?.maxTurns);
+  // ai-inference resolves the caller's real address through the trusted
+  // proxy chain and applies the deployment/admin allowlist. Do not retain a
+  // host's browser-side turn ceiling when that authoritative token says the
+  // address is exempt. The conversation clock still starts on its first turn.
+  const effectiveAnonymousConfig =
+    anonymousConfig && visitor.turnsUnlimited
+      ? { ...anonymousConfig, maxTurns: undefined }
+      : anonymousConfig;
+  const anonymousTurns = useAnonymousTurns(
+    effectiveAnonymousConfig?.maxTurns,
+    ANONYMOUS_MINUTES,
+    !visitor.turnsUnlimited,
+  );
   const anonymousValidating = Boolean(
     anonymousConfig &&
     visitors &&
@@ -1552,7 +1564,9 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
     workspace.sandbox.state !== 'error' &&
     (!visitor.token || agentServerUrl === undefined),
   );
-  const anonymousRefused = anonymousConfig ? anonymousTurns.refused : '';
+  const anonymousRefused = effectiveAnonymousConfig
+    ? anonymousTurns.refused
+    : '';
   // A turn taken each time the agent sets to work on a question.
   const anonymousWasBusy = useRef(false);
   const takeAnonymousTurn = anonymousTurns.take;
@@ -2361,11 +2375,11 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
    */
   const HeaderComponent = headerEntries[0]?.value.Component;
   const headerShown = !config?.hideHeader && !!HeaderComponent;
-  const anonymousState: AnonymousChatState | null = anonymousConfig
+  const anonymousState: AnonymousChatState | null = effectiveAnonymousConfig
     ? {
         ...anonymousTurns,
         refused: anonymousRefused,
-        config: anonymousConfig,
+        config: effectiveAnonymousConfig,
         name: presence?.name ?? member?.name ?? spec?.name ?? '',
         validating: anonymousValidating,
         headerShown,
