@@ -33,7 +33,7 @@ describe('the jupyter team', () => {
     expect(selection).toBeDefined();
     // The supervisor first, then the roster in the order the work goes.
     expect(selection!.members.map(member => member.specId)).toEqual([
-      'jupyter-data-analyst',
+      'worker-data-analyst',
       'jupyter-notebook-reviewer',
       'jupyter-notebook-writer',
       'example-decks',
@@ -50,7 +50,7 @@ describe('the jupyter team', () => {
       member => member.id === selection.selected.value,
     );
     expect(active?.isSupervisor).toBe(true);
-    expect(active?.specId).toBe('jupyter-data-analyst');
+    expect(active?.specId).toBe('worker-data-analyst');
   });
 
   it('reads its context model from the spec, not from a default here', () => {

@@ -14,7 +14,11 @@ import {
   contribution,
   definePlugin,
 } from '@datalayer/reactor';
-import { buildAgentReactor, AgentWorkspace } from '../shell/AgentWorkspace';
+import {
+  buildAgentReactor,
+  AgentWorkspace,
+  WORKSPACE_WORDS,
+} from '../shell/AgentWorkspace';
 import { PluginsPanelPlugin } from '../plugins/plugins-panel';
 import {
   AgentCommand,
@@ -401,6 +405,76 @@ describe('the blank base', () => {
     });
 
     expect(container.querySelector('aside')).not.toBeNull();
+
+    await act(async () => root.unmount());
+    container.remove();
+  });
+});
+
+describe('where the view goes, while there is none', () => {
+  // "No view is available yet." while a platform was still starting read as
+  // a workspace with nothing in it (the user, 22 November 2026): it is
+  // loading until the platform's startup pass is over, empty only after.
+  it('says Loading… until the platform has started, and no view only after', async () => {
+    const built = buildReactorFromPlugins([]);
+    let ready: () => void = () => undefined;
+    const pending = new Promise<void>(resolve => {
+      ready = resolve;
+    });
+    const reactor = { ...built, whenReady: () => pending };
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(
+        <AgentWorkspace serverUrl="" agentId="a" reactor={reactor} />,
+      );
+    });
+    expect(container.textContent).toContain(WORKSPACE_WORDS.loading);
+    expect(container.textContent).not.toContain(WORKSPACE_WORDS.noView);
+
+    await act(async () => {
+      ready();
+      await pending;
+    });
+    expect(container.textContent).toContain(WORKSPACE_WORDS.noView);
+    expect(container.textContent).not.toContain(WORKSPACE_WORDS.loading);
+
+    await act(async () => root.unmount());
+    container.remove();
+  });
+
+  it('draws the view once a plugin has contributed one, neither word', async () => {
+    const plugin = definePlugin({
+      name: '@tests/one-view',
+      contributes: [
+        contribution(
+          AgentViewType,
+          {
+            viewType: 'one',
+            title: 'One',
+            load: async () => ({ default: () => <p>the view</p> }),
+          },
+          { id: 'one' },
+        ),
+      ],
+    });
+    const reactor = buildReactorFromPlugins([plugin]);
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(
+        <AgentWorkspace serverUrl="" agentId="a" reactor={reactor} />,
+      );
+    });
+    await act(async () => {
+      await reactor.whenReady();
+    });
+    expect(container.textContent).toContain('the view');
+    expect(container.textContent).not.toContain(WORKSPACE_WORDS.noView);
 
     await act(async () => root.unmount());
     container.remove();

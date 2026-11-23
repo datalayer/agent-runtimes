@@ -493,6 +493,91 @@ export function withPartRemoved(data: unknown, part: AppPart): unknown {
   );
 }
 
+/** The kind of a part on the surface, read from its id (`agent`, `model`, `track`, or `<kind>-<index>`). */
+export const kindOfPartId = (id: string): AppPartKind =>
+  id.replace(/-\d+$/, '') as AppPartKind;
+
+/** What a part on the surface holds in the spec: its list entry, or the one key it sets (the agent's id, the model, the Track). */
+const valueOfPart = (data: unknown, part: AppPart): unknown =>
+  part.at.keys
+    ? valueAt(data, [...part.at.path, part.at.keys[0]])
+    : valueAt(data, part.at.path);
+
+/** One field of an object entry, as text. */
+const fieldOf = (value: unknown, key: string): string =>
+  text((value as Record<string, unknown> | null)?.[key]);
+
+/** Two references the same, a version (`id:version`) or not. */
+const sameRef = (a: unknown, b: unknown): boolean =>
+  typeof a === 'string' &&
+  typeof b === 'string' &&
+  a !== '' &&
+  (a === b || a.split(':')[0] === b.split(':')[0]);
+
+/**
+ * The toolbox entry a part on the surface was placed from, among the
+ * entries of its kind: a skill, a model, a protocol, a Guard, a Gate, the
+ * Track or the agent by its id; a connection by its server; a UI part by its
+ * plugin; a rule by its action, else by its behaviour (one entry each); a test by its
+ * question; a trigger by its type (an event's by its event). None when the
+ * part was written by hand and the toolbox offers nothing like it.
+ */
+export function toolOfPart(
+  data: unknown,
+  part: AppPart,
+  tools: readonly CanvasPartContribution[],
+): CanvasPartContribution | undefined {
+  const value = valueOfPart(data, part);
+  const own = tools.filter(tool => tool.kind === part.kind);
+  switch (part.kind) {
+    case 'connection':
+      return own.find(
+        tool =>
+          fieldOf(value, 'server') !== '' &&
+          fieldOf(tool.example, 'server') === fieldOf(value, 'server'),
+      );
+    case 'ui':
+      return own.find(
+        tool =>
+          fieldOf(value, 'plugin') !== '' &&
+          fieldOf(tool.example, 'plugin') === fieldOf(value, 'plugin'),
+      );
+    case 'rule':
+      return (
+        own.find(
+          tool =>
+            fieldOf(value, 'action') !== '' &&
+            fieldOf(tool.example, 'action') === fieldOf(value, 'action'),
+        ) ??
+        own.find(
+          tool =>
+            fieldOf(value, 'behaviour') !== '' &&
+            fieldOf(tool.example, 'behaviour') === fieldOf(value, 'behaviour'),
+        )
+      );
+    case 'test':
+      return own.find(
+        tool =>
+          fieldOf(value, 'ask') !== '' &&
+          fieldOf(tool.example, 'ask') === fieldOf(value, 'ask'),
+      );
+    case 'event':
+      return own.find(
+        tool =>
+          fieldOf(value, 'type') !== '' &&
+          fieldOf(tool.example, 'type') === fieldOf(value, 'type') &&
+          (fieldOf(value, 'type') !== 'event' ||
+            fieldOf(tool.example, 'event') === fieldOf(value, 'event')),
+      );
+    default:
+      // The agent, the model, a skill, a protocol, a Guard, a Gate, the Track: by reference.
+      return (
+        own.find(tool => tool.example === value) ??
+        own.find(tool => sameRef(tool.example, value))
+      );
+  }
+}
+
 /**
  * The Appspec's schema as the Properties of a UI part draw it: its plugin one of the catalogue's UI plugins, by name; its
  * renderer one of those this plugin may be exposed through, or none — drawn

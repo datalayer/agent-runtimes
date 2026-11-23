@@ -71,7 +71,7 @@ export function DesignerPanel({
   summary?: ReactNode;
   /** Folded at first (when not controlled by `open`). */
   folded?: boolean;
-  /** Open or folded, decided by the designer (a click on the surface opens the Properties). */
+  /** Open or folded, decided by the designer (a click on the surface opens the section of what it picked). */
   open?: boolean;
   /** Its title bar was clicked: the designer decides. */
   onOpenChange?: (open: boolean) => void;
@@ -178,6 +178,7 @@ export function DesignerTool({
   onDragStart,
   onDragEnd,
   disabled = false,
+  current = false,
 }: {
   type: string;
   payload: string;
@@ -191,6 +192,8 @@ export function DesignerTool({
   onDragStart?: () => void;
   onDragEnd?: () => void;
   disabled?: boolean;
+  /** The entry the part selected on the surface was placed from: marked, its properties under it. */
+  current?: boolean;
 }): JSX.Element {
   return (
     <Box
@@ -198,7 +201,9 @@ export function DesignerTool({
       type="button"
       draggable={!disabled}
       disabled={disabled}
+      aria-current={current ? 'true' : undefined}
       data-designer-tool={data}
+      data-designer-tool-current={current ? '' : undefined}
       title={says}
       onDragStart={(event: DragEvent) => {
         event.dataTransfer.setData(type, payload);
@@ -218,9 +223,9 @@ export function DesignerTool({
         font: 'inherit',
         textAlign: 'left',
         color: 'fg.default',
-        bg: 'canvas.default',
+        bg: current ? 'accent.subtle' : 'canvas.default',
         border: '1px solid',
-        borderColor: 'border.default',
+        borderColor: current ? 'accent.emphasis' : 'border.default',
         borderRadius: 2,
         cursor: disabled ? 'not-allowed' : 'grab',
         '&:hover': { borderColor: 'accent.emphasis', bg: 'accent.subtle' },

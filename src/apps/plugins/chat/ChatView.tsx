@@ -1088,7 +1088,7 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
    * Looked up through `getAgentspecs`, not by subscripting the record.
    *
    * Agent ids reach this component versioned as often as not —
-   * `jupyter-data-analyst:0.0.1` — and the record is keyed on the bare id, so
+   * `worker-data-analyst:0.0.1` — and the record is keyed on the bare id, so
    * a raw subscript on a versioned id silently misses. What follows from a
    * miss is not an error but a quiet wrong answer: no model, no openers, no
    * name. `getAgentspecs` strips the version and retries, which is the whole
@@ -1127,7 +1127,7 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
   /*
    * The team's name for a member first, then the spec's own.
    *
-   * A spec is named for the catalogue — "Jupyter Data Analyst" — and a team
+   * A spec is named for the catalogue — "Data Analyst" — and a team
    * names the same agent for the person working with it — "Analyst", which is
    * what the picker in the header says. The header, the empty state and the
    * openers' heading say the same word as the picker, or a person reads two

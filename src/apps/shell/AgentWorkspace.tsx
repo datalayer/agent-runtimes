@@ -173,6 +173,14 @@ export type AgentWorkspaceProps = {
   sidebarRail?: boolean;
 };
 
+/** What the workspace says where its view goes, while there is none to draw. */
+export const WORKSPACE_WORDS = {
+  /** A view's code on its way, or the platform still starting. */
+  loading: 'Loading…',
+  /** The platform started, and no plugin contributed a view. */
+  noView: 'No view is available yet.',
+} as const;
+
 /** Build the platform for a set of plugins, and of extensions grouping them. */
 export function buildAgentReactor(
   extensions: PlatformInput[],
@@ -211,8 +219,30 @@ export function AgentWorkspace(props: AgentWorkspaceProps): JSX.Element {
   );
   useReactor(reactor, { autoStart: manageReactor });
 
+  // Whether the platform's startup pass is over (`whenReady`): until it is, a
+  // workspace with no view yet is loading, not empty — "No view is available
+  // yet." is for a platform that started and contributed none. After
+  // `useReactor`'s effects, so a platform it starts is awaited, not a resolved
+  // promise from before its start. A platform its host leaves unstarted has
+  // no startup pass: nothing is coming, and it says so.
+  const [started, setStarted] = useState(false);
+  useEffect(() => {
+    let live = true;
+    setStarted(false);
+    const settle = () => {
+      if (live) {
+        setStarted(true);
+      }
+    };
+    reactor.whenReady().then(settle, settle);
+    return () => {
+      live = false;
+    };
+  }, [reactor]);
+
   return (
     <WorkspaceBody
+      starting={!started}
       serverUrl={serverUrl}
       agentId={agentId}
       conversationId={conversationId}
@@ -237,6 +267,8 @@ type BodyProps = Omit<
   'extensions' | 'reactor' | 'sandbox'
 > & {
   initialSandbox: SandboxSnapshot;
+  /** The platform's startup pass is not over: no view yet is loading, not none. */
+  starting?: boolean;
 };
 
 /**
@@ -260,6 +292,7 @@ function WorkspaceBody({
   headerActions,
   headerContainer,
   sidebarRail = false,
+  starting = false,
 }: BodyProps): JSX.Element {
   /*
    * Which agent the session is talking to.
@@ -587,8 +620,12 @@ function WorkspaceBody({
             point={AgentViewType}
             active={effectiveViewType}
             props={{ viewType: effectiveViewType, workspace }}
-            fallback={<Centered>Loading…</Centered>}
-            empty={<Centered>No view is available yet.</Centered>}
+            fallback={<Centered>{WORKSPACE_WORDS.loading}</Centered>}
+            empty={
+              <Centered>
+                {starting ? WORKSPACE_WORDS.loading : WORKSPACE_WORDS.noView}
+              </Centered>
+            }
             errorFallback={error => (
               <Centered>This view failed to load: {error.message}</Centered>
             )}

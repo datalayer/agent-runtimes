@@ -163,7 +163,7 @@ describe('a visitor’s application', () => {
       'demo-traveller',
       'demo-terra',
       'demo-aws-steward',
-      'demo-jupyter-data-analyst',
+      'demo-data-analyst',
       'demo-functional-analyst',
     ];
     for (const id of demos) {

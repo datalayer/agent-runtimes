@@ -4,7 +4,7 @@
  */
 
 /**
- * `@datalayer/agent-plugin-notebook-header` — the Jupyter Data Analyst's
+ * `@datalayer/agent-plugin-notebook-header` — the Data Analyst's
  * title bar: the dataset it works on, what ran (said by the agent: never a
  * run that did not happen), and a Profile data button that asks for a
  * profile of every column.

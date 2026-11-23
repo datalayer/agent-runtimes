@@ -114,7 +114,7 @@
             "format": 0,
             "mode": "normal",
             "style": "",
-            "text": "2 experiments on 6 tasks; jupyter-data-analyst leads at 83.3%.",
+            "text": "2 experiments on 6 tasks; worker-data-analyst leads at 83.3%.",
             "type": "text",
             "version": 1
           }
@@ -666,7 +666,7 @@
                         "format": 0,
                         "mode": "normal",
                         "style": "",
-                        "text": "jupyter-data-analyst",
+                        "text": "worker-data-analyst",
                         "type": "text",
                         "version": 1
                       }
@@ -723,7 +723,7 @@
                         "format": 0,
                         "mode": "normal",
                         "style": "",
-                        "text": "jupyter-data-analyst",
+                        "text": "worker-data-analyst",
                         "type": "text",
                         "version": 1
                       }
@@ -1783,7 +1783,7 @@
                         "format": 0,
                         "mode": "normal",
                         "style": "",
-                        "text": "jupyter-data-analyst",
+                        "text": "worker-data-analyst",
                         "type": "text",
                         "version": 1
                       }
@@ -2262,7 +2262,7 @@
                 "kind": "line",
                 "name": "Latest Pass Rate By Experiment",
                 "x": [
-                  "jupyter-data-analyst",
+                  "worker-data-analyst",
                   "example-evals"
                 ],
                 "y": [
@@ -2310,7 +2310,7 @@
                 "kind": "heatmap",
                 "name": "Recent Runs",
                 "rows": [
-                  "jupyter-data-analyst",
+                  "worker-data-analyst",
                   "example-evals"
                 ],
                 "values": [
@@ -2368,12 +2368,12 @@
                   {
                     "baseline": "example-evals",
                     "baseline_pass_rate": 0.3333333333333333,
-                    "candidate": "jupyter-data-analyst",
+                    "candidate": "worker-data-analyst",
                     "candidate_pass_rate": 0.8333333333333334,
                     "delta_pass_rate": 0.5
                   },
                   {
-                    "baseline": "jupyter-data-analyst",
+                    "baseline": "worker-data-analyst",
                     "baseline_pass_rate": 0.8333333333333334,
                     "candidate": "example-evals",
                     "candidate_pass_rate": 0.3333333333333333,
@@ -2676,7 +2676,7 @@
                         "format": 0,
                         "mode": "normal",
                         "style": "",
-                        "text": "jupyter-data-analyst",
+                        "text": "worker-data-analyst",
                         "type": "text",
                         "version": 1
                       }
@@ -2869,13 +2869,13 @@
                 "delta_pass_rate": 0.16666666666666674,
                 "family": "latest_two",
                 "kind": "comparison",
-                "name": "jupyter-data-analyst: latest two runs",
+                "name": "worker-data-analyst: latest two runs",
                 "run_ids": [
                   "run-1-3",
                   "run-1-2"
                 ]
               },
-              "text/plain": "jupyter-data-analyst: latest two runs"
+              "text/plain": "worker-data-analyst: latest two runs"
             },
             "metadata": {},
             "output_type": "display_data"
@@ -3198,7 +3198,7 @@
                         "format": 0,
                         "mode": "normal",
                         "style": "",
-                        "text": "jupyter-data-analyst",
+                        "text": "worker-data-analyst",
                         "type": "text",
                         "version": 1
                       }
@@ -5653,7 +5653,7 @@
             "format": 0,
             "mode": "normal",
             "style": "",
-            "text": "jupyter-data-analyst: agentspec jupyter-data-analyst, model claude-sonnet-4-6 (bedrock)",
+            "text": "worker-data-analyst: agentspec worker-data-analyst, model claude-sonnet-4-6 (bedrock)",
             "type": "text",
             "version": 1
           }
@@ -6245,7 +6245,7 @@
                         "format": 0,
                         "mode": "normal",
                         "style": "",
-                        "text": "jupyter-data-analyst",
+                        "text": "worker-data-analyst",
                         "type": "text",
                         "version": 1
                       }

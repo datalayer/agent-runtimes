@@ -277,7 +277,7 @@ APP = {
     "id": "r19-probe",
     "name": "R-19 probe",
     "kind": "chat",
-    "agent": "jupyter-data-analyst:0.0.1",
+    "agent": "worker-data-analyst:0.0.1",
     "goal": "Answer questions.",
 }
 

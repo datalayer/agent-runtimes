@@ -86,6 +86,7 @@ vi.mock('@datalayer/primer-addons', async () => {
                 'id',
                 'role',
                 'draggable',
+                'tabIndex',
               ].includes(key),
           ),
         ),
@@ -204,6 +205,7 @@ vi.mock('@primer/react', async () => {
 const OFFERED = canvasPartsOf(canvasPartsReactor());
 const CONNECTION = OFFERED.find(part => part.kind === 'connection')!;
 const RULE = OFFERED.find(part => part.kind === 'rule')!;
+const SKILL = OFFERED.find(part => part.kind === 'skill')!;
 
 /** Support desk: one connection, one rule. */
 const definition = () => {
@@ -295,11 +297,11 @@ const fire = (element: Element, event: Event) =>
     element.dispatchEvent(event);
   });
 /** The panels open folded: unfold the Toolbox by its title bar. */
-// One folded menu per kind of part (12 October 2026): open them all.
+// One folded menu per kind of part (12 October 2026): open them all, those a click on the surface opened left open.
 const openToolbox = () =>
-  [...host.querySelectorAll('[id^="designer-toolbox-"]')].forEach(menu =>
-    fire(menu, new MouseEvent('click', { bubbles: true })),
-  );
+  [...host.querySelectorAll('[id^="designer-toolbox-"]')]
+    .filter(menu => menu.getAttribute('aria-expanded') === 'false')
+    .forEach(menu => fire(menu, new MouseEvent('click', { bubbles: true })));
 
 describe('the Agent surface on React Flow', () => {
   it('draws the agent in the centre and a node per kind, the connections’ called MCP (its edges: designerGraph.spec)', () => {
@@ -367,7 +369,7 @@ describe('the Agent surface on React Flow', () => {
 });
 
 describe('the panels and a click on the surface', () => {
-  it('open folded, Properties first; a node clicked opens the Properties of what it picked', () => {
+  it('open folded, Properties first; a node clicked opens the section of what it picked', () => {
     draw();
     const panels = [...host.querySelectorAll('[data-designer-panel]')].map(
       panel => panel.getAttribute('data-designer-panel'),
@@ -391,14 +393,18 @@ describe('the panels and a click on the surface', () => {
         'false',
       ]);
     }
-    // The agent's node, anywhere on it.
+    // The agent's node, anywhere on it: the Agents section, not the Properties.
     fire(
       $('[data-designer-node="agent"]'),
       new MouseEvent('click', { bubbles: true }),
     );
-    expect($('#designer-properties').getAttribute('aria-expanded')).toBe(
+    expect($('#designer-toolbox-agent').getAttribute('aria-expanded')).toBe(
       'true',
     );
+    expect($('#designer-properties').getAttribute('aria-expanded')).toBe(
+      'false',
+    );
+    expect($('[data-designer-section-part="agent"]')).not.toBeNull();
     expect($('[data-designer-part="agent"]').getAttribute('aria-pressed')).toBe(
       'true',
     );
@@ -410,26 +416,113 @@ describe('the panels and a click on the surface', () => {
     expect(
       $('[data-designer-part="connection-0"]').getAttribute('aria-pressed'),
     ).toBe('true');
-    // A kind with none: what to add.
+    expect(
+      $('#designer-toolbox-connection').getAttribute('aria-expanded'),
+    ).toBe('true');
+    // A kind with none: its section says what to add.
     fire(
       $('[data-designer-frame="skill"]'),
       new MouseEvent('click', { bubbles: true }),
     );
-    expect($('[data-designer-panel="properties"]').textContent).toContain(
+    expect($('[data-designer-panel="toolbox-skill"]').textContent).toContain(
       'Skills: none yet. Drag one from the Toolbox onto it.',
     );
     // Folded again by its title bar, opened again by the next click.
-    fire($('#designer-properties'), new MouseEvent('click', { bubbles: true }));
-    expect($('#designer-properties').getAttribute('aria-expanded')).toBe(
-      'false',
+    fire(
+      $('#designer-toolbox-connection'),
+      new MouseEvent('click', { bubbles: true }),
     );
+    expect(
+      $('#designer-toolbox-connection').getAttribute('aria-expanded'),
+    ).toBe('false');
     fire(
       $('[data-designer-part="connection-0"]'),
       new MouseEvent('click', { bubbles: true }),
     );
+    expect(
+      $('#designer-toolbox-connection').getAttribute('aria-expanded'),
+    ).toBe('true');
+  });
+});
+
+describe('a part clicked on the surface opens its section of the Controls (22 November 2026)', () => {
+  /** Support desk with a skill too. */
+  const withSkill = () => {
+    const desk = definition();
+    const data = withPartAdded(dumpAppspec(desk.spec), SKILL).data;
+    return { ...desk, spec: parseAppspec(data).app };
+  };
+  const click = (selector: string) =>
+    fire($(selector), new MouseEvent('click', { bubbles: true }));
+  /** Its section open, the Properties folded, its entry marked, its properties under it and focused. */
+  const expectRevealed = (kind: string, partId: string, toolId: string) => {
+    expect($(`#designer-toolbox-${kind}`).getAttribute('aria-expanded')).toBe(
+      'true',
+    );
+    expect($('#designer-properties').getAttribute('aria-expanded')).toBe(
+      'false',
+    );
+    const tool = $(`[data-designer-tool="${toolId}"]`);
+    expect(tool.getAttribute('aria-current')).toBe('true');
+    expect(
+      [...host.querySelectorAll('[data-designer-tool-current]')].map(each =>
+        each.getAttribute('data-designer-tool'),
+      ),
+    ).toEqual([toolId]);
+    const item = $(`[data-designer-section-part="${partId}"]`);
+    expect(
+      item
+        .closest('[data-designer-panel]')!
+        .getAttribute('data-designer-panel'),
+    ).toBe(`toolbox-${kind}`);
+    // Right under the entry it was placed from.
+    expect(tool.nextElementSibling).toBe(item);
+    expect(item.querySelector('[data-properties-of]')).not.toBeNull();
+    expect(document.activeElement).toBe(item);
+  };
+
+  it('a skill opens Skills, that skill marked and its properties under it', () => {
+    draw({ definition: withSkill() });
+    const part = $('[data-designer-part="skill-0"]');
+    // A button: Enter and Space select it as a click does.
+    expect(part.tagName).toBe('BUTTON');
+    click('[data-designer-part="skill-0"]');
+    expectRevealed('skill', 'skill-0', SKILL.id);
+    expect(
+      $(
+        '[data-designer-section-part="skill-0"] [data-properties-of]',
+      ).getAttribute('data-properties-of'),
+    ).toBe(SKILL.example as string);
+    // The Properties, opened, say where it is set.
+    click('#designer-properties');
+    expect($('[data-designer-panel="properties"]').textContent).toContain(
+      'set in Skills, below.',
+    );
+  });
+
+  it('an MCP server opens MCP, and a rule Rules', () => {
+    draw();
+    click('[data-designer-part="connection-0"]');
+    expectRevealed('connection', 'connection-0', CONNECTION.id);
+    click('[data-designer-part="rule-0"]');
+    expectRevealed('rule', 'rule-0', RULE.id);
+    // The MCP section stays open; what it held is now in Rules.
+    expect($('[data-designer-section-part="connection-0"]')).toBeNull();
+  });
+
+  it('a kind with no section, its plugin off, still opens the Properties', () => {
+    draw({ pluginsOff: ['rules'] });
+    expect($('[data-designer-panel="toolbox-rule"]')).toBeNull();
+    click('[data-designer-part="rule-0"]');
     expect($('#designer-properties').getAttribute('aria-expanded')).toBe(
       'true',
     );
+    expect(
+      $('[data-designer-panel="properties"] [data-properties-of]').getAttribute(
+        'data-properties-of',
+      ),
+    ).toBe((RULE.example as { action: string }).action);
+    expect(host.querySelector('[data-designer-section-part]')).toBeNull();
   });
 });
 
@@ -726,6 +819,33 @@ describe('the Python surface', () => {
     );
   });
 
+  it('keeps one Preview, mounted once, through Agent, Preview and Python (22 November 2026)', () => {
+    const mounted = vi.fn();
+    const Preview = () => {
+      React.useEffect(() => {
+        mounted();
+      }, []);
+      return <div data-preview="" />;
+    };
+    const props = {
+      python: <div data-python-file="" />,
+      preview: <Preview />,
+    };
+    draw(props);
+    for (const surface of ['Preview', 'Python', 'Agent', 'Preview', 'Python']) {
+      fire(
+        $(`[data-surface="${surface}"]`),
+        new MouseEvent('click', { bubbles: true }),
+      );
+      draw(props);
+      expect([surface, host.querySelectorAll('[data-preview]').length]).toEqual(
+        [surface, 1],
+      );
+      expect($('[data-designer-python] [data-preview]')).toBeNull();
+    }
+    expect(mounted).toHaveBeenCalledTimes(1);
+  });
+
   it('is not in the switch when there is no file', () => {
     draw({ preview: <div data-preview="" /> });
     expect(
@@ -885,7 +1005,7 @@ describe('the mock designer (`mock`): a picture of the Accounting example', () =
     expect(
       (
         $(
-          '[data-designer-panel="properties"] button[disabled]',
+          '[data-designer-section-part="rule-1"] button[disabled]',
         ) as HTMLButtonElement
       ).textContent,
     ).toContain('Remove');

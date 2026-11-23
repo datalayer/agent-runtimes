@@ -234,7 +234,7 @@ def test_run_imports_the_spec_makes_the_experiments_validates_launches_and_watch
             "run",
             str(fake.spec_path),
             "--agent-spec-ids",
-            "jupyter-data-analyst,example-evals",
+            "worker-data-analyst,example-evals",
             "--concurrency",
             "2",
             "--budget",
@@ -262,7 +262,7 @@ def test_run_imports_the_spec_makes_the_experiments_validates_launches_and_watch
     assert "Dropped evaluators the platform cannot run: is_instance" in result.output
     created = [kwargs for name, kwargs in fake.calls if name == "create_experiment"]
     assert [item["config"]["subject"] for item in created] == [
-        {"kind": "agentspec", "ref": "jupyter-data-analyst"},
+        {"kind": "agentspec", "ref": "worker-data-analyst"},
         {"kind": "agentspec", "ref": "example-evals"},
     ]
     assert all(
@@ -288,8 +288,8 @@ def test_run_reuses_the_experiment_that_already_runs_the_subject(fake: FakeClien
     fake.experiments.append(
         {
             "id": "experiment-9",
-            "name": "jupyter-data-analyst",
-            "config": {"agent_spec_id": "jupyter-data-analyst"},
+            "name": "worker-data-analyst",
+            "config": {"agent_spec_id": "worker-data-analyst"},
             "archived": False,
         }
     )
@@ -300,7 +300,7 @@ def test_run_reuses_the_experiment_that_already_runs_the_subject(fake: FakeClien
             "run",
             "evalset-1",
             "--agent-spec-ids",
-            "jupyter-data-analyst",
+            "worker-data-analyst",
             "--no-watch",
         ],
     )
@@ -503,7 +503,7 @@ def test_the_runner_cloud_target_is_a_launch(fake: FakeClient):
     result = execute_evalset_spec(
         cast("AgentClient", fake),
         spec=SPEC,
-        agentspec_ids=["jupyter-data-analyst"],
+        agentspec_ids=["worker-data-analyst"],
         execution_target="cloud",
         run_limit=1,
         concurrency=3,

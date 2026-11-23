@@ -292,12 +292,13 @@ def test_a_new_runtime_asks_for_an_environment_then_an_agentspec(
         assert datalayer.created == {
             "environment": "ai-agents-env",
             "time_reservation": 10,
-            "agent_spec_id": "jupyter-data-analyst",
+            "agent_spec_id": "worker-accountant",
         }
-        # The catalogue's offered agents (agentspecs 0.0.215: the seven seed agents),
-        # by id, the first proposed. Picked, so not said as a default.
-        assert not any("jupyter-data-analyst" in line for line in notes)
-        assert started.agent_spec_id == "jupyter-data-analyst"
+        # The catalogue's offered agents (the eight seed agents), by id, the first
+        # proposed: the Accountant since the Data Analyst is worker-data-analyst
+        # (23 November 2026). Picked, so not said as a default.
+        assert not any("worker-accountant" in line for line in notes)
+        assert started.agent_spec_id == "worker-accountant"
         assert started.credits == pytest.approx(0.0008 * 60 * 10)
     finally:
         started.relay.stop()
@@ -869,15 +870,15 @@ def test_the_agentspecs_offered_on_datalayer_are_the_enabled_ones() -> None:
 def test_agent_offers_the_eight_agents_the_catalogue_enables() -> None:
     """agentspecs 0.0.187 (the user, 14 November 2026): the cloud picker and the
     local one offer the agents the catalogue enables and lists, the eight seed
-    agents (the Traveller since 15 November 2026, the Jupyter Data Analyst since
+    agents (the Traveller since 15 November 2026, the Data Analyst since
     18 November 2026, the Functional Analyst since 19 November 2026); example-simple,
     enabled and not listed, stays the neutral default."""
     from agent_runtimes.chat import cli
     from agent_runtimes.specs.agents import get_agent_spec, list_agentspecs
 
     seed = [
-        "jupyter-data-analyst",
         "worker-accountant",
+        "worker-data-analyst",
         "worker-functional-analyst",
         "worker-marketer",
         "worker-shopper",

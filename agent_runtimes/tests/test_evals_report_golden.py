@@ -58,7 +58,7 @@ EVALSET: dict[str, Any] = {
     ],
     "report_evaluators": [],
     "tags": ["reference"],
-    "metadata": {"agentspec_ids": ["jupyter-data-analyst", "example-evals"]},
+    "metadata": {"agentspec_ids": ["worker-data-analyst", "example-evals"]},
     "cases": [
         {
             "id": f"case-{index}",
@@ -173,13 +173,13 @@ def _run(
     }
 
 
-EXPERIMENTS = [_experiment(1, "jupyter-data-analyst"), _experiment(2, "example-evals")]
+EXPERIMENTS = [_experiment(1, "worker-data-analyst"), _experiment(2, "example-evals")]
 RUNS: dict[str, list[dict[str, Any]]] = {
     # Newest first, the way the store lists them.
     "experiment-1": [
-        _run(1, 3, [True, True, False, True, True, True], "jupyter-data-analyst"),
-        _run(1, 2, [True, True, False, False, True, True], "jupyter-data-analyst"),
-        _run(1, 1, [True, True, False, False, True, False], "jupyter-data-analyst"),
+        _run(1, 3, [True, True, False, True, True, True], "worker-data-analyst"),
+        _run(1, 2, [True, True, False, False, True, True], "worker-data-analyst"),
+        _run(1, 1, [True, True, False, False, True, False], "worker-data-analyst"),
     ],
     "experiment-2": [
         _run(2, 2, [True, False, False, False, True, False], "example-evals"),

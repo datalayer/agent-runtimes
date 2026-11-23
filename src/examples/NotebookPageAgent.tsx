@@ -36,7 +36,7 @@ const NotebookPageAgent: React.FC = () => (
         target="browser"
         /* The Analyst is the team's front door; the team puts the other
            members one click away in the composer's agents menu. */
-        agentId="jupyter-data-analyst"
+        agentId="worker-data-analyst"
         teamId="jupyter"
         /* The notebook, open on the page. */
         defaultEditor="notebook"

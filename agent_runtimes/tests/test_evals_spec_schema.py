@@ -70,7 +70,7 @@ def test_the_reference_fixture_is_what_the_plan_says():
     assert spec["name"] == "Data Analysis Agent Benchmark"
     assert spec["kind"] == "batch" and spec["run_environment"] == "sdk"
     assert spec["category"] == "data"
-    assert spec["metadata"]["agentspec_ids"] == ["jupyter-data-analyst"]
+    assert spec["metadata"]["agentspec_ids"] == ["worker-data-analyst"]
     names = [case["name"] for case in spec["cases"]]
     assert "duplicate-customers" in names and "duplicate-rows" in names
     # Every case can be graded by an evaluator the platform runs.

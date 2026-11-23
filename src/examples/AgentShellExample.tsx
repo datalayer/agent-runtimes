@@ -44,7 +44,7 @@ import { ThemedProvider } from './utils/themedProvider';
 /** The team the landing page runs, and this example with it. */
 const TEAM_ID = 'jupyter';
 /** Its front door: the member a prompt reaches unless `@` says otherwise. */
-const FRONT_DOOR = 'jupyter-data-analyst';
+const FRONT_DOOR = 'worker-data-analyst';
 
 // The package's example decks, so the Decks member has something to open and
 // change before it has made one. Once, at module load.

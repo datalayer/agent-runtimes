@@ -29,17 +29,6 @@ export type AgentPresentation = {
 };
 
 export const AGENT_PRESENTATIONS: Record<string, AgentPresentation> = {
-  'jupyter-data-analyst': {
-    id: 'jupyter-data-analyst',
-    version: '0.0.1',
-    name: 'Jupyter Data Analyst',
-    emoji: '📊',
-    description:
-      'Explores the data in the notebook you have open — adds the cells and runs them, profiles and charts the data, checks it for the things that quietly ruin an analysis, and says plainly what it found, where everyone can see it.',
-    tagline: 'Explores, charts and checks your data',
-    presentation:
-      'Explores the data in the notebook you have open — adds the cells and runs\nthem, profiles and charts the data, checks it for the things that quietly\nruin an analysis, and says plainly what it found, where everyone can see it.\n\n- Reads the notebook first and builds on the cells already there\n- Writes the cells and runs them, one idea per cell\n- Profiles every column: types, missing values and ranges that look wrong\n- Draws the chart when a chart is the clearest answer\n- Flags what would ruin the conclusion: repeated rows, outliers, dropped rows\n\n[The seed agents, in slides](/visitors/decks/agents/seed-agents)',
-  },
   'worker-accountant': {
     id: 'worker-accountant',
     version: '0.0.1',
@@ -50,6 +39,17 @@ export const AGENT_PRESENTATIONS: Record<string, AgentPresentation> = {
     tagline: 'Matches payments, checks balances',
     presentation:
       'Work with Odoo accounting data to reconcile invoices and payments, analyze\njournal balances, and prepare close-ready summaries.\n\n- Reads your Odoo books: invoices, payments, journals and ledgers\n- Lists unpaid invoices and the customers behind them\n- Matches payments against open invoices and flags what does not reconcile\n- Prepares a close summary with the balances that moved\n- Changes nothing in the books without a person\n\n[Watch it in the Sales and Accounting Stage](/stages?stage=sales-and-accounting)',
+  },
+  'worker-data-analyst': {
+    id: 'worker-data-analyst',
+    version: '0.0.1',
+    name: 'Data Analyst',
+    emoji: '📊',
+    description:
+      'Explores the data in the Jupyter notebook you have open — adds the cells and runs them, profiles and charts the data, checks it for the things that quietly ruin an analysis, and says plainly what it found, where everyone can see it.',
+    tagline: 'Explores, charts and checks your data',
+    presentation:
+      'Explores the data in the Jupyter notebook you have open — adds the cells and runs\nthem, profiles and charts the data, checks it for the things that quietly\nruin an analysis, and says plainly what it found, where everyone can see it.\n\n- Reads the notebook first and builds on the cells already there\n- Writes the cells and runs them, one idea per cell\n- Profiles every column: types, missing values and ranges that look wrong\n- Draws the chart when a chart is the clearest answer\n- Flags what would ruin the conclusion: repeated rows, outliers, dropped rows\n\n[The seed agents, in slides](/visitors/decks/agents/seed-agents)',
   },
   'worker-functional-analyst': {
     id: 'worker-functional-analyst',

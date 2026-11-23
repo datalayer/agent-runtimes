@@ -77,7 +77,7 @@ const SEED_AGENTS: Record<string, string> = {
   'worker-traveller': 'demo-traveller',
   'worker-terra': 'demo-terra',
   'worker-steward-aws': 'demo-aws-steward',
-  'jupyter-data-analyst': 'demo-jupyter-data-analyst',
+  'worker-data-analyst': 'demo-data-analyst',
   'worker-functional-analyst': 'demo-functional-analyst',
 };
 

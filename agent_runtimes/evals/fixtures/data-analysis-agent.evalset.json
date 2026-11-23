@@ -7,7 +7,7 @@
   "tags": ["reference", "data-analysis", "duplicates", "benchmark"],
   "metadata": {
     "scenario": "customer-duplicates",
-    "agentspec_ids": ["jupyter-data-analyst"],
+    "agentspec_ids": ["worker-data-analyst"],
     "comparison_mode": "same-evalset-multiple-agentspecs",
     "dataset": {
       "name": "customers.csv",

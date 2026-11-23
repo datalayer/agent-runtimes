@@ -18,8 +18,8 @@ import { getAgentspecs } from '../agents';
 describe('the agents’ presentations', () => {
   it('are the seed agents’, each with a tagline and a Markdown document', () => {
     expect(Object.keys(AGENT_PRESENTATIONS).sort()).toEqual([
-      'jupyter-data-analyst',
       'worker-accountant',
+      'worker-data-analyst',
       'worker-functional-analyst',
       'worker-marketer',
       'worker-shopper',

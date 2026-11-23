@@ -234,7 +234,7 @@ have, or a renderer's id said alone (`ui=["a2ui"]`), is refused:
 app = Application(
     id="quote",
     kind="widget",
-    agent="jupyter-data-analyst:0.0.1",
+    agent="worker-data-analyst:0.0.1",
     ui=[
         {"plugin": "chat"},
         {"plugin": "page-layout"},
@@ -456,7 +456,7 @@ from typing import Literal
 
 from agent_runtimes.apps import Application
 
-app = Application(id="quote", kind="widget", agent="jupyter-data-analyst:0.0.1")
+app = Application(id="quote", kind="widget", agent="worker-data-analyst:0.0.1")
 app.output("total", title="Total")
 app.output("lines", "Table", columns=["item", "amount"])
 app.input("seats", {"type": "integer", "title": "Seats", "minimum": 1, "maximum": 1000, "default": 10})

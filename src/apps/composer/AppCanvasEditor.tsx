@@ -15,8 +15,10 @@
  * the **Layout**, the page a person meets , the **Python** file when there is one, and the
  * **Preview**. On the right, the **Toolbox** of parts to drop on the agent —
  * each only on the node of its kind (`dropAllowed`), every other place
- * refusing it — arriving with its example filled in; the **Properties** of the part selected,
- * drawn from its JSON Schema; and the **Events**: what happens when,
+ * refusing it — arriving with its example filled in; a part selected opens
+ * its kind's section of the Toolbox, its properties, drawn from its JSON
+ * Schema, under the entry it was placed from (`toolOfPart`) — the
+ * **Properties** for a kind with no section; and the **Events**: what happens when,
  * and what it does.
  *
  * Every change is the application's spec read back through its own
@@ -36,6 +38,7 @@ import type {
   ReactNode,
 } from 'react';
 import {
+  Fragment,
   createContext,
   startTransition,
   useContext,
@@ -119,9 +122,11 @@ import {
   appParts,
   avatarModelUrlOf,
   avatarOf,
+  kindOfPartId,
   kindProblemsOf,
   partFamilies,
   toolboxGroupsOf,
+  toolOfPart,
   uiChoiceRoot,
   withAgentsOwnUiFirst,
   withPartAdded,
@@ -854,11 +859,14 @@ function ToolboxItem({
   onAdd,
   onDrag,
   disabled,
+  current = false,
 }: {
   tool: CanvasPartContribution;
   onAdd: () => void;
   onDrag: (tool: CanvasPartContribution | null) => void;
   disabled: boolean;
+  /** The entry the part selected on the surface was placed from. */
+  current?: boolean;
 }): JSX.Element {
   // An avatar wears its own drawing; the other kinds their mark.
   const icon =
@@ -884,6 +892,7 @@ function ToolboxItem({
       onDragStart={() => onDrag(tool)}
       onDragEnd={() => onDrag(null)}
       disabled={disabled}
+      current={current}
     />
   );
 }
@@ -1066,16 +1075,28 @@ function Designer({
   );
   const dragging: CanvasPartKind | null = draggedTool?.kind ?? null;
   const [selected, setSelected] = useState<string>('agent');
-  // The panels open folded; a click on the surface opens the Properties of what it picked.
+  // The panels open folded. A click on the surface opens the section of the
+  // Controls its kind is offered in, the part's properties under its entry
+  // (the user, 22 November 2026: a skill clicked opens Skills with that
+  // skill, not the Properties); a kind with no section, the Properties.
   const [propertiesOpen, setPropertiesOpen] = useState(false);
+  const [openSections, setOpenSections] = useState<
+    Partial<Record<CanvasPartKind, boolean>>
+  >({});
+  // Bumped when a part is revealed in its section: it is scrolled to and focused once drawn.
+  const [revealed, setRevealed] = useState(0);
+  const revealedRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const element = revealedRef.current;
+    if (!revealed || !element) {
+      return;
+    }
+    element.scrollIntoView?.({ block: 'nearest' });
+    element.focus({ preventScroll: true });
+  }, [revealed]);
   const confirm = useConfirm();
-  // A kind's node clicked while it holds no part: the Properties say what to add.
+  // A kind's node clicked while it holds no part: its section (or the Properties) says what to add.
   const [emptyKind, setEmptyKind] = useState<GroupKind | null>(null);
-  const pick = (id: string) => {
-    setEmptyKind(null);
-    setSelected(id);
-    setPropertiesOpen(true);
-  };
   const [refusal, setRefusal] = useState('');
   // What the last change did, in a line: every change is one step of the page's Undo.
   const [said, setSaid] = useState('');
@@ -1094,6 +1115,24 @@ function Designer({
       ),
     [offered, agentRef],
   );
+  /** The section of the Controls a kind of part is offered in: none when nothing enabled offers it. */
+  const sectionOf = (kind: AppPartKind) =>
+    groups.find(group => group.kind === kind);
+  /** A kind's section opened, what is selected in it scrolled to and focused; a kind with none, the Properties. */
+  const revealKind = (kind: AppPartKind) => {
+    if (sectionOf(kind)) {
+      setOpenSections(open => ({ ...open, [kind]: true }));
+      setPropertiesOpen(false);
+      setRevealed(count => count + 1);
+    } else {
+      setPropertiesOpen(true);
+    }
+  };
+  const pick = (id: string) => {
+    setEmptyKind(null);
+    setSelected(id);
+    revealKind(kindOfPartId(id));
+  };
   const eventChoices =
     groups.find(group => group.kind === 'event')?.parts ?? [];
   const avatarChoices =
@@ -1272,7 +1311,7 @@ function Designer({
       </SegmentedControl>
       <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
         {surface === 'agent'
-          ? 'Drag a part from the toolbox onto its place around the agent, an avatar onto the agent itself; select a part to set its properties. Delete takes a selected part off; Ctrl+Z takes back one change.'
+          ? 'Drag a part from the toolbox onto its place around the agent, an avatar onto the agent itself; select a part to set it in its section of the Controls. Delete takes a selected part off; Ctrl+Z takes back one change.'
           : surface === 'layout'
             ? 'The page a person meets: drag a component from the toolbox onto it.'
             : surface === 'flow'
@@ -1296,8 +1335,13 @@ function Designer({
   // The Preview stays mounted while another surface is shown, at the same place
   // in each: what was said to it is kept when the Maker comes back.
   // Hidden, neither is drawn again on a change: shown, it is.
+  // Keyed: the Agent's tree puts them one place further than the other
+  // surfaces' do, and unkeyed, a change between them handed the Preview's kept
+  // part to the Python's, which, hidden, went on holding a second, stale
+  // Preview (22 November 2026), and mounted the Preview again.
   const previewBody = preview ? (
     <KeptWhileHidden
+      key="preview"
       as="div"
       hidden={surface !== 'preview'}
       data-designer-preview=""
@@ -1308,6 +1352,7 @@ function Designer({
   // The Python file too: its editor keeps its place, its undo and its scroll.
   const pythonBody = python ? (
     <KeptWhileHidden
+      key="python"
       as="div"
       hidden={surface !== 'python'}
       data-designer-python=""
@@ -1327,6 +1372,175 @@ function Designer({
       </Box>
     );
   }
+
+  // What is selected — a part, or a kind's node holding none — and the section of the Controls it is set in.
+  const selectionKind: AppPartKind | null = emptyKind ?? part?.kind ?? null;
+  const selectionSection = selectionKind ? sectionOf(selectionKind) : undefined;
+  const selectionLabel = emptyKind
+    ? PART_WORDS[emptyKind].title
+    : (part?.label ?? '');
+  /** What is selected, set: what its checks find wrong with its kind, then its form — or what to add, for a kind holding none. */
+  const propertiesBody = (
+    <>
+      {selectedProblems.length ? (
+        <Flash
+          variant="warning"
+          sx={{ mb: 2 }}
+          data-designer-problems={emptyKind ?? part?.kind}
+        >
+          {selectedProblems.map(problem => (
+            <Text as="p" key={problem} sx={{ m: 0, fontSize: 1 }}>
+              {problem}
+            </Text>
+          ))}
+        </Flash>
+      ) : null}
+      {emptyKind ? (
+        <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
+          {`${PART_WORDS[emptyKind].title}: none yet. Drag one from the Toolbox onto it.`}
+        </Text>
+      ) : part ? (
+        <>
+          {part.kind === 'agent'
+            ? (() => {
+                // Its harness, and what runs and hosts it: Datalayer or kagent.
+                const agentRef = (data as Record<string, unknown> | null)
+                  ?.agent;
+                const spec =
+                  typeof agentRef === 'string' && agentRef
+                    ? getAgentspecs(agentRef)
+                    : undefined;
+                return spec && agentEngine ? (
+                  <Box
+                    mb={2}
+                    display="flex"
+                    alignItems="center"
+                    gap={2}
+                    data-designer-agent-engine={spec.id}
+                  >
+                    <Text sx={{ fontSize: 1, fontWeight: 'semibold' }}>
+                      Harness
+                    </Text>
+                    {agentEngine(spec)}
+                  </Box>
+                ) : null;
+              })()
+            : null}
+          {part.kind === 'agent'
+            ? (() => {
+                // A coding agent over ACP: its register's terms, its credential, what it honours.
+                const agentRef = (data as Record<string, unknown> | null)
+                  ?.agent;
+                const harness = harnessOf(
+                  typeof agentRef === 'string' ? agentRef : '',
+                  {
+                    harnessOfAgent: id => getAgentspecs(id)?.harness,
+                    harness: getHarness,
+                  },
+                );
+                return harness ? (
+                  <Box mb={3} data-designer-harness={harness.id}>
+                    <Text
+                      as="div"
+                      sx={{
+                        fontSize: 1,
+                        fontWeight: 'semibold',
+                        mb: 1,
+                      }}
+                    >
+                      {`${HARNESS_WORDS.title}: ${harness.name}`}
+                    </Text>
+                    <Box
+                      as="ul"
+                      pl={3}
+                      m={0}
+                      sx={{ fontSize: 0, color: 'fg.muted' }}
+                    >
+                      {harnessTermsLines(harness).map(line => (
+                        <Box as="li" key={line}>
+                          {line}
+                        </Box>
+                      ))}
+                    </Box>
+                  </Box>
+                ) : null;
+              })()
+            : null}
+          {part.kind === 'agent' && avatarChoices.length ? (
+            // The agent's avatar is one of its properties, as an avatar dropped on it
+            // (asked 12 October 2026): chosen here, it is placed as the toolbox places it.
+            <FormControl disabled={disabled} sx={{ mb: 3 }}>
+              <FormControl.Label>Avatar</FormControl.Label>
+              <Select
+                block
+                size="small"
+                data-designer-avatar-choice=""
+                value={avatarOf(data)}
+                onChange={change =>
+                  add(`avatar:${change.target.value}`, 'agent')
+                }
+              >
+                {avatarOf(data) ? null : (
+                  <Select.Option value="">The default</Select.Option>
+                )}
+                {partFamilies(avatarChoices).map(family => (
+                  <Select.OptGroup key={family.label} label={family.label}>
+                    {family.parts.map(tool => (
+                      <Select.Option
+                        key={tool.id}
+                        value={tool.id.slice('avatar:'.length)}
+                      >
+                        {tool.label}
+                      </Select.Option>
+                    ))}
+                  </Select.OptGroup>
+                ))}
+              </Select>
+              <FormControl.Caption>
+                What its floating assistant shows.
+                {/* A clippy.js character says, once chosen, that it is Microsoft's and fetched. */}
+                {avatarNoteOf(avatarChoices, avatarOf(data))
+                  ? ` ${avatarNoteOf(avatarChoices, avatarOf(data))}`
+                  : ''}
+              </FormControl.Caption>
+            </FormControl>
+          ) : null}
+          <SchemaProperties
+            key={part.id}
+            // A UI part: one of the UI plugins, then a renderer it may be exposed through.
+            root={
+              part.kind === 'ui'
+                ? uiChoiceRoot(APPSPEC_SCHEMA, data, part.at)
+                : APPSPEC_SCHEMA
+            }
+            data={data}
+            at={part.at}
+            title={part.label}
+            disabled={disabled}
+            onChange={(next, refused) => {
+              if (!refused) {
+                write(next, `designer:${part.id}`, `Set ${part.label}.`);
+              }
+            }}
+          />
+          {part.at.keys ? null : (
+            <Button
+              size="small"
+              sx={{ mt: 2 }}
+              disabled={disabled}
+              onClick={() => void removeAsked(part)}
+            >
+              Remove this {PART_WORDS[part.kind].one}
+            </Button>
+          )}
+        </>
+      ) : (
+        <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
+          {DESIGNER_WORDS.nothingSelected}
+        </Text>
+      )}
+    </>
+  );
 
   return (
     <Box
@@ -1422,7 +1636,7 @@ function Designer({
                   pick(first.id);
                 } else {
                   setEmptyKind(kind);
-                  setPropertiesOpen(true);
+                  revealKind(kind);
                 }
               },
               dragging,
@@ -1444,227 +1658,125 @@ function Designer({
               open={propertiesOpen}
               onOpenChange={setPropertiesOpen}
             >
-              {selectedProblems.length ? (
-                <Flash
-                  variant="warning"
-                  sx={{ mb: 2 }}
-                  data-designer-problems={emptyKind ?? part?.kind}
-                >
-                  {selectedProblems.map(problem => (
-                    <Text as="p" key={problem} sx={{ m: 0, fontSize: 1 }}>
-                      {problem}
-                    </Text>
-                  ))}
-                </Flash>
-              ) : null}
-              {emptyKind ? (
-                <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
-                  {`${PART_WORDS[emptyKind].title}: none yet. Drag one from the Toolbox onto it.`}
-                </Text>
-              ) : part ? (
-                <>
-                  {part.kind === 'agent'
-                    ? (() => {
-                        // Its harness, and what runs and hosts it: Datalayer or kagent.
-                        const agentRef = (
-                          data as Record<string, unknown> | null
-                        )?.agent;
-                        const spec =
-                          typeof agentRef === 'string' && agentRef
-                            ? getAgentspecs(agentRef)
-                            : undefined;
-                        return spec && agentEngine ? (
-                          <Box
-                            mb={2}
-                            display="flex"
-                            alignItems="center"
-                            gap={2}
-                            data-designer-agent-engine={spec.id}
-                          >
-                            <Text sx={{ fontSize: 1, fontWeight: 'semibold' }}>
-                              Harness
-                            </Text>
-                            {agentEngine(spec)}
-                          </Box>
-                        ) : null;
-                      })()
-                    : null}
-                  {part.kind === 'agent'
-                    ? (() => {
-                        // A coding agent over ACP: its register's terms, its credential, what it honours.
-                        const agentRef = (
-                          data as Record<string, unknown> | null
-                        )?.agent;
-                        const harness = harnessOf(
-                          typeof agentRef === 'string' ? agentRef : '',
-                          {
-                            harnessOfAgent: id => getAgentspecs(id)?.harness,
-                            harness: getHarness,
-                          },
-                        );
-                        return harness ? (
-                          <Box mb={3} data-designer-harness={harness.id}>
-                            <Text
-                              as="div"
-                              sx={{
-                                fontSize: 1,
-                                fontWeight: 'semibold',
-                                mb: 1,
-                              }}
-                            >
-                              {`${HARNESS_WORDS.title}: ${harness.name}`}
-                            </Text>
-                            <Box
-                              as="ul"
-                              pl={3}
-                              m={0}
-                              sx={{ fontSize: 0, color: 'fg.muted' }}
-                            >
-                              {harnessTermsLines(harness).map(line => (
-                                <Box as="li" key={line}>
-                                  {line}
-                                </Box>
-                              ))}
-                            </Box>
-                          </Box>
-                        ) : null;
-                      })()
-                    : null}
-                  {part.kind === 'agent' && avatarChoices.length ? (
-                    // The agent's avatar is one of its properties, as an avatar dropped on it
-                    // (asked 12 October 2026): chosen here, it is placed as the toolbox places it.
-                    <FormControl disabled={disabled} sx={{ mb: 3 }}>
-                      <FormControl.Label>Avatar</FormControl.Label>
-                      <Select
-                        block
-                        size="small"
-                        data-designer-avatar-choice=""
-                        value={avatarOf(data)}
-                        onChange={change =>
-                          add(`avatar:${change.target.value}`, 'agent')
-                        }
-                      >
-                        {avatarOf(data) ? null : (
-                          <Select.Option value="">The default</Select.Option>
-                        )}
-                        {partFamilies(avatarChoices).map(family => (
-                          <Select.OptGroup
-                            key={family.label}
-                            label={family.label}
-                          >
-                            {family.parts.map(tool => (
-                              <Select.Option
-                                key={tool.id}
-                                value={tool.id.slice('avatar:'.length)}
-                              >
-                                {tool.label}
-                              </Select.Option>
-                            ))}
-                          </Select.OptGroup>
-                        ))}
-                      </Select>
-                      <FormControl.Caption>
-                        What its floating assistant shows.
-                        {/* A clippy.js character says, once chosen, that it is Microsoft's and fetched. */}
-                        {avatarNoteOf(avatarChoices, avatarOf(data))
-                          ? ` ${avatarNoteOf(avatarChoices, avatarOf(data))}`
-                          : ''}
-                      </FormControl.Caption>
-                    </FormControl>
-                  ) : null}
-                  <SchemaProperties
-                    key={part.id}
-                    // A UI part: one of the UI plugins, then a renderer it may be exposed through.
-                    root={
-                      part.kind === 'ui'
-                        ? uiChoiceRoot(APPSPEC_SCHEMA, data, part.at)
-                        : APPSPEC_SCHEMA
+              {selectionSection ? (
+                <Box data-designer-properties-in={selectionSection.kind}>
+                  <Text
+                    as="p"
+                    sx={{ fontSize: 1, color: 'fg.muted', mt: 0, mb: 2 }}
+                  >
+                    {`${selectionLabel}: set in ${selectionSection.label}, below.`}
+                  </Text>
+                  <Button
+                    size="small"
+                    onClick={() =>
+                      revealKind(selectionSection.kind as AppPartKind)
                     }
-                    data={data}
-                    at={part.at}
-                    title={part.label}
-                    disabled={disabled}
-                    onChange={(next, refused) => {
-                      if (!refused) {
-                        write(
-                          next,
-                          `designer:${part.id}`,
-                          `Set ${part.label}.`,
-                        );
-                      }
-                    }}
-                  />
-                  {part.at.keys ? null : (
-                    <Button
-                      size="small"
-                      sx={{ mt: 2 }}
-                      disabled={disabled}
-                      onClick={() => void removeAsked(part)}
-                    >
-                      Remove this {PART_WORDS[part.kind].one}
-                    </Button>
-                  )}
-                </>
+                  >
+                    {`Show it in ${selectionSection.label}`}
+                  </Button>
+                </Box>
               ) : (
-                <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
-                  {DESIGNER_WORDS.nothingSelected}
-                </Text>
+                propertiesBody
               )}
             </DesignerPanel>
             {/* One folded menu per kind of part (asked 12 October 2026): skills, protocols, rules,
                 tests… each dragged onto its node, or added with Enter. */}
-            {groups.map(group => (
-              <DesignerPanel
-                key={group.kind}
-                id={`toolbox-${group.kind}`}
-                title={group.label}
-                icon={TOOL_GROUP_ICONS[group.kind]}
-                maxHeight={280}
-                folded
-              >
-                <Box data-designer-tool-group={group.kind}>
-                  {partFamilies(group.parts).map(family => (
-                    <Box
-                      key={family.label}
-                      data-designer-tool-family={family.label || undefined}
-                    >
-                      {family.label ? (
-                        <Text
-                          as="div"
-                          sx={{
-                            fontSize: 0,
-                            color: 'fg.muted',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.06em',
-                            mt: 2,
-                            mb: 1,
-                          }}
-                        >
-                          {family.label}
-                        </Text>
-                      ) : null}
-                      {family.note ? (
-                        <Text
-                          as="p"
-                          sx={{ fontSize: 0, color: 'fg.muted', mt: 0, mb: 1 }}
-                        >
-                          {family.note}
-                        </Text>
-                      ) : null}
-                      {family.parts.map(tool => (
-                        <ToolboxItem
-                          key={tool.id}
-                          tool={tool}
-                          disabled={disabled && !pictured}
-                          onAdd={() => add(tool.id)}
-                          onDrag={setDraggedTool}
-                        />
-                      ))}
-                    </Box>
-                  ))}
+            {groups.map(group => {
+              // The section of what is selected: its properties under the entry it was placed from, or first.
+              const holds = selectionSection?.kind === group.kind;
+              const current =
+                holds && !emptyKind && part
+                  ? toolOfPart(data, part, group.parts)
+                  : undefined;
+              const editor = holds ? (
+                <Box
+                  ref={revealedRef}
+                  tabIndex={-1}
+                  role="group"
+                  aria-label={`${selectionLabel}: its properties`}
+                  data-designer-section-part={emptyKind ?? part?.id}
+                  sx={{
+                    p: 2,
+                    mb: 2,
+                    border: '1px solid',
+                    borderColor: 'accent.emphasis',
+                    borderRadius: 2,
+                    bg: 'canvas.default',
+                    '&:focus-visible': {
+                      outline: '2px solid',
+                      outlineColor: 'accent.fg',
+                      outlineOffset: 2,
+                    },
+                  }}
+                >
+                  {propertiesBody}
                 </Box>
-              </DesignerPanel>
-            ))}
+              ) : null;
+              return (
+                <DesignerPanel
+                  key={group.kind}
+                  id={`toolbox-${group.kind}`}
+                  title={group.label}
+                  icon={TOOL_GROUP_ICONS[group.kind]}
+                  maxHeight={holds ? '60vh' : 280}
+                  open={Boolean(openSections[group.kind])}
+                  onOpenChange={open =>
+                    setOpenSections(was => ({ ...was, [group.kind]: open }))
+                  }
+                >
+                  <Box data-designer-tool-group={group.kind}>
+                    {current ? null : editor}
+                    {partFamilies(group.parts).map(family => (
+                      <Box
+                        key={family.label}
+                        data-designer-tool-family={family.label || undefined}
+                      >
+                        {family.label ? (
+                          <Text
+                            as="div"
+                            sx={{
+                              fontSize: 0,
+                              color: 'fg.muted',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.06em',
+                              mt: 2,
+                              mb: 1,
+                            }}
+                          >
+                            {family.label}
+                          </Text>
+                        ) : null}
+                        {family.note ? (
+                          <Text
+                            as="p"
+                            sx={{
+                              fontSize: 0,
+                              color: 'fg.muted',
+                              mt: 0,
+                              mb: 1,
+                            }}
+                          >
+                            {family.note}
+                          </Text>
+                        ) : null}
+                        {family.parts.map(tool => (
+                          <Fragment key={tool.id}>
+                            <ToolboxItem
+                              tool={tool}
+                              disabled={disabled && !pictured}
+                              onAdd={() => add(tool.id)}
+                              onDrag={setDraggedTool}
+                              current={tool.id === current?.id}
+                            />
+                            {tool.id === current?.id ? editor : null}
+                          </Fragment>
+                        ))}
+                      </Box>
+                    ))}
+                  </Box>
+                </DesignerPanel>
+              );
+            })}
             <DesignerPanel
               id="events"
               title={DESIGNER_WORDS.events}

@@ -13,10 +13,10 @@
 
 ## Agentspec Coverage
 
-| Agentspec ID         | Agentspec            | Model | Version | Experiments | Runs | Details                                                                |
-| :------------------- | :------------------- | :---- | :------ | ----------: | ---: | :--------------------------------------------------------------------- |
-| jupyter-data-analyst | jupyter-data-analyst | -     | -       |           1 |    3 | [Open](https://datalayer.app/settings/agentspecs/jupyter-data-analyst) |
-| example-evals        | example-evals        | -     | -       |           1 |    2 | [Open](https://datalayer.app/settings/agentspecs/example-evals)        |
+| Agentspec ID        | Agentspec           | Model | Version | Experiments | Runs | Details                                                               |
+| :------------------ | :------------------ | :---- | :------ | ----------: | ---: | :-------------------------------------------------------------------- |
+| worker-data-analyst | worker-data-analyst | -     | -       |           1 |    3 | [Open](https://datalayer.app/settings/agentspecs/worker-data-analyst) |
+| example-evals       | example-evals       | -     | -       |           1 |    2 | [Open](https://datalayer.app/settings/agentspecs/example-evals)       |
 
 
 ## Evaluator Results
@@ -46,30 +46,30 @@ Pass rate for each case across every fetched run (all experiments and agentspecs
 
 Compare how each case performs across agentspecs (for example codemode vs no-codemode).
 
-| Case                 | jupyter-data-analyst | example-evals |
-| :------------------- | -------------------: | ------------: |
-| row-count            |               100.0% |        100.0% |
-| exact-duplicate-rows |               100.0% |          0.0% |
-| duplicate-customers  |                 0.0% |          0.0% |
-| duplicate-rows       |                33.3% |          0.0% |
-| largest-plan         |               100.0% |        100.0% |
-| unique-customers     |                66.7% |         50.0% |
+| Case                 | worker-data-analyst | example-evals |
+| :------------------- | ------------------: | ------------: |
+| row-count            |              100.0% |        100.0% |
+| exact-duplicate-rows |              100.0% |          0.0% |
+| duplicate-customers  |                0.0% |          0.0% |
+| duplicate-rows       |               33.3% |          0.0% |
+| largest-plan         |              100.0% |        100.0% |
+| unique-customers     |               66.7% |         50.0% |
 
 ## Experiment Overview
 
-| Experiment           | Agentspec            | Runs (fetched/total) | Latest | Baseline | Drift       | Latest-2 Delta |
-| :------------------- | :------------------- | -------------------: | -----: | -------: | ----------: | -------------: |
-| jupyter-data-analyst | jupyter-data-analyst |                  3/3 |  83.3% |    50.0% | 🟢 +33.3 pts |    🟢 +16.7 pts |
-| example-evals        | example-evals        |                  2/2 |  33.3% |    50.0% | 🔴 -16.7 pts |    🔴 -16.7 pts |
+| Experiment          | Agentspec           | Runs (fetched/total) | Latest | Baseline | Drift       | Latest-2 Delta |
+| :------------------ | :------------------ | -------------------: | -----: | -------: | ----------: | -------------: |
+| worker-data-analyst | worker-data-analyst |                  3/3 |  83.3% |    50.0% | 🟢 +33.3 pts |    🟢 +16.7 pts |
+| example-evals       | example-evals       |                  2/2 |  33.3% |    50.0% | 🔴 -16.7 pts |    🔴 -16.7 pts |
 
 ## Comparison Combinations
 
 ### By Latest Pass Rate
 
-| Rank | Experiment           | Latest |
-| ---: | :------------------- | -----: |
-|    1 | jupyter-data-analyst |  83.3% |
-|    2 | example-evals        |  33.3% |
+| Rank | Experiment          | Latest |
+| ---: | :------------------ | -----: |
+|    1 | worker-data-analyst |  83.3% |
+|    2 | example-evals       |  33.3% |
 
 Latest pass-rate histogram (pts):
 `   0.0 to   12.5 pts |░░░░░░░░░░░░░░░░░░░░| 0`
@@ -83,10 +83,10 @@ Latest pass-rate histogram (pts):
 
 ### By Drift (Most Negative To Most Positive)
 
-| Rank | Experiment           | Drift       |
-| ---: | :------------------- | ----------: |
-|    1 | example-evals        | 🔴 -16.7 pts |
-|    2 | jupyter-data-analyst | 🟢 +33.3 pts |
+| Rank | Experiment          | Drift       |
+| ---: | :------------------ | ----------: |
+|    1 | example-evals       | 🔴 -16.7 pts |
+|    2 | worker-data-analyst | 🟢 +33.3 pts |
 
 Drift histogram (delta pts):
 ` -16.7 to  -10.4 pts |████████████████████| 1`
@@ -100,25 +100,25 @@ Drift histogram (delta pts):
 
 ### By Stability (Lowest Pass-Rate StdDev)
 
-| Rank | Experiment           | StdDev    | Mean  |
-| ---: | :------------------- | --------: | ----: |
-|    1 | example-evals        |  8.33 pts | 41.7% |
-|    2 | jupyter-data-analyst | 13.61 pts | 66.7% |
+| Rank | Experiment          | StdDev    | Mean  |
+| ---: | :------------------ | --------: | ----: |
+|    1 | example-evals       |  8.33 pts | 41.7% |
+|    2 | worker-data-analyst | 13.61 pts | 66.7% |
 
 ### Token Usage Across Runs By Experiment
 
 Total tokens across fetched runs for each experiment. Trends are ordered oldest to newest run.
 
-| Experiment           | Runs With Tokens | Latest Tokens | Mean Tokens | Total Tokens | Token Trend |
-| :------------------- | ---------------: | ------------: | ----------: | -----------: | :---------- |
-| jupyter-data-analyst |              3/3 |         9,000 |       9,000 |       27,000 | `▇▇▇`       |
-| example-evals        |              2/2 |         9,000 |       9,000 |       18,000 | `▇▇`        |
+| Experiment          | Runs With Tokens | Latest Tokens | Mean Tokens | Total Tokens | Token Trend |
+| :------------------ | ---------------: | ------------: | ----------: | -----------: | :---------- |
+| worker-data-analyst |              3/3 |         9,000 |       9,000 |       27,000 | `▇▇▇`       |
+| example-evals       |              2/2 |         9,000 |       9,000 |       18,000 | `▇▇`        |
 
 ### Pairwise Latest-Pass Deltas
 
-| Pair                                  | Left Latest | Right Latest | Delta (Left-Right) |
-| :------------------------------------ | ----------: | -----------: | -----------------: |
-| jupyter-data-analyst vs example-evals |       83.3% |        33.3% |        🟢 +50.0 pts |
+| Pair                                 | Left Latest | Right Latest | Delta (Left-Right) |
+| :----------------------------------- | ----------: | -----------: | -----------------: |
+| worker-data-analyst vs example-evals |       83.3% |        33.3% |        🟢 +50.0 pts |
 
 Pairwise latest-delta histogram (pts):
 `  50.0 to   50.0 pts |████████████████████| 1`
@@ -138,15 +138,15 @@ Pairwise latest-delta histogram (pts):
 
 ### Cross-Agentspec Pairwise Latest-Pass Deltas
 
-| Pair                                                                         | Left Latest | Right Latest | Delta (Left-Right) |
-| :--------------------------------------------------------------------------- | ----------: | -----------: | -----------------: |
-| jupyter-data-analyst (jupyter-data-analyst) vs example-evals (example-evals) |       83.3% |        33.3% |        🟢 +50.0 pts |
+| Pair                                                                       | Left Latest | Right Latest | Delta (Left-Right) |
+| :------------------------------------------------------------------------- | ----------: | -----------: | -----------------: |
+| worker-data-analyst (worker-data-analyst) vs example-evals (example-evals) |       83.3% |        33.3% |        🟢 +50.0 pts |
 
 ### Insight Highlights
 
-- Top latest pass-rate: jupyter-data-analyst (83.3%).
+- Top latest pass-rate: worker-data-analyst (83.3%).
 - Lowest latest pass-rate: example-evals (33.3%).
-- Strongest positive drift: jupyter-data-analyst (🟢 +33.3 pts).
+- Strongest positive drift: worker-data-analyst (🟢 +33.3 pts).
 - Strongest negative drift: example-evals (🔴 -16.7 pts).
 - Stability leader: example-evals (stddev=8.33 pts, mean=41.7%).
 
@@ -165,12 +165,12 @@ Full configuration, cases, heatmaps, per-experiment timelines, and per-run detai
 
 ## Appendix: Agentspec Details
 
-### jupyter-data-analyst
+### worker-data-analyst
 
-- ID: `jupyter-data-analyst`
-- Experiments (1): jupyter-data-analyst
+- ID: `worker-data-analyst`
+- Experiments (1): worker-data-analyst
 - Runs analysed: 3
-- Details: [Open in Datalayer](https://datalayer.app/settings/agentspecs/jupyter-data-analyst)
+- Details: [Open in Datalayer](https://datalayer.app/settings/agentspecs/worker-data-analyst)
 
 ### example-evals
 
@@ -242,7 +242,7 @@ The JSON block below is rendered directly from the top-level `report_analyses` p
     "name": "Experiment Latest/Baseline",
     "rows": [
       [
-        "jupyter-data-analyst",
+        "worker-data-analyst",
         0.8333333333333334,
         0.5,
         0.33333333333333337
@@ -259,7 +259,7 @@ The JSON block below is rendered directly from the top-level `report_analyses` p
     "kind": "line",
     "name": "Latest Pass Rate By Experiment",
     "x": [
-      "jupyter-data-analyst",
+      "worker-data-analyst",
       "example-evals"
     ],
     "y": [
@@ -279,7 +279,7 @@ The JSON block below is rendered directly from the top-level `report_analyses` p
     "kind": "heatmap",
     "name": "Recent Runs",
     "rows": [
-      "jupyter-data-analyst",
+      "worker-data-analyst",
       "example-evals"
     ],
     "values": [
@@ -309,12 +309,12 @@ The JSON block below is rendered directly from the top-level `report_analyses` p
       {
         "baseline": "example-evals",
         "baseline_pass_rate": 0.3333333333333333,
-        "candidate": "jupyter-data-analyst",
+        "candidate": "worker-data-analyst",
         "candidate_pass_rate": 0.8333333333333334,
         "delta_pass_rate": 0.5
       },
       {
-        "baseline": "jupyter-data-analyst",
+        "baseline": "worker-data-analyst",
         "baseline_pass_rate": 0.8333333333333334,
         "candidate": "example-evals",
         "candidate_pass_rate": 0.3333333333333333,
@@ -332,7 +332,7 @@ Pass-rate heatmap by experiment and run window:
 ```text
 Experiment           | r01 r02 r03 r04 r05 r06 r07 r08 r09 r10 r11 r12
 ----------------------------------------------------------------------
-jupyter-data-analyst | ▓ ▓ ▓ · · · · · · · · ·
+worker-data-analyst  | ▓ ▓ ▓ · · · · · · · · ·
 example-evals        | ▒ ▓ · · · · · · · · · ·
 Legend: low='░' .. high='█' (r01=latest fetched run, '·'=no run)
 ```
@@ -342,16 +342,16 @@ Consecutive delta heatmap (A-B) by experiment:
 ```text
 Experiment           | d01 d02 d03 d04 d05 d06 d07 d08 d09 d10 d11 d12
 ----------------------------------------------------------------------
-jupyter-data-analyst | +▒ +░ ·· ·· ·· ·· ·· ·· ·· ·· ·· ··
+worker-data-analyst  | +▒ +░ ·· ·· ·· ·· ·· ·· ·· ·· ·· ··
 example-evals        | -░ ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ··
 Legend: dNN are consecutive deltas (A-B), sign shows direction, magnitude uses '░'..'█', '··'=no comparison
 ```
 
 ## Appendix: Per-Experiment Details
 
-### jupyter-data-analyst
+### worker-data-analyst
 
-Agentspec: [jupyter-data-analyst](https://datalayer.app/settings/agentspecs/jupyter-data-analyst)
+Agentspec: [worker-data-analyst](https://datalayer.app/settings/agentspecs/worker-data-analyst)
 Evalset run details: [Open run page](https://datalayer.app/benchmarks/evalset-reference)
 
 #### Run Timeline
@@ -397,9 +397,9 @@ Token usage sparkline: `▇▇`
 
 Per-run detail for every run fetched in the window above. Each Run ID opens the run-details overlay directly in Datalayer, and the collapsible blocks below reproduce the same prompt, agent output, summary, and report shown by the in-app run-details dialog.
 
-### jupyter-data-analyst
+### worker-data-analyst
 
-Agentspec: jupyter-data-analyst
+Agentspec: worker-data-analyst
 
 | # | Run ID                                                               | Status    | Pass Rate | Cases (pass/total) | Avg Score | Total Tokens | Credits | Created              | Failure Cause |
 | --: | :------------------------------------------------------------------- | :-------- | --------: | -----------------: | --------: | -----------: | ------: | :------------------- | :------------ |
@@ -737,7 +737,7 @@ Raw usage payload:
 
 ```json
 {
-  "agent_spec_id": "jupyter-data-analyst",
+  "agent_spec_id": "worker-data-analyst",
   "execution_target": "cloud",
   "launch_source": "datalayer-core",
   "run_mode": "batch"
@@ -1113,7 +1113,7 @@ Raw usage payload:
 
 ```json
 {
-  "agent_spec_id": "jupyter-data-analyst",
+  "agent_spec_id": "worker-data-analyst",
   "execution_target": "cloud",
   "launch_source": "datalayer-core",
   "run_mode": "batch"
@@ -1489,7 +1489,7 @@ Raw usage payload:
 
 ```json
 {
-  "agent_spec_id": "jupyter-data-analyst",
+  "agent_spec_id": "worker-data-analyst",
   "execution_target": "cloud",
   "launch_source": "datalayer-core",
   "run_mode": "batch"

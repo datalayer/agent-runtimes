@@ -29,8 +29,10 @@ import {
   appParts,
   avatarModelUrlOf,
   avatarOf,
+  kindOfPartId,
   kindProblemsOf,
   partFamilies,
+  toolOfPart,
   toolboxGroupsOf,
   uiChoiceRoot,
   withPartAdded,
@@ -260,6 +262,58 @@ describe('the toolbox: what the plugins contribute, each arriving with its examp
     expect(withPartRemoved(twice.data, appParts(twice.data)[0])).toBe(
       twice.data,
     );
+  });
+});
+
+describe('a part on the surface, found in its section of the Controls (22 November 2026)', () => {
+  it('finds the entry each part was placed from, every kind of part', () => {
+    // Every kind but the avatar, which is worn by the agent, not a part of its own.
+    const placed = TOOLBOX_GROUPS.filter(group => group.kind !== 'avatar').map(
+      group =>
+        OFFERED.find(
+          tool =>
+            tool.kind === group.kind &&
+            // The agent's entry is one an agent of the catalogue runs on.
+            (group.kind !== 'agent' || Boolean(tool.example)),
+        )!,
+    );
+    let data: unknown = fresh();
+    const ids: [string, CanvasPartContribution][] = [];
+    for (const tool of placed) {
+      const added = withPartAdded(data, tool);
+      data = added.data;
+      ids.push([added.id, tool]);
+    }
+    const parts = appParts(data);
+    for (const [id, tool] of ids) {
+      const part = parts.find(each => each.id === id)!;
+      expect([
+        id,
+        kindOfPartId(id),
+        toolOfPart(data, part, OFFERED)?.id,
+      ]).toEqual([id, tool.kind, tool.id]);
+    }
+  });
+
+  it('finds a rule by its behaviour when its action is its own, and nothing for a test written by hand', () => {
+    const data = {
+      ...(fresh() as Record<string, unknown>),
+      rules: [
+        {
+          action: 'Pay a supplier',
+          applies_to: ['pay'],
+          behaviour: 'ask_first',
+        },
+      ],
+      tests: {
+        cases: [{ ask: 'Something nobody offers?', expect: 'An answer.' }],
+      },
+    };
+    const parts = appParts(data);
+    const rule = parts.find(part => part.id === 'rule-0')!;
+    expect(toolOfPart(data, rule, OFFERED)?.id).toBe('rule:ask-before-sending');
+    const test = parts.find(part => part.id === 'test-0')!;
+    expect(toolOfPart(data, test, OFFERED)).toBeUndefined();
   });
 });
 
