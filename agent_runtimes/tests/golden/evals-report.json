@@ -2,11 +2,11 @@
   "agentspecs": [
     {
       "experiment_names": [
-        "jupyter-data-analyst"
+        "worker-data-analyst"
       ],
       "experiments": 1,
-      "id": "jupyter-data-analyst",
-      "name": "jupyter-data-analyst",
+      "id": "worker-data-analyst",
+      "name": "worker-data-analyst",
       "runs": 3
     },
     {
@@ -151,8 +151,8 @@
   ],
   "experiments": [
     {
-      "agent_spec_id": "jupyter-data-analyst",
-      "agent_spec_name": "jupyter-data-analyst",
+      "agent_spec_id": "worker-data-analyst",
+      "agent_spec_name": "worker-data-analyst",
       "baseline_pass_rate": 0.5,
       "consecutive_comparisons": [
         {
@@ -313,7 +313,7 @@
           },
           "status": "completed",
           "summary": {
-            "agent_spec_id": "jupyter-data-analyst",
+            "agent_spec_id": "worker-data-analyst",
             "execution_target": "cloud",
             "launch_source": "datalayer-core",
             "run_mode": "batch"
@@ -464,7 +464,7 @@
           },
           "status": "completed",
           "summary": {
-            "agent_spec_id": "jupyter-data-analyst",
+            "agent_spec_id": "worker-data-analyst",
             "execution_target": "cloud",
             "launch_source": "datalayer-core",
             "run_mode": "batch"
@@ -492,7 +492,7 @@
         "run-1-2"
       ],
       "mean_pass_rate": 0.6666666666666666,
-      "name": "jupyter-data-analyst",
+      "name": "worker-data-analyst",
       "report_analyses": [
         {
           "kind": "scalar",
@@ -737,7 +737,7 @@
           },
           "status": "completed",
           "summary": {
-            "agent_spec_id": "jupyter-data-analyst",
+            "agent_spec_id": "worker-data-analyst",
             "execution_target": "cloud",
             "launch_source": "datalayer-core",
             "run_mode": "batch"
@@ -888,7 +888,7 @@
           },
           "status": "completed",
           "summary": {
-            "agent_spec_id": "jupyter-data-analyst",
+            "agent_spec_id": "worker-data-analyst",
             "execution_target": "cloud",
             "launch_source": "datalayer-core",
             "run_mode": "batch"
@@ -1039,7 +1039,7 @@
           },
           "status": "completed",
           "summary": {
-            "agent_spec_id": "jupyter-data-analyst",
+            "agent_spec_id": "worker-data-analyst",
             "execution_target": "cloud",
             "launch_source": "datalayer-core",
             "run_mode": "batch"
@@ -1823,7 +1823,7 @@
       "name": "Experiment Latest/Baseline",
       "rows": [
         [
-          "jupyter-data-analyst",
+          "worker-data-analyst",
           0.8333333333333334,
           0.5,
           0.33333333333333337
@@ -1840,7 +1840,7 @@
       "kind": "line",
       "name": "Latest Pass Rate By Experiment",
       "x": [
-        "jupyter-data-analyst",
+        "worker-data-analyst",
         "example-evals"
       ],
       "y": [
@@ -1860,7 +1860,7 @@
       "kind": "heatmap",
       "name": "Recent Runs",
       "rows": [
-        "jupyter-data-analyst",
+        "worker-data-analyst",
         "example-evals"
       ],
       "values": [
@@ -1890,12 +1890,12 @@
         {
           "baseline": "example-evals",
           "baseline_pass_rate": 0.3333333333333333,
-          "candidate": "jupyter-data-analyst",
+          "candidate": "worker-data-analyst",
           "candidate_pass_rate": 0.8333333333333334,
           "delta_pass_rate": 0.5
         },
         {
-          "baseline": "jupyter-data-analyst",
+          "baseline": "worker-data-analyst",
           "baseline_pass_rate": 0.8333333333333334,
           "candidate": "example-evals",
           "candidate_pass_rate": 0.3333333333333333,

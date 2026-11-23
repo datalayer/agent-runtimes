@@ -2439,7 +2439,7 @@ export const NOTEBOOK_HEADER_UI_0_0_1: UISpec = {
   version: '0.0.1',
   name: 'Notebook header',
   description:
-    "The Jupyter Data Analyst's title bar: the dataset it works on, what has run, and a button that asks for a profile of the data.",
+    "The Data Analyst's title bar: the dataset it works on, what has run, and a button that asks for a profile of the data.",
   emoji: '📓',
   octicon: 'table',
   plugin: '@datalayer/agent-plugin-notebook-header',

@@ -38,7 +38,7 @@ NOTES = {
     "id": "r25-notes",
     "name": "R-25 notes",
     "kind": "chat",
-    "agent": "jupyter-data-analyst:0.0.1",
+    "agent": "worker-data-analyst:0.0.1",
     "goal": "Save short notes as pages of a Space when asked.",
     "permissions": {"spaces": [{"space": "sp-granted", "access": "write"}]},
     "contents": ["01KRETURNS", "01KPLANS"],

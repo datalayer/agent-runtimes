@@ -5,7 +5,7 @@
 
 /**
  * The agents offered: the eight seed agents (the user, 14 November 2026;
- * the Traveller since 15 November 2026, the Jupyter Data Analyst since
+ * the Traveller since 15 November 2026, the Data Analyst since
  * 18 November 2026, the Analyst since 19 November 2026).
  * The new agent page, the chats, the assign menu and `agent`'s pickers offer what
  * the catalogue enables and lists (`isAgentspecOffered`), and nothing else, so
@@ -19,8 +19,8 @@ import { isAgentspecOffered } from '../../types/agentspecs';
 import { getAgentspecs, listAgentspecs } from '../agents';
 
 const SEED = [
-  'jupyter-data-analyst',
   'worker-accountant',
+  'worker-data-analyst',
   'worker-functional-analyst',
   'worker-marketer',
   'worker-shopper',
@@ -30,7 +30,7 @@ const SEED = [
 ];
 
 describe('the agents the catalogue offers', () => {
-  it('are the Marketer, the Shopper, the Accountant, the Traveller, Terra, the Steward for AWS, the Jupyter Data Analyst and the Analyst', () => {
+  it('are the Marketer, the Shopper, the Accountant, the Traveller, Terra, the Steward for AWS, the Data Analyst and the Analyst', () => {
     const offered = listAgentspecs()
       .filter(isAgentspecOffered)
       .map(spec => spec.id)

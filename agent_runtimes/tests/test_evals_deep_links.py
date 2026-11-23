@@ -49,8 +49,8 @@ def test_the_run_and_one_of_its_experiment_runs():
 
 def test_the_agentspec():
     assert (
-        links.agentspec_url("jupyter-data-analyst")
-        == "https://datalayer.example/settings/agentspecs/jupyter-data-analyst"
+        links.agentspec_url("worker-data-analyst")
+        == "https://datalayer.example/settings/agentspecs/worker-data-analyst"
     )
     assert links.agentspec_url("") == ""
 

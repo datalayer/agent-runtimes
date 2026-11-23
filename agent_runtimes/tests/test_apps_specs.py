@@ -120,7 +120,7 @@ class TestTheCatalogue:
         # Gmail's server is offered since agentspecs 0.0.128; its worker is out of the
         # picker since agentspecs 0.0.164 (enabled: false), so the setup names it.
         assert triage.setup == ["The agent 'worker-mail-triage:0.0.1' is not enabled."]
-        # worker-accountant is enabled since agentspecs 0.0.184; jupyter-data-analyst
+        # worker-accountant is enabled since agentspecs 0.0.184; worker-data-analyst
         # is enabled, and offered by the pickers since 0.0.215 (the seventh seed agent).
         assert APP_CATALOGUE["accounting"].setup == []
         assert APP_CATALOGUE["quote-calculator"].setup == []

@@ -166,7 +166,7 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
         "demo-accountant",
         "demo-aws-steward",
         # The seventh seed agent's demo (agentspecs 0.0.215).
-        "demo-jupyter-data-analyst",
+        "demo-data-analyst",
         # The eighth seed agent's demo, the Functional Analyst (agentspecs 0.1.4).
         "demo-functional-analyst",
         # The Demo Shop, a company of DummyJSON's products (agentspecs 0.0.204).
@@ -185,7 +185,7 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
         "traveller",
         "terra",
         "aws-steward",
-        "jupyter-data-analyst",
+        "data-analyst",
     ):
         assert reports[f"demo-{demo}"].setup == [], demo
     # Gmail's server is offered since agentspecs 0.0.128; Inbox triage's worker is out of

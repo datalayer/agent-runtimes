@@ -91,7 +91,7 @@ function widget(page: AppPageSpec = PAGE, kind: AppSpec['kind'] = 'widget') {
     ...app,
     id: 'quote',
     name: 'Quote',
-    agent: 'jupyter-data-analyst:0.0.1',
+    agent: 'worker-data-analyst:0.0.1',
     interface: { ...app.interface, layout: 'page' as const, page },
   } as AppSpec;
 }

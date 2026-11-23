@@ -223,7 +223,7 @@ describe('where each UI goes', () => {
   });
 });
 
-// The Jupyter Data Analyst brings no card: its results land in the notebook's cells; nor does
+// The Data Analyst brings no card: its results land in the notebook's cells; nor does
 // the Functional Analyst, whose canvas and diagrams are page tools in its right panel.
 describe('the six seed agents that bring cards', () => {
   it.each([

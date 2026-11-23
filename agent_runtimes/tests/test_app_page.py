@@ -47,7 +47,7 @@ class Term(enum.Enum):
 
 
 def quote_app() -> Application:
-    app = Application(id="quote", kind="widget", agent="jupyter-data-analyst:0.0.1")
+    app = Application(id="quote", kind="widget", agent="worker-data-analyst:0.0.1")
     app.output("total", title="Total")
     app.output("lines", "Table", columns=["item", "amount"])
 
@@ -149,7 +149,7 @@ def test_the_page_is_in_its_spec() -> None:
 
 
 def test_a_page_of_no_output_shows_its_result() -> None:
-    app = Application(id="square", kind="widget", agent="jupyter-data-analyst:0.0.1")
+    app = Application(id="square", kind="widget", agent="worker-data-analyst:0.0.1")
 
     @app.page(live=False)
     def square(n: int = 3) -> int:
@@ -164,7 +164,7 @@ def test_a_page_of_no_output_shows_its_result() -> None:
 
 
 def test_what_the_page_declares_is_refused_in_sentences() -> None:
-    app = Application(id="quote", kind="widget", agent="jupyter-data-analyst:0.0.1")
+    app = Application(id="quote", kind="widget", agent="worker-data-analyst:0.0.1")
     with pytest.raises(
         ValueError, match="an output is one of Text, Image, Table, Chart"
     ):
@@ -189,7 +189,7 @@ def test_what_the_page_declares_is_refused_in_sentences() -> None:
         app.page(page)
     with pytest.raises(ValueError, match="'page' is the action that runs its page"):
         app.action("page")
-    chat = Application(id="desk", kind="chat", agent="jupyter-data-analyst:0.0.1")
+    chat = Application(id="desk", kind="chat", agent="worker-data-analyst:0.0.1")
 
     @chat.page
     def desk(n: int = 1) -> str:
@@ -260,7 +260,7 @@ async def test_inputs_its_form_refuses_are_refused_in_a_sentence() -> None:
 
 async def test_outputs_it_cannot_show_are_refused_in_a_sentence() -> None:
     def app_returning(value: Any, *outputs: Dict[str, Any]) -> Application:
-        app = Application(id="odd", kind="widget", agent="jupyter-data-analyst:0.0.1")
+        app = Application(id="odd", kind="widget", agent="worker-data-analyst:0.0.1")
         for output in outputs:
             app.output(**output)
 
@@ -297,7 +297,7 @@ async def test_outputs_it_cannot_show_are_refused_in_a_sentence() -> None:
 
 async def test_a_table_of_pandas_is_its_rows() -> None:
     pandas = pytest.importorskip("pandas")
-    app = Application(id="frame", kind="widget", agent="jupyter-data-analyst:0.0.1")
+    app = Application(id="frame", kind="widget", agent="worker-data-analyst:0.0.1")
     app.output("rows", "Table", columns=["a"])
 
     @app.page
@@ -420,7 +420,7 @@ APP_PY = """
 from typing import Literal
 from agent_runtimes.apps import Application
 
-app = Application(id="quote", kind="widget", agent="jupyter-data-analyst:0.0.1")
+app = Application(id="quote", kind="widget", agent="worker-data-analyst:0.0.1")
 app.output("total", title="Total")
 
 @app.page

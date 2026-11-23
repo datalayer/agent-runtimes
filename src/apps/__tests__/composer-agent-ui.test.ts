@@ -45,7 +45,7 @@ describe('the toolbox’s UI parts for an application with an agent', () => {
 
   it('offers the Analyst its title bar and the sheet it builds', () => {
     const families = partFamilies(
-      withAgentsOwnUiFirst(UI_PARTS, agentUiIdsOf('jupyter-data-analyst')),
+      withAgentsOwnUiFirst(UI_PARTS, agentUiIdsOf('worker-data-analyst')),
     );
     expect(families[0].parts.map(plugin)).toEqual(
       expect.arrayContaining(['notebook-header', 'page-sheet']),

@@ -5,7 +5,7 @@
 
 A widget's page is a function of its inputs::
 
-    app = Application(id="quote", kind="widget", agent="jupyter-data-analyst:0.0.1")
+    app = Application(id="quote", kind="widget", agent="worker-data-analyst:0.0.1")
     app.output("total", title="Total")
     app.output("lines", "Table", columns=["item", "amount"])
 
