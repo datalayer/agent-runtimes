@@ -40,10 +40,13 @@ import { registerReactor } from '@datalayer/reactor/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   SIDE_PANELS_SHOWN,
+  SIDE_PANEL_MAX_WIDTH,
+  SIDE_PANEL_MIN_WIDTH,
   SIDE_PANEL_VIEW_MIN,
   SidePanel,
   SidePanelToggle,
   bothFit,
+  clampSidePanelWidth,
   sidePanelCallEvent,
   sidePanelOpen,
   useSidePanels,
@@ -126,6 +129,11 @@ const call = (
 });
 
 describe('open or closed, from the conversation', () => {
+  it('keeps a resized panel inside useful bounds', () => {
+    expect(clampSidePanelWidth(100)).toBe(SIDE_PANEL_MIN_WIDTH);
+    expect(clampSidePanelWidth(620)).toBe(620);
+    expect(clampSidePanelWidth(2000)).toBe(SIDE_PANEL_MAX_WIDTH);
+  });
   it('is the agent’s last word on that side', () => {
     const calls = [
       call('open_side_panel', { side: 'right' }, 1),
@@ -317,6 +325,22 @@ describe('the deck placed in the right panel', () => {
     expect(rightPanel()!.hasAttribute('data-open')).toBe(true);
     fireEvent.keyDown(rightPanel()!, { key: 'Escape' });
     expect(rightPanel()!.hasAttribute('data-open')).toBe(false);
+  });
+
+  it('lets the person resize the open panel with the keyboard', () => {
+    mount(placed());
+    recorded('deck_create', { title: 'Recap' });
+    const panel = rightPanel()!;
+    const resize = document.querySelector<HTMLElement>(
+      '[data-agent-right-panel-resize]',
+    )!;
+    expect(resize).not.toBeNull();
+    const before = Number(resize.getAttribute('aria-valuenow'));
+    fireEvent.keyDown(resize, { key: 'ArrowLeft' });
+    expect(Number(resize.getAttribute('aria-valuenow'))).toBeGreaterThan(
+      before,
+    );
+    expect(panel).toHaveAttribute('data-open');
   });
 
   it('opens and closes with the agent’s calls, the person’s word lasting until its next one', () => {

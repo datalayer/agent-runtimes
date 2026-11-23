@@ -63,6 +63,7 @@ from .health import router as health_router
 from .history import router as history_router
 from .identity import router as identity_router
 from .inference_relay import router as inference_relay_router
+from .library import router as library_router
 from .mcp import router as mcp_router
 from .mcp_auth import router as mcp_auth_router
 from .mcp_lent import router as mcp_lent_router
@@ -116,6 +117,7 @@ __all__ = [
     "protocols_router",
     "handoff_router",
     "inference_relay_router",
+    "library_router",
     "mcp_lent_router",
     "mcp_proxy_router",
     "mcp_auth_router",

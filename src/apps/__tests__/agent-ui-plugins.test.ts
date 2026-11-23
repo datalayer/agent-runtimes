@@ -221,6 +221,7 @@ describe('where each UI goes', () => {
       ['page-excalidraw', 'Excalidraw'],
       ['page-mermaid', 'Mermaid'],
       ['page-react-flow', 'React Flow'],
+      ['page-document', 'Document'],
     ]);
   });
 

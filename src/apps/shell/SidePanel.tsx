@@ -49,7 +49,7 @@
  * @module apps/shell/SidePanel
  */
 
-import type { ElementType, JSX, RefObject } from 'react';
+import type { ElementType, JSX, PointerEvent, RefObject } from 'react';
 import {
   useCallback,
   useEffect,
@@ -155,6 +155,20 @@ export type AgentSidePanelComponent = ReactorSlotComponent & {
 
 /** A side panel's width when open beside the view, in pixels, unless a component needs more. */
 export const SIDE_PANEL_WIDTH = 400;
+
+/** Bounds and keyboard step for a panel resized by the person. */
+export const SIDE_PANEL_MIN_WIDTH = 280;
+export const SIDE_PANEL_MAX_WIDTH = 960;
+export const SIDE_PANEL_RESIZE_STEP = 32;
+
+export const clampSidePanelWidth = (width: number): number =>
+  Math.min(
+    SIDE_PANEL_MAX_WIDTH,
+    Math.max(
+      SIDE_PANEL_MIN_WIDTH,
+      Number.isFinite(width) ? width : SIDE_PANEL_WIDTH,
+    ),
+  );
 
 /** Under this width, in pixels, the workspace is narrow: a panel opens over the view. */
 export const SIDE_PANEL_NARROW = 720;
@@ -291,6 +305,8 @@ export type SidePanelState = {
   toggleRef: RefObject<HTMLButtonElement | null>;
   /** Its width beside the view. */
   width: number;
+  /** Resize it beside the view. */
+  setWidth: (width: number) => void;
   /** The event that made it as it is: what decides between two panels. */
   latest: SidePanelEvent | undefined;
   /** The contribution shown in the panel. */
@@ -341,6 +357,21 @@ export function useSidePanel(side: SidePanelSide): SidePanelState {
   const components = useMemo(
     () => sidePanelShown(slot, application),
     [slot, application],
+  );
+  const preferredWidth = sidePanelWidth(components);
+  const [width, setWidthState] = useState(() =>
+    clampSidePanelWidth(preferredWidth),
+  );
+  useEffect(() => {
+    setWidthState(current =>
+      current === SIDE_PANEL_WIDTH
+        ? clampSidePanelWidth(preferredWidth)
+        : current,
+    );
+  }, [preferredWidth]);
+  const setWidth = useCallback(
+    (next: number) => setWidthState(clampSidePanelWidth(next)),
+    [],
   );
   const follows = useMemo(
     () => components.flatMap(component => component.panel?.follows ?? []),
@@ -462,7 +493,8 @@ export function useSidePanel(side: SidePanelSide): SidePanelState {
     icon: components[0]?.panel?.icon,
     panelId,
     toggleRef,
-    width: sidePanelWidth(components),
+    width,
+    setWidth,
     latest,
     activeTab,
     tabs,
@@ -613,10 +645,14 @@ export function SidePanel({
     toggleRef,
     side,
     width,
+    setWidth,
     activeTab,
     setActiveTab,
   } = panel;
   const panelRef = useRef<HTMLElement | null>(null);
+  const resize = useRef<{ pointer: number; x: number; width: number } | null>(
+    null,
+  );
   // Mounted on the first opening, and kept: a panel nobody opens loads nothing.
   const [opened, setOpened] = useState(false);
   useEffect(() => {
@@ -664,6 +700,17 @@ export function SidePanel({
   // The hairline on the edge it shares with the view.
   const edge = side === 'left' ? 'borderRight' : 'borderLeft';
   const edgeWidth = side === 'left' ? 'borderRightWidth' : 'borderLeftWidth';
+  const resizeAt = (event: PointerEvent<HTMLDivElement>) => {
+    const held = resize.current;
+    if (!held || held.pointer !== event.pointerId) return;
+    const delta = event.clientX - held.x;
+    setWidth(held.width + (side === 'left' ? delta : -delta));
+  };
+  const stopResize = (event: PointerEvent<HTMLDivElement>) => {
+    if (resize.current?.pointer !== event.pointerId) return;
+    resize.current = null;
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
+  };
   return (
     <Box
       ref={panelRef}
@@ -691,6 +738,7 @@ export function SidePanel({
       overflow="hidden"
       sx={{
         boxSizing: 'border-box',
+        position: 'relative',
         width: 0,
         opacity: 0,
         // Out of the tab order and of the accessibility tree once it has closed.
@@ -722,6 +770,69 @@ export function SidePanel({
         },
       }}
     >
+      {!narrow && open ? (
+        <Box
+          role="separator"
+          aria-orientation="vertical"
+          aria-label={`Resize the ${side} panel`}
+          aria-valuemin={SIDE_PANEL_MIN_WIDTH}
+          aria-valuemax={SIDE_PANEL_MAX_WIDTH}
+          aria-valuenow={Math.round(width)}
+          tabIndex={0}
+          {...{ [`data-agent-${side}-panel-resize`]: '' }}
+          position="absolute"
+          top={0}
+          bottom={0}
+          {...(side === 'left' ? { right: '-3px' } : { left: '-3px' })}
+          width="7px"
+          zIndex={3}
+          cursor="col-resize"
+          touchAction="none"
+          onPointerDown={(event: PointerEvent<HTMLDivElement>) => {
+            resize.current = {
+              pointer: event.pointerId,
+              x: event.clientX,
+              width,
+            };
+            event.currentTarget.setPointerCapture?.(event.pointerId);
+            event.preventDefault();
+          }}
+          onPointerMove={resizeAt}
+          onPointerUp={stopResize}
+          onPointerCancel={stopResize}
+          onKeyDown={(event: { key: string; preventDefault: () => void }) => {
+            const direction = side === 'left' ? 1 : -1;
+            const next =
+              event.key === 'Home'
+                ? SIDE_PANEL_MIN_WIDTH
+                : event.key === 'End'
+                  ? SIDE_PANEL_MAX_WIDTH
+                  : event.key === 'ArrowRight'
+                    ? width + SIDE_PANEL_RESIZE_STEP * direction
+                    : event.key === 'ArrowLeft'
+                      ? width - SIDE_PANEL_RESIZE_STEP * direction
+                      : null;
+            if (next !== null) {
+              event.preventDefault();
+              setWidth(next);
+            }
+          }}
+          sx={{
+            '&::before': {
+              content: '""',
+              display: 'block',
+              width: '1px',
+              height: '100%',
+              mx: 'auto',
+              bg: 'border.default',
+            },
+            '&:hover::before, &:focus-visible::before': {
+              width: '3px',
+              bg: 'accent.emphasis',
+            },
+          }}
+        />
+      ) : null}
       <Box
         {...{ [`data-agent-${side}-panel-body`]: '' }}
         position="relative"

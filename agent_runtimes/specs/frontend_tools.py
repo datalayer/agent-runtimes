@@ -193,6 +193,18 @@ PAGE_DECK_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
     emoji="🎞️",
 )
 
+PAGE_DOCUMENT_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
+    id="page-document",
+    version="0.0.1",
+    name="Document in the page",
+    description="Read and edit the blocks of the Lexical document in the conversation's Document tab, using stable block identifiers for later updates and deletion.",
+    tags=["frontend", "document", "lexical", "page"],
+    enabled=True,
+    toolset="all",
+    icon="@primer/octicons-react:file",
+    emoji="📄",
+)
+
 PAGE_EXCALIDRAW_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
     id="page-excalidraw",
     version="0.0.1",
@@ -297,6 +309,7 @@ FRONTEND_TOOL_CATALOG: Dict[str, FrontendToolSpec] = {
     "lexical-document": LEXICAL_DOCUMENT_FRONTEND_TOOL_SPEC_0_0_1,
     "notices": NOTICES_FRONTEND_TOOL_SPEC_0_0_1,
     "page-deck": PAGE_DECK_FRONTEND_TOOL_SPEC_0_0_1,
+    "page-document": PAGE_DOCUMENT_FRONTEND_TOOL_SPEC_0_0_1,
     "page-excalidraw": PAGE_EXCALIDRAW_FRONTEND_TOOL_SPEC_0_0_1,
     "page-mermaid": PAGE_MERMAID_FRONTEND_TOOL_SPEC_0_0_1,
     "page-react-flow": PAGE_REACT_FLOW_FRONTEND_TOOL_SPEC_0_0_1,

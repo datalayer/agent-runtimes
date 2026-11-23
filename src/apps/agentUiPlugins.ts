@@ -77,6 +77,10 @@ import { notebookHeaderPlugin } from './plugins/notebook-header';
 import { analysisHeaderPlugin } from './plugins/analysis-header';
 import { OdooContextChip, odooContextPlugin } from './plugins/odoo-context';
 import { NoticesPlugin } from './plugins/notices';
+import {
+  PageDocumentPlugin,
+  pageDocumentSidePlugin,
+} from './plugins/page-document';
 import { PageDeckPlugin, pageDeckSidePlugin } from './plugins/page-deck';
 import {
   PageExcalidrawPlugin,
@@ -247,6 +251,11 @@ export const AGENT_UI_PLUGINS: Readonly<Record<string, AgentUiPlugin>> = {
     needsConnection: false,
     message: PageDeckPlugin,
     side: pageDeckSidePlugin,
+  },
+  'page-document': {
+    needsConnection: false,
+    message: PageDocumentPlugin,
+    side: pageDocumentSidePlugin,
   },
   'page-sheet': {
     needsConnection: false,

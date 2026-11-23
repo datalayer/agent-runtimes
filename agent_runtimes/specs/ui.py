@@ -2661,6 +2661,37 @@ PAGE_DECK_UI_0_0_1 = UISpec(
     components=[],
 )
 
+PAGE_DOCUMENT_UI_0_0_1 = UISpec(
+    id="page-document",
+    version="0.0.1",
+    name="Document in the page",
+    description="A Lexical rich-text document the agent creates and edits with stable block tools, shown in a named side-panel tab and using the same editor as a Space document.",
+    emoji="📄",
+    octicon="file",
+    plugin="@datalayer/agent-plugin-page-document",
+    folder="page-document",
+    implementation=UiImplementationSpec(
+        package="@datalayer/agent-runtimes",
+        module="lib/apps/plugins/page-document",
+        export="PageDocumentPlugin",
+        kind="plugin",
+    ),
+    per=None,
+    contributions=UiContributionsSpec(
+        slots=[],
+        points=["agent.chat.extras", "reactor.ui.renderer", "reactor.ui.toolBinding"],
+        commands=[],
+    ),
+    contribution_points=[],
+    settings={},
+    renderers=[],
+    placements=["message", "right", "left"],
+    header=None,
+    supersedes=[],
+    catalog="",
+    components=[],
+)
+
 PAGE_EXCALIDRAW_UI_0_0_1 = UISpec(
     id="page-excalidraw",
     version="0.0.1",
@@ -3835,6 +3866,7 @@ UI_CATALOGUE: Dict[str, UISpec] = {
     "notices": NOTICES_UI_0_0_1,
     "odoo-context": ODOO_CONTEXT_UI_0_0_1,
     "page-deck": PAGE_DECK_UI_0_0_1,
+    "page-document": PAGE_DOCUMENT_UI_0_0_1,
     "page-excalidraw": PAGE_EXCALIDRAW_UI_0_0_1,
     "page-layout": PAGE_LAYOUT_UI_0_0_1,
     "page-mermaid": PAGE_MERMAID_UI_0_0_1,
