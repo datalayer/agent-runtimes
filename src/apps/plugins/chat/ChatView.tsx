@@ -1362,17 +1362,22 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
     ];
   }, [notebookTools, commandTools]);
   /*
-   * The page's own tools for an agent on a server: a host example's, and
-   * the tools of the `AgentTools` bundles its extras name
+   * The frontend tools for an agent on a server: the active surface's
+   * contributions (the notebook's live cell tools, for example), a host
+   * example's, and the tools of the `AgentTools` bundles its extras name
    * (the host page's functions, `host_<name>`, each running its command on
-   * this reactor). An in-page agent has every bundle already (above).
+   * this reactor). `notebookTools` already folds the host extras into the
+   * contributed tools and filters out inactive editors. Starting from the
+   * host extras alone advertised notebook tools in the agentspec without
+   * giving ChatBase the handlers that manipulate the notebook on screen.
+   * An in-page agent has every contribution and bundle already (above).
    */
   const bundles = useAgentToolBundles();
   const handedBundles = chatExtras.agentToolBundles;
   const pageTools = useMemo(() => {
-    const own = chatExtras.frontendTools ?? [];
+    const own = notebookTools;
     if (!handedBundles?.length) {
-      return chatExtras.frontendTools;
+      return own;
     }
     const handed = agentBundleToolDefinitions(
       bundles.filter(bundle => handedBundles.includes(bundle.id)),
@@ -1380,7 +1385,7 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
     );
     const taken = new Set(own.map(tool => tool.name));
     return [...own, ...handed.filter(tool => !taken.has(tool.name))];
-  }, [chatExtras.frontendTools, handedBundles, bundles, reactor]);
+  }, [notebookTools, handedBundles, bundles, reactor]);
   // The page's sandbox, while the agent turned here runs its code in it.
   pageSandboxRef.current =
     inPage && agentTools.some(tool => tool.name === BROWSER_CODE_TOOL)

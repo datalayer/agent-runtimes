@@ -69,6 +69,7 @@ import type { Agentspec, AppSpec } from '../types/agentspecs';
 import type { ResumedThread } from '../types/chat';
 import type { ChatCallToAction } from '../chat/anonymous/anonymousMode';
 import { getApp } from '../specs/apps';
+import { UI_CATALOGUE } from '../specs/ui';
 import { emptyAppspec } from './apps/appspec';
 import type { DatalayerVisitors } from './apps/visitorToken';
 import { agentUiChoicesOf } from './agentUiPlugins';
@@ -277,7 +278,11 @@ export async function resolveAIApplication({
  * A person's own agent as an application (the Personal page): a chat whose
  * name, face, welcome, starters and UI are its agentspec's, answered by the
  * agent made from that spec on the person's runtime — nothing of its own
- * enforced there, since the runtime runs the agent as its spec says.
+ * enforced there, since the runtime runs the agent as its spec says. An agent
+ * that declares a Reactor UI which contributes a chat surface opens with that
+ * surface beside the conversation. The host knows neither the surface nor its
+ * tool names: the UI spec says what it contributes, and the injected plugin
+ * supplies its own tools and handlers.
  */
 export function agentAppspec(
   spec: Pick<
@@ -304,7 +309,20 @@ export function agentAppspec(
   if (spec.presentation) {
     app.presentation = spec.presentation;
   }
-  app.interface.layout = 'chat';
+  // The resolved choices include the agent's own UI and the UI injected by
+  // its MCP servers, skills and backend tools.
+  const ownUi = agentUiChoicesOf(spec.id);
+  // A chat-only application deliberately does not mount work surfaces. The
+  // agentspec's UI choices are the sole source of that decision: any injected
+  // Reactor UI whose catalogue entry contributes `agent.chat.surface` gets a
+  // split work area. There is no coupling here to a notebook, document, tool
+  // id or handler; each plugin owns those details.
+  const hasWorkSurface = ownUi.some(choice =>
+    UI_CATALOGUE[choice.plugin]?.contributions.points.includes(
+      'agent.chat.surface',
+    ),
+  );
+  app.interface.layout = hasWorkSurface ? 'split' : 'chat';
   app.interface.welcome = spec.welcomeMessage || spec.description;
   app.interface.starters = (spec.suggestions ?? []).map(suggestion => ({
     label: suggestion.summary || suggestion.text,
@@ -312,7 +330,7 @@ export function agentAppspec(
   }));
   // Its own UI and that of the MCP servers, skills and tools it uses: the
   // Marketer's post previews, *Sign in to LinkedIn* (15 November 2026).
-  app.ui = [...app.ui, ...agentUiChoicesOf(spec.id)];
+  app.ui = [...app.ui, ...ownUi];
   return app;
 }
 

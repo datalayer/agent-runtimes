@@ -9019,7 +9019,7 @@ WORKER_DATA_ANALYST_AGENTSPEC_0_0_1 = Agentspec(
     emoji="📊",
     color="green",
     tagline="Explores, charts and checks your data",
-    presentation="Explores the data in the Jupyter notebook you have open — adds the cells and runs\nthem, profiles and charts the data, checks it for the things that quietly\nruin an analysis, and says plainly what it found, where everyone can see it.\n\n- Reads the notebook first and builds on the cells already there\n- Writes the cells and runs them, one idea per cell\n- Profiles every column: types, missing values and ranges that look wrong\n- Draws the chart when a chart is the clearest answer\n- Flags what would ruin the conclusion: repeated rows, outliers, dropped rows\n\n[The seed agents, in slides](/visitors/decks/agents/seed-agents)",
+    presentation="Explores the data in the Jupyter notebook you have open — adds the cells and runs\nthem, profiles and charts the data, checks it for the things that quietly\nruin an analysis, and says plainly what it found, where everyone can see it.\n\n- Reads the notebook first and builds on the cells already there\n- Writes the cells and runs them, one idea per cell\n- Profiles every column: types, missing values and ranges that look wrong\n- Draws the chart when a chart is the clearest answer\n- Flags what would ruin the conclusion: repeated rows, outliers, dropped rows\n\n[Poppy agents, in slides](/visitors/decks/agents/poppy-agents)",
     suggestions=[
         AgentSuggestion(
             text="Analyze this dataset and summarize the main findings.",
@@ -9154,6 +9154,7 @@ they move on to something else, and do not open it otherwise.
     ],
     protocol=None,
     ui=[
+        {"plugin": "notebook"},
         {"plugin": "notebook-header"},
         {"plugin": "notices"},
         {"plugin": "page-sheet", "placement": "right"},
@@ -10240,7 +10241,7 @@ WORKER_FUNCTIONAL_ANALYST_AGENTSPEC_0_0_1 = Agentspec(
     emoji="📐",
     color="purple",
     tagline="Works out how it fits, and draws it",
-    presentation="Works out how a system, a process or a plan fits together and draws it —\nMermaid diagrams checked by Mermaid's own parser, and Excalidraw drawings\nyou can draw on with it — then says what the picture shows and what it\nleaves open.\n\n- Asks what the parts are before it draws them\n- Writes flowcharts, sequences, class and entity models, states and timelines in Mermaid\n- Checks every diagram with Mermaid's parser, and fixes the line it names\n- Sketches freer pictures on an Excalidraw canvas, arrows bound to their shapes\n- Says what the diagram leaves out, and where it guessed\n\n[The seed agents, in slides](/visitors/decks/agents/seed-agents)",
+    presentation="Works out how a system, a process or a plan fits together and draws it —\nMermaid diagrams checked by Mermaid's own parser, and Excalidraw drawings\nyou can draw on with it — then says what the picture shows and what it\nleaves open.\n\n- Asks what the parts are before it draws them\n- Writes flowcharts, sequences, class and entity models, states and timelines in Mermaid\n- Checks every diagram with Mermaid's parser, and fixes the line it names\n- Sketches freer pictures on an Excalidraw canvas, arrows bound to their shapes\n- Says what the diagram leaves out, and where it guessed\n\n[Poppy agents, in slides](/visitors/decks/agents/poppy-agents)",
     suggestions=[
         AgentSuggestion(
             text="Draw the flow of an online checkout, from basket to confirmation, as a Mermaid flowchart.",
@@ -11198,7 +11199,7 @@ WORKER_MARKETER_AGENTSPEC_0_0_1 = Agentspec(
     emoji="📣",
     color="pink",
     tagline="Plans, drafts, reads the replies",
-    presentation="Plans and drafts social posts for X, Bluesky, LinkedIn and Discord in the\nbrand's voice, reads what comes back (on LinkedIn once signed in there from\nthe chat), remembers what worked, and publishes only with approval.\n\n- Plans a campaign around the goal you give it\n- Drafts each post for its network, in your brand’s voice\n- Reads what the audience says back\n- Remembers the voice, what was posted and what worked\n- Publishes nothing until you approve the exact text\n\n[The seed agents, in slides](/visitors/decks/agents/seed-agents)",
+    presentation="Plans and drafts social posts for X, Bluesky, LinkedIn and Discord in the\nbrand's voice, reads what comes back (on LinkedIn once signed in there from\nthe chat), remembers what worked, and publishes only with approval.\n\n- Plans a campaign around the goal you give it\n- Drafts each post for its network, in your brand’s voice\n- Reads what the audience says back\n- Remembers the voice, what was posted and what worked\n- Publishes nothing until you approve the exact text\n\n[Poppy agents, in slides](/visitors/decks/agents/poppy-agents)",
     suggestions=[
         AgentSuggestion(
             text="Plan a two-week launch campaign for our new feature across X, Bluesky, LinkedIn and our Discord, with one goal and a post a day.",
@@ -14676,7 +14677,7 @@ WORKER_TRAVELLER_AGENTSPEC_0_0_1 = Agentspec(
     emoji="🧭",
     color="sky",
     tagline="Finds flights, stays and places, plans three options",
-    presentation="A travel companion: finds flights, stays, restaurants and things to do, and\nputs them together into three practical trip options, each with a map, a daily\nschedule, a budget with its total and the booking links. It books nothing: you\nbook on the provider's site.\n\n- Asks your dates, places, travellers, preferences and budget\n- Compares flights on Kiwi.com by fare, baggage, connections and travel time\n- Finds restaurants, cafés and sights in Overture Maps' open data, travel times with Google Maps, and stays on Booking.com with your partner access\n- Plans three options, each with a map, a daily schedule and a budget with its total\n- Hands you the booking links: it books and pays nothing\n\n[The seed agents, in slides](/visitors/decks/agents/seed-agents)",
+    presentation="A travel companion: finds flights, stays, restaurants and things to do, and\nputs them together into three practical trip options, each with a map, a daily\nschedule, a budget with its total and the booking links. It books nothing: you\nbook on the provider's site.\n\n- Asks your dates, places, travellers, preferences and budget\n- Compares flights on Kiwi.com by fare, baggage, connections and travel time\n- Finds restaurants, cafés and sights in Overture Maps' open data, travel times with Google Maps, and stays on Booking.com with your partner access\n- Plans three options, each with a map, a daily schedule and a budget with its total\n- Hands you the booking links: it books and pays nothing\n\n[Poppy agents, in slides](/visitors/decks/agents/poppy-agents)",
     suggestions=[
         AgentSuggestion(
             text="Plan a long weekend in Lisbon for two from Brussels, 12 to 15 March, under 900 EUR in total: three options with flights, a stay, a day-by-day plan, a map and the budget.",

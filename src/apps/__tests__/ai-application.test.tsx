@@ -19,6 +19,7 @@ import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { iamStore } from '@datalayer/core/lib/state/substates/IAMState';
 import { getApp } from '../../specs/apps';
+import { getAgentspecs } from '../../specs/agents';
 import { dumpAppspec } from '../apps/appspec';
 import { LOCKED_UI_PLUGIN_NAME } from '../plugins/locked-ui';
 
@@ -251,6 +252,31 @@ describe('AIApplication in visitor mode', () => {
 });
 
 describe('AIApplication in runtime mode', () => {
+  it('opens a notebook beside an agent whose injected UI contributes a chat surface', () => {
+    const spec = getAgentspecs('worker-data-analyst');
+    expect(spec?.ui?.map(choice => choice.plugin)).toContain('notebook');
+    expect(spec?.frontendTools?.map(tool => tool.id)).toContain(
+      'jupyter-notebook',
+    );
+    const app = agentAppspec(spec!);
+
+    expect(app.interface.layout).toBe('split');
+    expect(app.ui.map(choice => choice.plugin)).toContain('notebook');
+  });
+
+  it('does not infer a work surface from a frontend tool declaration alone', () => {
+    const spec = getAgentspecs('worker-data-analyst')!;
+    const toolOnly = {
+      id: 'worker-tool-only',
+      name: 'Tool only',
+      description: 'Has notebook tools but no injected surface UI.',
+      frontendTools: spec.frontendTools,
+    };
+    const app = agentAppspec(toolOnly);
+
+    expect(app.interface.layout).toBe('chat');
+  });
+
   it('talks to the agent already on the person’s runtime, by its name there, and goes on with its session', async () => {
     iamStore.setState({ token: 'jwt' } as never);
     const spec = {
