@@ -3110,6 +3110,39 @@ export const PROMPT_UI_0_0_1: UISpec = {
   components: [],
 };
 
+export const PUBLIC_LIBRARY_UI_0_0_1: UISpec = {
+  id: 'public-library',
+  version: '0.0.1',
+  name: 'Public Library',
+  description:
+    "Datalayer's public artifacts searched and listed as A2UI cards in the conversation, with confirmed publication of an item owned by the signed-in person.",
+  emoji: '📚',
+  octicon: 'book',
+  plugin: '@datalayer/agent-plugin-public-library',
+  folder: 'public-library',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/public-library',
+    export: 'PublicLibraryPlugin',
+    kind: 'plugin',
+  },
+  contributions: {
+    slots: [],
+    points: [
+      'agent.chat.extras',
+      'reactor.ui.renderer',
+      'reactor.ui.toolBinding',
+    ],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: ['a2ui'],
+  placements: ['message'],
+  catalog: '',
+  components: [],
+};
+
 export const SHOP_HEADER_UI_0_0_1: UISpec = {
   id: 'shop-header',
   version: '0.0.1',
@@ -3902,6 +3935,7 @@ export const UI_CATALOGUE: Record<string, UISpec> = {
   'product-cards': PRODUCT_CARDS_UI_0_0_1,
   'product-comparison': PRODUCT_COMPARISON_UI_0_0_1,
   prompt: PROMPT_UI_0_0_1,
+  'public-library': PUBLIC_LIBRARY_UI_0_0_1,
   'shop-header': SHOP_HEADER_UI_0_0_1,
   'shopping-basket': SHOPPING_BASKET_UI_0_0_1,
   'side-panels': SIDE_PANELS_UI_0_0_1,

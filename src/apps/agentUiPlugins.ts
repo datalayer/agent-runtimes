@@ -98,6 +98,7 @@ import { PageSheetPlugin, pageSheetSidePlugin } from './plugins/page-sheet';
 import { PapPurchasePlugin } from './plugins/pap-purchase';
 import { ProductCardsPlugin } from './plugins/product-cards';
 import { ProductComparisonPlugin } from './plugins/product-comparison';
+import { PublicLibraryPlugin } from './plugins/public-library';
 import { shopHeaderPlugin } from './plugins/shop-header';
 import { ShoppingBasketPlugin } from './plugins/shopping-basket';
 import { SidePanelsPlugin } from './plugins/side-panels';
@@ -145,6 +146,12 @@ export type AgentUiPlugin = {
 
 /** Each agent UI plugin, by its UI spec's id. */
 export const AGENT_UI_PLUGINS: Readonly<Record<string, AgentUiPlugin>> = {
+  // Every public seed agent can browse the public Library. Publishing still
+  // needs the signed-in owner and a confirmation in the page.
+  'public-library': {
+    needsConnection: false,
+    message: PublicLibraryPlugin,
+  },
   // The Marketer.
   'social-accounts': {
     needsConnection: true,

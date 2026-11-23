@@ -45,7 +45,8 @@ describe('the chat’s UI, merged', () => {
       'notices',
       'composer-portal',
     ]);
-    expect(ids.slice(3, 7)).toEqual([
+    expect(ids[3]).toBe('public-library');
+    expect(ids.slice(4, 8)).toEqual([
       'trip-options',
       'trip-budget',
       'trip-map',
@@ -112,6 +113,24 @@ describe('the chat’s UI, merged', () => {
 });
 
 describe('the seed agents’ UI', () => {
+  const publicSeeds = [
+    'worker-marketer',
+    'worker-shopper',
+    'worker-accountant',
+    'worker-traveller',
+    'worker-terra',
+    'worker-steward-aws',
+    'worker-data-analyst',
+    'worker-functional-analyst',
+  ];
+
+  it.each(publicSeeds)(
+    '%s can browse and publish through the Library UI',
+    agent => {
+      expect(agentUiIdsOf(agent)).toContain('public-library');
+    },
+  );
+
   it('comes from what each uses', () => {
     expect(agentUiIdsOf('worker-shopper')).toEqual(
       expect.arrayContaining([

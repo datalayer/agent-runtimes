@@ -101,6 +101,7 @@ export const UI_PLUGIN_MODULES: Record<
   'plugin-manager': () => import('./plugins/plugin-manager'),
   'product-cards': () => import('./plugins/product-cards'),
   'product-comparison': () => import('./plugins/product-comparison'),
+  'public-library': () => import('./plugins/public-library'),
   prompt: () => import('./plugins/prompt'),
   'shop-header': () => import('./plugins/shop-header'),
   'shopping-basket': () => import('./plugins/shopping-basket'),

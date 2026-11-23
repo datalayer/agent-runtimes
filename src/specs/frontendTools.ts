@@ -305,6 +305,23 @@ export const PAGE_SHEET_FRONTEND_TOOL_SPEC_0_0_1: FrontendToolSpec = {
   emoji: '📑',
 };
 
+export const PUBLIC_LIBRARY_FRONTEND_TOOL_SPEC_0_0_1: FrontendToolSpec = {
+  id: 'public-library',
+  version: '0.0.1',
+  name: 'Public Library',
+  description:
+    "Search and browse Datalayer's public Library, and publish an existing item owned by the signed-in person after the page asks them to confirm.",
+  tags: ['frontend', 'library', 'search', 'publish'],
+  enabled: true,
+  toolset: [
+    'search_public_library',
+    'list_public_library',
+    'publish_library_item',
+  ],
+  icon: '@primer/octicons-react:book',
+  emoji: '📚',
+};
+
 export const SIDE_PANELS_FRONTEND_TOOL_SPEC_0_0_1: FrontendToolSpec = {
   id: 'side-panels',
   version: '0.0.1',
@@ -339,6 +356,7 @@ export const FRONTEND_TOOL_CATALOG: Record<string, FrontendToolSpec> = {
   'page-mermaid': PAGE_MERMAID_FRONTEND_TOOL_SPEC_0_0_1,
   'page-react-flow': PAGE_REACT_FLOW_FRONTEND_TOOL_SPEC_0_0_1,
   'page-sheet': PAGE_SHEET_FRONTEND_TOOL_SPEC_0_0_1,
+  'public-library': PUBLIC_LIBRARY_FRONTEND_TOOL_SPEC_0_0_1,
   'side-panels': SIDE_PANELS_FRONTEND_TOOL_SPEC_0_0_1,
 };
 
