@@ -85,8 +85,10 @@ WHOLE = ("settings", "settings_ui")
 
 
 def _flat(text: Any) -> str:
-    """A text on one line."""
-    return " ".join(str(text or "").split())
+    """A text with each of its lines on one line: its paragraphs kept, as the
+    Appspec's readers keep them."""
+    lines = (" ".join(line.split()) for line in str(text or "").split("\n"))
+    return "\n".join(lines).strip()
 
 
 def built_of(specs_dir: Path, identity: str, app: Any) -> str:

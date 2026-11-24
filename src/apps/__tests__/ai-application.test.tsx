@@ -279,7 +279,7 @@ describe('AIApplication in runtime mode', () => {
     );
 
     const demo = getApp('demo-data-analyst');
-    expect(demo?.version).toBe('0.0.7');
+    expect(demo?.version).toBe('0.0.8');
     expect(demo?.agent).toBe('worker-data-analyst:0.0.2');
     expect(demo?.instructions).toContain(
       'They require no account and no filesystem.',
