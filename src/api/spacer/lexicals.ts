@@ -104,6 +104,29 @@ export const updateLexical = async (
 };
 
 /**
+ * Write a lexical document's content: its Lexical editor state replaces the
+ * model Spacer holds (`PUT /lexicals/{id}/model`).
+ * @param token - Authentication token
+ * @param id - The document ID
+ * @param model - The document's Lexical editor state
+ * @param baseUrl - Base URL for the API (defaults to production)
+ * @returns Promise resolving to the updated document response
+ */
+export const updateLexicalModel = async (
+  token: string,
+  id: string,
+  model: unknown,
+  baseUrl: string = DEFAULT_SERVICE_URLS.SPACER,
+): Promise<UpdateLexicalResponse> => {
+  return requestDatalayerAPI<UpdateLexicalResponse>({
+    url: `${baseUrl}${API_BASE_PATHS.SPACER}/lexicals/${id}/model`,
+    method: 'PUT',
+    token,
+    body: { model },
+  });
+};
+
+/**
  * Clone a lexical document.
  * @param token - Authentication token
  * @param id - The document ID to clone

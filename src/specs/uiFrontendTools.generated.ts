@@ -318,6 +318,28 @@ export const UI_FRONTEND_TOOLS: Record<string, UiFrontendTool[]> = {
       "description": "Shows the person, in the title bar of the chat, what Social header is about (network, drafts). It runs in their page: it reads nothing and changes nothing else. Only the items you name change; the others stay as they are. Call it each time the number of drafts waiting for the person's approval changes: after you show a draft, and after one is approved, posted or dropped."
     }
   ],
+  "spaces": [
+    {
+      "name": "spacesList",
+      "description": "Lists the person's Datalayer Spaces (uid, name, handle, variant, description), read with their own sign-in. It reads and changes nothing else. Call it first to find the uid of the space whose documents and notebooks to list."
+    },
+    {
+      "name": "spacesListItems",
+      "description": "Lists the documents and the notebooks of one of the person's Datalayer Spaces (uid, type, name, description), given the space's uid from spacesList. It reads and changes nothing. Open one of them with spacesOpenItem."
+    },
+    {
+      "name": "spacesListItemsOfType",
+      "description": "Lists the items of one type of one of the person's Datalayer Spaces: its documents (type document) or its notebooks (type notebook), each with its uid, name and description. It reads and changes nothing. Open one of them with spacesOpenItem."
+    },
+    {
+      "name": "spacesOpenItem",
+      "description": "Loads a document or a notebook from the person's Datalayer Spaces and opens it in its own tab of the Spaces side panel: a document in a Lexical editor, a notebook in a notebook view, where the person reads and edits it. Opening an item already open loads it again from its space. Nothing is written back until spacesSaveItem."
+    },
+    {
+      "name": "spacesSaveItem",
+      "description": "Saves a document or a notebook open in the Spaces side panel back to its Datalayer Space, as its tab holds it now, the person's edits included: its content replaces the one the space held. Without a uid it saves the item whose tab is shown. Save only when the person asks for it or agreed to it."
+    }
+  ],
   "trip-header": [
     {
       "name": "setTripHeader",

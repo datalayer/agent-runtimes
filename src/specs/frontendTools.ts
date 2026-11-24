@@ -345,6 +345,25 @@ export const SIDE_PANELS_FRONTEND_TOOL_SPEC_0_0_1: FrontendToolSpec = {
   emoji: '🗂️',
 };
 
+export const SPACES_FRONTEND_TOOL_SPEC_0_0_1: FrontendToolSpec = {
+  id: 'spaces',
+  version: '0.0.1',
+  name: 'Datalayer Spaces',
+  description:
+    "List the person's Datalayer Spaces and their documents and notebooks, open an item in a tab of the Spaces side panel and save it back to its space — run in the page with the person's own sign-in.",
+  tags: ['frontend', 'page', 'spaces', 'document', 'notebook'],
+  enabled: true,
+  toolset: [
+    'spacesList',
+    'spacesListItems',
+    'spacesListItemsOfType',
+    'spacesOpenItem',
+    'spacesSaveItem',
+  ],
+  icon: '@primer/octicons-react:repo',
+  emoji: '🗃️',
+};
+
 // ============================================================================
 // Frontend Tool Catalog
 // ============================================================================
@@ -368,6 +387,7 @@ export const FRONTEND_TOOL_CATALOG: Record<string, FrontendToolSpec> = {
   'page-sheet': PAGE_SHEET_FRONTEND_TOOL_SPEC_0_0_1,
   'public-library': PUBLIC_LIBRARY_FRONTEND_TOOL_SPEC_0_0_1,
   'side-panels': SIDE_PANELS_FRONTEND_TOOL_SPEC_0_0_1,
+  spaces: SPACES_FRONTEND_TOOL_SPEC_0_0_1,
 };
 
 export function getFrontendToolSpecs(): FrontendToolSpec[] {

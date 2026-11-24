@@ -109,6 +109,7 @@ export const UI_PLUGIN_MODULES: Record<
   'side-panels': () => import('./plugins/side-panels'),
   'social-accounts': () => import('./plugins/social-accounts'),
   'social-header': () => import('./plugins/social-header'),
+  spaces: () => import('./plugins/spaces'),
   spreadsheet: () => import('./plugins/spreadsheet'),
   'spreadsheet-view': () => import('./plugins/spreadsheet-view'),
   'stripe-checkout': () => import('./plugins/stripe-checkout'),

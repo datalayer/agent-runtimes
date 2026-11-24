@@ -171,6 +171,30 @@ describe('the seed agents’ UI', () => {
     }
   });
 
+  it('gives the four seed agents the document and the person’s Spaces, kept from a visitor', () => {
+    for (const agent of [
+      'worker-data-analyst',
+      'worker-functional-analyst',
+      'worker-terra',
+      'worker-steward-aws',
+    ]) {
+      const right = agentUiChoicesOf(agent)
+        .filter(choice => choice.placement === 'right')
+        .map(choice => [choice.plugin, choice.tab]);
+      expect(right, agent).toEqual(
+        expect.arrayContaining([
+          ['page-document', 'Document'],
+          ['spaces', 'Spaces'],
+        ]),
+      );
+    }
+    expect(placementOf({ plugin: 'spaces' })).toBe('right');
+    expect(AGENT_UI_PLUGINS.spaces.needsConnection).toBe(true);
+    expect(nameOf(agentUiPluginsFor(['spaces'])[0])).toBe(
+      '@datalayer/agent-plugin-spaces',
+    );
+  });
+
   it('places the page’s document and notebook in a side panel by default, never in a message', () => {
     // A message placement mounted no editor and no kernel: their code-running
     // tools waited for a kernel that never came.
@@ -269,6 +293,7 @@ describe('where each UI goes', () => {
       ['page-mermaid', 'Mermaid'],
       ['page-react-flow', 'React Flow'],
       ['page-document', 'Document'],
+      ['spaces', 'Spaces'],
     ]);
   });
 

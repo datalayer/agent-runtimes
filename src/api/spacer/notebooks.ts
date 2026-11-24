@@ -104,6 +104,29 @@ export const updateNotebook = async (
 };
 
 /**
+ * Write a notebook's content: its nbformat model replaces the one Spacer
+ * holds (`PUT /notebooks/{id}/model`).
+ * @param token - Authentication token
+ * @param id - The notebook ID
+ * @param nbformat - The notebook's content, as nbformat writes it
+ * @param baseUrl - Base URL for the API (defaults to production)
+ * @returns Promise resolving to Spacer's answer
+ */
+export const updateNotebookModel = async (
+  token: string,
+  id: string,
+  nbformat: unknown,
+  baseUrl: string = DEFAULT_SERVICE_URLS.SPACER,
+): Promise<UpdateNotebookResponse> => {
+  return requestDatalayerAPI<UpdateNotebookResponse>({
+    url: `${baseUrl}${API_BASE_PATHS.SPACER}/notebooks/${id}/model`,
+    method: 'PUT',
+    token,
+    body: { nbformat },
+  });
+};
+
+/**
  * Clone a notebook.
  * @param token - Authentication token
  * @param id - The notebook ID to clone

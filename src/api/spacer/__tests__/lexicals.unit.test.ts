@@ -151,4 +151,27 @@ describe('Spacer Lexicals', () => {
       });
     });
   });
+  describe('update model', () => {
+    it('should write the content to the model route', async () => {
+      const content = { root: { type: 'root', children: [] } };
+      vi.mocked(DatalayerApi.requestDatalayerAPI).mockResolvedValue({
+        success: true,
+        message: 'ok',
+      });
+
+      await lexicals.updateLexicalModel(
+        MOCK_JWT_TOKEN,
+        'item-123',
+        content,
+        DEFAULT_SERVICE_URLS.SPACER,
+      );
+
+      expect(DatalayerApi.requestDatalayerAPI).toHaveBeenCalledWith({
+        url: `${DEFAULT_SERVICE_URLS.SPACER}${API_BASE_PATHS.SPACER}/lexicals/item-123/model`,
+        method: 'PUT',
+        token: MOCK_JWT_TOKEN,
+        body: { model: content },
+      });
+    });
+  });
 });
