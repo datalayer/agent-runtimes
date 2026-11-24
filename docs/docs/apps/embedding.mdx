@@ -646,7 +646,7 @@ The sizes, gzipped, as CI's build measured them on 2026-10-08 (kB and MB of 1000
 | Fetched only when shown | nothing: all of it was in the script | 11.7 MB in 978 chunks, each fetched when what it draws is shown, and the fonts and images as files |
 
 The build fails when what is fetched before the element draws — the module and
-the chunks it imports statically — is over **2.5 MB gzipped**
+the chunks it imports statically — is over **2.6 MB gzipped**
 (`INITIAL_GZIP_BUDGET` in `vite.embed.config.ts`), and prints every file's
 size and the initial load by package, with how each is reached. The budget
 sits a little above today's size, so a change that adds to the first load is
@@ -745,7 +745,7 @@ Not done yet:
 - A reload has not been tried in a browser against a running server.
 - The element has not been seen in a browser loading its loader, its module
   and its chunks from `/embed/` on a host page (the bundle is built by the
-  release and by PR CI, under its 2.5 MB gzipped budget). The end-to-end
+  release and by PR CI, under its 2.6 MB gzipped budget). The end-to-end
   suite (`npm run test:e2e`) is written for it and for the hosted page, and
   was not run against either: it needs the landing's dev server serving the
   rebuilt bundle, and an address open to visitors.
