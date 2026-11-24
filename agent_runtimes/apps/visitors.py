@@ -432,6 +432,35 @@ _LENT_TOOLS = "/api/v1/mcp/lent/"
 _INFERENCE_RELAY = "/api/v1/inference/relay/"
 
 
+#: What a skill in the sandbox publishes its owner's work through, on the pod's
+#: loopback (`routes.library`): the owner's token stays in the runtime.
+_LIBRARY_PUBLISH = re.compile(r"^/api/v1/library/items/[^/]+/publish/?$")
+
+
+def sandbox_may_publish(method: str, path: str) -> bool:
+    """Whether a loopback call is a skill publishing its owner's work, here and now.
+
+    Only while code the agent was let run is running (`enforcement.code_is_running`),
+    as its tool calls are, and only on a runtime launched for a deployment by
+    its owner (`principal.kernel_holds_owner_secrets`), where the person
+    talking to it is the one whose work it is. Never on the visitors'
+    runtime, on a deployment's kept runtime its visitors talk to, or on a
+    runtime a visitor launched: there the owner is not the person asking. The
+    route still asks for the person's explicit confirmation.
+    """
+    from agent_runtimes.apps.enforcement import code_is_running
+    from agent_runtimes.apps.principal import kernel_holds_owner_secrets, launched_for
+
+    return (
+        method == "POST"
+        and bool(_LIBRARY_PUBLISH.match(path))
+        and not visitors_runtime()
+        and bool(launched_for())
+        and kernel_holds_owner_secrets()
+        and code_is_running()
+    )
+
+
 #: What Amazon Bedrock AgentCore Runtime calls a runtime started for it at.
 _AGENTCORE_CONTRACT = ("/invocations", "/ping", "/ws")
 
@@ -545,6 +574,9 @@ class OwnRoutesOnly:
                 is_loopback(host)
                 and scope["path"].startswith((_LENT_TOOLS, _INFERENCE_RELAY))
             )
+            # A skill publishing its owner's work, from the sandbox
+            # (`routes.library`), which holds no pod secret.
+            or (is_loopback(host) and sandbox_may_publish(method, scope["path"]))
             # Launched for a deployment, it is held here from its launch; the
             # one thing it still answers is the making of that deployment's
             # agent (`principal.agent_refused_here`, in the route).

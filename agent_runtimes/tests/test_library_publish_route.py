@@ -5,7 +5,10 @@
 
 from __future__ import annotations
 
+from typing import Any, Iterator
+
 import httpx
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -69,3 +72,90 @@ def test_publication_needs_confirmation_a_known_type_and_the_pods_loopback(
         .status_code
         == 403
     )
+
+
+# --- through the production middleware -------------------------------------------
+
+POD = ("127.0.0.1", 50000)
+OUTSIDE = ("203.0.113.9", 50000)
+ROUTE = "/api/v1/library/items/doc-1/publish"
+CONFIRMED = {"item_type": "document", "confirm": True}
+
+
+def _proof() -> str:
+    import jwt
+
+    return jwt.encode(
+        {"sub": "runtime-1", "deployment_uid": "dep-1"},
+        "signed-by-the-platform-and-verified-by-ai-agents",
+        algorithm="HS256",
+    )
+
+
+@pytest.fixture(scope="module")
+def runtime_app() -> FastAPI:
+    from agent_runtimes.app import create_app
+
+    return create_app()
+
+
+@pytest.fixture
+def launched(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """A runtime launched for a deployment, held to its own routes, holding a pod secret."""
+    from agent_runtimes.apps import principal
+
+    async def nothing_read(*_: Any) -> None:
+        return None
+
+    monkeypatch.setenv("DATALAYER_AI_AGENTS_URL", "https://ai-agents.test")
+    monkeypatch.setattr(principal, "read_launched_app", nothing_read)
+    monkeypatch.setenv("DATALAYER_USER_TOKEN", "owner-token")
+    monkeypatch.setenv("DATALAYER_LIBRARY_URL", "https://library.example")
+
+    async def publish(url, token, payload):
+        return httpx.Response(200, json={"success": True})
+
+    monkeypatch.setattr(library, "_publish", publish)
+    principal.forget_runtime_proof()
+    principal.give_runtime_proof(_proof(), "the-pods-secret")
+    yield
+    principal.forget_runtime_proof()
+
+
+def test_a_skill_publishes_through_the_middleware_while_its_code_runs(
+    runtime_app: FastAPI, launched: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The sandbox shares the loopback and holds no pod secret: its run is its proof."""
+    from agent_runtimes.apps import enforcement, principal
+
+    sandbox = TestClient(runtime_app, client=POD)
+    # Its owner launched it, but no code of the agent's is running: refused.
+    principal._LAUNCHED_BY_OWNER["said"] = True
+    idle = sandbox.post(ROUTE, json=CONFIRMED)
+    assert idle.status_code == 404, idle.text
+    monkeypatch.setattr(enforcement, "code_is_running", lambda: True)
+    answered = sandbox.post(ROUTE, json=CONFIRMED)
+    assert answered.status_code == 200, answered.text
+    assert answered.json()["published"] is True
+    # From outside the pod, never.
+    outside = TestClient(runtime_app, client=OUTSIDE).post(ROUTE, json=CONFIRMED)
+    assert outside.status_code == 404
+    # Only the publication: the Library's other routes stay closed.
+    assert sandbox.get("/api/v1/agents").status_code == 404
+
+
+def test_no_skill_publishes_the_owners_work_for_somebody_else(
+    runtime_app: FastAPI, launched: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Launched by a visitor, or the visitors' runtime: the owner is not the one asking."""
+    from agent_runtimes.apps import enforcement, principal
+
+    monkeypatch.setattr(enforcement, "code_is_running", lambda: True)
+    sandbox = TestClient(runtime_app, client=POD)
+    principal._LAUNCHED_BY_OWNER["said"] = False
+    assert sandbox.post(ROUTE, json=CONFIRMED).status_code == 404
+    principal._LAUNCHED_BY_OWNER["said"] = True
+    from agent_runtimes.apps.visitors import VISITORS_ENV
+
+    monkeypatch.setenv(VISITORS_ENV, "example")
+    assert sandbox.post(ROUTE, json=CONFIRMED).status_code == 404
