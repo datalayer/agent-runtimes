@@ -807,7 +807,7 @@ export function EphemeralDocument({
             >
               <LexicalConfigProvider
                 lexicalId={documentId}
-                serviceManager={activeServiceManager}
+                serviceManager={activeServiceManager ?? undefined}
               >
                 <LexicalExtensionComposer
                   extension={extension}
