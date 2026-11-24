@@ -1896,11 +1896,11 @@ DEMO_ACCOUNTANT_APP_0_0_9 = AppSpec.model_validate(
     }
 )
 
-DEMO_AWS_STEWARD_APP_0_0_10 = AppSpec.model_validate(
+DEMO_AWS_STEWARD_APP_0_0_11 = AppSpec.model_validate(
     {
         "schema": "agent.app/v1",
         "id": "demo-aws-steward",
-        "version": "0.0.10",
+        "version": "0.0.11",
         "name": "Steward for AWS",
         "kind": "chat",
         "description": "Recommends savings on an AWS account, each with the evidence it read, the estimated monthly saving and the fix to review: a demo over findings recorded from an example account, reading no AWS.",
@@ -2054,11 +2054,11 @@ DEMO_AWS_STEWARD_APP_0_0_10 = AppSpec.model_validate(
     }
 )
 
-DEMO_DATA_ANALYST_APP_0_0_7 = AppSpec.model_validate(
+DEMO_DATA_ANALYST_APP_0_0_8 = AppSpec.model_validate(
     {
         "schema": "agent.app/v1",
         "id": "demo-data-analyst",
-        "version": "0.0.7",
+        "version": "0.0.8",
         "name": "Data Analyst",
         "kind": "chat",
         "description": "Creates and runs a reproducible Jupyter notebook for a dataset, with quality checks, transformations, charts and conclusions, and can build a companion spreadsheet from the notebook's results.",
@@ -2235,11 +2235,11 @@ DEMO_DATA_ANALYST_APP_0_0_7 = AppSpec.model_validate(
     }
 )
 
-DEMO_FUNCTIONAL_ANALYST_APP_0_0_2 = AppSpec.model_validate(
+DEMO_FUNCTIONAL_ANALYST_APP_0_0_3 = AppSpec.model_validate(
     {
         "schema": "agent.app/v1",
         "id": "demo-functional-analyst",
-        "version": "0.0.2",
+        "version": "0.0.3",
         "name": "Functional Analyst",
         "kind": "chat",
         "description": "Works out how a system, a process or a plan fits together and draws it, as Mermaid diagrams and on an Excalidraw canvas in the page: a demo on an example system or one the visitor describes.",
@@ -3248,11 +3248,11 @@ DEMO_SHOPPER_APP_0_0_13 = AppSpec.model_validate(
     }
 )
 
-DEMO_TERRA_APP_0_0_8 = AppSpec.model_validate(
+DEMO_TERRA_APP_0_0_9 = AppSpec.model_validate(
     {
         "schema": "agent.app/v1",
         "id": "demo-terra",
-        "version": "0.0.8",
+        "version": "0.0.9",
         "name": "Terra",
         "kind": "chat",
         "description": "Finds satellite scenes in NASA Earthdata, compares them and explains what their figures show: a demo that searches the live catalogue and reads its figures from an example, downloading no imagery.",
@@ -8878,13 +8878,13 @@ APP_CATALOGUE: Dict[str, AppSpec] = {
     "decide": DECIDE_APP_0_0_2,
     "deck-maker": DECK_MAKER_APP_0_0_1,
     "demo-accountant": DEMO_ACCOUNTANT_APP_0_0_9,
-    "demo-aws-steward": DEMO_AWS_STEWARD_APP_0_0_10,
-    "demo-data-analyst": DEMO_DATA_ANALYST_APP_0_0_7,
-    "demo-functional-analyst": DEMO_FUNCTIONAL_ANALYST_APP_0_0_2,
+    "demo-aws-steward": DEMO_AWS_STEWARD_APP_0_0_11,
+    "demo-data-analyst": DEMO_DATA_ANALYST_APP_0_0_8,
+    "demo-functional-analyst": DEMO_FUNCTIONAL_ANALYST_APP_0_0_3,
     "demo-marketer": DEMO_MARKETER_APP_0_0_8,
     "demo-shop": DEMO_SHOP_APP_0_0_1,
     "demo-shopper": DEMO_SHOPPER_APP_0_0_13,
-    "demo-terra": DEMO_TERRA_APP_0_0_8,
+    "demo-terra": DEMO_TERRA_APP_0_0_9,
     "demo-traveller": DEMO_TRAVELLER_APP_0_0_9,
     "disaster-assessment": DISASTER_ASSESSMENT_APP_0_0_2,
     "errand-runner": ERRAND_RUNNER_APP_0_0_2,
