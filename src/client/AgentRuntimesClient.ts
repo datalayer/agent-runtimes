@@ -129,6 +129,7 @@ export interface AgentRuntimesClient extends DatalayerCoreClient {
     file?: File | Blob,
   ): Promise<NotebookDTO>;
   getNotebook(id: string): Promise<NotebookDTO>;
+  updateNotebookModel(id: string, nbformat: unknown): Promise<void>;
   updateNotebook(
     id: string,
     name?: string,
@@ -141,6 +142,7 @@ export interface AgentRuntimesClient extends DatalayerCoreClient {
     file?: File | Blob,
   ): Promise<LexicalDTO>;
   getLexical(id: string): Promise<LexicalDTO>;
+  updateLexicalModel(id: string, model: unknown): Promise<void>;
   updateLexical(
     id: string,
     name?: string,

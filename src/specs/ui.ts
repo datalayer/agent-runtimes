@@ -3425,6 +3425,39 @@ export const SOCIAL_HEADER_UI_0_0_1: UISpec = {
   components: [],
 };
 
+export const SPACES_UI_0_0_1: UISpec = {
+  id: 'spaces',
+  version: '0.0.1',
+  name: 'Datalayer Spaces',
+  description:
+    "The person's Datalayer Spaces beside the conversation: their documents and notebooks listed, opened in tabs of a side panel (a document in a Lexical editor, a notebook in a notebook view) and saved back, by the agent or by the person.",
+  emoji: '🗃️',
+  octicon: 'repo',
+  plugin: '@datalayer/agent-plugin-spaces',
+  folder: 'spaces',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/spaces',
+    export: 'SpacesPlugin',
+    kind: 'plugin',
+  },
+  contributions: {
+    slots: [],
+    points: [
+      'agent.chat.extras',
+      'reactor.ui.renderer',
+      'reactor.ui.toolBinding',
+    ],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  placements: ['right', 'left'],
+  catalog: '',
+  components: [],
+};
+
 export const SPREADSHEET_VIEW_UI_0_0_1: UISpec = {
   id: 'spreadsheet-view',
   version: '0.0.1',
@@ -3975,6 +4008,7 @@ export const UI_CATALOGUE: Record<string, UISpec> = {
   'side-panels': SIDE_PANELS_UI_0_0_1,
   'social-accounts': SOCIAL_ACCOUNTS_UI_0_0_1,
   'social-header': SOCIAL_HEADER_UI_0_0_1,
+  spaces: SPACES_UI_0_0_1,
   'spreadsheet-view': SPREADSHEET_VIEW_UI_0_0_1,
   spreadsheet: SPREADSHEET_UI_0_0_1,
   'stripe-checkout': STRIPE_CHECKOUT_UI_0_0_1,

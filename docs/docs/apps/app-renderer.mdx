@@ -504,6 +504,42 @@ until the agent's next call (`sidePanelCallEvent`, `sidePanelOpen`). It is all r
 conversation's recorded calls (`toolResults`), so a conversation opened again shows its panels
 as they stood, and one started over closes them (`ToolResultsStore.getGeneration`).
 
+### The person's Spaces in a tab
+
+The `spaces` UI (`apps/plugins/spaces`, the user, 24 November 2026) puts the person's Datalayer
+Spaces in a tab of a side panel, `right` by default. Its first tab lists their spaces and, for the
+one chosen, its documents and notebooks (all of them, the documents or the notebooks); a click
+opens an item in a tab of its own, a document in the Lexical editor of the Document tab
+(`EphemeralDocument`), a notebook in the notebook view of the Notebook tab
+(`EphemeralNotebook`), their cells on the page's kernel. Each item's tab has **Save**, which
+writes it back to its space, and closes from its tab.
+
+The agent does the same with five frontend tools, run in the page with the person's sign-in
+through the Spacer client (`AgentRuntimesClient`): `spacesList`, `spacesListItems({spaceUid})`,
+`spacesListItemsOfType({spaceUid, type})`, `spacesOpenItem({uid, type})`, which shows the item's
+tab, and `spacesSaveItem({uid?})`, the tab shown when `uid` is unsaid. An item open in a
+conversation is that conversation's (`openItems`): kept while its tab is hidden, saved as its
+tab last said it. Signed out, each tool answers that the person must sign in, and the panel says
+so; a refusal from Spacer is a sentence too. A visitor is not given the UI
+(`needsConnection: true`).
+
+```yaml
+# agentspecs/agents/worker-data-analyst.yaml (abridged)
+ui:
+  - plugin: page-document
+    placement: right
+    tab: Document
+  - plugin: spaces
+    placement: right
+    tab: Spaces
+frontend_tools:
+  - page-document:0.0.1
+  - spaces:0.0.1
+```
+
+The Data Analyst, the Functional Analyst, Terra and the Steward for AWS carry both, their demos
+too.
+
 ## Over its conversation, for a moment: notices
 
 The agent slides a short notice in from an edge of the conversation with one frontend tool,

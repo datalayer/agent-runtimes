@@ -11,6 +11,8 @@
 
 // @vitest-environment jsdom
 import React from 'react';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { BaseStyles, ThemeProvider } from '@primer/react';
@@ -49,5 +51,47 @@ describe('the tools menu’s frontend tools', () => {
     // Placed as the row's leading visual: not inside the name's label.
     expect(label.contains(leading)).toBe(false);
     expect(leading?.contains(label)).toBe(false);
+  });
+
+  it('says what each does under its name, clamped, the whole on hover (24 November 2026)', () => {
+    const description = 'Shows a notice to the person, in their page.';
+    render(
+      <ThemeProvider>
+        <BaseStyles>
+          <ToolsMenu
+            availableTools={[]}
+            availableFrontendTools={[
+              { id: 'noticeShow', name: 'noticeShow', description } as never,
+            ]}
+          />
+        </BaseStyles>
+      </ThemeProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Tools/ }));
+    const said = screen.getByText(description);
+    expect(said.getAttribute('title')).toBe(description);
+    expect(said.style.webkitLineClamp).toBe('3');
+  });
+
+  it('is given each tool’s description by the app’s chat too, not its name alone', () => {
+    const chatView = readFileSync(
+      join(
+        __dirname,
+        '..',
+        '..',
+        '..',
+        'apps',
+        'plugins',
+        'chat',
+        'ChatView.tsx',
+      ),
+      'utf8',
+    );
+    expect(chatView).toContain(
+      'uiFrontendToolNamed(tool.name)?.description ||',
+    );
+    expect(chatView).not.toContain(
+      '.map(tool => ({ id: tool.name, name: tool.name })),',
+    );
   });
 });

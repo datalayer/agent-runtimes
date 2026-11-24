@@ -182,6 +182,26 @@ export function SpacerMixin<TBase extends Constructor>(Base: TBase) {
       return new NotebookDTO(response.notebook, this as any);
     }
 
+    /**
+     * Save a notebook's content: its nbformat model replaces the one Spacer holds.
+     * @param id - Notebook ID
+     * @param nbformat - The notebook's content, as nbformat writes it
+     * @throws Error when Spacer does not say it saved it
+     */
+    async updateNotebookModel(id: string, nbformat: unknown): Promise<void> {
+      const spacerUrl = (this as any).getSpacerUrl();
+      const token = (this as any).getToken();
+      const response = await notebooks.updateNotebookModel(
+        token,
+        id,
+        nbformat,
+        spacerUrl,
+      );
+      if (!response.success) {
+        throw new Error(`Failed to save notebook '${id}': ${response.message}`);
+      }
+    }
+
     // ========================================================================
     // Lexicals
     // ========================================================================
@@ -254,6 +274,27 @@ export function SpacerMixin<TBase extends Constructor>(Base: TBase) {
 
       const response = await lexicals.updateLexical(token, id, data, spacerUrl);
       return new LexicalDTO(response.document, this as any);
+    }
+
+    /**
+     * Save a lexical document's content: its Lexical editor state replaces
+     * the model Spacer holds.
+     * @param id - Document ID
+     * @param model - The document's Lexical editor state
+     * @throws Error when Spacer does not say it saved it
+     */
+    async updateLexicalModel(id: string, model: unknown): Promise<void> {
+      const spacerUrl = (this as any).getSpacerUrl();
+      const token = (this as any).getToken();
+      const response = await lexicals.updateLexicalModel(
+        token,
+        id,
+        model,
+        spacerUrl,
+      );
+      if (!response.success) {
+        throw new Error(`Failed to save document '${id}': ${response.message}`);
+      }
     }
 
     // ========================================================================

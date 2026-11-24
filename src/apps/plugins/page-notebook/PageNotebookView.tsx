@@ -18,7 +18,12 @@ import { Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import type { AgentWorkspaceContext } from '../../core';
 import { EphemeralNotebook } from '../../../chat/notebook/EphemeralNotebook';
-import { usePageKernel } from '../../pageTools/usePageKernel';
+import type { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
+import {
+  pageBrowserSandbox,
+  usePageKernel,
+} from '../../pageTools/usePageKernel';
+import { pageKernelToolbarItems } from '../page-document/PageKernelIndicator';
 import { pageNotebookViewId } from './memoryNotebook';
 
 const NotebookView = lazy(() => import('../notebook/NotebookView'));
@@ -56,6 +61,18 @@ export default function PageNotebookView({
     () => JSON.parse(JSON.stringify(EMPTY)) as INotebookContent,
     [],
   );
+  // The kernel indicator in its toolbar, as the document's (the user,
+  // 24 November 2026: "add the kernel indicator also in the notebook
+  // toolbar"): Python in this browser, its state followed as it changes.
+  const browserKernel =
+    kernel.source === 'browser'
+      ? ((pageBrowserSandbox().getKernelConnection() as IKernelConnection | null) ??
+        null)
+      : null;
+  const toolbarExtraItems = useMemo(
+    () => pageKernelToolbarItems('browser', browserKernel),
+    [browserKernel],
+  );
   if (kernel.source === 'workspace' && workspace) {
     return (
       <Suspense fallback={<Box minHeight={320} aria-busy="true" />}>
@@ -72,6 +89,8 @@ export default function PageNotebookView({
           inheritTheme
           serviceManager={kernel.serviceManager}
           kernelId={kernel.kernelId}
+          showToolbar
+          toolbarExtraItems={toolbarExtraItems}
         />
       </Box>
     );

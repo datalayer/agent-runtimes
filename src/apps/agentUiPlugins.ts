@@ -100,6 +100,7 @@ import { PublicLibraryPlugin } from './plugins/public-library';
 import { shopHeaderPlugin } from './plugins/shop-header';
 import { ShoppingBasketPlugin } from './plugins/shopping-basket';
 import { SidePanelsPlugin } from './plugins/side-panels';
+import { spacesSidePlugin } from './plugins/spaces';
 import {
   SocialAccountsChips,
   SocialAccountsMessagePlugin,
@@ -270,6 +271,15 @@ export const AGENT_UI_PLUGINS: Readonly<Record<string, AgentUiPlugin>> = {
   'page-document': {
     needsConnection: false,
     side: pageDocumentSidePlugin,
+  },
+  /*
+   * The person's Datalayer Spaces (the user, 24 November 2026): their
+   * documents and notebooks listed, opened in tabs of a side panel and saved
+   * back, with their own sign-in. Kept from a visitor, who has no Spaces.
+   */
+  spaces: {
+    needsConnection: true,
+    side: spacesSidePlugin,
   },
   'page-sheet': {
     needsConnection: false,

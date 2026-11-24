@@ -154,4 +154,59 @@ describe('Spacer Notebooks', () => {
       });
     });
   });
+  describe('update model', () => {
+    it('should write the content to the model route', async () => {
+      const content = {
+        cells: [],
+        metadata: {},
+        nbformat: 4,
+        nbformat_minor: 5,
+      };
+      vi.mocked(DatalayerApi.requestDatalayerAPI).mockResolvedValue({
+        success: true,
+        message: 'ok',
+      });
+
+      await notebooks.updateNotebookModel(
+        MOCK_JWT_TOKEN,
+        'item-123',
+        content,
+        DEFAULT_SERVICE_URLS.SPACER,
+      );
+
+      expect(DatalayerApi.requestDatalayerAPI).toHaveBeenCalledWith({
+        url: `${DEFAULT_SERVICE_URLS.SPACER}${API_BASE_PATHS.SPACER}/notebooks/item-123/model`,
+        method: 'PUT',
+        token: MOCK_JWT_TOKEN,
+        body: { nbformat: content },
+      });
+    });
+
+    it('should send nbformat given as JSON text as its object, as core sends it', async () => {
+      const content = {
+        cells: [],
+        metadata: {},
+        nbformat: 4,
+        nbformat_minor: 5,
+      };
+      vi.mocked(DatalayerApi.requestDatalayerAPI).mockResolvedValue({
+        success: true,
+        message: 'ok',
+      });
+
+      await notebooks.updateNotebookModel(
+        MOCK_JWT_TOKEN,
+        'item-123',
+        JSON.stringify(content),
+        DEFAULT_SERVICE_URLS.SPACER,
+      );
+
+      expect(DatalayerApi.requestDatalayerAPI).toHaveBeenCalledWith({
+        url: `${DEFAULT_SERVICE_URLS.SPACER}${API_BASE_PATHS.SPACER}/notebooks/item-123/model`,
+        method: 'PUT',
+        token: MOCK_JWT_TOKEN,
+        body: { nbformat: content },
+      });
+    });
+  });
 });

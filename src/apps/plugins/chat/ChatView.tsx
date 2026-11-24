@@ -153,6 +153,7 @@ import type {
   ModelConfig,
 } from '../../../types';
 import { AI_MODEL_CATALOGUE, isChatModel } from '../../../specs/models';
+import { uiFrontendToolNamed } from '../../../specs/uiFrontendTools';
 import {
   AgentBlueprint,
   AgentGate,
@@ -2203,7 +2204,16 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
       runtime: fromServer,
       frontend: agentTools
         .filter(tool => !seen.has(tool.name))
-        .map(tool => ({ id: tool.name, name: tool.name })),
+        // What each does, in its definition's words or its UI plugin's (the
+        // user, 24 November 2026: the overlay showed the names alone here).
+        .map(tool => ({
+          id: tool.name,
+          name: tool.name,
+          description:
+            (tool as { description?: string }).description?.trim() ||
+            uiFrontendToolNamed(tool.name)?.description ||
+            '',
+        })),
     };
   }, [configQuery.data?.builtinTools, agentTools]);
 
