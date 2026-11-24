@@ -58,6 +58,8 @@ import { CardSideContext } from '../toolCards/kit';
 import { PAGE_DECK } from '../plugins/page-deck/store';
 import { PageDeckCard } from '../plugins/page-deck';
 import { sidePanelsTools } from '../plugins/side-panels';
+import { revealPanelFor } from '../shell/sidePanelReveal';
+import { MERMAID_TOOL_NAMES } from '../plugins/page-mermaid/store';
 import {
   NOTICES_WORDS,
   NoticeBoard,
@@ -531,6 +533,27 @@ describe('several components in one side panel', () => {
         '[data-page-tool-panel-empty="page-excalidraw"]',
       ),
     ).not.toBeNull();
+  });
+});
+
+describe('a panel asked by a call still running (the user, 24 November 2026)', () => {
+  const placed = () =>
+    agentUiPluginsFor([
+      { plugin: 'page-excalidraw', placement: 'right', tab: 'Excalidraw' },
+      { plugin: 'page-mermaid', placement: 'right', tab: 'Mermaid' },
+      { plugin: 'side-panels', placement: 'message' },
+    ]);
+
+  it('opens and selects the tab whose component follows the tool, before any call is recorded', () => {
+    mount(placed());
+    expect(rightPanel()?.hasAttribute('data-open') ?? false).toBe(false);
+    act(() => revealPanelFor(MERMAID_TOOL_NAMES[0]));
+    expect(rightPanel()!.hasAttribute('data-open')).toBe(true);
+    expect(
+      screen
+        .getByRole('tab', { name: 'Mermaid' })
+        .getAttribute('aria-selected'),
+    ).toBe('true');
   });
 });
 

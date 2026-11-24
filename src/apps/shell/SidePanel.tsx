@@ -49,6 +49,7 @@
  * @module apps/shell/SidePanel
  */
 
+import { lastReveal, subscribeReveal } from './sidePanelReveal';
 import type { ElementType, JSX, PointerEvent, RefObject } from 'react';
 import {
   useCallback,
@@ -482,6 +483,25 @@ export function useSidePanel(side: SidePanelSide): SidePanelState {
     },
     [tabs, latestOrder, generation],
   );
+  // A running call asking for its panel (sidePanelReveal): the side whose
+  // component follows the tool opens and selects that tab.
+  const reveal = useSyncExternalStore(subscribeReveal, lastReveal, lastReveal);
+  const revealed = useRef(0);
+  useEffect(() => {
+    if (!reveal || reveal.seq === revealed.current) {
+      return;
+    }
+    revealed.current = reveal.seq;
+    const component = components.find(candidate =>
+      candidate.panel?.follows?.some(pattern =>
+        toolPattern(pattern).test(reveal.toolName),
+      ),
+    );
+    if (component) {
+      setOpen(true);
+      setActiveTab(component.id);
+    }
+  }, [reveal, components, setOpen, setActiveTab]);
   return {
     side,
     components,
