@@ -3,18 +3,54 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/** The Lexical document an agent and a person edit together in a side-panel tab. */
+/**
+ * The conversation's document in a side-panel tab: an editor that mirrors
+ * the in-memory document the agent's tools write (`memoryDocument`), so the
+ * person reads and edits the same document, and closing the tab loses
+ * nothing.
+ */
 
-import type { JSX } from 'react';
+import { useEffect, type JSX } from 'react';
+import { lexicalStore } from '@datalayer/jupyter-lexical';
 import { EphemeralDocument } from '../../../chat/document/EphemeralDocument';
+import {
+  PAGE_DOCUMENT_VIEW_ID,
+  mirror,
+  pageDocumentEditor,
+} from './memoryDocument';
 
-export const PAGE_DOCUMENT_ID = 'page-document';
+/** Mirror the in-memory document into the view's editor once it registers. */
+function useMirror(): void {
+  useEffect(() => {
+    let stop: (() => void) | undefined;
+    let cancelled = false;
+    const attach = async () => {
+      const view = lexicalStore.getState().lexicals.get(PAGE_DOCUMENT_VIEW_ID)
+        ?.adapter?.editor;
+      if (!view || stop) {
+        return;
+      }
+      const memory = await pageDocumentEditor();
+      if (!cancelled && !stop) {
+        stop = mirror(memory, view);
+      }
+    };
+    void attach();
+    const unsubscribe = lexicalStore.subscribe(() => void attach());
+    return () => {
+      cancelled = true;
+      unsubscribe();
+      stop?.();
+    };
+  }, []);
+}
 
 export default function PageDocumentEditor(): JSX.Element {
+  useMirror();
   return (
     <EphemeralDocument
       inheritTheme
-      documentId={PAGE_DOCUMENT_ID}
+      documentId={PAGE_DOCUMENT_VIEW_ID}
       autoFocus={false}
       showToolbar
     />

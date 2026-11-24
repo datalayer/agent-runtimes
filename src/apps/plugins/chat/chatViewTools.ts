@@ -109,3 +109,94 @@ export function isInactiveSurfaceContribution(
   const surfaceId = id.slice(0, -'-tools'.length);
   return surfaceIds.has(surfaceId) && surfaceId !== activeSurfaceId;
 }
+
+/** A tool contribution as the chat merges it: the plugin that gave it and what it gives. */
+export type ToolContributionEntry<W, T extends { name: string }> = {
+  plugin: string;
+  value: {
+    id: string;
+    tools: (workspace: W) => T[];
+    chatView?: boolean;
+  };
+};
+
+/**
+ * The agent's frontend tools, one per name: the editors' contributions and
+ * the chat's extras (a side panel's document or notebook, a host page's own
+ * tools).
+ *
+ * First name wins, so the order decides. The editor on screen goes first and
+ * owns the shared names. With none on screen, the extras go first (the user,
+ * 24 November 2026: "create a notebook and document fails"): a side panel's
+ * document or notebook names its tools as the workspace's surfaces do, and
+ * those surfaces, contributed first, shadowed them; the chat view's filter
+ * then left the agent their read tools alone, on an editor nobody had
+ * opened. With no editor on screen, the chat view keeps only what leaves the
+ * editors alone, plus what a contribution vouched for and the extras.
+ */
+export function mergeFrontendTools<W, T extends { name: string }>(opts: {
+  contributions: readonly ToolContributionEntry<W, T>[];
+  workspace: W;
+  extras: readonly T[];
+  surfaceIds: ReadonlySet<string>;
+  activeSurfaceId: string | undefined;
+}): T[] {
+  const { contributions, workspace, extras, surfaceIds, activeSurfaceId } =
+    opts;
+  const merged: T[] = [];
+  const owners = new Map<string, string>();
+  const keep = new Set<string>();
+  const foldExtras = () => {
+    for (const tool of extras) {
+      if (owners.has(tool.name)) {
+        continue;
+      }
+      owners.set(tool.name, 'chat-extras');
+      merged.push(tool);
+      keep.add(tool.name);
+    }
+  };
+  const extrasFirst = !activeSurfaceId;
+  if (extrasFirst) {
+    foldExtras();
+  }
+  for (const entry of orderToolContributions(contributions, activeSurfaceId)) {
+    if (
+      isInactiveSurfaceContribution(entry.value.id, surfaceIds, activeSurfaceId)
+    ) {
+      continue;
+    }
+    let tools: T[];
+    try {
+      tools = entry.value.tools(workspace);
+    } catch (error) {
+      // One broken contributor must not cost the agent every tool.
+      console.warn(
+        `[agent] frontend tools from '${entry.plugin}' failed:`,
+        error,
+      );
+      continue;
+    }
+    for (const tool of tools) {
+      const owner = owners.get(tool.name);
+      if (owner) {
+        // The extras owning a name with no editor on screen is the rule, not a clash.
+        if (owner !== 'chat-extras') {
+          console.warn(
+            `[agent] frontend tool '${tool.name}' from '${entry.plugin}' is shadowed by the one from '${owner}'.`,
+          );
+        }
+        continue;
+      }
+      owners.set(tool.name, entry.plugin);
+      merged.push(tool);
+      if (entry.value.chatView) {
+        keep.add(tool.name);
+      }
+    }
+  }
+  if (!extrasFirst) {
+    foldExtras();
+  }
+  return activeSurfaceId ? merged : toolsForChatView(merged, keep);
+}

@@ -15,9 +15,13 @@ import { lazy, Suspense, type JSX } from 'react';
 import { FileIcon } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import type { ToolCallRenderContext } from '../../../types/chat';
-import { lexicalStore } from '@datalayer/jupyter-lexical';
 import { createLexicalTools } from '../../../tools/adapters/agent-runtimes/lexicalHooks';
-import { untilMounted } from '../../pageTools/untilMounted';
+import { beforeEachCall } from '../../pageTools/untilMounted';
+import { revealPanelFor } from '../../shell/sidePanelReveal';
+import {
+  PAGE_DOCUMENT_ID as MEMORY_DOCUMENT_ID,
+  pageDocumentEditor,
+} from './memoryDocument';
 import { CallLine, cardRole, toolOf } from '../../pageTools/cards';
 import {
   defineToolCardPlugin,
@@ -30,12 +34,14 @@ export const PAGE_DOCUMENT_PLUGIN_NAME =
 export const PAGE_DOCUMENT_ID = 'page-document';
 
 const Editor = lazy(() => import('./PageDocumentEditor'));
-// Each call waits for the document's panel, which its first call opens, to mount its editor.
-const FRONTEND_TOOLS = untilMounted(
-  createLexicalTools(PAGE_DOCUMENT_ID),
-  () =>
-    Boolean(lexicalStore.getState().lexicals.get(PAGE_DOCUMENT_ID)?.adapter),
-  'the document',
+// The tools act on the in-memory document (memoryDocument), built on the
+// first call; the call also shows the panel that mirrors it, without waiting for it.
+const FRONTEND_TOOLS = beforeEachCall(
+  createLexicalTools(MEMORY_DOCUMENT_ID),
+  async tool => {
+    await pageDocumentEditor();
+    revealPanelFor(tool.name);
+  },
 );
 export const PAGE_DOCUMENT_TOOL_NAMES = FRONTEND_TOOLS.map(tool => tool.name);
 

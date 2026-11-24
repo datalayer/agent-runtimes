@@ -179,11 +179,7 @@ import {
   type AgentViewProps,
 } from '../../core';
 import { messageText, turnWritersOf, type TurnFeed } from './turnState';
-import {
-  isInactiveSurfaceContribution,
-  orderToolContributions,
-  toolsForChatView,
-} from './chatViewTools';
+import { mergeFrontendTools } from './chatViewTools';
 import {
   agentBundleToolDefinitions,
   useAgentCommandTools,
@@ -1258,79 +1254,13 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
      * outputs are what the conversation shows. The document's block tools
      * (runBlock, insertBlock…) keep their own names and are untouched.
      */
-    const merged: ReturnType<
-      (typeof toolContributions)[number]['value']['tools']
-    > = [];
-    const owners = new Map<string, string>();
-    // Tools a contribution vouched for in the chat view; see `chatView`.
-    const keep = new Set<string>();
-    // See `isInactiveSurfaceContribution`: with an editor on screen, only
-    // its own `${surfaceId}-tools` contribution survives this filter.
-    const surfaceIds = new Set(surfaces.map(entry => entry.value.surfaceId));
-    for (const entry of orderToolContributions(
-      toolContributions,
-      active?.surfaceId,
-    )) {
-      if (
-        isInactiveSurfaceContribution(
-          entry.value.id,
-          surfaceIds,
-          active?.surfaceId,
-        )
-      ) {
-        continue;
-      }
-      let tools: typeof merged;
-      try {
-        tools = entry.value.tools(workspace);
-      } catch (error) {
-        // One broken contributor must not cost the agent every tool.
-        console.warn(
-          `[agent] frontend tools from '${entry.plugin}' failed:`,
-          error,
-        );
-        continue;
-      }
-      for (const tool of tools) {
-        const owner = owners.get(tool.name);
-        if (owner) {
-          console.warn(
-            `[agent] frontend tool '${tool.name}' from '${entry.plugin}' is shadowed by the one from '${owner}'.`,
-          );
-          continue;
-        }
-        owners.set(tool.name, entry.plugin);
-        merged.push(tool);
-        if (entry.value.chatView) {
-          keep.add(tool.name);
-        }
-      }
-    }
-    // A host example's own frontend tools, folded in last (first name wins),
-    // so a bespoke client tool like A2UI's run_jupyter_output_demo joins the
-    // agent's toolset without a plugin of its own. Vouched for in the chat
-    // view as well: the filter below keeps the tools that leave the editors
-    // alone, and a host's tool touches no editor — the Jupyter Output
-    // example's chat had lost its one tool to that filter and answered
-    // "use the demo button" instead of running the demonstration.
-    for (const tool of chatExtras.frontendTools ?? []) {
-      if (owners.has(tool.name)) {
-        continue;
-      }
-      owners.set(tool.name, 'chat-extras');
-      merged.push(tool);
-      keep.add(tool.name);
-    }
-    /*
-     * The view decides the toolset. With an editor on screen the agent has
-     * that editor's own tools (`belongsToInactiveSurface` above, plus
-     * whatever isn't tied to a surface at all); with none — the chat view —
-     * it keeps only what leaves the editors alone: the `executeCodeIn…`
-     * tools, whose outputs stream onto the conversation as surfaces, and
-     * the read tools. The editors stay mounted out of sight either way, so
-     * what it can still call, works.
-     */
-    return active ? merged : toolsForChatView(merged, keep);
+    return mergeFrontendTools({
+      contributions: toolContributions,
+      workspace,
+      extras: chatExtras.frontendTools ?? [],
+      surfaceIds: new Set(surfaces.map(entry => entry.value.surfaceId)),
+      activeSurfaceId: active?.surfaceId,
+    });
     // The workspace object is rebuilt when its facts change; surfaceId is
     // the one the factories address by.
     // eslint-disable-next-line react-hooks/exhaustive-deps

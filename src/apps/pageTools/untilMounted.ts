@@ -76,3 +76,26 @@ export function untilMounted(
     };
   });
 }
+
+/**
+ * The same tools, each call running `prepare` first (building the in-memory
+ * surface the tools act on, showing its panel).
+ */
+export function beforeEachCall(
+  tools: FrontendToolDefinition[],
+  prepare: (tool: FrontendToolDefinition) => Promise<void> | void,
+): FrontendToolDefinition[] {
+  return tools.map(tool => {
+    const handler = tool.handler;
+    if (!handler) {
+      return tool;
+    }
+    return {
+      ...tool,
+      handler: async (args: Record<string, unknown>) => {
+        await prepare(tool);
+        return handler(args);
+      },
+    };
+  });
+}

@@ -11,9 +11,11 @@ import { Box } from '@datalayer/primer-addons';
 import type { AgentWorkspaceContext } from '../../core';
 import type { AgentSidePanelProps } from '../../shell/SidePanel';
 import type { ToolCallRenderContext } from '../../../types/chat';
-import { notebookStore } from '@datalayer/jupyter-react';
 import { createNotebookTools } from '../../../tools/adapters/agent-runtimes/notebookHooks';
-import { untilMounted } from '../../pageTools/untilMounted';
+import { beforeEachCall } from '../../pageTools/untilMounted';
+import { revealPanelFor } from '../../shell/sidePanelReveal';
+import { PAGE_NOTEBOOK_VIEW_ID, pageNotebook } from './memoryNotebook';
+import { usePageNotebookMirror } from './usePageNotebookMirror';
 import { CallLine, cardRole, toolOf } from '../../pageTools/cards';
 import {
   defineToolCardPlugin,
@@ -23,23 +25,27 @@ import type { SidePlacement } from '../../toolCards/chrome';
 
 export const PAGE_NOTEBOOK_ID = 'page-notebook';
 const NotebookView = lazy(() => import('../notebook/NotebookView'));
-// Each call waits for the notebook's panel, which its first call opens, to mount its notebook.
-const FRONTEND_TOOLS = untilMounted(
+// The tools act on the in-memory notebook (memoryNotebook); a call also
+// shows the panel that mirrors it, without waiting for it (a run does wait,
+// for the kernel there).
+const FRONTEND_TOOLS = beforeEachCall(
   createNotebookTools(PAGE_NOTEBOOK_ID),
-  () =>
-    Boolean(notebookStore.getState().notebooks.get(PAGE_NOTEBOOK_ID)?.adapter),
-  'the notebook',
+  tool => {
+    pageNotebook();
+    revealPanelFor(tool.name);
+  },
 );
 export const PAGE_NOTEBOOK_TOOL_NAMES = FRONTEND_TOOLS.map(tool => tool.name);
 
 function NotebookPanel(props: AgentSidePanelProps): JSX.Element {
+  usePageNotebookMirror();
   const workspace = props.workspace as AgentWorkspaceContext | undefined;
   if (!workspace) {
     return <Box minHeight={320} aria-busy="true" />;
   }
   return (
     <Suspense fallback={<Box minHeight={320} aria-busy="true" />}>
-      <NotebookView surfaceId={PAGE_NOTEBOOK_ID} workspace={workspace} />
+      <NotebookView surfaceId={PAGE_NOTEBOOK_VIEW_ID} workspace={workspace} />
     </Suspense>
   );
 }
