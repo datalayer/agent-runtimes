@@ -268,6 +268,25 @@ export function setUserFlow(
   PAGE_REACT_FLOW.touch();
 }
 
+/**
+ * Apply the person's change (a drag, a deletion) to the flow as it stands
+ * now, not as the last render saw it: deleting a connected node sends its
+ * node changes and its edge changes before the canvas draws again, and the
+ * second, applied to the arrays the render held, put the deleted node back.
+ * Returns the flow, for the canvas to draw.
+ */
+export function changeUserFlow(
+  change: (flow: Readonly<Pick<PageReactFlow, 'nodes' | 'edges'>>) => {
+    nodes?: Node<ReactFlowShapeData>[];
+    edges?: Edge[];
+  },
+): PageReactFlow {
+  const flow = PAGE_REACT_FLOW.read();
+  const next = change({ nodes: flow.nodes, edges: flow.edges });
+  setUserFlow(next.nodes ?? flow.nodes, next.edges ?? flow.edges);
+  return PAGE_REACT_FLOW.read();
+}
+
 /** Link shapes through React Flow's handles, with an ID the tools can read. */
 export function addUserLink(source: string, target: string): string {
   const flow = PAGE_REACT_FLOW.read();

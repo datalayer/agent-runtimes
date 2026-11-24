@@ -24,15 +24,26 @@
  * `executeCodeInDocument`, whose outputs stream onto the conversation, and
  * the read and list tools, so it can still answer from what is there.
  *
- * Names are matched by their reference form and their raw `datalayer_` form
- * alike, since the adapter registers whichever the definition carries.
+ * Names are matched by their reference form, their raw `datalayer_` form and
+ * their public form (`notebookReadAllCells`) alike, since the adapter
+ * registers whichever the definition carries and the chat hands the model
+ * the public one.
  *
  * @module apps/plugins/chat/chatViewTools
  */
 
-/** The reference name, with the adapter's prefix and the editor suffix off. */
+/**
+ * The reference name, with the adapter's prefix, the editor suffix and the
+ * public name's editor prefix off (`notebookReadAllCells` reads as
+ * `readAllCells`, `frontendToolNames`): for classification only, the tool
+ * keeps its name.
+ */
 function bareName(name: string): string {
-  return name.replace(/^datalayer_/, '').replace(/_lexical$/, '');
+  const bare = name.replace(/^datalayer_/, '').replace(/_lexical$/, '');
+  const unprefixed = bare.replace(/^(notebook|document)(?=[A-Z])/, '');
+  return unprefixed === bare
+    ? bare
+    : `${unprefixed[0].toLowerCase()}${unprefixed.slice(1)}`;
 }
 
 /** Whether a tool changes nothing on an editor. */

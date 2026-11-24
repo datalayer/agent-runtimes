@@ -4,11 +4,15 @@
  */
 
 import { afterEach, describe, expect, it } from 'vitest';
+import { applyEdgeChanges, applyNodeChanges } from '@xyflow/react';
 import { PAGE_TOOL_RESULTS } from '../toolCards/toolResults';
 import {
   PAGE_REACT_FLOW,
   REACT_FLOW_TOOL_NAMES,
+  REACT_FLOW_WRITE_TOOL_NAMES,
+  addUserLink,
   addUserShape,
+  changeUserFlow,
   pageReactFlowTools,
 } from '../plugins/page-react-flow/store';
 
@@ -79,5 +83,50 @@ describe('the React Flow tools in the page', () => {
     expect(
       await call('move_shape', { shape_id: 'shape-404', x: 0, y: 0 }),
     ).toMatchObject({ ok: false, error: "There is no shape 'shape-404'." });
+  });
+
+  it('applies the person’s node and edge changes, sent before a redraw, each to the flow as it stands', () => {
+    const browser = addUserShape({ x: 0, y: 0 });
+    const api = addUserShape({ x: 200, y: 0 });
+    const link = addUserLink(browser, api);
+    // Deleting a connected node: React Flow sends the node's removal, then
+    // its edge's, both before the canvas draws again.
+    changeUserFlow(flow => ({
+      nodes: applyNodeChanges([{ type: 'remove', id: api }], flow.nodes),
+    }));
+    const after = changeUserFlow(flow => ({
+      edges: applyEdgeChanges([{ type: 'remove', id: link }], flow.edges),
+    }));
+    expect(after.nodes.map(node => node.id)).toEqual([browser]);
+    expect(after.edges).toEqual([]);
+    expect(PAGE_REACT_FLOW.read().nodes.map(node => node.id)).toEqual([
+      browser,
+    ]);
+  });
+});
+
+describe('the conversation’s React Flow diagram', () => {
+  it('is built again from calls recorded under the public names', async () => {
+    PAGE_TOOL_RESULTS.record([
+      {
+        type: 'tool-call',
+        status: 'complete',
+        toolCallId: 'flow-1',
+        toolName: 'reactFlowInsertShape',
+        args: { label: 'Browser', x: 10, y: 20 },
+        result: { ok: true, id: 'shape-1' },
+      },
+    ]);
+    await PAGE_REACT_FLOW.sync(
+      PAGE_TOOL_RESULTS.callsOf([...REACT_FLOW_WRITE_TOOL_NAMES]),
+    );
+    expect(PAGE_REACT_FLOW.read().nodes).toMatchObject([
+      { id: 'shape-1', data: { label: 'Browser' } },
+    ]);
+    PAGE_TOOL_RESULTS.clear();
+    await PAGE_REACT_FLOW.sync(
+      PAGE_TOOL_RESULTS.callsOf([...REACT_FLOW_WRITE_TOOL_NAMES]),
+    );
+    expect(PAGE_REACT_FLOW.read().nodes).toEqual([]);
   });
 });

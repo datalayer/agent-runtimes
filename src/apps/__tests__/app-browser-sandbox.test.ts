@@ -17,6 +17,7 @@ import { appPreset, defineAppPlugin } from '../apps/AppRenderer';
 import { APP_BROWSER_SANDBOX_PLUGIN_NAME } from '../apps/AppBrowserSandbox';
 import {
   BROWSER_CODE_TOOL,
+  holdsBrowserCodeTool,
   SANDBOX_INPUTS,
   browserCodeTool,
   browserSandboxNote,
@@ -66,12 +67,24 @@ describe('an application whose agent runs code', () => {
     ) as Array<{ value: { instructions?: string } }>;
     const told = blueprint.value.instructions ?? '';
     expect(told.startsWith(quote.instructions)).toBe(true);
-    expect(told).toContain(BROWSER_CODE_TOOL);
+    // The name the chat hands the model (frontendToolNames), not the old one.
+    expect(told).toContain('`executeCode`');
+    expect(told).not.toContain(`\`${BROWSER_CODE_TOOL}\``);
     expect(told).toContain(
       `Price list at \`${SANDBOX_INPUTS}/price-list.csv\``,
     );
     expect(browserSandboxNote(report)).not.toContain(
       'documents you answer from',
+    );
+  });
+});
+
+describe('the browser sandbox among the page’s tools', () => {
+  it('is found under the public name the chat hands the model', () => {
+    expect(holdsBrowserCodeTool([{ name: 'executeCode' }])).toBe(true);
+    expect(holdsBrowserCodeTool([{ name: BROWSER_CODE_TOOL }])).toBe(true);
+    expect(holdsBrowserCodeTool([{ name: 'executeCodeInNotebook' }])).toBe(
+      false,
     );
   });
 });

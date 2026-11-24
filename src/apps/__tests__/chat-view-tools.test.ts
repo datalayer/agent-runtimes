@@ -23,6 +23,12 @@ describe('the chat view toolset', () => {
       'readAllCells',
       'datalayer_readAllBlocks',
       'listAvailableBlocks',
+      // The public names the chat hands the model (frontendToolNames).
+      'notebookReadAllCells',
+      'documentReadAllBlocks',
+      'notebookExecuteCodeInNotebook',
+      'documentExecuteCodeInDocument',
+      'documentListAvailableBlocks',
     ]) {
       expect(isChatViewTool(name), name).toBe(true);
     }
@@ -39,6 +45,11 @@ describe('the chat view toolset', () => {
       'runBlock',
       'runAllBlocks',
       'deleteBlocks',
+      'notebookInsertCell',
+      'notebookRunCell',
+      'documentInsertBlock',
+      'documentRunBlock',
+      'documentDeleteBlocks',
     ]) {
       expect(isChatViewTool(name), name).toBe(false);
     }

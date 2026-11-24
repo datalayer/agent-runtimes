@@ -38,7 +38,11 @@ import {
   slideOf,
   type DeckState,
 } from '../pageTools/deck';
-import { ConversationBound, succeeded } from '../pageTools/conversation';
+import {
+  ConversationBound,
+  bareToolName,
+  succeeded,
+} from '../pageTools/conversation';
 import { AgentChatExtras } from '../core';
 import { agentUiIdsOf, agentUiPluginsFor } from '../agentUiPlugins';
 import { PAGE_TOOL_RESULTS } from '../toolCards/toolResults';
@@ -451,6 +455,23 @@ describe('the conversation’s deck', () => {
     expect(deckSays(PAGE_DECK.read())).toBe(
       'Deck “Recap”, 2 slides.\n1. section: Reach\n2. statement: Up a third.',
     );
+  });
+
+  it('is built again from calls recorded under the public names, and emptied with them', async () => {
+    // What the chat hands the model: deckCreate for deck_create
+    // (frontendToolNames), with or without a server's prefix.
+    recorded('deckCreate', { title: 'Recap' });
+    recorded('worker__deckAddSlide', { type: 'section', title: 'Reach' });
+    expect(bareToolName('deckCreate', DECK_TOOL_NAMES)).toBe('deck_create');
+    expect(bareToolName('worker__deckAddSlide', DECK_TOOL_NAMES)).toBe(
+      'deck_add_slide',
+    );
+    await act(() => PAGE_DECK.sync(PAGE_TOOL_RESULTS.callsOf(DECK_TOOL_NAMES)));
+    expect(PAGE_DECK.read().spec.deck.title).toBe('Recap');
+    expect(deckSays(PAGE_DECK.read())).toContain('1. section: Reach');
+    act(() => PAGE_TOOL_RESULTS.clear());
+    await act(() => PAGE_DECK.sync(PAGE_TOOL_RESULTS.callsOf(DECK_TOOL_NAMES)));
+    expect(PAGE_DECK.read()).toEqual(emptyDeck());
   });
 
   it('takes the next call on top of what was restored, and is emptied when the conversation starts over', async () => {

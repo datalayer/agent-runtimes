@@ -22,7 +22,7 @@ import { Box } from '@datalayer/primer-addons';
 import {
   addUserLink,
   addUserShape,
-  setUserFlow,
+  changeUserFlow,
   type PageReactFlow,
   type ReactFlowShapeData,
 } from './store';
@@ -47,10 +47,12 @@ export default function FlowStage({
     setEdges([...flow.edges]);
   }, [flow, revision]);
 
-  const keep = (nextNodes: Node<ReactFlowShapeData>[], nextEdges: Edge[]) => {
-    setNodes(nextNodes);
-    setEdges(nextEdges);
-    setUserFlow(nextNodes, nextEdges);
+  // Each change applied to the flow as it stands (`changeUserFlow`), which
+  // the previous one has already updated, never to this render's arrays.
+  const keep = (change: Parameters<typeof changeUserFlow>[0]): void => {
+    const next = changeUserFlow(change);
+    setNodes([...next.nodes]);
+    setEdges([...next.edges]);
   };
 
   return (
@@ -85,8 +87,16 @@ export default function FlowStage({
         onInit={next => {
           instance.current = next;
         }}
-        onNodesChange={changes => keep(applyNodeChanges(changes, nodes), edges)}
-        onEdgesChange={changes => keep(nodes, applyEdgeChanges(changes, edges))}
+        onNodesChange={changes =>
+          keep(current => ({
+            nodes: applyNodeChanges(changes, current.nodes),
+          }))
+        }
+        onEdgesChange={changes =>
+          keep(current => ({
+            edges: applyEdgeChanges(changes, current.edges),
+          }))
+        }
         onConnect={connection => {
           if (!connection.source || !connection.target) {
             return;
