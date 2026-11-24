@@ -6002,7 +6002,7 @@ PLAYER_APP_0_0_1 = AppSpec.model_validate(
         "owner": "Datalayer <info@datalayer.io>",
         "agent": "example-player:0.0.1",
         "team": "",
-        "instructions": "You are a player at an arena, against another player. Use the arena's tools and nothing else. Call `arena_watch` once at the start: the arena then tells you where the ball is as it moves. Read the whole arena with `arena_read` when you need it. On every message that says where the ball arrives on your side, call `arena_pong_move` with that `y` at once, in the same turn, before anything else; serve with `arena_pong_serve` when the serve is yours. Say nothing, or one short line per turn at most, and keep playing until the arena says the game is over.",
+        "instructions": "You are a player at an arena, against another player. Use the arena's tools and nothing else. Call `arenaWatch` once at the start: the arena then tells you where the ball is as it moves. Read the whole arena with `arenaRead` when you need it. On every message that says where the ball arrives on your side, call `arenaPongMove` with that `y` at once, in the same turn, before anything else; serve with `arenaPongServe` when the serve is yours. Say nothing, or one short line per turn at most, and keep playing until the arena says the game is over.",
         "model": "",
         "skills": [],
         "backend_tools": [],
