@@ -88,3 +88,18 @@ describe('the document’s kernel indicator', () => {
     expect(label()).toBe('Python in this browser · Starting');
   });
 });
+
+describe('the notebook’s toolbar (the user, 24 November 2026: "add the kernel indicator also in the notebook toolbar")', () => {
+  it('carries the same indicator, on the page’s browser kernel', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const view = readFileSync(
+      join(__dirname, '..', 'plugins', 'page-notebook', 'PageNotebookView.tsx'),
+      'utf8',
+    );
+    expect(view).toContain("pageKernelToolbarItems('browser', browserKernel)");
+    expect(view).toMatch(
+      /<EphemeralNotebook[\s\S]*showToolbar[\s\S]*toolbarExtraItems=\{toolbarExtraItems\}/,
+    );
+  });
+});
