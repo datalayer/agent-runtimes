@@ -21,6 +21,7 @@ import { revealPanelFor } from '../../shell/sidePanelReveal';
 import {
   PAGE_DOCUMENT_ID as MEMORY_DOCUMENT_ID,
   pageDocumentEditor,
+  pageDocumentKernel,
 } from './memoryDocument';
 import { CallLine, cardRole, toolOf } from '../../pageTools/cards';
 import {
@@ -34,6 +35,13 @@ export const PAGE_DOCUMENT_PLUGIN_NAME =
 export const PAGE_DOCUMENT_ID = 'page-document';
 
 const Editor = lazy(() => import('./PageDocumentEditor'));
+/**
+ * The tools that run code: they wait for the document's kernel, which the
+ * panel binds once the page's Python (or the workspace's runtime) is up. A
+ * run before that ran on nothing and came back with no output.
+ */
+const RUNS_CODE = /run(all)?blocks?$|executecode/;
+
 // The tools act on the in-memory document (memoryDocument), built on the
 // first call; the call also shows the panel that mirrors it, without waiting for it.
 const FRONTEND_TOOLS = beforeEachCall(
@@ -41,9 +49,14 @@ const FRONTEND_TOOLS = beforeEachCall(
   async tool => {
     await pageDocumentEditor();
     revealPanelFor(tool.name);
+    if (RUNS_CODE.test(tool.name.toLowerCase().replace(/_/g, ''))) {
+      await pageDocumentKernel();
+    }
   },
 );
 export const PAGE_DOCUMENT_TOOL_NAMES = FRONTEND_TOOLS.map(tool => tool.name);
+/** The tools as the agent calls them: on the in-memory document, runs on its kernel. */
+export const PAGE_DOCUMENT_FRONTEND_TOOLS = FRONTEND_TOOLS;
 
 function DocumentPanel(): JSX.Element {
   return (

@@ -65,6 +65,20 @@ describe('usePageKernel', () => {
     });
   });
 
+  it('runs on the browser when the workspace sandbox runs with no Jupyter in it', () => {
+    // A server-side code sandbox: running, but no kernel to run a cell on.
+    workspace.current = {
+      snapshot: signal({ state: 'running' }),
+      getServiceManager: () => null,
+    };
+    const { result } = renderHook(() => usePageKernel());
+    expect(result.current).toEqual({
+      source: 'browser',
+      serviceManager: browserManager,
+      kernelId: 'pyodide-1',
+    });
+  });
+
   it('starts Python in this browser when the workspace runs no kernel (a public demo), once for the page', () => {
     workspace.current = undefined;
     const first = renderHook(() => usePageKernel());

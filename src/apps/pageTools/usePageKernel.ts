@@ -58,21 +58,28 @@ export function usePageKernel(): PageKernel {
       jupyterToken?: string;
     }>,
   );
-  const workspaceRuns = own.state === 'running';
+  const workspaceManager =
+    own.state === 'running' && workspace
+      ? ((workspace.getServiceManager() as ServiceManager.IManager | null) ??
+        undefined)
+      : undefined;
+  // Running is not enough: a sandbox with no Jupyter in it (a code sandbox
+  // that evaluates on the server, the agent's own) has no kernel to run a
+  // cell on, and the document's cells said "No runtime connected". Such a
+  // workspace runs its cells here, like one with no sandbox at all.
+  const workspaceRuns =
+    own.state === 'running' && Boolean(workspaceManager || own.jupyterUrl);
   const browser = workspaceRuns ? undefined : pageBrowserSandbox();
   const page = useSignalValue(
     (browser?.snapshot ?? IDLE) as Signal<{ state: string; kernelId?: string }>,
   );
-  if (workspaceRuns && workspace) {
-    const manager =
-      (workspace.getServiceManager() as ServiceManager.IManager | null) ??
-      undefined;
+  if (workspaceRuns) {
     return {
       source: 'workspace',
-      serviceManager: manager,
-      kernelId: manager ? own.kernelId : undefined,
+      serviceManager: workspaceManager,
+      kernelId: own.kernelId,
       runtimeOverride:
-        !manager && own.jupyterUrl
+        !workspaceManager && own.jupyterUrl
           ? { baseUrl: own.jupyterUrl, token: own.jupyterToken }
           : undefined,
     };

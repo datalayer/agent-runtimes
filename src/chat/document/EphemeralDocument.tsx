@@ -94,6 +94,7 @@ import {
   LoroCollaborationPlugin,
 } from '@datalayer/lexical-loro';
 import { useLexicalTools } from '../../tools/adapters/agent-runtimes/lexicalHooks';
+import { DocumentKernelPlugin } from './DocumentKernelPlugin';
 import { useAgentsRuntimes } from '../../hooks/useAgentRuntimes';
 import { registerSandboxServiceManager } from '../../services/sandboxServiceManagers';
 import { useProgressTask } from '../../hooks/useProgressTask';
@@ -138,6 +139,12 @@ export interface EphemeralDocumentProps {
    * in a side panel with no runtime stayed blank (24 November 2026).
    */
   withoutRuntime?: boolean;
+  /**
+   * A kernel is on its way (Python starting in this browser, a runtime being
+   * assigned): a cell run before it arrives says it waits and runs once the
+   * kernel is ready, instead of "No runtime connected".
+   */
+  awaitingKernel?: boolean;
   /**
    * Document identifier. Must match the id passed to `useLexicalTools` so the
    * agent's lexical frontend tools operate on this document instance.
@@ -375,6 +382,7 @@ export function EphemeralDocument({
   inheritTheme = false,
   autoFocus = true,
   withoutRuntime = false,
+  awaitingKernel = false,
 }: EphemeralDocumentProps) {
   // Real-time collaboration is active only when both a WebSocket endpoint and a
   // room id are supplied. In that mode the shared Loro CRDT is the single source
@@ -597,9 +605,18 @@ export function EphemeralDocument({
   // Surface the document's live kernel connection to the parent so the chat
   // header's kernel indicator reflects the real connected kernel instead of
   // the "disconnected"/"no-kernel" placeholder while the document is active.
+  // The connection exists once the kernel's session is up, after `ready`:
+  // reported then as well, or the indicator saw `null` for a live kernel.
   useEffect(() => {
+    let current = true;
     onKernelChange?.(documentKernel?.connection ?? null);
+    void documentKernel?.ready.then(() => {
+      if (current) {
+        onKernelChange?.(documentKernel.connection ?? null);
+      }
+    });
     return () => {
+      current = false;
       onKernelChange?.(null);
     };
   }, [documentKernel, onKernelChange]);
@@ -701,7 +718,13 @@ export function EphemeralDocument({
       overflow="hidden"
       bg="canvas.default"
     >
-      {activeServiceManager || (withoutRuntime && !isRuntimeStarting) ? (
+      {/*
+       * Drawn without a runtime, the editor stays mounted while the kernel
+       * arrives: swapping it for the skeleton unmounted the editor the
+       * mirror and the person were writing in, and the one drawn after was
+       * a new, empty editor nobody mirrored (24 November 2026).
+       */}
+      {activeServiceManager || withoutRuntime ? (
         <ThemeRoot
           inherit={inheritTheme}
           colorMode={effectiveColorMode}
@@ -864,6 +887,10 @@ export function EphemeralDocument({
                               kernel={documentKernel}
                             />
                             <JupyterInputOutputPlugin kernel={documentKernel} />
+                            <DocumentKernelPlugin
+                              kernel={documentKernel}
+                              awaiting={awaitingKernel || isRuntimeStarting}
+                            />
                             {floatingAnchorElem && (
                               <>
                                 <DraggableBlockPlugin

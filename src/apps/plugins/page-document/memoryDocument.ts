@@ -14,13 +14,25 @@
  * from the first tool call. The panel shows and edits it (`useMirror`); it
  * is never needed for the tools to work.
  *
+ * Its Jupyter cells run on the page's kernel (the user, 24 November 2026:
+ * "It should be connected to the pyodide browser runtime"): the panel binds
+ * it (`bindPageDocumentKernel`) to the kernel the view runs on, the
+ * workspace's or Python in this browser, so a cell the agent inserts or runs
+ * here runs where the person's do. The Jupyter behaviour itself (inserting a
+ * cell with its output, the run commands) is jupyter-lexical's
+ * `JupyterInputOutputPlugin`, a React plugin, hosted on a detached root:
+ * without it the agent's `jupyter-cell` came out as an empty paragraph.
+ *
  * Loaded on the first call, not with the chat: the Jupyter Lexical
  * extension is heavy, and the embed's first load is budgeted.
  *
  * @module apps/plugins/page-document/memoryDocument
  */
 
+import { createElement, useEffect, type ComponentType } from 'react';
 import type { LexicalEditor } from 'lexical';
+import type { ServiceManager } from '@jupyterlab/services';
+import type { Kernel } from '@datalayer/jupyter-react';
 
 /** The id the tools and the store know the conversation's document by. */
 export const PAGE_DOCUMENT_ID = 'page-document';
@@ -28,15 +40,26 @@ export const PAGE_DOCUMENT_ID = 'page-document';
 /** The id of the panel's editor, which mirrors it. */
 export const PAGE_DOCUMENT_VIEW_ID = 'page-document-view';
 
+/** The services the document's cells run on, and the kernel to join there. */
+export type PageDocumentServices = {
+  serviceManager: ServiceManager.IManager;
+  kernelId?: string;
+};
+
+type JupyterLexical = typeof import('@datalayer/jupyter-lexical');
+type LexicalCore = typeof import('lexical');
+
 let built: Promise<LexicalEditor> | undefined;
+let lexicalModule: JupyterLexical | undefined;
+let coreModule: LexicalCore | undefined;
 
 /** The in-memory document, built and registered once. */
 export function pageDocumentEditor(): Promise<LexicalEditor> {
   built ??= (async () => {
     const [
-      { buildEditorFromExtensions },
-      { defineExtension },
-      { ReactPluginHostExtension },
+      { buildEditorFromExtensions, getExtensionDependencyFromEditor },
+      core,
+      { ReactPluginHostExtension, mountReactPluginHost },
       lexical,
     ] = await Promise.all([
       import('@lexical/extension'),
@@ -44,12 +67,14 @@ export function pageDocumentEditor(): Promise<LexicalEditor> {
       import('@lexical/react/ReactPluginHostExtension'),
       import('@datalayer/jupyter-lexical'),
     ]);
+    lexicalModule = lexical;
+    coreModule = core;
     const editor = buildEditorFromExtensions(
-      defineExtension({
+      core.defineExtension({
         name: '@datalayer/agent-runtimes/page-document',
         namespace: PAGE_DOCUMENT_ID,
-        // The extension's React parts (toolbars, pickers) are hosted by the
-        // plugin host, never mounted: an in-memory document draws nothing.
+        // The extension's React parts are hosted by the plugin host, on a
+        // root that is never attached: an in-memory document draws nothing.
         dependencies: [
           ReactPluginHostExtension,
           lexical.JupyterLexicalExtension,
@@ -59,10 +84,235 @@ export function pageDocumentEditor(): Promise<LexicalEditor> {
         },
       }),
     );
-    lexical.registerLexicalState(editor, PAGE_DOCUMENT_ID);
+    // Registered through the extension's signals, so the kernel's services,
+    // known later, reach the adapter the tools use without rebuilding it.
+    getExtensionDependencyFromEditor(
+      editor,
+      lexical.LexicalStateExtension,
+    ).output.lexicalId.value = PAGE_DOCUMENT_ID;
+    if (typeof document !== 'undefined') {
+      mountReactPluginHost(editor, document.createElement('div'));
+      await hostJupyter(editor, undefined);
+    }
+    editor.registerUpdateListener(() => attachKernel(editor));
+    watchOutputs(editor);
     return editor;
   })();
   return built;
+}
+
+/**
+ * Host jupyter-lexical's Jupyter plugin on the document with `kernel`, and
+ * resolve once its handlers are registered (a child's effects run before its
+ * parent's, so `Hosted`'s effect means the plugin's have run).
+ */
+async function hostJupyter(
+  editor: LexicalEditor,
+  kernel: Kernel | undefined,
+): Promise<void> {
+  const lexical = lexicalModule;
+  if (!lexical) {
+    return;
+  }
+  const { mountReactPluginElement } =
+    await import('@lexical/react/ReactPluginHostExtension');
+  await new Promise<void>(resolve => {
+    mountReactPluginElement(editor, {
+      key: 'page-document-jupyter',
+      element: createElement(Hosted, {
+        Plugin: lexical.JupyterInputOutputPlugin as ComponentType<{
+          kernel?: Kernel;
+        }>,
+        kernel,
+        onMounted: resolve,
+      }),
+    });
+  });
+}
+
+function Hosted({
+  Plugin,
+  kernel,
+  onMounted,
+}: {
+  Plugin: ComponentType<{ kernel?: Kernel }>;
+  kernel?: Kernel;
+  onMounted: () => void;
+}) {
+  useEffect(() => {
+    onMounted();
+  }, [onMounted]);
+  return createElement(Plugin, { kernel });
+}
+
+type Binding = {
+  services: PageDocumentServices | undefined;
+  kernel: Kernel | undefined;
+};
+
+let binding: Binding = { services: undefined, kernel: undefined };
+let bindings = 0;
+let readyKernel: Kernel | undefined;
+let waiters: Array<(kernel: Kernel) => void> = [];
+
+/**
+ * Run the document's cells on `services` (none: on nothing, until the panel
+ * knows a kernel). The adapter the tools use gets the service manager
+ * (`documentExecuteCodeInDocument` runs on it) and every output node the
+ * kernel (`documentRunBlock` runs through them).
+ */
+export async function bindPageDocumentKernel(
+  services: PageDocumentServices | undefined,
+): Promise<void> {
+  const editor = await pageDocumentEditor();
+  const lexical = lexicalModule!;
+  if (
+    binding.services?.serviceManager === services?.serviceManager &&
+    binding.services?.kernelId === services?.kernelId
+  ) {
+    return;
+  }
+  const turn = ++bindings;
+  readyKernel = undefined;
+  let kernel: Kernel | undefined;
+  if (services) {
+    const { Kernel: KernelClass } = await import('@datalayer/jupyter-react');
+    const manager = services.serviceManager;
+    kernel = new KernelClass({
+      kernelName: 'python',
+      kernelSpecName: 'python',
+      kernelModel: services.kernelId
+        ? ({ id: services.kernelId, name: 'python' } as never)
+        : undefined,
+      kernelManager: manager.kernels,
+      kernelspecsManager: manager.kernelspecs,
+      sessionManager: manager.sessions,
+    });
+  }
+  if (turn !== bindings) {
+    return;
+  }
+  binding = { services, kernel };
+  const { getExtensionDependencyFromEditor } =
+    await import('@lexical/extension');
+  getExtensionDependencyFromEditor(
+    editor,
+    lexical.LexicalStateExtension,
+  ).output.serviceManager.value = services?.serviceManager;
+  await hostJupyter(editor, kernel);
+  attachKernel(editor);
+  void kernel?.ready.then(() => {
+    if (binding.kernel !== kernel) {
+      return;
+    }
+    readyKernel = kernel;
+    const resolved = waiters;
+    waiters = [];
+    resolved.forEach(resolve => resolve(kernel));
+  });
+}
+
+/** How long an agent's run waits for the page's kernel to start. */
+export const KERNEL_WAIT_MS = 120_000;
+
+/**
+ * The document's kernel once it is ready: what a run by the agent waits for.
+ * A public demo's Python starts in the browser and takes seconds; a run
+ * before that ran on nothing and returned no output.
+ */
+export function pageDocumentKernel(
+  timeoutMs: number = KERNEL_WAIT_MS,
+): Promise<Kernel> {
+  if (readyKernel) {
+    return Promise.resolve(readyKernel);
+  }
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      waiters = waiters.filter(waiter => waiter !== settle);
+      reject(
+        new Error(
+          `The document's kernel did not start within ${Math.round(timeoutMs / 1000)} seconds.`,
+        ),
+      );
+    }, timeoutMs);
+    const settle = (kernel: Kernel) => {
+      clearTimeout(timer);
+      resolve(kernel);
+    };
+    waiters.push(settle);
+  });
+}
+
+/** The output nodes of the editor whose state is being read. */
+function $outputNodes() {
+  const lexical = lexicalModule;
+  const core = coreModule;
+  if (!lexical || !core) {
+    return [];
+  }
+  return core.$nodesOfType(lexical.JupyterOutputNode);
+}
+
+/** Give every output node of the in-memory document the bound kernel. */
+function attachKernel(editor: LexicalEditor): void {
+  const kernel = binding.kernel;
+  editor.getEditorState().read(() => {
+    for (const node of $outputNodes()) {
+      const adapter = node.getLatest().__outputAdapter;
+      if (adapter && adapter.kernel !== kernel) {
+        adapter.kernel = kernel;
+      }
+    }
+  });
+}
+
+/**
+ * Write an output's results into its node when they arrive, so the update
+ * reaches the other editor through the mirror: a run's outputs live in the
+ * output area's model, which no Lexical update follows. The cells
+ * jupyter-lexical inserts do this themselves; a cell that came through the
+ * mirror (or a restored state) did not, and its results stayed in one
+ * editor. Returns how to stop.
+ */
+export function watchOutputs(editor: LexicalEditor): () => void {
+  const watched = new WeakSet<object>();
+  return editor.registerUpdateListener(({ editorState }) => {
+    editorState.read(() => {
+      for (const node of $outputNodes()) {
+        const adapter = node.getLatest().__outputAdapter;
+        const model = adapter?.outputArea?.model;
+        if (!model || watched.has(adapter)) {
+          continue;
+        }
+        watched.add(adapter);
+        const key = node.getKey();
+        model.changed.connect(() => {
+          queueMicrotask(() => {
+            editor.update(
+              () => {
+                const current = coreModule?.$getNodeByKey(key);
+                if (
+                  !current ||
+                  !(current instanceof lexicalModule!.JupyterOutputNode) ||
+                  current.__outputAdapter !== adapter
+                ) {
+                  return;
+                }
+                const outputs = model.toJSON();
+                if (
+                  JSON.stringify(current.getOutputs()) !==
+                  JSON.stringify(outputs)
+                ) {
+                  current.setOutputs(outputs);
+                }
+              },
+              { discrete: true },
+            );
+          });
+        });
+      }
+    });
+  });
 }
 
 /** Tags an update carries so the two editors do not echo each other. */
@@ -72,7 +322,8 @@ const FROM_VIEW = 'page-document-from-view';
 /**
  * Keep the panel's editor and the in-memory document the same: the view
  * starts from the document, the document's changes reach the view, and the
- * person's edits in the view reach the document. Returns how to stop.
+ * person's edits in the view reach the document, their cells' results
+ * included. Returns how to stop.
  */
 export function mirror(memory: LexicalEditor, view: LexicalEditor): () => void {
   view.setEditorState(view.parseEditorState(memory.getEditorState().toJSON()), {
@@ -99,8 +350,10 @@ export function mirror(memory: LexicalEditor, view: LexicalEditor): () => void {
       });
     },
   );
+  const viewOutputs = watchOutputs(view);
   return () => {
     toView();
     toMemory();
+    viewOutputs();
   };
 }
