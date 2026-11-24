@@ -133,7 +133,11 @@ import {
 import type { SandboxService } from '../agents/service';
 import { visitorForOf } from '../agents/visitorFor';
 import {
-  BROWSER_CODE_TOOL,
+  conversationKeyOf,
+  withConversation,
+} from '../../pageTools/conversationScope';
+import {
+  holdsBrowserCodeTool,
   dataUrlBase64,
   givenFilesSentence,
   sandboxFileName,
@@ -278,6 +282,9 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
    */
   const setThreadRef = useRef(workspace.setThread);
   setThreadRef.current = workspace.setThread;
+  /** The workspace as it stands, for a tool called later (its thread). */
+  const workspaceRef = useRef(workspace);
+  workspaceRef.current = workspace;
   const sayThread = useCallback(() => {
     const thread = controlsRef.current?.thread();
     if (thread) {
@@ -614,7 +621,7 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
   const inPageRef = useRef(false);
   /**
    * The page's sandbox, when the agent turned in the page runs its code
-   * there (`execute_code`): what a file given on the page is
+   * there (`executeCode`): what a file given on the page is
    * put in. Read by `sendNow`, set below.
    */
   const pageSandboxRef = useRef<SandboxService | undefined>(undefined);
@@ -1257,7 +1264,13 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
     return mergeFrontendTools({
       contributions: toolContributions,
       workspace,
-      extras: chatExtras.frontendTools ?? [],
+      // Each extra's call told the conversation it is part of — this
+      // workspace's surface and its thread, as they stand when it is
+      // called — for the page's document and notebook, which are the
+      // conversation's (`pageTools/conversationScope`).
+      extras: withConversation(chatExtras.frontendTools ?? [], () =>
+        conversationKeyOf(workspaceRef.current),
+      ),
       surfaceIds: new Set(surfaces.map(entry => entry.value.surfaceId)),
       activeSurfaceId: active?.surfaceId,
     });
@@ -1322,7 +1335,7 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
   }, [notebookTools, handedBundles, bundles, reactor]);
   // The page's sandbox, while the agent turned here runs its code in it.
   pageSandboxRef.current =
-    inPage && agentTools.some(tool => tool.name === BROWSER_CODE_TOOL)
+    inPage && holdsBrowserCodeTool(agentTools)
       ? reactor.getOutput<AgentsOutput>(AGENTS_PLUGIN_NAME)?.sandbox
       : undefined;
 

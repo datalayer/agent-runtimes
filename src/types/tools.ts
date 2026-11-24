@@ -193,6 +193,15 @@ export interface ToolStreamEvent {
 }
 
 /**
+ * What the chat says of a frontend tool's call besides its arguments: the
+ * conversation it is part of, by a key unique to the chat's workspace and
+ * thread (`apps/pageTools/conversationScope`). Absent outside a workspace.
+ */
+export type FrontendToolCallContext = {
+  conversation?: string;
+};
+
+/**
  * Frontend tool definition (compatible with CopilotKit useFrontendTool)
  */
 export interface FrontendToolDefinition<
@@ -219,9 +228,14 @@ export interface FrontendToolDefinition<
 
   /**
    * Handler function for frontend execution
-   * Required when location is 'frontend' (default)
+   * Required when location is 'frontend' (default). The chat that runs it
+   * may say which conversation the call is part of (`context`), for a tool
+   * whose state is the conversation's (the page's document and notebook).
    */
-  handler?: (args: TArgs) => Promise<TResult>;
+  handler?: (
+    args: TArgs,
+    context?: FrontendToolCallContext,
+  ) => Promise<TResult>;
 
   /**
    * Whether the tool streams: its call returns at once, *subscribed*, and

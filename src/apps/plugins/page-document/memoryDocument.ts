@@ -33,11 +33,12 @@ import { createElement, useEffect, type ComponentType } from 'react';
 import type { LexicalEditor } from 'lexical';
 import type { ServiceManager } from '@jupyterlab/services';
 import type { Kernel } from '@datalayer/jupyter-react';
+import { conversationScopedId } from '../../pageTools/conversationScope';
 
-/** The id the tools and the store know the conversation's document by. */
+/** The id the tools and the store know the page's document by, outside a workspace. */
 export const PAGE_DOCUMENT_ID = 'page-document';
 
-/** The id of the panel's editor, which mirrors it. */
+/** The id of its panel's editor, which mirrors it. */
 export const PAGE_DOCUMENT_VIEW_ID = 'page-document-view';
 
 /** The services the document's cells run on, and the kernel to join there. */
@@ -49,13 +50,59 @@ export type PageDocumentServices = {
 type JupyterLexical = typeof import('@datalayer/jupyter-lexical');
 type LexicalCore = typeof import('lexical');
 
-let built: Promise<LexicalEditor> | undefined;
 let lexicalModule: JupyterLexical | undefined;
 let coreModule: LexicalCore | undefined;
 
-/** The in-memory document, built and registered once. */
-export function pageDocumentEditor(): Promise<LexicalEditor> {
-  built ??= (async () => {
+type Binding = {
+  services: PageDocumentServices | undefined;
+  kernel: Kernel | undefined;
+};
+
+/** A conversation's document: its editor, and the kernel its cells run on. */
+type PageDocument = {
+  id: string;
+  built?: Promise<LexicalEditor>;
+  binding: Binding;
+  bindings: number;
+  readyKernel: Kernel | undefined;
+  waiters: Array<(kernel: Kernel) => void>;
+};
+
+const documents = new Map<string, PageDocument>();
+
+function documentOf(conversation: string): PageDocument {
+  let held = documents.get(conversation);
+  if (!held) {
+    held = {
+      id: pageDocumentId(conversation),
+      binding: { services: undefined, kernel: undefined },
+      bindings: 0,
+      readyKernel: undefined,
+      waiters: [],
+    };
+    documents.set(conversation, held);
+  }
+  return held;
+}
+
+/** The id the tools and the store know a conversation's document by. */
+export const pageDocumentId = (conversation = ''): string =>
+  conversationScopedId(PAGE_DOCUMENT_ID, conversation);
+
+/** The id of a conversation's panel editor, which mirrors it. */
+export const pageDocumentViewId = (conversation = ''): string =>
+  conversationScopedId(PAGE_DOCUMENT_VIEW_ID, conversation);
+
+/**
+ * A conversation's in-memory document (`conversationScope`), built and
+ * registered once, under `page-document:<conversation>`; the page's one,
+ * `page-document`, outside a workspace. Kept while its tab is hidden and
+ * shown again; a new thread is another conversation, with a document of its
+ * own.
+ */
+export function pageDocumentEditor(conversation = ''): Promise<LexicalEditor> {
+  const held = documentOf(conversation);
+  held.built ??= (async () => {
     const [
       { buildEditorFromExtensions, getExtensionDependencyFromEditor },
       core,
@@ -72,7 +119,7 @@ export function pageDocumentEditor(): Promise<LexicalEditor> {
     const editor = buildEditorFromExtensions(
       core.defineExtension({
         name: '@datalayer/agent-runtimes/page-document',
-        namespace: PAGE_DOCUMENT_ID,
+        namespace: held.id,
         // The extension's React parts are hosted by the plugin host, on a
         // root that is never attached: an in-memory document draws nothing.
         dependencies: [
@@ -89,16 +136,16 @@ export function pageDocumentEditor(): Promise<LexicalEditor> {
     getExtensionDependencyFromEditor(
       editor,
       lexical.LexicalStateExtension,
-    ).output.lexicalId.value = PAGE_DOCUMENT_ID;
+    ).output.lexicalId.value = held.id;
     if (typeof document !== 'undefined') {
       mountReactPluginHost(editor, document.createElement('div'));
       await hostJupyter(editor, undefined);
     }
-    editor.registerUpdateListener(() => attachKernel(editor));
+    editor.registerUpdateListener(() => attachKernel(editor, held));
     watchOutputs(editor);
     return editor;
   })();
-  return built;
+  return held.built;
 }
 
 /**
@@ -145,16 +192,6 @@ function Hosted({
   return createElement(Plugin, { kernel });
 }
 
-type Binding = {
-  services: PageDocumentServices | undefined;
-  kernel: Kernel | undefined;
-};
-
-let binding: Binding = { services: undefined, kernel: undefined };
-let bindings = 0;
-let readyKernel: Kernel | undefined;
-let waiters: Array<(kernel: Kernel) => void> = [];
-
 /**
  * Run the document's cells on `services` (none: on nothing, until the panel
  * knows a kernel). The adapter the tools use gets the service manager
@@ -163,17 +200,19 @@ let waiters: Array<(kernel: Kernel) => void> = [];
  */
 export async function bindPageDocumentKernel(
   services: PageDocumentServices | undefined,
+  conversation = '',
 ): Promise<void> {
-  const editor = await pageDocumentEditor();
+  const editor = await pageDocumentEditor(conversation);
+  const held = documentOf(conversation);
   const lexical = lexicalModule!;
   if (
-    binding.services?.serviceManager === services?.serviceManager &&
-    binding.services?.kernelId === services?.kernelId
+    held.binding.services?.serviceManager === services?.serviceManager &&
+    held.binding.services?.kernelId === services?.kernelId
   ) {
     return;
   }
-  const turn = ++bindings;
-  readyKernel = undefined;
+  const turn = ++held.bindings;
+  held.readyKernel = undefined;
   let kernel: Kernel | undefined;
   if (services) {
     const { Kernel: KernelClass } = await import('@datalayer/jupyter-react');
@@ -189,10 +228,10 @@ export async function bindPageDocumentKernel(
       sessionManager: manager.sessions,
     });
   }
-  if (turn !== bindings) {
+  if (turn !== held.bindings) {
     return;
   }
-  binding = { services, kernel };
+  held.binding = { services, kernel };
   const { getExtensionDependencyFromEditor } =
     await import('@lexical/extension');
   getExtensionDependencyFromEditor(
@@ -200,14 +239,14 @@ export async function bindPageDocumentKernel(
     lexical.LexicalStateExtension,
   ).output.serviceManager.value = services?.serviceManager;
   await hostJupyter(editor, kernel);
-  attachKernel(editor);
+  attachKernel(editor, held);
   void kernel?.ready.then(() => {
-    if (binding.kernel !== kernel) {
+    if (held.binding.kernel !== kernel) {
       return;
     }
-    readyKernel = kernel;
-    const resolved = waiters;
-    waiters = [];
+    held.readyKernel = kernel;
+    const resolved = held.waiters;
+    held.waiters = [];
     resolved.forEach(resolve => resolve(kernel));
   });
 }
@@ -222,13 +261,15 @@ export const KERNEL_WAIT_MS = 120_000;
  */
 export function pageDocumentKernel(
   timeoutMs: number = KERNEL_WAIT_MS,
+  conversation = '',
 ): Promise<Kernel> {
-  if (readyKernel) {
-    return Promise.resolve(readyKernel);
+  const held = documentOf(conversation);
+  if (held.readyKernel) {
+    return Promise.resolve(held.readyKernel);
   }
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
-      waiters = waiters.filter(waiter => waiter !== settle);
+      held.waiters = held.waiters.filter(waiter => waiter !== settle);
       reject(
         new Error(
           `The document's kernel did not start within ${Math.round(timeoutMs / 1000)} seconds.`,
@@ -239,7 +280,7 @@ export function pageDocumentKernel(
       clearTimeout(timer);
       resolve(kernel);
     };
-    waiters.push(settle);
+    held.waiters.push(settle);
   });
 }
 
@@ -254,8 +295,8 @@ function $outputNodes() {
 }
 
 /** Give every output node of the in-memory document the bound kernel. */
-function attachKernel(editor: LexicalEditor): void {
-  const kernel = binding.kernel;
+function attachKernel(editor: LexicalEditor, held: PageDocument): void {
+  const kernel = held.binding.kernel;
   editor.getEditorState().read(() => {
     for (const node of $outputNodes()) {
       const adapter = node.getLatest().__outputAdapter;

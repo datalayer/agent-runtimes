@@ -17,10 +17,19 @@ import { Box } from '@datalayer/primer-addons';
 import type { ToolCallRenderContext } from '../../../types/chat';
 import { createLexicalTools } from '../../../tools/adapters/agent-runtimes/lexicalHooks';
 import { beforeEachCall } from '../../pageTools/untilMounted';
-import { revealPanelFor } from '../../shell/sidePanelReveal';
 import {
+  conversationKeyOf,
+  conversationOf,
+  perConversation,
+} from '../../pageTools/conversationScope';
+import { revealPanelFor } from '../../shell/sidePanelReveal';
+import type { AgentWorkspaceContext } from '../../core';
+import type { AgentSidePanelProps } from '../../shell/SidePanel';
+import {
+  KERNEL_WAIT_MS,
   PAGE_DOCUMENT_ID as MEMORY_DOCUMENT_ID,
   pageDocumentEditor,
+  pageDocumentId,
   pageDocumentKernel,
 } from './memoryDocument';
 import { CallLine, cardRole, toolOf } from '../../pageTools/cards';
@@ -42,15 +51,20 @@ const Editor = lazy(() => import('./PageDocumentEditor'));
  */
 const RUNS_CODE = /run(all)?blocks?$|executecode/;
 
-// The tools act on the in-memory document (memoryDocument), built on the
-// first call; the call also shows the panel that mirrors it, without waiting for it.
+// The tools act on the conversation's in-memory document (memoryDocument,
+// conversationScope), built on its first call: each call on the document of
+// the conversation the chat says it is part of. The call also shows the
+// panel that mirrors it, without waiting for it.
 const FRONTEND_TOOLS = beforeEachCall(
-  createLexicalTools(MEMORY_DOCUMENT_ID),
-  async tool => {
-    await pageDocumentEditor();
+  perConversation(createLexicalTools(MEMORY_DOCUMENT_ID), conversation =>
+    createLexicalTools(pageDocumentId(conversation)),
+  ),
+  async (tool, context) => {
+    const conversation = conversationOf(context);
+    await pageDocumentEditor(conversation);
     revealPanelFor(tool.name);
     if (RUNS_CODE.test(tool.name.toLowerCase().replace(/_/g, ''))) {
-      await pageDocumentKernel();
+      await pageDocumentKernel(KERNEL_WAIT_MS, conversation);
     }
   },
 );
@@ -58,10 +72,15 @@ export const PAGE_DOCUMENT_TOOL_NAMES = FRONTEND_TOOLS.map(tool => tool.name);
 /** The tools as the agent calls them: on the in-memory document, runs on its kernel. */
 export const PAGE_DOCUMENT_FRONTEND_TOOLS = FRONTEND_TOOLS;
 
-function DocumentPanel(): JSX.Element {
+function DocumentPanel(props: AgentSidePanelProps): JSX.Element {
+  // The conversation's document: the same while its tab is hidden and shown
+  // again, another on a new thread or in another workspace on the page.
+  const conversation = conversationKeyOf(
+    props.workspace as AgentWorkspaceContext | undefined,
+  );
   return (
     <Suspense fallback={<Box minHeight={240} aria-busy="true" />}>
-      <Editor />
+      <Editor key={conversation} conversation={conversation} />
     </Suspense>
   );
 }

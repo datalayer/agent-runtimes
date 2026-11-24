@@ -139,8 +139,14 @@ export function createAgentRuntimesTool(
       : {}),
 
     handler: async (params: unknown): Promise<unknown> => {
-      // Check for duplicate execution
-      if (isRecentDuplicate(definition.name, params)) {
+      // Check for duplicate execution, on this document: the same call on
+      // another one (another conversation's, another embed's) is not one.
+      if (
+        isRecentDuplicate(
+          `${context.documentId ?? ''}/${definition.name}`,
+          params,
+        )
+      ) {
         return {
           success: false,
           message: 'Operation already executed recently (duplicate detected)',

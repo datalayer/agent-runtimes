@@ -16,31 +16,32 @@ import type { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
 import { lexicalStore } from '@datalayer/jupyter-lexical';
 import { EphemeralDocument } from '../../../chat/document/EphemeralDocument';
 import {
-  PAGE_DOCUMENT_VIEW_ID,
   bindPageDocumentKernel,
   mirror,
   pageDocumentEditor,
+  pageDocumentViewId,
 } from './memoryDocument';
 import { usePageDocumentServices } from './usePageDocumentServices';
 import { pageKernelToolbarItems } from './PageKernelIndicator';
 
 /**
- * Mirror the in-memory document into the view's editor once it registers,
- * and into the next one if the view's editor is drawn again.
+ * Mirror the conversation's in-memory document into the view's editor once
+ * it registers, and into the next one if the view's editor is drawn again.
  */
-function useMirror(): void {
+function useMirror(conversation = ''): void {
   useEffect(() => {
+    const viewId = pageDocumentViewId(conversation);
     let stop: (() => void) | undefined;
     let mirrored: LexicalEditor | undefined;
     let cancelled = false;
     const attach = async () => {
-      const view = lexicalStore.getState().lexicals.get(PAGE_DOCUMENT_VIEW_ID)
+      const view = lexicalStore.getState().lexicals.get(viewId)
         ?.adapter?.editor;
       if (!view || view === mirrored) {
         return;
       }
       mirrored = view;
-      const memory = await pageDocumentEditor();
+      const memory = await pageDocumentEditor(conversation);
       if (cancelled || mirrored !== view) {
         return;
       }
@@ -54,18 +55,23 @@ function useMirror(): void {
       unsubscribe();
       stop?.();
     };
-  }, []);
+  }, [conversation]);
 }
 
-export default function PageDocumentEditor(): JSX.Element {
-  useMirror();
+export default function PageDocumentEditor({
+  conversation = '',
+}: {
+  /** The conversation whose document it mirrors (`conversationScope`). */
+  conversation?: string;
+}): JSX.Element {
+  useMirror(conversation);
   // Its Jupyter cells run on the workspace's kernel, or in this browser (a
   // public demo); its text is drawn at once either way (withoutRuntime).
   // The in-memory document the agent's tools write runs on the same one.
   const { source, services } = usePageDocumentServices();
   useEffect(() => {
-    void bindPageDocumentKernel(services);
-  }, [services]);
+    void bindPageDocumentKernel(services, conversation);
+  }, [services, conversation]);
   const [connection, setConnection] = useState<IKernelConnection | null>(null);
   const toolbarExtraItems = useMemo(
     () => pageKernelToolbarItems(source, connection),
@@ -79,7 +85,7 @@ export default function PageDocumentEditor(): JSX.Element {
       onKernelChange={setConnection}
       toolbarExtraItems={toolbarExtraItems}
       inheritTheme
-      documentId={PAGE_DOCUMENT_VIEW_ID}
+      documentId={pageDocumentViewId(conversation)}
       autoFocus={false}
       showToolbar
       // The conversation's document needs no runtime to be read and edited.

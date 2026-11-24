@@ -23,6 +23,7 @@
 
 import { notebookStore } from '@datalayer/jupyter-react';
 import { untilTrue } from '../../pageTools/untilMounted';
+import { conversationScopedId } from '../../pageTools/conversationScope';
 
 export const PAGE_NOTEBOOK_ID = 'page-notebook';
 export const PAGE_NOTEBOOK_VIEW_ID = 'page-notebook-view';
@@ -79,13 +80,19 @@ type LiveAdapter = {
         connect(fn: () => void): void;
         disconnect(fn: () => void): void;
       };
+      /** Its cells, whose outputs and execution count a restore sets. */
+      cells?: ArrayLike<{
+        cell_type?: string;
+        setOutputs?(outputs: unknown[]): void;
+        execution_count?: number | null;
+      }>;
     };
   } | null;
 };
 
-const liveAdapter = (): LiveAdapter | undefined =>
-  notebookStore.getState().notebooks.get(PAGE_NOTEBOOK_VIEW_ID)
-    ?.adapter as unknown as LiveAdapter | undefined;
+const liveAdapterOf = (viewId: string): LiveAdapter | undefined =>
+  notebookStore.getState().notebooks.get(viewId)?.adapter as unknown as
+    LiveAdapter | undefined;
 
 /** A unified diff of a cell's source, as the live adapter returns one. */
 function patchOf(index: number, before: string, after: string): string {
@@ -104,6 +111,14 @@ function patchOf(index: number, before: string, after: string): string {
 
 export class MemoryNotebookAdapter {
   cells: MemoryCell[] = [];
+
+  /** The panel's live notebook it mirrors, by its id in jupyter-react's store. */
+  readonly viewId: string;
+
+  constructor(viewId: string = PAGE_NOTEBOOK_VIEW_ID) {
+    this.viewId = viewId;
+  }
+
   private _defaultCellType: CellType = 'code';
   /** Set while this adapter applies its own change to the live notebook. */
   private _applying = false;
@@ -117,11 +132,11 @@ export class MemoryNotebookAdapter {
 
   setDefaultCellType(type: CellType): void {
     this._defaultCellType = type;
-    liveAdapter()?.setDefaultCellType(type);
+    liveAdapterOf(this.viewId)?.setDefaultCellType(type);
   }
 
   private live(apply: (live: LiveAdapter) => void): void {
-    const live = liveAdapter();
+    const live = liveAdapterOf(this.viewId);
     if (!live) {
       return;
     }
@@ -278,14 +293,14 @@ export class MemoryNotebookAdapter {
   /** The panel's live notebook, opened and given this notebook's cells. */
   private async kernelSide(): Promise<LiveAdapter> {
     // The call that runs already asked for the panel (its tools show it).
-    if (!liveAdapter()) {
+    if (!liveAdapterOf(this.viewId)) {
       await untilTrue(
-        () => Boolean(liveAdapter()),
+        () => Boolean(liveAdapterOf(this.viewId)),
         KERNEL_WAIT_MS,
         'Running code needs the notebook’s kernel: the Notebook tab did not open with a kernel in time.',
       );
     }
-    return liveAdapter() as LiveAdapter;
+    return liveAdapterOf(this.viewId) as LiveAdapter;
   }
 
   /** Copy a cell's outputs back from the live notebook. */
@@ -306,7 +321,7 @@ export class MemoryNotebookAdapter {
     // jupyter-react's insert runs every new cell; a markdown or raw cell's
     // run is its rendering, nothing to wait a kernel for.
     if (this.cells[index] && this.cells[index].type !== 'code') {
-      const live = liveAdapter();
+      const live = liveAdapterOf(this.viewId);
       if (live) {
         await live.runCell({ ...params, index });
       }
@@ -337,6 +352,29 @@ export class MemoryNotebookAdapter {
   dispose(): void {}
 
   /**
+   * Give the live notebook's code cells the outputs and execution counts
+   * kept here: a tab shown again draws the results it had, not bare code.
+   */
+  private restoreResults(live: LiveAdapter): void {
+    const shared = live.model?.sharedModel?.cells;
+    if (!shared) {
+      return;
+    }
+    this.cells.forEach((cell, index) => {
+      const target = shared[index];
+      if (cell.type !== 'code' || !target) {
+        return;
+      }
+      if (cell.outputs.length > 0) {
+        target.setOutputs?.(cell.outputs);
+      }
+      if (cell.execution_count !== null) {
+        target.execution_count = cell.execution_count;
+      }
+    });
+  }
+
+  /**
    * The live notebook mounted: it takes this notebook's cells, and the
    * person's edits there come back here. Returns how to stop.
    */
@@ -352,6 +390,7 @@ export class MemoryNotebookAdapter {
           this.cells.map(({ type, source }) => ({ type, source })),
           0,
         );
+        this.restoreResults(live);
       }
     } finally {
       this._applying = false;
@@ -373,16 +412,33 @@ export class MemoryNotebookAdapter {
   }
 }
 
-let memory: MemoryNotebookAdapter | undefined;
+const memories = new Map<string, MemoryNotebookAdapter>();
 
-/** The in-memory notebook, registered once in jupyter-react's store. */
-export function pageNotebook(): MemoryNotebookAdapter {
+/**
+ * A conversation's in-memory notebook (`conversationScope`), registered once
+ * in jupyter-react's store under `page-notebook:<conversation>`, its panel's
+ * live notebook under `page-notebook-view:<conversation>`; the page's one,
+ * `page-notebook`, outside a workspace. Kept while its tab is hidden and
+ * shown again; a new thread is another conversation, with a notebook of its
+ * own.
+ */
+export function pageNotebook(conversation = ''): MemoryNotebookAdapter {
+  let memory = memories.get(conversation);
   if (!memory) {
-    memory = new MemoryNotebookAdapter();
+    memory = new MemoryNotebookAdapter(pageNotebookViewId(conversation));
+    memories.set(conversation, memory);
     notebookStore.getState().update({
-      id: PAGE_NOTEBOOK_ID,
+      id: pageNotebookId(conversation),
       state: { adapter: memory as never },
     });
   }
   return memory;
 }
+
+/** The id the tools know a conversation's notebook by. */
+export const pageNotebookId = (conversation = ''): string =>
+  conversationScopedId(PAGE_NOTEBOOK_ID, conversation);
+
+/** The id of a conversation's panel notebook, which mirrors it. */
+export const pageNotebookViewId = (conversation = ''): string =>
+  conversationScopedId(PAGE_NOTEBOOK_VIEW_ID, conversation);

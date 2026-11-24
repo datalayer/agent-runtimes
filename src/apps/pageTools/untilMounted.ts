@@ -16,7 +16,10 @@
  * @module apps/pageTools/untilMounted
  */
 
-import type { FrontendToolDefinition } from '../../types/tools';
+import type {
+  FrontendToolCallContext,
+  FrontendToolDefinition,
+} from '../../types/tools';
 import { revealPanelFor } from '../shell/sidePanelReveal';
 
 /** How long a call waits for its panel to mount before it says so. */
@@ -64,14 +67,14 @@ export function untilMounted(
     }
     return {
       ...tool,
-      handler: async (args: Record<string, unknown>) => {
+      handler: async (args: Record<string, unknown>, context) => {
         if (!isMounted()) {
           // Its panel opens from recorded calls, and this one is not recorded
           // before it completes: it asks for its panel itself.
           revealPanelFor(tool.name);
         }
         await untilTrue(isMounted, timeoutMs, refusal);
-        return handler(args);
+        return handler(args, context);
       },
     };
   });
@@ -83,7 +86,10 @@ export function untilMounted(
  */
 export function beforeEachCall(
   tools: FrontendToolDefinition[],
-  prepare: (tool: FrontendToolDefinition) => Promise<void> | void,
+  prepare: (
+    tool: FrontendToolDefinition,
+    context?: FrontendToolCallContext,
+  ) => Promise<void> | void,
 ): FrontendToolDefinition[] {
   return tools.map(tool => {
     const handler = tool.handler;
@@ -92,9 +98,9 @@ export function beforeEachCall(
     }
     return {
       ...tool,
-      handler: async (args: Record<string, unknown>) => {
-        await prepare(tool);
-        return handler(args);
+      handler: async (args: Record<string, unknown>, context) => {
+        await prepare(tool, context);
+        return handler(args, context);
       },
     };
   });

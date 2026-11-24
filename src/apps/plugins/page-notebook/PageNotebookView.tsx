@@ -19,7 +19,7 @@ import { Box } from '@datalayer/primer-addons';
 import type { AgentWorkspaceContext } from '../../core';
 import { EphemeralNotebook } from '../../../chat/notebook/EphemeralNotebook';
 import { usePageKernel } from '../../pageTools/usePageKernel';
-import { PAGE_NOTEBOOK_VIEW_ID } from './memoryNotebook';
+import { pageNotebookViewId } from './memoryNotebook';
 
 const NotebookView = lazy(() => import('../notebook/NotebookView'));
 
@@ -44,10 +44,14 @@ const LIVE_SX = {
 
 export default function PageNotebookView({
   workspace,
+  conversation = '',
 }: {
   workspace: AgentWorkspaceContext | undefined;
+  /** The conversation whose notebook it mirrors (`conversationScope`). */
+  conversation?: string;
 }): JSX.Element {
   const kernel = usePageKernel();
+  const viewId = pageNotebookViewId(conversation);
   const opening = useMemo(
     () => JSON.parse(JSON.stringify(EMPTY)) as INotebookContent,
     [],
@@ -55,7 +59,7 @@ export default function PageNotebookView({
   if (kernel.source === 'workspace' && workspace) {
     return (
       <Suspense fallback={<Box minHeight={320} aria-busy="true" />}>
-        <NotebookView surfaceId={PAGE_NOTEBOOK_VIEW_ID} workspace={workspace} />
+        <NotebookView surfaceId={viewId} workspace={workspace} />
       </Suspense>
     );
   }
@@ -63,7 +67,7 @@ export default function PageNotebookView({
     return (
       <Box sx={LIVE_SX} data-page-notebook-browser="">
         <EphemeralNotebook
-          notebookId={PAGE_NOTEBOOK_VIEW_ID}
+          notebookId={viewId}
           nbformat={opening}
           inheritTheme
           serviceManager={kernel.serviceManager}

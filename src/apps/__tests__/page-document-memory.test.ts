@@ -10,7 +10,14 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { PageDocumentPlugin } from '../plugins/page-document';
+import {
+  PAGE_DOCUMENT_FRONTEND_TOOLS,
+  PageDocumentPlugin,
+} from '../plugins/page-document';
+import {
+  conversationKeyOf,
+  withConversation,
+} from '../pageTools/conversationScope';
 import {
   PAGE_DOCUMENT_ID,
   mirror,
@@ -93,5 +100,59 @@ describe('the page document, in memory', () => {
     );
     expect(text(memory)).toContain('Edited by a person.');
     stop();
+  });
+});
+
+describe('the page document, per conversation', () => {
+  /** The plugin's tool, as the chat of a workspace on this thread calls it. */
+  const called = (part: string, surfaceId: string, thread: string) => {
+    const flat = (name: string) => name.toLowerCase().replace(/_/g, '');
+    const tools = withConversation(PAGE_DOCUMENT_FRONTEND_TOOLS, () =>
+      conversationKeyOf({ surfaceId, thread }),
+    );
+    const tool = tools.find(t => flat(t.name).includes(flat(part)));
+    if (!tool?.handler) {
+      throw new Error(`no ${part} tool`);
+    }
+    return tool.handler;
+  };
+
+  it('is one per workspace and thread, each under its own id', async () => {
+    const first = await pageDocumentEditor('surface-1:thread-a');
+    expect(first).not.toBe(await pageDocumentEditor());
+    expect(await pageDocumentEditor('surface-1:thread-a')).toBe(first);
+    expect(
+      lexicalStore
+        .getState()
+        .lexicals.get(`${PAGE_DOCUMENT_ID}:surface-1:thread-a`)?.adapter
+        ?.editor,
+    ).toBe(first);
+  });
+
+  it('keeps a thread’s draft from the next thread and from another workspace', async () => {
+    await called(
+      'insert_block',
+      'surface-1',
+      'thread-x',
+    )({
+      type: 'paragraph',
+      source: 'Draft of thread x.',
+      afterId: 'BOTTOM',
+    });
+    const read = async (surfaceId: string, thread: string) =>
+      JSON.stringify(await called('read_all_blocks', surfaceId, thread)({}));
+    expect(await read('surface-1', 'thread-x')).toContain('Draft of thread x.');
+    // A new thread: a document of its own.
+    expect(await read('surface-1', 'thread-y')).not.toContain(
+      'Draft of thread x.',
+    );
+    // Another embed on the page, on a thread of the same name.
+    expect(await read('surface-2', 'thread-x')).not.toContain(
+      'Draft of thread x.',
+    );
+    // The page's own document, outside a workspace.
+    expect(
+      JSON.stringify(await toolNamed('read_all_blocks').handler!({})),
+    ).not.toContain('Draft of thread x.');
   });
 });

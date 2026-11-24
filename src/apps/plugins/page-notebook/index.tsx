@@ -13,8 +13,13 @@ import type { AgentSidePanelProps } from '../../shell/SidePanel';
 import type { ToolCallRenderContext } from '../../../types/chat';
 import { createNotebookTools } from '../../../tools/adapters/agent-runtimes/notebookHooks';
 import { beforeEachCall } from '../../pageTools/untilMounted';
+import {
+  conversationKeyOf,
+  conversationOf,
+  perConversation,
+} from '../../pageTools/conversationScope';
 import { revealPanelFor } from '../../shell/sidePanelReveal';
-import { pageNotebook } from './memoryNotebook';
+import { pageNotebook, pageNotebookId } from './memoryNotebook';
 import { usePageNotebookMirror } from './usePageNotebookMirror';
 import { CallLine, cardRole, toolOf } from '../../pageTools/cards';
 import {
@@ -25,24 +30,34 @@ import type { SidePlacement } from '../../toolCards/chrome';
 
 export const PAGE_NOTEBOOK_ID = 'page-notebook';
 const PageNotebookView = lazy(() => import('./PageNotebookView'));
-// The tools act on the in-memory notebook (memoryNotebook); a call also
-// shows the panel that mirrors it, without waiting for it (a run does wait,
-// for the kernel there).
+// The tools act on the conversation's in-memory notebook (memoryNotebook,
+// conversationScope): each call on the notebook of the conversation the chat
+// says it is part of. A call also shows the panel that mirrors it, without
+// waiting for it (a run does wait, for the kernel there).
 const FRONTEND_TOOLS = beforeEachCall(
-  createNotebookTools(PAGE_NOTEBOOK_ID),
-  tool => {
-    pageNotebook();
+  perConversation(createNotebookTools(PAGE_NOTEBOOK_ID), conversation =>
+    createNotebookTools(pageNotebookId(conversation)),
+  ),
+  (tool, context) => {
+    pageNotebook(conversationOf(context));
     revealPanelFor(tool.name);
   },
 );
 export const PAGE_NOTEBOOK_TOOL_NAMES = FRONTEND_TOOLS.map(tool => tool.name);
 
 function NotebookPanel(props: AgentSidePanelProps): JSX.Element {
-  usePageNotebookMirror();
   const workspace = props.workspace as AgentWorkspaceContext | undefined;
+  // The conversation's notebook: the same while its tab is hidden and shown
+  // again, another on a new thread or in another workspace on the page.
+  const conversation = conversationKeyOf(workspace);
+  usePageNotebookMirror(conversation);
   return (
     <Suspense fallback={<Box minHeight={320} aria-busy="true" />}>
-      <PageNotebookView workspace={workspace} />
+      <PageNotebookView
+        key={conversation}
+        workspace={workspace}
+        conversation={conversation}
+      />
     </Suspense>
   );
 }
