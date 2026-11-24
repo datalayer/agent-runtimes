@@ -43,7 +43,9 @@ sent (`AppRecorder.kept`).
 (``AGENT_RUNTIMES_VISITOR_TURNS``, 10) and a session's life from its start
 (``AGENT_RUNTIMES_VISITOR_SESSION_MINUTES``, 15), each said in a sentence
 when it is reached. The rate of model calls and the day's ceiling are
-ai-inference's.
+ai-inference's. A visitor whose token ai-inference minted from an address on
+its allowlist (``turns_unlimited``, said by ``/anonymous/whoami``) is not
+counted turns: their session's minutes still hold.
 
 **Reach.** Only the application's own routes and the chat's reads of its
 models answer anybody but the pod itself (:func:`path_answered`): every other
@@ -363,13 +365,20 @@ def forget_turns() -> None:
 
 
 def admit_turn(
-    visitor: str, started_at: str, *, now: Optional[float] = None, take: bool = True
+    visitor: str,
+    started_at: str,
+    *,
+    now: Optional[float] = None,
+    take: bool = True,
+    unlimited: bool = False,
 ) -> str:
     """Why a visitor's next turn is refused, or ``""`` — and the turn is then taken.
 
     ``take``: false for a run that only carries what the page's tools
     answered (`page_tools`): the session's minutes are checked, no turn is
-    taken.
+    taken. ``unlimited``: the visitor's token says ai-inference exempts their
+    address (`Caller.turns_unlimited`): the minutes are checked, no turn is
+    counted.
     """
     minutes = session_minutes()
     started = datetime.fromisoformat(started_at)
@@ -381,7 +390,7 @@ def admit_turn(
             f"This conversation without an account has had its {minutes} minutes: "
             "start a new one, or sign in to keep going."
         )
-    if not take:
+    if not take or unlimited:
         return ""
     taken, limit = TURNS.take(visitor)
     if not taken:

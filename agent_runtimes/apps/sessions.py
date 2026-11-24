@@ -1242,7 +1242,12 @@ class LiveSession:
         if visitor and counts:
             from agent_runtimes.apps.visitors import admit_turn
 
-            refusal = admit_turn(self.opened_by.uid, self.started_at, take=takes_turn)
+            refusal = admit_turn(
+                self.opened_by.uid,
+                self.started_at,
+                take=takes_turn,
+                unlimited=self.opened_by.turns_unlimited,
+            )
             if refusal:
                 raise SessionRefused(429, refusal)
         queue = self._open_stream(run_id)
