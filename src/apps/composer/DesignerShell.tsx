@@ -269,7 +269,6 @@ const DOCK_WIDTH = 360;
 /** How close to the frame's edges a floating dock may go. */
 const DOCK_MARGIN = 8;
 /** Remembered per viewer, a convenience only: the page is right without it. */
-const DOCK_STORAGE_KEY = 'datalayer.designer.dock';
 
 /** The room between the editor and a dock floating beside it. */
 const DOCK_GAP = 16;
@@ -314,34 +313,54 @@ export function clampDock(
   };
 }
 
-function readDock(): { floating: boolean; position: DockPosition | null } {
+/** The dock's cookie: where the reader left it, a year long, for every page of the site. */
+export const DOCK_COOKIE = 'datalayer-designer-dock';
+const DOCK_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
+
+/**
+ * Where the reader left the dock, read from its cookie; `null` when they never
+ * chose (the dock then floats beside the editor: the user, 24 November 2026).
+ */
+export function readDock(): {
+  floating: boolean;
+  position: DockPosition | null;
+} | null {
   try {
+    const raw = document.cookie
+      .split('; ')
+      .find(part => part.startsWith(`${DOCK_COOKIE}=`));
+    if (!raw) {
+      return null;
+    }
     const kept = JSON.parse(
-      window.localStorage.getItem(DOCK_STORAGE_KEY) ?? 'null',
+      decodeURIComponent(raw.slice(DOCK_COOKIE.length + 1)),
     );
     if (kept && typeof kept.floating === 'boolean') {
       const position =
         kept.position &&
         Number.isFinite(kept.position.x) &&
         Number.isFinite(kept.position.y)
-          ? kept.position
+          ? { x: kept.position.x, y: kept.position.y }
           : null;
       return { floating: kept.floating, position };
     }
   } catch {
-    // No storage here (a private window, a preview): the dock starts on the right.
+    // An unreadable cookie: as if never chosen.
   }
-  return { floating: false, position: null };
+  return null;
 }
 
-function keepDock(floating: boolean, position: DockPosition | null): void {
+/** The reader's choice, kept in the dock's cookie. */
+export function keepDock(
+  floating: boolean,
+  position: DockPosition | null,
+): void {
   try {
-    window.localStorage.setItem(
-      DOCK_STORAGE_KEY,
+    document.cookie = `${DOCK_COOKIE}=${encodeURIComponent(
       JSON.stringify({ floating, position }),
-    );
+    )}; path=/; max-age=${DOCK_COOKIE_MAX_AGE}; SameSite=Lax`;
   } catch {
-    // Not kept: it starts on the right next time.
+    // No cookies here: it floats beside the editor next time.
   }
 }
 
@@ -726,12 +745,16 @@ export function DesignerShell({
     setFrameWidth(element.offsetWidth);
     return () => observer.disconnect();
   }, []);
-  // The editor's dock is remembered for the next visit; a picture's starts on the right each time.
-  const [dock, setDock] = useState(() =>
-    remember ? readDock() : { floating: false, position: null },
+  // The editor's dock is remembered for the next visit (a cookie); a picture's starts on the right each time.
+  // Never chosen, the editor's dock floats beside it (the user, 24 November 2026).
+  const [kept] = useState(() => (remember ? readDock() : null));
+  const [dock, setDock] = useState(
+    () => kept ?? { floating: false, position: null },
   );
   const [follows, setFollows] = useState(
-    () => initialDock === 'right' && !dock.floating,
+    () =>
+      (remember && kept === null) ||
+      (initialDock === 'right' && !dock.floating),
   );
   const onDock = useCallback(
     (floating: boolean, position: DockPosition | null) => {

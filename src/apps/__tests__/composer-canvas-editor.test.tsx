@@ -15,6 +15,8 @@
  * what is rendered and what a drag and a drop do, not how it looks.
  */
 
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import {
   afterEach,
   beforeAll,
@@ -35,7 +37,13 @@ import {
   AppCanvasEditor,
   type AppCanvasEditorEditProps,
 } from '../composer/AppCanvasEditor';
-import { besideEditor, clampDock } from '../composer/DesignerShell';
+import {
+  besideEditor,
+  clampDock,
+  DOCK_COOKIE,
+  keepDock,
+  readDock,
+} from '../composer/DesignerShell';
 
 /** An application that asks one business over PACT, as the Studio adds one. */
 const withPactConnection = (
@@ -871,14 +879,19 @@ describe('the Python surface', () => {
   });
 });
 
-describe('the controls dock (asked 14 October 2026)', () => {
-  beforeEach(() => window.localStorage.clear());
+const clearDockCookie = () => {
+  document.cookie = `${DOCK_COOKIE}=; path=/; max-age=0`;
+};
 
-  it('docks on the right, floats over a full-width surface from its header, and docks again', () => {
+describe('the controls dock (asked 14 October 2026)', () => {
+  beforeEach(clearDockCookie);
+
+  it('floats beside the editor until chosen, docks on the right from its header, kept in a cookie, and floats again', () => {
     draw();
     const dock = () =>
       $('[data-designer-dock]').getAttribute('data-designer-dock');
-    expect(dock()).toBe('docked');
+    // Never chosen: floating (the user, 24 November 2026).
+    expect(dock()).toBe('floating');
     expect($('[data-designer-dock-bar="header"]').textContent).toContain(
       'Controls',
     );
@@ -888,14 +901,12 @@ describe('the controls dock (asked 14 October 2026)', () => {
       $('[data-designer-dock] [data-designer-panel="properties"]'),
     ).toBeTruthy();
     act(() => $('[data-designer-dock-toggle]').click());
-    expect(dock()).toBe('floating');
-    // Kept for the next visit.
-    expect(
-      JSON.parse(window.localStorage.getItem('datalayer.designer.dock') ?? '{}')
-        .floating,
-    ).toBe(true);
-    act(() => $('[data-designer-dock-toggle]').click());
     expect(dock()).toBe('docked');
+    // Kept for the next visit, in its cookie.
+    expect(readDock()?.floating).toBe(false);
+    act(() => $('[data-designer-dock-toggle]').click());
+    expect(dock()).toBe('floating');
+    expect(readDock()?.floating).toBe(true);
   });
 
   it('moves with the arrow keys on its grip, floating once moved', () => {
@@ -926,7 +937,26 @@ describe('the controls dock (asked 14 October 2026)', () => {
     expect($('[data-designer-dock]').getAttribute('data-designer-dock')).toBe(
       'floating',
     );
-    expect(window.localStorage.getItem('datalayer.designer.dock')).toBeNull();
+    expect(readDock()).toBeNull();
+  });
+
+  it('floats beside the editor until the reader chooses, then keeps the choice in a cookie (24 November 2026)', () => {
+    // Never chosen: no cookie, and the editor's dock follows it, floating on its right.
+    expect(readDock()).toBeNull();
+    const shell = readFileSync(
+      join(__dirname, '..', 'composer', 'DesignerShell.tsx'),
+      'utf8',
+    );
+    expect(shell).toContain('(remember && kept === null)');
+    // Chosen: written to the cookie, read back as left.
+    keepDock(false, null);
+    expect(readDock()).toEqual({ floating: false, position: null });
+    keepDock(true, { x: 120, y: 40 });
+    expect(readDock()).toEqual({ floating: true, position: { x: 120, y: 40 } });
+    expect(document.cookie).toContain(`${DOCK_COOKIE}=`);
+    // An unreadable cookie counts as never chosen.
+    document.cookie = `${DOCK_COOKIE}=not-json; path=/`;
+    expect(readDock()).toBeNull();
   });
 
   it('starts beside a spread editor on its right, the editor narrowed to leave a dock room on either side', () => {
