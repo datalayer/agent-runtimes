@@ -18,6 +18,7 @@ import { Portal, ThemeProvider } from '@primer/react';
 import {
   FULL_SCREEN_PORTAL_CLASS,
   holdOverlaysInside,
+  useWorkspaceFullScreen,
 } from '../shell/useWorkspaceFullScreen';
 
 afterEach(cleanup);
@@ -87,5 +88,40 @@ describe('an overlay still open when full screen ends', () => {
     ).toBe(1);
     act(() => again());
     workspace.remove();
+  });
+});
+
+describe('overlays over the CSS overlay (the user, 24 November 2026)', () => {
+  it('are drawn inside the element painted over the page, where its z-index does not hide them', () => {
+    let toggle: () => void = () => undefined;
+    function View() {
+      const ref = React.useRef<HTMLDivElement>(null);
+      // The anonymous pages' door: a host header kept on screen forces the overlay.
+      const fullScreen = useWorkspaceFullScreen(ref, {
+        forceOverlay: true,
+        topOffset: 0,
+      });
+      toggle = fullScreen.toggle;
+      return <div ref={ref} data-testid="view" />;
+    }
+    const view = render(
+      <ThemeProvider>
+        <View />
+      </ThemeProvider>,
+    );
+    act(() => toggle());
+    const menu = render(
+      <ThemeProvider>
+        <Menu />
+      </ThemeProvider>,
+    );
+    expect(view.getByTestId('view').contains(menu.getByTestId('menu'))).toBe(
+      true,
+    );
+    menu.unmount();
+    act(() => toggle());
+    expect(
+      view.getByTestId('view').querySelector(`.${FULL_SCREEN_PORTAL_CLASS}`),
+    ).toBeNull();
   });
 });

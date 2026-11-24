@@ -340,17 +340,25 @@ export function useWorkspaceFullScreen(
   }, [fullScreen]);
 
   /*
-   * The overlays, inside the workspace while the browser holds it at full
-   * screen (`holdOverlaysInside`). The CSS overlay needs none of this: the
-   * page is still all there.
+   * The overlays, inside what is at full screen (`holdOverlaysInside`), by
+   * either door. The browser's: it paints only the promoted element. The CSS
+   * overlay's too: the element painted over the page is `fixed` at z-index
+   * 1000, and Primer's menus, which have no z-index of their own, opened
+   * under it in the portal under `<body>` — the footer's menus did nothing
+   * at full screen on the anonymous pages (the user, 24 November 2026). The
+   * element painted is the workspace when the hook paints it, else the
+   * anchor's own (`ChatView` paints its view, its anchor).
    */
   useEffect(() => {
-    if (!fullScreen || !usingApi.current) {
+    if (!fullScreen) {
       return undefined;
     }
-    const node = fullScreenNode(anchorRef.current);
+    const node =
+      usingApi.current || paintOverlay
+        ? fullScreenNode(anchorRef.current)
+        : anchorRef.current;
     return node ? holdOverlaysInside(node) : undefined;
-  }, [anchorRef, fullScreen]);
+  }, [anchorRef, fullScreen, paintOverlay]);
 
   /*
    * Primer's anchored overlays cache the anchor geometry. Entering either
