@@ -13,6 +13,7 @@
 import { useEffect, type JSX } from 'react';
 import { lexicalStore } from '@datalayer/jupyter-lexical';
 import { EphemeralDocument } from '../../../chat/document/EphemeralDocument';
+import { usePageKernel } from '../../pageTools/usePageKernel';
 import {
   PAGE_DOCUMENT_VIEW_ID,
   mirror,
@@ -47,8 +48,14 @@ function useMirror(): void {
 
 export default function PageDocumentEditor(): JSX.Element {
   useMirror();
+  // Its Jupyter cells run on the workspace's kernel, or in this browser (a
+  // public demo); its text is drawn at once either way (withoutRuntime).
+  const kernel = usePageKernel();
   return (
     <EphemeralDocument
+      serviceManager={kernel.serviceManager}
+      kernelId={kernel.kernelId}
+      runtimeOverride={kernel.runtimeOverride}
       inheritTheme
       documentId={PAGE_DOCUMENT_VIEW_ID}
       autoFocus={false}

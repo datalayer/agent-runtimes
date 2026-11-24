@@ -14,7 +14,7 @@ import type { ToolCallRenderContext } from '../../../types/chat';
 import { createNotebookTools } from '../../../tools/adapters/agent-runtimes/notebookHooks';
 import { beforeEachCall } from '../../pageTools/untilMounted';
 import { revealPanelFor } from '../../shell/sidePanelReveal';
-import { PAGE_NOTEBOOK_VIEW_ID, pageNotebook } from './memoryNotebook';
+import { pageNotebook } from './memoryNotebook';
 import { usePageNotebookMirror } from './usePageNotebookMirror';
 import { CallLine, cardRole, toolOf } from '../../pageTools/cards';
 import {
@@ -24,7 +24,7 @@ import {
 import type { SidePlacement } from '../../toolCards/chrome';
 
 export const PAGE_NOTEBOOK_ID = 'page-notebook';
-const NotebookView = lazy(() => import('../notebook/NotebookView'));
+const PageNotebookView = lazy(() => import('./PageNotebookView'));
 // The tools act on the in-memory notebook (memoryNotebook); a call also
 // shows the panel that mirrors it, without waiting for it (a run does wait,
 // for the kernel there).
@@ -40,12 +40,9 @@ export const PAGE_NOTEBOOK_TOOL_NAMES = FRONTEND_TOOLS.map(tool => tool.name);
 function NotebookPanel(props: AgentSidePanelProps): JSX.Element {
   usePageNotebookMirror();
   const workspace = props.workspace as AgentWorkspaceContext | undefined;
-  if (!workspace) {
-    return <Box minHeight={320} aria-busy="true" />;
-  }
   return (
     <Suspense fallback={<Box minHeight={320} aria-busy="true" />}>
-      <NotebookView surfaceId={PAGE_NOTEBOOK_VIEW_ID} workspace={workspace} />
+      <PageNotebookView workspace={workspace} />
     </Suspense>
   );
 }
