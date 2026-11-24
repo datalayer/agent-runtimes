@@ -108,7 +108,10 @@ export function ToolsMenu({
 
             {/*
               The frontend tools: the ones the page runs, named apart from the
-              runtime's, each with the mark of its frontend tool set.
+              runtime's, each with the mark of its frontend tool set and what
+              it does in its own words — the description its plugin's tool
+              definition gives, the one the Agentspecs UI page shows too.
+              Clamped to three lines; the whole of it on hover.
             */}
             {availableFrontendTools.length > 0 ? (
               <ActionList.Group title="Frontend tools">
@@ -116,9 +119,21 @@ export function ToolsMenu({
                   <ActionList.Item key={tool.id} disabled>
                     {leadingMark(marksOfFrontendTool(tool.name), true)}
                     {tool.name}
-                    <ActionList.Description variant="block">
-                      {tool.description || 'Runs in this page.'}
-                    </ActionList.Description>
+                    {tool.description ? (
+                      <ActionList.Description variant="block">
+                        <span
+                          title={tool.description}
+                          style={{
+                            display: '-webkit-box',
+                            WebkitLineClamp: 3,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                          }}
+                        >
+                          {tool.description}
+                        </span>
+                      </ActionList.Description>
+                    ) : null}
                   </ActionList.Item>
                 ))}
               </ActionList.Group>

@@ -191,6 +191,7 @@ import {
 } from '../tools/IdentityAuthorization';
 import type { EphemeralNotebook } from '../notebook/EphemeralNotebook';
 import { namedFrontendTools } from '../../tools/frontendToolNames';
+import { uiFrontendToolNamed } from '../../specs/uiFrontendTools';
 import {
   agentDecisionsGroup,
   initialModelId,
@@ -2089,9 +2090,13 @@ function ChatBaseInner({
       .map(tool => ({
         id: tool.name,
         name: tool.name,
+        // What the tool does, in its definition's words: the description the
+        // model is given, or the one its UI plugin exports (the same one the
+        // Agentspecs UI page shows) when the tool came without one.
         description:
-          'Runs in this page. ' +
-          (tool.description || 'Interacts with the visible application.'),
+          tool.description?.trim() ||
+          uiFrontendToolNamed(tool.name)?.description ||
+          '',
       }));
     /*
      * Kept apart: the runtime's tools, and the frontend tools — the ones this

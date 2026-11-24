@@ -13,8 +13,8 @@
  * the npm `package` that ships it, its settings as `configSchema`, its
  * Slots, Contributions and Commands as `declares`, and the rest — the spec's
  * id and version, where its plugin is, `per`, the Contribution Points it
- * offers, its renderers, placements, header, what it supersedes, its catalog
- * and components — under `metadata.ui`. Every plugin of a UI spec spreads it
+ * offers, its renderers, placements, header, what it supersedes, its catalog,
+ * components and the frontend tools it contributes — under `metadata.ui`. Every plugin of a UI spec spreads it
  * after its own presentation, so a host listing the plugins
  * (`reactor.getManifest`) reads what the catalogue says; agent-runtimes'
  * ui-specs test resolves each spec's export and holds the manifest to it.
@@ -24,6 +24,10 @@
 
 import type { PluginDescription, PluginPresentation } from '@datalayer/reactor';
 import { UI_CATALOGUE } from '../specs/ui';
+import {
+  uiFrontendToolsOf,
+  type UiFrontendTool,
+} from '../specs/uiFrontendTools';
 import type { UISpec } from '../types/agentspecs';
 
 /** Where a UI plugin's manifest keeps what its UI spec says beyond the reactor's own fields. */
@@ -45,7 +49,14 @@ export type UiManifestMetadata = Pick<
   | 'supersedes'
   | 'catalog'
   | 'components'
->;
+> & {
+  /**
+   * The frontend tools it hands the chat's agent, by name and description:
+   * read from the plugin's own tool definitions at build time
+   * (`specs/uiFrontendTools`), absent when it hands none.
+   */
+  frontendTools?: readonly UiFrontendTool[];
+};
 
 /** The manifest fields of a UI plugin: its presentation and its description. */
 export type UiManifest = PluginPresentation &
@@ -69,6 +80,10 @@ export function uiManifestOfSpec(spec: UISpec): UiManifest {
     catalog: spec.catalog,
     components: spec.components,
   };
+  const frontendTools = uiFrontendToolsOf(spec.id);
+  if (frontendTools.length > 0) {
+    ui.frontendTools = frontendTools;
+  }
   return {
     displayName: spec.name,
     description: spec.description,

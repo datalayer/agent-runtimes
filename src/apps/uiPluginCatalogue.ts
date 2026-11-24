@@ -94,6 +94,7 @@ export const UI_PLUGIN_MODULES: Record<
   'page-excalidraw': () => import('./plugins/page-excalidraw'),
   'page-layout': () => import('./plugins/page-layout'),
   'page-mermaid': () => import('./plugins/page-mermaid'),
+  'page-notebook': () => import('./plugins/page-notebook'),
   'page-react-flow': () => import('./plugins/page-react-flow'),
   'page-sheet': () => import('./plugins/page-sheet'),
   'pap-purchase': () => import('./plugins/pap-purchase'),

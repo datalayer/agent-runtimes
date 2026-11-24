@@ -3,6 +3,7 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
+import { uiFrontendToolNamed } from '../specs/uiFrontendTools';
 import type { FrontendToolDefinition } from '../types/tools';
 
 const SPECIAL: Readonly<Record<string, string>> = {
@@ -41,7 +42,8 @@ function pageEditorAvailability(name: string): string {
   if (name.startsWith('document')) {
     return 'This tool runs on the current in-page Document tab, including in a public demo. It needs no sign-in or filesystem access; creating a document means inserting content into that already-mounted document.';
   }
-  if (name.startsWith('notebook')) {
+  // The notebook header's tool sets the chat's title bar, not a cell.
+  if (name.startsWith('notebook') && name !== 'notebookSetHeader') {
     return 'This tool runs on the current in-page Notebook tab, including in a public demo. It needs no sign-in or filesystem access; creating a notebook means inserting and running cells in that already-mounted notebook.';
   }
   return '';
@@ -70,12 +72,17 @@ export function namedFrontendTool(
 ): FrontendToolDefinition {
   const name = frontendToolName(tool.name, domain);
   const availability = pageEditorAvailability(name);
+  // A tool handed over without words of its own takes its UI plugin's.
   const description =
-    tool.description?.trim() || `${name} runs in the visible application.`;
+    tool.description?.trim() ||
+    uiFrontendToolNamed(name)?.description ||
+    `${name} runs in the visible application.`;
   return {
     ...tool,
     name,
-    description: availability ? `${description} ${availability}` : description,
+    description: availability
+      ? `${/[.!?)]$/.test(description) ? description : `${description}.`} ${availability}`
+      : description,
   };
 }
 

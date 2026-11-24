@@ -169,13 +169,13 @@ const definitions: Array<
   {
     name: 'list_shapes',
     description:
-      'List every shape and link currently on the React Flow canvas, including stable IDs and positions. Call this before changing a diagram the user may have edited.',
+      'List every shape and link on the React Flow canvas in the page, with their stable IDs, labels and positions. Call it before changing a diagram the person may have edited: it reads the canvas as it is now and changes nothing.',
     parameters: objectSchema({}),
   },
   {
     name: 'insert_shape',
     description:
-      'Insert one shape on the React Flow canvas. Returns its new stable ID so later calls can move or link it.',
+      'Add one labelled shape to the React Flow canvas in the page (a default, input or output node), at a position or where the canvas places it. The person sees it at once; it returns the new stable ID, so later calls can move or link it.',
     parameters: objectSchema(
       {
         label: { type: 'string', description: 'Text shown in the shape.' },
@@ -193,7 +193,7 @@ const definitions: Array<
   {
     name: 'link_shapes',
     description:
-      'Link two existing shapes by their stable IDs. Use IDs returned by insert_shape or list_shapes.',
+      'Draw a link, optionally labelled, from one shape of the React Flow canvas to another, by their stable IDs (as reactFlowInsertShape returned them or reactFlowListShapes lists them). It runs in the page; the shapes themselves stay as they are.',
     parameters: objectSchema(
       {
         source_id: { type: 'string', description: 'Source shape ID.' },
@@ -205,7 +205,8 @@ const definitions: Array<
   },
   {
     name: 'move_shape',
-    description: 'Move an existing shape to an absolute canvas position.',
+    description:
+      'Move a shape of the React Flow canvas, by its stable ID, to an absolute position on the canvas; its links follow it. It runs in the page and changes nothing else.',
     parameters: objectSchema(
       {
         shape_id: { type: 'string', description: 'Stable shape ID.' },

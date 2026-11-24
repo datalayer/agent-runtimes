@@ -186,6 +186,7 @@ export function createAllAgentRuntimesTools(
   domain?: string,
 ): FrontendToolDefinition[] {
   const tools: FrontendToolDefinition[] = [];
+  const references = siblingReferences(definitions, domain);
 
   for (const definition of definitions) {
     const operation = operations[definition.operation];
@@ -203,8 +204,59 @@ export function createAllAgentRuntimesTools(
       context,
       domain,
     );
-    tools.push(tool);
+    tools.push({
+      ...tool,
+      description: renameReferences(tool.description, references),
+    });
   }
 
   return tools;
+}
+
+/**
+ * How the definitions name each other, and what they are called once named
+ * for a domain: `readAllCells` → `notebookReadAllCells`. Empty without a
+ * domain, where a tool keeps the name its siblings use.
+ */
+function siblingReferences(
+  definitions: readonly ToolDefinition[],
+  domain?: string,
+): Map<string, string> {
+  const references = new Map<string, string>();
+  if (!domain) {
+    return references;
+  }
+  for (const definition of definitions) {
+    const reference = definition.toolReferenceName;
+    if (!reference) {
+      continue;
+    }
+    const named = frontendToolName(reference, domain);
+    if (named !== reference) {
+      references.set(reference, named);
+    }
+  }
+  return references;
+}
+
+/**
+ * A description that names a sibling (`Call readAllCells first`) by the name
+ * the model is given (`Call notebookReadAllCells first`): the definitions
+ * are written for their own package, where the tools are not prefixed.
+ */
+function renameReferences(
+  description: string,
+  references: ReadonlyMap<string, string>,
+): string {
+  if (references.size === 0) {
+    return description;
+  }
+  const pattern = new RegExp(
+    `\\b(${[...references.keys()].join('|')})\\b`,
+    'g',
+  );
+  return description.replace(
+    pattern,
+    reference => references.get(reference) ?? reference,
+  );
 }
