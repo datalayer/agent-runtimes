@@ -17,6 +17,7 @@ import type { AgentGuardrail } from './guardrails';
 import type { AgentEvalConfig } from './evals';
 import type { AgentNotificationConfig } from './notifications';
 import type { AgentCodemodeConfig, AgentAdvancedConfig } from './config';
+import type { RuntimeEngine } from '../specs/runtimeEngines';
 
 /**
  * Specification for an AI agent.
@@ -252,6 +253,24 @@ export interface UiHeaderSpec {
   when?: string;
   /** Three items at most. */
   items: UiHeaderItemSpec[];
+}
+
+/** A runtime engine (`agentspecs/runtime-engines`): what runs and hosts an agent. */
+export interface RuntimeEngineSpec {
+  /** What an agent's `runtimeEngine` says (e.g. 'kagent'). */
+  id: string;
+  version: string;
+  /** Its name, as a person reads it. */
+  name: string;
+  description: string;
+  /** Its own documentation. */
+  docsUrl: string;
+  /** Its place where the engines are offered; 1 is the default. */
+  position: number;
+  /** The harnesses it runs, by id; null when it runs any. */
+  harnesses: readonly string[] | null;
+  /** Whether an agent may run on it today. */
+  enabled: boolean;
 }
 
 /**
@@ -2157,27 +2176,6 @@ export const unmetAgentspecGroups = (
     group => !group.some(id => isSetUp(componentIdOf(id))),
   );
 
-/** The engines that run and host an agent (`runtime_engine`), the default first. */
-export const RUNTIME_ENGINES = ['datalayer', 'kagent', 'agentcore'] as const;
-
-/** What runs and hosts an agent: a Datalayer runtime, kagent, or AWS AgentCore. */
-export type RuntimeEngine = (typeof RUNTIME_ENGINES)[number];
-
-/** How an engine is named to a person. */
-export const RUNTIME_ENGINE_LABELS: Record<RuntimeEngine, string> = {
-  datalayer: 'Datalayer',
-  kagent: 'kagent',
-  agentcore: 'AWS AgentCore',
-};
-
-/** The harnesses an engine can run; an engine absent here runs any. */
-export const RUNTIME_ENGINE_HARNESSES: Partial<
-  Record<RuntimeEngine, readonly string[]>
-> = {
-  kagent: ['pydantic-ai'],
-  agentcore: ['pydantic-ai'],
-};
-
 export interface Agentspec {
   /** Unique agent identifier */
   id: string;
@@ -2266,9 +2264,9 @@ export interface Agentspec {
    * What runs and hosts this agent.
    *
    * `datalayer` (the default) is a Datalayer agent runtime, from the
-   * platform's pools or on your own machine; `kagent` is kagent, a Kubernetes
-   * control plane for agents: a kagent Agent (an AgentTemplate and a Harness
-   * running `agent-runtimes serve --target kagent`), reached through kagent's
+   * platform's pools or on your own machine; `kagent` is Kagent, a Kubernetes
+   * control plane for agents: a Kagent Agent (an AgentTemplate and a Harness
+   * running `agent-runtimes serve --target kagent`), reached through Kagent's
    * A2A gateway at `/agents/{namespace}/{name}`, each conversation a session
    * actor of Agent Substrate, suspended when idle and resumed on the next
    * message; `agentcore` is Amazon Bedrock AgentCore Runtime in the AWS

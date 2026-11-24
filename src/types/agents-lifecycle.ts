@@ -11,7 +11,7 @@
  */
 
 import type { AgentRuntimeData } from './agents';
-import type { RuntimeEngine } from './agentspecs';
+import type { RuntimeEngine } from '../specs/runtimeEngines';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Runtime API Request / Response

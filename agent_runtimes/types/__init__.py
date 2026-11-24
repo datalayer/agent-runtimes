@@ -7,7 +7,6 @@ from .types import (
     AGENT_CAPABILITIES,
     BUILTIN_HARNESSES,
     DECIDE_TOOL,
-    RUNTIME_ENGINES,
     A2ASubagentConfig,
     ActionConditionSpec,
     AgentCapability,
@@ -167,13 +166,13 @@ from .types import (
     UiChoiceSpec,
     UiContributionsSpec,
     UiImplementationSpec,
+    RuntimeEngineSpec,
     UiRendererSpec,
     UISpec,
     harness_problems,
 )
 
 __all__ = [
-    "RUNTIME_ENGINES",
     "AgentSkillSpec",
     "Agentspec",
     "AgentspecOptional",
@@ -187,6 +186,7 @@ __all__ = [
     "UiBackendImplementationSpec",
     "UiContributionsSpec",
     "UiImplementationSpec",
+    "RuntimeEngineSpec",
     "UiRendererSpec",
     "UISpec",
     "ProtocolPackagesSpec",

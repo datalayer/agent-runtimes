@@ -5,17 +5,24 @@
 
 /**
  * Every agent of the catalogue says what runs and hosts it: `datalayer`, a
- * Datalayer agent runtime, `kagent`, or `agentcore` (AWS AgentCore). The generator writes the spec's
- * `runtime_engine` as it is; a spec without one is refused before this.
+ * Datalayer agent runtime, `kagent` (Kagent), or `agentcore` (AWS AgentCore). The generator writes the spec's
+ * `runtime_engine` as it is; a spec without one is refused before this. The
+ * engines themselves are specs of `agentspecs/runtime-engines`, generated into
+ * `runtimeEngines.ts`: the ids, the labels and the harnesses are read there.
  */
 
 import { describe, expect, it } from 'vitest';
 import { AGENTSPECS } from '../agents';
 import {
+  DEFAULT_RUNTIME_ENGINE,
   RUNTIME_ENGINES,
+  RUNTIME_ENGINE_CATALOGUE,
   RUNTIME_ENGINE_HARNESSES,
   RUNTIME_ENGINE_LABELS,
-} from '../../types';
+  getRuntimeEngine,
+  isRuntimeEngine,
+  listRuntimeEngines,
+} from '../runtimeEngines';
 
 describe('runtimeEngine', () => {
   const specs = Object.values(AGENTSPECS);
@@ -27,7 +34,7 @@ describe('runtimeEngine', () => {
     }
   });
 
-  it('is kagent for the kagent example alone, on pydantic-ai', () => {
+  it('is Kagent for the Kagent example alone, on pydantic-ai', () => {
     const onKagent = specs.filter(spec => spec.runtimeEngine === 'kagent');
     expect(onKagent.map(spec => spec.id)).toEqual(['example-kagent']);
     expect(onKagent[0].harness).toBe('pydantic-ai');
@@ -45,9 +52,36 @@ describe('runtimeEngine', () => {
     expect(RUNTIME_ENGINES).toEqual(['datalayer', 'kagent', 'agentcore']);
     expect(RUNTIME_ENGINE_LABELS).toEqual({
       datalayer: 'Datalayer',
-      kagent: 'kagent',
+      kagent: 'Kagent',
       agentcore: 'AWS AgentCore',
     });
+  });
+
+  it('is generated from the runtime engine specs, the default first', () => {
+    expect(DEFAULT_RUNTIME_ENGINE).toBe('datalayer');
+    expect(listRuntimeEngines().map(engine => engine.id)).toEqual([
+      ...RUNTIME_ENGINES,
+    ]);
+    expect(listRuntimeEngines().map(engine => engine.position)).toEqual([
+      1, 2, 3,
+    ]);
+    for (const engine of listRuntimeEngines()) {
+      expect(engine.enabled).toBe(true);
+      expect(engine.docsUrl).toMatch(/^https:\/\//);
+      expect(engine.description).not.toContain('KAgent');
+      expect(
+        RUNTIME_ENGINE_LABELS[engine.id as keyof typeof RUNTIME_ENGINE_LABELS],
+      ).toBe(engine.name);
+    }
+    expect(RUNTIME_ENGINE_CATALOGUE.datalayer.harnesses).toBeNull();
+    expect(RUNTIME_ENGINE_CATALOGUE.kagent.docsUrl).toBe('https://kagent.dev');
+  });
+
+  it('knows an engine by its id, and no other', () => {
+    expect(getRuntimeEngine('kagent')?.name).toBe('Kagent');
+    expect(getRuntimeEngine('lambda')).toBeUndefined();
+    expect(isRuntimeEngine('agentcore')).toBe(true);
+    expect(isRuntimeEngine('KAgent')).toBe(false);
   });
 
   it('runs pydantic-ai only on kagent and AgentCore', () => {

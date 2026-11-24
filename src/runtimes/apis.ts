@@ -7,7 +7,7 @@
  * Runtimes APIs.
  */
 import { ISessionContext } from '@jupyterlab/apputils';
-import type { RuntimeEngine } from '../types/agentspecs';
+import type { RuntimeEngine } from '../specs/runtimeEngines';
 import { ServiceManager, Kernel, ServerConnection } from '@jupyterlab/services';
 import { IDisposable } from '@lumino/disposable';
 import { ISignal } from '@lumino/signaling';

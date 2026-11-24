@@ -38,7 +38,7 @@ from code_sandboxes.lifecycle import (
 )
 from datalayer_core.utils.defaults import get_default_credits_limit
 
-from agent_runtimes.types.types import RUNTIME_ENGINES
+from agent_runtimes.specs.runtime_engines import RUNTIME_ENGINES
 
 logger = logging.getLogger(__name__)
 
