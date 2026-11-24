@@ -24,6 +24,29 @@ const SPECIAL: Readonly<Record<string, string>> = {
 const upperFirst = (value: string): string =>
   value ? `${value[0].toUpperCase()}${value.slice(1)}` : value;
 
+/**
+ * What the model must know about page-local editors.
+ *
+ * Their upstream schemas speak about notebook and `.dlex` files because the
+ * same operations also run in persisted editors. In an application they are
+ * bound to the live tab instead: a public demo can populate that temporary
+ * notebook or document without an account or a filesystem. Leaving that
+ * distinction implicit makes a model refuse exactly the work the page put in
+ * front of it.
+ */
+function pageEditorAvailability(name: string): string {
+  if (name === 'documentInsertBlock') {
+    return 'This tool creates content in the current in-page Document tab, including in a public demo. When the user asks to create a document, call it immediately with afterId BOTTOM instead of refusing, asking them to sign in, or merely drafting in chat. It needs no filesystem access.';
+  }
+  if (name.startsWith('document')) {
+    return 'This tool runs on the current in-page Document tab, including in a public demo. It needs no sign-in or filesystem access; creating a document means inserting content into that already-mounted document.';
+  }
+  if (name.startsWith('notebook')) {
+    return 'This tool runs on the current in-page Notebook tab, including in a public demo. It needs no sign-in or filesystem access; creating a notebook means inserting and running cells in that already-mounted notebook.';
+  }
+  return '';
+}
+
 /** The public, model-facing name of a frontend tool. */
 export function frontendToolName(name: string, domain?: string): string {
   const special = SPECIAL[name];
@@ -46,11 +69,13 @@ export function namedFrontendTool(
   domain?: string,
 ): FrontendToolDefinition {
   const name = frontendToolName(tool.name, domain);
+  const availability = pageEditorAvailability(name);
+  const description =
+    tool.description?.trim() || `${name} runs in the visible application.`;
   return {
     ...tool,
     name,
-    description:
-      tool.description?.trim() || `${name} runs in the visible application.`,
+    description: availability ? `${description} ${availability}` : description,
   };
 }
 

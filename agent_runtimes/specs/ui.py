@@ -2415,9 +2415,9 @@ MODELS_UI_0_0_1 = UISpec(
     components=[],
 )
 
-NOTEBOOK_HEADER_UI_0_0_1 = UISpec(
+NOTEBOOK_HEADER_UI_0_0_2 = UISpec(
     id="notebook-header",
-    version="0.0.1",
+    version="0.0.2",
     name="Notebook header",
     description="The Data Analyst's title bar: the dataset it works on, what has run, and a button that asks for a profile of the data.",
     emoji="📓",
@@ -2442,7 +2442,7 @@ NOTEBOOK_HEADER_UI_0_0_1 = UISpec(
     placements=["header", "right", "left"],
     header={
         "tool": "set_notebook_header",
-        "when": "Call it once you know the dataset (its name and size as the label of dataset), and after each answer to say what ran: the cells run, or that nothing ran. Never show a run that did not happen.",
+        "when": "Call it once you know the dataset (its name and size as the label of dataset), and after notebook work to say what ran. Do not call it for a document-only or spreadsheet-only request. Never imply that the public demo lacks a notebook or kernel: report only the cells actually run or a cell failure.",
         "items": [
             {
                 "id": "dataset",
@@ -2457,7 +2457,7 @@ NOTEBOOK_HEADER_UI_0_0_1 = UISpec(
                 "kind": "indicator",
                 "display": "status",
                 "label": "Run",
-                "description": 'What ran, said honestly, such as "3 cells run" (tone "success"), "Cell failed" (tone "danger") or "Nothing ran here" (tone "neutral") where there is no kernel.',
+                "description": 'What ran in the mounted notebook, said honestly, such as "3 cells run" (tone "success") or "Cell failed" (tone "danger"). Do not update this indicator for document-only or spreadsheet-only work.',
                 "octicon": "play",
             },
             {
@@ -3921,7 +3921,7 @@ UI_CATALOGUE: Dict[str, UISpec] = {
     "linkedin-link": LINKEDIN_LINK_UI_0_0_1,
     "linkedin-post-preview": LINKEDIN_POST_PREVIEW_UI_0_0_1,
     "models": MODELS_UI_0_0_1,
-    "notebook-header": NOTEBOOK_HEADER_UI_0_0_1,
+    "notebook-header": NOTEBOOK_HEADER_UI_0_0_2,
     "notebook-toolbar": NOTEBOOK_TOOLBAR_UI_0_0_1,
     "notebook-view": NOTEBOOK_VIEW_UI_0_0_1,
     "notebook": NOTEBOOK_UI_0_0_1,

@@ -1087,7 +1087,7 @@ export const JUPYTER_TEAM_SPEC_0_0_1: TeamSpec = {
   executionMode: 'supervisor',
   supervisor: {
     name: 'Jupyter Analyst',
-    ref: 'worker-data-analyst:0.0.1',
+    ref: 'worker-data-analyst:0.0.2',
     model: 'bedrock:us.anthropic.claude-sonnet-4-6',
     goal: `Keep the work in the notebook. Answer analysis requests directly; send a request to check something to the Reviewer, a request to write something up to the Writer, a request for slides to Decks, a question about the code to the Tutor and a request to tidy the notebook to the Compactor — and never leave results anywhere but the cells, or the deck made from them.`,
     instructions: ``,
@@ -1144,7 +1144,7 @@ export const JUPYTER_TEAM_SPEC_0_0_1: TeamSpec = {
     {
       id: 'analyst',
       name: 'Jupyter Analyst',
-      ref: 'worker-data-analyst:0.0.1',
+      ref: 'worker-data-analyst:0.0.2',
       role: 'initiator',
       goal: `Explore the data in the open notebook — add the cells, run them, and leave the results on them for the others to build on.`,
       dependsOn: [],
@@ -1365,7 +1365,7 @@ export const NOTEBOOK_BENCHMARK_TEAM_SPEC_0_0_1: TeamSpec = {
   icon: 'beaker',
   emoji: '🧪',
   color: 'teal',
-  agentSpecId: 'worker-data-analyst:0.0.1',
+  agentSpecId: 'worker-data-analyst:0.0.2',
   orchestrationProtocol: 'datalayer',
   executionMode: 'sequential',
   supervisor: {

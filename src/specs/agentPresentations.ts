@@ -42,7 +42,7 @@ export const AGENT_PRESENTATIONS: Record<string, AgentPresentation> = {
   },
   'worker-data-analyst': {
     id: 'worker-data-analyst',
-    version: '0.0.1',
+    version: '0.0.2',
     name: 'Data Analyst',
     emoji: '📊',
     description:
@@ -55,7 +55,7 @@ export const AGENT_PRESENTATIONS: Record<string, AgentPresentation> = {
     id: 'worker-functional-analyst',
     version: '0.0.1',
     name: 'Functional Analyst',
-    emoji: '📐',
+    emoji: '🔀',
     description:
       "Works out how a system, a process or a plan fits together and draws it — Mermaid diagrams checked by Mermaid's own parser, and Excalidraw drawings you can draw on with it — then says what the picture shows and what it leaves open.",
     tagline: 'Works out how it fits, and draws it',

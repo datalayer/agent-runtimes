@@ -254,6 +254,15 @@ describe('AIApplication in visitor mode', () => {
 describe('AIApplication in runtime mode', () => {
   it('keeps a notebook placed in a side-panel tab out of the middle editor column', () => {
     const spec = getAgentspecs('worker-data-analyst');
+    expect(spec?.version).toBe('0.0.2');
+    expect(spec?.systemPrompt).toMatch(
+      /They are available in a\s+public demo too\./,
+    );
+    expect(spec?.systemPrompt).toContain(
+      'populate the already-mounted blank tab',
+    );
+    expect(spec?.systemPrompt).toContain('documentReadAllBlocks');
+    expect(spec?.systemPrompt).not.toContain('documentReadBlocks');
     expect(spec?.ui?.map(choice => choice.plugin)).toContain('page-notebook');
     expect(spec?.frontendTools?.map(tool => tool.id)).toContain(
       'jupyter-notebook',
@@ -268,6 +277,15 @@ describe('AIApplication in runtime mode', () => {
         tab: 'Notebook',
       }),
     );
+
+    const demo = getApp('demo-data-analyst');
+    expect(demo?.version).toBe('0.0.7');
+    expect(demo?.agent).toBe('worker-data-analyst:0.0.2');
+    expect(demo?.instructions).toContain(
+      'They require no account and no filesystem.',
+    );
+    expect(demo?.instructions).toContain('documentReadAllBlocks');
+    expect(demo?.instructions).not.toContain('documentReadBlocks');
   });
 
   it('does not infer a work surface from a frontend tool declaration alone', () => {

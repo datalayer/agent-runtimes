@@ -235,6 +235,8 @@ clean: ## clean
 build: ## build
 	npm run build
 
+build-embed: dist-embed ## build-embed
+
 build-lib: ## build-lib
 	npm run build:lib
 

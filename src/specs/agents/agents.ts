@@ -9956,9 +9956,9 @@ export const WORKER_DATA_ACQUISITION_AGENTSPEC_0_0_1: Agentspec = {
   identity: 'datalayer-acting-agent',
 };
 
-export const WORKER_DATA_ANALYST_AGENTSPEC_0_0_1: Agentspec = {
+export const WORKER_DATA_ANALYST_AGENTSPEC_0_0_2: Agentspec = {
   id: 'worker-data-analyst',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Data Analyst',
   description: `Explores the data in the Jupyter notebook you have open — adds the cells and runs them, profiles and charts the data, checks it for the things that quietly ruin an analysis, and says plainly what it found, where everyone can see it.`,
   tags: [
@@ -10043,6 +10043,14 @@ conclusion. Keep it reproducible from top to bottom. Do not create empty
 scaffolding: every section must contain the code, output, or explanation it
 promises.
 
+The Notebook and Document tabs are live frontend work surfaces, not files
+you need an account or server filesystem to create. They are available in a
+public demo too. When the person says "create a notebook" or "create a
+document", populate the already-mounted blank tab with the corresponding
+notebook or document tools immediately. Never refuse because the person is
+signed out, never tell them to use their own runtime, and never merely draft
+in chat when the requested frontend tool is present.
+
 Look before you answer. The notebook is already open beside this
 conversation and may have cells in it: read them first with \`notebookReadAllCells\`
 so you build on what is there rather than starting over — a variable a cell
@@ -10067,9 +10075,11 @@ When the person asks for a narrative report, methodology, data dictionary or
 executive summary, create it in the Document tab with the document tools.
 Do not answer with questions instead of creating it: if details are missing,
 make a useful structured first draft from the request and current analysis,
-then ask what to refine. Start with \`documentReadBlocks\`, create content with
-\`documentInsertBlock\`, and use \`documentUpdateBlock\` with stable IDs. Read
-its blocks before revising it and use their stable IDs
+then ask what to refine. For a new or blank document, call
+\`documentInsertBlock\` immediately with \`afterId: BOTTOM\`; this creates the
+requested content in the mounted Document tab. For an existing document,
+start with \`documentReadAllBlocks\`, then use \`documentInsertBlock\` and
+\`documentUpdateBlock\` with stable IDs. Read its blocks before revising it and use their stable IDs
 for later edits. Every stated number must come from a successfully executed
 notebook cell; use the document for interpretation and decisions, the
 notebook for reproducible evidence, and the spreadsheet for inspectable
@@ -11401,7 +11411,7 @@ export const WORKER_FUNCTIONAL_ANALYST_AGENTSPEC_0_0_1: Agentspec = {
   ],
   environmentName: 'ai-agents-env',
   icon: 'workflow',
-  emoji: '📐',
+  emoji: '🔀',
   color: 'purple',
   tagline: 'Works out how it fits, and draws it',
   presentation:
@@ -16854,7 +16864,7 @@ export const AGENTSPECS: Record<string, Agentspec> = {
     WORKER_CUSTOMER_CHURN_ANALYSIS_AGENTSPEC_0_0_1,
   'worker-customer-interviewer': WORKER_CUSTOMER_INTERVIEWER_AGENTSPEC_0_0_1,
   'worker-data-acquisition': WORKER_DATA_ACQUISITION_AGENTSPEC_0_0_1,
-  'worker-data-analyst': WORKER_DATA_ANALYST_AGENTSPEC_0_0_1,
+  'worker-data-analyst': WORKER_DATA_ANALYST_AGENTSPEC_0_0_2,
   'worker-disaster-assessment': WORKER_DISASTER_ASSESSMENT_AGENTSPEC_0_0_1,
   'worker-document-qa': WORKER_DOCUMENT_QA_AGENTSPEC_0_0_1,
   'worker-end-of-month-performance':
