@@ -2703,7 +2703,7 @@ export const PAGE_DOCUMENT_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
-  placements: ['message', 'right', 'left'],
+  placements: ['right', 'left'],
   catalog: '',
   components: [],
 };
@@ -2898,7 +2898,7 @@ export const PAGE_NOTEBOOK_UI_0_0_1: UISpec = {
   contributionPoints: [],
   settings: {},
   renderers: [],
-  placements: ['message', 'right', 'left'],
+  placements: ['right', 'left'],
   catalog: '',
   components: [],
 };

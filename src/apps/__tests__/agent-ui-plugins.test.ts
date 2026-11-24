@@ -159,6 +159,34 @@ describe('the seed agents’ UI', () => {
     }
   });
 
+  it('registers a working plugin for every placement a UI spec declares', () => {
+    for (const spec of listUI()) {
+      if (!AGENT_UI_PLUGINS[spec.id]) {
+        continue;
+      }
+      for (const placement of spec.placements ?? []) {
+        const [plugin] = agentUiPluginsFor([{ plugin: spec.id, placement }]);
+        expect(plugin, `${spec.id}@${placement}`).toBeDefined();
+      }
+    }
+  });
+
+  it('places the page’s document and notebook in a side panel by default, never in a message', () => {
+    // A message placement mounted no editor and no kernel: their code-running
+    // tools waited for a kernel that never came.
+    for (const id of ['page-document', 'page-notebook']) {
+      expect(placementOf({ plugin: id }), id).toBe('right');
+      expect(AGENT_UI_PLUGINS[id].message, id).toBeUndefined();
+      expect(
+        agentUiPluginsFor([{ plugin: id, placement: 'message' }]),
+        id,
+      ).toEqual([]);
+      expect(nameOf(agentUiPluginsFor([id])[0])).toBe(
+        `@datalayer/agent-plugin-${id}`,
+      );
+    }
+  });
+
   it('is mounted by the preset for the spec it creates', () => {
     const names = agentPlugins({
       target: 'datalayer',

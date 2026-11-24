@@ -78,10 +78,7 @@ import { analysisHeaderPlugin } from './plugins/analysis-header';
 import { OdooContextChip, odooContextPlugin } from './plugins/odoo-context';
 import { NoticesPlugin } from './plugins/notices';
 import { pageNotebookSidePlugin } from './plugins/page-notebook';
-import {
-  PageDocumentPlugin,
-  pageDocumentSidePlugin,
-} from './plugins/page-document';
+import { pageDocumentSidePlugin } from './plugins/page-document';
 import { PageDeckPlugin, pageDeckSidePlugin } from './plugins/page-deck';
 import {
   PageExcalidrawPlugin,
@@ -147,6 +144,12 @@ export type AgentUiPlugin = {
 
 /** Each agent UI plugin, by its UI spec's id. */
 export const AGENT_UI_PLUGINS: Readonly<Record<string, AgentUiPlugin>> = {
+  /*
+   * The page's notebook and document live in a side panel only: their editor
+   * and its kernel are the panel's, and a card in the conversation had
+   * neither (the code-running tools waited for a kernel that never came).
+   * Their UI specs place them `right` or `left`, `right` by default.
+   */
   'page-notebook': {
     needsConnection: false,
     side: pageNotebookSidePlugin,
@@ -266,7 +269,6 @@ export const AGENT_UI_PLUGINS: Readonly<Record<string, AgentUiPlugin>> = {
   },
   'page-document': {
     needsConnection: false,
-    message: PageDocumentPlugin,
     side: pageDocumentSidePlugin,
   },
   'page-sheet': {
