@@ -17,7 +17,7 @@ from inspect_ai import Task, task
 from inspect_ai.dataset import json_dataset
 from inspect_ai.scorer import includes
 from inspect_ai.solver import generate, system_message, use_tools
-from inspect_ai.tool import bash
+from inspect_ai.tool import ToolFunction, bash
 
 HERE = Path(__file__).parent
 
@@ -30,7 +30,8 @@ def arithmetic_in_docker() -> Task:
             system_message(
                 "Compute with the bash tool, then answer with the number only."
             ),
-            use_tools(bash(timeout=30)),
+            # Named, so that a model that can do the sum in its head still calls it.
+            use_tools(bash(timeout=30), tool_choice=ToolFunction(name="bash")),
             generate(),
         ],
         scorer=[includes(), answer_length()],
