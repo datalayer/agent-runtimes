@@ -132,6 +132,13 @@ export interface EphemeralDocumentCollaboration {
 
 export interface EphemeralDocumentProps {
   /**
+   * Draw the editor before, or without, a runtime: its text, headings and
+   * lists need no kernel, only its Jupyter cells do (they wait for one). Off,
+   * the editor appears once services are there; a document the agent writes
+   * in a side panel with no runtime stayed blank (24 November 2026).
+   */
+  withoutRuntime?: boolean;
+  /**
    * Document identifier. Must match the id passed to `useLexicalTools` so the
    * agent's lexical frontend tools operate on this document instance.
    */
@@ -367,6 +374,7 @@ export function EphemeralDocument({
   showToolbar = true,
   inheritTheme = false,
   autoFocus = true,
+  withoutRuntime = false,
 }: EphemeralDocumentProps) {
   // Real-time collaboration is active only when both a WebSocket endpoint and a
   // room id are supplied. In that mode the shared Loro CRDT is the single source
@@ -693,7 +701,7 @@ export function EphemeralDocument({
       overflow="hidden"
       bg="canvas.default"
     >
-      {activeServiceManager ? (
+      {activeServiceManager || (withoutRuntime && !isRuntimeStarting) ? (
         <ThemeRoot
           inherit={inheritTheme}
           colorMode={effectiveColorMode}

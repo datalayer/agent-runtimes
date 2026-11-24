@@ -53,6 +53,8 @@ export default function PageDocumentEditor(): JSX.Element {
       documentId={PAGE_DOCUMENT_VIEW_ID}
       autoFocus={false}
       showToolbar
+      // The conversation's document needs no runtime to be read and edited.
+      withoutRuntime
     />
   );
 }
