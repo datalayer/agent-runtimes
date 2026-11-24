@@ -171,6 +171,10 @@ export const clampSidePanelWidth = (width: number): number =>
     ),
   );
 
+/** A panel's opening width: half the workspace, within its bounds. */
+export const halfSidePanelWidth = (rowWidth: number): number =>
+  clampSidePanelWidth(Math.round(rowWidth / 2));
+
 /** Under this width, in pixels, the workspace is narrow: a panel opens over the view. */
 export const SIDE_PANEL_NARROW = 720;
 
@@ -308,6 +312,8 @@ export type SidePanelState = {
   width: number;
   /** Resize it beside the view. */
   setWidth: (width: number) => void;
+  /** Whether the person resized it; until then it opens at half the workspace. */
+  resized: boolean;
   /** The event that made it as it is: what decides between two panels. */
   latest: SidePanelEvent | undefined;
   /** The contribution shown in the panel. */
@@ -370,10 +376,13 @@ export function useSidePanel(side: SidePanelSide): SidePanelState {
         : current,
     );
   }, [preferredWidth]);
-  const setWidth = useCallback(
-    (next: number) => setWidthState(clampSidePanelWidth(next)),
-    [],
-  );
+  // Whether the person resized it: until then it opens at half the workspace
+  // (useSidePanels), afterwards at the width they chose.
+  const [resized, setResized] = useState(false);
+  const setWidth = useCallback((next: number) => {
+    setResized(true);
+    setWidthState(clampSidePanelWidth(next));
+  }, []);
   const follows = useMemo(
     () => components.flatMap(component => component.panel?.follows ?? []),
     [components],
@@ -515,6 +524,7 @@ export function useSidePanel(side: SidePanelSide): SidePanelState {
     toggleRef,
     width,
     setWidth,
+    resized,
     latest,
     activeTab,
     tabs,
@@ -577,9 +587,18 @@ export function useSidePanels(rowRef: RefObject<HTMLElement | null>): {
   right: SidePanelState;
   narrow: boolean;
 } {
-  const left = useSidePanel('left');
-  const right = useSidePanel('right');
   const width = useWidth(rowRef);
+  // A panel opens at half the workspace (the user, 24 November 2026: "they
+  // should open half size (50%)"), within its bounds, until the person resizes it.
+  const half = useCallback(
+    (panel: SidePanelState): SidePanelState =>
+      width > 0 && !panel.resized
+        ? { ...panel, width: halfSidePanelWidth(width) }
+        : panel,
+    [width],
+  );
+  const left = half(useSidePanel('left'));
+  const right = half(useSidePanel('right'));
   const narrow = width > 0 && width < SIDE_PANEL_NARROW;
   const leftNames = left.tabs.map(tab => `${tab.id}:${tab.label}`).join(',');
   const rightNames = right.tabs.map(tab => `${tab.id}:${tab.label}`).join(',');

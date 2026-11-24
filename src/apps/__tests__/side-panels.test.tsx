@@ -47,6 +47,7 @@ import {
   SidePanelToggle,
   bothFit,
   clampSidePanelWidth,
+  halfSidePanelWidth,
   sidePanelCallEvent,
   sidePanelOpen,
   useSidePanels,
@@ -131,6 +132,12 @@ const call = (
 });
 
 describe('open or closed, from the conversation', () => {
+  it('opens at half the workspace, within its bounds (the user, 24 November 2026)', () => {
+    expect(halfSidePanelWidth(1600)).toBe(800);
+    expect(halfSidePanelWidth(400)).toBe(SIDE_PANEL_MIN_WIDTH);
+    expect(halfSidePanelWidth(3000)).toBe(SIDE_PANEL_MAX_WIDTH);
+  });
+
   it('keeps a resized panel inside useful bounds', () => {
     expect(clampSidePanelWidth(100)).toBe(SIDE_PANEL_MIN_WIDTH);
     expect(clampSidePanelWidth(620)).toBe(620);
