@@ -85,8 +85,11 @@ WHOLE = ("settings", "settings_ui")
 
 
 def _flat(text: Any) -> str:
-    """A text with each of its lines on one line: its paragraphs kept, as the
-    Appspec's readers keep them."""
+    """
+    Return a text with each of its lines on one line.
+
+    Its paragraphs are kept, as the Appspec's readers keep them.
+    """
     lines = (" ".join(line.split()) for line in str(text or "").split("\n"))
     return "\n".join(lines).strip()
 

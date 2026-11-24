@@ -18,6 +18,11 @@
  */
 
 import type { INotebookContent } from '@jupyterlab/nbformat';
+import { conversationScopedId } from '../../pageTools/conversationScope';
+
+/** The id an open item's editor is registered under, in this conversation. */
+export const spaceItemViewId = (uid: string, conversation = ''): string =>
+  conversationScopedId(`spaces-${uid}`, conversation);
 
 /** The kinds of Space items the panel opens. */
 export const SPACE_ITEM_TYPES = ['document', 'notebook'] as const;
@@ -105,14 +110,21 @@ export function openSpaceItem(
   return item;
 }
 
-/** What an item's view says it holds now. Nothing is redrawn for it. */
+/**
+ * What an item's view says it holds now. Nothing is redrawn for it.
+ *
+ * `loaded` is the load the view was drawn for: a view of a load since
+ * replaced (an item opened again flushes its old view's model as it goes) is
+ * not heard, so it cannot overwrite what the new load holds.
+ */
 export function updateSpaceItemContent(
   uid: string,
   current: string | INotebookContent,
-  conversation = '',
+  conversation: string,
+  loaded: number,
 ): void {
   const item = openSpaceItemOf(uid, conversation);
-  if (item) {
+  if (item && item.loaded === loaded) {
     // In place: its view drew it, and redrawing it would start it again.
     item.current = current;
   }

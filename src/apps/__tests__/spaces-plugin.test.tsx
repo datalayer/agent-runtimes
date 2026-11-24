@@ -28,6 +28,7 @@ const state = vi.hoisted(() => ({
   configs: [] as Array<Record<string, unknown>>,
   client: {} as Record<string, ReturnType<typeof vi.fn>>,
   revealed: [] as string[],
+  live: {} as Record<string, unknown>,
 }));
 
 vi.mock('@datalayer/core/lib/state', () => ({
@@ -50,6 +51,11 @@ vi.mock('../shell/sidePanelReveal', () => ({
   revealPanelFor: (name: string) => state.revealed.push(name),
 }));
 
+// The notebooks drawn on the page, by the id each is drawn under.
+vi.mock('../../chat/notebook/liveNotebookModel', () => ({
+  liveNotebookModel: (id: string) => state.live[id] ?? null,
+}));
+
 // The editors are heavy: a tab draws what it holds instead.
 vi.mock('../plugins/spaces/SpaceItemView', () => ({
   default: ({ item }: { item: { uid: string; type: string } }) => (
@@ -57,12 +63,14 @@ vi.mock('../plugins/spaces/SpaceItemView', () => ({
   ),
 }));
 
+const { ItemTypes } = await import('@datalayer/core/lib/client');
 const { spacesTools, SPACES_WORDS, SPACES_TOOL_NAMES } =
   await import('../plugins/spaces/tools');
 const {
   openSpaceItemsOf,
   openSpaceItemOf,
   resetSpaceItems,
+  spaceItemViewId,
   updateSpaceItemContent,
 } = await import('../plugins/spaces/openItems');
 const { default: SpacesPanel } = await import('../plugins/spaces/SpacesPanel');
@@ -103,12 +111,16 @@ function fakeClient() {
         description: '',
       },
     ]),
+    // As Spacer's client answers them, typed as LexicalDTO and NotebookDTO
+    // say (core's ItemTypes: a lexical document is `document`); a space
+    // holds other kinds too.
     getSpaceItems: vi.fn(async () => [
-      item('doc-1', 'document', 'Report', DOCUMENT_STATE),
-      item('nb-1', 'notebook', 'Analysis', NOTEBOOK),
+      item('doc-1', ItemTypes.LEXICAL, 'Report', DOCUMENT_STATE),
+      item('nb-1', ItemTypes.NOTEBOOK, 'Analysis', NOTEBOOK),
+      item('cell-1', ItemTypes.CELL, 'A cell', ''),
     ]),
     getLexical: vi.fn(async (uid: string) =>
-      item(uid, 'document', 'Report', DOCUMENT_STATE),
+      item(uid, ItemTypes.LEXICAL, 'Report', DOCUMENT_STATE),
     ),
     getNotebook: vi.fn(async (uid: string) =>
       item(uid, 'notebook', 'Analysis', JSON.stringify(NOTEBOOK)),
@@ -130,6 +142,7 @@ beforeEach(() => {
   state.spacerUrl = 'https://spacer.example';
   state.configs = [];
   state.revealed = [];
+  state.live = {};
   fakeClient();
   resetSpaceItems();
 });
@@ -192,6 +205,30 @@ describe('the Spaces tools', () => {
     })) as { items: Array<{ uid: string }>; type: string };
     expect(notebooks.type).toBe('notebook');
     expect(notebooks.items.map(each => each.uid)).toEqual(['nb-1']);
+    // A lexical document is listed as a document.
+    const documents = (await call('spacesListItemsOfType', {
+      spaceUid: 'space-1',
+      type: 'document',
+    })) as { items: Array<{ uid: string; type: string }> };
+    expect(documents.items).toEqual([
+      {
+        uid: 'doc-1',
+        type: 'document',
+        name: 'Report',
+        description: 'Report described',
+      },
+    ]);
+  });
+
+  it('list a space’s documents in the panel, under All and Documents', async () => {
+    render(<SpacesPanel conversation="c1" />);
+    fireEvent.click(await screen.findByText('Research'));
+    expect(await screen.findByText('Report')).toBeTruthy();
+    expect(screen.getByText('Analysis')).toBeTruthy();
+    expect(screen.queryByText('A cell')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Documents' }));
+    await waitFor(() => expect(screen.queryByText('Analysis')).toBeNull());
+    expect(await screen.findByText('Report')).toBeTruthy();
   });
 
   it('answer in a sentence, never throwing, when signed out or refused', async () => {
@@ -311,6 +348,44 @@ describe('an item opened in a tab', () => {
     expect(await screen.findByText('Research')).toBeTruthy();
   });
 
+  it('are tabs a keyboard moves through, each controlling the panel it labels', async () => {
+    await call('spacesOpenItem', { uid: 'nb-1', type: 'notebook' });
+    await call('spacesOpenItem', { uid: 'doc-1', type: 'document' });
+    render(<SpacesPanel conversation="c1" />);
+    const tabs = () => screen.getAllByRole('tab');
+    const panel = screen.getByRole('tabpanel');
+    const shown = () =>
+      tabs().find(tab => tab.getAttribute('aria-selected') === 'true')!;
+    // The shown tab alone in the Tab order, labelling the panel it controls.
+    expect(shown().textContent).toBe('Report');
+    expect(tabs().map(tab => tab.tabIndex)).toEqual([-1, -1, 0]);
+    for (const tab of tabs()) {
+      expect(tab.getAttribute('aria-controls')).toBe(panel.id);
+    }
+    expect(panel.getAttribute('aria-labelledby')).toBe(shown().id);
+    // Right wraps to the first, Left goes back, End and Home to the ends.
+    fireEvent.keyDown(shown(), { key: 'ArrowRight' });
+    expect(shown().textContent).toBe('Spaces');
+    expect(document.activeElement).toBe(shown());
+    expect(screen.queryByTestId('item-view')).toBeNull();
+    fireEvent.keyDown(shown(), { key: 'ArrowRight' });
+    expect(shown().textContent).toBe('Analysis');
+    expect(screen.getByTestId('item-view').getAttribute('data-uid')).toBe(
+      'nb-1',
+    );
+    fireEvent.keyDown(shown(), { key: 'ArrowLeft' });
+    expect(shown().textContent).toBe('Spaces');
+    fireEvent.keyDown(shown(), { key: 'End' });
+    expect(shown().textContent).toBe('Report');
+    expect(document.activeElement).toBe(shown());
+    fireEvent.keyDown(shown(), { key: 'Home' });
+    expect(shown().textContent).toBe('Spaces');
+    expect(tabs().map(tab => tab.tabIndex)).toEqual([0, -1, -1]);
+    expect(screen.getByRole('tabpanel').getAttribute('aria-labelledby')).toBe(
+      shown().id,
+    );
+  });
+
   it('says the person must sign in, in the panel too', async () => {
     state.token = undefined;
     render(<SpacesPanel conversation="c1" />);
@@ -326,7 +401,12 @@ describe('saving an open item', () => {
     const edited = {
       root: { type: 'root', children: [{ type: 'paragraph' }] },
     };
-    updateSpaceItemContent('doc-1', JSON.stringify(edited), 'c1');
+    updateSpaceItemContent(
+      'doc-1',
+      JSON.stringify(edited),
+      'c1',
+      openSpaceItemOf('doc-1', 'c1')!.loaded,
+    );
     const answer = await call('spacesSaveItem', {});
     expect(answer).toEqual({
       uid: 'doc-1',
@@ -334,9 +414,10 @@ describe('saving an open item', () => {
       name: 'Report',
       saved: true,
     });
+    // As JSON text, as the Spacer client sends it.
     expect(state.client.updateLexicalModel).toHaveBeenCalledWith(
       'doc-1',
-      edited,
+      JSON.stringify(edited),
     );
   });
 
@@ -344,13 +425,60 @@ describe('saving an open item', () => {
     await call('spacesOpenItem', { uid: 'nb-1', type: 'notebook' });
     await call('spacesOpenItem', { uid: 'doc-1', type: 'document' });
     const edited = { ...NOTEBOOK, cells: [] };
-    updateSpaceItemContent('nb-1', edited, 'c1');
+    updateSpaceItemContent(
+      'nb-1',
+      edited,
+      'c1',
+      openSpaceItemOf('nb-1', 'c1')!.loaded,
+    );
     await call('spacesSaveItem', { uid: 'nb-1' });
     expect(state.client.updateNotebookModel).toHaveBeenCalledWith(
       'nb-1',
       edited,
     );
     expect(state.client.updateLexicalModel).not.toHaveBeenCalled();
+  });
+
+  it('writes a notebook drawn in its tab as it stands at the save, not as it last said', async () => {
+    await call('spacesOpenItem', { uid: 'nb-1', type: 'notebook' });
+    const said = { ...NOTEBOOK, cells: [] };
+    updateSpaceItemContent(
+      'nb-1',
+      said,
+      'c1',
+      openSpaceItemOf('nb-1', 'c1')!.loaded,
+    );
+    // An edit made since: the view says it only at its next half second.
+    const live = {
+      ...NOTEBOOK,
+      cells: [
+        { cell_type: 'code', source: 'print(2)', outputs: [], metadata: {} },
+      ],
+    };
+    state.live[spaceItemViewId('nb-1', 'c1')] = live;
+    await call('spacesSaveItem', {});
+    expect(state.client.updateNotebookModel).toHaveBeenCalledWith('nb-1', live);
+    expect(openSpaceItemOf('nb-1', 'c1')!.current).toEqual(live);
+    // Its tab no longer drawn: what it last said.
+    delete state.live[spaceItemViewId('nb-1', 'c1')];
+    state.client.updateNotebookModel.mockClear();
+    await call('spacesSaveItem', {});
+    expect(state.client.updateNotebookModel).toHaveBeenCalledWith('nb-1', live);
+  });
+
+  it('is not overwritten by the view of a load it replaced', async () => {
+    await call('spacesOpenItem', { uid: 'nb-1', type: 'notebook' });
+    const first = openSpaceItemOf('nb-1', 'c1')!.loaded;
+    await call('spacesOpenItem', { uid: 'nb-1', type: 'notebook' });
+    const second = openSpaceItemOf('nb-1', 'c1')!;
+    expect(second.loaded).not.toBe(first);
+    // The outgoing view flushes its old model as it unmounts.
+    updateSpaceItemContent('nb-1', { ...NOTEBOOK, cells: [] }, 'c1', first);
+    expect(openSpaceItemOf('nb-1', 'c1')!.current).toEqual(NOTEBOOK);
+    // The view of the new load is heard.
+    const edited = { ...NOTEBOOK, metadata: { edited: true } };
+    updateSpaceItemContent('nb-1', edited, 'c1', second.loaded);
+    expect(openSpaceItemOf('nb-1', 'c1')!.current).toEqual(edited);
   });
 
   it('says so in a sentence when Spacer refuses', async () => {
@@ -370,7 +498,7 @@ describe('saving an open item', () => {
     expect(await screen.findByText(SPACES_WORDS.saved('Report'))).toBeTruthy();
     expect(state.client.updateLexicalModel).toHaveBeenCalledWith(
       'doc-1',
-      DOCUMENT_STATE,
+      JSON.stringify(DOCUMENT_STATE),
     );
   });
 });

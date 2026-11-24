@@ -22,13 +22,12 @@ import { Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { EphemeralDocument } from '../../../chat/document/EphemeralDocument';
 import { EphemeralNotebook } from '../../../chat/notebook/EphemeralNotebook';
-import { conversationScopedId } from '../../pageTools/conversationScope';
 import { usePageDocumentServices } from '../page-document/usePageDocumentServices';
-import { updateSpaceItemContent, type OpenSpaceItem } from './openItems';
-
-/** The id an open item's editor is registered under, in this conversation. */
-export const spaceItemViewId = (uid: string, conversation = ''): string =>
-  conversationScopedId(`spaces-${uid}`, conversation);
+import {
+  spaceItemViewId,
+  updateSpaceItemContent,
+  type OpenSpaceItem,
+} from './openItems';
 
 const NOTEBOOK_SX = {
   height: '100%',
@@ -53,8 +52,8 @@ export default function SpaceItemView({
   const [initial] = useState(() => item.current);
   const onChange = useCallback(
     (content: string | INotebookContent) =>
-      updateSpaceItemContent(item.uid, content, conversation),
-    [item.uid, conversation],
+      updateSpaceItemContent(item.uid, content, conversation, item.loaded),
+    [item.uid, item.loaded, conversation],
   );
   const viewId = spaceItemViewId(item.uid, conversation);
   if (item.type === 'document') {

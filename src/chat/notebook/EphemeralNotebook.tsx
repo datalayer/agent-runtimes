@@ -38,11 +38,11 @@ import {
   CellSidebarExtension,
   CellSidebarButton,
   JupyterReactTheme,
-  notebookStore,
   disposeServiceManager,
   useJupyterLabCssLoaded,
 } from '@datalayer/jupyter-react';
 import type { ICollaborationProvider } from '@datalayer/jupyter-react';
+import { liveNotebookModel } from './liveNotebookModel';
 import { useAgentsRuntimes } from '../../hooks/useAgentRuntimes';
 import { useResumeServerExecutions } from '../../jupyter/useResumeServerExecutions';
 import { registerSandboxServiceManager } from '../../services/sandboxServiceManagers';
@@ -558,19 +558,7 @@ export function EphemeralNotebook({
     // The `NotebookAdapter` exposes `notebook` (the widget, whose `.model` is
     // the `INotebookModel`) and `panel` (`panel.content.model`). There is NO
     // `notebookPanel` getter, so we read through those real accessors.
-    const readLiveModel = (): INotebookContent | null => {
-      const notebook = notebookStore.getState().selectNotebook(notebookId);
-      const adapter = notebook?.adapter as
-        | {
-            notebook?: { model?: { toJSON?: () => unknown } | null };
-            panel?: { content?: { model?: { toJSON?: () => unknown } | null } };
-          }
-        | undefined;
-      const model =
-        adapter?.notebook?.model ?? adapter?.panel?.content?.model ?? null;
-      const modelJson = model?.toJSON?.() as INotebookContent | undefined;
-      return modelJson ?? null;
-    };
+    const readLiveModel = () => liveNotebookModel(notebookId);
 
     // Persist the current model to the store, but only when it actually
     // changed. This never feeds back into the `nbformat` prop, so the live

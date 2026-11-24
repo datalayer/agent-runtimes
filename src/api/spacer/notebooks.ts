@@ -105,10 +105,13 @@ export const updateNotebook = async (
 
 /**
  * Write a notebook's content: its nbformat model replaces the one Spacer
- * holds (`PUT /notebooks/{id}/model`).
+ * holds (`PUT /notebooks/{id}/model`). The model goes as a JSON object, as
+ * core's client of the route sends it (Spacer writes the object it is given
+ * as JSON, so text would be stored as a string): nbformat given as JSON text
+ * is read into its object first.
  * @param token - Authentication token
  * @param id - The notebook ID
- * @param nbformat - The notebook's content, as nbformat writes it
+ * @param nbformat - The notebook's content, as nbformat writes it, as an object or as JSON text
  * @param baseUrl - Base URL for the API (defaults to production)
  * @returns Promise resolving to Spacer's answer
  */
@@ -122,7 +125,9 @@ export const updateNotebookModel = async (
     url: `${baseUrl}${API_BASE_PATHS.SPACER}/notebooks/${id}/model`,
     method: 'PUT',
     token,
-    body: { nbformat },
+    body: {
+      nbformat: typeof nbformat === 'string' ? JSON.parse(nbformat) : nbformat,
+    },
   });
 };
 

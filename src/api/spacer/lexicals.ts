@@ -105,10 +105,13 @@ export const updateLexical = async (
 
 /**
  * Write a lexical document's content: its Lexical editor state replaces the
- * model Spacer holds (`PUT /lexicals/{id}/model`).
+ * model Spacer holds (`PUT /lexicals/{id}/model`). The model goes as JSON
+ * text, as agent-runtimes' Python clients of the route send it (the
+ * applications' and the scenes' stores): an editor state given as an object
+ * is written to that text first.
  * @param token - Authentication token
  * @param id - The document ID
- * @param model - The document's Lexical editor state
+ * @param model - The document's Lexical editor state, as JSON text or as an object
  * @param baseUrl - Base URL for the API (defaults to production)
  * @returns Promise resolving to the updated document response
  */
@@ -122,7 +125,7 @@ export const updateLexicalModel = async (
     url: `${baseUrl}${API_BASE_PATHS.SPACER}/lexicals/${id}/model`,
     method: 'PUT',
     token,
-    body: { model },
+    body: { model: typeof model === 'string' ? model : JSON.stringify(model) },
   });
 };
 

@@ -27,6 +27,7 @@
 import type { INotebookContent } from '@jupyterlab/nbformat';
 import { coreStore, iamStore } from '@datalayer/core/lib/state';
 import { AgentRuntimesClient } from '../../../client/AgentRuntimesClient';
+import { liveNotebookModel } from '../../../chat/notebook/liveNotebookModel';
 import type { FrontendToolDefinition } from '../../../types/tools';
 import { conversationOf } from '../../pageTools/conversationScope';
 import { revealPanelFor } from '../../shell/sidePanelReveal';
@@ -36,6 +37,8 @@ import {
   openSpaceItem,
   openSpaceItemOf,
   openSpaceItemsOf,
+  spaceItemViewId,
+  updateSpaceItemContent,
   type SpaceItemType,
 } from './openItems';
 
@@ -165,6 +168,8 @@ export async function listSpaceItems(
   client: AgentRuntimesClient = spacesClient(),
 ): Promise<SpaceItemSummary[]> {
   const items = await client.getSpaceItems(spaceUid);
+  // A document is the `document` item a LexicalDTO answers (core's
+  // ItemTypes.LEXICAL), a notebook the `notebook` one.
   return items
     .filter(item => isSpaceItemType(item.type))
     .filter(item => !type || item.type === type)
@@ -218,7 +223,14 @@ export async function loadSpaceItem(
   );
 }
 
-/** Write an open item back to its space, as its tab holds it now. */
+/**
+ * Write an open item back to its space, as its tab holds it now.
+ *
+ * A notebook's view says its changes every half second, so the model of the
+ * notebook drawn in its tab is read at the moment of the save; what it last
+ * said is written only when its tab is not drawn. A document's editor says
+ * each change as it is made, so what it last said is what it holds.
+ */
 export async function saveSpaceItem(
   uid: string,
   conversation = '',
@@ -229,10 +241,13 @@ export async function saveSpaceItem(
     throw new Refusal(SPACES_WORDS.notOpen(uid));
   }
   if (item.type === 'document') {
-    const text = item.current as string;
-    await client.updateLexicalModel(uid, text ? JSON.parse(text) : '');
+    await client.updateLexicalModel(uid, item.current as string);
   } else {
-    await client.updateNotebookModel(uid, item.current);
+    const live = liveNotebookModel(spaceItemViewId(uid, conversation));
+    if (live) {
+      updateSpaceItemContent(uid, live, conversation, item.loaded);
+    }
+    await client.updateNotebookModel(uid, live ?? item.current);
   }
   return item;
 }

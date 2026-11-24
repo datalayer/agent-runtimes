@@ -9,6 +9,12 @@
  * conversation, opened by the person from the list or by the agent
  * (`spacesOpenItem`). An item's tab saves it back to its space and closes.
  *
+ * The tabs are a tablist as core's `ViewTabs` draws one (which has no close
+ * button on a tab): the shown tab alone in the Tab order, Left and Right
+ * moving to the tab before or after and showing it, Home and End to the
+ * first and the last; each tab controls the one tab panel, labelled by the
+ * tab shown.
+ *
  * @module apps/plugins/spaces/SpacesPanel
  */
 
@@ -17,9 +23,12 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useId,
+  useRef,
   useState,
   useSyncExternalStore,
   type JSX,
+  type KeyboardEvent,
 } from 'react';
 import {
   ArrowLeftIcon,
@@ -344,6 +353,45 @@ export default function SpacesPanel({
 }): JSX.Element {
   const { items, selected } = useOpenSpaceItems(conversation);
   const shown = items.find(item => item.uid === selected);
+  const ids = useId();
+  // The list of spaces is the tab keyed '', an item's tab its uid.
+  const tabId = (key: string) => `${ids}-tab-${key || 'spaces'}`;
+  const panelId = `${ids}-panel`;
+  const shownKey = shown?.uid ?? '';
+  const tabs = useRef(new Map<string, HTMLElement | null>());
+  const keys = ['', ...items.map(item => item.uid)];
+  const onTabKeyDown = (event: KeyboardEvent<HTMLElement>, at: string) => {
+    const index = keys.indexOf(at);
+    const next =
+      event.key === 'ArrowRight'
+        ? keys[(index + 1) % keys.length]
+        : event.key === 'ArrowLeft'
+          ? keys[(index - 1 + keys.length) % keys.length]
+          : event.key === 'Home'
+            ? keys[0]
+            : event.key === 'End'
+              ? keys[keys.length - 1]
+              : undefined;
+    if (index < 0 || next === undefined) {
+      return;
+    }
+    event.preventDefault();
+    selectSpaceItem(next || undefined, conversation);
+    tabs.current.get(next)?.focus();
+  };
+  const tabProps = (key: string) => ({
+    as: 'button' as const,
+    type: 'button' as const,
+    role: 'tab',
+    id: tabId(key),
+    'aria-selected': key === shownKey,
+    'aria-controls': panelId,
+    tabIndex: key === shownKey ? 0 : -1,
+    ref: (node: HTMLElement | null) => {
+      tabs.current.set(key, node);
+    },
+    onKeyDown: (event: KeyboardEvent<HTMLElement>) => onTabKeyDown(event, key),
+  });
   const tabSx = (active: boolean) => ({
     display: 'inline-flex',
     alignItems: 'center',
@@ -380,10 +428,7 @@ export default function SpacesPanel({
         }}
       >
         <Box
-          as="button"
-          type="button"
-          role="tab"
-          aria-selected={!shown}
+          {...tabProps('')}
           onClick={() => selectSpaceItem(undefined, conversation)}
           sx={tabSx(!shown)}
         >
@@ -396,10 +441,7 @@ export default function SpacesPanel({
           return (
             <Box key={item.uid} display="inline-flex" alignItems="center">
               <Box
-                as="button"
-                type="button"
-                role="tab"
-                aria-selected={active}
+                {...tabProps(item.uid)}
                 data-spaces-tab={item.uid}
                 onClick={() => selectSpaceItem(item.uid, conversation)}
                 sx={tabSx(active)}
@@ -418,11 +460,21 @@ export default function SpacesPanel({
           );
         })}
       </Box>
-      {shown ? (
-        <ItemTab key={shown.uid} item={shown} conversation={conversation} />
-      ) : (
-        <SpacesBrowser conversation={conversation} />
-      )}
+      <Box
+        role="tabpanel"
+        id={panelId}
+        aria-labelledby={tabId(shownKey)}
+        display="flex"
+        flexDirection="column"
+        flex={1}
+        minHeight={0}
+      >
+        {shown ? (
+          <ItemTab key={shown.uid} item={shown} conversation={conversation} />
+        ) : (
+          <SpacesBrowser conversation={conversation} />
+        )}
+      </Box>
     </Box>
   );
 }
