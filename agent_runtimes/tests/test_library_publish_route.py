@@ -22,7 +22,7 @@ def test_an_explicitly_confirmed_owned_item_is_published(monkeypatch) -> None:
     monkeypatch.setenv("DATALAYER_USER_TOKEN", "owner-token")
     monkeypatch.setenv("DATALAYER_LIBRARY_URL", "https://library.example")
     monkeypatch.setenv("DATALAYER_UI_URL", "https://datalayer.ai")
-    sent = {}
+    sent: dict[str, object] = {}
 
     async def publish(url, token, payload):
         sent.update(url=url, token=token, payload=payload)
