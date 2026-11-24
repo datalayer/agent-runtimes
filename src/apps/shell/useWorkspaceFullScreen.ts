@@ -126,6 +126,18 @@ export const FULL_SCREEN_PORTAL_CLASS = 'datalayer-fullscreen-portal';
  * Escape — moves out with the node into the page's root, where it is seen and
  * can be closed; an empty node goes. Any landing for any element.
  */
+/** The rule that gives the overlays in a full-screen portal root their clicks back. */
+function ensureClickThroughRule(doc: Document): void {
+  const id = `${FULL_SCREEN_PORTAL_CLASS}-rule`;
+  if (doc.getElementById(id)) {
+    return;
+  }
+  const rule = doc.createElement('style');
+  rule.id = id;
+  rule.textContent = `.${FULL_SCREEN_PORTAL_CLASS} > * { pointer-events: auto; }`;
+  doc.head.appendChild(rule);
+}
+
 export function holdOverlaysInside(node: HTMLElement): () => void {
   // An earlier hold's node, emptied since its overlays closed: gone now.
   (node.getRootNode() as Document | ShadowRoot)
@@ -137,13 +149,23 @@ export function holdOverlaysInside(node: HTMLElement): () => void {
     });
   const root = document.createElement('div');
   root.className = FULL_SCREEN_PORTAL_CLASS;
+  // The whole screen, and the overlays' clipping node: Primer places a menu within the
+  // first ancestor of it whose overflow is not visible. Without one here, that was an
+  // ancestor of the element at full screen, the box the workspace stood in on the page,
+  // and the footer's menus were placed in it, under the footer or off the screen (the
+  // user, 24 November 2026). Clicks pass through it to the workspace; its overlays
+  // take them (`ensureClickThroughRule`).
   Object.assign(root.style, {
     position: 'fixed',
     top: '0',
     left: '0',
     width: '100%',
+    height: '100%',
+    overflow: 'hidden',
+    pointerEvents: 'none',
     zIndex: '9999',
   });
+  ensureClickThroughRule(node.ownerDocument);
   node.appendChild(root);
   registerPortalRoot(root);
   return () => {
@@ -159,7 +181,14 @@ export function holdOverlaysInside(node: HTMLElement): () => void {
     }
     const back = pageRoot();
     if (back && root.childElementCount > 0) {
-      root.style.position = 'absolute';
+      // Out of full screen, an ordinary portal again: no longer the screen's size, clipping
+      // or letting clicks through.
+      Object.assign(root.style, {
+        position: 'absolute',
+        height: '',
+        overflow: '',
+        pointerEvents: '',
+      });
       back.appendChild(root);
     } else {
       root.remove();

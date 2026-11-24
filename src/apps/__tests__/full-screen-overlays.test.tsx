@@ -125,3 +125,46 @@ describe('overlays over the CSS overlay (the user, 24 November 2026)', () => {
     ).toBeNull();
   });
 });
+
+describe('the full-screen portal root as the overlays’ clipping node (the user, 24 November 2026)', () => {
+  it('covers the screen, clips, lets clicks through to the workspace and back to its overlays', () => {
+    const workspace = document.createElement('div');
+    document.body.appendChild(workspace);
+    const release = holdOverlaysInside(workspace);
+    const root = workspace.querySelector(
+      `.${FULL_SCREEN_PORTAL_CLASS}`,
+    ) as HTMLElement;
+    expect(root.style.position).toBe('fixed');
+    expect([root.style.width, root.style.height]).toEqual(['100%', '100%']);
+    // Primer places a menu within the first ancestor whose overflow is not visible: this one.
+    expect(root.style.overflow).toBe('hidden');
+    expect(root.style.pointerEvents).toBe('none');
+    const rule = document.getElementById(`${FULL_SCREEN_PORTAL_CLASS}-rule`);
+    expect(rule?.textContent).toBe(
+      `.${FULL_SCREEN_PORTAL_CLASS} > * { pointer-events: auto; }`,
+    );
+    // An overlay still open when full screen ends: an ordinary portal again.
+    const open = render(
+      <ThemeProvider>
+        <Menu />
+      </ThemeProvider>,
+    );
+    act(() => release());
+    const moved = open
+      .getByTestId('menu')
+      .closest(`.${FULL_SCREEN_PORTAL_CLASS}`) as HTMLElement;
+    expect([
+      moved.style.position,
+      moved.style.height,
+      moved.style.overflow,
+      moved.style.pointerEvents,
+    ]).toEqual(['absolute', '', '', '']);
+    open.unmount();
+    // One rule, however many holds.
+    act(() => holdOverlaysInside(workspace)());
+    expect(
+      document.querySelectorAll(`#${FULL_SCREEN_PORTAL_CLASS}-rule`),
+    ).toHaveLength(1);
+    workspace.remove();
+  });
+});
