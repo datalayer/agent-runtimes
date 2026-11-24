@@ -27,6 +27,9 @@ import { useEditorToolbar } from '../../core/toolbar';
 import { openingCode, openingNotebook } from './openingNotebook';
 import { useSandboxService } from '../agents';
 
+/** The notebook editor's contribution id, which the workspace's chat hands its surface. */
+const NOTEBOOK_SURFACE_ID = 'notebook';
+
 export default function NotebookView({
   surfaceId,
   workspace,
@@ -34,8 +37,12 @@ export default function NotebookView({
   const service = useSandboxService();
   const snapshot = useSignalValue(service.snapshot);
   // Named once: it identifies the notebook to its store, and it is what a
-  // toolbar item is handed so it can report on *this* notebook.
-  const notebookId = surfaceId;
+  // toolbar item is handed so it can report on *this* notebook. In the
+  // workspace the chat hands its surface the contribution's id ('notebook'),
+  // and the notebook is the one the workspace minted, which its tools address;
+  // the page notebook hands its own view id, the conversation's notebook.
+  const notebookId =
+    surfaceId === NOTEBOOK_SURFACE_ID ? workspace.surfaceId : surfaceId;
 
   // The toolbar is not this view's to draw. It offers the point, and a plugin
   // provides the bar; with that plugin switched off there is no toolbar here

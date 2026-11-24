@@ -77,6 +77,8 @@ describe('the UI plugins an application is drawn with (R8)', () => {
           choice =>
             !UI_CATALOGUE[choice.plugin]?.header &&
             !getFrontendToolSpec(choice.plugin) &&
+            // The notebook in the page is a page UI too: it binds the notebook tool sets to its tab.
+            choice.plugin !== 'page-notebook' &&
             choice.plugin !== 'composer-portal',
         ),
       ).toEqual(uiOf(APP_CATALOGUE[id]));

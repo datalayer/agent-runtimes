@@ -48,7 +48,8 @@ const ASKS = sse([
   {
     type: 'TOOL_CALL_START',
     toolCallId: 'call-1',
-    toolCallName: 'set_shop_header',
+    // The model calls it by the public name the chat hands it.
+    toolCallName: 'setShopHeader',
   },
   {
     type: 'TOOL_CALL_ARGS',
@@ -144,7 +145,7 @@ async function mountChat(
 
 const statusOf = (container: HTMLElement): string | null =>
   container
-    .querySelector('[data-tool-call="set_shop_header"]')
+    .querySelector('[data-tool-call="setShopHeader"]')
     ?.getAttribute('data-tool-call-status') ?? null;
 
 describe("a page tool's call in the chat", () => {
@@ -174,7 +175,7 @@ describe("a page tool's call in the chat", () => {
       (message: { role: string }) => message.role === 'tool',
     );
     expect(tools).toHaveLength(1);
-    expect(tools[0].error).toBe('set_shop_header failed: Nothing to set.');
+    expect(tools[0].error).toBe('setShopHeader failed: Nothing to set.');
     expect(statusOf(chat.container)).toBe('error');
     await chat.unmount();
   });

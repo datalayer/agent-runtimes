@@ -18,7 +18,9 @@ describe('untilMounted', () => {
 
   it('runs at once when the surface is already mounted, asking for no panel', async () => {
     const before = lastReveal()?.seq ?? 0;
-    const handler = vi.fn(async () => ({ ok: true }));
+    const handler = vi.fn(async (_args: Record<string, unknown>) => ({
+      ok: true,
+    }));
     const [tool] = untilMounted(
       [
         {
@@ -32,7 +34,8 @@ describe('untilMounted', () => {
       'the document',
     );
     await expect(tool.handler!({ a: 1 })).resolves.toEqual({ ok: true });
-    expect(handler).toHaveBeenCalledWith({ a: 1 });
+    // The call's context goes with it (its conversation), unsaid here.
+    expect(handler.mock.calls[0][0]).toEqual({ a: 1 });
     expect(lastReveal()?.seq ?? 0).toBe(before);
   });
 

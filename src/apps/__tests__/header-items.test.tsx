@@ -62,6 +62,7 @@ import {
 } from '../toolCards/headerState';
 import { PAGE_TOOL_RESULTS } from '../toolCards/toolResults';
 import { UI_CATALOGUE } from '../../specs/ui';
+import { frontendToolName } from '../../tools/frontendToolNames';
 import { AGENTSPECS } from '../../specs/agents';
 import { agentAppspec } from '../AIApplication';
 import type { UiHeaderItemSpec } from '../../types/agentspecs';
@@ -170,7 +171,8 @@ describe('a header UI in the catalogue', () => {
   // from the agentspecs release that has the header UIs.
   it.each(Object.entries(SEED))('%s names its header', (agent, [, ui]) => {
     expect(agentUiChoicesOf(agent).map(choice => choice.plugin)).toContain(ui);
-    const tool = headerSpecOf(ui).tool!;
+    // The model is told the header's tool by its public name (setShopHeader, notebookSetHeader).
+    const tool = frontendToolName(headerSpecOf(ui).tool!);
     expect(AGENTSPECS[agent].systemPrompt).toContain(tool);
     // A visitor's demo mounts it: it needs no connection of theirs.
     expect(

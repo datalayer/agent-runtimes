@@ -95,7 +95,7 @@ describe('whose a tool call is', () => {
   });
 
   it('a frontend tool is its set’s, a runtime tool its spec’s', () => {
-    expect(marksOfToolCall('readCell', {})).toMatchObject({
+    expect(marksOfToolCall('notebookReadCell', {})).toMatchObject({
       kind: 'frontend',
       icon: '@datalayer/icons-react:jupyter',
     });
@@ -159,8 +159,8 @@ describe('a frontend set whose toolset is all', () => {
   it('gives its tools its marks once its adapter registers them', async () => {
     const { marksOfFrontendTool, registerFrontendToolset } =
       await import('../toolMarks');
-    // The edit set names insertCell; deleteCells is only in the 'all' set.
-    expect(marksOfFrontendTool('insertCell').icon).toBe(
+    // The edit set names notebookInsertCell; deleteCells is only in the 'all' set.
+    expect(marksOfFrontendTool('notebookInsertCell').icon).toBe(
       '@datalayer/icons-react:jupyter',
     );
     expect(marksOfFrontendTool('a')).toEqual({

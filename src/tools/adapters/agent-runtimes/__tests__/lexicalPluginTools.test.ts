@@ -57,35 +57,36 @@ describe('createLexicalTools', () => {
   it('offers the block tools when no plugin has registered', () => {
     const names = toolNames();
     expect(names.length).toBeGreaterThan(0);
-    expect(names.some(name => name.includes('excalidraw'))).toBe(false);
+    expect(names.some(name => /excalidraw/i.test(name))).toBe(false);
   });
 
   it('offers a plugin’s tools once it has registered', () => {
     lexicalStore.getState().registerPluginTools(DOC, excalidrawPluginTools);
 
     const names = toolNames();
-    // Named for the plugin, as `excalidrawToolMismatches` insists.
-    const drawing = names.filter(name => name.includes('excalidraw'));
+    // Named for the plugin, as `excalidrawToolMismatches` insists, under the
+    // document's domain (documentExcalidrawInsertNode).
+    const drawing = names.filter(name => /excalidraw/i.test(name));
     expect(drawing.length).toBe(excalidrawPluginTools.definitions.length);
-    expect(names.some(n => n.endsWith('excalidrawInsertNode'))).toBe(true);
-    expect(names.some(n => n.endsWith('excalidrawReadScene'))).toBe(true);
+    expect(names.some(n => n.endsWith('ExcalidrawInsertNode'))).toBe(true);
+    expect(names.some(n => n.endsWith('ExcalidrawReadScene'))).toBe(true);
   });
 
   it('does not offer them to a different document on the same page', () => {
     lexicalStore.getState().registerPluginTools(DOC, excalidrawPluginTools);
 
     const otherNames = createLexicalTools('another-doc').map(t => t.name);
-    expect(otherNames.some(name => name.includes('excalidraw'))).toBe(false);
+    expect(otherNames.some(name => /excalidraw/i.test(name))).toBe(false);
   });
 
   it('takes them away again when the plugin unmounts', () => {
     lexicalStore.getState().registerPluginTools(DOC, excalidrawPluginTools);
-    expect(toolNames().some(n => n.includes('excalidraw'))).toBe(true);
+    expect(toolNames().some(n => /excalidraw/i.test(n))).toBe(true);
 
     lexicalStore
       .getState()
       .unregisterPluginTools(DOC, excalidrawPluginTools.name);
-    expect(toolNames().some(n => n.includes('excalidraw'))).toBe(false);
+    expect(toolNames().some(n => /excalidraw/i.test(n))).toBe(false);
   });
 
   it('gives every advertised tool something that can execute it', () => {
@@ -145,7 +146,7 @@ describe('createLexicalTools', () => {
     );
 
     const listDrawings = createLexicalTools(DOC).find(tool =>
-      tool.name.endsWith('excalidrawListDrawings'),
+      tool.name.endsWith('ExcalidrawListDrawings'),
     );
     expect(listDrawings).toBeDefined();
 
