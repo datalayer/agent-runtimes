@@ -101,7 +101,13 @@ def runtime_app() -> FastAPI:
 
 @pytest.fixture
 def launched(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    """A runtime launched for a deployment, held to its own routes, holding a pod secret."""
+    """A runtime launched for a deployment, held to its own routes, holding a pod secret.
+
+    Yields
+    ------
+    None
+        Control to the test, with the launched runtime's environment set.
+    """
     from agent_runtimes.apps import principal
 
     async def nothing_read(*_: Any) -> None:

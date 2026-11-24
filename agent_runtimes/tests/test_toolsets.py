@@ -15,7 +15,10 @@ class TestResolve:
         assert resolve_toolset("jupyter-notebook") is None
 
     def test_a_named_bundle_grants_exactly_its_list(self) -> None:
-        assert resolve_toolset("jupyter-notebook-read") == ("notebookReadCell", "notebookReadAllCells")
+        assert resolve_toolset("jupyter-notebook-read") == (
+            "notebookReadCell",
+            "notebookReadAllCells",
+        )
 
     def test_a_versioned_reference_resolves(self) -> None:
         assert resolve_toolset("jupyter-notebook-read:0.0.1") == (
@@ -29,7 +32,12 @@ class TestResolve:
     def test_bundles_union(self) -> None:
         assert resolve_allowed_tools(
             ["jupyter-notebook-read", "jupyter-notebook-propose"]
-        ) == ("notebookReadCell", "notebookReadAllCells", "notebookProposeCellUpdate", "notebookRunCell")
+        ) == (
+            "notebookReadCell",
+            "notebookReadAllCells",
+            "notebookProposeCellUpdate",
+            "notebookRunCell",
+        )
 
     def test_asking_for_everything_wins(self) -> None:
         # Narrowing is opting out; it should not happen by accident.
