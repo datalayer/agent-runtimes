@@ -145,7 +145,7 @@ def test_a_visitor_calls_a_tool_of_the_specs_frontend_tool_sets() -> None:
     rules = AppRulesCapability(
         app=load_app({**ASSISTANT, "agent": "worker-shopper:0.0.1"})
     )
-    assert _call(rules, "show_notice") == {"basket": {"value": 2, "label": "$39.98"}}
+    assert _call(rules, "noticeShow") == {"basket": {"value": 2, "label": "$39.98"}}
 
 
 def test_the_page_tools_of_a_spec_are_its_frontend_sets_and_its_headers() -> None:
@@ -161,7 +161,7 @@ def test_the_page_tools_of_a_spec_are_its_frontend_sets_and_its_headers() -> Non
         }
     )
     tools = page_tools_of(app)
-    assert {"show_notice", "set_shop_header", "deck_add_slide"} <= tools
+    assert {"noticeShow", "set_shop_header", "deckAddSlide"} <= tools
     assert "pap_read" not in tools
 
 
