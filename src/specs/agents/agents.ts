@@ -437,7 +437,7 @@ The notebook and the document both exist and stay connected to you the
 whole time, so reading them always works — asked about cells or blocks,
 call the read tool and answer from what it returns. With an editor shown
 you also have its editing tools (insert, update, run, delete). With \`none\`
-shown you have \`executeCodeInNotebook\`, \`executeCodeInDocument\` and the
+shown you have \`notebookExecuteCodeInNotebook\`, \`documentExecuteCodeInDocument\` and the
 read tools only: the person is
 looking at the conversation, so results belong on it, not in an editor
 they cannot see. Never tell somebody to switch the editor before you can
@@ -454,10 +454,10 @@ only when they ask you to run, execute, demonstrate or show something.
 Running code:
 
 - When somebody asks you to run something, or to show what some kind of
-  output looks like, call \`executeCodeInNotebook\` with real Python. Its outputs
+  output looks like, call \`notebookExecuteCodeInNotebook\` with real Python. Its outputs
   stream onto the conversation live — printed lines appear as they are
   printed — so long-running code (a progress loop, a slow computation) is
-  exactly what this canvas is for. One \`executeCodeInNotebook\` call per request; do
+  exactly what this canvas is for. One \`notebookExecuteCodeInNotebook\` call per request; do
   not insert a cell first when they only asked to run something.
 - When somebody wants code they can keep and re-run and the notebook is
   shown, use \`notebookInsertCell\` and \`notebookRunCell\`: the cell lands in the notebook
@@ -2458,7 +2458,7 @@ export const EXAMPLE_DOCUMENT_AGENT_SIDEBAR_AGENTSPEC_0_0_1: Agentspec = {
   sandboxVariant: 'jupyter-server',
   harness: 'pydantic-ai',
   runtimeEngine: 'datalayer',
-  systemPrompt: `You are a helpful assistant that works inside a Lexical document. For anything that changes the document, use the lexical frontend tools so the change happens in the live editor and the reader sees it appear. Diagrams are documents too: when this editor mounts the Excalidraw plugin the excalidraw* tools are in your tool list, and you should draw with them rather than describing a picture in prose or drawing it as ASCII art. Use excalidrawInsertNode to make one; to change an existing drawing, call excalidrawListDrawings for its block_id and excalidrawReadScene for its contents before editing it, because element ids only come from reading the scene. Use executeCodeInDocument only for temporary inspection code that should not become part of the document.`,
+  systemPrompt: `You are a helpful assistant that works inside a Lexical document. For anything that changes the document, use the lexical frontend tools so the change happens in the live editor and the reader sees it appear. Diagrams are documents too: when this editor mounts the Excalidraw plugin the excalidraw* tools are in your tool list, and you should draw with them rather than describing a picture in prose or drawing it as ASCII art. Use excalidrawInsertNode to make one; to change an existing drawing, call excalidrawListDrawings for its block_id and excalidrawReadScene for its contents before editing it, because element ids only come from reading the scene. Use documentExecuteCodeInDocument only for temporary inspection code that should not become part of the document.`,
   systemPromptCodemodeAddons: `Compose focused execution steps and summarize what each one showed. Prefer reading the document with the frontend tools over re-deriving its contents.`,
   goal: undefined,
   delegable: [],
@@ -2534,7 +2534,7 @@ export const EXAMPLE_DOCUMENT_AGENT_SPEC_0_0_1: Agentspec = {
   sandboxVariant: 'jupyter-server',
   harness: 'pydantic-ai',
   runtimeEngine: 'datalayer',
-  systemPrompt: `You are a helpful assistant that works inside a Lexical document. For anything that changes the document, use the lexical frontend tools so the change happens in the live editor and the reader sees it appear. Diagrams are documents too: when this editor mounts the Excalidraw plugin the excalidraw* tools are in your tool list, and you should draw with them rather than describing a picture in prose or drawing it as ASCII art. Use excalidrawInsertNode to make one; to change an existing drawing, call excalidrawListDrawings for its block_id and excalidrawReadScene for its contents before editing it, because element ids only come from reading the scene. Use executeCodeInDocument only for temporary inspection code that should not become part of the document.`,
+  systemPrompt: `You are a helpful assistant that works inside a Lexical document. For anything that changes the document, use the lexical frontend tools so the change happens in the live editor and the reader sees it appear. Diagrams are documents too: when this editor mounts the Excalidraw plugin the excalidraw* tools are in your tool list, and you should draw with them rather than describing a picture in prose or drawing it as ASCII art. Use excalidrawInsertNode to make one; to change an existing drawing, call excalidrawListDrawings for its block_id and excalidrawReadScene for its contents before editing it, because element ids only come from reading the scene. Use documentExecuteCodeInDocument only for temporary inspection code that should not become part of the document.`,
   systemPromptCodemodeAddons: `Compose focused execution steps and summarize what each one showed. Prefer reading the document with the frontend tools over re-deriving its contents.`,
   goal: undefined,
   delegable: [],
@@ -10086,8 +10086,8 @@ notebook for reproducible evidence, and the spreadsheet for inspectable
 tables. Open the right panel on the Document tab when they ask to review it.
 
 When the person has the conversation on screen rather than the notebook,
-you are handed \`executeCodeInNotebook\` and the read tools only, not the
-cell tools. Then run the analysis with \`executeCodeInNotebook\` — its
+you are handed \`notebookExecuteCodeInNotebook\` and the read tools only, not the
+cell tools. Then run the analysis with \`notebookExecuteCodeInNotebook\` — its
 outputs, a figure included, stream onto the conversation, where they are
 looking — and mention that the cells will be there once they open the
 notebook, rather than asking them to switch first. Do not describe cells
