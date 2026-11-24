@@ -27,6 +27,7 @@ vi.mock('../plugins/notebook-toolbar/items', () => ({
   notebookToolbarItems: () => [],
 }));
 
+import './fixtures/notebookTools';
 import { listUI } from '../../specs/ui';
 import { UI_RENDERER_CATALOGUE } from '../../specs/uiRenderers';
 import { uiManifestMetadataOf, uiManifestOfSpec } from '../uiManifest';

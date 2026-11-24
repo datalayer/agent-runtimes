@@ -626,7 +626,9 @@ class TestAgentServesIt:
 VISITORS_KEY = _token(task_grant_uid="grant-v", task_id="a2a:local:accounting:v1")
 
 
-def _visitor_token(visitor: str = "tab-ada-0001", app: str = "accounting") -> str:
+def _visitor_token(
+    visitor: str = "tab-ada-0001", app: str = "accounting", unlimited: bool = False
+) -> str:
     """A visitor's token, as ai-inference mints it (its audience is what is read)."""
     return jwt.encode(
         {
@@ -635,6 +637,7 @@ def _visitor_token(visitor: str = "tab-ada-0001", app: str = "accounting") -> st
             "visitor": visitor,
             "app": app,
             "exp": int(time.time()) + 300,
+            **({"turns_unlimited": True} if unlimited else {}),
         },
         "ai-inferences-own-secret",
         algorithm="HS256",
@@ -651,7 +654,12 @@ def inference(monkeypatch: Any) -> list[str]:
         claims = jwt.decode(token, options={"verify_signature": False})
         if claims["visitor"].startswith("spent"):
             raise CallerRefused(401, "Your visitor's token has run out.")
-        return Caller(kind="visitor", uid=claims["visitor"], app_uid=claims["app"])
+        return Caller(
+            kind="visitor",
+            uid=claims["visitor"],
+            app_uid=claims["app"],
+            turns_unlimited=claims.get("turns_unlimited") is True,
+        )
 
     monkeypatch.setattr(VERIFIER, "verify_visitor", verify_visitor)
     monkeypatch.delenv(apps_a2a.VISITOR_TURNS_ENV, raising=False)
@@ -796,6 +804,26 @@ class TestVisitors:
         assert "1 times today without an account" in again.json()["detail"]
         assert read.status_code == 200
         assert len(agent.contexts) == 2
+
+    @pytest.mark.asyncio
+    async def test_an_allowlisted_visitor_is_not_held_to_a_visitors_runs(
+        self, state: Any, platform: list[str], inference: list[str], monkeypatch: Any
+    ) -> None:
+        """ai-inference exempts the address (its allowlist): the token says so,
+        and only the owner's ceiling for all visitors still counts them."""
+        monkeypatch.setenv(apps_a2a.VISITOR_TURNS_ENV, "1")
+        monkeypatch.setenv(apps_a2a.VISITORS_DAY_ENV, "3")
+        async with (
+            served(state, True, VISITORS_KEY) as (app, agent),
+            _client(app, REMOTE) as client,
+        ):
+            exempt = [
+                await _ask_as(client, _visitor_token(unlimited=True)) for _ in range(3)
+            ]
+            past_ceiling = await _ask_as(client, _visitor_token(unlimited=True))
+        assert [response.status_code for response in exempt] == [200, 200, 200]
+        assert past_ceiling.status_code == 429
+        assert "3 visitors' requests for today" in past_ceiling.json()["detail"]
 
     @pytest.mark.asyncio
     async def test_all_visitors_together_have_a_ceiling_a_day(

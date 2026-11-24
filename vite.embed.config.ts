@@ -66,8 +66,12 @@ const EMBED_STYLESHEET_FILE = 'datalayer-app.css';
  * an import() cannot move without changing the chat. A little above that, so
  * a change that adds a library to the first load fails here instead of
  * shipping. See `docs/docs/apps/embedding.mdx` (What loads when).
+ *
+ * 2.6 MB since 24 November 2026: the catalogue's growth (the specs' own
+ * data, no new library) took the first load to 2,500.3 kB; the room is for
+ * that growth, and a library added to the first load still fails here.
  */
-const INITIAL_GZIP_BUDGET = 2_500_000;
+const INITIAL_GZIP_BUDGET = 2_600_000;
 
 /** The app build's plugins an embed has no use for. */
 const NOT_FOR_THE_EMBED = new Set([

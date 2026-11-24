@@ -19,6 +19,7 @@ import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { iamStore } from '@datalayer/core/lib/state/substates/IAMState';
 import { getApp } from '../../specs/apps';
+import { getAgentspecs } from '../../specs/agents';
 import { dumpAppspec } from '../apps/appspec';
 import { LOCKED_UI_PLUGIN_NAME } from '../plugins/locked-ui';
 
@@ -251,6 +252,55 @@ describe('AIApplication in visitor mode', () => {
 });
 
 describe('AIApplication in runtime mode', () => {
+  it('keeps a notebook placed in a side-panel tab out of the middle editor column', () => {
+    const spec = getAgentspecs('worker-data-analyst');
+    expect(spec?.version).toBe('0.0.2');
+    expect(spec?.systemPrompt).toMatch(
+      /They are available in a\s+public demo too\./,
+    );
+    expect(spec?.systemPrompt).toContain(
+      'populate the already-mounted blank tab',
+    );
+    expect(spec?.systemPrompt).toContain('documentReadAllBlocks');
+    expect(spec?.systemPrompt).not.toContain('documentReadBlocks');
+    expect(spec?.ui?.map(choice => choice.plugin)).toContain('page-notebook');
+    expect(spec?.frontendTools?.map(tool => tool.id)).toContain(
+      'jupyter-notebook',
+    );
+    const app = agentAppspec(spec!);
+
+    expect(app.interface.layout).toBe('chat');
+    expect(app.ui).toContainEqual(
+      expect.objectContaining({
+        plugin: 'page-notebook',
+        placement: 'right',
+        tab: 'Notebook',
+      }),
+    );
+
+    const demo = getApp('demo-data-analyst');
+    expect(demo?.version).toBe('0.0.7');
+    expect(demo?.agent).toBe('worker-data-analyst:0.0.2');
+    expect(demo?.instructions).toContain(
+      'They require no account and no filesystem.',
+    );
+    expect(demo?.instructions).toContain('documentReadAllBlocks');
+    expect(demo?.instructions).not.toContain('documentReadBlocks');
+  });
+
+  it('does not infer a work surface from a frontend tool declaration alone', () => {
+    const spec = getAgentspecs('worker-data-analyst')!;
+    const toolOnly = {
+      id: 'worker-tool-only',
+      name: 'Tool only',
+      description: 'Has notebook tools but no injected surface UI.',
+      frontendTools: spec.frontendTools,
+    };
+    const app = agentAppspec(toolOnly);
+
+    expect(app.interface.layout).toBe('chat');
+  });
+
   it('talks to the agent already on the person’s runtime, by its name there, and goes on with its session', async () => {
     iamStore.setState({ token: 'jwt' } as never);
     const spec = {

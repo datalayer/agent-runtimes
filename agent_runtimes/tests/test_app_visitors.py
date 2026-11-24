@@ -60,14 +60,20 @@ from agent_runtimes.tests.test_app_sessions import (
 
 
 class Visitors:
-    """Each token is ``v:<visitor>:<app>``: what ai-inference would say of it."""
+    """Each token is ``v:<visitor>:<app>``: what ai-inference would say of it.
+
+    ``u:<visitor>:<app>`` is a visitor whose address ai-inference's allowlist
+    exempts: its ``/anonymous/whoami`` says ``turns_unlimited``.
+    """
 
     async def verify(self, token: str, app_uid: str = "") -> Caller:
         kind, _, rest = token.partition(":")
-        if kind != "v":
+        if kind not in ("v", "u"):
             raise CallerRefused(403, ONLY_VISITORS)
         visitor, _, app = rest.partition(":")
-        return Caller(kind="visitor", uid=visitor, app_uid=app)
+        return Caller(
+            kind="visitor", uid=visitor, app_uid=app, turns_unlimited=kind == "u"
+        )
 
 
 @pytest.fixture()
@@ -288,10 +294,50 @@ def test_the_visitors_runtime_refuses_a_person_and_asks_ai_inference_for_a_visit
     token = _token(sub="anonymous:j", aud=visitors.ANONYMOUS_AUDIENCE)
     caller = _verify(token)
     assert caller == Caller(kind="visitor", uid="tab-ada-0001", app_uid="web-research")
+    assert caller.turns_unlimited is False
     assert asked == ["https://inference.example/api/ai-inference/v1/anonymous/whoami"]
     with pytest.raises(CallerRefused) as lapsed:
         _verify(_token(sub="anonymous:k", aud=visitors.ANONYMOUS_AUDIENCE) + "lapsed")
     assert lapsed.value.status == 401
+
+
+def test_ai_inference_says_whether_a_visitors_address_is_exempt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The exemption is decided where the token was minted, from the visitor's
+    address and ai-inference's allowlist: the runtime reads it from whoami."""
+    monkeypatch.setenv(visitors.VISITORS_ENV, "web-research")
+    monkeypatch.setenv("DATALAYER_AI_INFERENCE_URL", "https://inference.example")
+
+    def answer(request: httpx.Request) -> httpx.Response:
+        said: Dict[str, Any] = {
+            "visitor": "tab-ada-0001",
+            "app": "web-research",
+            "expires_in": 200,
+        }
+        bearer = request.headers["authorization"].removeprefix("Bearer ")
+        # What ai-inference decided when it minted the token, said back here.
+        exempt = jwt.decode(bearer, options={"verify_signature": False})["exempt"]
+        if exempt is not None:
+            said["turns_unlimited"] = exempt
+        return httpx.Response(200, json=said)
+
+    real = httpx.AsyncClient
+    monkeypatch.setattr(
+        callers.httpx,
+        "AsyncClient",
+        lambda **kwargs: real(transport=httpx.MockTransport(answer), **kwargs),
+    )
+
+    def visitor(exempt: Any) -> Caller:
+        return _verify(
+            _token(sub="anonymous:x", aud=visitors.ANONYMOUS_AUDIENCE, exempt=exempt)
+        )
+
+    assert visitor(True).turns_unlimited is True
+    assert visitor(None).turns_unlimited is False
+    # Only a true is an exemption.
+    assert visitor("yes").turns_unlimited is False
 
 
 # --- limits --------------------------------------------------------------------------
@@ -323,6 +369,38 @@ def test_a_visitor_has_so_many_turns_a_day_whatever_the_session(
         ).status_code
         == 200
     )
+
+
+def test_an_allowlisted_visitor_is_not_counted_turns(
+    runtime: Runtime, visitors_runtime: TestClient
+) -> None:
+    """ai-inference's allowlist exempts the address: past the day's 3 turns."""
+    make_example(runtime)
+    exempt = {"Authorization": "Bearer u:tab-eve-0005:notes-assistant"}
+    for turn in range(5):
+        response = visitors_runtime.post(
+            AGUI, headers=exempt, json=agui(f"thread-e{turn}", f"Turn {turn}")
+        )
+        assert response.status_code == 200, response.text
+        events_of(response)
+
+
+def test_an_allowlisted_visitors_session_still_has_its_minutes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv(visitors.SESSION_MINUTES_ENV, "15")
+    monkeypatch.setenv(visitors.TURNS_ENV, "1")
+    visitors.forget_turns()
+    now = datetime.now(timezone.utc).isoformat()
+    for _ in range(3):
+        assert admit_turn("tab-eve-0005", now, unlimited=True) == ""
+    # Not counted: an ordinary turn of the same visitor is still their first.
+    assert admit_turn("tab-eve-0005", now) == ""
+    started = datetime.now(timezone.utc) - timedelta(minutes=16)
+    assert admit_turn("tab-eve-0005", started.isoformat(), unlimited=True) == (
+        "This conversation without an account has had its 15 minutes: start a new one, or sign in to keep going."
+    )
+    visitors.forget_turns()
 
 
 def test_a_session_lives_so_many_minutes(monkeypatch: pytest.MonkeyPatch) -> None:

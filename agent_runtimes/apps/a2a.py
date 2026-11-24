@@ -45,8 +45,11 @@ owner's key granted to this route that reaches the connections read only
 runs, so they are counted at the gate (:class:`VisitorsOpen`): a few a day per
 visitor (``AGENT_RUNTIMES_A2A_VISITOR_TURNS``, 3) and a ceiling a day for all
 of them together (``AGENT_RUNTIMES_A2A_VISITORS_TURNS_A_DAY``, 100), each said
-in a sentence when reached (429). Only a request that starts a run is counted:
-reading a task is not. The counts live in this process.
+in a sentence when reached (429). A visitor whose token ai-inference minted
+from an address on its allowlist (``turns_unlimited``) is not held to the few
+a visitor has, and still counts toward the ceiling for all of them, which is
+the owner's. Only a request that starts a run is counted: reading a task is
+not. The counts live in this process.
 """
 
 from __future__ import annotations
@@ -401,9 +404,14 @@ class VisitorsOpen:
             clock, lambda: _positive(VISITORS_DAY_ENV, DEFAULT_VISITORS_DAY)
         )
 
-    def take(self, visitor: str, app_name: str) -> str:
-        """Why a visitor's run is refused, or ``""`` — and the run is then counted."""
-        taken, limit = self._each.take(visitor)
+    def take(self, visitor: str, app_name: str, unlimited: bool = False) -> str:
+        """Why a visitor's run is refused, or ``""`` — and the run is then counted.
+
+        ``unlimited``: ai-inference exempts the visitor's address
+        (`Caller.turns_unlimited`): not held to a visitor's runs a day, still
+        counted toward the ceiling for all visitors.
+        """
+        taken, limit = (True, 0) if unlimited else self._each.take(visitor)
         if not taken:
             return (
                 f"You have asked {app_name} {limit} times today without an account: "
@@ -490,6 +498,7 @@ class A2AGate:
         refusal: Optional[tuple[int, str]] = None
         visitor = ""
         battle = ""
+        unlimited = False
         visitors = self.visitors
         if visitors is None:
             refusal = (
@@ -507,11 +516,16 @@ class A2AGate:
             else:
                 visitor = caller.uid
                 battle = caller.battle
+                unlimited = caller.turns_unlimited
                 if caller.app_uid != self.app_id:
                     refusal = 403, OTHER_APPLICATION
         if refusal is None and visitors is not None:
             body = await read_body(receive)
-            why = visitors.take(visitor, self.app_name) if _starts_a_run(body) else ""
+            why = (
+                visitors.take(visitor, self.app_name, unlimited)
+                if _starts_a_run(body)
+                else ""
+            )
             if not why:
                 # Marked a visitor's, so it only reads; the owner's key for
                 # visitors, when given, never the visitor's own token.

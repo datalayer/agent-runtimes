@@ -28,7 +28,8 @@ import {
 } from '@datalayer/reactor';
 import { APP_CATALOGUE } from '../../../specs/apps';
 import type { AppSpec, UISpec } from '../../../types/agentspecs';
-import { AgentCommand } from '../../core';
+import type { FrontendToolDefinition } from '../../../types/tools';
+import { AgentChatExtras, AgentCommand } from '../../core';
 import { CHROME_SLOTS } from '../../toolCards/chrome';
 
 /** An application of the catalogue with a page, and a component of its developer's. */
@@ -225,6 +226,8 @@ export type Registration = {
   settings: Record<string, unknown>;
   /** The manifest of each plugin it registers, in order. */
   manifests: PluginManifest[];
+  /** The frontend tools it hands the chat's agent (`agent.chat.extras`), in order. */
+  frontendTools: FrontendToolDefinition[];
   /** Its name, description and faces, as it presents itself. */
   displayName?: string;
   description?: string;
@@ -309,6 +312,10 @@ export async function registrationOf(mount: Mount): Promise<Registration> {
     ]),
     contributionPoints: sorted(contributionPoints),
     manifests: names.map(name => reactor.getManifest(name)!),
+    frontendTools: reactor
+      .getContributions(AgentChatExtras)
+      .filter(entry => mine.has(entry.plugin))
+      .flatMap(entry => entry.value.extras.value.frontendTools ?? []),
     settings: loaded === false ? {} : { ...(config ?? {}) },
     displayName: presented.displayName,
     description: presented.description,

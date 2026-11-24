@@ -18,6 +18,7 @@
  */
 
 import type { RecordedToolCall } from '../toolCards/toolResults';
+import { frontendToolName } from '../../tools/frontendToolNames';
 
 /** An object, or the JSON of one. */
 const answered = (value: unknown): Record<string, unknown> | null => {
@@ -43,13 +44,23 @@ export function succeeded(call: Pick<RecordedToolCall, 'result'>): boolean {
   return result !== null && result.ok === true && !('error' in result);
 }
 
-/** A tool's bare name: a server's or a toolset's prefix taken off. */
+const escaped = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * A tool's bare name: a server's or a toolset's prefix taken off, and its
+ * public name (`frontendToolNames`: `deckCreate` for `deck_create`) read as
+ * the name it stands for, as the tool cards match it (`toolCards/kit`).
+ */
 export const bareToolName = (
   name: string,
   among: readonly string[],
 ): string | undefined =>
-  among.find(
-    each => name === each || new RegExp(`[_.:\\-/]${each}$`).test(name),
+  among.find(each =>
+    [...new Set([each, frontendToolName(each)])].some(
+      alias =>
+        name === alias || new RegExp(`[_.:\\-/]${escaped(alias)}$`).test(name),
+    ),
   );
 
 export type ConversationBoundOptions<S> = {

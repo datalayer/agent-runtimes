@@ -33,10 +33,14 @@ import {
  * direct children, and one wrapped in a component of ours was not found —
  * drawn in the label instead, the mark on one line and the name under it.
  */
-function leadingMark(marks: Marks) {
-  return hasMark(marks) ? (
+function leadingMark(marks: Marks, fallback = false) {
+  return hasMark(marks) || fallback ? (
     <ActionList.LeadingVisual>
-      <SpecMark icon={marks.icon} emoji={marks.emoji} size={16} />
+      {hasMark(marks) ? (
+        <SpecMark icon={marks.icon} emoji={marks.emoji} size={16} />
+      ) : (
+        <ToolsIcon size={16} aria-hidden="true" />
+      )}
     </ActionList.LeadingVisual>
   ) : null;
 }
@@ -104,14 +108,32 @@ export function ToolsMenu({
 
             {/*
               The frontend tools: the ones the page runs, named apart from the
-              runtime's, each with the mark of its frontend tool set.
+              runtime's, each with the mark of its frontend tool set and what
+              it does in its own words — the description its plugin's tool
+              definition gives, the one the Agentspecs UI page shows too.
+              Clamped to three lines; the whole of it on hover.
             */}
             {availableFrontendTools.length > 0 ? (
               <ActionList.Group title="Frontend tools">
                 {availableFrontendTools.map(tool => (
                   <ActionList.Item key={tool.id} disabled>
-                    {leadingMark(marksOfFrontendTool(tool.name))}
+                    {leadingMark(marksOfFrontendTool(tool.name), true)}
                     {tool.name}
+                    {tool.description ? (
+                      <ActionList.Description variant="block">
+                        <span
+                          title={tool.description}
+                          style={{
+                            display: '-webkit-box',
+                            WebkitLineClamp: 3,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                          }}
+                        >
+                          {tool.description}
+                        </span>
+                      </ActionList.Description>
+                    ) : null}
                   </ActionList.Item>
                 ))}
               </ActionList.Group>

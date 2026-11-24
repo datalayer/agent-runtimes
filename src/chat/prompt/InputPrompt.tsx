@@ -261,6 +261,14 @@ export interface InputPromptProps {
   /** The skills' menu in the footer: the same overlay as the skills dot. */
   showSkillsMenu: boolean;
   /**
+   * Whether the MCP and skills shortcuts are repeated inside the prompt.
+   *
+   * True by default. Anonymous applications keep the complete menus in the
+   * footer but turn these compact prompt indicators off, leaving the writing
+   * area visually quiet without hiding what the agent can use.
+   */
+  showInlineEquipmentMenus?: boolean;
+  /**
    * Whether the footer offers the agent's suggestions.
    *
    * True by default: beside agents, tools, skills and model, a menu of the
@@ -404,6 +412,7 @@ export function InputPrompt({
   showToolsMenu,
   showMcpMenu = showToolsMenu,
   showSkillsMenu,
+  showInlineEquipmentMenus = true,
   showSuggestionsMenu = true,
   suggestions,
   codemodeEnabled,
@@ -635,20 +644,26 @@ export function InputPrompt({
         value={input}
         onChange={setInput}
         footerRightContent={
-          <>
-            <EquipmentMenu
-              kind="servers"
-              trigger="dot"
-              lists={lists}
-              switches={switches}
-            />
-            <EquipmentMenu
-              kind="skills"
-              trigger="dot"
-              lists={lists}
-              switches={switches}
-            />
-          </>
+          showInlineEquipmentMenus && (mcpOffered || skillsOffered) ? (
+            <>
+              {mcpOffered ? (
+                <EquipmentMenu
+                  kind="servers"
+                  trigger="dot"
+                  lists={lists}
+                  switches={switches}
+                />
+              ) : null}
+              {skillsOffered ? (
+                <EquipmentMenu
+                  kind="skills"
+                  trigger="dot"
+                  lists={lists}
+                  switches={switches}
+                />
+              ) : null}
+            </>
+          ) : undefined
         }
       />
 

@@ -24,6 +24,7 @@ export type AgentUiChoice = {
   plugin: string;
   placement: UiPlacement;
   renderer?: string;
+  tab?: string;
 };
 
 /** Where a UI goes: its declaration's placement, else its spec's first, else a message. */
@@ -103,6 +104,7 @@ export function agentUiChoicesOf(
       plugin: choice.plugin,
       placement: placementOf(choice),
       ...(choice.renderer ? { renderer: choice.renderer } : {}),
+      ...(choice.tab ? { tab: choice.tab } : {}),
     });
   }
   return choices;

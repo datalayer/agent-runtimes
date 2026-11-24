@@ -114,6 +114,8 @@ describe('the composer’s toolbar, read by name', () => {
     draw(
       <InputPrompt
         {...APP_COMPOSER}
+        showMcpMenu
+        showSkillsMenu
         mcpStatusData={STARTING}
         skills={[{ id: 'pdf', name: 'PDF' }] as never}
         enabledSkills={new Set(['pdf'])}
@@ -121,10 +123,43 @@ describe('the composer’s toolbar, read by name', () => {
     );
     expectEveryButtonNamed();
     // By the same summary as the footer's menus: what is on, of all.
-    const mcp = screen.getByRole('button', { name: 'MCP servers — 0 of 1 on' });
+    const [mcp] = screen.getAllByRole('button', {
+      name: 'MCP servers — 0 of 1 on',
+    });
     expect(mcp.getAttribute('data-equipment-status')).toBe('starting');
     expect(
-      screen.getByRole('button', { name: 'Skills — 1 of 1 on' }),
+      screen.getAllByRole('button', { name: 'Skills — 1 of 1 on' }),
+    ).toHaveLength(2);
+  });
+
+  it('keeps anonymous application equipment in the footer, outside the input', () => {
+    draw(
+      <InputPrompt
+        {...APP_COMPOSER}
+        showToolsMenu
+        showMcpMenu
+        showSkillsMenu
+        showInlineEquipmentMenus={false}
+        availableFrontendTools={
+          [{ id: 'draw_diagram', name: 'draw_diagram' }] as never
+        }
+        mcpStatusData={STARTING}
+        skills={[{ id: 'pdf', name: 'PDF' }] as never}
+        enabledSkills={new Set(['pdf'])}
+      />,
+    );
+
+    // One button for each capability menu: the footer's. The two prompt-dot
+    // duplicates are deliberately absent.
+    expect(screen.getAllByRole('button', { name: /^Tools —/ })).toHaveLength(1);
+    expect(
+      screen.getAllByRole('button', { name: /^MCP servers —/ }),
+    ).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: /^Skills —/ })).toHaveLength(
+      1,
+    );
+    expect(
+      screen.getByRole('button', { name: /1 frontend tool/ }),
     ).toBeInTheDocument();
   });
 

@@ -172,7 +172,10 @@ const PAGE_EXCALIDRAW_CARD: ToolCardPluginOptions = {
 export const PageExcalidrawPlugin = defineToolCardPlugin(PAGE_EXCALIDRAW_CARD);
 
 /** Placed in a side panel (`right`, `left`): the canvas there, a line per call here. */
-export const pageExcalidrawSidePlugin = (side: SidePlacement) =>
-  defineToolCardPlugin(PAGE_EXCALIDRAW_CARD, side);
+export const pageExcalidrawSidePlugin = (side: SidePlacement, tab?: string) =>
+  defineToolCardPlugin(
+    { ...PAGE_EXCALIDRAW_CARD, ...(tab ? { panelLabel: tab } : {}) },
+    side,
+  );
 
 export default PageExcalidrawPlugin;

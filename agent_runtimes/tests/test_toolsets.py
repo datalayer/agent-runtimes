@@ -15,12 +15,15 @@ class TestResolve:
         assert resolve_toolset("jupyter-notebook") is None
 
     def test_a_named_bundle_grants_exactly_its_list(self) -> None:
-        assert resolve_toolset("jupyter-notebook-read") == ("readCell", "readAllCells")
+        assert resolve_toolset("jupyter-notebook-read") == (
+            "notebookReadCell",
+            "notebookReadAllCells",
+        )
 
     def test_a_versioned_reference_resolves(self) -> None:
         assert resolve_toolset("jupyter-notebook-read:0.0.1") == (
-            "readCell",
-            "readAllCells",
+            "notebookReadCell",
+            "notebookReadAllCells",
         )
 
     def test_an_unknown_bundle_grants_nothing_special(self) -> None:
@@ -29,7 +32,12 @@ class TestResolve:
     def test_bundles_union(self) -> None:
         assert resolve_allowed_tools(
             ["jupyter-notebook-read", "jupyter-notebook-propose"]
-        ) == ("readCell", "readAllCells", "proposeCellUpdate", "runCell")
+        ) == (
+            "notebookReadCell",
+            "notebookReadAllCells",
+            "notebookProposeCellUpdate",
+            "notebookRunCell",
+        )
 
     def test_asking_for_everything_wins(self) -> None:
         # Narrowing is opting out; it should not happen by accident.
@@ -44,24 +52,24 @@ class TestTheSpecialists:
             AGENTSPECS["jupyter-notebook-reproducer"].frontend_tools
         )
 
-        assert allowed == ("readCell", "readAllCells")
+        assert allowed == ("notebookReadCell", "notebookReadAllCells")
         # It reports; it does not repair.
-        assert "updateCell" not in (allowed or ())
+        assert "notebookUpdateCell" not in (allowed or ())
 
     def test_the_fixer_proposes_and_cannot_apply(self) -> None:
         allowed = resolve_allowed_tools(AGENTSPECS["jupyter-cell-fixer"].frontend_tools)
 
-        assert "proposeCellUpdate" in (allowed or ())
-        assert "updateCell" not in (allowed or ())
-        assert "deleteCells" not in (allowed or ())
+        assert "notebookProposeCellUpdate" in (allowed or ())
+        assert "notebookUpdateCell" not in (allowed or ())
+        assert "notebookDeleteCells" not in (allowed or ())
 
     def test_the_compactor_may_edit_but_not_delete(self) -> None:
         allowed = resolve_allowed_tools(
             AGENTSPECS["jupyter-notebook-compactor"].frontend_tools
         )
 
-        assert "updateCell" in (allowed or ())
-        assert "deleteCells" not in (allowed or ())
+        assert "notebookUpdateCell" in (allowed or ())
+        assert "notebookDeleteCells" not in (allowed or ())
 
     def test_the_shell_names_no_bundle_and_is_not_narrowed(self) -> None:
         # The generalist is not narrowed; only the specialists are. The shell

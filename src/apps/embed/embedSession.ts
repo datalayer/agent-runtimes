@@ -8,7 +8,7 @@
  * page reloads.
  *
  * The session an embed opened is kept by its uid in the host page's own
- * storage, under the application and the visit its embed token names —
+ * storage, under the application version and the visit its embed token names —
  * the host's server issues the reloaded page a token for the same visit.
  * After the reload, the session is asked for its conversation on the
  * agent-runtimes server that holds it, with that token, and the chat draws
@@ -29,7 +29,7 @@ import type { ChatMessage } from '../../types/messages';
 import { windowTurnErrorOf } from '../../chat/base/agentWindow';
 import { messagesOfThread } from '../../portable/thread';
 
-/** Where a visit's session is kept in the host's storage: `<prefix>:<app>:<visit>`. */
+/** Where a visit's session is kept in the host's storage: `<prefix>:<app>:<version>:<visit>`. */
 export const EMBED_SESSION_KEY_PREFIX = 'datalayer-app:session';
 
 /**
@@ -54,9 +54,20 @@ export function visitOfToken(token: string | undefined): string | undefined {
   }
 }
 
-/** The key a visit's session is kept under. */
-export function embedSessionKey(app: string, visit: string): string {
-  return `${EMBED_SESSION_KEY_PREFIX}:${app}:${visit}`;
+/**
+ * The key a visit's session is kept under.
+ *
+ * The application version is part of its identity here. A kept session was
+ * created with that version's instructions; resuming it after a bundled demo
+ * or deployed Appspec changes silently keeps the old system prompt alive,
+ * even though the page is drawing the new UI and tools.
+ */
+export function embedSessionKey(
+  app: string,
+  version: string,
+  visit: string,
+): string {
+  return `${EMBED_SESSION_KEY_PREFIX}:${app}:${version}:${visit}`;
 }
 
 /** What keeps a visit's session uid. */

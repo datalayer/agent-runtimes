@@ -224,13 +224,22 @@ export type AppEmbedProps = {
  * What else a host gives the application's renderer: its own plugins in the
  * workspace (cards, panels, actions of its menus), the UI plugins its
  * organization turned off, its computer or its builder's sidebar beside its
- * page, whether its composer takes the caret — Datalayer's own page at an
- * application's address passes these (`AIApplication`'s `renderer`).
+ * page, whether its composer takes the caret, and where its capability menus
+ * are drawn — Datalayer's own page at an application's address passes these
+ * (`AIApplication`'s `renderer`).
  */
 export type AppRendererExtras = Partial<
   Pick<
     AppRendererProps,
-    'plugins' | 'pluginsOff' | 'computer' | 'sidebar' | 'autoFocusPrompt'
+    | 'plugins'
+    | 'pluginsOff'
+    | 'computer'
+    | 'sidebar'
+    | 'autoFocusPrompt'
+    | 'showMcpMenu'
+    | 'showSkillsMenu'
+    | 'showInlineEquipmentMenus'
+    | 'showToolsMenu'
   >
 >;
 
@@ -258,7 +267,7 @@ export type EmbedSession = {
 /**
  * The visit's session, kept and picked up again: on the host's
  * server with an embed token that names its visit, the session the chat
- * opens is kept under the application and the visit — in the host's
+ * opens is kept under the application version and the visit — in the host's
  * storage unless `resume` is off, in memory always — and, when the
  * application is drawn again (the page reloaded, or a token renewed for the
  * visit), its conversation is asked for and drawn again. One that is gone
@@ -271,13 +280,13 @@ export function useEmbedSession({
   embedToken,
   resume = true,
 }: {
-  app: Pick<AppSpec, 'id' | 'name'>;
+  app: Pick<AppSpec, 'id' | 'name' | 'version'>;
   serverUrl?: string;
   embedToken?: string;
   resume?: boolean;
 }): EmbedSession {
   const visit = serverUrl && embedToken ? visitOfToken(embedToken) : undefined;
-  const key = visit ? embedSessionKey(app.id, visit) : undefined;
+  const key = visit ? embedSessionKey(app.id, app.version, visit) : undefined;
   const keeper = useMemo(() => sessionKeeper({ persist: resume }), [resume]);
   // What was found, for the token it was found with: a renewed token asks again.
   const [found, setFound] = useState<{

@@ -43,7 +43,9 @@ sent (`AppRecorder.kept`).
 (``AGENT_RUNTIMES_VISITOR_TURNS``, 10) and a session's life from its start
 (``AGENT_RUNTIMES_VISITOR_SESSION_MINUTES``, 15), each said in a sentence
 when it is reached. The rate of model calls and the day's ceiling are
-ai-inference's.
+ai-inference's. A visitor whose token ai-inference minted from an address on
+its allowlist (``turns_unlimited``, said by ``/anonymous/whoami``) is not
+counted turns: their session's minutes still hold.
 
 **Reach.** Only the application's own routes and the chat's reads of its
 models answer anybody but the pod itself (:func:`path_answered`): every other
@@ -363,13 +365,20 @@ def forget_turns() -> None:
 
 
 def admit_turn(
-    visitor: str, started_at: str, *, now: Optional[float] = None, take: bool = True
+    visitor: str,
+    started_at: str,
+    *,
+    now: Optional[float] = None,
+    take: bool = True,
+    unlimited: bool = False,
 ) -> str:
     """Why a visitor's next turn is refused, or ``""`` — and the turn is then taken.
 
     ``take``: false for a run that only carries what the page's tools
     answered (`page_tools`): the session's minutes are checked, no turn is
-    taken.
+    taken. ``unlimited``: the visitor's token says ai-inference exempts their
+    address (`Caller.turns_unlimited`): the minutes are checked, no turn is
+    counted.
     """
     minutes = session_minutes()
     started = datetime.fromisoformat(started_at)
@@ -381,7 +390,7 @@ def admit_turn(
             f"This conversation without an account has had its {minutes} minutes: "
             "start a new one, or sign in to keep going."
         )
-    if not take:
+    if not take or unlimited:
         return ""
     taken, limit = TURNS.take(visitor)
     if not taken:
@@ -421,6 +430,35 @@ _LENT_TOOLS = "/api/v1/mcp/lent/"
 #: What a harness calls its models through, by the handle it was given: the
 #: runtime's token is added there (`routes.inference_relay`).
 _INFERENCE_RELAY = "/api/v1/inference/relay/"
+
+
+#: What a skill in the sandbox publishes its owner's work through, on the pod's
+#: loopback (`routes.library`): the owner's token stays in the runtime.
+_LIBRARY_PUBLISH = re.compile(r"^/api/v1/library/items/[^/]+/publish/?$")
+
+
+def sandbox_may_publish(method: str, path: str) -> bool:
+    """Whether a loopback call is a skill publishing its owner's work, here and now.
+
+    Only while code the agent was let run is running (`enforcement.code_is_running`),
+    as its tool calls are, and only on a runtime launched for a deployment by
+    its owner (`principal.kernel_holds_owner_secrets`), where the person
+    talking to it is the one whose work it is. Never on the visitors'
+    runtime, on a deployment's kept runtime its visitors talk to, or on a
+    runtime a visitor launched: there the owner is not the person asking. The
+    route still asks for the person's explicit confirmation.
+    """
+    from agent_runtimes.apps.enforcement import code_is_running
+    from agent_runtimes.apps.principal import kernel_holds_owner_secrets, launched_for
+
+    return (
+        method == "POST"
+        and bool(_LIBRARY_PUBLISH.match(path))
+        and not visitors_runtime()
+        and bool(launched_for())
+        and kernel_holds_owner_secrets()
+        and code_is_running()
+    )
 
 
 #: What Amazon Bedrock AgentCore Runtime calls a runtime started for it at.
@@ -536,6 +574,9 @@ class OwnRoutesOnly:
                 is_loopback(host)
                 and scope["path"].startswith((_LENT_TOOLS, _INFERENCE_RELAY))
             )
+            # A skill publishing its owner's work, from the sandbox
+            # (`routes.library`), which holds no pod secret.
+            or (is_loopback(host) and sandbox_may_publish(method, scope["path"]))
             # Launched for a deployment, it is held here from its launch; the
             # one thing it still answers is the making of that deployment's
             # agent (`principal.agent_refused_here`, in the route).

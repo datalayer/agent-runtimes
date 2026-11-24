@@ -71,6 +71,7 @@ import {
   resolveAgentspec,
 } from '../../apps/agent';
 import type { ProtocolConfig } from '../../../types/protocol';
+import { namedFrontendTools } from '../../../tools/frontendToolNames';
 import {
   targetRunsAgentInPage,
   type SandboxTarget,
@@ -132,7 +133,11 @@ import {
 import type { SandboxService } from '../agents/service';
 import { visitorForOf } from '../agents/visitorFor';
 import {
-  BROWSER_CODE_TOOL,
+  conversationKeyOf,
+  withConversation,
+} from '../../pageTools/conversationScope';
+import {
+  holdsBrowserCodeTool,
   dataUrlBase64,
   givenFilesSentence,
   sandboxFileName,
@@ -178,11 +183,7 @@ import {
   type AgentViewProps,
 } from '../../core';
 import { messageText, turnWritersOf, type TurnFeed } from './turnState';
-import {
-  isInactiveSurfaceContribution,
-  orderToolContributions,
-  toolsForChatView,
-} from './chatViewTools';
+import { mergeFrontendTools } from './chatViewTools';
 import {
   agentBundleToolDefinitions,
   useAgentCommandTools,
@@ -281,6 +282,9 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
    */
   const setThreadRef = useRef(workspace.setThread);
   setThreadRef.current = workspace.setThread;
+  /** The workspace as it stands, for a tool called later (its thread). */
+  const workspaceRef = useRef(workspace);
+  workspaceRef.current = workspace;
   const sayThread = useCallback(() => {
     const thread = controlsRef.current?.thread();
     if (thread) {
@@ -617,7 +621,7 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
   const inPageRef = useRef(false);
   /**
    * The page's sandbox, when the agent turned in the page runs its code
-   * there (`execute_code`): what a file given on the page is
+   * there (`executeCode`): what a file given on the page is
    * put in. Read by `sendNow`, set below.
    */
   const pageSandboxRef = useRef<SandboxService | undefined>(undefined);
@@ -1257,79 +1261,19 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
      * outputs are what the conversation shows. The document's block tools
      * (runBlock, insertBlock…) keep their own names and are untouched.
      */
-    const merged: ReturnType<
-      (typeof toolContributions)[number]['value']['tools']
-    > = [];
-    const owners = new Map<string, string>();
-    // Tools a contribution vouched for in the chat view; see `chatView`.
-    const keep = new Set<string>();
-    // See `isInactiveSurfaceContribution`: with an editor on screen, only
-    // its own `${surfaceId}-tools` contribution survives this filter.
-    const surfaceIds = new Set(surfaces.map(entry => entry.value.surfaceId));
-    for (const entry of orderToolContributions(
-      toolContributions,
-      active?.surfaceId,
-    )) {
-      if (
-        isInactiveSurfaceContribution(
-          entry.value.id,
-          surfaceIds,
-          active?.surfaceId,
-        )
-      ) {
-        continue;
-      }
-      let tools: typeof merged;
-      try {
-        tools = entry.value.tools(workspace);
-      } catch (error) {
-        // One broken contributor must not cost the agent every tool.
-        console.warn(
-          `[agent] frontend tools from '${entry.plugin}' failed:`,
-          error,
-        );
-        continue;
-      }
-      for (const tool of tools) {
-        const owner = owners.get(tool.name);
-        if (owner) {
-          console.warn(
-            `[agent] frontend tool '${tool.name}' from '${entry.plugin}' is shadowed by the one from '${owner}'.`,
-          );
-          continue;
-        }
-        owners.set(tool.name, entry.plugin);
-        merged.push(tool);
-        if (entry.value.chatView) {
-          keep.add(tool.name);
-        }
-      }
-    }
-    // A host example's own frontend tools, folded in last (first name wins),
-    // so a bespoke client tool like A2UI's run_jupyter_output_demo joins the
-    // agent's toolset without a plugin of its own. Vouched for in the chat
-    // view as well: the filter below keeps the tools that leave the editors
-    // alone, and a host's tool touches no editor — the Jupyter Output
-    // example's chat had lost its one tool to that filter and answered
-    // "use the demo button" instead of running the demonstration.
-    for (const tool of chatExtras.frontendTools ?? []) {
-      if (owners.has(tool.name)) {
-        continue;
-      }
-      owners.set(tool.name, 'chat-extras');
-      merged.push(tool);
-      keep.add(tool.name);
-    }
-    /*
-     * The view decides the toolset. With an editor on screen the agent has
-     * that editor's own tools (`belongsToInactiveSurface` above, plus
-     * whatever isn't tied to a surface at all); with none — the chat view —
-     * it keeps only what leaves the editors alone: the `executeCodeIn…`
-     * tools, whose outputs stream onto the conversation as surfaces, and
-     * the read tools. The editors stay mounted out of sight either way, so
-     * what it can still call, works.
-     */
-    return active ? merged : toolsForChatView(merged, keep);
+    return mergeFrontendTools({
+      contributions: toolContributions,
+      workspace,
+      // Each extra's call told the conversation it is part of — this
+      // workspace's surface and its thread, as they stand when it is
+      // called — for the page's document and notebook, which are the
+      // conversation's (`pageTools/conversationScope`).
+      extras: withConversation(chatExtras.frontendTools ?? [], () =>
+        conversationKeyOf(workspaceRef.current),
+      ),
+      surfaceIds: new Set(surfaces.map(entry => entry.value.surfaceId)),
+      activeSurfaceId: active?.surfaceId,
+    });
     // The workspace object is rebuilt when its facts change; surfaceId is
     // the one the factories address by.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1353,37 +1297,45 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
   const commandTools = useAgentCommandTools();
   const agentTools = useMemo(() => {
     if (commandTools.length === 0) {
-      return notebookTools;
+      return namedFrontendTools(notebookTools);
     }
     const taken = new Set(notebookTools.map(tool => tool.name));
-    return [
+    return namedFrontendTools([
       ...notebookTools,
       ...commandTools.filter(tool => !taken.has(tool.name)),
-    ];
+    ]);
   }, [notebookTools, commandTools]);
   /*
-   * The page's own tools for an agent on a server: a host example's, and
-   * the tools of the `AgentTools` bundles its extras name
+   * The frontend tools for an agent on a server: the active surface's
+   * contributions (the notebook's live cell tools, for example), a host
+   * example's, and the tools of the `AgentTools` bundles its extras name
    * (the host page's functions, `host_<name>`, each running its command on
-   * this reactor). An in-page agent has every bundle already (above).
+   * this reactor). `notebookTools` already folds the host extras into the
+   * contributed tools and filters out inactive editors. Starting from the
+   * host extras alone advertised notebook tools in the agentspec without
+   * giving ChatBase the handlers that manipulate the notebook on screen.
+   * An in-page agent has every contribution and bundle already (above).
    */
   const bundles = useAgentToolBundles();
   const handedBundles = chatExtras.agentToolBundles;
   const pageTools = useMemo(() => {
-    const own = chatExtras.frontendTools ?? [];
+    const own = notebookTools;
     if (!handedBundles?.length) {
-      return chatExtras.frontendTools;
+      return namedFrontendTools(own);
     }
     const handed = agentBundleToolDefinitions(
       bundles.filter(bundle => handedBundles.includes(bundle.id)),
       reactor,
     );
     const taken = new Set(own.map(tool => tool.name));
-    return [...own, ...handed.filter(tool => !taken.has(tool.name))];
-  }, [chatExtras.frontendTools, handedBundles, bundles, reactor]);
+    return namedFrontendTools([
+      ...own,
+      ...handed.filter(tool => !taken.has(tool.name)),
+    ]);
+  }, [notebookTools, handedBundles, bundles, reactor]);
   // The page's sandbox, while the agent turned here runs its code in it.
   pageSandboxRef.current =
-    inPage && agentTools.some(tool => tool.name === BROWSER_CODE_TOOL)
+    inPage && holdsBrowserCodeTool(agentTools)
       ? reactor.getOutput<AgentsOutput>(AGENTS_PLUGIN_NAME)?.sandbox
       : undefined;
 
@@ -1539,7 +1491,19 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
    * the turns the host counts or the conversation's minutes are spent.
    */
   const anonymousConfig = config?.anonymous;
-  const anonymousTurns = useAnonymousTurns(anonymousConfig?.maxTurns);
+  // ai-inference resolves the caller's real address through the trusted
+  // proxy chain and applies the deployment/admin allowlist. Do not retain a
+  // host's browser-side turn ceiling when that authoritative token says the
+  // address is exempt. The conversation clock still starts on its first turn.
+  const effectiveAnonymousConfig =
+    anonymousConfig && visitor.turnsUnlimited
+      ? { ...anonymousConfig, maxTurns: undefined }
+      : anonymousConfig;
+  const anonymousTurns = useAnonymousTurns(
+    effectiveAnonymousConfig?.maxTurns,
+    ANONYMOUS_MINUTES,
+    !visitor.turnsUnlimited,
+  );
   const anonymousValidating = Boolean(
     anonymousConfig &&
     visitors &&
@@ -1547,7 +1511,9 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
     workspace.sandbox.state !== 'error' &&
     (!visitor.token || agentServerUrl === undefined),
   );
-  const anonymousRefused = anonymousConfig ? anonymousTurns.refused : '';
+  const anonymousRefused = effectiveAnonymousConfig
+    ? anonymousTurns.refused
+    : '';
   // A turn taken each time the agent sets to work on a question.
   const anonymousWasBusy = useRef(false);
   const takeAnonymousTurn = anonymousTurns.take;
@@ -2356,11 +2322,11 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
    */
   const HeaderComponent = headerEntries[0]?.value.Component;
   const headerShown = !config?.hideHeader && !!HeaderComponent;
-  const anonymousState: AnonymousChatState | null = anonymousConfig
+  const anonymousState: AnonymousChatState | null = effectiveAnonymousConfig
     ? {
         ...anonymousTurns,
         refused: anonymousRefused,
-        config: anonymousConfig,
+        config: effectiveAnonymousConfig,
         name: presence?.name ?? member?.name ?? spec?.name ?? '',
         validating: anonymousValidating,
         headerShown,
@@ -2502,13 +2468,19 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
     decisions,
     selectedModel: activeModel,
     onModelSelect: model => void selectModel(model),
-    showToolsMenu: !presence,
+    // An anonymous application still explains all the equipment its fixed
+    // agent may use. The list belongs in the footer; only the compact dots in
+    // the writing area stand down below.
+    showToolsMenu:
+      config?.showToolsMenu ?? (anonymousConfig ? true : !presence),
     availableTools: offeredTools.runtime,
     availableFrontendTools: offeredTools.frontend,
     mcpServers: configQuery.data?.mcpServers ?? [],
     mcpStatusData: mcpStatus,
-    showMcpMenu: true,
-    showSkillsMenu: true,
+    showMcpMenu: config?.showMcpMenu ?? true,
+    showSkillsMenu: config?.showSkillsMenu ?? true,
+    showInlineEquipmentMenus:
+      config?.showInlineEquipmentMenus ?? !anonymousConfig,
     skills: skillsQuery.data?.skills ?? [],
     skillsLoading: skillsQuery.isLoading,
     enabledSkills,

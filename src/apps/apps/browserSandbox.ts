@@ -29,9 +29,27 @@ import type { AppSpec } from '../../types/agentspecs';
 import type { FrontendToolDefinition } from '../../types/tools';
 import type { SandboxExecution } from '../plugins/agents/service';
 import { resolveAgentspec } from './agent';
+import { frontendToolName } from '../../tools/frontendToolNames';
 
 /** The tool the agent runs its code with: the name a runtime gives it too. */
 export const BROWSER_CODE_TOOL = 'execute_code';
+
+/**
+ * Its name as the chat hands it to the model (`frontendToolNames`):
+ * `executeCode`. What the agent is told to call, and what a page's tools
+ * are looked through for.
+ */
+export const BROWSER_CODE_TOOL_NAME = frontendToolName(BROWSER_CODE_TOOL);
+
+/** Whether these tools hold the browser's sandbox, by either of its names. */
+export function holdsBrowserCodeTool(
+  tools: ReadonlyArray<{ name: string }>,
+): boolean {
+  return tools.some(
+    tool =>
+      tool.name === BROWSER_CODE_TOOL_NAME || tool.name === BROWSER_CODE_TOOL,
+  );
+}
 
 /** Where its files are, in the page's sandbox: in memory, gone with the page. */
 export const SANDBOX_INPUTS = '/tmp/inputs';
@@ -120,7 +138,7 @@ export function writeFilesCode(files: SandboxFile[]): string {
 export function browserSandboxNote(app: Pick<AppSpec, 'samples'>): string {
   const documents = app.samples?.documents ?? [];
   return [
-    `Your code runs in Python (Pyodide) in this browser, through \`${BROWSER_CODE_TOOL}\`. ` +
+    `Your code runs in Python (Pyodide) in this browser, through \`${BROWSER_CODE_TOOL_NAME}\`. ` +
       'Variables and imports persist between calls. Compute every figure there, ' +
       'print it, and answer from what it printed.',
     ...(documents.length > 0

@@ -92,6 +92,29 @@ DATALAYER_EMAIL_SKILL_SPEC_0_0_1 = SkillSpec(
     enabled=True,
 )
 
+DATALAYER_LIBRARY_PUBLISH_SKILL_SPEC_0_0_1 = SkillSpec(
+    id="datalayer-library-publish",
+    version="0.0.1",
+    name="Publish to the Library",
+    description="Publish one item the person owns in Datalayer's public Library, only after explicit confirmation, without exposing the runtime owner's credential.",
+    module="datalayer_skills.skills.library_publish",
+    package=None,
+    method=None,
+    path=None,
+    envvars=[],
+    optional_env_vars=[],
+    dependencies=["datalayer-skills"],
+    install=InstallSpec(
+        type="python",
+        command="pip install datalayer-skills",
+        note="Standard library only; the script publishes through agent-runtimes on the pod loopback.",
+    ),
+    tags=["datalayer", "library", "publish", "artifact"],
+    icon="@primer/octicons-react:globe",
+    emoji="🌍",
+    enabled=True,
+)
+
 DINING_SKILL_SPEC_0_0_1 = SkillSpec(
     id="dining",
     version="0.0.1",
@@ -371,6 +394,7 @@ SKILLS_CATALOG: Dict[str, SkillSpec] = {
     "accounting": ACCOUNTING_SKILL_SPEC_0_0_1,
     "crawl": CRAWL_SKILL_SPEC_0_0_1,
     "datalayer-email": DATALAYER_EMAIL_SKILL_SPEC_0_0_1,
+    "datalayer-library-publish": DATALAYER_LIBRARY_PUBLISH_SKILL_SPEC_0_0_1,
     "dining": DINING_SKILL_SPEC_0_0_1,
     "events": EVENTS_SKILL_SPEC_0_0_1,
     "fare-and-stay-comparison": FARE_AND_STAY_COMPARISON_SKILL_SPEC_0_0_1,

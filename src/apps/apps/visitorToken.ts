@@ -73,6 +73,8 @@ function keepVisitorId(visitor: string): void {
 export type VisitorToken = {
   token: string;
   visitor: string;
+  /** The caller's address is exempt from the browser-side daily turn count. */
+  turnsUnlimited: boolean;
   /** Epoch milliseconds: the token's own lifetime from now. */
   renewAt: number;
 };
@@ -95,6 +97,7 @@ type MintedVisitorToken = {
   token: string;
   visitor?: string;
   expires_in?: number;
+  turns_unlimited?: boolean;
 };
 
 /** Ask ai-inference for a token; throws with its sentence. The visitor it names is kept for the next one. */
@@ -118,6 +121,7 @@ async function mintVisitorToken(
     token?: string;
     visitor?: string;
     expires_in?: number;
+    turns_unlimited?: boolean;
     detail?: string;
   };
   if (!response.ok || !body.token) {
@@ -133,6 +137,7 @@ async function mintVisitorToken(
     token: body.token,
     visitor: body.visitor,
     expires_in: body.expires_in,
+    turns_unlimited: body.turns_unlimited === true,
   };
 }
 
@@ -153,6 +158,7 @@ export async function fetchVisitorToken(
   return {
     token: body.token,
     visitor: body.visitor ?? visitor,
+    turnsUnlimited: body.turns_unlimited === true,
     renewAt: Date.now() + lifetimeMs - MARGIN_MS,
   };
 }
@@ -203,8 +209,13 @@ export async function fetchBattleToken(
 export function useVisitorToken(visitors: DatalayerVisitors | undefined): {
   token?: string;
   error?: string;
+  turnsUnlimited?: boolean;
 } {
-  const [state, setState] = useState<{ token?: string; error?: string }>({});
+  const [state, setState] = useState<{
+    token?: string;
+    error?: string;
+    turnsUnlimited?: boolean;
+  }>({});
   const app = visitors?.app;
   const inferenceUrl = visitors?.inferenceUrl;
   const battle = visitors?.battle ?? '';
@@ -221,7 +232,10 @@ export function useVisitorToken(visitors: DatalayerVisitors | undefined): {
           if (cancelled) {
             return;
           }
-          setState({ token: minted.token });
+          setState({
+            token: minted.token,
+            turnsUnlimited: minted.turnsUnlimited,
+          });
           timer = setTimeout(
             mint,
             Math.max(5_000, minted.renewAt - Date.now()),

@@ -68,14 +68,13 @@ const RENEWED = tokenFor({
   jti: 'renewed',
 });
 const SERVER = 'https://host.example/agents';
-const KEY = embedSessionKey('notes-assistant', 'visit-a');
-
 const app = (() => {
   const spec = emptyAppspec('chat');
   spec.id = 'notes-assistant';
   spec.name = 'Notes assistant';
   return spec;
 })();
+const KEY = embedSessionKey(app.id, app.version, 'visit-a');
 
 const THREAD = [
   { id: 'u1', role: 'user', content: 'Hello' },
@@ -109,6 +108,23 @@ describe('the visit an embed token names', () => {
     expect(visitOfToken(TOKEN)).toBe('visit-a');
   });
 
+  it('starts a fresh conversation when the application version changes', async () => {
+    const oldKey = embedSessionKey(app.id, '0.0.0', 'visit-a');
+    window.localStorage.setItem(oldKey, 'msg_old_version');
+    globalThis.fetch = vi.fn() as unknown as typeof fetch;
+
+    const mounted = await mountSession({
+      app,
+      serverUrl: SERVER,
+      embedToken: TOKEN,
+    });
+
+    expect(mounted.last().thread?.id).not.toBe('msg_old_version');
+    expect(mounted.last().thread?.messages).toEqual([]);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+    await mounted.unmount();
+  });
+
   it('is none for a token without one, or that is not a token', () => {
     expect(visitOfToken(tokenFor({ sub: 'owner' }))).toBeUndefined();
     expect(visitOfToken('not-a-token')).toBeUndefined();
@@ -121,7 +137,7 @@ describe('the session keeper', () => {
   it('keeps the uid in the host’s storage, under a namespaced key', () => {
     const keeper = sessionKeeper({ persist: true });
     keeper.keep(KEY, 'msg_1_abc');
-    expect(KEY).toBe('datalayer-app:session:notes-assistant:visit-a');
+    expect(KEY).toBe('datalayer-app:session:notes-assistant:0.0.1:visit-a');
     expect(window.localStorage.getItem(KEY)).toBe('msg_1_abc');
     forgetSessionsInMemory();
     expect(sessionKeeper({ persist: true }).read(KEY)).toBe('msg_1_abc');

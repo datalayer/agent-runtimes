@@ -42,25 +42,25 @@ export const AGENT_PRESENTATIONS: Record<string, AgentPresentation> = {
   },
   'worker-data-analyst': {
     id: 'worker-data-analyst',
-    version: '0.0.1',
+    version: '0.0.2',
     name: 'Data Analyst',
     emoji: '📊',
     description:
       'Explores the data in the Jupyter notebook you have open — adds the cells and runs them, profiles and charts the data, checks it for the things that quietly ruin an analysis, and says plainly what it found, where everyone can see it.',
     tagline: 'Explores, charts and checks your data',
     presentation:
-      'Explores the data in the Jupyter notebook you have open — adds the cells and runs\nthem, profiles and charts the data, checks it for the things that quietly\nruin an analysis, and says plainly what it found, where everyone can see it.\n\n- Reads the notebook first and builds on the cells already there\n- Writes the cells and runs them, one idea per cell\n- Profiles every column: types, missing values and ranges that look wrong\n- Draws the chart when a chart is the clearest answer\n- Flags what would ruin the conclusion: repeated rows, outliers, dropped rows\n\n[The seed agents, in slides](/visitors/decks/agents/seed-agents)',
+      'Explores the data in the Jupyter notebook you have open — adds the cells and runs\nthem, profiles and charts the data, checks it for the things that quietly\nruin an analysis, and says plainly what it found, where everyone can see it.\n\n- Reads the notebook first and builds on the cells already there\n- Writes the cells and runs them, one idea per cell\n- Profiles every column: types, missing values and ranges that look wrong\n- Draws the chart when a chart is the clearest answer\n- Flags what would ruin the conclusion: repeated rows, outliers, dropped rows\n\n[Poppy agents, in slides](/visitors/decks/agents/poppy-agents)',
   },
   'worker-functional-analyst': {
     id: 'worker-functional-analyst',
     version: '0.0.1',
     name: 'Functional Analyst',
-    emoji: '📐',
+    emoji: '🔀',
     description:
       "Works out how a system, a process or a plan fits together and draws it — Mermaid diagrams checked by Mermaid's own parser, and Excalidraw drawings you can draw on with it — then says what the picture shows and what it leaves open.",
     tagline: 'Works out how it fits, and draws it',
     presentation:
-      "Works out how a system, a process or a plan fits together and draws it —\nMermaid diagrams checked by Mermaid's own parser, and Excalidraw drawings\nyou can draw on with it — then says what the picture shows and what it\nleaves open.\n\n- Asks what the parts are before it draws them\n- Writes flowcharts, sequences, class and entity models, states and timelines in Mermaid\n- Checks every diagram with Mermaid's parser, and fixes the line it names\n- Sketches freer pictures on an Excalidraw canvas, arrows bound to their shapes\n- Says what the diagram leaves out, and where it guessed\n\n[The seed agents, in slides](/visitors/decks/agents/seed-agents)",
+      "Works out how a system, a process or a plan fits together and draws it —\nMermaid diagrams checked by Mermaid's own parser, and Excalidraw drawings\nyou can draw on with it — then says what the picture shows and what it\nleaves open.\n\n- Asks what the parts are before it draws them\n- Writes flowcharts, sequences, class and entity models, states and timelines in Mermaid\n- Checks every diagram with Mermaid's parser, and fixes the line it names\n- Sketches freer pictures on an Excalidraw canvas, arrows bound to their shapes\n- Says what the diagram leaves out, and where it guessed\n\n[Poppy agents, in slides](/visitors/decks/agents/poppy-agents)",
   },
   'worker-marketer': {
     id: 'worker-marketer',
@@ -71,7 +71,7 @@ export const AGENT_PRESENTATIONS: Record<string, AgentPresentation> = {
       "Plans and drafts social posts for X, Bluesky, LinkedIn and Discord in the brand's voice, reads what comes back (on LinkedIn once signed in there from the chat), remembers what worked, and publishes only with approval.",
     tagline: 'Plans, drafts, reads the replies',
     presentation:
-      "Plans and drafts social posts for X, Bluesky, LinkedIn and Discord in the\nbrand's voice, reads what comes back (on LinkedIn once signed in there from\nthe chat), remembers what worked, and publishes only with approval.\n\n- Plans a campaign around the goal you give it\n- Drafts each post for its network, in your brand’s voice\n- Reads what the audience says back\n- Remembers the voice, what was posted and what worked\n- Publishes nothing until you approve the exact text\n\n[The seed agents, in slides](/visitors/decks/agents/seed-agents)",
+      "Plans and drafts social posts for X, Bluesky, LinkedIn and Discord in the\nbrand's voice, reads what comes back (on LinkedIn once signed in there from\nthe chat), remembers what worked, and publishes only with approval.\n\n- Plans a campaign around the goal you give it\n- Drafts each post for its network, in your brand’s voice\n- Reads what the audience says back\n- Remembers the voice, what was posted and what worked\n- Publishes nothing until you approve the exact text\n\n[Poppy agents, in slides](/visitors/decks/agents/poppy-agents)",
   },
   'worker-shopper': {
     id: 'worker-shopper',
@@ -115,7 +115,7 @@ export const AGENT_PRESENTATIONS: Record<string, AgentPresentation> = {
       "A travel companion: finds flights, stays, restaurants and things to do, and puts them together into three practical trip options, each with a map, a daily schedule, a budget with its total and the booking links. It books nothing: you book on the provider's site.",
     tagline: 'Finds flights, stays and places, plans three options',
     presentation:
-      "A travel companion: finds flights, stays, restaurants and things to do, and\nputs them together into three practical trip options, each with a map, a daily\nschedule, a budget with its total and the booking links. It books nothing: you\nbook on the provider's site.\n\n- Asks your dates, places, travellers, preferences and budget\n- Compares flights on Kiwi.com by fare, baggage, connections and travel time\n- Finds restaurants, cafés and sights in Overture Maps' open data, travel times with Google Maps, and stays on Booking.com with your partner access\n- Plans three options, each with a map, a daily schedule and a budget with its total\n- Hands you the booking links: it books and pays nothing\n\n[The seed agents, in slides](/visitors/decks/agents/seed-agents)",
+      "A travel companion: finds flights, stays, restaurants and things to do, and\nputs them together into three practical trip options, each with a map, a daily\nschedule, a budget with its total and the booking links. It books nothing: you\nbook on the provider's site.\n\n- Asks your dates, places, travellers, preferences and budget\n- Compares flights on Kiwi.com by fare, baggage, connections and travel time\n- Finds restaurants, cafés and sights in Overture Maps' open data, travel times with Google Maps, and stays on Booking.com with your partner access\n- Plans three options, each with a map, a daily schedule and a budget with its total\n- Hands you the booking links: it books and pays nothing\n\n[Poppy agents, in slides](/visitors/decks/agents/poppy-agents)",
   },
 };
 

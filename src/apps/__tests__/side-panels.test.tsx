@@ -40,10 +40,14 @@ import { registerReactor } from '@datalayer/reactor/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   SIDE_PANELS_SHOWN,
+  SIDE_PANEL_MAX_WIDTH,
+  SIDE_PANEL_MIN_WIDTH,
   SIDE_PANEL_VIEW_MIN,
   SidePanel,
   SidePanelToggle,
   bothFit,
+  clampSidePanelWidth,
+  halfSidePanelWidth,
   sidePanelCallEvent,
   sidePanelOpen,
   useSidePanels,
@@ -55,6 +59,8 @@ import { CardSideContext } from '../toolCards/kit';
 import { PAGE_DECK } from '../plugins/page-deck/store';
 import { PageDeckCard } from '../plugins/page-deck';
 import { sidePanelsTools } from '../plugins/side-panels';
+import { revealPanelFor } from '../shell/sidePanelReveal';
+import { MERMAID_TOOL_NAMES } from '../plugins/page-mermaid/store';
 import {
   NOTICES_WORDS,
   NoticeBoard,
@@ -126,6 +132,17 @@ const call = (
 });
 
 describe('open or closed, from the conversation', () => {
+  it('opens at half the workspace, within its bounds (the user, 24 November 2026)', () => {
+    expect(halfSidePanelWidth(1600)).toBe(800);
+    expect(halfSidePanelWidth(400)).toBe(SIDE_PANEL_MIN_WIDTH);
+    expect(halfSidePanelWidth(3000)).toBe(SIDE_PANEL_MAX_WIDTH);
+  });
+
+  it('keeps a resized panel inside useful bounds', () => {
+    expect(clampSidePanelWidth(100)).toBe(SIDE_PANEL_MIN_WIDTH);
+    expect(clampSidePanelWidth(620)).toBe(620);
+    expect(clampSidePanelWidth(2000)).toBe(SIDE_PANEL_MAX_WIDTH);
+  });
   it('is the agent’s last word on that side', () => {
     const calls = [
       call('open_side_panel', { side: 'right' }, 1),
@@ -261,7 +278,9 @@ describe('the deck placed in the right panel', () => {
 
   it('opens with the first slide, and the conversation keeps a line per call', async () => {
     mount(placed());
-    expect(SIDE_PANELS_SHOWN.right).toEqual(['page-deck-right']);
+    expect(SIDE_PANELS_SHOWN.right).toEqual([
+      { id: 'page-deck-right', label: 'Deck in the page' },
+    ]);
     // The handler builds the deck in the page; the transcript records the call.
     await act(async () => {
       PAGE_DECK.set({
@@ -315,6 +334,22 @@ describe('the deck placed in the right panel', () => {
     expect(rightPanel()!.hasAttribute('data-open')).toBe(true);
     fireEvent.keyDown(rightPanel()!, { key: 'Escape' });
     expect(rightPanel()!.hasAttribute('data-open')).toBe(false);
+  });
+
+  it('lets the person resize the open panel with the keyboard', () => {
+    mount(placed());
+    recorded('deck_create', { title: 'Recap' });
+    const panel = rightPanel()!;
+    const resize = document.querySelector<HTMLElement>(
+      '[data-agent-right-panel-resize]',
+    )!;
+    expect(resize).not.toBeNull();
+    const before = Number(resize.getAttribute('aria-valuenow'));
+    fireEvent.keyDown(resize, { key: 'ArrowLeft' });
+    expect(Number(resize.getAttribute('aria-valuenow'))).toBeGreaterThan(
+      before,
+    );
+    expect(panel).toHaveAttribute('data-open');
   });
 
   it('opens and closes with the agent’s calls, the person’s word lasting until its next one', () => {
@@ -418,12 +453,25 @@ describe('the agent’s tools for the side panels', () => {
   const [open, close] = sidePanelsTools();
 
   it('open a side that has something placed in it, and say so of one that has not', async () => {
-    SIDE_PANELS_SHOWN.right = ['page-deck-right'];
+    SIDE_PANELS_SHOWN.right = [
+      { id: 'page-deck-right', label: 'Deck in the page' },
+      { id: 'page-sheet-right', label: 'Spreadsheet' },
+    ];
     SIDE_PANELS_SHOWN.left = [];
     await expect(open.handler!({ side: 'right' })).resolves.toEqual({
       side: 'right',
       open: true,
     });
+    await expect(
+      open.handler!({ side: 'right', tab: 'Spreadsheet' }),
+    ).resolves.toEqual({
+      side: 'right',
+      open: true,
+      tab: 'page-sheet-right',
+    });
+    await expect(
+      open.handler!({ side: 'right', tab: 'Unknown' }),
+    ).rejects.toThrow('Choose one of: Deck in the page, Spreadsheet');
     await expect(open.handler!({ side: 'left' })).rejects.toThrow(
       'Nothing is placed in the left panel of this chat',
     );
@@ -437,7 +485,82 @@ describe('the agent’s tools for the side panels', () => {
     expect(open.summaryOf!({ side: 'right' }, {})).toBe(
       'Opened the right panel',
     );
+    expect(open.summaryOf!({ side: 'right', tab: 'Spreadsheet' }, {})).toBe(
+      'Opened the right panel on Spreadsheet',
+    );
     SIDE_PANELS_SHOWN.right = [];
+  });
+});
+
+describe('several components in one side panel', () => {
+  const placed = () =>
+    agentUiPluginsFor([
+      { plugin: 'page-excalidraw', placement: 'right', tab: 'Excalidraw' },
+      { plugin: 'page-mermaid', placement: 'right', tab: 'Mermaid' },
+      { plugin: 'page-react-flow', placement: 'right', tab: 'React Flow' },
+      { plugin: 'side-panels', placement: 'message' },
+    ]);
+
+  it('shows one named component at a time and lets the agent select it', () => {
+    mount(placed());
+    act(() => rightToggle()!.click());
+    const excalidraw = screen.getByRole('tab', { name: 'Excalidraw' });
+    const mermaid = screen.getByRole('tab', { name: 'Mermaid' });
+    const reactFlow = screen.getByRole('tab', { name: 'React Flow' });
+    expect(excalidraw.getAttribute('aria-selected')).toBe('true');
+    expect(mermaid.getAttribute('aria-selected')).toBe('false');
+    expect(reactFlow.getAttribute('aria-selected')).toBe('false');
+    expect(
+      rightPanel()!.querySelector(
+        '[data-page-tool-panel-empty="page-excalidraw"]',
+      ),
+    ).not.toBeNull();
+    expect(
+      rightPanel()!.querySelector(
+        '[data-page-tool-panel-empty="page-mermaid"]',
+      ),
+    ).toBeNull();
+
+    act(() => mermaid.click());
+    expect(mermaid.getAttribute('aria-selected')).toBe('true');
+    expect(
+      rightPanel()!.querySelector(
+        '[data-page-tool-panel-empty="page-mermaid"]',
+      ),
+    ).not.toBeNull();
+
+    recorded(
+      'open_side_panel',
+      { side: 'right', tab: 'Excalidraw' },
+      { side: 'right', open: true, tab: 'page-excalidraw-right' },
+    );
+    expect(excalidraw.getAttribute('aria-selected')).toBe('true');
+    expect(
+      rightPanel()!.querySelector(
+        '[data-page-tool-panel-empty="page-excalidraw"]',
+      ),
+    ).not.toBeNull();
+  });
+});
+
+describe('a panel asked by a call still running (the user, 24 November 2026)', () => {
+  const placed = () =>
+    agentUiPluginsFor([
+      { plugin: 'page-excalidraw', placement: 'right', tab: 'Excalidraw' },
+      { plugin: 'page-mermaid', placement: 'right', tab: 'Mermaid' },
+      { plugin: 'side-panels', placement: 'message' },
+    ]);
+
+  it('opens and selects the tab whose component follows the tool, before any call is recorded', () => {
+    mount(placed());
+    expect(rightPanel()?.hasAttribute('data-open') ?? false).toBe(false);
+    act(() => revealPanelFor(MERMAID_TOOL_NAMES[0]));
+    expect(rightPanel()!.hasAttribute('data-open')).toBe(true);
+    expect(
+      screen
+        .getByRole('tab', { name: 'Mermaid' })
+        .getAttribute('aria-selected'),
+    ).toBe('true');
   });
 });
 

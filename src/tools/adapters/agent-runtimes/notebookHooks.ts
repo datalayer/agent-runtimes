@@ -52,6 +52,7 @@ export function createNotebookTools(
     notebookToolDefinitions,
     notebookToolOperations,
     { documentId, executor, format: 'toon', ...contextOverrides },
+    'notebook',
   );
 }
 
@@ -116,6 +117,7 @@ export function useNotebookTools(
         notebookToolDefinitions,
         notebookToolOperations,
         context,
+        'notebook',
       ),
     [context],
   );

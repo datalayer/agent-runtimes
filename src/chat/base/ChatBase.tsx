@@ -190,6 +190,8 @@ import {
   type IdentityAuthorization,
 } from '../tools/IdentityAuthorization';
 import type { EphemeralNotebook } from '../notebook/EphemeralNotebook';
+import { namedFrontendTools } from '../../tools/frontendToolNames';
+import { uiFrontendToolNamed } from '../../specs/uiFrontendTools';
 import {
   agentDecisionsGroup,
   initialModelId,
@@ -1096,12 +1098,18 @@ function ChatBaseInner({
   );
   const frontendTools = useMemo(() => {
     if (notebookVisible) {
-      return [...(frontendToolsProp || []), ...notebookTools];
+      return namedFrontendTools([
+        ...(frontendToolsProp || []),
+        ...notebookTools,
+      ]);
     }
     if (documentVisible) {
-      return [...(frontendToolsProp || []), ...documentTools];
+      return namedFrontendTools([
+        ...(frontendToolsProp || []),
+        ...documentTools,
+      ]);
     }
-    return frontendToolsProp;
+    return namedFrontendTools(frontendToolsProp || []);
   }, [
     notebookVisible,
     documentVisible,
@@ -2064,8 +2072,11 @@ function ChatBaseInner({
      * names what the agent can call, which is the question this menu asks.
      */
     const inProtocol =
-      (protocol?.options as { frontendTools?: { name: string }[] } | undefined)
-        ?.frontendTools ?? [];
+      (
+        protocol?.options as
+          | { frontendTools?: { name: string; description?: string }[] }
+          | undefined
+      )?.frontendTools ?? [];
 
     const seen = new Set(fromConfig.map(tool => tool.name));
     const fromPage = [...(frontendTools ?? []), ...inProtocol]
@@ -2076,7 +2087,17 @@ function ChatBaseInner({
         seen.add(tool.name);
         return true;
       })
-      .map(tool => ({ id: tool.name, name: tool.name }));
+      .map(tool => ({
+        id: tool.name,
+        name: tool.name,
+        // What the tool does, in its definition's words: the description the
+        // model is given, or the one its UI plugin exports (the same one the
+        // Agentspecs UI page shows) when the tool came without one.
+        description:
+          tool.description?.trim() ||
+          uiFrontendToolNamed(tool.name)?.description ||
+          '',
+      }));
     /*
      * Kept apart: the runtime's tools, and the frontend tools — the ones this
      * page runs. The menu names them under two headings, so a person can tell

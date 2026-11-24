@@ -827,7 +827,7 @@ export function deckTools(
     },
     {
       name: 'deck_add_slides',
-      description: `Add several slides at once, in order, at the end of the deck or before the slide numbered \`at\`: the deck's outline in one or two calls. Each slide is as deck_add_slide takes one (${kinds.join(', ')}); one refused refuses them all, and nothing is added. A deck holds ${DECK_LIMITS.slides} slides at most.`,
+      description: `Add several slides at once, in order, at the end of the deck or before the slide numbered \`at\`: the deck's outline in one or two calls. Each slide is as deckAddSlide takes one (${kinds.join(', ')}); one refused refuses them all, and nothing is added. A deck holds ${DECK_LIMITS.slides} slides at most.`,
       parameters: {
         type: 'object',
         properties: {
@@ -836,7 +836,7 @@ export function deckTools(
             minItems: 1,
             maxItems: DECK_LIMITS.slides,
             description:
-              'The slides, in order: each as deck_add_slide takes one.',
+              'The slides, in order: each as deckAddSlide takes one.',
             items: {
               type: 'object',
               properties: slideProperties(kinds),

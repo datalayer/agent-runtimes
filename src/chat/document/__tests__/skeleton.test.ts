@@ -57,3 +57,29 @@ describe('the ephemeral document before it is there', () => {
     expect(source).not.toMatch(/\bSpinner\b/);
   });
 });
+
+describe('a document with no runtime (24 November 2026)', () => {
+  it('draws its editor when asked to, without waiting for services, and keeps it while they arrive', () => {
+    expect(source).toContain('withoutRuntime = false');
+    // Not `withoutRuntime && !isRuntimeStarting`: the editor swapped for the
+    // skeleton while the kernel connected came back new and empty.
+    expect(source).toContain('{activeServiceManager || withoutRuntime ? (');
+  });
+
+  it('is how the conversation’s document is drawn in its side panel', () => {
+    const panel = readFileSync(
+      join(
+        __dirname,
+        '..',
+        '..',
+        '..',
+        'apps',
+        'plugins',
+        'page-document',
+        'PageDocumentEditor.tsx',
+      ),
+      'utf8',
+    );
+    expect(panel).toMatch(/<EphemeralDocument[\s\S]*withoutRuntime[\s\S]*\/>/);
+  });
+});

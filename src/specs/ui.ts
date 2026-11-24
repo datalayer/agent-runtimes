@@ -2434,9 +2434,9 @@ export const MODELS_UI_0_0_1: UISpec = {
   components: [],
 };
 
-export const NOTEBOOK_HEADER_UI_0_0_1: UISpec = {
+export const NOTEBOOK_HEADER_UI_0_0_2: UISpec = {
   id: 'notebook-header',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Notebook header',
   description:
     "The Data Analyst's title bar: the dataset it works on, what has run, and a button that asks for a profile of the data.",
@@ -2461,7 +2461,7 @@ export const NOTEBOOK_HEADER_UI_0_0_1: UISpec = {
   placements: ['header', 'right', 'left'],
   header: {
     tool: 'set_notebook_header',
-    when: 'Call it once you know the dataset (its name and size as the label of dataset), and after each answer to say what ran: the cells run, or that nothing ran. Never show a run that did not happen.',
+    when: 'Call it once you know the dataset (its name and size as the label of dataset), and after notebook work to say what ran. Do not call it for a document-only or spreadsheet-only request. Never imply that the public demo lacks a notebook or kernel: report only the cells actually run or a cell failure.',
     items: [
       {
         id: 'dataset',
@@ -2478,7 +2478,7 @@ export const NOTEBOOK_HEADER_UI_0_0_1: UISpec = {
         display: 'status',
         label: 'Run',
         description:
-          'What ran, said honestly, such as "3 cells run" (tone "success"), "Cell failed" (tone "danger") or "Nothing ran here" (tone "neutral") where there is no kernel.',
+          'What ran in the mounted notebook, said honestly, such as "3 cells run" (tone "success") or "Cell failed" (tone "danger"). Do not update this indicator for document-only or spreadsheet-only work.',
         octicon: 'play',
       },
       {
@@ -2675,6 +2675,39 @@ export const PAGE_DECK_UI_0_0_1: UISpec = {
   components: [],
 };
 
+export const PAGE_DOCUMENT_UI_0_0_1: UISpec = {
+  id: 'page-document',
+  version: '0.0.1',
+  name: 'Document in the page',
+  description:
+    'A Lexical rich-text document the agent creates and edits with stable block tools, shown in a named side-panel tab and using the same editor as a Space document.',
+  emoji: '📄',
+  octicon: 'file',
+  plugin: '@datalayer/agent-plugin-page-document',
+  folder: 'page-document',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/page-document',
+    export: 'PageDocumentPlugin',
+    kind: 'plugin',
+  },
+  contributions: {
+    slots: [],
+    points: [
+      'agent.chat.extras',
+      'reactor.ui.renderer',
+      'reactor.ui.toolBinding',
+    ],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  placements: ['right', 'left'],
+  catalog: '',
+  components: [],
+};
+
 export const PAGE_EXCALIDRAW_UI_0_0_1: UISpec = {
   id: 'page-excalidraw',
   version: '0.0.1',
@@ -2818,6 +2851,72 @@ export const PAGE_MERMAID_UI_0_0_1: UISpec = {
     package: '@datalayer/agent-runtimes',
     module: 'lib/apps/plugins/page-mermaid',
     export: 'PageMermaidPlugin',
+    kind: 'plugin',
+  },
+  contributions: {
+    slots: [],
+    points: [
+      'agent.chat.extras',
+      'reactor.ui.renderer',
+      'reactor.ui.toolBinding',
+    ],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  placements: ['message', 'right', 'left'],
+  catalog: '',
+  components: [],
+};
+
+export const PAGE_NOTEBOOK_UI_0_0_1: UISpec = {
+  id: 'page-notebook',
+  version: '0.0.1',
+  name: 'Notebook in the page',
+  description:
+    'A live Jupyter notebook the agent reads, writes and runs in a named side-panel tab.',
+  emoji: '📓',
+  octicon: 'rows',
+  plugin: '@datalayer/agent-plugin-page-notebook',
+  folder: 'page-notebook',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/page-notebook',
+    export: 'PageNotebookPlugin',
+    kind: 'plugin',
+  },
+  contributions: {
+    slots: [],
+    points: [
+      'agent.chat.extras',
+      'reactor.ui.renderer',
+      'reactor.ui.toolBinding',
+    ],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  placements: ['right', 'left'],
+  catalog: '',
+  components: [],
+};
+
+export const PAGE_REACT_FLOW_UI_0_0_1: UISpec = {
+  id: 'page-react-flow',
+  version: '0.0.1',
+  name: 'React Flow in the page',
+  description:
+    'An editable node-and-link diagram shared by the person and the agent, with stable element IDs: the agent can read shapes the person drew, then insert, move and link them.',
+  emoji: '🔀',
+  octicon: 'workflow',
+  plugin: '@datalayer/agent-plugin-page-react-flow',
+  folder: 'page-react-flow',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/page-react-flow',
+    export: 'PageReactFlowPlugin',
     kind: 'plugin',
   },
   contributions: {
@@ -3044,6 +3143,39 @@ export const PROMPT_UI_0_0_1: UISpec = {
   components: [],
 };
 
+export const PUBLIC_LIBRARY_UI_0_0_1: UISpec = {
+  id: 'public-library',
+  version: '0.0.1',
+  name: 'Public Library',
+  description:
+    "Datalayer's public artifacts searched and listed as A2UI cards in the conversation, with confirmed publication of an item owned by the signed-in person.",
+  emoji: '📚',
+  octicon: 'book',
+  plugin: '@datalayer/agent-plugin-public-library',
+  folder: 'public-library',
+  implementation: {
+    package: '@datalayer/agent-runtimes',
+    module: 'lib/apps/plugins/public-library',
+    export: 'PublicLibraryPlugin',
+    kind: 'plugin',
+  },
+  contributions: {
+    slots: [],
+    points: [
+      'agent.chat.extras',
+      'reactor.ui.renderer',
+      'reactor.ui.toolBinding',
+    ],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: ['a2ui'],
+  placements: ['message'],
+  catalog: '',
+  components: [],
+};
+
 export const SHOP_HEADER_UI_0_0_1: UISpec = {
   id: 'shop-header',
   version: '0.0.1',
@@ -3160,7 +3292,7 @@ export const SIDE_PANELS_UI_0_0_1: UISpec = {
   version: '0.0.1',
   name: 'Side panels',
   description:
-    "The agent opens and closes the chat's left and right panels, where its UI placed there shows: the deck it builds, the sheet it fills, its title bar's controls.",
+    "The agent opens and closes the chat's left and right panels and selects a named tab when several UI components are placed there: the deck it builds, the sheet it fills, its diagrams or controls.",
   emoji: '🗂️',
   octicon: 'sidebar-expand',
   plugin: '@datalayer/agent-plugin-side-panels',
@@ -3817,16 +3949,19 @@ export const UI_CATALOGUE: Record<string, UISpec> = {
   'linkedin-link': LINKEDIN_LINK_UI_0_0_1,
   'linkedin-post-preview': LINKEDIN_POST_PREVIEW_UI_0_0_1,
   models: MODELS_UI_0_0_1,
-  'notebook-header': NOTEBOOK_HEADER_UI_0_0_1,
+  'notebook-header': NOTEBOOK_HEADER_UI_0_0_2,
   'notebook-toolbar': NOTEBOOK_TOOLBAR_UI_0_0_1,
   'notebook-view': NOTEBOOK_VIEW_UI_0_0_1,
   notebook: NOTEBOOK_UI_0_0_1,
   notices: NOTICES_UI_0_0_1,
   'odoo-context': ODOO_CONTEXT_UI_0_0_1,
   'page-deck': PAGE_DECK_UI_0_0_1,
+  'page-document': PAGE_DOCUMENT_UI_0_0_1,
   'page-excalidraw': PAGE_EXCALIDRAW_UI_0_0_1,
   'page-layout': PAGE_LAYOUT_UI_0_0_1,
   'page-mermaid': PAGE_MERMAID_UI_0_0_1,
+  'page-notebook': PAGE_NOTEBOOK_UI_0_0_1,
+  'page-react-flow': PAGE_REACT_FLOW_UI_0_0_1,
   'page-sheet': PAGE_SHEET_UI_0_0_1,
   'pap-purchase': PAP_PURCHASE_UI_0_0_1,
   'pap-sign-in': PAP_SIGN_IN_UI_0_0_1,
@@ -3834,6 +3969,7 @@ export const UI_CATALOGUE: Record<string, UISpec> = {
   'product-cards': PRODUCT_CARDS_UI_0_0_1,
   'product-comparison': PRODUCT_COMPARISON_UI_0_0_1,
   prompt: PROMPT_UI_0_0_1,
+  'public-library': PUBLIC_LIBRARY_UI_0_0_1,
   'shop-header': SHOP_HEADER_UI_0_0_1,
   'shopping-basket': SHOPPING_BASKET_UI_0_0_1,
   'side-panels': SIDE_PANELS_UI_0_0_1,

@@ -145,7 +145,7 @@ describe('the Marketer’s presentation, from its spec', () => {
       within(actions).getByRole('button', { name: /Start building/ }),
     ).toBeTruthy();
     const slides = within(actions).getByRole('link', {
-      name: 'The seed agents, in slides',
+      name: 'Poppy agents, in slides',
     });
     // No icon before a link unless the host says one.
     expect(slides.querySelector('svg')).toBeNull();
@@ -167,10 +167,10 @@ describe('the Marketer’s presentation, from its spec', () => {
     );
     expect(navigate).toHaveBeenLastCalledWith('/signin');
     fireEvent.click(
-      screen.getByRole('link', { name: 'The seed agents, in slides' }),
+      screen.getByRole('link', { name: 'Poppy agents, in slides' }),
     );
     expect(navigate).toHaveBeenLastCalledWith(
-      '/visitors/decks/agents/seed-agents',
+      '/visitors/decks/agents/poppy-agents',
     );
   });
 
@@ -185,11 +185,13 @@ describe('the Marketer’s presentation, from its spec', () => {
       />,
     );
     const slides = await screen.findByRole('link', {
-      name: 'The seed agents, in slides',
+      name: 'Poppy agents, in slides',
     });
     expect(slides.querySelector('svg')).not.toBeNull();
     fireEvent.click(slides);
-    expect(open).toHaveBeenLastCalledWith('/visitors/decks/agents/seed-agents');
+    expect(open).toHaveBeenLastCalledWith(
+      '/visitors/decks/agents/poppy-agents',
+    );
     expect(navigate).not.toHaveBeenCalled();
     // Not the host's: navigated to.
     fireEvent.click(screen.getByRole('button', { name: /Start building/ }));

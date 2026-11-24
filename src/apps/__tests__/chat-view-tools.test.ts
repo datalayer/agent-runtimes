@@ -10,6 +10,7 @@ import {
   orderToolContributions,
   toolsForChatView,
 } from '../plugins/chat/chatViewTools';
+import { mergeFrontendTools } from '../plugins/chat/chatViewTools';
 
 describe('the chat view toolset', () => {
   it('keeps the kernel tools and the read and list tools', () => {
@@ -22,6 +23,12 @@ describe('the chat view toolset', () => {
       'readAllCells',
       'datalayer_readAllBlocks',
       'listAvailableBlocks',
+      // The public names the chat hands the model (frontendToolNames).
+      'notebookReadAllCells',
+      'documentReadAllBlocks',
+      'notebookExecuteCodeInNotebook',
+      'documentExecuteCodeInDocument',
+      'documentListAvailableBlocks',
     ]) {
       expect(isChatViewTool(name), name).toBe(true);
     }
@@ -38,6 +45,11 @@ describe('the chat view toolset', () => {
       'runBlock',
       'runAllBlocks',
       'deleteBlocks',
+      'notebookInsertCell',
+      'notebookRunCell',
+      'documentInsertBlock',
+      'documentRunBlock',
+      'documentDeleteBlocks',
     ]) {
       expect(isChatViewTool(name), name).toBe(false);
     }
@@ -133,5 +145,76 @@ describe('the chat view toolset', () => {
         isInactiveSurfaceContribution('decks-tools', surfaceIds, 'document'),
       ).toBe(false);
     });
+  });
+});
+
+describe('mergeFrontendTools (the user, 24 November 2026: "create a notebook and document fails")', () => {
+  const tool = (name: string, from: string) => ({ name, from });
+  const surface = (id: string, names: string[], chatView = false) => ({
+    plugin: id,
+    value: {
+      id: `${id}-tools`,
+      tools: () => names.map(name => tool(name, id)),
+      chatView,
+    },
+  });
+  const contributions = [
+    surface('document', [
+      'documentInsertBlock',
+      'documentReadAllBlocks',
+      'documentListAvailableBlocks',
+    ]),
+  ];
+  const extras = [
+    tool('documentInsertBlock', 'page-document'),
+    tool('documentReadAllBlocks', 'page-document'),
+    tool('documentListAvailableBlocks', 'page-document'),
+  ];
+
+  it('gives a side panel’s document its own tools when no editor is on screen', () => {
+    const merged = mergeFrontendTools({
+      contributions,
+      workspace: {},
+      extras,
+      surfaceIds: new Set(['document']),
+      activeSurfaceId: undefined,
+    });
+    expect(merged.map(t => [t.name, t.from])).toEqual([
+      ['documentInsertBlock', 'page-document'],
+      ['documentReadAllBlocks', 'page-document'],
+      ['documentListAvailableBlocks', 'page-document'],
+    ]);
+  });
+
+  it('leaves the shared names to the editor on screen', () => {
+    const merged = mergeFrontendTools({
+      contributions,
+      workspace: {},
+      extras,
+      surfaceIds: new Set(['document']),
+      activeSurfaceId: 'document',
+    });
+    expect(merged.every(t => t.from === 'document')).toBe(true);
+    expect(merged).toHaveLength(3);
+  });
+
+  it('still drops what a broken contributor would give', () => {
+    const broken = {
+      plugin: 'broken',
+      value: {
+        id: 'broken-tools',
+        tools: () => {
+          throw new Error('boom');
+        },
+      },
+    };
+    const merged = mergeFrontendTools({
+      contributions: [broken],
+      workspace: {},
+      extras: [tool('hostTool', 'host')],
+      surfaceIds: new Set(),
+      activeSurfaceId: undefined,
+    });
+    expect(merged.map(t => t.name)).toEqual(['hostTool']);
   });
 });

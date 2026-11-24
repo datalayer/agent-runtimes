@@ -79,6 +79,7 @@ export type AnonymousTurns = {
 export function useAnonymousTurns(
   maxTurns: number | undefined,
   minutes: number = ANONYMOUS_MINUTES,
+  countTurns = true,
 ): AnonymousTurns {
   const [taken, setTaken] = useState(() =>
     turnsToday(readTurns(storage()), Date.now()),
@@ -94,12 +95,14 @@ export function useAnonymousTurns(
   }, [startedAt]);
   const take = useCallback(() => {
     const at = Date.now();
-    const kept = takeTurn(readTurns(storage()), at);
-    writeTurns(storage(), kept);
-    setTaken(kept.taken);
+    if (countTurns) {
+      const kept = takeTurn(readTurns(storage()), at);
+      writeTurns(storage(), kept);
+      setTaken(kept.taken);
+    }
     setStartedAt(current => current ?? at);
     setNow(at);
-  }, []);
+  }, [countTurns]);
   const refused = anonymousRefusal({
     taken,
     maxTurns,

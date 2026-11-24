@@ -33,6 +33,8 @@ vi.mock('@jupyter/ydoc', async importOriginal => await importOriginal());
 // The setup's jupyter-react stand-in has no notebook tool definitions.
 vi.mock('../../tools/adapters/agent-runtimes/notebookHooks', () => ({
   useNotebookTools: () => [],
+  // The page notebook builds its tools at module load (one set a conversation).
+  createNotebookTools: () => [],
 }));
 
 // jsdom does not scroll.

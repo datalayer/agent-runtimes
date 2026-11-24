@@ -77,6 +77,8 @@ import { notebookHeaderPlugin } from './plugins/notebook-header';
 import { analysisHeaderPlugin } from './plugins/analysis-header';
 import { OdooContextChip, odooContextPlugin } from './plugins/odoo-context';
 import { NoticesPlugin } from './plugins/notices';
+import { pageNotebookSidePlugin } from './plugins/page-notebook';
+import { pageDocumentSidePlugin } from './plugins/page-document';
 import { PageDeckPlugin, pageDeckSidePlugin } from './plugins/page-deck';
 import {
   PageExcalidrawPlugin,
@@ -86,10 +88,15 @@ import {
   PageMermaidPlugin,
   pageMermaidSidePlugin,
 } from './plugins/page-mermaid';
+import {
+  PageReactFlowPlugin,
+  pageReactFlowSidePlugin,
+} from './plugins/page-react-flow';
 import { PageSheetPlugin, pageSheetSidePlugin } from './plugins/page-sheet';
 import { PapPurchasePlugin } from './plugins/pap-purchase';
 import { ProductCardsPlugin } from './plugins/product-cards';
 import { ProductComparisonPlugin } from './plugins/product-comparison';
+import { PublicLibraryPlugin } from './plugins/public-library';
 import { shopHeaderPlugin } from './plugins/shop-header';
 import { ShoppingBasketPlugin } from './plugins/shopping-basket';
 import { SidePanelsPlugin } from './plugins/side-panels';
@@ -128,15 +135,31 @@ export type AgentUiPlugin = {
    * Its card's live view in a side panel, its calls a line each in the
    * conversation (a deck, a sheet built in the page), when it can go there.
    */
-  side?: (side: SidePlacement) => PluginRef;
+  side?: (side: SidePlacement, tab?: string) => PluginRef;
   /** Its plugin for a chrome placement, when it has one (an Agent workspace). */
-  chrome?: (placement: ChromePlacement) => PluginRef;
+  chrome?: (placement: ChromePlacement, tab?: string) => PluginRef;
   /** What it draws in the chat's chrome (`Chat`, outside an Agent workspace). */
   Chrome?: ComponentType<ChromeComponentProps>;
 };
 
 /** Each agent UI plugin, by its UI spec's id. */
 export const AGENT_UI_PLUGINS: Readonly<Record<string, AgentUiPlugin>> = {
+  /*
+   * The page's notebook and document live in a side panel only: their editor
+   * and its kernel are the panel's, and a card in the conversation had
+   * neither (the code-running tools waited for a kernel that never came).
+   * Their UI specs place them `right` or `left`, `right` by default.
+   */
+  'page-notebook': {
+    needsConnection: false,
+    side: pageNotebookSidePlugin,
+  },
+  // Every public seed agent can browse the public Library. Publishing still
+  // needs the signed-in owner and a confirmation in the page.
+  'public-library': {
+    needsConnection: false,
+    message: PublicLibraryPlugin,
+  },
   // The Marketer.
   'social-accounts': {
     needsConnection: true,
@@ -244,6 +267,10 @@ export const AGENT_UI_PLUGINS: Readonly<Record<string, AgentUiPlugin>> = {
     message: PageDeckPlugin,
     side: pageDeckSidePlugin,
   },
+  'page-document': {
+    needsConnection: false,
+    side: pageDocumentSidePlugin,
+  },
   'page-sheet': {
     needsConnection: false,
     message: PageSheetPlugin,
@@ -260,6 +287,11 @@ export const AGENT_UI_PLUGINS: Readonly<Record<string, AgentUiPlugin>> = {
     needsConnection: false,
     message: PageMermaidPlugin,
     side: pageMermaidSidePlugin,
+  },
+  'page-react-flow': {
+    needsConnection: false,
+    message: PageReactFlowPlugin,
+    side: pageReactFlowSidePlugin,
   },
   /*
    * Every agent's: it opens and closes the side panels (`side-panels`), and
@@ -383,12 +415,12 @@ export function agentUiPluginsFor(
     if (choice.placement === 'message') {
       plugin = entry.message;
     } else if (isSidePlacement(choice.placement) && entry.side) {
-      plugin = entry.side(choice.placement);
+      plugin = entry.side(choice.placement, choice.tab);
     } else if (
       isChromePlacement(choice.placement) &&
       CHROME_SLOTS[choice.placement]
     ) {
-      plugin = entry.chrome?.(choice.placement);
+      plugin = entry.chrome?.(choice.placement, choice.tab);
     }
     if (plugin) {
       seen.add(choice.plugin);

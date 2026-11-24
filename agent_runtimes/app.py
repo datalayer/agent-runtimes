@@ -71,6 +71,7 @@ from .routes import (
     history_router,
     identity_router,
     inference_relay_router,
+    library_router,
     mcp_auth_router,
     mcp_lent_router,
     mcp_proxy_router,
@@ -1722,6 +1723,8 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     app.include_router(sandbox_router, prefix=config.api_prefix)
     # A skill's file kept in the owner's Space, from the pod's loopback.
     app.include_router(spaces_router, prefix=config.api_prefix)
+    # A skill publishes one owned artifact without receiving the owner's token.
+    app.include_router(library_router, prefix=config.api_prefix)
     app.include_router(tool_approvals_router, prefix=config.api_prefix)
     app.include_router(tool_approvals_legacy_router)
     app.include_router(tool_approvals_ws_router)

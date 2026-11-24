@@ -100,6 +100,12 @@ class Caller:
     #: For a visitor: the catalogue Battle their token is played for, as
     #: ai-inference says it; ``""`` for none.
     battle: str = ""
+    #: For a visitor: whether ai-inference exempts them from the turns a
+    #: visitor has in a day. It is decided where the token is minted, from the
+    #: address the visitor asked from and the allowlist the platform's admins
+    #: and the deployment set, and said back by ``/anonymous/whoami``; the
+    #: runtime, which sees only Traefik, never sees that address.
+    turns_unlimited: bool = False
 
 
 LOCAL = Caller(kind="local")
@@ -491,6 +497,7 @@ class CallerVerifier:
             uid=visitor,
             app_uid=str(said.get("app") or ""),
             battle=str(said.get("battle") or ""),
+            turns_unlimited=said.get("turns_unlimited") is True,
         )
         lifetime = min(CACHE_SECONDS, max(0.0, float(said.get("expires_in") or 0)))
         self._remember(key, caller, self._clock() + lifetime)

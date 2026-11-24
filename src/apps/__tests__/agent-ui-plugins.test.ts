@@ -45,7 +45,8 @@ describe('the chat’s UI, merged', () => {
       'notices',
       'composer-portal',
     ]);
-    expect(ids.slice(3, 7)).toEqual([
+    expect(ids[3]).toBe('public-library');
+    expect(ids.slice(4, 8)).toEqual([
       'trip-options',
       'trip-budget',
       'trip-map',
@@ -112,6 +113,24 @@ describe('the chat’s UI, merged', () => {
 });
 
 describe('the seed agents’ UI', () => {
+  const publicSeeds = [
+    'worker-marketer',
+    'worker-shopper',
+    'worker-accountant',
+    'worker-traveller',
+    'worker-terra',
+    'worker-steward-aws',
+    'worker-data-analyst',
+    'worker-functional-analyst',
+  ];
+
+  it.each(publicSeeds)(
+    '%s can browse and publish through the Library UI',
+    agent => {
+      expect(agentUiIdsOf(agent)).toContain('public-library');
+    },
+  );
+
   it('comes from what each uses', () => {
     expect(agentUiIdsOf('worker-shopper')).toEqual(
       expect.arrayContaining([
@@ -137,6 +156,34 @@ describe('the seed agents’ UI', () => {
     const specified = new Set(listUI().map(spec => spec.id));
     for (const id of Object.keys(AGENT_UI_PLUGINS)) {
       expect(specified.has(id), id).toBe(true);
+    }
+  });
+
+  it('registers a working plugin for every placement a UI spec declares', () => {
+    for (const spec of listUI()) {
+      if (!AGENT_UI_PLUGINS[spec.id]) {
+        continue;
+      }
+      for (const placement of spec.placements ?? []) {
+        const [plugin] = agentUiPluginsFor([{ plugin: spec.id, placement }]);
+        expect(plugin, `${spec.id}@${placement}`).toBeDefined();
+      }
+    }
+  });
+
+  it('places the page’s document and notebook in a side panel by default, never in a message', () => {
+    // A message placement mounted no editor and no kernel: their code-running
+    // tools waited for a kernel that never came.
+    for (const id of ['page-document', 'page-notebook']) {
+      expect(placementOf({ plugin: id }), id).toBe('right');
+      expect(AGENT_UI_PLUGINS[id].message, id).toBeUndefined();
+      expect(
+        agentUiPluginsFor([{ plugin: id, placement: 'message' }]),
+        id,
+      ).toEqual([]);
+      expect(nameOf(agentUiPluginsFor([id])[0])).toBe(
+        `@datalayer/agent-plugin-${id}`,
+      );
     }
   });
 
@@ -213,6 +260,16 @@ describe('where each UI goes', () => {
     );
     expect(chrome.banner).toEqual(['linkedin-link']);
     expect(agentUiChromeOf(marketer, { anonymous: true }).header).toEqual([]);
+    expect(
+      agentUiChoicesOf('worker-functional-analyst')
+        .filter(choice => choice.placement === 'right')
+        .map(choice => [choice.plugin, choice.tab]),
+    ).toEqual([
+      ['page-excalidraw', 'Excalidraw'],
+      ['page-mermaid', 'Mermaid'],
+      ['page-react-flow', 'React Flow'],
+      ['page-document', 'Document'],
+    ]);
   });
 
   it('takes a UI out of its slot when its server goes', () => {

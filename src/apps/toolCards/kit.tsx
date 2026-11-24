@@ -61,6 +61,7 @@ import {
   type FormSubmission,
 } from '../../chat/messages/formSubmission';
 import { uiManifestOf } from '../uiManifest';
+import { frontendToolName } from '../../tools/frontendToolNames';
 
 /** Sends a turn as the person; false when the chat could not. */
 export type ToolCardSend = (message: string) => boolean;
@@ -126,7 +127,10 @@ export function PlatformDisplay<C>({
 
 /** A tool name, bare or with a server's or a toolset's prefix. */
 export function toolPattern(name: string): RegExp {
-  return new RegExp(`(^|[_.:\\-/])${name}$`);
+  const names = [...new Set([name, frontendToolName(name)])]
+    .map(value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('|');
+  return new RegExp(`(^|[_.:\\-/])(?:${names})$`);
 }
 
 // ---- Reading what the agent passed --------------------------------------
@@ -408,6 +412,8 @@ export type ToolCardPluginOptions = {
    * opens with its tools' first call.
    */
   Panel?: ComponentType<AgentSidePanelProps>;
+  /** Its concise visible tab name; the display name when unsaid. */
+  panelLabel?: string;
   /** The width its panel needs, in pixels. */
   panelWidth?: number;
   /**
@@ -516,7 +522,7 @@ export function defineToolCardPlugin(
                       Component: Panel as never,
                       order: SIDE_PANEL_ORDER,
                       panel: {
-                        label: options.displayName,
+                        label: options.panelLabel ?? options.displayName,
                         follows: options.tools,
                         ...(options.panelWidth
                           ? { width: options.panelWidth }

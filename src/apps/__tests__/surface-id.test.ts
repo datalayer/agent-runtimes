@@ -73,7 +73,9 @@ describe('what an in-page agent can reach', () => {
     const source = readFileSync(join(PLUGINS, 'chat/ChatView.tsx'), 'utf8');
     const handed = source.match(/frontendTools=\{[^}]*\}/g) ?? [];
     expect(handed).toEqual(['frontendTools={inPage ? undefined : pageTools}']);
-    // The page's tools are the host's, with the tool bundles it hands added.
-    expect(source).toContain('const own = chatExtras.frontendTools ?? [];');
+    // The server gets the active surface's contributed tools (including the
+    // notebook handlers), with the host's extras already folded in and any
+    // explicitly handed tool bundles added afterwards.
+    expect(source).toContain('const own = notebookTools;');
   });
 });

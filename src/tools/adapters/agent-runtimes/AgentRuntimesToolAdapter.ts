@@ -23,6 +23,7 @@ import type {
   FrontendToolDefinition,
   ToolStreamEvent,
 } from '../../../types/tools';
+import { frontendToolName } from '../../frontendToolNames';
 
 /**
  * Deduplication cache to prevent executing the same operation multiple times
@@ -107,12 +108,16 @@ export function createAgentRuntimesTool(
   definition: ToolDefinition,
   operation: ToolOperation<unknown, unknown>,
   context: ToolExecutionContext,
+  domain?: string,
 ): FrontendToolDefinition {
   // Create runner instance for this tool
   const runner = new OperationRunner();
 
   return {
-    name: definition.toolReferenceName || definition.name,
+    name: frontendToolName(
+      definition.toolReferenceName || definition.name,
+      domain,
+    ),
     description: definition.description,
     parameters: definition.parameters,
     // A tool that streams: subscribed through its
@@ -134,8 +139,14 @@ export function createAgentRuntimesTool(
       : {}),
 
     handler: async (params: unknown): Promise<unknown> => {
-      // Check for duplicate execution
-      if (isRecentDuplicate(definition.name, params)) {
+      // Check for duplicate execution, on this document: the same call on
+      // another one (another conversation's, another embed's) is not one.
+      if (
+        isRecentDuplicate(
+          `${context.documentId ?? ''}/${definition.name}`,
+          params,
+        )
+      ) {
         return {
           success: false,
           message: 'Operation already executed recently (duplicate detected)',
@@ -178,8 +189,10 @@ export function createAllAgentRuntimesTools(
   definitions: ToolDefinition[],
   operations: Record<string, ToolOperation<unknown, unknown>>,
   context: ToolExecutionContext,
+  domain?: string,
 ): FrontendToolDefinition[] {
   const tools: FrontendToolDefinition[] = [];
+  const references = siblingReferences(definitions, domain);
 
   for (const definition of definitions) {
     const operation = operations[definition.operation];
@@ -191,9 +204,65 @@ export function createAllAgentRuntimesTools(
       continue;
     }
 
-    const tool = createAgentRuntimesTool(definition, operation, context);
-    tools.push(tool);
+    const tool = createAgentRuntimesTool(
+      definition,
+      operation,
+      context,
+      domain,
+    );
+    tools.push({
+      ...tool,
+      description: renameReferences(tool.description, references),
+    });
   }
 
   return tools;
+}
+
+/**
+ * How the definitions name each other, and what they are called once named
+ * for a domain: `readAllCells` → `notebookReadAllCells`. Empty without a
+ * domain, where a tool keeps the name its siblings use.
+ */
+function siblingReferences(
+  definitions: readonly ToolDefinition[],
+  domain?: string,
+): Map<string, string> {
+  const references = new Map<string, string>();
+  if (!domain) {
+    return references;
+  }
+  for (const definition of definitions) {
+    const reference = definition.toolReferenceName;
+    if (!reference) {
+      continue;
+    }
+    const named = frontendToolName(reference, domain);
+    if (named !== reference) {
+      references.set(reference, named);
+    }
+  }
+  return references;
+}
+
+/**
+ * A description that names a sibling (`Call readAllCells first`) by the name
+ * the model is given (`Call notebookReadAllCells first`): the definitions
+ * are written for their own package, where the tools are not prefixed.
+ */
+function renameReferences(
+  description: string,
+  references: ReadonlyMap<string, string>,
+): string {
+  if (references.size === 0) {
+    return description;
+  }
+  const pattern = new RegExp(
+    `\\b(${[...references.keys()].join('|')})\\b`,
+    'g',
+  );
+  return description.replace(
+    pattern,
+    reference => references.get(reference) ?? reference,
+  );
 }

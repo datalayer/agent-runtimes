@@ -497,6 +497,12 @@ class UiChoiceSpec(BaseModel):
         default=None,
         description="Where in the chat it goes, one of its spec's placements; its default unsaid",
     )
+    tab: Optional[str] = Field(
+        default=None,
+        min_length=1,
+        max_length=40,
+        description="Its visible name in a left or right panel tab; the UI spec's name unsaid",
+    )
 
     @model_validator(mode="before")
     @classmethod

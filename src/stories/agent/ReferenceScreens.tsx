@@ -288,7 +288,9 @@ const TOOL_MARKS: DisplayItem[] = [
     'complete',
     { variance: 0 },
   ),
-  tool('t4', 'readCell', { index: 3 }, 'complete', { source: 'balances' }),
+  tool('t4', 'notebookReadCell', { index: 3 }, 'complete', {
+    source: 'balances',
+  }),
   said(
     't5',
     'assistant',

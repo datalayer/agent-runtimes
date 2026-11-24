@@ -488,6 +488,7 @@ describe('writing an Appspec', () => {
   it('reads and writes its UI plugins, each with its renderer (R8)', () => {
     const ui = [
       { plugin: 'a2ui-surface', renderer: 'a2ui' },
+      { plugin: 'page-mermaid', placement: 'right', tab: 'Diagram' },
       { plugin: 'chat' },
     ];
     const { app, problems } = parseAppspec({ kind: 'chat', ui });
@@ -518,6 +519,9 @@ describe('writing an Appspec', () => {
     expect(
       said({ ui: [{ plugin: 'app-page', renderer: 'mcp-apps' }] })[0],
     ).toMatch(/is not enabled/);
+    expect(said({ ui: [{ plugin: 'chat', tab: 'Conversation' }] })).toEqual([
+      "The UI plugin Chat ('chat') names a `tab`, but it goes in the chat's message, not its left or right panel.",
+    ]);
     expect(
       said({
         ui: [{ plugin: 'app-page', renderer: 'mcp-apps' }],
