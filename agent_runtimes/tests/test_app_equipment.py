@@ -62,7 +62,7 @@ def test_every_server_and_skill_the_spec_declares_is_listed_in_its_order() -> No
 
 
 def test_what_is_off_says_why_by_variable_name() -> None:
-    said = _marketer({"GITHUB_TOKEN"})
+    said = _marketer(set())
     servers, skills = _by_id(said["mcp_servers"]), _by_id(said["skills"])
     assert servers["discord"] == {
         "id": "discord",
@@ -72,17 +72,21 @@ def test_what_is_off_says_why_by_variable_name() -> None:
         "reason": "needs DISCORD_BOT_TOKEN, DISCORD_GUILD_ID",
         "missing_env_vars": ["DISCORD_BOT_TOKEN", "DISCORD_GUILD_ID"],
     }
-    assert skills["crawl"]["state"] == "not_activated"
-    assert skills["crawl"]["reason"] == "needs TAVILY_API_KEY"
-    assert skills["crawl"]["missing_env_vars"] == ["TAVILY_API_KEY"]
+    assert skills["github"]["state"] == "not_activated"
+    assert skills["github"]["reason"] == "needs GITHUB_TOKEN"
+    assert skills["github"]["missing_env_vars"] == ["GITHUB_TOKEN"]
     # An any-of rule: one of its keys is enough, and none is set.
     assert skills["image-stock"]["state"] == "not_activated"
     assert skills["image-stock"]["optional"] is True
     assert skills["image-stock"]["one_of_env_vars"] == KEYS
     assert skills["image-stock"]["reason"].startswith("needs one of FREEPIK_API_KEY")
-    # Set up: active, and nothing to say.
-    assert skills["github"]["state"] == "active"
-    assert skills["github"]["reason"] is None
+    # Nothing to set up: active, and nothing to say. Crawling a page asks no key
+    # (agentspecs, 25 November 2026), and it is not something the Marketer starts without.
+    assert skills["crawl"]["state"] == "active"
+    assert skills["crawl"]["reason"] is None
+    assert skills["crawl"]["optional"] is False
+    # Set up: active too.
+    assert _by_id(_marketer({"GITHUB_TOKEN"})["skills"])["github"]["state"] == "active"
     assert skills["image"]["optional"] is False
 
 

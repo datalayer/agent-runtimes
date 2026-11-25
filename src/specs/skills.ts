@@ -57,7 +57,7 @@ export const CRAWL_SKILL_SPEC_0_0_1: SkillSpec = {
   package: undefined,
   method: undefined,
   path: undefined,
-  requiredEnvVars: ['TAVILY_API_KEY:0.0.1'],
+  requiredEnvVars: [],
   optionalEnvVars: [],
   dependencies: ['requests>=2.31.0', 'beautifulsoup4>=4.12.0'],
   install: {

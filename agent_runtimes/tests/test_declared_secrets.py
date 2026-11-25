@@ -151,9 +151,13 @@ def test_the_library_s_crop_monitoring_declares_its_servers_and_skills() -> None
 
     spec = get_library_agent_spec("worker-crop-monitoring")
     declared = declared_secrets(spec, resolve_agent=get_library_agent_spec)
-    # earthdata's bearer, tavily's key, the crawl skill's key.
+    # earthdata's bearer and tavily's key. The crawl skill asks no key (agentspecs,
+    # 25 November 2026): Tavily's is its MCP server's, sent from this process, and
+    # no longer reaches the kernel, where the code the model writes runs.
     assert declared.consumers["the MCP server earthdata"] == {"DATALAYER_API_KEY"}
-    assert "TAVILY_API_KEY" in declared.kernel
+    assert declared.consumers["the MCP server tavily"] == {"TAVILY_API_KEY"}
+    assert "TAVILY_API_KEY" in declared.runtime
+    assert "TAVILY_API_KEY" not in declared.kernel
     assert "DATALAYER_API_KEY" not in declared.kernel
     # The download's script reads the Earthdata login in the sandbox: offered
     # there when the account has it, never required (agentspecs 0.0.65).

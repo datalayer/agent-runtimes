@@ -12494,7 +12494,7 @@ export const WORKER_MARKETER_AGENTSPEC_0_0_1: Agentspec = {
   listed: true,
   optional: {
     mcpServers: ['discord', 'linkedin'],
-    skills: ['crawl', 'github', 'datalayer-email', 'image-stock'],
+    skills: ['github', 'datalayer-email', 'image-stock'],
     backendTools: [
       'social-post-x',
       'social-read-x',
@@ -15334,7 +15334,6 @@ export const WORKER_SHOPPER_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'personal-assistant',
   enabled: true,
   listed: true,
-  optional: { mcpServers: [], skills: ['crawl'], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   modelAdditionals: [
     'bedrock:us.anthropic.claude-sonnet-4-6',
@@ -16491,7 +16490,7 @@ export const WORKER_TRAVELLER_AGENTSPEC_0_0_1: Agentspec = {
   listed: true,
   optional: {
     mcpServers: ['overture', 'booking-com', 'google-maps'],
-    skills: ['crawl'],
+    skills: [],
     atLeastOne: [],
   },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
