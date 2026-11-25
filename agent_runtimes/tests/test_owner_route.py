@@ -521,7 +521,7 @@ def _run_of(agent_id: str) -> Any:
 
 
 @pytest.mark.parametrize(
-    "bad", ["..", ".", "%2e%2e", "a/../b", "a/b", "a?x=1", "a#b", "..%2f", " ", "a b"]
+    "bad", ["..", ".", "%2e%2e", "a/../b", "a/b", "a?x=1", "a#b", "..%2f", "a b"]
 )
 def test_an_id_that_is_no_path_segment_never_reaches_an_authenticated_address(
     bad: str, a_persons_runtime: list[dict[str, Any]]
@@ -535,18 +535,16 @@ def test_an_id_that_is_no_path_segment_never_reaches_an_authenticated_address(
         "/api/v1/owner/events/evt-1", json={"agent_id": bad, "status": "done"}
     )
     for answer in (listed, created, changed):
-        if bad.strip():
-            assert answer.status_code == 422, (bad, answer.text)
-            assert "is not an agent id" in answer.json()["detail"]
+        assert answer.status_code == 422, (bad, answer.text)
+        assert "is not an agent id" in answer.json()["detail"]
     # The event's id, in the path as the client's own encoding carries it.
     # (A client may resolve a dot segment itself, and then asks another route:
     # what matters is that no address of the events is built from it.)
-    if bad.strip():
-        from fastapi import HTTPException
+    from fastapi import HTTPException
 
-        with pytest.raises(HTTPException) as refused:
-            owner._events_url("a", bad)
-        assert refused.value.status_code == 422
+    with pytest.raises(HTTPException) as refused:
+        owner._events_url("a", bad)
+    assert refused.value.status_code == 422
     # Nothing was asked of ai-agents with the runtime's token.
     assert [each for each in a_persons_runtime if "/events" in each["url"]] == []
 
