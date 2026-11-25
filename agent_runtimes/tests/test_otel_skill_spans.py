@@ -113,7 +113,15 @@ def test_the_load_skill_span_carries_the_skill_its_content_and_the_choice(
     assert WHOAMI in {item["name"] for item in available}
     assert len(available) > 1
     (whoami,) = [item for item in available if item["name"] == WHOAMI]
-    assert whoami["description"].startswith("Query the authenticated user's profile")
+    # The skill's own description, as its SKILL.md says it (datalayer-skills 0.7.9
+    # rewrote every skill's: what it does and when to use it).
+    (described,) = [
+        line.removeprefix("description:").strip()
+        for line in skill_md.split("---", 2)[1].splitlines()
+        if line.startswith("description:")
+    ]
+    assert described
+    assert whoami["description"] == described
 
 
 def test_without_content_capture_the_span_names_the_skill_but_not_its_content(
