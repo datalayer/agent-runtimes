@@ -773,11 +773,18 @@ def purge_agent_stream_state(agent_id: str | None) -> None:
     _STREAM_SUBSCRIBERS.pop(key, None)
 
 
-def build_codemode_status(agent_id: str | None = None) -> dict[str, Any] | None:
+def build_codemode_status(
+    agent_id: str | None = None, with_credentials: bool = False
+) -> dict[str, Any] | None:
     """Build codemode status dict (sync — safe to call from async context).
 
     Uses the stream-layer per-agent skills state. Each skill in the ``skills`` list carries
     a ``status`` field (``available`` | ``enabled`` | ``loaded``).
+
+    The sandbox block carries none of the sandbox's own credentials unless
+    ``with_credentials`` is asked: a snapshot goes to every subscriber of a
+    stream, and only a route that knows its caller says them
+    (`callers.sandbox_answer`).
     """
     from agent_runtimes.routes.configure import (
         _codemode_state,
@@ -830,11 +837,16 @@ def build_codemode_status(agent_id: str | None = None) -> dict[str, Any] | None:
         sandbox_status = _get_sandbox_status()
         skills_snapshot = get_agent_skills_snapshot(agent_id)
 
+        sandbox = sandbox_status.model_dump() if sandbox_status else None
+        if sandbox is not None and not with_credentials:
+            from agent_runtimes.apps.callers import without_sandbox_credentials
+
+            sandbox = without_sandbox_credentials(sandbox)
         return {
             "enabled": codemode_enabled,
             "skills": skills_snapshot,
             "available_skills": skills_snapshot,
-            "sandbox": sandbox_status.model_dump() if sandbox_status else None,
+            "sandbox": sandbox,
         }
     except Exception:
         return None

@@ -28,7 +28,7 @@ from typing import Any, AsyncGenerator
 
 from code_sandboxes import CodeSandboxClient
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -1660,8 +1660,16 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     # pod itself only on the application's own routes, websockets and the
     # dynamic AG-UI and A2A mounts included. Inside CORS, so that a page reads
     # the refusal's sentence.
-    from .apps.visitors import OwnRoutesOnly
+    from .apps.visitors import OwnersOnly, OwnRoutesOnly, access_mode, route_templates
 
+    # The lock, inside that gate: what the gate lets through and is neither
+    # public, an application's own nor self-proving answers the runtime's
+    # owner. In `log` mode a call that proves nothing is served and said in
+    # the log; in `enforce` mode it is refused. Read here, once: a runtime
+    # does not start on a mode it cannot read.
+    app.add_middleware(
+        OwnersOnly, mode=access_mode(), templates=lambda: route_templates(app)
+    )
     app.add_middleware(OwnRoutesOnly)
 
     # The agent host (`{name}.agent.<domain>`), once the runtime's agent answers
@@ -1780,8 +1788,14 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         }
 
     @app.get(f"{config.api_prefix}/runtime/status")
-    async def runtime_status() -> dict[str, Any]:
-        """Runtime status endpoint for overlays and quick diagnostics."""
+    async def runtime_status(request: Request) -> dict[str, Any]:
+        """Runtime status endpoint for overlays and quick diagnostics.
+
+        The sandbox's own credentials are said only to a caller that proved
+        the runtime is theirs (`callers.sandbox_answer`).
+        """
+        from .apps.callers import sandbox_answer
+
         startup_info = dict(getattr(app.state, "startup_info", None) or {})
 
         sandbox_status: dict[str, Any]
@@ -1803,8 +1817,8 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
             "agent_sessions": True,
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "api_prefix": config.api_prefix,
-            "startup": startup_info,
-            "sandbox": sandbox_status,
+            "startup": await sandbox_answer(request, startup_info),
+            "sandbox": await sandbox_answer(request, sandbox_status),
         }
 
     # Serve the built frontend assets (agent.html, JS/CSS bundles, etc.)

@@ -114,8 +114,12 @@ async def startup_info(request: Request) -> dict[str, Any]:
             "Could not enrich startup info from sandbox manager", exc_info=True
         )
 
+    # The sandbox's own credentials are said only to a caller that proved the
+    # runtime is theirs; the probe of whatever keeps it reads everything else.
+    from agent_runtimes.apps.callers import sandbox_answer
+
     return {
         "status": "ok",
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        **info,
+        **(await sandbox_answer(request, info)),
     }
