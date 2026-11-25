@@ -126,16 +126,28 @@ export const FULL_SCREEN_PORTAL_CLASS = 'datalayer-fullscreen-portal';
  * Escape — moves out with the node into the page's root, where it is seen and
  * can be closed; an empty node goes. Any landing for any element.
  */
-/** The rule that gives the overlays in a full-screen portal root their clicks back. */
-function ensureClickThroughRule(doc: Document): void {
+/**
+ * The rule that gives the overlays in a full-screen portal root their clicks back,
+ * installed where it matches them: in the node's own root. An inline embed mounts the
+ * workspace in a shadow root, where a stylesheet of the document's head matches
+ * nothing, and its overlays at full screen kept the root's `pointer-events: none`;
+ * the rule goes in that shadow root, once, else in the document's head.
+ */
+function ensureClickThroughRule(node: HTMLElement): void {
   const id = `${FULL_SCREEN_PORTAL_CLASS}-rule`;
-  if (doc.getElementById(id)) {
+  const scope = node.getRootNode();
+  const shadow =
+    typeof ShadowRoot !== 'undefined' && scope instanceof ShadowRoot
+      ? scope
+      : null;
+  const doc = node.ownerDocument;
+  if (shadow ? shadow.querySelector(`style#${id}`) : doc.getElementById(id)) {
     return;
   }
   const rule = doc.createElement('style');
   rule.id = id;
   rule.textContent = `.${FULL_SCREEN_PORTAL_CLASS} > * { pointer-events: auto; }`;
-  doc.head.appendChild(rule);
+  (shadow ?? doc.head).appendChild(rule);
 }
 
 export function holdOverlaysInside(node: HTMLElement): () => void {
@@ -165,7 +177,7 @@ export function holdOverlaysInside(node: HTMLElement): () => void {
     pointerEvents: 'none',
     zIndex: '9999',
   });
-  ensureClickThroughRule(node.ownerDocument);
+  ensureClickThroughRule(node);
   node.appendChild(root);
   registerPortalRoot(root);
   return () => {
