@@ -240,6 +240,64 @@ async def test_a_broken_pipe_is_tried_three_times(
     assert SERVER not in manager._starting_servers
 
 
+class _Unlisted(_Toolset):
+    """Enters, then fails to list its tools `failures` times (the gateway rolling)."""
+
+    def __init__(self, failures: int) -> None:
+        super().__init__()
+        self.failures = failures
+        self.listings = 0
+
+    async def list_tools(self) -> list[Any]:
+        self.listings += 1
+        if self.listings <= self.failures:
+            raise RuntimeError("Connection closed")
+        return [_Tool("odoo_accounting_aged_balance")]
+
+
+class _Tool:
+    def __init__(self, name: str) -> None:
+        self.name = name
+        self.description = "A tool."
+        self.input_schema: dict[str, Any] = {"type": "object"}
+
+
+@pytest.mark.asyncio
+async def test_a_listing_that_fails_once_is_made_again_on_a_new_connection(
+    manager: MCPLifecycleManager, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """run1, 25 November 2026: "Running, 0 tools" for a server whose listing met a rolling gateway."""
+    toolset = _Unlisted(failures=1)
+    _toolsets(monkeypatch, toolset)
+    monkeypatch.setattr(lifecycle, "MCP_SERVER_RETRY_BACKOFF", 0.01)
+    monkeypatch.setattr(lifecycle, "start_deadline", lambda: 5.0)
+    instance = await manager.start_server(SERVER, _remote())
+    assert instance is not None
+    assert [tool.name for tool in instance.tools] == ["odoo_accounting_aged_balance"]
+    assert toolset.listings == 2
+    # The connection whose listing failed was closed before the next attempt.
+    assert toolset.exited == 1
+    assert SERVER not in manager.get_failed_servers()
+    assert await manager.stop_server(SERVER)
+
+
+@pytest.mark.asyncio
+async def test_a_server_that_never_lists_its_tools_is_failed_not_running_with_none(
+    manager: MCPLifecycleManager, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    toolset = _Unlisted(failures=99)
+    _toolsets(monkeypatch, toolset)
+    monkeypatch.setattr(lifecycle, "MCP_SERVER_RETRY_BACKOFF", 0.01)
+    monkeypatch.setattr(lifecycle, "start_deadline", lambda: 5.0)
+    assert await manager.start_server(SERVER, _remote()) is None
+    assert toolset.listings == lifecycle.MCP_SERVER_MAX_ATTEMPTS
+    assert toolset.exited == lifecycle.MCP_SERVER_MAX_ATTEMPTS
+    said = manager.get_failed_servers()[SERVER]
+    assert "did not list its tools" in said and "Connection closed" in said
+    assert SERVER not in manager._starting_servers
+    assert not manager._lock_for(SERVER).locked()
+
+
 def test_the_deadline_covers_every_attempt(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("AGENT_RUNTIMES_MCP_START_DEADLINE", raising=False)
     monkeypatch.setattr(lifecycle, "MCP_SERVER_STARTUP_TIMEOUT", 45.0)

@@ -46,6 +46,12 @@ MCP_SERVER_HANDSHAKE_TIMEOUT = MCP_SERVER_STARTUP_TIMEOUT
 MCP_SERVER_MAX_ATTEMPTS = 3
 #: The longest a start waits between two attempts, in seconds.
 MCP_SERVER_RETRY_BACKOFF = 5.0
+
+
+class _ToolsNotListed(Exception):
+    """A server answered the handshake and failed to list its tools."""
+
+
 #: How long a start ended at its deadline is given to close what it opened,
 #: in seconds, before it is left to end on its own.
 MCP_SERVER_START_GRACE = 5.0
@@ -993,11 +999,17 @@ class MCPLifecycleManager:
                     logger.info(
                         f"✓ MCP server '{server_id}' started with tools: {tool_names}"
                     )
+                except asyncio.TimeoutError:
+                    raise
                 except Exception as e:
-                    logger.warning(f"Failed to list tools for '{server_id}': {e}")
-                    logger.info(
-                        f"✓ MCP server '{server_id}' started (tools unavailable)"
-                    )
+                    # A server that answered the handshake and then did not
+                    # list its tools is not started: kept as running it
+                    # showed "Running, 0 tools" for the runtime's life (run1,
+                    # 25 November 2026: the gateway was rolling, the listing
+                    # got "Connection closed"). The connection is closed and
+                    # the attempt made again; the last one fails the start,
+                    # so the next turn that needs the server starts it again.
+                    raise _ToolsNotListed(self._format_exception(e)) from e
 
                 # The handshake is over: a refusal from now on is a
                 # tool's to say, the way every tool error reaches the model.
@@ -1050,6 +1062,25 @@ class MCPLifecycleManager:
                     logger.debug(
                         f"Closing '{server_id}' after its timeout: {close_error}"
                     )
+                self._failed_servers[server_id] = self._refused_or(
+                    pydantic_server, error_detail
+                )
+                return None
+
+            except _ToolsNotListed as unlisted:
+                error_detail = (
+                    f"MCP server '{server_id}' answered and did not list its "
+                    f"tools: {unlisted}"
+                )
+                await self._close_quietly(
+                    exit_stack, server_id, "its tools were not listed"
+                )
+                if attempt < MCP_SERVER_MAX_ATTEMPTS:
+                    logger.warning(redact(f"{error_detail}; retrying"))
+                    await asyncio.sleep(min(2 * attempt, MCP_SERVER_RETRY_BACKOFF))
+                    attempt += 1
+                    continue
+                logger.error(redact(f"✗ {error_detail}"))
                 self._failed_servers[server_id] = self._refused_or(
                     pydantic_server, error_detail
                 )
