@@ -168,3 +168,31 @@ describe('the full-screen portal root as the overlays’ clipping node (the user
     workspace.remove();
   });
 });
+
+describe('the click-through rule in an inline embed’s shadow root', () => {
+  it('is installed in the shadow root, once, and not in the document for it', () => {
+    const id = `${FULL_SCREEN_PORTAL_CLASS}-rule`;
+    document.getElementById(id)?.remove();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const shadow = host.attachShadow({ mode: 'open' });
+    const workspace = document.createElement('div');
+    workspace.setAttribute('data-agent-workspace', '');
+    shadow.appendChild(workspace);
+
+    const release = holdOverlaysInside(workspace);
+    // A stylesheet in the document's head matches nothing inside a shadow root.
+    const rules = shadow.querySelectorAll(`style#${id}`);
+    expect(rules).toHaveLength(1);
+    expect(rules[0].textContent).toBe(
+      `.${FULL_SCREEN_PORTAL_CLASS} > * { pointer-events: auto; }`,
+    );
+    expect(document.getElementById(id)).toBeNull();
+    act(() => release());
+    // One rule in that root, however many holds.
+    act(() => holdOverlaysInside(workspace)());
+    expect(shadow.querySelectorAll(`style#${id}`)).toHaveLength(1);
+    expect(document.getElementById(id)).toBeNull();
+    host.remove();
+  });
+});

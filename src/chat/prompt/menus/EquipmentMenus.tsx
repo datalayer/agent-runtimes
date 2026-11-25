@@ -102,6 +102,9 @@ export type EquipmentSwitches = {
 
 export type EquipmentKind = 'servers' | 'skills';
 
+/** The mark of a skill no catalogue marks: the Skills menu's own briefcase. */
+export const NEUTRAL_SKILL_ICON = '@primer/octicons-react:briefcase';
+
 const TITLES: Record<EquipmentKind, string> = {
   servers: EQUIPMENT_WORDS.servers,
   skills: EQUIPMENT_WORDS.skills,
@@ -386,17 +389,19 @@ function SkillBlock({
         <RowHead
           row={row}
           labelId={labelId}
+          // Every skill has a mark before its name: the catalogue's icon,
+          // its emoji where it names no icon, a neutral one otherwise.
           mark={
             hasMark(marks) ? (
               <SpecMark icon={marks.icon} emoji={marks.emoji} size={16} />
-            ) : undefined
+            ) : (
+              <SpecMark icon={NEUTRAL_SKILL_ICON} size={16} />
+            )
           }
         />
-        <Line>
-          {[row.reason, row.note, row.reason ? undefined : row.description]
-            .filter(Boolean)
-            .join(' · ')}
-        </Line>
+        {/* What it does, on every row; then why it is off, and its note. */}
+        <Line>{row.description}</Line>
+        <Line>{[row.reason, row.note].filter(Boolean).join(' · ')}</Line>
       </Box>
       <Box display="flex" alignItems="center" gap={3}>
         <Switch

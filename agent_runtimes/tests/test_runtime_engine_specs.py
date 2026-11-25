@@ -205,3 +205,55 @@ class TestTheStewardOnAgentCore:
         assert on_agentcore == ["worker-steward-aws"]
         spec = get_agent_spec("worker-steward-aws")
         assert spec is not None and spec.harness == "pydantic-ai"
+
+
+# -- the published import paths of RUNTIME_ENGINES ------------------------------------------
+
+#: A fresh interpreter for each: what is imported first decides whether a cycle shows.
+_OLD_PATHS = (
+    "from agent_runtimes.types import RUNTIME_ENGINES as old",
+    "from agent_runtimes.types.types import RUNTIME_ENGINES as old",
+    "import agent_runtimes.types as t; old = t.RUNTIME_ENGINES",
+    "import agent_runtimes.types.types as t; old = t.RUNTIME_ENGINES",
+)
+_FIRST = (
+    "",
+    "import agent_runtimes.specs.runtime_engines",
+    "import agent_runtimes.types",
+)
+
+
+@pytest.mark.parametrize("old_path", _OLD_PATHS)
+@pytest.mark.parametrize("first", _FIRST)
+def test_runtime_engines_is_still_imported_from_the_types(
+    old_path: str, first: str
+) -> None:
+    import subprocess
+
+    code = "\n".join(
+        [
+            first,
+            old_path,
+            "from agent_runtimes.specs.runtime_engines import RUNTIME_ENGINES",
+            "assert old is RUNTIME_ENGINES, old",
+            "print(','.join(old))",
+        ]
+    )
+    done = subprocess.run(  # nosec B603: this interpreter, the code above
+        [sys.executable, "-c", code], capture_output=True, text=True, timeout=120
+    )
+    assert done.returncode == 0, done.stderr[-2000:]
+    assert done.stdout.strip() == "datalayer,kagent,agentcore"
+
+
+def test_the_types_still_list_runtime_engines() -> None:
+    import agent_runtimes.types as types
+    import agent_runtimes.types.types as types_module
+
+    assert "RUNTIME_ENGINES" in types.__all__
+    assert "RUNTIME_ENGINES" in dir(types)
+    assert "RUNTIME_ENGINES" in dir(types_module)
+    with pytest.raises(AttributeError):
+        types.NO_SUCH_NAME
+    with pytest.raises(AttributeError):
+        types_module.NO_SUCH_NAME

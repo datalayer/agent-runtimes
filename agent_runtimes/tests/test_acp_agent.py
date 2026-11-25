@@ -1330,7 +1330,7 @@ class TestSkillsLentInTheHarnessFormat:
         assert page == tmp_path / ".claude" / "skills" / "crawl" / "SKILL.md"
         assert (page.stat().st_mode & 0o777) == 0o444
         text = page.read_text()
-        assert text.startswith("---\nname: crawl\ndescription: Web crawling")
+        assert text.startswith("---\nname: crawl\ndescription: Web pages fetched")
         assert (
             "lent-to: fake" in text and "module: datalayer_skills.skills.crawl" in text
         )

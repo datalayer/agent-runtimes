@@ -10,6 +10,8 @@
  * with the conversation's switches; an application's model, to read.
  */
 
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import React from 'react';
 import {
   cleanup,
@@ -32,9 +34,11 @@ import {
 import {
   EQUIPMENT_WORDS,
   equipmentLists,
+  humanisedId,
   modelRow,
   rowWords,
   serverRow,
+  skillNameOf,
   skillRow,
   summaryOf,
   type EquipmentSources,
@@ -43,9 +47,12 @@ import {
   EquipmentMenu,
   EquipmentModelMenu,
   LINE_FOLD_CHARS,
+  NEUTRAL_SKILL_ICON,
   foldLine,
   type EquipmentSwitches,
 } from '../prompt/menus/EquipmentMenus';
+import { SKILLS_CATALOG } from '../../specs/skills';
+import { iconOf, loadIconPackage, parseIconRef } from '../marks';
 
 /** What the runtime answers for the Marketer with GITHUB_TOKEN alone set up. */
 const ANSWER = {
@@ -829,5 +836,251 @@ describe('a long line', () => {
     expect(screen.getByText(LONG, { exact: false })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'less' }));
     expect(screen.getByRole('button', { name: 'more…' })).toBeTruthy();
+  });
+});
+
+/**
+ * A skill's row (the user, 25 November 2026: "We need icons, display name
+ * and description for the datalayer memory skills - we need that for all the
+ * datalayer skills"): the anonymous page listed `datalayer-memory-add` and
+ * its three siblings as bare ids with nothing under them.
+ */
+describe('a skill’s row', () => {
+  const MEMORY = [
+    'datalayer-memory-add',
+    'datalayer-memory-search',
+    'datalayer-memory-list',
+    'datalayer-memory-delete',
+  ];
+
+  /** What a runtime whose catalogue has no entry for them answers: the id as the name. */
+  const bareAnswer = () =>
+    readEquipment({
+      mcp_servers: [],
+      skills: [
+        {
+          id: 'crawl',
+          name: 'Web Crawl Skill',
+          description: 'As the runtime says it.',
+          optional: true,
+          state: 'not_activated',
+          reason: 'needs TAVILY_API_KEY',
+        },
+        ...MEMORY.map(id => ({
+          id,
+          name: id,
+          description: '',
+          state: 'active',
+        })),
+        { id: 'acme-thing_do:1.2.0', name: 'acme-thing_do', state: 'active' },
+      ],
+    });
+
+  const open = () => {
+    render(
+      <ThemeProvider>
+        <EquipmentMenu
+          kind="skills"
+          trigger="button"
+          lists={equipmentLists({
+            equipment: { source: 'live', ...bareAnswer() },
+            // What the skills area reports once loaded: the SKILL.md's own words.
+            skills: MEMORY.map(id => ({
+              id,
+              name: id,
+              description: 'Use it when the person asks you to remember.',
+              status: 'loaded' as const,
+            })),
+          })}
+          switches={switches()}
+        />
+      </ThemeProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^Skills — / }));
+  };
+
+  it('names a skill for a person: the runtime’s name, the catalogue’s when that is the id, the id as words otherwise', () => {
+    expect(skillNameOf('crawl', 'Web Crawl Skill')).toBe('Web Crawl Skill');
+    expect(skillNameOf('datalayer-memory-add', 'datalayer-memory-add')).toBe(
+      'Remember Skill',
+    );
+    expect(skillNameOf('datalayer-memory-add:0.0.1', undefined, '')).toBe(
+      'Remember Skill',
+    );
+    expect(humanisedId('datalayer-memory-add')).toBe('Datalayer Memory Add');
+    expect(skillNameOf('acme-thing_do:1.2.0', 'acme-thing_do')).toBe(
+      'Acme Thing Do',
+    );
+    const { skills } = bareAnswer();
+    expect(skillRow(skills[1]).name).toBe('Remember Skill');
+  });
+
+  it('gives the memory skills their names and descriptions from the page’s catalogue, over the skill’s own words', () => {
+    const { skills } = equipmentLists({
+      equipment: { source: 'live', ...bareAnswer() },
+      skills: MEMORY.map(id => ({
+        id,
+        name: id,
+        description: 'Use it when the person asks you to remember.',
+      })),
+    });
+    expect(skills.map(row => row.name)).toEqual([
+      'Web Crawl Skill',
+      'Remember Skill',
+      'Recall Skill',
+      'List Memories Skill',
+      'Forget Skill',
+      'Acme Thing Do',
+    ]);
+    // The runtime's catalogue first, the page's next, the SKILL.md's last.
+    expect(skills[0].description).toBe('As the runtime says it.');
+    for (const row of skills.slice(1, 5)) {
+      expect(row.description).toBe(SKILLS_CATALOG[row.id].description);
+    }
+    expect(skills[5].description).toBeUndefined();
+    // No row is its bare id.
+    expect(skills.filter(row => row.name === row.id)).toEqual([]);
+  });
+
+  it('draws a mark before every name and the description under it, a neutral mark for a skill no catalogue has', async () => {
+    open();
+    const rows = Array.from(
+      document.querySelectorAll('[data-equipment-row]'),
+    ) as HTMLElement[];
+    expect(rows.length).toBe(6);
+    for (const row of rows) {
+      const id = row.getAttribute('data-equipment-row') as string;
+      const mark = row.querySelector('[data-mark]');
+      expect(mark, id).toBeTruthy();
+      // Before the name, in the row's head.
+      const name = row.querySelector('[id*="-skill-"]') as HTMLElement;
+      expect(
+        mark!.compareDocumentPosition(name) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(mark!.getAttribute('data-mark')).toBe(
+        SKILLS_CATALOG[id]?.icon ?? NEUTRAL_SKILL_ICON,
+      );
+    }
+    expect(rows[5].getAttribute('data-equipment-row')).toBe('acme-thing_do');
+    expect(rows[5].textContent).toContain('Acme Thing Do');
+    for (const id of MEMORY) {
+      const row = document.querySelector(
+        `[data-equipment-row="${id}"]`,
+      ) as HTMLElement;
+      expect(row.textContent).toContain(SKILLS_CATALOG[id].name);
+      expect(row.textContent).toContain(SKILLS_CATALOG[id].description);
+      expect(row.textContent).not.toContain(id);
+    }
+    // A skill that is off says what it does and why it is off, both.
+    const crawl = document.querySelector(
+      '[data-equipment-row="crawl"]',
+    ) as HTMLElement;
+    expect(crawl.textContent).toContain('As the runtime says it.');
+    expect(crawl.textContent).toContain('needs TAVILY_API_KEY · optional');
+    // The icons arrive once their package has loaded.
+    await waitFor(() =>
+      expect(
+        document.querySelectorAll('[data-equipment-row] [data-mark] svg')
+          .length,
+      ).toBe(6),
+    );
+  });
+
+  it('has a neutral icon its package exports', async () => {
+    const ref = parseIconRef(NEUTRAL_SKILL_ICON);
+    expect(iconOf(ref, await loadIconPackage(ref.pkg))).toBeTruthy();
+  });
+});
+
+/**
+ * No skill ships without what its row shows: every skill a generated agent
+ * or cog spec names is in the catalogue, under the version it is named by,
+ * with a display name, a description, an icon and an emoji.
+ */
+describe('the skills the generated specs name', () => {
+  const named = (file: string): string[] => {
+    const source = readFileSync(
+      resolve(__dirname, '../../specs', file),
+      'utf8',
+    );
+    return Array.from(
+      new Set(
+        Array.from(source.matchAll(/SKILL_MAP\[\s*'([^']+)'\s*\]/g)).map(
+          match => match[1],
+        ),
+      ),
+    );
+  };
+  const refs = [...named('agents/agents.ts'), ...named('cogs.ts')];
+
+  it('are named by the agents and the cogs', () => {
+    expect(refs.length).toBeGreaterThan(10);
+    expect(refs).toContain('datalayer-memory-add:0.0.1');
+    expect(refs).toContain('datalayer-whoami:1.0.0');
+  });
+
+  it('are each in the catalogue, under that version, with a name, a description, an icon and an emoji', async () => {
+    const problems: string[] = [];
+    for (const ref of refs) {
+      const [id, version] = ref.split(':');
+      const spec = SKILLS_CATALOG[id];
+      if (!spec) {
+        problems.push(`${ref}: no catalogue entry`);
+        continue;
+      }
+      if (version && spec.version !== version) {
+        problems.push(`${ref}: the catalogue has ${spec.version}`);
+      }
+      if (!spec.name?.trim() || spec.name === id) {
+        problems.push(`${ref}: no display name`);
+      }
+      if (!spec.description?.trim()) {
+        problems.push(`${ref}: no description`);
+      }
+      if (!spec.emoji) {
+        problems.push(`${ref}: no emoji`);
+      }
+      if (!spec.icon) {
+        problems.push(`${ref}: no icon`);
+        continue;
+      }
+      const icon = parseIconRef(spec.icon);
+      try {
+        iconOf(icon, await loadIconPackage(icon.pkg));
+      } catch (error) {
+        problems.push(`${ref}: ${(error as Error).message}`);
+      }
+    }
+    expect(problems).toEqual([]);
+  });
+
+  it('are every Datalayer skill, the memory skills and the identity skill among them', () => {
+    for (const id of [
+      'accounting',
+      'crawl',
+      'dining',
+      'datalayer-email',
+      'events',
+      'fare-and-stay-comparison',
+      'github',
+      'image',
+      'image-stock',
+      'datalayer-library-publish',
+      'datalayer-memory-add',
+      'datalayer-memory-delete',
+      'datalayer-memory-list',
+      'datalayer-memory-search',
+      'pdf',
+      'text-summarizer',
+      'travel-planning',
+      'video',
+      'datalayer-whoami',
+    ]) {
+      const spec = SKILLS_CATALOG[id];
+      expect(spec, id).toBeTruthy();
+      expect(spec.name.endsWith(' Skill'), id).toBe(true);
+      expect(spec.description.length, id).toBeGreaterThan(20);
+      expect(spec.icon && spec.emoji, id).toBeTruthy();
+    }
   });
 });

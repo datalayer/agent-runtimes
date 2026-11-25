@@ -23,6 +23,11 @@ import {
   isRuntimeEngine,
   listRuntimeEngines,
 } from '../runtimeEngines';
+import type { RuntimeEngine } from '../runtimeEngines';
+import * as types from '../../types';
+import * as agentspecsTypes from '../../types/agentspecs';
+import type { RuntimeEngine as RuntimeEngineFromTypes } from '../../types';
+import type { RuntimeEngine as RuntimeEngineFromAgentspecs } from '../../types/agentspecs';
 
 describe('runtimeEngine', () => {
   const specs = Object.values(AGENTSPECS);
@@ -89,5 +94,24 @@ describe('runtimeEngine', () => {
       kagent: ['pydantic-ai'],
       agentcore: ['pydantic-ai'],
     });
+  });
+});
+
+describe('the runtime engines at their published type paths', () => {
+  // `lib/types` and `lib/types/agentspecs` exported them until 1.8.5 generated them.
+  it.each([
+    ['types', types as Record<string, unknown>],
+    ['types/agentspecs', agentspecsTypes as Record<string, unknown>],
+  ])('%s exports the catalogue’s own', (_path, module) => {
+    expect(module.RUNTIME_ENGINES).toBe(RUNTIME_ENGINES);
+    expect(module.RUNTIME_ENGINE_LABELS).toBe(RUNTIME_ENGINE_LABELS);
+    expect(module.RUNTIME_ENGINE_HARNESSES).toBe(RUNTIME_ENGINE_HARNESSES);
+  });
+
+  it('exports the RuntimeEngine type there too', () => {
+    const fromTypes: RuntimeEngineFromTypes = 'kagent';
+    const fromAgentspecs: RuntimeEngineFromAgentspecs = 'agentcore';
+    const engines: RuntimeEngine[] = [fromTypes, fromAgentspecs];
+    expect(engines).toEqual(['kagent', 'agentcore']);
   });
 });

@@ -19,6 +19,15 @@ import type { AgentNotificationConfig } from './notifications';
 import type { AgentCodemodeConfig, AgentAdvancedConfig } from './config';
 import type { RuntimeEngine } from '../specs/runtimeEngines';
 
+// The runtime engines, generated from their specs since 1.8.5 (`specs/runtimeEngines`):
+// still exported from here, where `lib/types` and `lib/types/agentspecs` had them.
+export {
+  RUNTIME_ENGINES,
+  RUNTIME_ENGINE_LABELS,
+  RUNTIME_ENGINE_HARNESSES,
+} from '../specs/runtimeEngines';
+export type { RuntimeEngine } from '../specs/runtimeEngines';
+
 /**
  * Specification for an AI agent.
  *

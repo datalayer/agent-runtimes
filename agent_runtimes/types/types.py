@@ -5,7 +5,7 @@
 
 import json
 from enum import Enum
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Union
 
 from pydantic import (
     AliasChoices,
@@ -4853,3 +4853,28 @@ class SceneSpec(BaseModel):
     live: str = Field(
         default="", description="A scripted scene: what of it runs on Datalayer today"
     )
+
+
+# -- names that moved to the generated runtime engine catalogue ------------------------------
+
+#: Read from here until 1.8.5, generated since into ``agent_runtimes.specs.runtime_engines``,
+#: which imports this module: they are looked up there when first asked for (PEP 562), so
+#: ``from agent_runtimes.types.types import RUNTIME_ENGINES`` still holds.
+_FROM_RUNTIME_ENGINES = frozenset({"RUNTIME_ENGINES"})
+
+if TYPE_CHECKING:
+    RUNTIME_ENGINES: tuple[str, ...]
+else:
+
+    def __getattr__(name: str) -> Any:
+        """A name the runtime engine catalogue has now, read from it."""
+        if name in _FROM_RUNTIME_ENGINES:
+            from agent_runtimes.specs import runtime_engines
+
+            return getattr(runtime_engines, name)
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__() -> list[str]:
+    """The module's names, those read from the runtime engine catalogue included."""
+    return sorted({*globals(), *_FROM_RUNTIME_ENGINES})
