@@ -304,7 +304,13 @@ export function SandboxDetailsDialog({
             sandbox.serverToken,
           )
         : undefined,
-    [connection, sandbox.serverUrl, sandbox.agentId, sandbox.serverToken],
+    [
+      connection,
+      sandbox.serverUrl,
+      sandbox.agentId,
+      sandbox.serverToken,
+      sandbox.status,
+    ],
   );
 
   const url = displayUrl(sandbox.url ?? sandbox.serverUrl);
