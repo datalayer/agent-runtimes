@@ -284,13 +284,21 @@ def test_every_route_of_the_application_is_the_owners_unless_it_is_listed(
 ) -> None:
     classes = _classes(apps["log"])
     assert set(classes) == {"public", "own-proof", "application", "owner"}
-    # The pages are routes of their own under the static mounts: the mounts say them all.
+    # The pages are routes of their own under the static mounts, which say
+    # them all; they are routes only where the frontend was built.
+    built = {
+        ("GET", "/agent"),
+        ("GET", "/static/{path:path}"),
+        ("GET", "/html/{path:path}"),
+    }
     pages = {
         (m, t)
         for m, t in classes["public"]
         if t.startswith(("/static/", "/html/")) and "{" not in t
     }
-    assert classes["public"] - pages == PUBLIC
+    public = classes["public"] - pages
+    assert PUBLIC - built <= public <= PUBLIC
+    assert public & built in (set(), built)
     # The platforms' contracts are routes only of a runtime started for them.
     assert classes["own-proof"] == {
         route for route in OWN_PROOF if route[1].startswith("/api/")
