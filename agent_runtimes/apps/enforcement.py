@@ -363,6 +363,16 @@ def code_is_running() -> bool:
     return bool(_CODE_RUNNING)
 
 
+def code_runs() -> List[str]:
+    """The agent of each run whose code is running on this runtime, by id.
+
+    Nothing the sandbox sends says who it is: what acts in an agent's name
+    from the sandbox (`routes.owner`) is bound to the one agent whose code is
+    running, and to nobody when the code of several runs at once.
+    """
+    return [str(run.rules.agent_id or "") for run in _CODE_RUNNING]
+
+
 def _no_code_running(tool_name: str) -> "AppRuleBlockedError":
     return AppRuleBlockedError(
         Decision(LEAVE_TO_ME, tool_name, ("write",), NO_CODE_RUNNING),
@@ -1069,6 +1079,7 @@ __all__ = [
     "AppRulesCapability",
     "Enforced",
     "code_is_running",
+    "code_runs",
     "sentence_of",
     "through_the_code_run",
 ]

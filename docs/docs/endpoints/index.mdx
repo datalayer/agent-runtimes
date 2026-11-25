@@ -1501,13 +1501,13 @@ All endpoints return standard error responses:
 
 ## Authentication
 
-:::info
-Authentication is optional and configurable. When enabled, include the API key in the request header:
+A runtime's own routes answer its owner: a call from the machine itself, or one that carries the owner's Datalayer token or the runtime's own token.
 
 ```http
-Authorization: Bearer your-api-key
+Authorization: Bearer <token>
 ```
-:::
+
+Which routes are public, which are an application's, how a websocket sends its token and how the `log` and `enforce` modes work are in [Authenticating to a Runtime](./authentication).
 
 ## Rate Limiting
 

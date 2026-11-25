@@ -132,6 +132,11 @@ const sidebars = {
     { type: 'doc', id: 'agent-nodes/index', label: 'Nodes' },
     { type: 'doc', id: 'endpoints/index', label: 'Endpoints' },
     {
+      type: 'doc',
+      id: 'endpoints/authentication',
+      label: 'Authenticating to a Runtime',
+    },
+    {
       type: 'category',
       label: 'Agentspecs',
       link: { type: 'doc', id: 'agentspecs/index' },

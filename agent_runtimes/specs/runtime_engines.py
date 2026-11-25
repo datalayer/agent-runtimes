@@ -53,10 +53,13 @@ RUNTIME_ENGINE_CATALOGUE: Dict[str, RuntimeEngineSpec] = {
     "agentcore": AGENTCORE_RUNTIME_ENGINE_0_0_1,
 }
 
-#: The engines an agent may name, the default first.
-RUNTIME_ENGINES: tuple[str, ...] = tuple(RUNTIME_ENGINE_CATALOGUE)
+#: The engines an agent may name, the default first: the enabled ones alone.
+#: A disabled engine stays in the catalogue and is not offered or accepted.
+RUNTIME_ENGINES: tuple[str, ...] = tuple(
+    engine_id for engine_id, spec in RUNTIME_ENGINE_CATALOGUE.items() if spec.enabled
+)
 
-#: The engine of an agent that names none.
+#: The engine of an agent that names none: the first enabled one.
 DEFAULT_RUNTIME_ENGINE = RUNTIME_ENGINES[0]
 
 #: The harnesses each engine can run; an engine absent here runs any.

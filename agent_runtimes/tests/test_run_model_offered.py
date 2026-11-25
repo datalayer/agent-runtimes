@@ -47,10 +47,16 @@ from agent_runtimes.tests.test_app_visitors import (  # noqa: F401
 )
 
 #: cog-crawler's model and its model_additionals, as the library has them.
-SONNET = "bedrock:us.anthropic.claude-sonnet-4-6"
+SONNET = "bedrock:us.anthropic.claude-sonnet-5-5"
+#: The former default, which an agent may still be switched to.
+FORMER = "bedrock:us.anthropic.claude-sonnet-4-6"
 QWEN = "alibaba:qwen-max"
 #: Another model of the catalogue: not one cog-crawler offers.
 OPUS = "bedrock:us.anthropic.claude-opus-5"
+
+
+#: What a library agent offers: its model and the two it may be switched to.
+LIBRARY = [SONNET, FORMER, QWEN]
 
 
 def refusal(model: str, models: List[str] = [SONNET, QWEN]) -> str:
@@ -110,7 +116,7 @@ def test_the_check_takes_the_agents_models_and_refuses_any_other(
     assert offered.run_model_refusal("notes-assistant", QWEN) is None
     assert offered.run_model_refusal("notes-assistant", None) is None
     assert offered.run_model_refusal("notes-assistant", "") is None
-    assert offered.run_model_refusal("notes-assistant", OPUS) == refusal(OPUS)
+    assert offered.run_model_refusal("notes-assistant", OPUS) == refusal(OPUS, LIBRARY)
     # An agent nobody made, or one whose models are not kept: only no model.
     assert offered.run_model_refusal("nobody", OPUS) == unknown(OPUS)
     assert offered.run_model_refusal("nobody", None) is None
@@ -164,7 +170,7 @@ def test_a_visitors_run_on_another_model_is_refused_in_a_sentence(
         json={**agui("thread-other"), "model": OPUS},
     )
     assert refused.status_code == 400, refused.text
-    assert refused.json()["detail"] == refusal(OPUS)
+    assert refused.json()["detail"] == refusal(OPUS, LIBRARY)
     assert on_the_model_asked == []
 
 
@@ -226,12 +232,14 @@ def test_the_owners_run_is_held_to_the_same_rule(
     refused = remote.post(
         url, headers=as_("ada"), json={**agui("thread-other-1"), "model": OPUS}
     )
-    assert refused.status_code == 400 and refused.json()["detail"] == refusal(OPUS)
+    assert refused.status_code == 400 and refused.json()["detail"] == refusal(
+        OPUS, LIBRARY
+    )
     # Not even in a conversation already open.
     again = remote.post(
         url, headers=as_("ada"), json={**agui("thread-own-1"), "model": OPUS}
     )
-    assert again.status_code == 400 and again.json()["detail"] == refusal(OPUS)
+    assert again.status_code == 400 and again.json()["detail"] == refusal(OPUS, LIBRARY)
     none = events_of(remote.post(url, headers=as_("ada"), json=agui("thread-none-1")))
     assert answer_of(none).startswith("Heard 1: Hello")
     assert on_the_model_asked == [SONNET, QWEN]
@@ -591,13 +599,13 @@ def test_a_mode_or_a_profile_naming_a_model_its_agent_does_not_offer_is_not_load
         load_app(moded(OPUS))
     assert refused.value.problems == [
         f"The option Deep of the mode Depth runs on {OPUS}, which is not one of "
-        f"the models its agent offers ({SONNET}, {QWEN})."
+        f"the models its agent offers ({SONNET}, {FORMER}, {QWEN})."
     ]
     with pytest.raises(AppNotRunnable) as refused:
         load_app(profiled(OPUS))
     assert refused.value.problems == [
         f"The profile Sales runs on {OPUS}, which is not one of the models its "
-        f"agent offers ({SONNET}, {QWEN})."
+        f"agent offers ({SONNET}, {FORMER}, {QWEN})."
     ]
     # The application's own model is one its agent offers too.
     assert load_app({**moded(OPUS), "model": OPUS}).model == OPUS

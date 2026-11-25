@@ -12,7 +12,10 @@ the available (enabled or disabled)"):
   reason its start gave), ``not_started``, or ``left_out``: optional, and the
   secrets it needs are not set up on this runtime;
 - a **skill** is ``active``, or ``not_activated``: optional or under an
-  any-of rule, and what it needs is not set up.
+  any-of rule, and what it needs is not set up. An active skill that acts
+  with the runtime's identity (who it runs for, its mailer, its owner's
+  publications: ``routes.owner``) is ``ready`` only while the runtime holds
+  that identity, and says why when it does not.
 
 Why one is off is said by the *names* of the variables it needs, never by a
 value (``LeftOut.as_names``, :mod:`agent_runtimes.guardrails.declared_secrets`).
@@ -24,7 +27,7 @@ anything.
 
 from __future__ import annotations
 
-from typing import Any, Dict, Iterable, List, Mapping, Optional
+from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional
 
 #: The states of an MCP server, as a page shows them.
 MCP_STATES = ("started", "starting", "failed", "not_started", "left_out")
@@ -72,6 +75,7 @@ def equipment(
     left_out: Optional[Mapping[str, Any]] = None,
     any_of: Iterable[str] = (),
     mcp_status: Optional[Mapping[str, Any]] = None,
+    identity_refusal: Optional[Callable[[str], Optional[str]]] = None,
 ) -> Dict[str, Any]:
     """The MCP servers and skills a spec declares, each with its state and why.
 
@@ -88,6 +92,9 @@ def equipment(
         whether or not the spec lists them under ``optional``.
     mcp_status : Optional[Mapping[str, Any]]
         The servers' live status (``get_config_mcp_toolsets_status()``).
+    identity_refusal : Optional[Callable[[str], Optional[str]]]
+        Why a skill that acts with the runtime's identity cannot work here
+        now, by skill id; ``None`` for one that can, or that needs none.
 
     Returns
     -------
@@ -95,7 +102,7 @@ def equipment(
         ``mcp_servers`` and ``skills``, a row each: ``id``, ``name``,
         ``optional``, ``state``, ``reason`` (a sentence's worth, or None) and
         the variable names (``missing_env_vars``; ``one_of_env_vars`` for a
-        skill). Never a value.
+        skill); a skill says ``ready`` as well. Never a value.
     """
     left = left_out or {}
     left_servers: Mapping[str, Any] = left.get("mcp_servers") or {}
@@ -151,6 +158,7 @@ def equipment(
             **_skill_row(skill_id),
             "optional": skill_id in optional_skills,
             "state": "active",
+            "ready": True,
             "reason": None,
             "missing_env_vars": [],
             "one_of_env_vars": [],
@@ -159,10 +167,15 @@ def equipment(
             said = left_skills[skill_id]
             row.update(
                 state="not_activated",
+                ready=False,
                 reason=said.get("reason"),
                 missing_env_vars=list(said.get("missing_env_vars") or []),
                 one_of_env_vars=list(said.get("one_of_env_vars") or []),
             )
+        elif identity_refusal is not None:
+            refusal = identity_refusal(skill_id)
+            if refusal:
+                row.update(ready=False, reason=refusal)
         skills.append(row)
     return {"mcp_servers": servers, "skills": skills}
 
@@ -181,6 +194,7 @@ def equipment_of_agent(agent_id: str) -> Optional[Dict[str, Any]]:
         get_stored_agent_spec,
         left_out_of,
     )
+    from agent_runtimes.routes.owner import identity_refusal
 
     stored = get_stored_agent_spec(agent_id)
     if stored is None:
@@ -224,6 +238,7 @@ def equipment_of_agent(agent_id: str) -> Optional[Dict[str, Any]]:
             if label.startswith(prefix)
         ],
         mcp_status=get_config_mcp_toolsets_status(),
+        identity_refusal=lambda skill_id: identity_refusal(skill_id, agent_id),
     )
     if hidden:
         found["mcp_servers"] = [

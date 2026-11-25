@@ -42,17 +42,12 @@ class AIModels(str, Enum):
     BEDROCK_US_ANTHROPIC_CLAUDE_FABLE_5 = "bedrock:us.anthropic.claude-fable-5"
     BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1 = "bedrock:us.anthropic.claude-opus-4-6-v1"
     BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8 = "bedrock:us.anthropic.claude-opus-4-8"
-    BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0 = (
-        "bedrock:us.anthropic.claude-opus-4-20250514-v1:0"
-    )
     BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_5 = "bedrock:us.anthropic.claude-opus-5"
     BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0 = (
         "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0"
     )
     BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6 = "bedrock:us.anthropic.claude-sonnet-4-6"
-    BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0 = (
-        "bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0"
-    )
+    BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_5_5 = "bedrock:us.anthropic.claude-sonnet-5-5"
     CLOUDFLARE_GTW_TYPESAFE_JEV = "cloudflare:gtw/typesafe/jev"
     CLOUDFLARE_WRK_GOOGLE_GEMMA_4_26B_A4B_IT = (
         "cloudflare:wrk/google/gemma-4-26b-a4b-it"
@@ -378,24 +373,6 @@ BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8_0_0_1 = AIModel(
     pricing=ModelPricing(input_usd_per_million=5.5, output_usd_per_million=27.5),
 )
 
-BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0_0_0_1 = AIModel(
-    id="bedrock:us.anthropic.claude-opus-4-20250514-v1:0",
-    version="0.0.1",
-    name="Bedrock Claude Opus 4",
-    description="Claude Opus 4 via AWS Bedrock - highest capability",
-    provider="bedrock",
-    provider_url="https://aws.amazon.com/bedrock/anthropic/",
-    default=False,
-    available=False,
-    required_env_vars=[
-        "AWS_ACCESS_KEY_ID",
-        "AWS_SECRET_ACCESS_KEY",
-        "AWS_DEFAULT_REGION",
-    ],
-    tokens_limit=32000,
-    pricing=ModelPricing(input_usd_per_million=15.0, output_usd_per_million=75.0),
-)
-
 BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_5_0_0_1 = AIModel(
     id="bedrock:us.anthropic.claude-opus-5",
     version="0.0.1",
@@ -439,7 +416,7 @@ BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6_0_0_1 = AIModel(
     description="Claude Sonnet 4.6 via AWS Bedrock - balanced performance",
     provider="bedrock",
     provider_url="https://aws.amazon.com/bedrock/anthropic/",
-    default=True,
+    default=False,
     available=True,
     required_env_vars=[
         "AWS_ACCESS_KEY_ID",
@@ -452,22 +429,24 @@ BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6_0_0_1 = AIModel(
     pricing=ModelPricing(input_usd_per_million=3.3, output_usd_per_million=16.5),
 )
 
-BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1 = AIModel(
-    id="bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0",
+BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_5_5_0_0_1 = AIModel(
+    id="bedrock:us.anthropic.claude-sonnet-5-5",
     version="0.0.1",
-    name="Bedrock Claude Sonnet 4",
-    description="Claude Sonnet 4 via AWS Bedrock - strong reasoning",
+    name="Bedrock Claude Sonnet 5.5",
+    description="Claude Sonnet 5.5 via AWS Bedrock - balanced performance",
     provider="bedrock",
     provider_url="https://aws.amazon.com/bedrock/anthropic/",
-    default=False,
-    available=False,
+    default=True,
+    available=True,
     required_env_vars=[
         "AWS_ACCESS_KEY_ID",
         "AWS_SECRET_ACCESS_KEY",
         "AWS_DEFAULT_REGION",
     ],
     tokens_limit=64000,
-    pricing=ModelPricing(input_usd_per_million=3.0, output_usd_per_million=15.0),
+    capabilities=["chat", "tools"],
+    context_window=200000,
+    pricing=ModelPricing(input_usd_per_million=2.2, output_usd_per_million=11.0),
 )
 
 CLOUDFLARE_GTW_TYPESAFE_JEV_0_0_1 = AIModel(
@@ -792,11 +771,10 @@ AI_MODEL_CATALOGUE: Dict[str, AIModel] = {
     "bedrock:us.anthropic.claude-fable-5": BEDROCK_US_ANTHROPIC_CLAUDE_FABLE_5_0_0_1,
     "bedrock:us.anthropic.claude-opus-4-6-v1": BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_0_0_1,
     "bedrock:us.anthropic.claude-opus-4-8": BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8_0_0_1,
-    "bedrock:us.anthropic.claude-opus-4-20250514-v1:0": BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0_0_0_1,
     "bedrock:us.anthropic.claude-opus-5": BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_5_0_0_1,
     "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0": BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0_0_0_1,
     "bedrock:us.anthropic.claude-sonnet-4-6": BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6_0_0_1,
-    "bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0": BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1,
+    "bedrock:us.anthropic.claude-sonnet-5-5": BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_5_5_0_0_1,
     "cloudflare:gtw/typesafe/jev": CLOUDFLARE_GTW_TYPESAFE_JEV_0_0_1,
     "cloudflare:wrk/google/gemma-4-26b-a4b-it": CLOUDFLARE_WRK_GOOGLE_GEMMA_4_26B_A4B_IT_0_0_1,
     "cloudflare:wrk/zai-org/glm-5.2": CLOUDFLARE_WRK_ZAI_ORG_GLM_5_2_0_0_1,
@@ -829,7 +807,7 @@ AI_MODEL_ALIASES: Dict[str, str] = {
 }
 
 
-DEFAULT_MODEL: AIModels = AIModels.BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6
+DEFAULT_MODEL: AIModels = AIModels.BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_5_5
 
 
 def check_env_vars_available(env_vars: list[str]) -> bool:

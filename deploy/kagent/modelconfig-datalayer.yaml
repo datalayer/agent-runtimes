@@ -16,7 +16,7 @@ metadata:
   name: datalayer-ai-inference
 spec:
   provider: OpenAI
-  model: bedrock:us.anthropic.claude-sonnet-4-6
+  model: bedrock:us.anthropic.claude-sonnet-5-5
   apiKeySecret: datalayer-api-key
   apiKeySecretKey: api-key
   openAI:

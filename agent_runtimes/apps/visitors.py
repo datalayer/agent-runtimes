@@ -57,19 +57,28 @@ routes (the release gates, decided 14 October 2026).
 
 from __future__ import annotations
 
+import logging
 import os
 import re
 import threading
 import time
 from contextvars import ContextVar
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 __all__ = [
     "AT_PREFIX",
     "NOT_HERE",
     "VISITORS_OWN",
     "OwnRoutesOnly",
+    "OwnersOnly",
+    "ACCESS_MODE_ENV",
+    "NOT_PROVEN",
+    "OWN_PROOF_ROUTES",
+    "PUBLIC_ROUTES",
+    "access_mode",
+    "route_class",
+    "route_templates",
     "ONLY_VISITORS",
     "OTHER_APPLICATION",
     "agent_of",
@@ -449,14 +458,15 @@ def sandbox_may_publish(method: str, path: str) -> bool:
     route still asks for the person's explicit confirmation.
     """
     from agent_runtimes.apps.enforcement import code_is_running
-    from agent_runtimes.apps.principal import kernel_holds_owner_secrets, launched_for
+    from agent_runtimes.routes.owner import publication_place_refusal
 
+    # Where a publication may be made is one predicate, the skill's readiness
+    # reads it too (`routes.owner.publication_place_refusal`): what is said
+    # ready is what is answered here.
     return (
         method == "POST"
         and bool(_LIBRARY_PUBLISH.match(path))
-        and not visitors_runtime()
-        and bool(launched_for())
-        and kernel_holds_owner_secrets()
+        and publication_place_refusal() is None
         and code_is_running()
     )
 
@@ -547,6 +557,7 @@ class OwnRoutesOnly:
             a_deployment_is_served,
             launched_for,
         )
+        from agent_runtimes.routes.owner import sandbox_may_ask
 
         visitors = visitors_runtime()
         served = a_deployment_is_served()
@@ -577,6 +588,9 @@ class OwnRoutesOnly:
             # A skill publishing its owner's work, from the sandbox
             # (`routes.library`), which holds no pod secret.
             or (is_loopback(host) and sandbox_may_publish(method, scope["path"]))
+            # A skill asking who the runtime runs for, or for its agent's
+            # events (`routes.owner`): no credential reaches the sandbox.
+            or (is_loopback(host) and sandbox_may_ask(method, scope["path"]))
             # Launched for a deployment, it is held here from its launch; the
             # one thing it still answers is the making of that deployment's
             # agent (`principal.agent_refused_here`, in the route).
@@ -599,6 +613,417 @@ class OwnRoutesOnly:
             await WebSocket(scope, receive, send).send_denial_response(refused)
             return
         await refused(scope, receive, send)
+
+
+# --- the lock: the runtime's own routes are its owner's -----------------------------
+
+#: The setting that says whether a call that did not prove the runtime is its
+#: caller's is served and logged (``log``) or refused (``enforce``).
+ACCESS_MODE_ENV = "AGENT_RUNTIMES_ACCESS_MODE"
+
+#: The two modes, and the one a runtime starts in when the setting is not there.
+ACCESS_MODES = ("log", "enforce")
+DEFAULT_ACCESS_MODE = "log"
+
+#: Answered with no credential, by design: the probes of whatever keeps the
+#: runtime (they say nothing of its sandbox's credentials to such a caller),
+#: the built pages, which are the same files for everybody, and what a page
+#: reads of an application's plugins. Exact routes: a route added beside one
+#: of these is the owner's until it is listed here.
+PUBLIC_ROUTES: frozenset[tuple[str, str]] = frozenset(
+    {
+        ("GET", "/health"),
+        ("GET", "/health/live"),
+        ("GET", "/health/ready"),
+        ("GET", "/health/startup"),
+        ("GET", "/agent"),
+        ("GET", "/static/{path:path}"),
+        ("GET", "/html/{path:path}"),
+        # Which of an application's plugins the runtime holds, and its page's
+        # files: read by a browser's EventSource and script tags, which send
+        # no token, and about the one application whoever asks names
+        # (`routes.app_plugins`).
+        ("GET", "/api/v1/apps/{app_id}/plugins/state"),
+        ("GET", "/api/v1/apps/{app_id}/plugins/frontend-extensions"),
+        ("GET", "/api/v1/apps/{app_id}/events/stream"),
+        (
+            "GET",
+            "/api/v1/apps/{app_id}/reactor-extensions/{extension}/{asset_path:path}",
+        ),
+    }
+)
+
+#: Routes that carry a proof of their own, checked by the route: a code or a
+#: state minted for one use by a call that was itself the owner's, a trigger's
+#: declared source, and the contracts of the platforms a runtime is started
+#: for (each invocation is its caller's by the token it exchanges).
+OWN_PROOF_ROUTES: frozenset[tuple[str, str]] = frozenset(
+    {
+        ("POST", "/api/v1/agent/handoff/exchange"),
+        ("GET", "/api/v1/mcp/auth/callback"),
+        ("POST", "/api/v1/identity/oauth/token"),
+        ("POST", "/api/v1/identity/oauth/userinfo"),
+        ("GET", "/api/v1/agents/{agent_id}/webhook"),
+        ("POST", "/api/v1/agents/{agent_id}/webhook"),
+        ("GET", "/ate/wakeup"),
+        ("GET", "/ate/identity"),
+        ("GET", "/ping"),
+        ("POST", "/invocations"),
+        ("WS", "/ws"),
+    }
+)
+
+#: The application routes: each verifies its caller itself against what the
+#: application's deployment declares (a visitor's, an embed's, a host's, a
+#: member's or its principal's token; nothing for what a public one shows).
+_APPLICATION_ROUTES = "/api/v1/apps"
+
+#: Said, in ``enforce`` mode, to a call that did not prove the runtime is its caller's.
+NOT_PROVEN = (
+    "This route is the runtime owner's: send the owner's Datalayer token, or the "
+    "runtime's own token, as a Bearer token (the token query parameter on a websocket)."
+)
+
+
+def access_mode(environ: Optional[Mapping[str, str]] = None) -> str:
+    """The mode this runtime's lock runs in, read when it starts.
+
+    Raises
+    ------
+    ValueError
+        When the setting is there and is neither ``log`` nor ``enforce``: a
+        runtime does not start on a setting it cannot read, in either mode.
+    """
+    env = os.environ if environ is None else environ
+    said = (env.get(ACCESS_MODE_ENV) or "").strip().lower()
+    if not said:
+        return DEFAULT_ACCESS_MODE
+    if said not in ACCESS_MODES:
+        raise ValueError(
+            f"{ACCESS_MODE_ENV} is {said!r}: it is 'log' (serve and log a call that "
+            "did not prove the runtime is its caller's) or 'enforce' (refuse it)."
+        )
+    return said
+
+
+def _template_pattern(template: str) -> "re.Pattern[str]":
+    """A route's path, as a pattern a request's path is matched against."""
+    from starlette.routing import compile_path
+
+    return compile_path(template)[0]
+
+
+_DECLARED = {
+    (method, template): _template_pattern(template)
+    for method, template in sorted(PUBLIC_ROUTES | OWN_PROOF_ROUTES)
+}
+
+
+def _declared(method: str, path: str, routes: frozenset[tuple[str, str]]) -> bool:
+    """Whether a request is one of the routes a list declares, by method and template."""
+    asked = "GET" if method == "HEAD" else method
+    return any(
+        asked == of and _DECLARED[(of, template)].match(path) is not None
+        for of, template in routes
+    )
+
+
+def route_class(method: str, path: str) -> str:
+    """What a route of the runtime is: ``public``, ``own-proof``, ``application`` or ``owner``.
+
+    ``method`` is an HTTP method, or ``WS`` for a websocket's handshake. A
+    route that is none of the first three is its owner's: that is the default,
+    and what a route added tomorrow is until somebody lists it.
+    """
+    if _declared(method, path, PUBLIC_ROUTES):
+        return "public"
+    if path in ("/ping", "/invocations", "/ws"):
+        from agent_runtimes.agentcore.settings import is_agentcore_target
+
+        return "own-proof" if is_agentcore_target() else "owner"
+    if path.startswith("/ate/"):
+        from agent_runtimes.ate.settings import is_ate_target
+
+        if not is_ate_target():
+            return "owner"
+    if _declared(method, path, OWN_PROOF_ROUTES):
+        return "own-proof"
+    if path == _APPLICATION_ROUTES or path.startswith(_APPLICATION_ROUTES + "/"):
+        return "application"
+    if path.startswith(_A2A_AGENTS):
+        from agent_runtimes.models.models import app_instance_of
+
+        agent = path[len(_A2A_AGENTS) :].split("/", 1)[0]
+        if app_instance_of(agent) is not None:
+            return "application"
+    if (
+        held_to_own_routes()
+        and method in ("GET", "HEAD")
+        and path.rstrip("/") in _READS
+    ):
+        # The chat's reads of its models, on a runtime that serves an
+        # application: answered to the application's page (`path_answered`).
+        return "application"
+    return "owner"
+
+
+def _host_of(value: str) -> str:
+    """The host of an Origin or a Referer, never its path or its query."""
+    if not value:
+        return ""
+    try:
+        from urllib.parse import urlsplit
+
+        return (urlsplit(value).hostname or "")[:120]
+    except ValueError:
+        return ""
+
+
+def caller_kind(scope: Any, headers: Mapping[str, str]) -> dict[str, str]:
+    """Who a call seems to come from, for a log line: never a token, never a query.
+
+    ``agent`` is the client's product (the first word of its User-Agent),
+    ``origin`` and ``referer`` the hosts a browser names, and ``source`` where
+    the call entered: ``ingress`` (a proxy passed it on), ``loopback`` or
+    ``cluster`` (straight from another address, with no proxy before it).
+    """
+    from agent_runtimes.apps.callers import is_forwarded, is_loopback
+
+    host = (scope.get("client") or (None,))[0]
+    agent = (headers.get("user-agent") or "").split(" ", 1)[0][:60]
+    if is_forwarded(headers):
+        source = "ingress"
+    elif is_loopback(host):
+        source = "loopback"
+    else:
+        source = "cluster"
+    return {
+        "agent": agent or "-",
+        "origin": _host_of(headers.get("origin") or "") or "-",
+        "referer": _host_of(headers.get("referer") or "") or "-",
+        "source": source,
+    }
+
+
+_ACCESS_LOGGER = logging.getLogger("agent_runtimes.access")
+_ACCESS_COUNTER: dict[str, Any] = {}
+
+#: Counted at most this often for one route, reason and caller: a page that
+#: polls is one line a minute, not one a second. The counter counts every call.
+ACCESS_LOG_EVERY_SECONDS = 60.0
+_ACCESS_LOGGED: dict[tuple[str, ...], float] = {}
+
+
+def _count_unproven(attributes: dict[str, str]) -> None:
+    """One more call that did not prove itself, on the OTEL counter when there is a meter."""
+    if "counter" not in _ACCESS_COUNTER:
+        counter = None
+        try:
+            from agent_runtimes.otel import get_meter
+
+            meter = get_meter()
+            if meter is not None:
+                counter = meter.create_counter(
+                    "agent_runtimes.access.unproven",
+                    description=(
+                        "Calls to a runtime owner's route that did not prove the "
+                        "runtime is the caller's, by route, reason and caller."
+                    ),
+                )
+        except Exception:  # noqa: BLE001 - no meter is no counter; the log line stands
+            counter = None
+        _ACCESS_COUNTER["counter"] = counter
+    counter = _ACCESS_COUNTER["counter"]
+    if counter is not None:
+        try:
+            counter.add(1, attributes)
+        except Exception:  # noqa: BLE001 - counting never fails a request
+            pass
+
+
+def note_unproven(
+    mode: str, method: str, template: str, reason: str, caller: Mapping[str, str]
+) -> None:
+    """Say, in one line and on one counter, that a call did not prove itself.
+
+    The line is ``ACCESS unproven`` followed by ``key=value`` pairs: the mode,
+    what was done about it (``served`` or ``refused``), the method, the route
+    (its template, never the path asked, never a query), the reason and the
+    caller's kind (:func:`caller_kind`). No token is ever in it.
+    """
+    attributes = {
+        "mode": mode,
+        "method": method,
+        "route": template,
+        "reason": reason,
+        "agent": caller.get("agent", "-"),
+        "origin": caller.get("origin", "-"),
+        "referer": caller.get("referer", "-"),
+        "source": caller.get("source", "-"),
+    }
+    _count_unproven(attributes)
+    key = tuple(attributes.values())
+    now = time.monotonic()
+    last = _ACCESS_LOGGED.get(key)
+    if last is not None and now - last < ACCESS_LOG_EVERY_SECONDS:
+        return
+    if len(_ACCESS_LOGGED) > 2048:
+        _ACCESS_LOGGED.clear()
+    _ACCESS_LOGGED[key] = now
+    _ACCESS_LOGGER.warning(
+        "ACCESS unproven mode=%s action=%s method=%s route=%s reason=%s agent=%s "
+        "origin=%s referer=%s source=%s",
+        mode,
+        "refused" if mode == "enforce" else "served",
+        method,
+        template,
+        reason,
+        attributes["agent"],
+        attributes["origin"],
+        attributes["referer"],
+        attributes["source"],
+    )
+
+
+class OwnersOnly:
+    """The lock: every route of a runtime that is not public, an application's or
+    self-proving answers its owner, and nobody else (:func:`route_class`).
+
+    Beside :class:`OwnRoutesOnly`, which says *which* routes a runtime that
+    serves an application answers, this says *who* the others answer: a call
+    that proves the runtime is its caller's (`callers.proves_the_runtime`: the
+    machine itself, the runtime's own token, or its owner's Datalayer token),
+    over HTTP and on a websocket's handshake alike, the dynamic AG-UI and A2A
+    mounts included. It fails closed: a route nobody listed is the owner's.
+
+    In ``log`` mode a call that proves nothing is served as before and said in
+    one line and on one counter (:func:`note_unproven`), so that the callers to
+    fix are known before anything is refused; in ``enforce`` mode it is refused
+    in a sentence (401, or a websocket's denial). The mode is read once, when
+    the runtime starts (:func:`access_mode`), and a runtime does not start on a
+    mode it cannot read.
+
+    Parameters
+    ----------
+    app : Any
+        The ASGI application behind the lock.
+    mode : str | None
+        ``log`` or ``enforce``; read from the environment when not given.
+    templates : Callable[[], list[tuple[str, str]]] | None
+        The routes of the application, as ``(method, template)``, read once
+        when the first line is logged: a log line names a route by its
+        template, never by the path that was asked.
+    """
+
+    def __init__(
+        self,
+        app: Any,
+        mode: Optional[str] = None,
+        templates: Optional[Callable[[], list[tuple[str, str]]]] = None,
+    ) -> None:
+        """Read the mode, and keep how the routes' templates are read."""
+        self.app = app
+        self.mode = (
+            access_mode() if mode is None else access_mode({ACCESS_MODE_ENV: mode})
+        )
+        self._templates = templates
+        self._patterns: Optional[list[tuple[str, str, Any]]] = None
+
+    def template_of(self, method: str, path: str) -> str:
+        """The route a path is, by its template; its first two segments when no route is."""
+        if self._patterns is None:
+            listed = self._templates() if self._templates is not None else []
+            self._patterns = [
+                (of, template, _template_pattern(template)) for of, template in listed
+            ]
+        asked = "GET" if method == "HEAD" else method
+        for of, template, pattern in self._patterns:
+            if of == asked and pattern.match(path) is not None:
+                return template
+        # A dynamic mount (an agent's AG-UI or A2A application), or no route at all.
+        parts = [part for part in path.split("/") if part]
+        known = (
+            "/" + "/".join(parts[:3])
+            if parts[:2] == ["api", "v1"]
+            else "/" + "/".join(parts[:1])
+        )
+        return (
+            f"{known}/…"
+            if len(parts) > (3 if parts[:2] == ["api", "v1"] else 1)
+            else known
+        )
+
+    async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
+        """Pass on what needs no proof or gave one; say, and in ``enforce`` refuse, the rest."""
+        if scope["type"] not in ("http", "websocket"):
+            await self.app(scope, receive, send)
+            return
+        method = (
+            "WS" if scope["type"] == "websocket" else (scope.get("method") or "GET")
+        )
+        path = scope["path"]
+        if method == "OPTIONS" or route_class(method, path) != "owner":
+            await self.app(scope, receive, send)
+            return
+        from agent_runtimes.apps.callers import headers_of, proves_the_runtime
+
+        proof = await proves_the_runtime(scope)
+        if proof.sufficient:
+            await self.app(scope, receive, send)
+            return
+        note_unproven(
+            self.mode,
+            method,
+            self.template_of(method, path),
+            proof.reason,
+            caller_kind(scope, headers_of(scope)),
+        )
+        if self.mode != "enforce":
+            await self.app(scope, receive, send)
+            return
+        from starlette.responses import JSONResponse
+
+        refused = JSONResponse(
+            {"detail": NOT_PROVEN},
+            status_code=401,
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+        if scope["type"] == "websocket":
+            from starlette.websockets import WebSocket
+
+            await WebSocket(scope, receive, send).send_denial_response(refused)
+            return
+        await refused(scope, receive, send)
+
+
+def route_templates(app: Any) -> list[tuple[str, str]]:
+    """Every route of an application as ``(method, template)``, ``WS`` for a websocket.
+
+    Read through the routers an application includes, whichever way the
+    framework keeps them, so that the lock's log names a route by its template
+    and a test can hold every route to its class.
+    """
+    found: list[tuple[str, str]] = []
+
+    def walk(routes: Any, prefix: str) -> None:
+        """Add the routes of one router, under the prefix it was included with."""
+        for route in routes or []:
+            original = getattr(route, "original_router", None)
+            if original is not None:
+                context = getattr(route, "include_context", None)
+                walk(original.routes, prefix + (getattr(context, "prefix", "") or ""))
+                continue
+            path = prefix + (getattr(route, "path", "") or "")
+            kind = type(route).__name__
+            if kind == "Mount":
+                found.append(("GET", path.rstrip("/") + "/{path:path}"))
+            elif getattr(route, "methods", None):
+                found.extend((method, path) for method in sorted(route.methods))
+            elif "WebSocket" in kind:
+                found.append(("WS", path))
+
+    walk(getattr(app, "routes", []), "")
+    return found
 
 
 def loopback_url() -> str:

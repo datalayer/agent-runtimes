@@ -43,11 +43,11 @@ JEV = "cloudflare:wrk/typesafe/jev"
 
 #: ai-inference's ``GET /api/ai-inference/v1/models`` on r1, 2026-10-04.
 R1_PAYLOAD: dict[str, Any] = {
-    "models": ["bedrock/us.anthropic.claude-sonnet-4-6", "alibaba/qwen-max"],
-    "default_model": "bedrock/us.anthropic.claude-sonnet-4-6",
+    "models": ["bedrock/us.anthropic.claude-sonnet-5-5", "alibaba/qwen-max"],
+    "default_model": "bedrock/us.anthropic.claude-sonnet-5-5",
     "default_provider": "bedrock",
     "providers": ["bedrock", "azure", "alibaba", "cloudflare"],
-    "bedrock_anthropic_models": ["bedrock/us.anthropic.claude-sonnet-4-6"],
+    "bedrock_anthropic_models": ["bedrock/us.anthropic.claude-sonnet-5-5"],
     "alibaba_models": ["alibaba/qwen-max"],
     "cloudflare_models": [],
     "decision_models": [JEV],

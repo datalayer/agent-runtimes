@@ -406,7 +406,7 @@ tags:
 {tags}
 
 enabled: true
-model: "bedrock:us.anthropic.claude-sonnet-4-6"
+model: "bedrock:us.anthropic.claude-sonnet-5-5"
 
 sandbox_variant: jupyter
 

@@ -45,7 +45,7 @@ import ipaddress
 import os
 import time
 from dataclasses import dataclass
-from typing import Any, Awaitable, Callable, Dict, Optional, Tuple
+from typing import Any, Awaitable, Callable, Dict, Mapping, Optional, Tuple
 
 import httpx
 import jwt
@@ -550,6 +550,206 @@ def _ai_agents_url() -> str:
 
 #: The runtime's verifier: one per process.
 VERIFIER = CallerVerifier()
+
+
+# --- the runtime's own routes: who proves the runtime is theirs -----------------------
+
+#: The headers a proxy adds to what it passes on: a call that carries one did
+#: not start on this machine, whatever address it arrives from.
+FORWARDED_HEADERS = ("x-forwarded-for", "x-forwarded-host", "x-real-ip", "forwarded")
+
+
+@dataclass(frozen=True)
+class Proof:
+    """Whether a call proved the runtime is its caller's, and how or why not.
+
+    ``kind`` when it did: ``pod`` (the machine itself: the companion, the
+    sandbox, a developer's localhost), ``sandbox-token`` (the runtime's own
+    Jupyter token, which its owner holds from the platform's record) or
+    ``owner`` (the owner's Datalayer token). ``reason`` when it did not, in a
+    word a log line can be counted by.
+    """
+
+    sufficient: bool
+    kind: str = ""
+    reason: str = ""
+
+
+def headers_of(scope: Any) -> Dict[str, str]:
+    """An ASGI scope's headers, lower-cased; the last of a repeated one."""
+    return {
+        key.decode("latin-1").lower(): value.decode("latin-1")
+        for key, value in scope.get("headers") or []
+    }
+
+
+def is_forwarded(headers: Mapping[str, str]) -> bool:
+    """Whether a proxy passed this call on (:data:`FORWARDED_HEADERS`)."""
+    return any(name in headers for name in FORWARDED_HEADERS)
+
+
+def credential_of(scope: Any, headers: Optional[Mapping[str, str]] = None) -> str:
+    """The token a call presents on one of the runtime's own routes, or ``""``.
+
+    ``Authorization: Bearer …`` or Jupyter's ``Authorization: token …``; on a
+    websocket, which a browser opens without headers of its own, the ``token``
+    query parameter.
+    """
+    from urllib.parse import parse_qs
+
+    said = (headers if headers is not None else headers_of(scope)).get(
+        "authorization", ""
+    )
+    scheme, _, token = said.partition(" ")
+    if scheme.lower() in ("bearer", "token") and token.strip():
+        return token.strip()
+    query = parse_qs((scope.get("query_string") or b"").decode("latin-1"))
+    return (query.get("token") or [""])[0].strip()
+
+
+def runtime_owner_uid() -> str:
+    """The account this runtime is assigned to, or ``""`` while it is nobody's.
+
+    ``DATALAYER_USER_UID``, which the Operator sets at launch or the companion
+    names once when the runtime is assigned (`routes.agents._take_owner`);
+    else the account of the token the runtime was given for its owner.
+    """
+    named = (os.environ.get("DATALAYER_USER_UID") or "").strip()
+    if named:
+        return named
+    held = (os.environ.get("DATALAYER_USER_TOKEN") or "").strip()
+    claims = _unverified_claims(held) if held else {}
+    if str(claims.get("agent_uid") or "") and claims.get("agent_uid") == claims.get(
+        "sub"
+    ):
+        return ""
+    return str(claims.get("sub") or claims.get("uid") or "") if claims else ""
+
+
+def sandbox_token() -> str:
+    """The token of the runtime's own Jupyter sandbox, or ``""`` when it has none."""
+    try:
+        from agent_runtimes.services.code_sandbox_manager import (
+            get_code_sandbox_manager,
+        )
+
+        return str(get_code_sandbox_manager().get_status().get("jupyter_token") or "")
+    except Exception:  # noqa: BLE001 - no sandbox is no token
+        return ""
+
+
+async def proves_the_runtime(scope: Any, verifier: Optional[Any] = None) -> Proof:
+    """Whether an HTTP request or a websocket handshake proves the runtime is its caller's.
+
+    The machine itself needs no token, as on every other route: a call from
+    loopback that no proxy passed on (the companion, the sandbox's own tool
+    calls, a developer's page on ``localhost``). Any other call presents a
+    token (:func:`credential_of`): the runtime's own Jupyter token, which the
+    platform gives its owner with the runtime's record, or a Datalayer token
+    the platform accepts for the account the runtime is assigned to. A token
+    of another kind (an application's visitor, embed, host or principal token)
+    proves nothing here: those reach the application's routes, which verify
+    them themselves.
+    """
+    import hmac
+
+    headers = headers_of(scope)
+    host = (scope.get("client") or (None,))[0]
+    if is_loopback(host) and not is_forwarded(headers):
+        return Proof(True, kind="pod")
+    token = credential_of(scope, headers)
+    if not token:
+        return Proof(False, reason="no-credential")
+    held = sandbox_token()
+    if held and hmac.compare_digest(token.encode("utf-8"), held.encode("utf-8")):
+        return Proof(True, kind="sandbox-token")
+    key = hashlib.sha256(token.encode()).hexdigest()
+    remembered = _PROOFS.get(key)
+    if remembered and remembered[1] > time.monotonic():
+        return remembered[0]
+    proof, seconds = await _proof_of_token(token, verifier or VERIFIER)
+    for stale in [k for k, (_, end) in _PROOFS.items() if end <= time.monotonic()]:
+        del _PROOFS[stale]
+    while len(_PROOFS) >= CACHE_SIZE:
+        del _PROOFS[next(iter(_PROOFS))]
+    _PROOFS[key] = (proof, time.monotonic() + seconds)
+    return proof
+
+
+#: What a token proved here, remembered a short while: the platform is asked
+#: once for a page's burst of calls, whatever it answers, and a token that
+#: stopped being the owner's stops within a minute.
+PROOF_SECONDS = 60.0
+
+#: A proof that could not be had yet (the platform not reached, the runtime not
+#: assigned) is asked for again much sooner.
+PROOF_RETRY_SECONDS = 5.0
+
+_PROOFS: Dict[str, Tuple[Proof, float]] = {}
+
+
+def forget_proofs() -> None:
+    """Forget what tokens proved (a runtime given its owner; the tests)."""
+    _PROOFS.clear()
+
+
+async def _proof_of_token(token: str, verifier: Any) -> Tuple[Proof, float]:
+    """What a token that is not the sandbox's proves, and how long that is remembered."""
+    try:
+        caller = await verifier.verify(token)
+    except CallerRefused as refused:
+        if refused.status >= 500:
+            return Proof(False, reason="unverifiable"), PROOF_RETRY_SECONDS
+        return Proof(False, reason="token-refused"), PROOF_SECONDS
+    if caller.kind != "person":
+        return Proof(False, reason="application-token"), PROOF_SECONDS
+    owner = runtime_owner_uid()
+    if not owner:
+        return Proof(False, reason="owner-unknown"), PROOF_RETRY_SECONDS
+    if caller.uid != owner:
+        return Proof(False, reason="another-account"), PROOF_SECONDS
+    return Proof(True, kind="owner"), PROOF_SECONDS
+
+
+def without_sandbox_credentials(answer: Any) -> Any:
+    """A copy of an answer with no credential of the sandbox in it.
+
+    What the runtime says of its sandbox to a caller that did not prove the
+    runtime is theirs (:func:`proves_the_runtime`): the ``jupyter_token`` key
+    is not there at all, at any depth, and an address loses its ``token``
+    query parameter. Everything else (variant, kernel, state) is unchanged.
+    """
+    from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+
+    if isinstance(answer, dict):
+        kept: Dict[str, Any] = {}
+        for key, value in answer.items():
+            if key == "jupyter_token":
+                continue
+            kept[key] = without_sandbox_credentials(value)
+        return kept
+    if isinstance(answer, (list, tuple)):
+        return [without_sandbox_credentials(item) for item in answer]
+    if isinstance(answer, str) and "token=" in answer and "://" in answer:
+        parts = urlsplit(answer)
+        query = [
+            (k, v)
+            for k, v in parse_qsl(parts.query, keep_blank_values=True)
+            if k != "token"
+        ]
+        return urlunsplit(parts._replace(query=urlencode(query)))
+    return answer
+
+
+async def sandbox_answer(connection: Any, answer: Any) -> Any:
+    """An answer about the sandbox, as this caller may read it.
+
+    ``connection`` is a request or a websocket. Whole for a caller that proved
+    the runtime is theirs; without the sandbox's credentials for anybody else.
+    """
+    if (await proves_the_runtime(connection.scope)).sufficient:
+        return answer
+    return without_sandbox_credentials(answer)
 
 
 def is_loopback_origin(origin: str) -> bool:

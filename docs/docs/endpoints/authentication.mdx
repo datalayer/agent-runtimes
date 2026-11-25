@@ -1,0 +1,71 @@
+---
+sidebar_position: 16
+title: Authenticating to a Runtime
+---
+
+# Authenticating to a Runtime
+
+A runtime is one person's: it runs their agent, holds their connections and spends their credits. Its routes answer accordingly. This page says which routes need a credential, which credentials a runtime takes, and how a client sends one.
+
+## The four kinds of routes
+
+Every route of a runtime is one of four kinds. A route that is not listed as one of the first three is the owner's: that is the default, and what a route added tomorrow is until somebody lists it.
+
+| Kind | Routes | Who is answered |
+|------|--------|-----------------|
+| **Public** | `GET /health`, `/health/live`, `/health/ready`, `/health/startup`; the built pages (`/agent`, `/static/*`, `/html/*`); what a page reads of an application's plugins (`GET /api/v1/apps/{app_id}/plugins/state`, `/plugins/frontend-extensions`, `/events/stream`, `/reactor-extensions/...`) | Anybody. A health answer says nothing of the sandbox's credentials to a caller that did not prove itself. |
+| **Application** | `/api/v1/apps/**`, an application's agent over A2A (`/api/v1/a2a/agents/{agent}/**`), and the chat's reads of its models (`GET /api/v1/configure`, `/configure/models`) on a runtime that serves an application | Whoever the application's deployment allows. Each route verifies its caller itself: a visitor's, an embed's, a host's, a member's or the principal's token, and nothing for what a public application shows (its agent card, its chat for visitors). |
+| **Self-proving** | `POST /api/v1/agent/handoff/exchange`, `GET /api/v1/mcp/auth/callback`, `POST /api/v1/identity/oauth/token` and `/userinfo`, `/api/v1/agents/{agent_id}/webhook`, and the contracts of the platforms a runtime is started for (`/ping`, `/invocations`, `/ws`; `/ate/wakeup`, `/ate/identity`) | A caller that holds the one-use code, the state or the declared source the route checks. |
+| **Owner** | Everything else: agents, configuration, MCP servers, the sandbox, memory, checkpoints, history, the chat transports (`/vercel-ai`, `/ag-ui`, `/acp`, `/a2a` of an agent that serves no application), `/api/v1/runtime/status`, `/docs`, `/openapi.json`, and every websocket other than the application's | A caller that proves the runtime is theirs. |
+
+## Proving the runtime is yours
+
+A call to an owner's route is answered when it is one of these:
+
+- **The machine itself.** A call from loopback that no proxy passed on: the companion beside the runtime, the sandbox's own tool calls, a developer's page on `localhost`. It needs no token.
+- **The owner's Datalayer token.** The token the person is signed in with (or an API key of theirs), which the platform accepts and which names the account the runtime is assigned to.
+- **The runtime's own token.** The token of the runtime's sandbox, which the platform gives the owner with the runtime's record (`token` in `GET /api/runtimes/v1/runtimes/{uid}`).
+
+Send either token as a bearer:
+
+```http
+GET /api/v1/agents HTTP/1.1
+Authorization: Bearer <token>
+```
+
+Jupyter's scheme is taken too (`Authorization: token <token>`). A browser opens a websocket without headers of its own, so a websocket carries the token in its `token` query parameter:
+
+```text
+wss://<runtime>/api/v1/configure/sandbox/ws?agent_id=default&token=<token>
+```
+
+A token of another kind proves nothing on an owner's route: an application's visitor, embed, host or principal token reaches the application's routes, which verify it themselves, and nothing else.
+
+## What a caller that proved nothing is told of the sandbox
+
+`GET /health/startup`, `GET /api/v1/runtime/status`, `GET /api/v1/configure/codemode/status`, `GET /api/v1/configure/agents/{agent_id}/spec` and the frames of the `/api/v1/configure/sandbox/ws` websocket describe the sandbox: its variant, its address, its kernel, whether it runs. The sandbox's token is in those answers only for a caller that proved the runtime is theirs; for anybody else the `jupyter_token` key is not there, and an address carries no `token` parameter. The monitoring stream and the skills' catalogue never carry it.
+
+A client that needs the token to open a kernel connection reads it from the platform's record of the runtime, or sends its credential on the call that describes the sandbox.
+
+## Log, then enforce
+
+The lock runs in one of two modes, set by `AGENT_RUNTIMES_ACCESS_MODE` and read once when the runtime starts:
+
+| Mode | A call to an owner's route that proves nothing |
+|------|-----------------------------------------------|
+| `log` (the default) | Is served as before, and said in one line of the runtime's log and on one OpenTelemetry counter. |
+| `enforce` | Is refused: `401` with a sentence over HTTP, a denial at the handshake for a websocket. |
+
+Any other value stops the runtime from starting: it never takes a setting it cannot read for either mode.
+
+The log line names the route by its template, never by the path that was asked, and never carries a token or a query:
+
+```text
+ACCESS unproven mode=log action=served method=GET route=/api/v1/agents/{agent_id}/memory reason=no-credential agent=Mozilla/5.0 origin=example.com referer=example.com source=ingress
+```
+
+- `reason` is why the call proved nothing: `no-credential`, `token-refused` (the platform does not accept it), `another-account`, `application-token` (a token for the application's routes), `owner-unknown` (the runtime is not assigned yet) or `unverifiable` (the platform could not be asked).
+- `agent`, `origin` and `referer` are the client's product and the hosts a browser names; `source` is where the call entered: `ingress` (a proxy passed it on), `cluster` or `loopback`.
+- The line is written at most once a minute for one route, reason and caller. The counter `agent_runtimes.access.unproven` counts every call, with the same attributes.
+
+Run a deployment in `log` mode first, fix the clients the log names, and switch to `enforce` once it has stayed quiet.

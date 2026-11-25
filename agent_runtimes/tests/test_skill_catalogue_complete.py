@@ -34,11 +34,42 @@ def _named() -> dict[str, list[str]]:
         for spec_id, spec in catalogue.items():
             # A cog's skills are its agent spec's (``CogSpec.spec``), not the cog's own.
             agent = spec.spec if kind == "cog" else spec
-            for skill in agent.skills or []:
+            for skill in _skills_of(agent):
                 ref = _ref(skill)
                 if ref:
                     named.setdefault(ref, []).append(f"{kind} {spec_id}")
     return named
+
+
+def _skills_of(agent: object) -> list[object]:
+    """Every skill reference of an agent spec: its ``skills`` and its ``optional.skills``."""
+    optional = getattr(agent, "optional", None)
+    if isinstance(optional, dict):
+        optional_skills = optional.get("skills")
+    else:
+        optional_skills = getattr(optional, "skills", None)
+    return [*(getattr(agent, "skills", None) or []), *(optional_skills or [])]
+
+
+def test_an_optional_skill_reference_is_read_too() -> None:
+    """A wrong version under ``optional.skills`` is a wrong version."""
+    from types import SimpleNamespace
+
+    agent = SimpleNamespace(
+        skills=["crawl:0.0.1"], optional=SimpleNamespace(skills=["image-stock:9.9.9"])
+    )
+    assert _skills_of(agent) == ["crawl:0.0.1", "image-stock:9.9.9"]
+    as_dict = SimpleNamespace(skills=None, optional={"skills": ["pdf:0.0.1"]})
+    assert _skills_of(as_dict) == ["pdf:0.0.1"]
+    assert _skills_of(SimpleNamespace(skills=["crawl"], optional=None)) == ["crawl"]
+    declared = [
+        ref
+        for spec in AGENTSPECS.values()
+        for ref in _skills_of(spec)
+        if ref not in (spec.skills or [])
+    ]
+    for ref in declared:
+        assert _ref(ref) in _named()
 
 
 def test_the_cogs_skills_are_read() -> None:

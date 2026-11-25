@@ -39,15 +39,13 @@ export const AIModels = {
   BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1:
     'bedrock:us.anthropic.claude-opus-4-6-v1',
   BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8: 'bedrock:us.anthropic.claude-opus-4-8',
-  BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0:
-    'bedrock:us.anthropic.claude-opus-4-20250514-v1:0',
   BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_5: 'bedrock:us.anthropic.claude-opus-5',
   BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0:
     'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6:
     'bedrock:us.anthropic.claude-sonnet-4-6',
-  BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0:
-    'bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0',
+  BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_5_5:
+    'bedrock:us.anthropic.claude-sonnet-5-5',
   CLOUDFLARE_GTW_TYPESAFE_JEV: 'cloudflare:gtw/typesafe/jev',
   CLOUDFLARE_WRK_GOOGLE_GEMMA_4_26B_A4B_IT:
     'cloudflare:wrk/google/gemma-4-26b-a4b-it',
@@ -370,24 +368,6 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8_0_0_1: AIModel = {
   pricing: { inputUsdPerMillion: 5.5, outputUsdPerMillion: 27.5 },
 };
 
-export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0_0_0_1: AIModel = {
-  id: 'bedrock:us.anthropic.claude-opus-4-20250514-v1:0',
-  version: '0.0.1',
-  name: 'Bedrock Claude Opus 4',
-  description: 'Claude Opus 4 via AWS Bedrock - highest capability',
-  provider: 'bedrock',
-  providerUrl: 'https://aws.amazon.com/bedrock/anthropic/',
-  default: false,
-  available: false,
-  requiredEnvVars: [
-    'AWS_ACCESS_KEY_ID',
-    'AWS_SECRET_ACCESS_KEY',
-    'AWS_DEFAULT_REGION',
-  ],
-  tokensLimit: 32000,
-  pricing: { inputUsdPerMillion: 15.0, outputUsdPerMillion: 75.0 },
-};
-
 export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_5_0_0_1: AIModel = {
   id: 'bedrock:us.anthropic.claude-opus-5',
   version: '0.0.1',
@@ -432,7 +412,7 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6_0_0_1: AIModel = {
   description: 'Claude Sonnet 4.6 via AWS Bedrock - balanced performance',
   provider: 'bedrock',
   providerUrl: 'https://aws.amazon.com/bedrock/anthropic/',
-  default: true,
+  default: false,
   available: true,
   requiredEnvVars: [
     'AWS_ACCESS_KEY_ID',
@@ -445,24 +425,25 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6_0_0_1: AIModel = {
   pricing: { inputUsdPerMillion: 3.3, outputUsdPerMillion: 16.5 },
 };
 
-export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1: AIModel =
-  {
-    id: 'bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0',
-    version: '0.0.1',
-    name: 'Bedrock Claude Sonnet 4',
-    description: 'Claude Sonnet 4 via AWS Bedrock - strong reasoning',
-    provider: 'bedrock',
-    providerUrl: 'https://aws.amazon.com/bedrock/anthropic/',
-    default: false,
-    available: false,
-    requiredEnvVars: [
-      'AWS_ACCESS_KEY_ID',
-      'AWS_SECRET_ACCESS_KEY',
-      'AWS_DEFAULT_REGION',
-    ],
-    tokensLimit: 64000,
-    pricing: { inputUsdPerMillion: 3.0, outputUsdPerMillion: 15.0 },
-  };
+export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_5_5_0_0_1: AIModel = {
+  id: 'bedrock:us.anthropic.claude-sonnet-5-5',
+  version: '0.0.1',
+  name: 'Bedrock Claude Sonnet 5.5',
+  description: 'Claude Sonnet 5.5 via AWS Bedrock - balanced performance',
+  provider: 'bedrock',
+  providerUrl: 'https://aws.amazon.com/bedrock/anthropic/',
+  default: true,
+  available: true,
+  requiredEnvVars: [
+    'AWS_ACCESS_KEY_ID',
+    'AWS_SECRET_ACCESS_KEY',
+    'AWS_DEFAULT_REGION',
+  ],
+  tokensLimit: 64000,
+  capabilities: ['chat', 'tools'],
+  contextWindow: 200000,
+  pricing: { inputUsdPerMillion: 2.2, outputUsdPerMillion: 11.0 },
+};
 
 export const CLOUDFLARE_GTW_TYPESAFE_JEV_0_0_1: AIModel = {
   id: 'cloudflare:gtw/typesafe/jev',
@@ -809,16 +790,14 @@ export const AI_MODEL_CATALOGUE: Record<string, AIModel> = {
     BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_0_0_1,
   'bedrock:us.anthropic.claude-opus-4-8':
     BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8_0_0_1,
-  'bedrock:us.anthropic.claude-opus-4-20250514-v1:0':
-    BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0_0_0_1,
   'bedrock:us.anthropic.claude-opus-5':
     BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_5_0_0_1,
   'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0':
     BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0_0_0_1,
   'bedrock:us.anthropic.claude-sonnet-4-6':
     BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6_0_0_1,
-  'bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0':
-    BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1,
+  'bedrock:us.anthropic.claude-sonnet-5-5':
+    BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_5_5_0_0_1,
   'cloudflare:gtw/typesafe/jev': CLOUDFLARE_GTW_TYPESAFE_JEV_0_0_1,
   'cloudflare:wrk/google/gemma-4-26b-a4b-it':
     CLOUDFLARE_WRK_GOOGLE_GEMMA_4_26B_A4B_IT_0_0_1,
@@ -888,6 +867,6 @@ export function listChatModels(): AIModel[] {
 }
 
 export const DEFAULT_MODEL: AIModelId =
-  AIModels.BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6;
+  AIModels.BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_5_5;
 export const DEFAULT_MODEL_SPEC: AIModel =
-  BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6_0_0_1;
+  BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_5_5_0_0_1;

@@ -257,3 +257,88 @@ def test_the_types_still_list_runtime_engines() -> None:
         types.NO_SUCH_NAME
     with pytest.raises(AttributeError):
         types_module.NO_SUCH_NAME
+
+
+def test_a_disabled_engine_stays_known_and_is_not_one_an_agent_may_name(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`enabled: false` keeps the engine in the catalogue, out of the allowed ones."""
+    from agent_runtimes.specs import runtime_engines
+
+    assert runtime_engines.RUNTIME_ENGINES == tuple(
+        engine
+        for engine, spec in runtime_engines.RUNTIME_ENGINE_CATALOGUE.items()
+        if spec.enabled
+    )
+    assert runtime_engines.DEFAULT_RUNTIME_ENGINE == runtime_engines.RUNTIME_ENGINES[0]
+    base = {"id": "an-agent", "name": "An agent", "description": "It answers."}
+    assert Agentspec(**base, runtime_engine="kagent").runtime_engine == "kagent"
+    # Kagent switched off: still in the catalogue, refused in a sentence of its own.
+    monkeypatch.setattr(runtime_engines, "RUNTIME_ENGINES", ("datalayer", "agentcore"))
+    assert "kagent" in runtime_engines.RUNTIME_ENGINE_CATALOGUE
+    with pytest.raises(ValidationError, match="'kagent' is not enabled"):
+        Agentspec(**base, runtime_engine="kagent")
+    with pytest.raises(ValidationError, match="no runtime_engine named 'lambda'"):
+        Agentspec(**base, runtime_engine="lambda")
+
+
+def test_the_generator_emits_the_enabled_engines_and_refuses_none() -> None:
+    """What the codegen writes for a catalogue with a disabled engine."""
+    import importlib.util
+    from pathlib import Path
+
+    path = (
+        Path(__file__).resolve().parents[2]
+        / "scripts"
+        / "codegen"
+        / "generate_runtime_engines.py"
+    )
+    if not path.exists():
+        pytest.skip("the codegen scripts are not in this install")
+    spec = importlib.util.spec_from_file_location("generate_runtime_engines", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys_path = list(sys.path)
+    sys.path.insert(0, str(path.parent))
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.path[:] = sys_path
+    engines = [
+        {
+            "id": engine,
+            "version": "0.0.1",
+            "name": engine.title(),
+            "description": "An engine.",
+            "docs_url": "https://example.org",
+            "position": position,
+            "harnesses": None,
+            "enabled": engine != "datalayer",
+        }
+        for position, engine in enumerate(("datalayer", "kagent"), start=1)
+    ]
+    typescript = module.generate_typescript_code(engines)
+    assert "export const RUNTIME_ENGINES = ['kagent'] as const;" in typescript
+    assert "RUNTIME_ENGINE_IDS = ['datalayer', 'kagent'] as const;" in typescript
+    assert "DEFAULT_RUNTIME_ENGINE: RuntimeEngine = 'kagent';" in typescript
+    assert "if spec.enabled" in module.generate_python_code(engines)
+
+
+def test_a_spec_that_names_no_engine_takes_the_catalogues_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Never a name written in the field: the first enabled engine, held to the validator."""
+    from agent_runtimes.specs import runtime_engines
+
+    base = {"id": "an-agent", "name": "An agent", "description": "It answers."}
+    assert Agentspec(**base).runtime_engine == runtime_engines.DEFAULT_RUNTIME_ENGINE
+    # Datalayer switched off, Kagent the default: an omitted engine is Kagent.
+    monkeypatch.setattr(runtime_engines, "RUNTIME_ENGINES", ("kagent", "agentcore"))
+    monkeypatch.setattr(runtime_engines, "DEFAULT_RUNTIME_ENGINE", "kagent")
+    assert Agentspec(**base).runtime_engine == "kagent"
+    with pytest.raises(ValidationError, match="'datalayer' is not enabled"):
+        Agentspec(**base, runtime_engine="datalayer")
+    # A default the catalogue has switched off is refused like a stated one.
+    monkeypatch.setattr(runtime_engines, "DEFAULT_RUNTIME_ENGINE", "datalayer")
+    with pytest.raises(ValidationError, match="'datalayer' is not enabled"):
+        Agentspec(**base)

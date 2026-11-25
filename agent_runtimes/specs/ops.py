@@ -36,7 +36,7 @@ OP_SALES_PIPELINE_BOARD_REPORT_0_0_1 = OpSpec.model_validate(
         ],
         "frames": ["datalayer"],
         "supervisor": {
-            "model": "bedrock:us.anthropic.claude-sonnet-4-6",
+            "model": "bedrock:us.anthropic.claude-sonnet-5-5",
             "instructions": "Run the Cog on the pipeline data of the period. Send a step back to the Cog when a Gate asks for a retry or a revision, with what the Guard found. Never release the report yourself: it leaves through the release approval Gate.",
         },
         "guards": {

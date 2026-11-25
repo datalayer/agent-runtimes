@@ -432,8 +432,15 @@ async def mail_me_endpoint(body: MailToMeRequest) -> dict[str, Any]:
     the runtime or the sandbox. A runtime given no social token (a visitor's, a
     deployment's) sends none.
     """
+    from agent_runtimes.routes.owner import mail_place_refusal
     from agent_runtimes.tools.social import send_mail
 
+    # Where a mail may be sent from is one predicate, the skill's readiness
+    # reads it too: never from a runtime that serves an application or
+    # visitors, whoever reaches this route there.
+    refusal = mail_place_refusal()
+    if refusal:
+        raise HTTPException(status_code=409, detail=refusal)
     sent = await send_mail("me", body.subject, body.text)
     if isinstance(sent, str):
         raise HTTPException(status_code=409, detail=sent)
@@ -751,6 +758,7 @@ async def list_catalog_skills(agent_id: str | None = None) -> dict[str, Any]:
     Whether a skill is installed and active is a second question, answerable
     only when something is running.
     """
+    from agent_runtimes.routes.owner import IDENTITY_SKILLS, identity_refusal
     from agent_runtimes.specs.skills import list_skill_specs
 
     skills: list[dict[str, Any]] = []
@@ -770,6 +778,9 @@ async def list_catalog_skills(agent_id: str | None = None) -> dict[str, Any]:
         ]
         missing = [name for name in required if not os.getenv(name)]
         one_is_set = not any_of or any(os.getenv(name) for name in any_of)
+        # A skill that acts with the runtime's identity names no variable: it
+        # is ready when the runtime holds that identity, and says why when not.
+        refusal = identity_refusal(spec.id, agent_id or "")
 
         skills.append(
             {
@@ -787,13 +798,17 @@ async def list_catalog_skills(agent_id: str | None = None) -> dict[str, Any]:
                 "any_of_env_vars": any_of,
                 "set_env_vars": [name for name in optional if os.getenv(name)],
                 "missing_env_vars": missing,
-                "ready": not missing and one_is_set,
+                "needs_identity": spec.id in IDENTITY_SKILLS,
+                "not_ready_reason": refusal,
+                "ready": not missing and one_is_set and refusal is None,
             }
         )
 
     active: list[str] = []
     sandbox: dict[str, Any] = {}
     try:
+        # Its sandbox without the sandbox's own credentials: a catalogue is not
+        # where they are read.
         status = await get_codemode_status(agent_id=agent_id)
         if isinstance(status, dict):
             sandbox = status.get("sandbox") or {}
@@ -1141,6 +1156,7 @@ async def export_agent_context_csv(
 
 @router.get("/agents/{agent_id:path}/spec")
 async def get_agent_spec_endpoint(
+    request: Request,
     agent_id: str = Path(
         ...,
         description="Agent ID to get the creation spec for",
@@ -1177,9 +1193,14 @@ async def get_agent_spec_endpoint(
     sandbox_status = _get_sandbox_status()
 
     refused = set_up_refused(agent_id)
+    from agent_runtimes.apps.callers import sandbox_answer
+
     return {
         **spec,
-        "sandbox": sandbox_status.model_dump() if sandbox_status else None,
+        # Its own credentials only to a caller that proved the runtime is theirs.
+        "sandbox": await sandbox_answer(request, sandbox_status.model_dump())
+        if sandbox_status
+        else None,
         # Why its configure was refused — a secret its specs declare and it was
         # not given — so a launch waiting for it says so, and stops.
         **({"set_up_refused": refused} if refused else {}),
@@ -1689,8 +1710,19 @@ async def sandbox_status_ws(websocket: WebSocket, agent_id: str | None = None) -
 
     The token and kernel travel with the URL because the browser is a real
     client of this sandbox: the workspace's editors connect to that Jupyter
-    server directly, and a URL on its own is an address they cannot use.
+    server directly, and a URL on its own is an address they cannot use. The
+    token is in the frames of a caller that proved the runtime is theirs
+    (`callers.proves_the_runtime`: the machine itself, or the ``token`` query
+    parameter); for anybody else the key is not there.
     """
+    from agent_runtimes.apps.callers import (
+        proves_the_runtime,
+        without_sandbox_credentials,
+    )
+
+    # Decided once, at the handshake: the token and the address's own token
+    # travel only to a caller that proved the runtime is theirs.
+    proven = (await proves_the_runtime(websocket.scope)).sufficient
     await websocket.accept()
     logger.debug("Sandbox status WebSocket connected")
     status_queue = _subscribe_sandbox_status(agent_id)
@@ -1700,6 +1732,8 @@ async def sandbox_status_ws(websocket: WebSocket, agent_id: str | None = None) -
     async def send_status() -> None:
         nonlocal last_status
         status = _build_sandbox_ws_status(agent_id=agent_id)
+        if not proven:
+            status = without_sandbox_credentials(status)
         # Only send when status changed.
         if status != last_status:
             last_status = status
@@ -1879,8 +1913,24 @@ async def toggle_codemode(request: CodemodeToggleRequest) -> dict[str, Any]:
     }
 
 
+async def get_codemode_status(agent_id: str | None = None) -> dict[str, Any]:
+    """The codemode status of the running server, its sandbox without the sandbox's own credentials.
+
+    What this module's other routes read (the skills' catalogue); the route
+    below is what says the credentials, to a caller that proved the runtime
+    is theirs.
+    """
+    from agent_runtimes.streams.pubsub import build_codemode_status
+
+    status = build_codemode_status(agent_id=agent_id)
+    if status is None:
+        raise HTTPException(status_code=500, detail="Could not resolve codemode status")
+    return status
+
+
 @router.get("/codemode/status")
-async def get_codemode_status(
+async def get_codemode_status_endpoint(
+    request: Request,
     agent_id: str | None = Query(
         default=None,
         description="Optional agent id to resolve codemode status for a specific running agent",
@@ -1891,10 +1941,14 @@ async def get_codemode_status(
     This endpoint is intended for interactive clients (e.g. TUX slash
     commands) so they can query a single source of truth instead of relying on
     in-process state from a separate CLI process.
+
+    The sandbox's own credentials are said only to a caller that proved the
+    runtime is theirs (`callers.sandbox_answer`).
     """
+    from agent_runtimes.apps.callers import sandbox_answer
     from agent_runtimes.streams.pubsub import build_codemode_status
 
-    status = build_codemode_status(agent_id=agent_id)
+    status = build_codemode_status(agent_id=agent_id, with_credentials=True)
     if status is None:
         raise HTTPException(status_code=500, detail="Could not resolve codemode status")
-    return status
+    return await sandbox_answer(request, status)

@@ -115,8 +115,11 @@ const COG_CRAWLER_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'market-analyst',
   enabled: true,
   listed: false,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
-  modelAdditionals: ['alibaba:qwen-max'],
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
+  modelAdditionals: [
+    'bedrock:us.anthropic.claude-sonnet-4-6',
+    'alibaba:qwen-max',
+  ],
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
     SKILL_MAP['github:0.0.1']
@@ -307,8 +310,11 @@ const COG_CUSTOMER_INTERVIEWER_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'market-analyst',
   enabled: true,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
-  modelAdditionals: ['alibaba:qwen-max'],
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
+  modelAdditionals: [
+    'bedrock:us.anthropic.claude-sonnet-4-6',
+    'alibaba:qwen-max',
+  ],
   mcpServers: [],
   skills: [
     SKILL_MAP['text-summarizer:0.0.1']
@@ -508,8 +514,11 @@ const COG_SALES_PIPELINE_BOARD_REPORT_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'market-analyst',
   enabled: false,
   listed: false,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
-  modelAdditionals: ['alibaba:qwen-max'],
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
+  modelAdditionals: [
+    'bedrock:us.anthropic.claude-sonnet-4-6',
+    'alibaba:qwen-max',
+  ],
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
