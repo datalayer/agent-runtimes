@@ -78,7 +78,10 @@ import {
 } from '../../core';
 import type { DisplayItem } from '../../../types/chat';
 import { assistantCharacterFor } from '../assistant-characters';
-import { useOptionalSandboxService } from '../agents/useSandboxService';
+import {
+  useOptionalSandboxService,
+  useServerToken,
+} from '../agents/useSandboxService';
 import { TARGET_SPECS } from '../agents/switchable';
 import type {
   AssistantSandbox,
@@ -461,6 +464,12 @@ export function AgentAssistant({
     sandboxService?.target ?? IDLE_SANDBOX_TARGET_SIGNAL,
   );
   const agentId = workspace?.agentId || undefined;
+  // What the agent's server takes: the person's token on a Datalayer
+  // runtime, the host's for its own server, none on this machine.
+  const personToken = useIAMStore(state => state.token);
+  const hostToken = useServerToken();
+  const agentServerToken =
+    (target === 'datalayer' ? personToken : hostToken) || undefined;
   const agentAbout = useMemo<AssistantAbout>(
     () => ({
       name: appId,
@@ -471,6 +480,7 @@ export function AgentAssistant({
       apiBase:
         snapshot.agentBaseUrl ??
         (workspace?.serverUrl || sandboxService?.serverUrl || undefined),
+      ...(agentServerToken ? { apiToken: agentServerToken } : {}),
     }),
     [
       appId,
@@ -480,6 +490,7 @@ export function AgentAssistant({
       workspace?.serverUrl,
       sandboxService,
       snapshot.agentBaseUrl,
+      agentServerToken,
     ],
   );
   const agentSandbox = useMemo<AssistantSandbox | undefined>(() => {
@@ -505,8 +516,9 @@ export function AgentAssistant({
       connection:
         target === 'browser' ? sandboxService.getKernelConnection() : undefined,
       serverUrl: snapshot.agentBaseUrl ?? sandboxService.serverUrl,
+      ...(agentServerToken ? { serverToken: agentServerToken } : {}),
     };
-  }, [sandboxService, target, snapshot, agentId]);
+  }, [sandboxService, target, snapshot, agentId, agentServerToken]);
 
   const stageRef = useRef<HTMLDivElement>(null);
   const drag = useViewportDrag(stageRef, { whole: true });

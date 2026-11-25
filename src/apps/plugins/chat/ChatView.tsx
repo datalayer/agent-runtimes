@@ -130,7 +130,7 @@ import {
   type AgentsConfig,
   type AgentsOutput,
 } from '../agents/plugin';
-import type { SandboxService } from '../agents/service';
+import { serverTokenOf, type SandboxService } from '../agents/service';
 import { visitorForOf } from '../agents/visitorFor';
 import {
   conversationKeyOf,
@@ -145,7 +145,7 @@ import {
   type SandboxFile,
 } from '../../apps/browserSandbox';
 import { useConfig } from '../../../hooks/useConfig';
-import { runtimeModelsUrl } from '../../../hooks/ownRoutes';
+import { runtimeAuthHeaders, runtimeModelsUrl } from '../../../hooks/ownRoutes';
 import { useSkills, useSkillActions } from '../../../hooks/useSkills';
 import type {
   AgentSuggestion,
@@ -1728,6 +1728,20 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
   const iamToken = visitors ? visitor.token : embedToken || memberToken;
   iamTokenRef.current = iamToken || undefined;
   /*
+   * The token the agent's server takes for what is asked of it: the person's
+   * on a Datalayer runtime and for an application, the host's for its own
+   * server (`AgentsConfig.serverToken`), none for a server on this machine.
+   */
+  const personToken =
+    runsApp || workspace.sandbox.target === 'datalayer'
+      ? iamToken || undefined
+      : undefined;
+  const agentServerToken =
+    personToken ??
+    serverTokenOf(
+      reactor.getConfig<AgentsConfig>(AGENTS_PLUGIN_NAME)?.serverToken,
+    );
+  /*
    * Its voice asked of the speech service as this chat speaks to its runtime:
    * the host's token, else this one — a visitor's,
    * an embed's or the person's; an embed's names its deployment.
@@ -2027,7 +2041,9 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
               endpoint: runsApp
                 ? `${agentServerUrl}/api/v1/apps/agents/${encodeURIComponent(agentId)}/ag-ui/`
                 : `${agentServerUrl}/api/v1/ag-ui/${agentId}/`,
-              ...(runsApp && iamToken ? { authToken: iamToken } : {}),
+              // The person's token only: the chat presents its token to the
+              // platform's approvals stream too, which the host's is not for.
+              ...(personToken ? { authToken: personToken } : {}),
               // Its session's ui channel (RU-W): what its answers
               // show, its steps and its elements, beside the run's text.
               ...(runsApp
@@ -2060,7 +2076,7 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
       activeModel,
       agentServerUrl,
       runsApp,
-      iamToken,
+      personToken,
       ownRoutesOnly,
     ],
   );
@@ -2135,7 +2151,7 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
     let cancelled = false;
     // The agent's own models (its model and model_additionals), each saying
     // whether its inference serves it.
-    void fetch(modelsUrl)
+    void fetch(modelsUrl, { headers: runtimeAuthHeaders(agentServerToken) })
       .then(response => (response.ok ? response.json() : null))
       .then(payload => {
         if (!cancelled) {
@@ -2158,7 +2174,7 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [agentServerUrl, agentId, inPage, ownRoutesOnly]);
+  }, [agentServerUrl, agentServerToken, agentId, inPage, ownRoutesOnly]);
 
   /*
    * What to offer when the server has no catalogue of its own.
@@ -2293,11 +2309,14 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
       }
       await fetch(`${agentServerUrl}/api/v1/configure/inference/provider`, {
         method: 'PUT',
-        headers: { 'content-type': 'application/json' },
+        headers: {
+          'content-type': 'application/json',
+          ...runtimeAuthHeaders(agentServerToken),
+        },
         body: JSON.stringify({ model }),
       }).catch(() => undefined);
     },
-    [agentServerUrl, inPage, ownRoutesOnly],
+    [agentServerUrl, agentServerToken, inPage, ownRoutesOnly],
   );
 
   /* `bottom-chat` keeps the prompt in the chat column; `bottom`, the default,

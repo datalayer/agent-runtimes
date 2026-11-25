@@ -56,6 +56,7 @@ export function AgentDetailsDialog({
             messageCount={0}
             agentId={about.agentId}
             apiBase={about.apiBase}
+            authToken={about.apiToken}
             onBack={onClose}
             showBackHeader={false}
             showUsage={onRuntime}

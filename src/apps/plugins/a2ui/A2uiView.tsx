@@ -31,7 +31,8 @@ import {
   datalayerCatalog,
 } from '../../../components/a2ui';
 import type { AgentViewProps } from '../../core';
-import { useSandboxService } from '../agents';
+import { useSandboxService, useServerToken } from '../agents';
+import { runtimeAuthHeaders } from '../../../hooks/ownRoutes';
 
 type Surface = SurfaceModel<ReactComponentImplementation>;
 
@@ -57,6 +58,7 @@ export default function A2uiView({ workspace }: AgentViewProps): JSX.Element {
   // The code that produced what is on screen, so an action can re-run *it*
   // rather than whatever the sandbox happened to execute last.
   const sourceRef = useRef<string>('');
+  const serverToken = useServerToken();
   const renderRef = useRef<
     ((code: string, action?: A2uiClientAction) => Promise<void>) | null
   >(null);
@@ -97,7 +99,10 @@ export default function A2uiView({ workspace }: AgentViewProps): JSX.Element {
           `${workspace.serverUrl}/api/v1/sandbox/execute/a2ui`,
           {
             method: 'POST',
-            headers: { 'content-type': 'application/json' },
+            headers: {
+              'content-type': 'application/json',
+              ...runtimeAuthHeaders(serverToken),
+            },
             body: JSON.stringify({ code, action: action ?? null }),
           },
         );
@@ -116,7 +121,7 @@ export default function A2uiView({ workspace }: AgentViewProps): JSX.Element {
         setError(failure instanceof Error ? failure.message : String(failure));
       }
     },
-    [processor, workspace.serverUrl],
+    [processor, workspace.serverUrl, serverToken],
   );
 
   // Published for the processor's action callback, which is built once and

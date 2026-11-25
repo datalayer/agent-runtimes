@@ -31,6 +31,7 @@ import { Box } from '@datalayer/primer-addons';
 import { AiAgentIcon } from '@datalayer/icons-react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { ContextPanel } from '../context/ContextPanel';
+import { runtimeAuthHeaders } from '../hooks/ownRoutes';
 import {
   ContextInspector,
   type FullContextResponse,
@@ -79,6 +80,8 @@ export interface AgentDetailsProps {
   agentId?: string;
   /** API base URL for fetching context data */
   apiBase?: string;
+  /** The caller's token for that server; none on the server's machine. */
+  authToken?: string;
   /** Identity provider configurations */
   identityProviders?: {
     [K in OAuthProvider]?: {
@@ -376,6 +379,7 @@ export function AgentDetails({
   messageCount,
   agentId,
   apiBase,
+  authToken,
   identityProviders,
   onIdentityConnect,
   onIdentityDisconnect,
@@ -424,6 +428,7 @@ export function AgentDetails({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...runtimeAuthHeaders(authToken),
         },
         body: JSON.stringify({ enabled }),
       });
@@ -449,6 +454,7 @@ export function AgentDetails({
         const base = getApiBase(apiBase);
         const response = await fetch(
           `${base}/api/v1/configure/agents/${encodeURIComponent(agentId!)}/spec`,
+          { headers: runtimeAuthHeaders(authToken) },
         );
         if (!response.ok) {
           throw new Error('Failed to fetch agent spec');

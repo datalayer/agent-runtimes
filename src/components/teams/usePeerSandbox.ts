@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import { runtimeAuthHeaders } from '../../hooks/ownRoutes';
 import {
   assistantSandboxOf,
   type AssistantSandbox,
@@ -30,11 +31,15 @@ export function runtimeBaseOfA2AUrl(url: string): string {
  * The sandbox of the runtime a peer answers from, read again each time
  * `refresh` changes (when a turn ends, it may have started one). Until the
  * runtime says, or when it does not answer, the peer's sandbox is offered
- * as not running, with the runtime it would be on.
+ * as not running, with the runtime it would be on. The token is the
+ * caller's for that runtime, sent when there is one; the runtime names its
+ * Jupyter token only to a caller it knows, and the sandbox is read through
+ * the runtime itself without it.
  */
 export function usePeerSandbox(
   a2aUrl: string,
   refresh?: unknown,
+  token?: string,
 ): AssistantSandbox {
   const serverUrl = runtimeBaseOfA2AUrl(a2aUrl);
   const [sandbox, setSandbox] = useState<AssistantSandbox>({
@@ -44,14 +49,19 @@ export function usePeerSandbox(
   });
   useEffect(() => {
     let current = true;
-    fetch(`${serverUrl}/api/v1/configure/codemode/status`)
+    fetch(`${serverUrl}/api/v1/configure/codemode/status`, {
+      headers: runtimeAuthHeaders(token),
+    })
       .then(response => (response.ok ? response.json() : null))
       .then((status: { sandbox?: Record<string, unknown> | null } | null) => {
         if (!current) {
           return;
         }
         setSandbox(
-          assistantSandboxOf(status?.sandbox, { serverUrl }) ?? {
+          assistantSandboxOf(status?.sandbox, {
+            serverUrl,
+            serverToken: token,
+          }) ?? {
             kind: 'runtime',
             status: 'not running',
             serverUrl,
@@ -66,6 +76,6 @@ export function usePeerSandbox(
     return () => {
       current = false;
     };
-  }, [serverUrl, refresh]);
+  }, [serverUrl, refresh, token]);
   return sandbox;
 }

@@ -41,6 +41,7 @@ import {
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import type { AgentWorkspaceContext } from '../../core';
+import { useServerToken } from '../agents/useSandboxService';
 import {
   deleteConversationCheckpoint,
   isAutoCheckpoint,
@@ -122,6 +123,7 @@ export function CheckpointsSidebar({
 }: CheckpointsSidebarProps): React.ReactElement {
   const serverUrl = workspace?.serverUrl ?? '';
   const agentId = workspace?.agentId ?? '';
+  const token = useServerToken();
   const [state, setState] = useState<ConversationCheckpointsState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -134,7 +136,7 @@ export function CheckpointsSidebar({
   const reload = useCallback(async () => {
     if (!serverUrl || !agentId) return;
     try {
-      const next = await listConversationCheckpoints(serverUrl, agentId);
+      const next = await listConversationCheckpoints(serverUrl, agentId, token);
       if (!alive.current) return;
       setState(next);
       setError(null);
@@ -143,7 +145,7 @@ export function CheckpointsSidebar({
       if (!alive.current) return;
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [serverUrl, agentId]);
+  }, [serverUrl, agentId, token]);
 
   useEffect(() => {
     alive.current = true;
@@ -184,31 +186,31 @@ export function CheckpointsSidebar({
     const trimmed = label.trim();
     if (!trimmed) return;
     void act('save', async () => {
-      await saveConversationCheckpoint(serverUrl, agentId, trimmed);
+      await saveConversationCheckpoint(serverUrl, agentId, trimmed, token);
       if (alive.current) setLabel('');
     });
-  }, [act, agentId, label, serverUrl]);
+  }, [act, agentId, label, serverUrl, token]);
 
   const rewind = useCallback(
     (checkpoint: ConversationCheckpoint) =>
       act(`rewind:${checkpoint.id}`, async () => {
         const settled = afterNextSnapshot();
-        await rewindConversation(serverUrl, agentId, checkpoint.id);
+        await rewindConversation(serverUrl, agentId, checkpoint.id, token);
         // The server pushes the rewound snapshot; ask for one too in case the
         // push raced us, then have the chat load the transcript it now has.
         agentRuntimeStore.getState().requestRefresh(agentId);
         await settled;
         agentRuntimeStore.getState().requestHistoryReload();
       }),
-    [act, agentId, serverUrl],
+    [act, agentId, serverUrl, token],
   );
 
   const remove = useCallback(
     (checkpoint: ConversationCheckpoint) =>
       act(`delete:${checkpoint.id}`, () =>
-        deleteConversationCheckpoint(serverUrl, agentId, checkpoint.id),
+        deleteConversationCheckpoint(serverUrl, agentId, checkpoint.id, token),
       ),
-    [act, agentId, serverUrl],
+    [act, agentId, serverUrl, token],
   );
 
   const checkpoints = useMemo(() => state?.checkpoints ?? [], [state]);

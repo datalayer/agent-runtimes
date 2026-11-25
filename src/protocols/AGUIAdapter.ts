@@ -186,9 +186,7 @@ export class AGUIAdapter extends BaseProtocolAdapter {
 
       const response = await this.fetchOf()(terminateUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.buildHeaders(),
         body: JSON.stringify({
           thread_id: threadId || this.currentThreadId,
         }),

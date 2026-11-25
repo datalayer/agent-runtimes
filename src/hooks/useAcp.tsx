@@ -26,6 +26,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { runtimeSocketUrl } from './ownRoutes';
 
 // Import from official ACP SDK
 import {
@@ -115,6 +116,8 @@ export interface UseAcpOptions {
   wsUrl: string;
   /** Agent ID to connect to */
   agentId: string;
+  /** The caller's token, sent as the websocket's `token` query parameter. */
+  authToken?: string;
   /** Whether to auto-connect on mount (default: true) */
   autoConnect?: boolean;
   /** Number of reconnection attempts (default: 3) */
@@ -195,6 +198,7 @@ export function useAcp(options: UseAcpOptions): UseAcpReturn {
   const {
     wsUrl,
     agentId,
+    authToken,
     autoConnect = true,
     reconnectAttempts = 3,
     reconnectDelay = 2000,
@@ -483,7 +487,7 @@ export function useAcp(options: UseAcpOptions): UseAcpReturn {
     onConnectionChange?.('connecting');
 
     try {
-      const fullUrl = `${wsUrl}/${agentId}`;
+      const fullUrl = runtimeSocketUrl(`${wsUrl}/${agentId}`, authToken);
       const ws = new WebSocket(fullUrl);
 
       ws.onopen = async () => {
@@ -575,6 +579,7 @@ export function useAcp(options: UseAcpOptions): UseAcpReturn {
   }, [
     wsUrl,
     agentId,
+    authToken,
     reconnectAttempts,
     reconnectDelay,
     handleMessage,

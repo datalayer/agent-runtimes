@@ -15,6 +15,7 @@ import {
 import { Box } from '@datalayer/primer-addons';
 import { Heading, Text, ProgressBar, Spinner } from '@primer/react';
 import { useQuery } from '@tanstack/react-query';
+import { runtimeAuthHeaders } from '../hooks/ownRoutes';
 
 /**
  * Context category child item
@@ -93,12 +94,18 @@ export interface ContextUsageProps {
   agentId: string;
   /** Optional base URL override (defaults to local 8765 or same-origin) */
   baseUrl?: string;
+  /** The caller's token for the runtime's routes; none on the runtime's machine. */
+  authToken?: string;
 }
 
 /**
  * ContextUsage component displays token usage breakdown by category.
  */
-export function ContextUsage({ agentId, baseUrl }: ContextUsageProps) {
+export function ContextUsage({
+  agentId,
+  baseUrl,
+  authToken,
+}: ContextUsageProps) {
   const {
     data: contextData,
     isLoading,
@@ -109,6 +116,7 @@ export function ContextUsage({ agentId, baseUrl }: ContextUsageProps) {
       const apiBase = baseUrl || getLocalApiBase();
       const response = await fetch(
         `${apiBase}/api/v1/configure/agents/${encodeURIComponent(agentId)}/context-details`,
+        { headers: runtimeAuthHeaders(authToken) },
       );
       if (!response.ok) {
         throw new Error('Failed to fetch context details');

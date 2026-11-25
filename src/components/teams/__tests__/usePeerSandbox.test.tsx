@@ -37,14 +37,47 @@ describe('usePeerSandbox', () => {
     vi.stubGlobal('fetch', fetch);
     const { result } = renderHook(() => usePeerSandbox(A2A));
     await waitFor(() => expect(result.current.status).toBe('running'));
+    // No token held: nothing is said of the caller, as before.
     expect(fetch).toHaveBeenCalledWith(
       'http://localhost:8767/api/v1/configure/codemode/status',
+      { headers: {} },
     );
     expect(result.current).toMatchObject({
       kind: 'runtime',
       variant: 'eval',
       serverUrl: 'http://localhost:8767',
     });
+    expect(result.current.serverToken).toBeUndefined();
+  });
+
+  it('says who asks when it holds a token, and keeps it for what is run there', async () => {
+    const fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        // The runtime did not name its Jupyter token: the sandbox is read
+        // through the runtime all the same.
+        sandbox: {
+          variant: 'jupyter-server',
+          jupyter_url: 'http://localhost:8888',
+          jupyter_connected: true,
+        },
+      }),
+    });
+    vi.stubGlobal('fetch', fetch);
+    const { result } = renderHook(() =>
+      usePeerSandbox(A2A, undefined, 'a-token'),
+    );
+    await waitFor(() => expect(result.current.status).toBe('running'));
+    expect(fetch).toHaveBeenCalledWith(
+      'http://localhost:8767/api/v1/configure/codemode/status',
+      { headers: { Authorization: 'Bearer a-token' } },
+    );
+    expect(result.current).toMatchObject({
+      kind: 'local',
+      serverUrl: 'http://localhost:8767',
+      serverToken: 'a-token',
+    });
+    expect(result.current.token).toBeUndefined();
   });
 
   it('offers it as not running until it has one, unreachable when the runtime is down', async () => {

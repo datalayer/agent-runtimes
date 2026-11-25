@@ -57,7 +57,9 @@ vi.mock('../../runtimes/lifecycle', () => ({
 import {
   agentDeletionUrl,
   launchesOwnRoutesOnly,
+  runtimeAuthHeaders,
   runtimeModelsUrl,
+  runtimeSocketUrl,
   runtimeStatusUrl,
 } from '../ownRoutes';
 import { createServiceManagerFromAgentSandbox } from '../useAgentRuntimes';
@@ -90,6 +92,45 @@ describe('the routes a page asks besides an application’s own', () => {
     ).toBe(true);
     expect(launchesOwnRoutesOnly({ appSpec, appUid: '01APP' })).toBe(false);
     expect(launchesOwnRoutesOnly(undefined)).toBe(false);
+  });
+});
+
+describe('what a page says of itself to a runtime', () => {
+  const SOCKET = 'wss://r1.example/agent-runtimes/pool/01rt/api/v1/acp/ws/desk';
+
+  it('is the token it holds, as a bearer', () => {
+    expect(runtimeAuthHeaders('a-token')).toEqual({
+      Authorization: 'Bearer a-token',
+    });
+    expect(runtimeAuthHeaders(' a-token ')).toEqual({
+      Authorization: 'Bearer a-token',
+    });
+  });
+
+  it('is nothing without a token: the call goes as it always did', () => {
+    expect(runtimeAuthHeaders()).toEqual({});
+    expect(runtimeAuthHeaders(null)).toEqual({});
+    expect(runtimeAuthHeaders('  ')).toEqual({});
+    expect(runtimeSocketUrl(SOCKET)).toBe(SOCKET);
+    expect(runtimeSocketUrl(SOCKET, null)).toBe(SOCKET);
+    expect(runtimeSocketUrl(`${SOCKET}?agent_id=desk`, '')).toBe(
+      `${SOCKET}?agent_id=desk`,
+    );
+  });
+
+  it('travels in a websocket’s query, after what the address already asks', () => {
+    expect(runtimeSocketUrl(SOCKET, 'a token/1')).toBe(
+      `${SOCKET}?token=a%20token%2F1`,
+    );
+    expect(runtimeSocketUrl(`${SOCKET}?agent_id=desk`, 'tok')).toBe(
+      `${SOCKET}?agent_id=desk&token=tok`,
+    );
+  });
+
+  it('is not said twice on an address that names a token already', () => {
+    expect(runtimeSocketUrl(`${SOCKET}?token=first`, 'second')).toBe(
+      `${SOCKET}?token=first`,
+    );
   });
 });
 

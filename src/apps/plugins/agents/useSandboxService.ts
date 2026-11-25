@@ -14,8 +14,16 @@
  * @module apps/plugins/agents/useSandboxService
  */
 
-import { useReactorPlatform } from '@datalayer/reactor/react';
-import { AGENTS_PLUGIN_NAME, type AgentsOutput } from './plugin';
+import {
+  useOptionalReactorPlatform,
+  useReactorPlatform,
+} from '@datalayer/reactor/react';
+import {
+  AGENTS_PLUGIN_NAME,
+  type AgentsConfig,
+  type AgentsOutput,
+} from './plugin';
+import { serverTokenOf } from './service';
 import type { SwitchableSandboxService } from './switchable';
 
 /** The sandbox service, or `undefined` when the plugin is not mounted. */
@@ -41,4 +49,16 @@ export function useSandboxService(): SwitchableSandboxService {
     );
   }
   return service;
+}
+
+/**
+ * The token the workspace's server takes (`AgentsConfig.serverToken`), as it
+ * stands at this render; none when the host gave none, as for a server on
+ * this machine, and none for a view drawn outside a workspace.
+ */
+export function useServerToken(): string | undefined {
+  const reactor = useOptionalReactorPlatform();
+  return serverTokenOf(
+    reactor?.getConfig<AgentsConfig>(AGENTS_PLUGIN_NAME)?.serverToken,
+  );
 }

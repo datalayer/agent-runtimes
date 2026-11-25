@@ -177,5 +177,27 @@ describe('Stop in an application’s chat', () => {
     expect(calls.map(call => call.url)).toEqual([
       'http://localhost:8765/api/v1/ag-ui/terminate',
     ]);
+    // No token held: nothing is said of the caller, as before.
+    expect(calls[0].init?.headers).toEqual({
+      'Content-Type': 'application/json',
+    });
+  });
+
+  it('says who stops it when the chat holds a token', async () => {
+    const { calls, fetch } = recording();
+    globalThis.fetch = fetch;
+    const adapter = createProtocolAdapter({
+      type: 'ag-ui',
+      endpoint: 'http://localhost:8765/api/v1/ag-ui/default/',
+      authToken: 'tok',
+    }) as AGUIAdapter;
+    await adapter.terminateAgent('t1');
+    expect(calls.map(call => call.url)).toEqual([
+      'http://localhost:8765/api/v1/ag-ui/terminate',
+    ]);
+    expect(calls[0].init?.headers).toEqual({
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer tok',
+    });
   });
 });

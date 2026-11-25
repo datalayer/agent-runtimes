@@ -26,6 +26,18 @@ import {
   type Signal,
 } from '@datalayer/reactor';
 import type { SandboxSnapshot, SandboxState } from '../../core';
+import { runtimeAuthHeaders, runtimeSocketUrl } from '../../../hooks/ownRoutes';
+
+/**
+ * The token the host's server takes, when it asks for one: given as it is, or
+ * read each time it is sent so that a renewed one is the one that travels. A
+ * server on this machine needs none.
+ */
+export type ServerToken = string | (() => string | undefined);
+
+/** The token as it stands now, or none. */
+export const serverTokenOf = (token?: ServerToken): string | undefined =>
+  typeof token === 'function' ? token() : token;
 
 /** Status as the server reports it over the configure WebSocket. */
 export type SandboxStatusPayload = {
@@ -146,7 +158,10 @@ export function summarize(
 const RECONNECT_BASE_MS = 1000;
 const RECONNECT_MAX_MS = 30000;
 
-export function createServerSandboxService(serverUrl: string): SandboxService {
+export function createServerSandboxService(
+  serverUrl: string,
+  token?: ServerToken,
+): SandboxService {
   const status: Signal<SandboxStatusPayload | null> = signal(null);
   const lifecycle: Signal<SandboxState> = signal<SandboxState>('idle');
   /* Set beside `lifecycle`, and only meaningful while it says `error`. */
@@ -178,7 +193,13 @@ export function createServerSandboxService(serverUrl: string): SandboxService {
         }
         const base = serverUrl.replace(/^http/, 'ws');
         const query = agentId ? `?agent_id=${encodeURIComponent(agentId)}` : '';
-        socket = new WebSocket(`${base}/api/v1/configure/sandbox/ws${query}`);
+        // A websocket takes no header: the token travels in its query.
+        socket = new WebSocket(
+          runtimeSocketUrl(
+            `${base}/api/v1/configure/sandbox/ws${query}`,
+            serverTokenOf(token),
+          ),
+        );
 
         socket.onopen = () => {
           attempts = 0;
@@ -234,7 +255,10 @@ export function createServerSandboxService(serverUrl: string): SandboxService {
       try {
         const response = await fetch(`${serverUrl}/api/v1/sandbox/execute`, {
           method: 'POST',
-          headers: { 'content-type': 'application/json' },
+          headers: {
+            'content-type': 'application/json',
+            ...runtimeAuthHeaders(serverTokenOf(token)),
+          },
           body: JSON.stringify({ code }),
         });
         const payload = response.ok ? await response.json() : null;

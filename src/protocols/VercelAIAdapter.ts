@@ -167,9 +167,7 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
 
       const response = await fetch(terminateUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.buildHeaders(),
         body: JSON.stringify({
           request_id: requestId || this.currentRequestId,
         }),

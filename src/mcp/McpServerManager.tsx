@@ -25,11 +25,14 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
 import type { McpServerSelection } from '../types';
+import { runtimeAuthHeaders } from '../hooks/ownRoutes';
 import type { MCPServerManager as MCPServer } from '../types/mcp';
 
 export interface McpServerManagerProps {
   /** Base URL for the API */
   baseUrl: string;
+  /** The caller's token for the runtime's routes; none on the runtime's machine. */
+  authToken?: string;
   /** Agent ID for updating the running agent's MCP servers */
   agentId?: string;
   /** Whether codemode is enabled - affects tool regeneration on add/remove */
@@ -56,6 +59,7 @@ export interface McpServerManagerProps {
  */
 export function McpServerManager({
   baseUrl,
+  authToken,
   agentId,
   enableCodemode = false,
   selectedServers = [],
@@ -71,7 +75,9 @@ export function McpServerManager({
   const catalogQuery = useQuery<MCPServer[]>({
     queryKey: ['mcp-available', baseUrl],
     queryFn: async () => {
-      const response = await fetch(`${baseUrl}/api/v1/mcp/servers/available`);
+      const response = await fetch(`${baseUrl}/api/v1/mcp/servers/available`, {
+        headers: runtimeAuthHeaders(authToken),
+      });
       if (!response.ok) {
         throw new Error('Failed to fetch available MCP servers');
       }
@@ -87,7 +93,7 @@ export function McpServerManager({
     mutationFn: async (serverName: string) => {
       const response = await fetch(
         `${baseUrl}/api/v1/mcp/servers/catalog/${serverName}/enable`,
-        { method: 'POST' },
+        { method: 'POST', headers: runtimeAuthHeaders(authToken) },
       );
       if (!response.ok) {
         const error = await response
@@ -119,7 +125,7 @@ export function McpServerManager({
     mutationFn: async (serverName: string) => {
       const response = await fetch(
         `${baseUrl}/api/v1/mcp/servers/catalog/${serverName}/disable`,
-        { method: 'DELETE' },
+        { method: 'DELETE', headers: runtimeAuthHeaders(authToken) },
       );
       if (!response.ok) {
         const error = await response
@@ -153,7 +159,10 @@ export function McpServerManager({
         `${baseUrl}/api/v1/agents/${agentId}/mcp-servers`,
         {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...runtimeAuthHeaders(authToken),
+          },
           body: JSON.stringify({ selected_mcp_servers: newServers }),
         },
       );

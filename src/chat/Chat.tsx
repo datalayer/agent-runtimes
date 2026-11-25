@@ -1061,6 +1061,7 @@ export function Chat({
                   messageCount={messageCount}
                   agentId={agentId}
                   apiBase={baseUrl}
+                  authToken={authTokenProp}
                   identityProviders={identityProviders}
                   onIdentityConnect={onIdentityConnect}
                   onIdentityDisconnect={onIdentityDisconnect}

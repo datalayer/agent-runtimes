@@ -39,10 +39,13 @@ import {
 } from './browserService';
 import {
   createServerSandboxService,
+  serverTokenOf,
   type SandboxExecution,
   type SandboxService,
   type SandboxStatusPayload,
+  type ServerToken,
 } from './service';
+import { runtimeAuthHeaders } from '../../../hooks/ownRoutes';
 
 /** Where the sandbox runs. */
 export type SandboxTarget = 'browser' | 'local' | 'jupyter' | 'datalayer';
@@ -214,6 +217,8 @@ export type SwitchableSandboxService = SandboxService & {
 
 export type SwitchableConfig = {
   serverUrl: string;
+  /** The token that server takes, when it asks for one (`ServerToken`). */
+  serverToken?: ServerToken;
   initialTarget?: SandboxTarget;
   /**
    * Whether the initial target is the only one: the host decided where the
@@ -249,6 +254,7 @@ export type SwitchableConfig = {
 
 export function createSwitchableSandboxService({
   serverUrl,
+  serverToken,
   initialTarget = 'local',
   targetFixed = false,
   kernelSource,
@@ -261,7 +267,8 @@ export function createSwitchableSandboxService({
   // Both implementations exist from the start, but neither connects until it is
   // the active one — a Pyodide kernel that nobody asked for is megabytes of
   // download, and a WebSocket to a server nobody chose is noise in the logs.
-  const server = createServerSandboxService(serverUrl);
+  const server = createServerSandboxService(serverUrl, serverToken);
+  const authHeaders = () => runtimeAuthHeaders(serverTokenOf(serverToken));
   const browser = createBrowserSandboxService(kernelSource ?? browserSource());
 
   const active = computed<SandboxService>(() =>
@@ -319,7 +326,7 @@ export function createSwitchableSandboxService({
     try {
       response = await fetch(`${serverUrl}/api/v1/agents/sandbox/configure`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...authHeaders() },
         body: JSON.stringify(configure),
       });
     } catch (reason) {
@@ -348,6 +355,7 @@ export function createSwitchableSandboxService({
     // when the promise resolves, the selected sandbox has actually launched.
     const restart = await fetch(`${serverUrl}/api/v1/agents/sandbox/restart`, {
       method: 'POST',
+      headers: authHeaders(),
     });
     if (!restart.ok) {
       throw new Error(
@@ -361,7 +369,12 @@ export function createSwitchableSandboxService({
   function ensureLocalAgent(
     createPayload: Record<string, unknown>,
   ): Promise<void> {
-    return ensureServerAgent(serverUrl, agentId, createPayload);
+    return ensureServerAgent(
+      serverUrl,
+      agentId,
+      createPayload,
+      serverTokenOf(serverToken),
+    );
   }
 
   function connectActive(): void {
@@ -507,6 +520,7 @@ export async function ensureServerAgent(
   serverUrl: string,
   agentId: string | undefined,
   createPayload: Record<string, unknown>,
+  token?: string,
 ): Promise<void> {
   const id = agentId?.trim();
   if (!id) {
@@ -517,6 +531,7 @@ export async function ensureServerAgent(
   try {
     existing = await fetch(
       `${serverUrl}/api/v1/agents/${encodeURIComponent(id)}`,
+      { headers: runtimeAuthHeaders(token) },
     );
   } catch (reason) {
     throw new Error(
@@ -534,7 +549,7 @@ export async function ensureServerAgent(
     // a spell on Jupyter finds the agent alive and nothing behind it. Asking
     // for the sandbox is idempotent, so it costs a round trip and nothing
     // else when one is already running.
-    await ensureServerSandbox(serverUrl, id);
+    await ensureServerSandbox(serverUrl, id, token);
     return;
   }
   if (existing.status !== 404) {
@@ -546,7 +561,10 @@ export async function ensureServerAgent(
 
   const created = await fetch(`${serverUrl}/api/v1/agents`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      ...runtimeAuthHeaders(token),
+    },
     body: JSON.stringify({
       // Defaults first, so a blueprint that names its own transport or
       // sandbox variant — the sandbox capacity plugins do — wins over
@@ -566,7 +584,7 @@ export async function ensureServerAgent(
   // A 409 means somebody else created it between the two calls above, and
   // that agent is as unlikely to have a sandbox as one found by the GET.
   if (created.status === 409) {
-    await ensureServerSandbox(serverUrl, id);
+    await ensureServerSandbox(serverUrl, id, token);
   }
 }
 
@@ -582,10 +600,11 @@ export async function ensureServerAgent(
 async function ensureServerSandbox(
   serverUrl: string,
   id: string,
+  token?: string,
 ): Promise<void> {
   const response = await fetch(
     `${serverUrl}/api/v1/agents/${encodeURIComponent(id)}/sandbox/ensure`,
-    { method: 'POST' },
+    { method: 'POST', headers: runtimeAuthHeaders(token) },
   );
   if (!response.ok) {
     throw new Error(

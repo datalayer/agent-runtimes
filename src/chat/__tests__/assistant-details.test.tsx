@@ -242,6 +242,38 @@ describe('Code Sandbox Details…', () => {
     const variables = dialog.querySelector('[data-kernel-variables-stub]')!;
     expect(variables.getAttribute('data-has-execute')).toBe('true');
   });
+
+  it('opens no kernel connection to a Jupyter server whose token it does not hold', async () => {
+    await renderStage({
+      about: { name: 'Clip' },
+      sandbox: {
+        kind: 'jupyter',
+        status: 'running',
+        variant: 'jupyter-server',
+        // The runtime named its kernel and not its Jupyter token.
+        url: 'https://jupyter.example/server',
+        kernelId: 'k1',
+        agentId: 'a1',
+        serverUrl: 'https://runtime.example',
+        serverToken: 'a-token',
+      },
+    });
+    await openMenu();
+    await choose('sandbox-details');
+    await vi.waitFor(
+      () =>
+        expect(
+          document.querySelector('[data-assistant-sandbox-details]'),
+        ).not.toBeNull(),
+      { timeout: 10000 },
+    );
+    const dialog = document.querySelector('[data-assistant-sandbox-details]')!;
+    const variables = dialog.querySelector('[data-kernel-variables-stub]')!;
+    // Listed through the agent's server instead, and the token never shown.
+    expect(variables.getAttribute('data-has-connection')).toBe('false');
+    expect(variables.getAttribute('data-has-execute')).toBe('true');
+    expect(dialog.textContent).not.toContain('a-token');
+  });
 });
 
 describe('the team graph', () => {
@@ -380,10 +412,52 @@ describe('the helpers', () => {
       'http://localhost:8765/api/v1/sandbox/execute',
       expect.objectContaining({
         method: 'POST',
+        // No token held: nothing is said of the caller, as before.
+        headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ code: 'print(1)', agent_id: 'a1' }),
       }),
     );
     vi.unstubAllGlobals();
+  });
+
+  it('run it as the caller when the page holds a token for that server', async () => {
+    const fetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ stdout: 'out', error: null }),
+    }));
+    vi.stubGlobal('fetch', fetch);
+    const execute = sandboxExecuteOverHttp(
+      'http://localhost:8765',
+      'a1',
+      'a-token',
+    );
+    await execute('print(1)');
+    expect(fetch).toHaveBeenCalledWith(
+      'http://localhost:8765/api/v1/sandbox/execute',
+      expect.objectContaining({
+        headers: {
+          'content-type': 'application/json',
+          Authorization: 'Bearer a-token',
+        },
+      }),
+    );
+    vi.unstubAllGlobals();
+  });
+
+  it('keep the server’s token beside a sandbox whose Jupyter token is not named', () => {
+    const sandbox = assistantSandboxOf(
+      {
+        variant: 'jupyter-server',
+        jupyter_url: 'http://127.0.0.1:8888',
+        jupyter_connected: true,
+      },
+      { agentId: 'a1', serverUrl: 'http://x', serverToken: 'a-token' },
+    );
+    expect(sandbox?.token).toBeUndefined();
+    expect(sandbox?.serverToken).toBe('a-token');
+    expect(
+      assistantSandboxOf({ variant: 'eval' }, { serverUrl: 'http://x' }),
+    ).not.toHaveProperty('serverToken');
   });
 
   it('read Pyodide’s version and packages', () => {

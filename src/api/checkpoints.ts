@@ -9,12 +9,13 @@
  * The agent takes its own checkpoints as it runs; these calls let a page see
  * them, take one between turns, rewind to one and drop one. They speak to
  * `/api/v1/agents/{id}/checkpoints` on the server the workspace is backed by,
- * as the Agent's other local calls do — no token, the local server checks
- * none.
+ * as the Agent's other local calls do. A server on this machine needs no
+ * token; one that asks for its caller's is given it (`token`).
  *
  * @module api/checkpoints
  */
 
+import { runtimeAuthHeaders } from '../hooks/ownRoutes';
 import type {
   ConversationCheckpoint,
   ConversationCheckpointsState,
@@ -45,10 +46,18 @@ const trimSlash = (url: string): string => url.replace(/\/+$/, '');
 const base = (serverUrl: string, agentId: string): string =>
   `${trimSlash(serverUrl)}/api/v1/agents/${encodeURIComponent(agentId)}/checkpoints`;
 
-async function call<T>(url: string, init?: RequestInit): Promise<T> {
+async function call<T>(
+  url: string,
+  init?: RequestInit,
+  token?: string,
+): Promise<T> {
   const response = await fetch(url, {
     ...init,
-    headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
+    headers: {
+      'Content-Type': 'application/json',
+      ...runtimeAuthHeaders(token),
+      ...(init?.headers ?? {}),
+    },
   });
   if (!response.ok) {
     let detail = '';
@@ -85,8 +94,13 @@ export const isAutoCheckpoint = (checkpoint: ConversationCheckpoint): boolean =>
 export async function listConversationCheckpoints(
   serverUrl: string,
   agentId: string,
+  token?: string,
 ): Promise<ConversationCheckpointsState> {
-  const wire = await call<StateWire>(base(serverUrl, agentId));
+  const wire = await call<StateWire>(
+    base(serverUrl, agentId),
+    undefined,
+    token,
+  );
   return {
     agentId: wire.agent_id,
     enabled: wire.enabled,
@@ -103,11 +117,16 @@ export async function saveConversationCheckpoint(
   serverUrl: string,
   agentId: string,
   label: string,
+  token?: string,
 ): Promise<ConversationCheckpoint> {
-  const wire = await call<CheckpointWire>(base(serverUrl, agentId), {
-    method: 'POST',
-    body: JSON.stringify({ label }),
-  });
+  const wire = await call<CheckpointWire>(
+    base(serverUrl, agentId),
+    {
+      method: 'POST',
+      body: JSON.stringify({ label }),
+    },
+    token,
+  );
   return toConversationCheckpoint(wire);
 }
 
@@ -119,13 +138,16 @@ export async function rewindConversation(
   serverUrl: string,
   agentId: string,
   checkpointId: string,
+  token?: string,
 ): Promise<{ checkpoint: ConversationCheckpoint; messageCount: number }> {
   const wire = await call<{
     checkpoint: CheckpointWire;
     message_count: number;
-  }>(`${base(serverUrl, agentId)}/${encodeURIComponent(checkpointId)}/rewind`, {
-    method: 'POST',
-  });
+  }>(
+    `${base(serverUrl, agentId)}/${encodeURIComponent(checkpointId)}/rewind`,
+    { method: 'POST' },
+    token,
+  );
   return {
     checkpoint: toConversationCheckpoint(wire.checkpoint),
     messageCount: wire.message_count,
@@ -137,9 +159,11 @@ export async function deleteConversationCheckpoint(
   serverUrl: string,
   agentId: string,
   checkpointId: string,
+  token?: string,
 ): Promise<void> {
   await call<{ deleted: string }>(
     `${base(serverUrl, agentId)}/${encodeURIComponent(checkpointId)}`,
     { method: 'DELETE' },
+    token,
   );
 }

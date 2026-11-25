@@ -60,6 +60,7 @@ import {
 import { ShareAccessComponent } from '@datalayer/core/lib/components/sharing';
 import { useAgentNodeThemeStore } from './agent-node/themeStore';
 import { AgentNodeGallery } from './agent-node/AgentNodeGallery';
+import { runtimeAuthHeaders } from './hooks/ownRoutes';
 import { Chat } from './chat';
 import type { EphemeralRuntimeOverride } from './chat/notebook/EphemeralNotebook';
 import type { Suggestion } from './types/chat';
@@ -454,6 +455,15 @@ function AgentNodeProfileView({
 
 export function AgentNode() {
   const { token, setAuth, clearAuth } = useSimpleAuthStore();
+  // The signed-in person's token, as the node's routes read it: sent with
+  // what the page asks of the node, nothing before sign-in. Read through a
+  // ref so that a call made later carries the token of that moment.
+  const tokenRef = useRef(token);
+  tokenRef.current = token;
+  const nodeAuthHeaders = useCallback(
+    () => runtimeAuthHeaders(tokenRef.current),
+    [],
+  );
   const tokenForCore = token ?? undefined;
   const signInLoginUrl = `${resolveIamUrl()}/api/iam/v1/login`;
   const queryClient = useQueryClient();
@@ -645,7 +655,12 @@ export function AgentNode() {
 
     const poll = async () => {
       try {
-        const resp = await fetch(`${AGENT_RUNTIMES_BASE_URL}/health/startup`);
+        // The node names its sandbox's Jupyter token to a caller it knows,
+        // or to a page on its own machine: the surfaces bind without it
+        // when it is not named.
+        const resp = await fetch(`${AGENT_RUNTIMES_BASE_URL}/health/startup`, {
+          headers: nodeAuthHeaders(),
+        });
         if (!resp.ok) {
           return;
         }
@@ -956,6 +971,7 @@ export function AgentNode() {
       try {
         const response = await fetch(
           `${AGENT_RUNTIMES_BASE_URL}/api/v1/agent-node/configuration`,
+          { headers: nodeAuthHeaders() },
         );
         if (!response.ok) {
           setConfigurationLoaded(true);
@@ -984,6 +1000,7 @@ export function AgentNode() {
       try {
         const response = await fetch(
           `${AGENT_RUNTIMES_BASE_URL}/api/v1/configure/inference/provider`,
+          { headers: nodeAuthHeaders() },
         );
         if (!response.ok) {
           return;
@@ -1012,6 +1029,7 @@ export function AgentNode() {
       try {
         const response = await fetch(
           `${AGENT_RUNTIMES_BASE_URL}/api/v1/configure/inference/models`,
+          { headers: nodeAuthHeaders() },
         );
         if (!response.ok) {
           setInferenceModels([]);
@@ -1352,6 +1370,7 @@ export function AgentNode() {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
+            ...nodeAuthHeaders(),
           },
           body: JSON.stringify({ provider: inferenceProvider }),
         },
@@ -1369,6 +1388,7 @@ export function AgentNode() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            ...nodeAuthHeaders(),
           },
           body: JSON.stringify(nextConfiguration),
         },
@@ -1945,6 +1965,7 @@ export function AgentNode() {
                       method: 'POST',
                       headers: {
                         'Content-Type': 'application/json',
+                        ...nodeAuthHeaders(),
                       },
                       body: JSON.stringify(nextConfiguration),
                     },

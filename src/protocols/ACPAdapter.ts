@@ -34,6 +34,7 @@ import type { ProtocolAdapterConfig, ACP } from '../types';
 import type { ChatMessage } from '../types/messages';
 import type { ToolDefinition, ToolExecutionResult } from '../types/tools';
 import { generateMessageId, createAssistantMessage } from '../types/messages';
+import { runtimeSocketUrl } from '../hooks/ownRoutes';
 import { BaseProtocolAdapter } from './BaseProtocolAdapter';
 
 /**
@@ -160,7 +161,11 @@ export class ACPAdapter extends BaseProtocolAdapter {
       try {
         const wsUrl = this.acpConfig.wsUrl || this.config.baseUrl;
         const agentId = this.config.agentId;
-        const fullUrl = agentId ? `${wsUrl}/${agentId}` : wsUrl;
+        // A websocket takes no header: the token travels in its query.
+        const fullUrl = runtimeSocketUrl(
+          agentId ? `${wsUrl}/${agentId}` : wsUrl,
+          this.config.authToken,
+        );
 
         this.ws = new WebSocket(fullUrl);
 
