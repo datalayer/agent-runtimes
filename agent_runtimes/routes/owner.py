@@ -228,10 +228,10 @@ def runs_for(agent_id: str = "", *, acting: bool = False) -> Identity:
     if not deployments:
         raise IdentityRefused(NOBODY)
     (deployment,) = deployments
-    token = principal_token(deployment)
-    if not token:
+    held = principal_token(deployment)
+    if not held:
         raise IdentityRefused(principal_token_refusal(deployment) or NOBODY)
-    return Identity(str(token), "principal", deployment)
+    return Identity(str(held), "principal", deployment)
 
 
 #: Said of the mail on a runtime that serves an application.
