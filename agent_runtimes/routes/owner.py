@@ -27,6 +27,15 @@ the events are the principal's. The visitors' runtime runs for nobody.
 **No secret crosses.** The sandbox names no token and receives none; the
 caller can only name which of the runtime's agents asks, never whose account.
 
+**Nothing the caller says chooses the identity or the address.** The sandbox
+names no account and no deployment: on a runtime that serves applications the
+identity is that of the one agent whose code is running
+(`enforcement.code_runs`), refused when the code of several agents runs at
+once or when the caller names another of the runtime's agents. What the
+caller may name — the agent an event is filed under, an event — goes into the
+address as one path segment of a known shape (:func:`path_id`), never a dot
+segment; the host, the method and the headers are the runtime's.
+
 **The pod's loopback only**, as the Space and Library routes are. On a runtime
 held to its application's own routes (`apps.visitors.OwnRoutesOnly`), the
 identity is answered to the sandbox at any time — it is public there — and
@@ -48,7 +57,7 @@ from urllib.parse import quote
 
 import httpx
 from fastapi import APIRouter, HTTPException, Query, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 logger = logging.getLogger(__name__)
 
@@ -123,10 +132,47 @@ def _serves_deployments() -> bool:
     return a_deployment_is_served() or bool(launched_for())
 
 
-def runs_for(agent_id: str = "") -> Identity:
-    """The identity this runtime acts with, for one of its agents when named.
+#: What a caller may put in an address: one path segment, as the platform's ids
+#: are written (a ULID, a uid, a slug, a name). Never a dot segment, a slash, a
+#: percent escape or a query: the address is the runtime's to build.
+_PATH_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:@-]{0,199}$")
 
-    Raises :class:`IdentityRefused` with the sentence when it holds none.
+
+def path_id(value: str, what: str) -> str:
+    """An id a caller gave, as one path segment of an address, or a 422 in a sentence.
+
+    The one check of everything a caller names that goes into the address of
+    a call made with the runtime's identity: an allow-list, so ``..``, ``.``,
+    an escaped dot, a slash, a query or a fragment never reach the address
+    and the call cannot be turned to another resource of the account.
+    """
+    said = str(value or "").strip()
+    if not _PATH_ID.fullmatch(said) or ".." in said or said.strip(".") == "":
+        raise HTTPException(
+            422,
+            f"{said!r} is not {what}: letters, digits and _ . : @ - only, "
+            "starting with a letter or a digit.",
+        )
+    return quote(said, safe="")
+
+
+def _agents_whose_code_runs() -> set[str]:
+    """The agents of this runtime whose code is running now, by id."""
+    from agent_runtimes.apps.enforcement import code_runs
+
+    return {agent for agent in code_runs() if agent}
+
+
+def runs_for(agent_id: str = "", *, acting: bool = False) -> Identity:
+    """The identity this runtime acts with for the caller, or :class:`IdentityRefused`.
+
+    A person's runtime holds one identity, its person's: nothing the caller
+    says chooses it. A runtime that serves applications acts as the principal
+    of the one agent whose code is running: never one the caller names
+    (``agent_id`` naming another of the runtime's agents is refused), never a
+    guess among several running at once. With no code running it says, of the
+    only deployment it serves, who it runs for; it acts (``acting``: the
+    events) for nobody then.
     """
     from agent_runtimes.apps.principal import (
         deployment_of,
@@ -140,42 +186,119 @@ def runs_for(agent_id: str = "") -> Identity:
 
     if visitors_runtime():
         raise IdentityRefused(VISITORS)
-    if _serves_deployments():
-        named = deployment_of(app_instance_of(agent_id)) if agent_id else ""
-        deployments = [named] if named else deployments_served()
-        held = {
-            deployment: principal_token(deployment)
-            for deployment in deployments
-            if principal_token(deployment)
-        }
-        if len(held) == 1:
-            deployment, token = next(iter(held.items()))
-            return Identity(str(token), "principal", deployment)
-        if len(held) > 1:
+    if not _serves_deployments():
+        token = owner_token()
+        if not token:
+            raise IdentityRefused(NOBODY)
+        if _expired(token):
+            raise IdentityRefused(EXPIRED)
+        return Identity(token, "person")
+
+    asked = agent_id.strip()
+    running = _agents_whose_code_runs()
+    if len(running) > 1:
+        raise IdentityRefused(
+            "Code of several agents is running on this runtime "
+            f"({', '.join(sorted(running))}): which one asks cannot be told, so "
+            "nobody is answered. Ask again when one runs alone.",
+            409,
+        )
+    if running:
+        (agent,) = running
+        if asked and asked != agent and app_instance_of(asked) is not None:
             raise IdentityRefused(
-                "Several applications run on this runtime: say which agent asks "
-                "with --agent.",
-                422,
+                f"The code running is {agent}'s: it does not act as {asked}.", 403
             )
-        if len(deployments) == 1:
+        deployments = [deployment_of(app_instance_of(agent))]
+    elif acting:
+        raise IdentityRefused(
+            "No code the agent was let run is running: nothing is done in its "
+            "application's name outside a run.",
+            409,
+        )
+    else:
+        deployments = deployments_served()
+        if len(deployments) > 1:
             raise IdentityRefused(
-                principal_token_refusal(deployments[0]) or NOBODY,
+                "Several applications run on this runtime: who it runs for is "
+                "said to the code of one of them, while it runs.",
+                409,
             )
+    deployments = [deployment for deployment in deployments if deployment]
+    if not deployments:
         raise IdentityRefused(NOBODY)
-    token = owner_token()
+    (deployment,) = deployments
+    token = principal_token(deployment)
     if not token:
-        raise IdentityRefused(NOBODY)
-    if _expired(token):
-        raise IdentityRefused(EXPIRED)
-    return Identity(token, "person")
+        raise IdentityRefused(principal_token_refusal(deployment) or NOBODY)
+    return Identity(str(token), "principal", deployment)
+
+
+#: Said of the mail on a runtime that serves an application.
+NO_MAIL_HERE = (
+    "This runtime serves an application: it mails nobody. A mail to the person "
+    "an agent runs for is sent from a runtime they started from their account."
+)
+
+#: Said of a publication where the person asking is not the owner.
+NOT_THE_OWNERS_ASKING = (
+    "This runtime serves an application to people who are not its owner: it "
+    "publishes nothing in their name."
+)
+
+
+def publication_place_refusal() -> Optional[str]:
+    """Why no skill publishes its owner's work from this runtime, or ``None``.
+
+    The one predicate of where a publication may be made, read by the gate
+    (`apps.visitors.sandbox_may_publish`) and by readiness alike: never on the
+    visitors' runtime; on a runtime that serves an application, only one
+    launched for a deployment by its owner (its proof held, ai-agents saying
+    so), where the person talking to it is the one whose work it is.
+    """
+    from agent_runtimes.apps.principal import (
+        a_deployment_is_served,
+        kernel_holds_owner_secrets,
+        launched_for,
+    )
+    from agent_runtimes.apps.visitors import visitors_runtime
+
+    if visitors_runtime():
+        return VISITORS
+    launched = bool(launched_for())
+    if (launched or a_deployment_is_served()) and not (
+        launched and kernel_holds_owner_secrets()
+    ):
+        return NOT_THE_OWNERS_ASKING
+    return None
+
+
+def mail_place_refusal() -> Optional[str]:
+    """Why no skill mails from this runtime, or ``None``.
+
+    A runtime held to its application's own routes answers the mail route to
+    nobody in its sandbox (`apps.visitors.OwnRoutesOnly`), and mailing an
+    owner on a visitor's word is not decided: unavailable there, said.
+    """
+    from agent_runtimes.apps.visitors import held_to_own_routes, visitors_runtime
+
+    if visitors_runtime():
+        return VISITORS
+    if held_to_own_routes():
+        return NO_MAIL_HERE
+    return None
 
 
 def identity_refusal(skill_id: str, agent_id: str = "") -> Optional[str]:
     """Why a skill that needs the runtime's identity cannot work here now, or ``None``.
 
     ``None`` as well for a skill that needs none. What a skill's readiness is
-    read from: no variable of the environment says it, the identity the
-    runtime holds does.
+    read from, by the predicates its route and the gate enforce: the place
+    (:func:`mail_place_refusal`, :func:`publication_place_refusal`,
+    :func:`sandbox_may_ask`) and the identity held. That code must be running
+    for the events and a publication on a runtime that serves an application
+    is the moment's, not the runtime's: a skill runs as code, so it is not
+    counted against readiness.
     """
     needs = IDENTITY_SKILLS.get(str(skill_id or "").split(":", 1)[0])
     if needs is None:
@@ -183,30 +306,48 @@ def identity_refusal(skill_id: str, agent_id: str = "") -> Optional[str]:
     if needs == "mail":
         from agent_runtimes.tools.social import social_token_refusal
 
-        return social_token_refusal()
+        return mail_place_refusal() or social_token_refusal()
     if needs == "owner":
-        from agent_runtimes.apps.principal import kernel_holds_owner_secrets
-        from agent_runtimes.apps.visitors import visitors_runtime
         from agent_runtimes.routes.spaces import owner_token
 
-        if visitors_runtime():
-            return VISITORS
+        refusal = publication_place_refusal()
+        if refusal:
+            return refusal
         token = owner_token()
         if not token:
             return NOBODY
-        if _expired(token):
-            return EXPIRED
-        if _serves_deployments() and not kernel_holds_owner_secrets():
-            return (
-                "This runtime serves an application to people who are not its "
-                "owner: it publishes nothing in their name."
-            )
-        return None
+        return EXPIRED if _expired(token) else None
     try:
-        runs_for(agent_id)
+        _held_identity(agent_id)
     except IdentityRefused as refused:
         return str(refused)
     return None
+
+
+def _held_identity(agent_id: str = "") -> None:
+    """Whether an identity is held for this agent, whatever code runs now.
+
+    Readiness is asked from outside a run: of the agent named when it serves
+    a deployment, else of the runtime's only deployment or of its person.
+    """
+    from agent_runtimes.apps.principal import (
+        deployment_of,
+        deployments_served,
+        principal_token,
+        principal_token_refusal,
+    )
+    from agent_runtimes.apps.visitors import visitors_runtime
+    from agent_runtimes.models.models import app_instance_of
+
+    if visitors_runtime() or not _serves_deployments():
+        runs_for()
+        return
+    named = deployment_of(app_instance_of(agent_id)) if agent_id else ""
+    deployments = [named] if named else deployments_served()
+    if len(deployments) != 1:
+        raise IdentityRefused(NOBODY)
+    if not principal_token(deployments[0]):
+        raise IdentityRefused(principal_token_refusal(deployments[0]) or NOBODY)
 
 
 def sandbox_may_ask(method: str, path: str) -> bool:
@@ -242,10 +383,10 @@ def _local(request: Request) -> None:
         )
 
 
-def _identity(agent_id: str = "") -> Identity:
+def _identity(agent_id: str = "", *, acting: bool = False) -> Identity:
     """The runtime's identity, or its refusal as an HTTP answer."""
     try:
-        return runs_for(agent_id)
+        return runs_for(agent_id, acting=acting)
     except IdentityRefused as refused:
         raise HTTPException(
             status_code=refused.status_code, detail=str(refused)
@@ -363,7 +504,7 @@ async def who_it_runs_for(
         answer = await _asked(
             "IAM",
             "GET",
-            f"{iam}/api/iam/v1/users/public/by-uid/{quote(owner, safe='')}",
+            f"{iam}/api/iam/v1/users/public/by-uid/{path_id(owner, 'an account')}",
         )
         face = _json(answer).get("profile") if answer.status_code == 200 else None
         if not isinstance(face, dict):
@@ -390,6 +531,9 @@ async def who_it_runs_for(
 class EventToCreate(BaseModel):
     """An event of the agent, as the events skill creates it."""
 
+    # A field this route does not know is an error, never dropped in silence.
+    model_config = ConfigDict(extra="forbid")
+
     agent_id: str = ""
     title: str = Field(min_length=1)
     kind: str = "generic"
@@ -401,19 +545,26 @@ class EventToCreate(BaseModel):
 class EventToUpdate(BaseModel):
     """What changes of an event; a field left out is left as it is."""
 
+    # A field this route does not know is an error, never dropped in silence.
+    model_config = ConfigDict(extra="forbid")
+
     agent_id: str = ""
     title: Optional[str] = None
     kind: Optional[str] = None
     status: Optional[str] = None
+    read: Optional[bool] = None
     payload: Optional[dict[str, Any]] = None
     metadata: Optional[dict[str, Any]] = None
 
 
 def _runtime_agent(named: str = "") -> str:
-    """The agent the events are of: named, else the runtime's only agent."""
+    """The agent the events are of: named, else the one whose code runs, else the runtime's only agent."""
     name = named.strip()
     if name:
         return name
+    running = _agents_whose_code_runs()
+    if len(running) == 1:
+        return next(iter(running))
     from agent_runtimes.routes.agents import _agents
 
     ids = sorted(str(agent_id) for agent_id in _agents)
@@ -427,27 +578,28 @@ def _runtime_agent(named: str = "") -> str:
     )
 
 
-def _events_url(agent_id: str, event_id: str = "") -> str:
-    """The agent's events at ai-agents, or one of them."""
+def _events_url(agent_id: str, event_id: Optional[str] = None) -> str:
+    """The agent's events at ai-agents, or one of them: each id one checked path segment."""
+    agent = path_id(agent_id, "an agent id")
+    event = None if event_id is None else path_id(event_id, "an event id")
     base = _service("ai_agents_url", "ai-agents")
-    url = f"{base}/api/ai-agents/v1/agents/{quote(agent_id, safe='')}/events"
-    return f"{url}/{quote(event_id.strip(), safe='')}" if event_id else url
+    url = f"{base}/api/ai-agents/v1/agents/{agent}/events"
+    return url if event is None else f"{url}/{event}"
 
 
 async def _events(
-    method: str, agent_id: str, event_id: str = "", **kwargs: Any
+    method: str, agent_id: str, event_id: Optional[str] = None, **kwargs: Any
 ) -> dict[str, Any]:
-    """One call to the agent's events at ai-agents, with the runtime's identity."""
-    agent = _runtime_agent(agent_id)
-    # The identity is the asking agent's when it is one of this runtime's; an
-    # agent id of another kind (a platform agent the events are filed under)
-    # chooses no principal.
-    from agent_runtimes.models.models import app_instance_of
+    """One call to the agent's events at ai-agents, with the runtime's identity.
 
-    identity = _identity(agent if app_instance_of(agent) is not None else "")
-    answer = await _asked(
-        "ai-agents", method, _events_url(agent, event_id), identity.token, **kwargs
-    )
+    The address is checked before any identity is read, and the identity is
+    never the caller's choice (:func:`runs_for`): the agent the events are
+    filed under is a name in the address, nothing more.
+    """
+    agent = _runtime_agent(agent_id)
+    url = _events_url(agent, event_id)
+    identity = _identity(agent, acting=True)
+    answer = await _asked("ai-agents", method, url, identity.token, **kwargs)
     if answer.status_code in (401, 403):
         raise HTTPException(
             409,

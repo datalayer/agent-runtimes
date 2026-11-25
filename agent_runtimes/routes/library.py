@@ -84,6 +84,14 @@ async def publish_item(
         raise HTTPException(
             403, "Only a skill in this runtime's pod may publish its owner's work."
         )
+    # Where a publication may be made is one predicate, read by the gate and
+    # by the skill's readiness too: enforced here as well, since the pod's
+    # loopback is answered whole on a runtime that holds no pod secret.
+    from agent_runtimes.routes.owner import publication_place_refusal
+
+    not_here = publication_place_refusal()
+    if not_here:
+        raise HTTPException(403, not_here)
     if not body.confirm:
         raise HTTPException(
             409,
@@ -100,9 +108,14 @@ async def publish_item(
         raise HTTPException(
             409, "This runtime holds no identity of its owner to publish with."
         )
+    # One path segment of a known shape: `..` or an escaped dot would turn the
+    # call, made with the owner's token, to another resource of the Library.
+    from agent_runtimes.routes.owner import path_id
+
     uid = item_uid.strip()
     if not uid:
         raise HTTPException(422, "The item uid is empty.")
+    path_id(uid, "an item uid")
     payload: dict[str, Any] = {"is_public": True, "video": body.video}
     if body.tags is not None:
         payload["tags"] = body.tags

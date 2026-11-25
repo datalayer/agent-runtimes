@@ -449,14 +449,15 @@ def sandbox_may_publish(method: str, path: str) -> bool:
     route still asks for the person's explicit confirmation.
     """
     from agent_runtimes.apps.enforcement import code_is_running
-    from agent_runtimes.apps.principal import kernel_holds_owner_secrets, launched_for
+    from agent_runtimes.routes.owner import publication_place_refusal
 
+    # Where a publication may be made is one predicate, the skill's readiness
+    # reads it too (`routes.owner.publication_place_refusal`): what is said
+    # ready is what is answered here.
     return (
         method == "POST"
         and bool(_LIBRARY_PUBLISH.match(path))
-        and not visitors_runtime()
-        and bool(launched_for())
-        and kernel_holds_owner_secrets()
+        and publication_place_refusal() is None
         and code_is_running()
     )
 

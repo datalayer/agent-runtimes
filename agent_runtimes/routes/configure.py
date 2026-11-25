@@ -432,8 +432,15 @@ async def mail_me_endpoint(body: MailToMeRequest) -> dict[str, Any]:
     the runtime or the sandbox. A runtime given no social token (a visitor's, a
     deployment's) sends none.
     """
+    from agent_runtimes.routes.owner import mail_place_refusal
     from agent_runtimes.tools.social import send_mail
 
+    # Where a mail may be sent from is one predicate, the skill's readiness
+    # reads it too: never from a runtime that serves an application or
+    # visitors, whoever reaches this route there.
+    refusal = mail_place_refusal()
+    if refusal:
+        raise HTTPException(status_code=409, detail=refusal)
     sent = await send_mail("me", body.subject, body.text)
     if isinstance(sent, str):
         raise HTTPException(status_code=409, detail=sent)

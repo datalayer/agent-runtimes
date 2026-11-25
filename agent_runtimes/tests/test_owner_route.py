@@ -492,7 +492,11 @@ def test_the_sandbox_reaches_the_identity_and_the_events_only_while_code_runs(
     assert who.json()["handle"] == "grace" and who.json()["email"] is None
     # Its events only while code the agent was let run is running.
     assert sandbox.get("/api/v1/owner/events?agent_id=a").status_code == 404
-    monkeypatch.setattr(enforcement, "code_is_running", lambda: True)
+    monkeypatch.setattr(enforcement, "_CODE_RUNNING", [_run_of("shopper")])
+    monkeypatch.setattr(
+        "agent_runtimes.models.models._APP_INSTANCES",
+        {"shopper": {"deployment_uid": "dep-1"}},
+    )
     assert sandbox.get("/api/v1/owner/events?agent_id=a").status_code == 200
     # From outside the pod, never; and nothing else opens with it.
     outside = TestClient(runtime_app, client=OUTSIDE)
@@ -504,3 +508,359 @@ def test_the_sandbox_reaches_the_identity_and_the_events_only_while_code_runs(
     monkeypatch.setenv(VISITORS_ENV, "example")
     assert sandbox.get("/api/v1/owner").status_code == 404
     assert sandbox.get("/api/v1/owner/events?agent_id=a").status_code == 404
+
+
+# --- review of 1.8.7: the address and the identity are never the caller's to choose ----
+
+
+def _run_of(agent_id: str) -> Any:
+    """A run whose code is running, as the enforcement keeps it: its rules name its agent."""
+    from types import SimpleNamespace
+
+    return SimpleNamespace(rules=SimpleNamespace(agent_id=agent_id))
+
+
+@pytest.mark.parametrize(
+    "bad", ["..", ".", "%2e%2e", "a/../b", "a/b", "a?x=1", "a#b", "..%2f", " ", "a b"]
+)
+def test_an_id_that_is_no_path_segment_never_reaches_an_authenticated_address(
+    bad: str, a_persons_runtime: list[dict[str, Any]]
+) -> None:
+    """`..` would turn the agent's events into the account's: refused before any call."""
+    listed = client().get("/api/v1/owner/events", params={"agent_id": bad})
+    created = client().post(
+        "/api/v1/owner/events", json={"agent_id": bad, "title": "t"}
+    )
+    changed = client().patch(
+        "/api/v1/owner/events/evt-1", json={"agent_id": bad, "status": "done"}
+    )
+    for answer in (listed, created, changed):
+        if bad.strip():
+            assert answer.status_code == 422, (bad, answer.text)
+            assert "is not an agent id" in answer.json()["detail"]
+    # The event's id, in the path as the client's own encoding carries it.
+    # (A client may resolve a dot segment itself, and then asks another route:
+    # what matters is that no address of the events is built from it.)
+    if bad.strip():
+        from fastapi import HTTPException
+
+        with pytest.raises(HTTPException) as refused:
+            owner._events_url("a", bad)
+        assert refused.value.status_code == 422
+    # Nothing was asked of ai-agents with the runtime's token.
+    assert [each for each in a_persons_runtime if "/events" in each["url"]] == []
+
+
+def test_a_path_id_is_one_segment_of_a_known_shape() -> None:
+    """The allow-list every caller-named id passes before it is put in an address."""
+    from fastapi import HTTPException
+
+    for good in (
+        "evt-1",
+        "01M89RDAM8XY88EKQYXAJC9745",
+        "data-acquisition",
+        "a.b_c:d@e",
+    ):
+        assert owner.path_id(good, "an id") == good.replace(":", "%3A").replace(
+            "@", "%40"
+        )
+    for bad in ("..", ".", "a..b", "%2e%2e", "a/b", "", "-a", "a" * 201, "a\nb"):
+        with pytest.raises(HTTPException) as refused:
+            owner.path_id(bad, "an id")
+        assert refused.value.status_code == 422
+
+
+def test_the_library_publication_takes_no_dot_segment_either(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The same check where the owner's token publishes an item the sandbox names."""
+    from agent_runtimes.routes import library
+
+    sent: list[str] = []
+
+    async def publish(url: str, token: str, payload: dict[str, Any]) -> httpx.Response:
+        sent.append(url)
+        return httpx.Response(200, json={"success": True})
+
+    monkeypatch.setattr(library, "_publish", publish)
+    monkeypatch.setenv("DATALAYER_LIBRARY_URL", "https://library.example")
+    app = FastAPI()
+    app.include_router(library.router, prefix="/api/v1")
+    sandbox = TestClient(app, client=("127.0.0.1", 40000))
+    for bad in ("%2e%2e", "a%2f..%2fb", "x%3Fy"):
+        refused = sandbox.post(
+            f"/api/v1/library/items/{bad}/publish",
+            json={"item_type": "document", "confirm": True},
+        )
+        assert refused.status_code in (404, 422), (bad, refused.text)
+    assert sent == []
+    good = sandbox.post(
+        "/api/v1/library/items/doc-1/publish",
+        json={"item_type": "document", "confirm": True},
+    )
+    assert good.status_code == 200 and sent == [
+        "https://library.example/api/library/v1/items/doc-1/public"
+    ]
+
+
+@pytest.fixture
+def two_deployments(monkeypatch: pytest.MonkeyPatch) -> Iterator[dict[str, str]]:
+    """One runtime serving two deployments, each agent's principal held.
+
+    Yields
+    ------
+    dict[str, str]
+        Each agent's principal token, by agent id.
+    """
+    from agent_runtimes.apps import enforcement, principal
+
+    tokens = {}
+    for agent, deployment, account in (
+        ("agent-a", "dep-a", "u-a"),
+        ("agent-b", "dep-b", "u-b"),
+    ):
+        tokens[agent] = jwt.encode(
+            {
+                "agent_uid": f"p-{agent}",
+                "account_uid": account,
+                "exp": int(time.time()) + 600,
+            },
+            "k" * 32,
+            algorithm="HS256",
+        )
+        principal.give_principal_token(
+            deployment, tokens[agent], expires_in=600, principal_uid=f"p-{agent}"
+        )
+    monkeypatch.setattr(principal, "a_deployment_is_served", lambda: True)
+    monkeypatch.setattr(principal, "deployments_served", lambda: ["dep-a", "dep-b"])
+    monkeypatch.setattr(
+        "agent_runtimes.models.models._APP_INSTANCES",
+        {
+            "agent-a": {"deployment_uid": "dep-a"},
+            "agent-b": {"deployment_uid": "dep-b"},
+        },
+    )
+    monkeypatch.setattr(enforcement, "_CODE_RUNNING", [])
+    yield tokens
+    principal.forget_principal_token("dep-a")
+    principal.forget_principal_token("dep-b")
+
+
+def test_the_sandbox_of_one_agent_never_acts_as_another(
+    two_deployments: dict[str, str],
+    a_persons_runtime: list[dict[str, Any]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The principal is the running agent's: what the caller names selects none."""
+    from agent_runtimes.apps import enforcement
+
+    def upstream() -> list[dict[str, Any]]:
+        return [each for each in a_persons_runtime if "/events" in each["url"]]
+
+    # No code running: nothing is done in an application's name, whoever is named.
+    for named in ("agent-a", "agent-b", "", "notes"):
+        idle = client().get("/api/v1/owner/events", params={"agent_id": named})
+        assert idle.status_code in (409, 422), (named, idle.text)
+    assert upstream() == []
+    # And who it runs for is not said among two applications.
+    assert client().get("/api/v1/owner").status_code == 409
+
+    # A's code runs: A's sandbox asking for B's events is refused, nothing sent.
+    monkeypatch.setattr(enforcement, "_CODE_RUNNING", [_run_of("agent-a")])
+    crossed = client().get("/api/v1/owner/events", params={"agent_id": "agent-b"})
+    assert crossed.status_code == 403, crossed.text
+    assert crossed.json()["detail"] == (
+        "The code running is agent-a's: it does not act as agent-b."
+    )
+    assert client().get("/api/v1/owner?agent=agent-b").status_code == 403
+    written = client().post(
+        "/api/v1/owner/events", json={"agent_id": "agent-b", "title": "t"}
+    )
+    assert written.status_code == 403 and upstream() == []
+    # Its own, named or not, or filed under a name that is no agent of the runtime:
+    # always with A's principal.
+    for named in ("agent-a", "", "data-acquisition"):
+        own = client().get("/api/v1/owner/events", params={"agent_id": named})
+        assert own.status_code == 200, (named, own.text)
+        assert upstream()[-1]["token"] == two_deployments["agent-a"]
+    assert upstream()[0]["url"].endswith("/agents/agent-a/events")
+    assert upstream()[1]["url"].endswith("/agents/agent-a/events")
+    who = client().get("/api/v1/owner")
+    assert who.status_code == 200
+    assert a_persons_runtime[-1]["url"].endswith("/users/public/by-uid/u-a")
+
+    # The code of both runs at once: which one asks cannot be told.
+    monkeypatch.setattr(
+        enforcement, "_CODE_RUNNING", [_run_of("agent-a"), _run_of("agent-b")]
+    )
+    before = len(a_persons_runtime)
+    for route in ("/api/v1/owner", "/api/v1/owner/events?agent_id=agent-a"):
+        ambiguous = client().get(route)
+        assert ambiguous.status_code == 409 and "several agents" in ambiguous.text
+    assert len(a_persons_runtime) == before
+
+
+def test_an_events_request_keeps_its_read_flag_and_takes_no_unknown_field(
+    a_persons_runtime: list[dict[str, Any]],
+) -> None:
+    """`read` is part of the events' update contract; a field nobody knows is an error."""
+    marked = client().patch(
+        "/api/v1/owner/events/evt-1", json={"agent_id": "a", "read": True}
+    )
+    assert marked.status_code == 200, marked.text
+    assert a_persons_runtime[-1]["json"] == {"read": True}
+    both = client().patch(
+        "/api/v1/owner/events/evt-1",
+        json={"agent_id": "a", "status": "completed", "read": False},
+    )
+    assert both.status_code == 200
+    assert a_persons_runtime[-1]["json"] == {"status": "completed", "read": False}
+    before = len(a_persons_runtime)
+    unknown = client().patch(
+        "/api/v1/owner/events/evt-1", json={"agent_id": "a", "unread": True}
+    )
+    assert unknown.status_code == 422
+    assert (
+        client()
+        .post("/api/v1/owner/events", json={"title": "t", "reed": True})
+        .status_code
+        == 422
+    )
+    assert len(a_persons_runtime) == before
+
+
+# --- readiness is what the routes and the gate enforce ---------------------------------
+
+
+RUNTIME_KINDS = (
+    "person",
+    "nobody",
+    "visitors",
+    "served",
+    "launched-by-owner",
+    "launched",
+)
+
+
+@pytest.fixture
+def runtime_kind(
+    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[str]:
+    """A runtime of each kind, each holding every token it could.
+
+    Yields
+    ------
+    str
+        The kind set up.
+    """
+    from agent_runtimes.apps import enforcement, principal
+    from agent_runtimes.apps.visitors import VISITORS_ENV
+    from agent_runtimes.tools import social
+
+    kind = request.param
+    social.give_social_token("a-social-token")
+    monkeypatch.setattr(principal, "deployments_served", lambda: [])
+    monkeypatch.setattr(enforcement, "_CODE_RUNNING", [])
+    if kind == "nobody":
+        monkeypatch.delenv("DATALAYER_USER_TOKEN")
+        social.give_social_token(None)
+    if kind == "visitors":
+        monkeypatch.setenv(VISITORS_ENV, "example")
+    if kind in ("served", "launched-by-owner", "launched"):
+        monkeypatch.setattr(principal, "deployments_served", lambda: ["dep-1"])
+        monkeypatch.setattr(
+            "agent_runtimes.models.models._APP_INSTANCES",
+            {"shopper": {"deployment_uid": "dep-1"}},
+        )
+        principal.give_principal_token(
+            "dep-1", _principal_token(), expires_in=600, principal_uid="p-1"
+        )
+    if kind == "served":
+        monkeypatch.setattr(principal, "a_deployment_is_served", lambda: True)
+    if kind in ("launched-by-owner", "launched"):
+
+        async def nothing_read(*_: Any) -> None:
+            return None
+
+        monkeypatch.setattr(principal, "read_launched_app", nothing_read)
+        principal.give_runtime_proof(_proof(), "the-pods-secret")
+        principal._LAUNCHED_BY_OWNER["said"] = kind == "launched-by-owner"
+    yield kind
+    social.give_social_token(None)
+    principal.forget_principal_token("dep-1")
+    principal.forget_runtime_proof()
+
+
+@pytest.mark.parametrize("runtime_kind", RUNTIME_KINDS, indirect=True)
+def test_a_skill_is_ready_exactly_where_its_route_answers_its_sandbox(
+    runtime_kind: str, runtime_app: FastAPI, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Readiness and enforcement never disagree: each skill, on each kind of runtime.
+
+    The skill runs as code of the agent, so its call is made while that code
+    runs: what is asked is whether the sandbox's call is answered then, by
+    the production middleware and the route, with the services faked.
+    """
+    from agent_runtimes.apps import enforcement
+    from agent_runtimes.routes import library
+    from agent_runtimes.tools import social
+
+    async def publish(url: str, token: str, payload: dict[str, Any]) -> httpx.Response:
+        return httpx.Response(200, json={"success": True})
+
+    async def mailed(to: str, subject: str, text: str) -> Any:
+        refusal = social.social_token_refusal()
+        return refusal if refusal else {"sent": True, "to": "me"}
+
+    monkeypatch.setattr(library, "_publish", publish)
+    monkeypatch.setattr(social, "send_mail", mailed)
+    monkeypatch.setenv("DATALAYER_LIBRARY_URL", "https://library.example")
+    monkeypatch.setattr(enforcement, "_CODE_RUNNING", [_run_of("shopper")])
+    sandbox = TestClient(runtime_app, client=POD)
+    calls = {
+        "datalayer-whoami": lambda: sandbox.get("/api/v1/owner"),
+        "events": lambda: sandbox.get("/api/v1/owner/events?agent_id=shopper"),
+        "datalayer-email": lambda: sandbox.post(
+            "/api/v1/configure/mail", json={"subject": "s", "text": "t"}
+        ),
+        "datalayer-library-publish": lambda: sandbox.post(
+            "/api/v1/library/items/doc-1/publish",
+            json={"item_type": "document", "confirm": True},
+        ),
+    }
+    assert set(calls) == set(owner.IDENTITY_SKILLS)
+    for skill, call in calls.items():
+        ready = owner.identity_refusal(skill, "shopper") is None
+        answered = call().status_code == 200
+        assert ready == answered, (runtime_kind, skill, ready, answered)
+
+
+def test_mail_is_said_unavailable_where_an_application_is_served(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A social token held there is no way to mail: the route is not the sandbox's."""
+    from agent_runtimes.apps import principal
+    from agent_runtimes.tools import social
+
+    social.give_social_token("a-social-token")
+    assert owner.identity_refusal("datalayer-email") is None
+    monkeypatch.setattr(principal, "a_deployment_is_served", lambda: True)
+    assert owner.identity_refusal("datalayer-email") == owner.NO_MAIL_HERE
+    social.give_social_token(None)
+
+
+def test_a_publication_is_not_ready_without_the_owners_launch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Served with no launch proof: the gate answers no publication, readiness says so."""
+    from agent_runtimes.apps import principal
+    from agent_runtimes.apps.visitors import sandbox_may_publish
+
+    monkeypatch.setattr(principal, "a_deployment_is_served", lambda: True)
+    assert principal.kernel_holds_owner_secrets() is True
+    assert (
+        owner.identity_refusal("datalayer-library-publish")
+        == owner.NOT_THE_OWNERS_ASKING
+    )
+    monkeypatch.setattr("agent_runtimes.apps.enforcement.code_is_running", lambda: True)
+    assert sandbox_may_publish("POST", "/api/v1/library/items/x/publish") is False

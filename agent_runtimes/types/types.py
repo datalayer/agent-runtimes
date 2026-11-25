@@ -2169,6 +2169,13 @@ class AppVoiceSpec(BaseModel):
         return self.enabled and self.output != "off"
 
 
+def _default_runtime_engine() -> str:
+    """The engine of an agent that names none: the catalogue's first enabled one."""
+    from agent_runtimes.specs import runtime_engines
+
+    return runtime_engines.DEFAULT_RUNTIME_ENGINE
+
+
 class AgentspecOptional(BaseModel):
     """What an agent starts without (agentspecs 0.0.188, the user, 14 November 2026).
 
@@ -2439,7 +2446,11 @@ class Agentspec(BaseModel):
         alias="harness",
     )
     runtime_engine: str = Field(
-        default="datalayer",
+        # The catalogue's default, read as the spec is made and held to the
+        # validator like a stated one: the first enabled engine, never a name
+        # written here that the catalogue may have switched off.
+        default_factory=lambda: _default_runtime_engine(),
+        validate_default=True,
         description=(
             "What runs and hosts this agent. 'datalayer' (default): a Datalayer "
             "agent runtime, from the platform's pools or on your own machine. "

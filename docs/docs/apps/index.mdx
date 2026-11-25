@@ -725,6 +725,15 @@ a sentence. Only the pod's loopback is answered, no redirect is followed with
 the identity, and on a runtime that serves an application the events are
 reached only while code the agent was let run is running.
 
+Nothing the sandbox says chooses whose identity is used or where a call goes.
+On a runtime that serves applications the identity is that of the one agent
+whose code is running: code of one agent naming another is refused, and when
+the code of several agents runs at once nobody is answered. An id the caller
+names (the agent an event is filed under, an event, an item to publish) is one
+path segment of letters, digits and `_ . : @ -`; anything else, a dot segment
+included, is refused before a call is made. A runtime that serves an
+application mails nobody, and publishes only when its owner launched it.
+
 So no variable says whether such a skill can work: the runtime does.
 `GET /api/v1/configure/skills` marks the four `needs_identity`, and each is
 `ready` only while the runtime holds the identity it needs, with

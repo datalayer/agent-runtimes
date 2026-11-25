@@ -322,3 +322,23 @@ def test_the_generator_emits_the_enabled_engines_and_refuses_none() -> None:
     assert "RUNTIME_ENGINE_IDS = ['datalayer', 'kagent'] as const;" in typescript
     assert "DEFAULT_RUNTIME_ENGINE: RuntimeEngine = 'kagent';" in typescript
     assert "if spec.enabled" in module.generate_python_code(engines)
+
+
+def test_a_spec_that_names_no_engine_takes_the_catalogues_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Never a name written in the field: the first enabled engine, held to the validator."""
+    from agent_runtimes.specs import runtime_engines
+
+    base = {"id": "an-agent", "name": "An agent", "description": "It answers."}
+    assert Agentspec(**base).runtime_engine == runtime_engines.DEFAULT_RUNTIME_ENGINE
+    # Datalayer switched off, Kagent the default: an omitted engine is Kagent.
+    monkeypatch.setattr(runtime_engines, "RUNTIME_ENGINES", ("kagent", "agentcore"))
+    monkeypatch.setattr(runtime_engines, "DEFAULT_RUNTIME_ENGINE", "kagent")
+    assert Agentspec(**base).runtime_engine == "kagent"
+    with pytest.raises(ValidationError, match="'datalayer' is not enabled"):
+        Agentspec(**base, runtime_engine="datalayer")
+    # A default the catalogue has switched off is refused like a stated one.
+    monkeypatch.setattr(runtime_engines, "DEFAULT_RUNTIME_ENGINE", "datalayer")
+    with pytest.raises(ValidationError, match="'datalayer' is not enabled"):
+        Agentspec(**base)
