@@ -1,15 +1,15 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A Datalayer runtime for a kagent Agent: the bridge's Datalayer mode.
+"""A Datalayer runtime for a Kagent Agent: the bridge's Datalayer mode.
 
-In its Datalayer mode the kagent bridge (:mod:`agent_runtimes.kagent.bridge`)
+In its Datalayer mode the Kagent bridge (:mod:`agent_runtimes.kagent.bridge`)
 starts no agent-runtimes beside it. It asks the platform for a runtime, the
-way every Datalayer client does, and forwards kagent's tasks to that
+way every Datalayer client does, and forwards Kagent's tasks to that
 runtime's agent-runtimes over A2A. The bridge runs in its own environment
 (kagent-core, a2a-sdk 1.x) and cannot import the Datalayer client, so it asks
-through this module, run as ``agent-runtimes kagent launch-runtime`` and
-``agent-runtimes kagent end-runtime`` in agent-runtimes' environment:
+through this module, run as ``agent-runtimes Kagent launch-runtime`` and
+``agent-runtimes Kagent end-runtime`` in agent-runtimes' environment:
 
 - **launch**: ``AgentClient.create_runtime`` with ``client_id="kagent"`` and
   ``agent_uid="<namespace>/<agent>"`` (the normal launch path: the runtime
@@ -36,7 +36,7 @@ from typing import Any, Mapping, Optional
 
 logger = logging.getLogger(__name__)
 
-#: The client a kagent bridge launches its runtimes as (the operator labels
+#: The client a Kagent bridge launches its runtimes as (the operator labels
 #: such a runtime with its Agent, and ends it when the Agent is deleted).
 CLIENT_ID = "kagent"
 
@@ -64,7 +64,7 @@ class DatalayerModeError(ValueError):
 
 @dataclass(frozen=True)
 class RuntimeRequest:
-    """What one runtime for a kagent Agent is launched with."""
+    """What one runtime for a Kagent Agent is launched with."""
 
     environment: str
     spec_id: str
@@ -97,7 +97,7 @@ def minutes_of(value: Optional[str]) -> float:
 
 
 def agent_uid_of(agent_uid: str) -> str:
-    """``<namespace>/<agent>``, as the operator takes a kagent Agent's name."""
+    """``<namespace>/<agent>``, as the operator takes a Kagent Agent's name."""
     namespace, slash, name = (agent_uid or "").strip().partition("/")
     if not slash or not namespace or not name or "/" in name:
         raise DatalayerModeError(

@@ -68,6 +68,8 @@ from reactor import PluginPlatform
 from agent_runtimes.addresses.hosts import AddressHosts
 from agent_runtimes.protocols.pap import pap_protocol_version
 
+from . import draft
+
 
 def company_domain(company: str) -> str:
     """The domain a company is discovered at (``/.well-known/poppy.json`` on it).
@@ -388,6 +390,11 @@ class PapPersonalAgentCapability:
     (Sessions, conversations, Device Sign-In, Operations), as ``client_id``
     for ``tenant_id``; without them it reads public metadata only and every
     session call raises ``PapCapabilityError("no_host")``.
+
+    ``offline_access``: a sign-in also asks for the ``offline_access`` scope when the
+    company's issuer lists it, as upstream's unpublished draft 1.1 has a personal agent
+    do. ``None`` reads ``AGENT_RUNTIMES_PAP_OFFLINE_ACCESS``; off by default, and refused
+    on an SDK that does not have it (:mod:`agent_runtimes.pap.draft`).
     """
 
     def __init__(
@@ -399,6 +406,7 @@ class PapPersonalAgentCapability:
         http_client: httpx.AsyncClient | None = None,
         client_id: str | None = None,
         tenant_id: str = "local",
+        offline_access: bool | None = None,
     ) -> None:
         if (reactor is None) != (http_client is None) or (reactor is None) != (
             client_id is None
@@ -406,6 +414,8 @@ class PapPersonalAgentCapability:
             raise ValueError(
                 "A personal agent needs its PAP reactor, its HTTP client and its client_id together"
             )
+        # Read once, here: a setting the installed SDK cannot honour stops the host at start.
+        self._offline_access = draft.offline_access(offline_access)
         self._reactor = reactor
         self._http = http_client
         self._session_http: SessionHttpClient | None = None
@@ -674,10 +684,13 @@ class PapPersonalAgentCapability:
                 reason=f"{domain} offers no Device Sign-In, the one a local runtime does",
             )
         # Never `poppy:browser-sign-in` (PAP draft 0.4 §4.7, §6): it joins no browser to a Session.
+        # Nor ``offline_access``, once the host turned it on: it asks for a refresh token, is
+        # no access to the account, and the SDK adds it from the issuer's ``scopes_supported``.
+        never = {BROWSER_SIGN_IN_SCOPE}
+        if self._offline_access:
+            never.add(draft.OFFLINE_ACCESS_SCOPE)
         offered = tuple(
-            scope
-            for scope in metadata.scopes_supported or ()
-            if scope != BROWSER_SIGN_IN_SCOPE
+            scope for scope in metadata.scopes_supported or () if scope not in never
         )
         asked = offered if scopes is None else tuple(scopes)
         beyond = [scope for scope in asked if scope not in offered]
@@ -709,6 +722,7 @@ class PapPersonalAgentCapability:
             dpop_signing_algs=metadata.dpop_signing_alg_values_supported,
             # A DPoP key proves for one User ID only (PAP draft 0.4 §4.5).
             pairwise_user_id=link.pairwise_user_id,
+            **draft.sign_in_scopes(metadata, self._offline_access),
         )
         link.device_reference = started.reference
         return PapSignInSummary(

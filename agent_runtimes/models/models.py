@@ -254,7 +254,7 @@ def runtime_engine_headers(environ: Mapping[str, str] | None = None) -> dict[str
     writes ``AGENT_RUNTIMES_TARGET=agentcore``): no Datalayer reservation
     carries it, so each call ai-inference records is the usage of its
     engine, and the platform's usage reads it as ``runtime_engine:
-    agentcore``. A runtime of Datalayer's or kagent's sends none: its
+    agentcore``. A runtime of Datalayer's or Kagent's sends none: its
     reservation, opened by the Operator, says its engine.
     """
     from agent_runtimes.agentcore.settings import TARGET, TARGET_VARIABLE

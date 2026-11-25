@@ -113,6 +113,7 @@ import { appPluginPair } from './pluginPair';
 import { visitorAgentOf } from './visitorToken';
 import { defineAppBrowserSandboxPlugin } from './AppBrowserSandbox';
 import { browserSandboxNote, runsCodeInSandbox } from './browserSandbox';
+import type { RuntimeEngine } from '../../specs/runtimeEngines';
 
 /** The id of an agent or a Cog, without its version. */
 export const agentIdOf = (app: Pick<AppSpec, 'agent' | 'team'>): string => {
@@ -262,10 +263,10 @@ export type AppInstance = {
   organizationUid?: string;
   /**
    * What runs and hosts its agent, as its deployment says (`runtime_engine`):
-   * a kagent deployment's runtime is launched on kagent. Unsaid, its agent
+   * a Kagent deployment's runtime is launched on Kagent. Unsaid, its agent
    * spec's engine applies.
    */
-  runtimeEngine?: 'datalayer' | 'kagent';
+  runtimeEngine?: Exclude<RuntimeEngine, 'agentcore'>;
 };
 
 export type AppRendererProps = Omit<AgentEmbedProps, 'agentId'> & {

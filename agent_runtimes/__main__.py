@@ -974,8 +974,8 @@ def serve(
         # Answer Amazon Bedrock AgentCore Runtime's contract (0.0.0.0:8080)
         AGENT_SPEC_ID=crawler agent-runtimes serve --target agentcore
 
-        # Serve a kagent BYO actor's agent, for the bridge beside it
-        AGENT_SPEC_ID=crawler agent-runtimes serve --target kagent
+        # Serve a Kagent BYO actor's agent, for the bridge beside it
+        AGENT_SPEC_ID=crawler agent-runtimes serve --target Kagent
 
         # Run as an Agent Substrate actor (port 80, the wakeup probe at /ate/wakeup)
         AGENT_SPEC_ID=crawler agent-runtimes serve --target ate

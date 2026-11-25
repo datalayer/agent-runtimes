@@ -81,7 +81,7 @@ def test_a_deployment_without_its_application_is_refused_before_anything_is_aske
 
 
 def test_the_launch_s_engine_is_sent_and_unsaid_is_the_spec_s() -> None:
-    """``runtime_engine`` overrides the spec's (a kagent deployment's tick);
+    """``runtime_engine`` overrides the spec's (a Kagent deployment's tick);
     unsaid, nothing is sent and Runtimes applies the spec's."""
     transport = _Transport()
     RuntimesClient(transport).create(

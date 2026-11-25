@@ -1576,7 +1576,6 @@ function Designer({
         wide={wide}
         contentWidth={contentWidth}
         initialDock={initialDock}
-        keepDock={!pictured}
         dockHeader={
           // What is selected, beside the dock's name.
           emptyKind || part ? (

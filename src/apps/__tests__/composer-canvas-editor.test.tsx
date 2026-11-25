@@ -929,15 +929,24 @@ describe('the controls dock (asked 14 October 2026)', () => {
     expect($('[data-designer-dock-problems]')).toBeTruthy();
   });
 
-  it('floats in the picture of the designer too, and is not remembered there', () => {
+  it('floats by default in the picture of the designer too (the editor the agent’s footer opens), and shares the editors’ cookie (25 November 2026)', () => {
     act(() => {
       root.render(<AppCanvasEditor mock />);
     });
-    act(() => $('[data-designer-dock-toggle]').click());
-    expect($('[data-designer-dock]').getAttribute('data-designer-dock')).toBe(
-      'floating',
-    );
+    // Never chosen: it follows the editor, floating, as the application's editor does.
     expect(readDock()).toBeNull();
+    const shell = readFileSync(
+      join(__dirname, '..', 'composer', 'DesignerShell.tsx'),
+      'utf8',
+    );
+    expect(shell).toContain('kept === null ||');
+    expect(shell).not.toContain('keepDock?:');
+    // Docked from its header: kept in the one cookie every canvas editor reads.
+    act(() => $('[data-designer-dock-toggle]').click());
+    const docked = readDock();
+    expect(docked).not.toBeNull();
+    act(() => $('[data-designer-dock-toggle]').click());
+    expect(readDock()?.floating).toBe(!docked?.floating);
   });
 
   it('floats beside the editor until the reader chooses, then keeps the choice in a cookie (24 November 2026)', () => {
@@ -947,7 +956,7 @@ describe('the controls dock (asked 14 October 2026)', () => {
       join(__dirname, '..', 'composer', 'DesignerShell.tsx'),
       'utf8',
     );
-    expect(shell).toContain('(remember && kept === null)');
+    expect(shell).toContain('kept === null ||');
     // Chosen: written to the cookie, read back as left.
     keepDock(false, null);
     expect(readDock()).toEqual({ floating: false, position: null });

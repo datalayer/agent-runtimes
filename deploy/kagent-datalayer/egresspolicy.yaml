@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 #
 # The Datalayer plane, reachable from the actor with the Datalayer API key put
-# in the Authorization header by kagent's egress gateway: the key never enters
+# in the Authorization header by Kagent's egress gateway: the key never enters
 # the actor. The same Secret, header and prefix as the datalayer-ai-inference
 # ModelConfig, so the two bindings of the origin are identical and merge.
 #

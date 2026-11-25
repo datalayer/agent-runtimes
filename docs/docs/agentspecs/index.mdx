@@ -120,9 +120,9 @@ Two fields, one after the other, say what runs an agent:
   - `datalayer`: a Datalayer agent runtime, from the platform's pools or
     started on your own machine (`agent-runtimes serve`). Every agent of the
     catalogue but two.
-  - `kagent`: [kagent](../integrations/kagent). The agent is a kagent `Agent`
+  - `kagent`: [kagent](../integrations/kagent). The agent is a Kagent `Agent`
     whose `Harness` runs `agent-runtimes serve --target kagent` behind the
-    kagent bridge, reached through kagent's A2A gateway at
+    Kagent bridge, reached through Kagent's A2A gateway at
     `/agents/{namespace}/{name}`; each conversation is a session actor of
     [Agent Substrate](../integrations/agent-substrate), suspended when idle
     and resumed on the next message. It takes the `pydantic-ai` harness only.
@@ -140,7 +140,7 @@ The platform checks the launch's engine as it checks the spec's: one of the
 three, one that can run the agent's harness, and for `agentcore` an
 organization with its AWS connection. What a launch ran on is on the runtime's
 record and on the usage the platform records for it (`runtime_engine`), and
-the platform's usage lists kagent's apart.
+the platform's usage lists Kagent's apart.
 
 ```yaml
 # agentspecs/agents/example-kagent.yaml

@@ -9,7 +9,7 @@
 #
 # and set baseUrl to your Datalayer plane's ai-inference (a full DNS name:
 # Substrate's egress allows named origins only). The key never enters the
-# actor: kagent's egress gateway sets it on each call.
+# actor: Kagent's egress gateway sets it on each call.
 apiVersion: api.kagent.dev/v1alpha3
 kind: ModelConfig
 metadata:

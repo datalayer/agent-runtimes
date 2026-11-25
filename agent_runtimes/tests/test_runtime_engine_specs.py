@@ -1,11 +1,13 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""`runtime_engine`: what runs and hosts an agent, `datalayer` or `kagent`.
+"""`runtime_engine`: what runs and hosts an agent, `datalayer`, `kagent` or `agentcore`.
 
 Every agent of the catalogue states it, on the line after `harness`; the
-generator refuses a spec that names none, names another, or asks kagent to
-run a harness other than pydantic-ai.
+generator refuses a spec that names none, names another, or asks Kagent or
+AWS AgentCore to run a harness other than pydantic-ai. The engines are specs
+of `agentspecs/runtime-engines`, generated into
+`agent_runtimes.specs.runtime_engines`.
 """
 
 from __future__ import annotations
@@ -19,6 +21,14 @@ from pydantic import ValidationError
 
 from agent_runtimes.specs.agents import get_agent_spec, list_agentspecs
 from agent_runtimes.specs.cogs import list_cogs
+from agent_runtimes.specs.runtime_engines import (
+    DEFAULT_RUNTIME_ENGINE,
+    ENGINE_HARNESSES,
+    RUNTIME_ENGINE_CATALOGUE,
+    RUNTIME_ENGINES,
+    get_runtime_engine,
+    list_runtime_engines,
+)
 from agent_runtimes.types import Agentspec
 
 REPO = Path(__file__).resolve().parents[2]
@@ -32,6 +42,38 @@ def _clone_or_skip() -> Path:
             "the agentspecs clone beside this one, with runtime_engines, is not here"
         )
     return AGENTS_DIR
+
+
+class TestTheEngines:
+    def test_are_datalayer_kagent_and_aws_agentcore_the_default_first(self) -> None:
+        assert RUNTIME_ENGINES == ("datalayer", "kagent", "agentcore")
+        assert DEFAULT_RUNTIME_ENGINE == "datalayer"
+        assert [engine.name for engine in list_runtime_engines()] == [
+            "Datalayer",
+            "Kagent",
+            "AWS AgentCore",
+        ]
+        assert [engine.position for engine in list_runtime_engines()] == [1, 2, 3]
+
+    def test_run_the_harnesses_their_specs_say(self) -> None:
+        assert ENGINE_HARNESSES == {
+            "kagent": ("pydantic-ai",),
+            "agentcore": ("pydantic-ai",),
+        }
+        assert RUNTIME_ENGINE_CATALOGUE["datalayer"].harnesses is None
+        assert get_runtime_engine("lambda") is None
+
+    def test_are_the_yaml_ones(self) -> None:
+        engines_dir = _clone_or_skip().parent / "runtime-engines"
+        if not engines_dir.is_dir():
+            pytest.skip("the agentspecs clone beside this one has no runtime-engines")
+        raw = {
+            path.stem: yaml.safe_load(path.read_text())
+            for path in engines_dir.glob("*.yaml")
+        }
+        assert set(raw) == set(RUNTIME_ENGINES)
+        for engine in list_runtime_engines():
+            assert engine.model_dump() == raw[engine.id], engine.id
 
 
 class TestTheCatalogue:
@@ -103,7 +145,10 @@ class TestTheModel:
         assert spec.runtime_engine == "agentcore"
 
     def test_refuses_any_other_engine(self) -> None:
-        with pytest.raises(ValidationError, match="runtimeEngine|runtime_engine"):
+        with pytest.raises(
+            ValidationError,
+            match="there is no runtime_engine named 'lambda': one of datalayer, kagent, agentcore",
+        ):
             Agentspec(id="a", name="A", description="d", runtime_engine="lambda")
 
 

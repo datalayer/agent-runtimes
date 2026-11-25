@@ -38,7 +38,7 @@ from code_sandboxes.lifecycle import (
 )
 from datalayer_core.utils.defaults import get_default_credits_limit
 
-from agent_runtimes.types.types import RUNTIME_ENGINES
+from agent_runtimes.specs.runtime_engines import RUNTIME_ENGINES
 
 logger = logging.getLogger(__name__)
 
@@ -238,12 +238,12 @@ class RuntimesClient:
             the spec's MCP servers or those skills out, their secrets not
             asked for.
         client_id : Optional[str]
-            What asked for the runtime (``kagent`` for a kagent Agent's
+            What asked for the runtime (``kagent`` for a Kagent Agent's
             bridge). With ``agent_uid`` it reaches the runtime's reservation
             as its agent dimensions; neither changes who pays.
         agent_uid : Optional[str]
             The agent the runtime runs for, in the client's own naming
-            (``<namespace>/<agent>`` for a kagent Agent).
+            (``<namespace>/<agent>`` for a Kagent Agent).
         runtime_engine : Optional[str]
             What runs and hosts the agent: ``datalayer``, ``kagent`` or
             ``agentcore``. It overrides the spec's ``runtime_engine``; none
