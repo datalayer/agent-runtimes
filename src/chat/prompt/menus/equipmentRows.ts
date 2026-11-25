@@ -33,6 +33,7 @@ import type {
   McpToolsetsStatusResponse,
 } from '../../../types/mcp';
 import type { SkillInfo } from '../../../types/skills';
+import { SKILLS_CATALOG } from '../../../specs/skills';
 
 export const EQUIPMENT_WORDS = {
   switches:
@@ -151,6 +152,52 @@ export type EquipmentSources = {
 
 const bare = (id: string): string => id.split(':', 1)[0];
 
+/**
+ * An id as words, for a skill no catalogue names: `datalayer-memory-add` is
+ * "Datalayer Memory Add". Never the bare id in a menu.
+ */
+export function humanisedId(id: string): string {
+  const words = bare(id)
+    .split(/[-_.\s]+/)
+    .filter(Boolean)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1));
+  return words.length > 0 ? words.join(' ') : id;
+}
+
+/**
+ * A skill's name, for a person: what its runtime calls it, unless that is
+ * its id again (a runtime whose catalogue has no entry for it answers the
+ * id, and a loaded skill's own name is its id); then the page's catalogue,
+ * then the id as words.
+ */
+export function skillNameOf(
+  id: string,
+  ...said: (string | undefined)[]
+): string {
+  const key = bare(id);
+  const named = said.find(
+    name => name && name.trim() && bare(name.trim()) !== key,
+  );
+  return named?.trim() || SKILLS_CATALOG[key]?.name || humanisedId(key);
+}
+
+/**
+ * A skill's description, for a menu: its runtime's catalogue, the page's
+ * catalogue, and only then the skill's own (written for the model).
+ */
+export function skillDescriptionOf(
+  id: string,
+  catalogued?: string,
+  own?: string,
+): string | undefined {
+  return (
+    catalogued?.trim() ||
+    SKILLS_CATALOG[bare(id)]?.description?.trim() ||
+    own?.trim() ||
+    undefined
+  );
+}
+
 const SERVER_STATES: readonly McpServerState[] = [
   'started',
   'starting',
@@ -209,7 +256,7 @@ export function skillRow(skill: EquipmentSkill): EquipmentRow {
   const state = skill.state;
   return {
     id: skill.id,
-    name: skill.name,
+    name: skillNameOf(skill.id, skill.name),
     state: state
       ? EQUIPMENT_WORDS.skillState[state]
       : EQUIPMENT_WORDS.declaredState,
@@ -386,11 +433,15 @@ function skillRows(sources: EquipmentSources): SkillRow[] {
       : isDeclared
         ? EQUIPMENT_WORDS.declared
         : sources.locked;
-    const description = said?.description || known?.description || undefined;
+    const description = skillDescriptionOf(
+      id,
+      said?.description,
+      known?.description,
+    );
     return {
       id,
       switchId,
-      name: said?.name || known?.name || id,
+      name: skillNameOf(id, said?.name, known?.name),
       state,
       tone: enabled ? 'success' : 'neutral',
       on: enabled,

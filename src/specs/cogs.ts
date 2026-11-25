@@ -17,6 +17,10 @@ import type { Agentspec, CogSpec } from '../types';
 import { TAVILY_MCP_SERVER_0_0_1 } from './mcpServers';
 import {
   CRAWL_SKILL_SPEC_0_0_1,
+  DATALAYER_MEMORY_ADD_SKILL_SPEC_0_0_1,
+  DATALAYER_MEMORY_DELETE_SKILL_SPEC_0_0_1,
+  DATALAYER_MEMORY_LIST_SKILL_SPEC_0_0_1,
+  DATALAYER_MEMORY_SEARCH_SKILL_SPEC_0_0_1,
   EVENTS_SKILL_SPEC_0_0_1,
   GITHUB_SKILL_SPEC_0_0_1,
   TEXT_SUMMARIZER_SKILL_SPEC_0_0_1,
@@ -43,6 +47,14 @@ const MCP_SERVER_MAP: Record<string, any> = {
 const SKILL_MAP: Record<string, any> = {
   'crawl:0.0.1': CRAWL_SKILL_SPEC_0_0_1,
   crawl: CRAWL_SKILL_SPEC_0_0_1,
+  'datalayer-memory-add:0.0.1': DATALAYER_MEMORY_ADD_SKILL_SPEC_0_0_1,
+  'datalayer-memory-add': DATALAYER_MEMORY_ADD_SKILL_SPEC_0_0_1,
+  'datalayer-memory-delete:0.0.1': DATALAYER_MEMORY_DELETE_SKILL_SPEC_0_0_1,
+  'datalayer-memory-delete': DATALAYER_MEMORY_DELETE_SKILL_SPEC_0_0_1,
+  'datalayer-memory-list:0.0.1': DATALAYER_MEMORY_LIST_SKILL_SPEC_0_0_1,
+  'datalayer-memory-list': DATALAYER_MEMORY_LIST_SKILL_SPEC_0_0_1,
+  'datalayer-memory-search:0.0.1': DATALAYER_MEMORY_SEARCH_SKILL_SPEC_0_0_1,
+  'datalayer-memory-search': DATALAYER_MEMORY_SEARCH_SKILL_SPEC_0_0_1,
   'events:0.0.1': EVENTS_SKILL_SPEC_0_0_1,
   events: EVENTS_SKILL_SPEC_0_0_1,
   'github:0.0.1': GITHUB_SKILL_SPEC_0_0_1,
