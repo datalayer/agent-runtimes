@@ -1353,11 +1353,15 @@ class TestSkillsLentInTheHarnessFormat:
     def test_a_skill_with_secrets_says_datalayer_holds_them(self) -> None:
         from agent_runtimes.specs.skills import get_skill_spec
 
+        # crawl asks no key since agentspecs 0.1.22; github needs its token.
+        github = get_skill_spec("github")
+        assert github is not None
+        text = skill_markdown(github, reading_skills())
+        assert "It needs GITHUB_TOKEN, which Datalayer holds" in text
+        assert "do not write it anywhere" in text
         crawl = get_skill_spec("crawl")
         assert crawl is not None
-        text = skill_markdown(crawl, reading_skills())
-        assert "It needs TAVILY_API_KEY, which Datalayer holds" in text
-        assert "do not write it anywhere" in text
+        assert "which Datalayer holds" not in skill_markdown(crawl, reading_skills())
 
     def test_an_unknown_or_disabled_skill_is_refused_at_load(
         self, monkeypatch: pytest.MonkeyPatch
