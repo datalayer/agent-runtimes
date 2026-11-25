@@ -298,6 +298,32 @@ def or_visitors_key(otherwise: Any) -> Any:
     return key
 
 
+#: Said to a visitor's turn on a runtime whose model calls all leave as its application.
+VISITOR_PAYS_ITS_OWN = (
+    "A visitor's turn calls its models with the visitor's own token, and on this runtime every "
+    "model call leaves as the application: the turn is not run. Sign in, or ask its owner to run "
+    "it where visitors are served."
+)
+
+
+def principal_key_only(otherwise: Any) -> Any:
+    """The key a deployment's model call is made with on a runtime that acts as its
+    principal without holding the token (`egress_principal`): ``otherwise()``, its
+    principal's, and never a visitor's. Every call there leaves as the application,
+    so a visitor's turn, which pays with the visitor's own token, is refused in a
+    sentence instead of being charged to the application's owner.
+    """
+
+    async def key() -> str:
+        if _TURN_TOKEN.get():
+            from agent_runtimes.models.offered import InferenceTokenMissing
+
+            raise InferenceTokenMissing(VISITOR_PAYS_ITS_OWN)
+        return await otherwise()
+
+    return key
+
+
 # --- read only --------------------------------------------------------------------
 
 

@@ -94,6 +94,13 @@ async def send_to_ai_agents(body: Dict[str, Any]) -> List[Dict[str, Any]]:
     url = getattr(DatalayerURLs.from_environment(), "ai_agents_url", "") or ""
     if not url:
         raise NotificationsNotSent("Nothing was sent: no ai-agents to send it.")
+    deployment = str(body.get("deployment_uid") or "").strip()
+    if deployment:
+        # Sent as the deployment's principal: to the address its token is put
+        # in for, on a runtime that does not hold it (`principal_address`).
+        from agent_runtimes.apps.principal import principal_address
+
+        url = principal_address(deployment, url)
     async with httpx.AsyncClient(timeout=15.0) as client:
         response = await client.post(
             f"{url.rstrip('/')}/api/ai-agents/v1/apps/notifications",

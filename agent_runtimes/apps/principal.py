@@ -123,6 +123,7 @@ __all__ = [
     "preview_key",
     "preview_token",
     "preview_token_refusal",
+    "principal_address",
     "principal_token",
     "principal_token_refusal",
     "principal_uid_of",
@@ -438,12 +439,10 @@ def owner_of(deployment_uid: str) -> str:
     (the release gates, decided 14 October 2026). ``""`` when no
     token of its principal is held here: nobody's, so nobody is answered.
     """
-    from agent_runtimes.apps.callers import _unverified_claims  # noqa: PLC0415
-
     held = _HELD.get(deployment_uid)
     if not held:
         return ""
-    return str(_unverified_claims(str(held["token"])).get("account_uid") or "")
+    return str(_claims_of_held(held).get("account_uid") or "")
 
 
 #: IAM's administrator role in an organization (`OrganizationRoles.OWNER`),
@@ -531,14 +530,72 @@ async def administers(organization_uid: str, bearer: str) -> bool:
 
 
 def give_principal_token(
-    deployment_uid: str, token: str, *, expires_in: int, principal_uid: str = ""
+    deployment_uid: str,
+    token: str,
+    *,
+    expires_in: int,
+    principal_uid: str = "",
+    claims: Optional[Mapping[str, Any]] = None,
 ) -> None:
-    """Keep the principal's token for a deployment, for ``expires_in`` seconds."""
+    """Keep the principal's token for a deployment, for ``expires_in`` seconds.
+
+    ``claims`` is given for a principal this runtime acts as without holding
+    its token (`egress_principal`): what the token says, as ai-agents read it,
+    kept beside the placeholder that stands for it.
+    """
     _HELD[deployment_uid] = {
         "token": token,
         "expires_at": time.time() + max(0, int(expires_in)),
         "principal_uid": principal_uid,
     }
+    if claims is not None:
+        _HELD[deployment_uid]["claims"] = dict(claims)
+
+
+def _claims_of_held(held: Mapping[str, Any]) -> dict[str, Any]:
+    """What a held principal's token says: read off the token, or, for one put in at
+    egress, as ai-agents said it when the runtime asked."""
+    said = held.get("claims")
+    if isinstance(said, Mapping):
+        return dict(said)
+    from agent_runtimes.apps.callers import _unverified_claims  # noqa: PLC0415
+
+    return _unverified_claims(str(held["token"]))
+
+
+def principal_address(
+    deployment_uid: str, url: str, *, service: str = "ai-agents"
+) -> str:
+    """
+    Where a call made **as a deployment's principal** is sent.
+
+    ``url`` itself on a runtime that holds the principal's token. On one that
+    acts as its principal without holding it (`egress_principal`), the
+    service's second address, the only one the token is put in for. Called
+    where a call is made as the principal and nowhere else: a call that
+    carries a caller's own token never asks, so it goes to the usual address,
+    where nothing is put in.
+
+    Parameters
+    ----------
+    deployment_uid : str
+        The deployment whose principal the call is made as.
+    url : str
+        The service's usual address, as this runtime knows it.
+    service : str
+        ``ai-agents`` or ``ai-inference``.
+    """
+    held = _HELD.get(deployment_uid)
+    if not deployment_uid or not held or "claims" not in held:
+        return url
+    from agent_runtimes.apps import egress_principal  # noqa: PLC0415
+
+    second = (
+        egress_principal.inference_principal_url()
+        if service == "ai-inference"
+        else egress_principal.agents_principal_url()
+    )
+    return second or url
 
 
 def holds_principal_token(deployment_uid: str) -> bool:
@@ -579,8 +636,6 @@ def is_held_principal(claims: Mapping[str, Any]) -> bool:
     those of a token held here. What ai-agents sends a kept deployment's agent a
     company's turn with — never a person's, never another's.
     """
-    from agent_runtimes.apps.callers import _unverified_claims  # noqa: PLC0415
-
     agent = str(claims.get("agent_uid") or "")
     grant = str(claims.get("task_grant_uid") or "")
     if not agent or not grant:
@@ -588,10 +643,7 @@ def is_held_principal(claims: Mapping[str, Any]) -> bool:
     for held in _HELD.values():
         if held.get("principal_uid") != agent or held["expires_at"] <= time.time():
             continue
-        if (
-            str(_unverified_claims(str(held["token"])).get("task_grant_uid") or "")
-            == grant
-        ):
+        if str(_claims_of_held(held).get("task_grant_uid") or "") == grant:
             return True
     return False
 
@@ -607,7 +659,17 @@ async def _ask_ai_agents(deployment_uid: str, bearer: str) -> dict[str, Any]:
     import httpx
     from datalayer_core.utils.urls import DatalayerURLs
 
+    from agent_runtimes.apps import egress_principal
     from agent_runtimes.apps.opening import page_origin_headers
+
+    if egress_principal.at_egress():
+        # This runtime holds no credential: its principal's token is never
+        # asked for. What that token says is read through the address it is
+        # put in for; nothing the caller sent chooses whose it is.
+        try:
+            return await egress_principal.read_claims(deployment_uid)
+        except egress_principal.ClaimsUnread as unread:
+            raise PrincipalTokenMissing(str(unread)) from None
 
     url = getattr(DatalayerURLs.from_environment(), "ai_agents_url", "") or ""
     if not url:
@@ -961,9 +1023,12 @@ async def _ensure_held(
     )
     if fresh:
         return {}
-    if bearer:
+    from agent_runtimes.apps import egress_principal  # noqa: PLC0415
+
+    # A principal put in at egress is read with nobody's token: asked whoever calls.
+    if bearer or (egress_principal.at_egress() and not key.startswith("preview:")):
         try:
-            answer = await ask(bearer)
+            answer = await ask(bearer or "")
         except PrincipalTokenMissing:
             if not refusal():
                 # Still good for a few minutes: the next request asks again.
@@ -977,6 +1042,7 @@ async def _ensure_held(
             token,
             expires_in=int(answer.get("expires_in") or 0),
             principal_uid=str(answer.get("principal_uid") or ""),
+            claims=answer.get("claims"),
         )
         return answer
     said = refusal()
@@ -1067,6 +1133,7 @@ async def renew_principal_token(deployment_uid: str, bearer: str) -> float:
         token,
         expires_in=int(answer.get("expires_in") or 0),
         principal_uid=str(answer.get("principal_uid") or ""),
+        claims=answer.get("claims"),
     )
     logger.info(
         "Deployment %s's principal token renewed by its keeper.", deployment_uid
@@ -1174,10 +1241,12 @@ def _deployment_renewal(
     """
 
     async def ask_fresh() -> None:
-        if not bearer:
+        from agent_runtimes.apps import egress_principal  # noqa: PLC0415
+
+        if not bearer and not egress_principal.at_egress():
             return
         try:
-            answer = await _asker["ask"](deployment_uid, bearer)
+            answer = await _asker["ask"](deployment_uid, bearer or "")
         except PrincipalTokenMissing as error:
             logger.warning(
                 "Deployment %s's execution ended and its principal token could not be renewed: %s",
@@ -1193,6 +1262,7 @@ def _deployment_renewal(
             token,
             expires_in=int(answer.get("expires_in") or 0),
             principal_uid=str(answer.get("principal_uid") or ""),
+            claims=answer.get("claims"),
         )
         logger.info(
             "Deployment %s's execution ended: its principal token renewed.",

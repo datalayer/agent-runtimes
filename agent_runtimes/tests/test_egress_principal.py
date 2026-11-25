@@ -1,0 +1,454 @@
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+
+"""A deployment's principal the runtime acts as without holding it.
+
+On a runtime whose sandbox holds no credential (an Agent Substrate actor), the
+principal's token is put in at egress for addresses of its own. What these
+tests hold, with a gateway that does what the platform's does (it decides on
+the host a request names, and replaces the header whatever value was sent):
+
+- the principal is asked for by nobody: what its token says is read through
+  the principal's own address, and the token is never in this process;
+- a call made as the principal goes to the principal's address; a caller's
+  own token, a forged one, goes to the usual address and leaves as it was
+  sent;
+- the placeholder is nobody's credential: a caller that presents it presents
+  nothing;
+- a runtime that holds its principal's token (a pool runtime) asks for it and
+  sends it exactly as before.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import base64
+import json
+import time
+from typing import Any
+
+import httpx
+import pytest
+
+from agent_runtimes.apps import callers, egress_principal, principal, record
+from agent_runtimes.apps.egress_principal import PLACEHOLDER
+from agent_runtimes.apps.principal import (
+    PrincipalTokenMissing,
+    ensure_principal_token,
+    forget_principal_token,
+    is_held_principal,
+    owner_of,
+    principal_address,
+    principal_token,
+    principal_uid_of,
+    renew_principal_token,
+)
+
+AGENTS = "http://ai-agents-svc.api.svc.cluster.local:4400"
+AGENTS_PRINCIPAL = "http://ai-agents-principal-svc.api.svc.cluster.local:4400"
+INFERENCE = "http://ai-inference-svc.api.svc.cluster.local:4450"
+INFERENCE_PRINCIPAL = "http://ai-inference-principal-svc.api.svc.cluster.local:4450"
+IAM = "https://core.example.com"
+PRINCIPAL_HOSTS = {
+    "ai-agents-principal-svc.api.svc.cluster.local",
+    "ai-inference-principal-svc.api.svc.cluster.local",
+}
+
+
+def _jwt(**claims: Any) -> str:
+    def part(value: dict) -> str:
+        return (
+            base64.urlsafe_b64encode(json.dumps(value).encode()).rstrip(b"=").decode()
+        )
+
+    return f"{part({'alg': 'none'})}.{part(claims)}.sig"
+
+
+#: The principal's token: kept by the gateway, never given to the runtime.
+SECRET = _jwt(
+    sub="p-1",
+    agent_uid="p-1",
+    app_uid="app-1",
+    account_uid="u-owner",
+    task_id="deployment:dep-1:7",
+    task_grant_uid="grant-1",
+    exp=int(time.time()) + 3600,
+)
+
+
+class Gateway:
+    """The egress gateway and what is behind it, as one transport.
+
+    A request to a principal's address has its Authorization replaced by the
+    principal's token, whatever it carried; a request to any other address
+    allowed leaves as it was sent. Everything is recorded as it left.
+    """
+
+    def __init__(self) -> None:
+        self.left: list[tuple[str, str, str]] = []
+        self.ends = int(time.time()) + 3600
+        self.deployment = "dep-1"
+        self.refuse = 0
+
+    def __call__(self, request: httpx.Request) -> httpx.Response:
+        authorization = request.headers.get("authorization", "")
+        if request.url.host in PRINCIPAL_HOSTS and authorization:
+            authorization = f"Bearer {SECRET}"
+        self.left.append((request.url.host, request.url.path, authorization))
+        if request.url.host not in PRINCIPAL_HOSTS:
+            return httpx.Response(401, json={"detail": "judged as the token it is"})
+        if self.refuse:
+            return httpx.Response(self.refuse, json={"detail": "refused"})
+        if request.url.path == egress_principal.CLAIMS_PATH:
+            assert authorization == f"Bearer {SECRET}"
+            return httpx.Response(
+                200,
+                json={
+                    "success": True,
+                    "principal_uid": "p-1",
+                    "account_uid": "u-owner",
+                    "app_uid": "app-1",
+                    "deployment_uid": self.deployment,
+                    "expires_at": self.ends,
+                    "claims": {
+                        "sub": "p-1",
+                        "agent_uid": "p-1",
+                        "task_grant_uid": "grant-1",
+                        "exp": self.ends,
+                    },
+                },
+            )
+        return httpx.Response(200, json={"success": True})
+
+
+@pytest.fixture
+def gateway(monkeypatch):
+    made = Gateway()
+    real = httpx.AsyncClient
+
+    class ThroughTheGateway(real):  # type: ignore[misc, valid-type]
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            kwargs["transport"] = httpx.MockTransport(made)
+            super().__init__(*args, **kwargs)
+
+    monkeypatch.setattr(httpx, "AsyncClient", ThroughTheGateway)
+    return made
+
+
+@pytest.fixture
+def actor(monkeypatch, gateway):
+    """An Agent Substrate actor whose template names the principal's addresses."""
+    monkeypatch.setenv("AGENT_RUNTIMES_TARGET", "ate")
+    monkeypatch.setenv("DATALAYER_AI_AGENTS_URL", AGENTS)
+    monkeypatch.setenv("DATALAYER_AI_AGENTS_PRINCIPAL_URL", AGENTS_PRINCIPAL)
+    monkeypatch.setenv("DATALAYER_AI_INFERENCE_URL", INFERENCE)
+    monkeypatch.setenv("DATALAYER_AI_INFERENCE_PRINCIPAL_URL", INFERENCE_PRINCIPAL)
+    monkeypatch.setenv("DATALAYER_IAM_URL", IAM)
+    monkeypatch.delenv("DATALAYER_USER_TOKEN", raising=False)
+    principal.use_asker(None)
+    for uid in ("dep-1", "dep-2"):
+        forget_principal_token(uid)
+    yield gateway
+    for uid in ("dep-1", "dep-2"):
+        forget_principal_token(uid)
+
+
+# --- when it applies ------------------------------------------------------------
+
+
+def test_only_an_actor_told_both_addresses_acts_as_a_principal_it_does_not_hold():
+    both = {
+        "AGENT_RUNTIMES_TARGET": "ate",
+        "DATALAYER_AI_AGENTS_PRINCIPAL_URL": AGENTS_PRINCIPAL,
+        "DATALAYER_AI_INFERENCE_PRINCIPAL_URL": INFERENCE_PRINCIPAL + "/",
+    }
+    assert egress_principal.at_egress(both) is True
+    assert egress_principal.inference_principal_url(both) == INFERENCE_PRINCIPAL
+    # A pool runtime, whatever its environment says of addresses: never.
+    assert egress_principal.at_egress({**both, "AGENT_RUNTIMES_TARGET": ""}) is False
+    assert (
+        egress_principal.at_egress(
+            {k: v for k, v in both.items() if k != "AGENT_RUNTIMES_TARGET"}
+        )
+        is False
+    )
+    for missing in (
+        "DATALAYER_AI_AGENTS_PRINCIPAL_URL",
+        "DATALAYER_AI_INFERENCE_PRINCIPAL_URL",
+    ):
+        assert (
+            egress_principal.at_egress({k: v for k, v in both.items() if k != missing})
+            is False
+        )
+    assert egress_principal.at_egress({}) is False
+
+
+# --- the principal is read, never held ------------------------------------------
+
+
+def test_what_the_principal_says_is_read_through_its_own_address_and_its_token_is_never_here(
+    actor,
+):
+    held = asyncio.run(ensure_principal_token("dep-1", "the-caller's-own-token"))
+    assert held == PLACEHOLDER == principal_token("dep-1")
+    # Asked once, at the principal's address, with the placeholder: the caller's token went nowhere.
+    assert [(host, path) for host, path, _ in actor.left] == [
+        ("ai-agents-principal-svc.api.svc.cluster.local", egress_principal.CLAIMS_PATH)
+    ]
+    assert "the-caller's-own-token" not in json.dumps(actor.left)
+    # What the runtime needs of the token it does not hold.
+    assert owner_of("dep-1") == "u-owner" and principal_uid_of("dep-1") == "p-1"
+    assert is_held_principal({"agent_uid": "p-1", "task_grant_uid": "grant-1"})
+    assert not is_held_principal(
+        {"agent_uid": "p-1", "task_grant_uid": "another-grant"}
+    )
+    assert not is_held_principal({"agent_uid": "p-2", "task_grant_uid": "grant-1"})
+    # The token is nowhere in this process's keeping.
+    assert SECRET not in repr(principal._HELD) and "eyJ" not in repr(principal._HELD)
+    # Kept: the next request asks nothing.
+    asyncio.run(ensure_principal_token("dep-1", None))
+    assert len(actor.left) == 1
+
+
+def test_it_is_read_again_before_it_ends_whoever_calls_and_with_nobodys_token(actor):
+    actor.ends = int(time.time()) + 120
+    asyncio.run(ensure_principal_token("dep-1", None))
+    # Less than the margin left: a visitor's request over A2A, which carries no token to ask with, reads again.
+    actor.ends = int(time.time()) + 3600
+    asyncio.run(ensure_principal_token("dep-1", None))
+    assert (
+        len(actor.left) == 2
+        and principal._HELD["dep-1"]["expires_at"] > time.time() + 3000
+    )
+    # Its keeper's renewal reads again too, and answers when it ends.
+    assert (
+        asyncio.run(renew_principal_token("dep-1", "the-keeper's-key"))
+        > time.time() + 3000
+    )
+    assert "the-keeper's-key" not in json.dumps(actor.left)
+
+
+def test_another_deployments_principal_is_not_this_agents(actor):
+    with pytest.raises(PrincipalTokenMissing, match="is not deployment dep-2's"):
+        asyncio.run(ensure_principal_token("dep-2", "owner"))
+    assert principal_token("dep-2") is None and owner_of("dep-2") == ""
+
+
+def test_no_principal_put_in_is_said_and_nothing_is_called(actor):
+    actor.refuse = 403
+    with pytest.raises(
+        PrincipalTokenMissing,
+        match="No principal is put in this runtime's calls for deployment dep-1 \\(403\\)",
+    ):
+        asyncio.run(ensure_principal_token("dep-1", "owner"))
+    assert principal_token("dep-1") is None
+    # The usual address is never asked for the token in its place.
+    assert all(host in PRINCIPAL_HOSTS for host, _, _ in actor.left)
+
+
+# --- which address a call takes --------------------------------------------------
+
+
+def test_a_call_made_as_the_principal_goes_to_its_own_address_and_no_other(actor):
+    asyncio.run(ensure_principal_token("dep-1", None))
+    assert principal_address("dep-1", AGENTS) == AGENTS_PRINCIPAL
+    assert (
+        principal_address("dep-1", INFERENCE, service="ai-inference")
+        == INFERENCE_PRINCIPAL
+    )
+    # A deployment no agent here serves, and no deployment at all: the usual address.
+    assert (
+        principal_address("dep-2", AGENTS) == AGENTS
+        and principal_address("", AGENTS) == AGENTS
+    )
+
+
+def test_the_record_of_a_deployment_is_written_as_its_principal_and_a_persons_as_themselves(
+    actor, monkeypatch
+):
+    asyncio.run(ensure_principal_token("dep-1", None))
+    actor.left.clear()
+    asyncio.run(
+        record.send_to_ai_agents(
+            {
+                "app_uid": "app-1",
+                "deployment_uid": "dep-1",
+                "session_uid": "s",
+                "entries": [],
+            }
+        )
+    )
+    assert actor.left == [
+        (
+            "ai-agents-principal-svc.api.svc.cluster.local",
+            "/api/ai-agents/v1/apps/records",
+            f"Bearer {SECRET}",
+        )
+    ]
+    # A person's own record (a Preview): their own token, to the usual address, as it was sent.
+    actor.left.clear()
+    monkeypatch.setenv("DATALAYER_USER_TOKEN", "a-person's-own-token")
+    with pytest.raises(record.RecordNotSent):
+        asyncio.run(
+            record.send_to_ai_agents(
+                {
+                    "app_uid": "app-1",
+                    "deployment_uid": "",
+                    "session_uid": "s",
+                    "entries": [],
+                }
+            )
+        )
+    assert actor.left == [
+        (
+            "ai-agents-svc.api.svc.cluster.local",
+            "/api/ai-agents/v1/apps/records",
+            "Bearer a-person's-own-token",
+        )
+    ]
+
+
+def test_what_a_deployment_tells_its_owner_is_sent_as_its_principal(actor):
+    from agent_runtimes.apps import notifications
+
+    asyncio.run(ensure_principal_token("dep-1", None))
+    actor.left.clear()
+    asyncio.run(
+        notifications.send_to_ai_agents(
+            {"app_uid": "app-1", "deployment_uid": "dep-1", "notifications": []}
+        )
+    )
+    assert actor.left == [
+        (
+            "ai-agents-principal-svc.api.svc.cluster.local",
+            "/api/ai-agents/v1/apps/notifications",
+            f"Bearer {SECRET}",
+        )
+    ]
+
+
+# --- a caller is judged as itself -------------------------------------------------
+
+
+def test_a_forged_token_is_checked_at_the_usual_address_and_leaves_as_it_was_sent(
+    actor,
+):
+    """Whoever calls, the check of who they are never takes the principal's address: a token forged
+    to name the owner is sent where nothing is put in, and is judged as the token it is."""
+    asyncio.run(ensure_principal_token("dep-1", None))
+    actor.left.clear()
+    forged = _jwt(sub="u-owner", uid="u-owner", exp=int(time.time()) + 600)
+    with pytest.raises(callers.CallerRefused):
+        asyncio.run(callers.CallerVerifier().verify(forged))
+    assert actor.left, "the token was checked with the platform"
+    for host, _, authorization in actor.left:
+        assert host not in PRINCIPAL_HOSTS and authorization == f"Bearer {forged}"
+
+
+def test_the_placeholder_is_nobodys_credential(actor):
+    asyncio.run(ensure_principal_token("dep-1", None))
+    actor.left.clear()
+    assert (
+        callers.bearer_of(f"Bearer {PLACEHOLDER}") == ""
+        and callers.bearer_of("Bearer a-token") == "a-token"
+    )
+    for scope in (
+        {"headers": [(b"authorization", f"Bearer {PLACEHOLDER}".encode())]},
+        {"headers": [(b"authorization", f"token {PLACEHOLDER}".encode())]},
+        {"headers": [], "query_string": f"token={PLACEHOLDER}".encode()},
+    ):
+        assert callers.credential_of(scope) == ""
+    assert (
+        callers.credential_of({"headers": [(b"authorization", b"Bearer a-token")]})
+        == "a-token"
+    )
+    # Presented all the same, it is refused before anything is asked of the platform.
+    with pytest.raises(callers.CallerRefused):
+        asyncio.run(callers.CallerVerifier().verify(PLACEHOLDER))
+    assert actor.left == []
+
+
+# --- its model calls ---------------------------------------------------------------
+
+
+def test_a_visitors_turn_is_refused_where_every_model_call_leaves_as_the_application(
+    actor,
+):
+    from agent_runtimes.apps import visitors
+    from agent_runtimes.models.offered import InferenceTokenMissing
+
+    async def its_principals() -> str:
+        return PLACEHOLDER
+
+    key = visitors.principal_key_only(its_principals)
+    assert asyncio.run(key()) == PLACEHOLDER
+
+    async def a_visitors_turn() -> str:
+        visitors._TURN_TOKEN.set("a-visitor's-own-token")
+        return await key()
+
+    with pytest.raises(
+        InferenceTokenMissing, match="every model call leaves as the application"
+    ):
+        asyncio.run(a_visitors_turn())
+
+
+def test_a_deployments_model_calls_go_to_the_principals_address(actor):
+    from agent_runtimes.models.models import resolve_model_for_inference_provider
+
+    asyncio.run(ensure_principal_token("dep-1", None))
+    model = resolve_model_for_inference_provider(
+        "bedrock:us.anthropic.claude-sonnet-4-6",
+        "datalayer",
+        app_instance={"app_uid": "app-1", "deployment_uid": "dep-1"},
+    )
+    client = model.client
+    assert str(client.base_url).startswith(INFERENCE_PRINCIPAL)
+    assert asyncio.run(client._api_key_provider()) == PLACEHOLDER
+    # An agent that serves no deployment calls the usual address, as before.
+    own = resolve_model_for_inference_provider(
+        "bedrock:us.anthropic.claude-sonnet-4-6", "datalayer"
+    )
+    assert str(own.client.base_url).startswith(INFERENCE) and not str(
+        own.client.base_url
+    ).startswith(INFERENCE_PRINCIPAL)
+
+
+# --- a runtime that holds its principal's token: as before -------------------------
+
+
+def test_a_pool_runtime_asks_for_its_token_and_sends_it_where_it_always_did(
+    gateway, monkeypatch
+):
+    monkeypatch.delenv("AGENT_RUNTIMES_TARGET", raising=False)
+    # Told the addresses or not, it is no actor: nothing is read at egress.
+    monkeypatch.setenv("DATALAYER_AI_AGENTS_PRINCIPAL_URL", AGENTS_PRINCIPAL)
+    monkeypatch.setenv("DATALAYER_AI_INFERENCE_PRINCIPAL_URL", INFERENCE_PRINCIPAL)
+    monkeypatch.setenv("DATALAYER_AI_AGENTS_URL", AGENTS)
+    asked: list[tuple[str, str]] = []
+
+    async def ask(deployment_uid: str, bearer: str) -> dict:
+        asked.append((deployment_uid, bearer))
+        return {"access_token": SECRET, "expires_in": 3600, "principal_uid": "p-1"}
+
+    principal.use_asker(ask)
+    forget_principal_token("dep-1")
+    try:
+        assert asyncio.run(ensure_principal_token("dep-1", "owner")) == SECRET
+        assert (
+            asked == [("dep-1", "owner")] and "claims" not in principal._HELD["dep-1"]
+        )
+        assert owner_of("dep-1") == "u-owner" and is_held_principal(
+            {"agent_uid": "p-1", "task_grant_uid": "grant-1"}
+        )
+        assert principal_address("dep-1", AGENTS) == AGENTS
+        assert (
+            principal_address("dep-1", INFERENCE, service="ai-inference") == INFERENCE
+        )
+        # With nobody's token it is not asked again, as before.
+        principal._HELD["dep-1"]["expires_at"] = time.time() + 10
+        asyncio.run(ensure_principal_token("dep-1", None))
+        assert len(asked) == 1 and gateway.left == []
+    finally:
+        principal.use_asker(None)
+        forget_principal_token("dep-1")

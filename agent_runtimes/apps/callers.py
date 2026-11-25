@@ -170,11 +170,21 @@ def is_the_pod(host: Optional[str], secret: Optional[str]) -> bool:
 
 
 def bearer_of(authorization: Optional[str]) -> str:
-    """The token of an ``Authorization: Bearer …`` header, or nothing."""
+    """The token of an ``Authorization: Bearer …`` header, or nothing.
+
+    The placeholder a runtime without credentials sends in place of one
+    (`egress_principal.PLACEHOLDER`) is nobody's token: a caller that presents
+    it presents nothing, so it is never passed on as theirs to an address
+    where a credential is put in.
+    """
     if not authorization:
         return ""
     scheme, _, token = authorization.partition(" ")
-    return token.strip() if scheme.lower() == "bearer" else ""
+    if scheme.lower() != "bearer":
+        return ""
+    from agent_runtimes.apps.egress_principal import is_placeholder
+
+    return "" if is_placeholder(token) else token.strip()
 
 
 def _unverified_claims(token: str) -> Dict[str, Any]:
@@ -600,11 +610,15 @@ def credential_of(scope: Any, headers: Optional[Mapping[str, str]] = None) -> st
     said = (headers if headers is not None else headers_of(scope)).get(
         "authorization", ""
     )
+    from agent_runtimes.apps.egress_principal import is_placeholder
+
     scheme, _, token = said.partition(" ")
     if scheme.lower() in ("bearer", "token") and token.strip():
-        return token.strip()
+        # The placeholder of a runtime without credentials is nobody's token.
+        return "" if is_placeholder(token) else token.strip()
     query = parse_qs((scope.get("query_string") or b"").decode("latin-1"))
-    return (query.get("token") or [""])[0].strip()
+    asked = (query.get("token") or [""])[0].strip()
+    return "" if is_placeholder(asked) else asked
 
 
 def runtime_owner_uid() -> str:
