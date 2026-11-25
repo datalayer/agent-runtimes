@@ -27,16 +27,29 @@ def _ref(skill: object) -> str:
     return skill if isinstance(skill, str) else str(getattr(skill, "id", "") or "")
 
 
-def _named() -> dict[str, str]:
-    """Each skill reference a generated spec names, with one spec that names it."""
-    named: dict[str, str] = {}
+def _named() -> dict[str, list[str]]:
+    """Each skill reference a generated spec names, with the specs that name it."""
+    named: dict[str, list[str]] = {}
     for kind, catalogue in (("agent", AGENTSPECS), ("cog", COG_CATALOGUE)):
         for spec_id, spec in catalogue.items():
-            for skill in getattr(spec, "skills", None) or []:
+            # A cog's skills are its agent spec's (``CogSpec.spec``), not the cog's own.
+            agent = spec.spec if kind == "cog" else spec
+            for skill in agent.skills or []:
                 ref = _ref(skill)
                 if ref:
-                    named.setdefault(ref, f"{kind} {spec_id}")
+                    named.setdefault(ref, []).append(f"{kind} {spec_id}")
     return named
+
+
+def test_the_cogs_skills_are_read() -> None:
+    named = _named()
+    by_cogs = {
+        ref for ref, where in named.items() if any(w.startswith("cog ") for w in where)
+    }
+    assert "datalayer-memory-add:0.0.1" in by_cogs, sorted(by_cogs)
+    for cog_id, cog in COG_CATALOGUE.items():
+        for skill in cog.spec.skills or []:
+            assert f"cog {cog_id}" in named[_ref(skill)]
 
 
 def test_the_agents_and_the_cogs_name_skills() -> None:
@@ -52,10 +65,10 @@ def test_every_named_skill_has_a_name_a_description_and_its_marks() -> None:
         skill_id, _, version = ref.partition(":")
         spec = get_skill_spec(ref)
         if spec is None:
-            problems.append(f"{ref} ({where}): no catalogue entry")
+            problems.append(f"{ref} ({where[0]}): no catalogue entry")
             continue
         if version and spec.version != version:
-            problems.append(f"{ref} ({where}): the catalogue has {spec.version}")
+            problems.append(f"{ref} ({where[0]}): the catalogue has {spec.version}")
         if not (spec.name or "").strip() or spec.name == skill_id:
             problems.append(f"{ref}: no display name")
         if not (spec.description or "").strip():
