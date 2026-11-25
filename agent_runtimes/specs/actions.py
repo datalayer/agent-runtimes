@@ -925,7 +925,7 @@ SERVER_ACTIONS: Dict[str, ServerActionsSpec] = {
     ),
     "tavily": ServerActionsSpec.model_validate(
         {
-            "checked": "2026-10-02",
+            "checked": "2026-11-25",
             "default": [],
             "tools": {
                 "tavily_search": ["read"],
