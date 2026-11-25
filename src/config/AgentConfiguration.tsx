@@ -669,7 +669,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
 }) => {
   // Fetch general configuration from the backend (models, etc.)
   const configQuery = useQuery<ConfigResponse>({
-    queryKey: ['agent-config', baseUrl],
+    queryKey: ['agent-config', baseUrl, authToken],
     queryFn: async () => {
       const response = await fetch(`${baseUrl}/api/v1/configure`, {
         headers: runtimeAuthHeaders(authToken),
@@ -686,7 +686,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
 
   // Fetch MCP Config servers from mcp.json (user-defined servers)
   const mcpServersQuery = useQuery<MCPServerConfig[]>({
-    queryKey: ['mcp-config', baseUrl],
+    queryKey: ['mcp-config', baseUrl, authToken],
     queryFn: async () => {
       const response = await fetch(`${baseUrl}/api/v1/mcp/servers/config`, {
         headers: runtimeAuthHeaders(authToken),
@@ -703,7 +703,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
 
   // Fetch agent specs from library
   const libraryQuery = useQuery<LibraryAgentspec[]>({
-    queryKey: ['agent-library', baseUrl],
+    queryKey: ['agent-library', baseUrl, authToken],
     queryFn: async () => {
       const response = await fetch(`${baseUrl}/api/v1/agents/library`, {
         headers: runtimeAuthHeaders(authToken),
@@ -742,7 +742,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
 
   // Fetch skills from the backend (always available, independent of codemode)
   const skillsQuery = useQuery<{ skills: SkillOption[]; total: number }>({
-    queryKey: ['agent-skills', baseUrl],
+    queryKey: ['agent-skills', baseUrl, authToken],
     queryFn: async () => {
       const response = await fetch(`${baseUrl}/api/v1/skills`, {
         headers: runtimeAuthHeaders(authToken),
@@ -759,7 +759,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
 
   // Fetch MCP Catalog servers (predefined servers that can be enabled on-demand)
   const catalogServersQuery = useQuery<MCPServerConfig[]>({
-    queryKey: ['mcp-catalog', baseUrl],
+    queryKey: ['mcp-catalog', baseUrl, authToken],
     queryFn: async () => {
       const response = await fetch(`${baseUrl}/api/v1/mcp/servers/catalog`, {
         headers: runtimeAuthHeaders(authToken),

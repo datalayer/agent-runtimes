@@ -111,7 +111,7 @@ export function ContextUsage({
     isLoading,
     error,
   } = useQuery<ContextDetailsResponse>({
-    queryKey: ['context-details', agentId, baseUrl],
+    queryKey: ['context-details', agentId, baseUrl, authToken],
     queryFn: async () => {
       const apiBase = baseUrl || getLocalApiBase();
       const response = await fetch(

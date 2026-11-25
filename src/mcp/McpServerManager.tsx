@@ -73,7 +73,7 @@ export function McpServerManager({
 
   // Fetch all available servers (catalog + mcp.json running servers)
   const catalogQuery = useQuery<MCPServer[]>({
-    queryKey: ['mcp-available', baseUrl],
+    queryKey: ['mcp-available', baseUrl, authToken],
     queryFn: async () => {
       const response = await fetch(`${baseUrl}/api/v1/mcp/servers/available`, {
         headers: runtimeAuthHeaders(authToken),

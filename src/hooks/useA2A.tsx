@@ -252,6 +252,7 @@ export function useA2A(options: UseA2AOptions = {}): UseA2AReturn {
       isConnected,
       streaming,
       agentCard,
+      authToken,
       generateRequestId,
       onMessageSent,
       onError,

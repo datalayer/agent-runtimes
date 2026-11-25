@@ -449,7 +449,7 @@ export function AgentDetails({
 
   const { data: agentSpec, isLoading: specLoading } =
     useQuery<AgentspecResponse>({
-      queryKey: ['agent-spec', agentId, apiBase],
+      queryKey: ['agent-spec', agentId, apiBase, authToken],
       queryFn: async () => {
         const base = getApiBase(apiBase);
         const response = await fetch(
