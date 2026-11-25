@@ -1,10 +1,10 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The kagent bridge's Datalayer mode.
+"""The Kagent bridge's Datalayer mode.
 
 The bridge obtains a Datalayer runtime for its Agent through ``agent-runtimes
-kagent launch-runtime`` (the real ``AgentClient``, here against a fake
+Kagent launch-runtime`` (the real ``AgentClient``, here against a fake
 transport answering what the Runtimes service answers), forwards each task to
 it, keeps it across the session's tasks, launches another once it expired,
 and ends it when the actor stops. Whatever the mode needs and lacks stops it
@@ -36,7 +36,7 @@ RUN_URL = "https://datalayer.example.com"
 UID = "01kagentruntime0000000000a"
 KEY = "dl-test-key-not-a-real-one"
 
-#: What kagent materializes for an Agent ``team-a/reviewer`` (config.json).
+#: What Kagent materializes for an Agent ``team-a/reviewer`` (config.json).
 CONFIG = {
     "runtime": {"name": "reviewer", "namespace": "team-a", "port": 80},
     "agent": {},
@@ -350,7 +350,7 @@ def test_a_forwarding_executor_needs_somewhere_to_forward() -> None:
         bridge.ForwardingExecutor()
 
 
-# ── agent-runtimes kagent launch-runtime | end-runtime (the real client) ────
+# ── agent-runtimes Kagent launch-runtime | end-runtime (the real client) ────
 
 
 class Response:

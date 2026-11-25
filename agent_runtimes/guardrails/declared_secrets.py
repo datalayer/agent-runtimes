@@ -96,7 +96,7 @@ RESERVED_PREFIXES: Tuple[str, ...] = (
     "AGENT_",
     # AgentCore Runtime's own (AGENTCORE_PORT, AGENTCORE_WORKLOAD_NAME, AGENTCORE_OAUTH_RETURN_URL).
     "AGENTCORE_",
-    # kagent's (KAGENT_CONFIG_PATH, KAGENT_BOOTSTRAP_JSON, the bridge's KAGENT_BRIDGE_*).
+    # Kagent's (KAGENT_CONFIG_PATH, KAGENT_BOOTSTRAP_JSON, the bridge's KAGENT_BRIDGE_*).
     "KAGENT_",
     # Agent Substrate's (ATE_PORT, ATE_SYSTEM_INFO_DIR, ATE_TRUST_BUNDLE).
     "ATE_",

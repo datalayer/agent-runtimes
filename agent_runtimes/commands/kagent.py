@@ -1,9 +1,9 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""`agent-runtimes kagent launch-runtime|end-runtime`: the kagent bridge's Datalayer runtime.
+"""`agent-runtimes kagent launch-runtime|end-runtime`: the Kagent bridge's Datalayer runtime.
 
-What the kagent bridge runs, in its Datalayer mode, to obtain a Datalayer
+What the Kagent bridge runs, in its Datalayer mode, to obtain a Datalayer
 runtime for its Agent and to end it (:mod:`agent_runtimes.kagent.datalayer`):
 the bridge's own environment cannot import the Datalayer client. Each command
 reads ``DATALAYER_API_KEY``, ``DATALAYER_RUN_URL`` (and, to launch,
@@ -39,7 +39,7 @@ def launch_runtime_command(
         ..., "--agent", help="The kagent Agent, as <namespace>/<agent>."
     ),
 ) -> None:
-    """Launch a runtime for a kagent Agent and print its uid, A2A endpoint and expiry."""
+    """Launch a runtime for a Kagent Agent and print its uid, A2A endpoint and expiry."""
     from agent_runtimes.kagent.datalayer import launch_runtime, runtime_request
 
     try:
@@ -53,7 +53,7 @@ def launch_runtime_command(
 def end_runtime_command(
     uid: str = typer.Argument(..., help="The runtime's uid."),
 ) -> None:
-    """End a runtime launched for a kagent Agent, closing its reservation."""
+    """End a runtime launched for a Kagent Agent, closing its reservation."""
     from agent_runtimes.kagent.datalayer import (
         API_KEY_VARIABLE,
         RUN_URL_VARIABLE,

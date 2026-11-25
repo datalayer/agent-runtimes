@@ -3,7 +3,7 @@
 
 """What ``agent-runtimes serve --target kagent`` is started with.
 
-kagent (1.0) runs a BYO Harness's image as a Substrate actor, and hands it
+Kagent (1.0) runs a BYO Harness's image as a Substrate actor, and hands it
 its configuration as a bootstrap bundle that kagent-core materializes at
 ``/config/config.json``: an ``ADKConfig`` in ProtoJSON, with the proto field
 names (``runtime``, ``agent.model``, ``agent.http_tools``, ...). The bridge
@@ -12,10 +12,10 @@ as its child; this module reads what the server takes from it:
 
 - **the agentspec** the actor serves, in ``AGENT_SPEC_ID`` (a literal value of
   the Harness's ``spec.env``);
-- **the model** of the Agent's template, when it names one (a kagent
+- **the model** of the Agent's template, when it names one (a Kagent
   ``ModelConfig``), as agent-runtimes' model and its provider's endpoint. The
   provider's key is not here: Substrate's egress gateway puts it in the
-  request; the provider SDK reads the placeholder kagent sets in its usual
+  request; the provider SDK reads the placeholder Kagent sets in its usual
   variable;
 - **the MCP servers** of the template's ``RemoteMCPServer`` tools, as remote
   Streamable HTTP servers.
@@ -58,7 +58,7 @@ AGENT_ID = "default"
 #: The A2A mount of that agent, under the server's API prefix.
 A2A_PATH = f"/api/v1/a2a/agents/{AGENT_ID}/"
 
-#: kagent's model providers agent-runtimes calls, and how: the agent-runtimes
+#: Kagent's model providers agent-runtimes calls, and how: the agent-runtimes
 #: model prefix, and the variable the provider SDK reads its endpoint from.
 _PROVIDERS: dict[str, tuple[str, str]] = {
     "openai": ("openai", "OPENAI_BASE_URL"),
@@ -81,7 +81,7 @@ class KagentModel:
 
 @dataclass(frozen=True)
 class KagentSettings:
-    """Where the server listens, the agentspec it serves, what kagent configured."""
+    """Where the server listens, the agentspec it serves, what Kagent configured."""
 
     spec_id: str
     host: str
@@ -169,7 +169,7 @@ _KNOWN_PROVIDERS = frozenset(
 
 
 def server_id_of(url: str, taken: set[str]) -> str:
-    """A server id for a kagent tool server, from its URL's host and path."""
+    """A server id for a Kagent tool server, from its URL's host and path."""
     stem = re.sub(r"^https?://", "", url).strip("/")
     base = "kagent-" + (_ENV_NAME.sub("-", stem).strip("-").lower() or "mcp")
     candidate, n = base[:60], 2
@@ -182,7 +182,7 @@ def server_id_of(url: str, taken: set[str]) -> str:
 def mcp_servers_of(agent: Mapping[str, Any]) -> list[dict[str, Any]]:
     """The template's RemoteMCPServer tools, as agent-runtimes' remote MCP servers.
 
-    Each is a ``MCPServer`` body: a url, its headers (kagent's placeholders,
+    Each is a ``MCPServer`` body: a url, its headers (Kagent's placeholders,
     which the egress gateway replaces), ``transport: streamable-http`` and no
     command.
 
@@ -235,12 +235,12 @@ def mcp_servers_of(agent: Mapping[str, Any]) -> list[dict[str, Any]]:
 def kagent_settings(
     environ: Optional[Mapping[str, str]] = None,
 ) -> KagentSettings:
-    """The settings of a kagent actor, from its environment and kagent's configuration.
+    """The settings of a Kagent actor, from its environment and Kagent's configuration.
 
     Raises
     ------
     ValueError
-        When ``AGENT_SPEC_ID`` is not set, the port is not one, or kagent's
+        When ``AGENT_SPEC_ID`` is not set, the port is not one, or Kagent's
         configuration cannot be served (`model_of`, `mcp_servers_of`), in a sentence.
     """
     env = os.environ if environ is None else environ

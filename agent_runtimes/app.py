@@ -1363,7 +1363,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                         f"Loaded {len(agent_spec.mcp_servers)} MCP servers from agent spec"
                     )
 
-                # Under kagent, the RemoteMCPServer tools of the Agent's
+                # Under Kagent, the RemoteMCPServer tools of the Agent's
                 # template are the agent's too, beside the agentspec's.
                 from .kagent.settings import is_kagent_target, kagent_settings
 

@@ -1145,7 +1145,7 @@ class AgentClient(
         client_id : Optional[str], optional
             What asked for the runtime, and ``agent_uid`` the agent it runs
             for in that client's naming (``kagent`` and
-            ``<namespace>/<agent>`` for a kagent Agent): the reservation's
+            ``<namespace>/<agent>`` for a Kagent Agent): the reservation's
             agent dimensions. Neither changes who pays.
         agent_uid : Optional[str], optional
             See ``client_id``.

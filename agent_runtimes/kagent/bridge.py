@@ -1,9 +1,9 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The kagent bridge: what kagent (1.0) talks to in an agent-runtimes actor.
+"""The Kagent bridge: what Kagent (1.0) talks to in an agent-runtimes actor.
 
-kagent runs a BYO Harness's image as a Substrate actor and expects of it:
+Kagent runs a BYO Harness's image as a Substrate actor and expects of it:
 
 - its configuration materialized from the bootstrap bundle
   (``kagent.core.materialize_from_bootstrap``: ``/config/config.json`` and
@@ -25,7 +25,7 @@ pins 0.3) and imports nothing of agent-runtimes; the helpers above
 :class:`ForwardingExecutor` import nothing but the standard library, so the
 relay's logic is tested anywhere.
 
-Outside kagent (a laptop, a test), ``KAGENT_BRIDGE_LOCAL=true`` keeps the
+Outside Kagent (a laptop, a test), ``KAGENT_BRIDGE_LOCAL=true`` keeps the
 tasks in memory instead of the controller's store; the configuration is then
 read from ``/config`` (``KAGENT_CONFIG_DIR``) as written there.
 
@@ -33,19 +33,19 @@ read from ``/config`` (``KAGENT_CONFIG_DIR``) as written there.
 starts no agent-runtimes beside it: on the first task it obtains a Datalayer
 runtime for its Agent (``client_id="kagent"``, ``agent_uid`` the Agent's
 ``<namespace>/<name>`` from the configuration), through ``agent-runtimes
-kagent launch-runtime`` in agent-runtimes' environment, which launches it the
+Kagent launch-runtime`` in agent-runtimes' environment, which launches it the
 way every Datalayer client does: from the platform's pools, with its credits
 reservation, known by its uid. Each task is forwarded to that runtime's A2A
 endpoint; the runtime is kept, its uid in the actor's durable ``/data``,
 across the tasks of the actor's session, and a new one is launched once it
-has expired. When kagent stops the actor, the bridge ends the runtime
-(``agent-runtimes kagent end-runtime``), which closes its reservation.
+has expired. When Kagent stops the actor, the bridge ends the runtime
+(``agent-runtimes Kagent end-runtime``), which closes its reservation.
 
 The Datalayer API key is either read from a mounted Secret
-(``DATALAYER_API_KEY_FILE``) or, under kagent, which mounts no Secret in an
+(``DATALAYER_API_KEY_FILE``) or, under Kagent, which mounts no Secret in an
 actor, put in each request by Substrate's egress gateway
 (``DATALAYER_API_KEY_INJECTED=true`` and an ``EgressPolicy`` binding the
-Secret to the plane's origin): the bridge then sends kagent's placeholder.
+Secret to the plane's origin): the bridge then sends Kagent's placeholder.
 Exactly one of the two; a key in the environment itself is refused. Whatever
 is missing stops the bridge at start, in a sentence: Datalayer mode never
 falls back to the local server.
@@ -80,14 +80,14 @@ DEFAULT_COMMAND = "agent-runtimes"
 PORT_VARIABLE = "AGENT_RUNTIMES_KAGENT_PORT"
 DEFAULT_PORT = 8765
 
-#: Tasks in memory, not in kagent's store: outside kagent only.
+#: Tasks in memory, not in Kagent's store: outside Kagent only.
 LOCAL_VARIABLE = "KAGENT_BRIDGE_LOCAL"
 
 #: How long one task may take upstream, in seconds.
 TIMEOUT_VARIABLE = "KAGENT_BRIDGE_TASK_TIMEOUT"
 DEFAULT_TIMEOUT = 600.0
 
-#: kagent's readiness port.
+#: Kagent's readiness port.
 READY_PORT = 8081
 
 #: The A2A mount of the agent agent-runtimes serves (as ``settings.A2A_PATH``).
@@ -109,14 +109,14 @@ MINUTES_VARIABLE = "DATALAYER_RUNTIME_MINUTES"
 #: Datalayer mode: the file of a mounted Secret holding the Datalayer API key.
 API_KEY_FILE_VARIABLE = "DATALAYER_API_KEY_FILE"
 
-#: Datalayer mode: ``true`` when kagent's egress gateway puts the key in each
+#: Datalayer mode: ``true`` when Kagent's egress gateway puts the key in each
 #: request (an ``EgressPolicy`` on the plane's origin).
 API_KEY_INJECTED_VARIABLE = "DATALAYER_API_KEY_INJECTED"
 
 #: The key as Datalayer clients read it: never in the bridge's own environment.
 API_KEY_VARIABLE = "DATALAYER_API_KEY"
 
-#: What a request carries for the egress gateway to replace (kagent's
+#: What a request carries for the egress gateway to replace (Kagent's
 #: ``CredentialPlaceholder``).
 CREDENTIAL_PLACEHOLDER = "kagent-credential-injected"
 
@@ -149,11 +149,11 @@ def upstream_url(environ: Optional[Mapping[str, str]] = None) -> str:
 
 
 def send_request(message: Mapping[str, Any], context_id: str) -> dict[str, Any]:
-    """The JSON-RPC ``SendMessage`` forwarding a kagent message upstream.
+    """The JSON-RPC ``SendMessage`` forwarding a Kagent message upstream.
 
     The message keeps its parts and metadata; it gets an id of its own, and
-    the kagent context (the Session) as its context, so the conversation
-    goes on upstream as it does in kagent. kagent's task id is not sent: the
+    the Kagent context (the Session) as its context, so the conversation
+    goes on upstream as it does in kagent. Kagent's task id is not sent: the
     upstream task is another one.
     """
     forwarded = {
@@ -230,7 +230,7 @@ class DatalayerMode:
     environment: str
     run_url: str
     spec_id: str
-    #: The kagent Agent, ``<namespace>/<name>``: the runtime's ``agent_uid``.
+    #: The Kagent Agent, ``<namespace>/<name>``: the runtime's ``agent_uid``.
     agent_uid: str
     #: The key, or :data:`CREDENTIAL_PLACEHOLDER` when the gateway injects it.
     api_key: str
@@ -333,13 +333,13 @@ def datalayer_mode(
     )
 
 
-#: Runs ``agent-runtimes kagent <args>`` with the Datalayer environment; the
+#: Runs ``agent-runtimes Kagent <args>`` with the Datalayer environment; the
 #: JSON of its last line on stdout.
 Runner = Callable[[DatalayerMode, list[str]], Awaitable[dict[str, Any]]]
 
 
 async def run_agent_runtimes(mode: DatalayerMode, args: list[str]) -> dict[str, Any]:
-    """Run ``agent-runtimes kagent <args>`` in agent-runtimes' environment.
+    """Run ``agent-runtimes Kagent <args>`` in agent-runtimes' environment.
 
     The key reaches that process in its environment only (never on its
     command line); a failure raises its sentence from stderr.
@@ -559,7 +559,7 @@ class ForwardingExecutor:
         self.timeout = timeout
         self.poll = poll
         self.client = httpx.AsyncClient(timeout=30.0)
-        #: kagent's task id → where the upstream task runs and its id, while it runs.
+        #: Kagent's task id → where the upstream task runs and its id, while it runs.
         self.upstream: dict[str, tuple[tuple[str, dict[str, str]], str]] = {}
 
     async def _target(self) -> tuple[str, dict[str, str]]:
@@ -749,7 +749,7 @@ def request_handler(card: Any, forward: Any, local: bool) -> Any:
 
 
 async def grpc_server(handler: Any, address: str) -> Any:
-    """A2A v1 over gRPC at ``address``, with gRPC health, as kagent's runtimes serve it."""
+    """A2A v1 over gRPC at ``address``, with gRPC health, as Kagent's runtimes serve it."""
     import grpc
     from a2a.server.request_handlers.grpc_handler import GrpcHandler
     from a2a.types import a2a_pb2, a2a_pb2_grpc
@@ -851,7 +851,7 @@ async def serve() -> int:
     ready.close()
     await server.stop(grace=5)
     if runtime is not None:
-        # kagent stops the actor: its runtime ends, and its reservation with it.
+        # Kagent stops the actor: its runtime ends, and its reservation with it.
         await runtime.end()
     await forward.client.aclose()
     if controller is not None:

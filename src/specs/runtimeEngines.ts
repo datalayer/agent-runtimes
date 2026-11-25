@@ -40,7 +40,7 @@ export const KAGENT_RUNTIME_ENGINE_0_0_1: RuntimeEngineSpec = {
   version: '0.0.1',
   name: 'Kagent',
   description:
-    "Kagent, a Kubernetes control plane for agents. The agent is a Kagent Agent (an AgentTemplate and a Harness running `agent-runtimes serve --target kagent` behind the kagent bridge), reached through Kagent's A2A gateway at /agents/{namespace}/{name}; each conversation is a session actor of Agent Substrate, suspended when idle and resumed on the next message.",
+    "Kagent, a Kubernetes control plane for agents. The agent is a Kagent Agent (an AgentTemplate and a Harness running `agent-runtimes serve --target kagent` behind the Kagent bridge), reached through Kagent's A2A gateway at /agents/{namespace}/{name}; each conversation is a session actor of Agent Substrate, suspended when idle and resumed on the next message.",
   docsUrl: 'https://kagent.dev',
   position: 2,
   harnesses: ['pydantic-ai'],

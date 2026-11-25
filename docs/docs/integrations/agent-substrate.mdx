@@ -144,7 +144,7 @@ A Datalayer runtime can be an actor rather than a Pod, with the same credits
 reservation and the same record, known by its uid.
 
 - **`p up datalayer-ate`** reuses the cluster's Substrate when one is there
-  (kagent's) or installs Agent Substrate 1.0.0, then makes the runtimes'
+  (Kagent's) or installs Agent Substrate 1.0.0, then makes the runtimes'
   gVisor `WorkerPool` (`datalayer-ate`, 2 workers by default), the atespace
   `datalayer-runtimes` with the operator as its editor, and the ingress proxy.
   It first checks the cluster has the certificate feature gates, and stops in
@@ -160,7 +160,7 @@ reservation and the same record, known by its uid.
   its environment (made with `agent-runtimes-ate template`, refused in a
   sentence when missing): every launch of an environment listed in
   `DATALAYER_OPERATOR_ATE_ENVIRONMENTS`, and every launch of an agent whose
-  `runtime_engine` is `kagent` (with the operator's kagent part on, see
+  `runtime_engine` is `kagent` (with the operator's Kagent part on, see
   [kagent](./kagent#on-a-datalayer-plane)), whatever its environment. The
   reservation is opened before the actor and closed with it; it pauses while
   the actor is suspended and resumes when it runs, so a person pays only while

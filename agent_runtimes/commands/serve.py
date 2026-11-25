@@ -390,8 +390,8 @@ def serve_server(
                 root, the agentspec named by ``AGENT_SPEC_ID`` configured at
                 start; it refuses to start without one. ``kagent`` serves
                 the agentspec of ``AGENT_SPEC_ID`` over A2A on loopback
-                (``AGENT_RUNTIMES_KAGENT_PORT``, 8765), for the kagent bridge
-                beside it, with the model and MCP servers of kagent's
+                (``AGENT_RUNTIMES_KAGENT_PORT``, 8765), for the Kagent bridge
+                beside it, with the model and MCP servers of Kagent's
                 configuration (``/config/config.json``).
                 ``ate`` answers Agent Substrate's actor contract: on
                 ``0.0.0.0``, port 80 (``ATE_PORT``), the wakeup probe at
@@ -450,7 +450,7 @@ def serve_server(
         if kagent.model is not None:
             # The Agent's ModelConfig names the endpoint (Datalayer's
             # ai-inference or the user's provider) and its key stays in
-            # kagent's egress gateway: the call is made to that endpoint.
+            # Kagent's egress gateway: the call is made to that endpoint.
             os.environ["AGENT_RUNTIMES_MODEL"] = kagent.model.model_id
             os.environ["AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE"] = "local"
             os.environ.update(kagent.model.env)

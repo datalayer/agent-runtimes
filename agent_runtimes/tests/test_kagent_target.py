@@ -1,9 +1,9 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""``serve --target kagent``, the kagent bridge's relay, and ``deploy/kagent``.
+"""``serve --target kagent``, the Kagent bridge's relay, and ``deploy/kagent``.
 
-kagent (1.0) hands a BYO actor an ``ADKConfig`` at ``/config/config.json``
+Kagent (1.0) hands a BYO actor an ``ADKConfig`` at ``/config/config.json``
 (ProtoJSON, proto field names): the target reads the model and the MCP tools
 from it and refuses, in a sentence, what it cannot serve as bound. The bridge's
 helpers are the standard library's only; its executor is tested where
@@ -222,7 +222,7 @@ def test_server_ids_are_unique() -> None:
     assert first != second and second.endswith("-2")
 
 
-# ── serve --target kagent ───────────────────────────────────────────────────
+# ── serve --target Kagent ───────────────────────────────────────────────────
 
 
 @pytest.fixture()
@@ -466,7 +466,7 @@ def test_no_key_is_in_the_manifests() -> None:
 def test_the_image_installs_the_extras_the_app_imports() -> None:
     # agent_runtimes.app imports the AG-UI transport (ag_ui) whatever protocol
     # is served: an image without the `ui` extra stops at import, the bridge's
-    # /readyz never answers, and kagent's golden build fails on its wakeup probe.
+    # /readyz never answers, and Kagent's golden build fails on its wakeup probe.
     root = Path(__file__).resolve().parents[2]
     dockerfile = (root / "docker" / "Dockerfile.kagent").read_text()
     declared = re.search(r"^ARG AGENT_RUNTIMES_EXTRAS=(\S+)$", dockerfile, re.M)
