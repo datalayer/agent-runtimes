@@ -36,7 +36,9 @@ caller may name — the agent an event is filed under, an event — goes into th
 address as one path segment of a known shape (:func:`path_id`), never a dot
 segment; the host, the method and the headers are the runtime's.
 
-**The pod's loopback only**, as the Space and Library routes are. On a runtime
+**The pod's loopback only**, as the Space and Library routes are, and never a
+browser's page: a request that carries an ``Origin`` or fetch metadata is
+refused, since on a person's own machine a page reaches the loopback too. On a runtime
 held to its application's own routes (`apps.visitors.OwnRoutesOnly`), the
 identity is answered to the sandbox at any time — it is public there — and
 the events only while code the agent was let run is running.
@@ -342,8 +344,13 @@ def _held_identity(agent_id: str = "") -> None:
     if visitors_runtime() or not _serves_deployments():
         runs_for()
         return
-    named = deployment_of(app_instance_of(agent_id)) if agent_id else ""
-    deployments = [named] if named else deployments_served()
+    if agent_id:
+        # A named agent's own deployment, never another's: one that serves
+        # none (a Preview beside a deployment) holds no identity here.
+        named = deployment_of(app_instance_of(agent_id))
+        deployments = [named] if named else []
+    else:
+        deployments = deployments_served()
     if len(deployments) != 1:
         raise IdentityRefused(NOBODY)
     if not principal_token(deployments[0]):
@@ -372,14 +379,38 @@ def sandbox_may_ask(method: str, path: str) -> bool:
     )
 
 
+#: What a browser puts on a request and a skill's script does not.
+_BROWSER_HEADERS = ("origin", "sec-fetch-site", "sec-fetch-mode", "sec-fetch-dest")
+
+
+def from_a_browser(request: Request) -> bool:
+    """Whether a request says a browser made it: an ``Origin`` or fetch metadata."""
+    return any(name in request.headers for name in _BROWSER_HEADERS)
+
+
 def _local(request: Request) -> None:
-    """Refuse a caller that is not on the pod's loopback."""
+    """Refuse a caller that is not a skill on the pod's loopback.
+
+    The loopback alone is no proof of a skill: on a person's own machine a
+    page they opened in a browser reaches it too, and the server's CORS
+    answers any origin. A browser's request says so (an ``Origin``, fetch
+    metadata) and a script's does not: one that does is refused, before any
+    identity is read.
+    """
     from agent_runtimes.routes.spaces import _caller_is_local
 
     if not _caller_is_local(request):
         raise HTTPException(
             status_code=403,
             detail="Only a skill in this runtime's pod asks who it runs for.",
+        )
+    if from_a_browser(request):
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Only a skill in this runtime's pod asks who it runs for: "
+                "a browser's page is not one."
+            ),
         )
 
 

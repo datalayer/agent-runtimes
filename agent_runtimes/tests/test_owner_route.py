@@ -864,3 +864,94 @@ def test_a_publication_is_not_ready_without_the_owners_launch(
     )
     monkeypatch.setattr("agent_runtimes.apps.enforcement.code_is_running", lambda: True)
     assert sandbox_may_publish("POST", "/api/v1/library/items/x/publish") is False
+
+
+# --- second review of 1.8.7 ----------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "headers",
+    [
+        {"Origin": "https://evil.example"},
+        {"Origin": "null"},
+        {"Origin": "http://127.0.0.1:8765"},
+        {"Sec-Fetch-Site": "cross-site"},
+        {"Sec-Fetch-Mode": "cors"},
+    ],
+)
+def test_a_browsers_page_is_no_skill_even_on_the_loopback(
+    headers: dict[str, str], a_persons_runtime: list[dict[str, Any]]
+) -> None:
+    """A page a person opened on the runtime's own machine reaches the loopback too.
+
+    A skill's script sends no Origin and no fetch metadata; a browser's
+    request does. It is refused before any identity is read.
+    """
+    for method, route, body in (
+        ("GET", "/api/v1/owner", None),
+        ("GET", "/api/v1/owner/events?agent_id=a", None),
+        ("POST", "/api/v1/owner/events", {"agent_id": "a", "title": "t"}),
+        ("PATCH", "/api/v1/owner/events/evt-1", {"agent_id": "a", "read": True}),
+    ):
+        answer = client().request(method, route, json=body, headers=headers)
+        assert answer.status_code == 403, (method, route, answer.text)
+        assert "browser" in answer.json()["detail"]
+        assert "ada@example.org" not in answer.text
+    assert a_persons_runtime == []
+
+
+def test_a_named_agent_that_serves_no_deployment_is_not_ready_on_anothers_principal(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A Preview beside a deployment: its readiness never borrows the deployment's identity."""
+    from agent_runtimes.apps import enforcement, principal
+
+    monkeypatch.setattr(principal, "a_deployment_is_served", lambda: True)
+    monkeypatch.setattr(principal, "deployments_served", lambda: ["dep-1"])
+    monkeypatch.setattr(
+        "agent_runtimes.models.models._APP_INSTANCES",
+        {"shopper": {"deployment_uid": "dep-1"}, "preview": {"app_uid": "app-2"}},
+    )
+    principal.give_principal_token(
+        "dep-1", _principal_token(), expires_in=600, principal_uid="p-1"
+    )
+    try:
+        assert owner.identity_refusal("datalayer-whoami", "shopper") is None
+        assert owner.identity_refusal("events", "shopper") is None
+        # Named, and serving no deployment: nobody's, whatever else runs here.
+        assert owner.identity_refusal("datalayer-whoami", "preview") == owner.NOBODY
+        assert owner.identity_refusal("events", "preview") == owner.NOBODY
+        # As its route answers while its code runs.
+        monkeypatch.setattr(enforcement, "_CODE_RUNNING", [_run_of("preview")])
+        refused = client().get("/api/v1/owner")
+        assert refused.status_code == 409 and refused.json()["detail"] == owner.NOBODY
+        # No agent named: the runtime's only deployment, as before.
+        assert owner.identity_refusal("datalayer-whoami") is None
+    finally:
+        principal.forget_principal_token("dep-1")
+
+
+def test_a_browsers_page_publishes_nothing_either(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The publication is a write with the owner's token: no page makes it."""
+    from agent_runtimes.routes import library
+
+    sent: list[str] = []
+
+    async def publish(url: str, token: str, payload: dict[str, Any]) -> httpx.Response:
+        sent.append(url)
+        return httpx.Response(200, json={"success": True})
+
+    monkeypatch.setattr(library, "_publish", publish)
+    monkeypatch.setenv("DATALAYER_LIBRARY_URL", "https://library.example")
+    app = FastAPI()
+    app.include_router(library.router, prefix="/api/v1")
+    page = TestClient(app, client=("127.0.0.1", 40000))
+    refused = page.post(
+        "/api/v1/library/items/doc-1/publish",
+        json={"item_type": "document", "confirm": True},
+        headers={"Origin": "https://evil.example"},
+    )
+    assert refused.status_code == 403 and "browser" in refused.json()["detail"]
+    assert sent == []

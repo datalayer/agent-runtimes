@@ -87,8 +87,15 @@ async def publish_item(
     # Where a publication may be made is one predicate, read by the gate and
     # by the skill's readiness too: enforced here as well, since the pod's
     # loopback is answered whole on a runtime that holds no pod secret.
-    from agent_runtimes.routes.owner import publication_place_refusal
+    from agent_runtimes.routes.owner import from_a_browser, publication_place_refusal
 
+    if from_a_browser(request):
+        # On a person's own machine a page reaches the loopback too.
+        raise HTTPException(
+            403,
+            "Only a skill in this runtime's pod may publish its owner's work: "
+            "a browser's page is not one.",
+        )
     not_here = publication_place_refusal()
     if not_here:
         raise HTTPException(403, not_here)
