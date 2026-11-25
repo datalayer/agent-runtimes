@@ -69,6 +69,13 @@ async def ask_ai_agents(
     url = getattr(DatalayerURLs.from_environment(), "ai_agents_url", "") or ""
     if not url:
         raise NotLearned("no ai-agents is configured")
+    deployment = str(body.get("deployment_uid") or "").strip()
+    if deployment:
+        # Asked as the deployment's principal: to the address its token is put
+        # in for, on a runtime that does not hold it (`principal_address`).
+        from agent_runtimes.apps.principal import principal_address
+
+        url = principal_address(deployment, url)
     try:
         async with httpx.AsyncClient(timeout=TIMEOUT) as client:
             response = await client.post(

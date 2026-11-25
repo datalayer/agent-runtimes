@@ -327,6 +327,72 @@ def test_what_a_deployment_tells_its_owner_is_sent_as_its_principal(actor):
     ]
 
 
+def test_what_a_deployment_learns_and_reads_of_its_week_is_asked_as_its_principal(actor):
+    """Its learned skills and its recommendations are asked as its principal, so to
+    the principal's address (review of 1.8.8): at the usual one the placeholder is
+    nobody's and every such call was refused."""
+    from agent_runtimes.apps import learning
+    from agent_runtimes.tools import recommendations
+
+    asyncio.run(ensure_principal_token("dep-1", None))
+    actor.left.clear()
+    asyncio.run(
+        learning.ask_ai_agents(
+            "/skills/approved",
+            {"app_uid": "app-1", "deployment_uid": "dep-1"},
+            principal_token("dep-1") or "",
+        )
+    )
+    asyncio.run(recommendations._deployment_recommendations("dep-1", 7))
+    assert actor.left == [
+        (
+            "ai-agents-principal-svc.api.svc.cluster.local",
+            "/api/ai-agents/v1/apps/skills/approved",
+            f"Bearer {SECRET}",
+        ),
+        (
+            "ai-agents-principal-svc.api.svc.cluster.local",
+            "/api/ai-agents/v1/apps/deployments/dep-1/recommendations",
+            f"Bearer {SECRET}",
+        ),
+    ]
+
+
+def test_the_events_of_a_deployments_agent_are_asked_as_its_principal(
+    actor, monkeypatch
+):
+    """The owner events route acts as the deployment's principal on its runtime: to
+    the principal's address, the checked path unchanged; a person's identity keeps
+    the usual address."""
+    from agent_runtimes.routes import owner
+
+    asked: list[str] = []
+
+    async def recorded(service: str, method: str, url: str, token: str = "", **kw: Any):
+        asked.append(url)
+        return httpx.Response(200, json={"events": []})
+
+    monkeypatch.setattr(owner, "_asked", recorded)
+    monkeypatch.setattr(owner, "_runtime_agent", lambda named="": "agent-1")
+    asyncio.run(ensure_principal_token("dep-1", None))
+    monkeypatch.setattr(
+        owner,
+        "_identity",
+        lambda agent, acting=False: owner.Identity(PLACEHOLDER, "principal", "dep-1"),
+    )
+    asyncio.run(owner._events("GET", "agent-1"))
+    monkeypatch.setattr(
+        owner,
+        "_identity",
+        lambda agent, acting=False: owner.Identity("a-person", "person", ""),
+    )
+    asyncio.run(owner._events("GET", "agent-1"))
+    assert asked == [
+        f"{AGENTS_PRINCIPAL}/api/ai-agents/v1/agents/agent-1/events",
+        f"{AGENTS}/api/ai-agents/v1/agents/agent-1/events",
+    ]
+
+
 # --- a caller is judged as itself -------------------------------------------------
 
 
