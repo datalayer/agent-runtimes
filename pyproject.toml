@@ -64,7 +64,12 @@ dependencies = [
     # the domain beside a company's name.
     # 0.37.0: 1.0 as published (frozen 2026-11-14): each agent.protocols entry needs a
     # description (CompanyConfig.agent_description), prompt=consent, PAR, ports.
-    "personal-agent-protocol[ui]>=1.0.0,<1.1",
+    # <1.2: the SDK's pre-release 1.1.0a1 (upstream's unpublished draft 1.1, its additions off
+    # until turned on; `agent_runtimes.pap.draft`) installs beside a runtime when an
+    # installation names it (`personal-agent-protocol==1.1.0a1`). Nothing takes it otherwise:
+    # pip never chooses a pre-release, so a plain install keeps the stable 1.0.x, and the
+    # protocol a runtime speaks stays 1.0 on both.
+    "personal-agent-protocol[ui]>=1.0.0,<1.2",
     # The first releases of both on mcp 2; an older one pins mcp<2.
     "agent-codemode>=1.1.0",
     # 1.4.0: agent-skills is the framework alone (and its `jokes` example).

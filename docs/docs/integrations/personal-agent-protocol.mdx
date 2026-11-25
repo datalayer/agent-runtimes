@@ -129,6 +129,31 @@ on. In Datalayer the same journey is the gateway's `pap` toolset (`pap_ask`,
 mirror; there IAM holds every credential. The `local-personal-agent`
 example runs it against the SDK's Manzanita.
 
+### What a host may turn on from the unpublished draft 1.1
+
+A runtime speaks PAP 1.0 as published and announces nothing else. Upstream's
+draft 1.1 adds to it and says of itself that it can change until it is
+published. Two of its additions concern a personal agent's sign-in; a host may
+turn each on, and both are off by default
+(`agent_runtimes.pap.draft`):
+
+| Setting | Turned on by | What it does |
+| --- | --- | --- |
+| `offline_access` | `PapPersonalAgentCapability(offline_access=True)`, or `AGENT_RUNTIMES_PAP_OFFLINE_ACCESS=true` | a sign-in also names the `offline_access` scope when the company's issuer lists it in `scopes_supported` (some issuers give a refresh token only then); it is never one of the scopes granted, and never a scope a caller asks for by name |
+| operator signatures at the authorization server | `operator_signer(key, signature_agent=..., oauth_endpoints=True)`, or `AGENT_RUNTIMES_PAP_OPERATOR_SIGNS_OAUTH=true` | the `pap.operatorSigner` a host contributes also signs the agent's requests to a company's pushed authorization request, token, device authorization and revocation endpoints, over their content digest |
+
+Both need a PAP SDK that has them: its pre-release, which an installation
+names itself, since `pip` never takes a pre-release otherwise:
+
+```bash
+pip install agent-runtimes "personal-agent-protocol==1.1.0a1"
+```
+
+On the stable SDK (1.0.x), which a plain `pip install agent-runtimes` gives,
+both stay off and nothing changes; a setting turned on there is refused when
+the host starts (`PapDraftUnavailable`, naming the SDK it needs), never
+silently off.
+
 ## TypeScript
 
 The TypeScript package provides the same boundary and vocabulary:
