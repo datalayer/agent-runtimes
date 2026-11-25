@@ -703,8 +703,6 @@ export type DesignerShellProps = {
   dockHeader?: ReactNode;
   /** What the dock's footer says. */
   dockFooter?: ReactNode;
-  /** Where the dock was left is remembered for the next visit (not for a picture of the designer). */
-  keepDock?: boolean;
   /**
    * The editor's own width, centred in a frame as wide as its box: the
    * floating dock ranges over the whole frame, so it can be moved aside of an
@@ -726,7 +724,6 @@ export function DesignerShell({
   dockTitle = DESIGNER_WORDS.dock,
   dockHeader,
   dockFooter,
-  keepDock: remember = true,
   contentWidth,
   initialDock = 'docked',
 }: DesignerShellProps): JSX.Element {
@@ -745,27 +742,24 @@ export function DesignerShell({
     setFrameWidth(element.offsetWidth);
     return () => observer.disconnect();
   }, []);
-  // The editor's dock is remembered for the next visit (a cookie); a picture's starts on the right each time.
-  // Never chosen, the editor's dock floats beside it (the user, 24 November 2026).
-  const [kept] = useState(() => (remember ? readDock() : null));
+  // Where the dock was left is remembered for the next visit, in one cookie for every canvas editor: the
+  // application's, the one the agent's footer opens, a picture of the designer (the user, 25 November 2026).
+  // Never chosen, the dock floats beside the editor (the user, 24 November 2026).
+  const [kept] = useState(readDock);
   const [dock, setDock] = useState(
     () => kept ?? { floating: false, position: null },
   );
   const [follows, setFollows] = useState(
-    () =>
-      (remember && kept === null) ||
-      (initialDock === 'right' && !dock.floating),
+    () => kept === null || (initialDock === 'right' && !dock.floating),
   );
   const onDock = useCallback(
     (floating: boolean, position: DockPosition | null) => {
       // Moved, floated or docked by the reader: it no longer follows the editor.
       setFollows(false);
       setDock({ floating, position });
-      if (remember) {
-        keepDock(floating, position);
-      }
+      keepDock(floating, position);
     },
-    [remember],
+    [],
   );
   // Asked to start beside the editor: placed there once the frame is measured, and kept there as the frame
   // settles (a picture is measured more than once) until the reader moves it — unless they left it somewhere already.
