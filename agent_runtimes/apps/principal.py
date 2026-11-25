@@ -553,8 +553,11 @@ def give_principal_token(
 
 
 def _claims_of_held(held: Mapping[str, Any]) -> dict[str, Any]:
-    """What a held principal's token says: read off the token, or, for one put in at
-    egress, as ai-agents said it when the runtime asked."""
+    """What a held principal's token says.
+
+    Read off the token, or, for one put in at egress, as ai-agents said it when
+    the runtime asked.
+    """
     said = held.get("claims")
     if isinstance(said, Mapping):
         return dict(said)

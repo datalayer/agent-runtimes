@@ -223,4 +223,7 @@ def test_what_was_left_out_is_said_by_name_for_a_page():
         "reason": "needs a linked X account",
     }
     given = declared.left_out(_having(["GITHUB_TOKEN"]))
-    assert given.needs("skill", "github") is None and "github" not in given.as_names()["skills"]
+    assert (
+        given.needs("skill", "github") is None
+        and "github" not in given.as_names()["skills"]
+    )

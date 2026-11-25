@@ -137,7 +137,13 @@ def gateway(monkeypatch):
 
 @pytest.fixture
 def actor(monkeypatch, gateway):
-    """An Agent Substrate actor whose template names the principal's addresses."""
+    """An Agent Substrate actor whose template names the principal's addresses.
+
+    Yields
+    ------
+    Gateway
+        The gateway its calls leave through.
+    """
     monkeypatch.setenv("AGENT_RUNTIMES_TARGET", "ate")
     monkeypatch.setenv("DATALAYER_AI_AGENTS_URL", AGENTS)
     monkeypatch.setenv("DATALAYER_AI_AGENTS_PRINCIPAL_URL", AGENTS_PRINCIPAL)
@@ -327,7 +333,9 @@ def test_what_a_deployment_tells_its_owner_is_sent_as_its_principal(actor):
     ]
 
 
-def test_what_a_deployment_learns_and_reads_of_its_week_is_asked_as_its_principal(actor):
+def test_what_a_deployment_learns_and_reads_of_its_week_is_asked_as_its_principal(
+    actor,
+):
     """Its learned skills and its recommendations are asked as its principal, so to
     the principal's address (review of 1.8.8): at the usual one the placeholder is
     nobody's and every such call was refused."""
@@ -369,6 +377,7 @@ def test_the_events_of_a_deployments_agent_are_asked_as_its_principal(
     asked: list[str] = []
 
     async def recorded(service: str, method: str, url: str, token: str = "", **kw: Any):
+        """Ask nothing: record the address asked."""
         asked.append(url)
         return httpx.Response(200, json={"events": []})
 

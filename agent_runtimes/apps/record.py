@@ -393,7 +393,8 @@ def _written_at(deployment_uid: str, url: str) -> str:
     """Where a record is written: ai-agents as this runtime knows it; for a deployment
     whose principal the runtime acts as without holding its token, the address that
     token is put in for (`principal.principal_address`). A person's record, written
-    with their own token, always goes to the usual address."""
+    with their own token, always goes to the usual address.
+    """
     deployment = deployment_uid.strip()
     if not deployment:
         return url
