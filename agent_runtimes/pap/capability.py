@@ -684,11 +684,10 @@ class PapPersonalAgentCapability:
                 reason=f"{domain} offers no Device Sign-In, the one a local runtime does",
             )
         # Never `poppy:browser-sign-in` (PAP draft 0.4 §4.7, §6): it joins no browser to a Session.
-        # Nor ``offline_access``, once the host turned it on: it asks for a refresh token, is
-        # no access to the account, and the SDK adds it from the issuer's ``scopes_supported``.
-        never = {BROWSER_SIGN_IN_SCOPE}
-        if self._offline_access:
-            never.add(draft.OFFLINE_ACCESS_SCOPE)
+        # Nor ``offline_access``, whatever the host's setting: it asks for a refresh token and
+        # is no access to the account, so it is never offered nor taken from a caller. Turned
+        # on, the SDK alone adds it, from the issuer's ``scopes_supported`` (``sign_in_scopes``).
+        never = {BROWSER_SIGN_IN_SCOPE, draft.OFFLINE_ACCESS_SCOPE}
         offered = tuple(
             scope for scope in metadata.scopes_supported or () if scope not in never
         )

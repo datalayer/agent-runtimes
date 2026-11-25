@@ -125,6 +125,37 @@ async def test_off_a_sign_in_names_the_account_scopes_alone(tmp_path: Path) -> N
     assert not any("signature-input" in request.headers for request in sent.requests)
 
 
+@pytest.mark.asyncio
+async def test_off_offline_access_is_no_account_scope_though_the_issuer_lists_it(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # An issuer that lists it: the pre-release SDK's company says so itself, and the stable
+    # SDK's metadata is told so here, as any company's document may say it.
+    config = dataclasses.replace(CONFIG, offline_access=True) if DRAFT_SDK else CONFIG
+    agent, shop, clock, sent = _world(tmp_path, config)
+    discover = agent._discover
+
+    async def listing_it(domain: str) -> Any:
+        company = await discover(domain)
+        listed = company.oauth_metadata.scopes_supported
+        if draft.OFFLINE_ACCESS_SCOPE not in listed:
+            listed.append(draft.OFFLINE_ACCESS_SCOPE)
+        return company
+
+    monkeypatch.setattr(agent, "_discover", listing_it)
+    # Asked for by name: refused, and not named among what the company offers.
+    refused = await agent.sign_in(
+        DOMAIN, user_id="ada", scopes=("orders:read", "offline_access")
+    )
+    assert refused.status == "unavailable"
+    assert "offline_access" not in (refused.reason or "")
+    assert not [r for r in sent.requests if r.url.path == "/oauth/device"]
+    # The default sign-in names the account scopes alone.
+    started = await agent.sign_in(DOMAIN, user_id="ada")
+    assert started.status == "waiting_for_the_person"
+    assert sent.device()["scope"].split() == ["orders:read", "orders:write"]
+
+
 @pytest.mark.parametrize("setting", SETTINGS)
 @pytest.mark.parametrize("said", ["false", "0", "off", ""])
 def test_a_setting_said_off_is_off(
