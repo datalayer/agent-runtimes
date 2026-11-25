@@ -126,7 +126,7 @@ def gateway(monkeypatch):
     made = Gateway()
     real = httpx.AsyncClient
 
-    class ThroughTheGateway(real):  # type: ignore[misc, valid-type]
+    class ThroughTheGateway(real):
         def __init__(self, *args: Any, **kwargs: Any) -> None:
             kwargs["transport"] = httpx.MockTransport(made)
             super().__init__(*args, **kwargs)
