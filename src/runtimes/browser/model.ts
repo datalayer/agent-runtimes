@@ -27,7 +27,7 @@
  * like any other.
  *
  * The model *name* needs no translation. A spec writes
- * `bedrock:us.anthropic.claude-sonnet-4-6`, and the inference service already
+ * `bedrock:us.anthropic.claude-sonnet-5-5`, and the inference service already
  * normalises that prefix for LiteLLM — the same string the server-side harness
  * sends. Both harnesses name a model identically, which is what keeps one spec
  * runnable in either.
@@ -48,7 +48,7 @@ export const INFERENCE_API_PATH = '/api/ai-inference/v1';
  * default, so a caller that forgets to pass one still gets a working agent
  * instead of a 404 from a model nobody provisioned.
  */
-export const DEFAULT_BROWSER_MODEL = 'bedrock:us.anthropic.claude-sonnet-4-6';
+export const DEFAULT_BROWSER_MODEL = 'bedrock:us.anthropic.claude-sonnet-5-5';
 
 export type BrowserModelOptions = {
   /**

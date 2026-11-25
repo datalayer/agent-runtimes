@@ -751,6 +751,7 @@ async def list_catalog_skills(agent_id: str | None = None) -> dict[str, Any]:
     Whether a skill is installed and active is a second question, answerable
     only when something is running.
     """
+    from agent_runtimes.routes.owner import IDENTITY_SKILLS, identity_refusal
     from agent_runtimes.specs.skills import list_skill_specs
 
     skills: list[dict[str, Any]] = []
@@ -770,6 +771,9 @@ async def list_catalog_skills(agent_id: str | None = None) -> dict[str, Any]:
         ]
         missing = [name for name in required if not os.getenv(name)]
         one_is_set = not any_of or any(os.getenv(name) for name in any_of)
+        # A skill that acts with the runtime's identity names no variable: it
+        # is ready when the runtime holds that identity, and says why when not.
+        refusal = identity_refusal(spec.id, agent_id or "")
 
         skills.append(
             {
@@ -787,7 +791,9 @@ async def list_catalog_skills(agent_id: str | None = None) -> dict[str, Any]:
                 "any_of_env_vars": any_of,
                 "set_env_vars": [name for name in optional if os.getenv(name)],
                 "missing_env_vars": missing,
-                "ready": not missing and one_is_set,
+                "needs_identity": spec.id in IDENTITY_SKILLS,
+                "not_ready_reason": refusal,
+                "ready": not missing and one_is_set and refusal is None,
             }
         )
 

@@ -42,14 +42,14 @@ from agent_runtimes.routes import configure as configure_route
 from agent_runtimes.subagents.capability import _routed
 from agent_runtimes.transports.vercel_ai import _resolve_effective_inference_provider
 
-SONNET = "bedrock:us.anthropic.claude-sonnet-4-6"
+SONNET = "bedrock:us.anthropic.claude-sonnet-5-5"
 QWEN = "alibaba:qwen-max"
 URL = "https://r1.example"
 
 #: ai-inference's ``/models``: Sonnet on Bedrock and Qwen on Model Studio.
 SERVED: dict[str, Any] = {
-    "models": ["bedrock/us.anthropic.claude-sonnet-4-6", "alibaba/qwen-max"],
-    "bedrock_anthropic_models": ["bedrock/us.anthropic.claude-sonnet-4-6"],
+    "models": ["bedrock/us.anthropic.claude-sonnet-5-5", "alibaba/qwen-max"],
+    "bedrock_anthropic_models": ["bedrock/us.anthropic.claude-sonnet-5-5"],
     "alibaba_models": ["alibaba/qwen-max"],
 }
 

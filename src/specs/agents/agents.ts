@@ -400,7 +400,7 @@ export const AGENT_SHELL_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [],
@@ -545,7 +545,7 @@ export const EXAMPLE_A2A_RESEARCHER_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [],
@@ -604,7 +604,7 @@ export const EXAMPLE_A2A_WRITER_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [],
@@ -663,7 +663,7 @@ export const EXAMPLE_A2A_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [],
@@ -751,7 +751,7 @@ export const EXAMPLE_A2UI_AGENT_SPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [TOOL_MAP['example-render-a2ui-surface:0.0.1']],
@@ -844,7 +844,7 @@ export const EXAMPLE_A2UI_JUPYTER_OUTPUT_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [],
@@ -961,7 +961,7 @@ export const EXAMPLE_A2UI_RESTAURANT_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [],
@@ -1021,7 +1021,7 @@ export const EXAMPLE_A2UI_VIEWER_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [TOOL_MAP['example-render-a2ui-surface:0.0.1']],
@@ -1141,7 +1141,7 @@ export const EXAMPLE_AGENT_CRITIC_LOOP_FOR_ANALYSIS_AGENTSPEC_0_0_1: Agentspec =
     domain: undefined,
     enabled: false,
     listed: true,
-    model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+    model: 'bedrock:us.anthropic.claude-sonnet-5-5',
     mcpServers: [],
     skills: [
       SKILL_MAP['events:0.0.1']
@@ -1208,7 +1208,7 @@ export const EXAMPLE_AGENTIC_CHAT_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [TOOL_MAP['example-current-time:0.0.1']],
@@ -1266,7 +1266,7 @@ export const EXAMPLE_AGENTIC_GENERATIVE_UI_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [
@@ -1345,7 +1345,7 @@ export const EXAMPLE_AI_CREATES_DASHBOARDS_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -1412,7 +1412,7 @@ export const EXAMPLE_AI_EXPLAINS_NOTEBOOK_OUTPUT_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -1479,7 +1479,7 @@ export const EXAMPLE_AI_WRITES_PANDAS_CODE_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -1546,7 +1546,7 @@ export const EXAMPLE_ANALYZE_EXCEL_SPREADSHEET_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -1613,7 +1613,7 @@ export const EXAMPLE_BACKEND_TOOL_RENDERING_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [TOOL_MAP['example-get-weather:0.0.1']],
@@ -1686,8 +1686,11 @@ export const EXAMPLE_BLANK_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: true,
   listed: false,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
-  modelAdditionals: ['alibaba:qwen-max'],
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
+  modelAdditionals: [
+    'bedrock:us.anthropic.claude-sonnet-4-6',
+    'alibaba:qwen-max',
+  ],
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [],
@@ -1742,7 +1745,7 @@ export const EXAMPLE_BUILD_NOTEBOOK_WITH_ONE_PROMPT_AGENTSPEC_0_0_1: Agentspec =
     domain: undefined,
     enabled: false,
     listed: true,
-    model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+    model: 'bedrock:us.anthropic.claude-sonnet-5-5',
     mcpServers: [],
     skills: [
       SKILL_MAP['events:0.0.1']
@@ -1809,7 +1812,7 @@ export const EXAMPLE_CHECKPOINTS_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [],
@@ -1957,7 +1960,7 @@ export const EXAMPLE_CODE_SANDBOX_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [],
@@ -2025,7 +2028,7 @@ export const EXAMPLE_CODEMODE_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -2099,7 +2102,7 @@ export const EXAMPLE_COMPACTION_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [],
@@ -2167,7 +2170,7 @@ export const EXAMPLE_COMPARE_TWO_SPREADSHEETS_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -2234,7 +2237,7 @@ export const EXAMPLE_COST_COMPARISON_REPORT_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -2307,7 +2310,7 @@ export const EXAMPLE_DECKS_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'personal-assistant',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [],
@@ -2441,7 +2444,7 @@ export const EXAMPLE_DOCUMENT_AGENT_SIDEBAR_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -2514,7 +2517,7 @@ export const EXAMPLE_DOCUMENT_AGENT_SPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -2590,7 +2593,7 @@ export const EXAMPLE_EVALS_NOCODEMODE_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -2660,7 +2663,7 @@ export const EXAMPLE_EVALS_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -2727,7 +2730,7 @@ export const EXAMPLE_EXPLORE_SQL_DATABASE_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -2794,7 +2797,7 @@ export const EXAMPLE_FIVE_AI_AGENTS_ANALYZE_CSV_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -2861,7 +2864,7 @@ export const EXAMPLE_FIVE_NOTEBOOKS_IN_PARALLEL_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -2928,7 +2931,7 @@ export const EXAMPLE_FULL_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
     SKILL_MAP['crawl:0.0.1']
@@ -3042,7 +3045,7 @@ export const EXAMPLE_GITHUB_REPOSITORIES_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [TOOL_MAP['github-repositories:0.0.1']],
@@ -3100,7 +3103,7 @@ export const EXAMPLE_GPT_AND_CLAUDE_COLLABORATE_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -3167,7 +3170,7 @@ export const EXAMPLE_GUARDRAILS_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -3289,7 +3292,7 @@ export const EXAMPLE_HAIKU_GENERATIVE_UI_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [TOOL_MAP['example-generate-haiku:0.0.1']],
@@ -3808,7 +3811,7 @@ export const EXAMPLE_HOOKS_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [
@@ -3945,7 +3948,7 @@ export const EXAMPLE_HUMAN_APPROVED_AUTOMATION_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -4012,7 +4015,7 @@ export const EXAMPLE_HUMAN_IN_THE_LOOP_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [TOOL_MAP['example-generate-task-steps:0.0.1']],
@@ -4089,7 +4092,7 @@ export const EXAMPLE_INFERENCE_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   inferenceProvider: 'local',
   mcpServers: [],
   skills: [
@@ -4162,8 +4165,11 @@ export const EXAMPLE_KAGENT_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: true,
   listed: false,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
-  modelAdditionals: ['alibaba:qwen-max'],
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
+  modelAdditionals: [
+    'bedrock:us.anthropic.claude-sonnet-4-6',
+    'alibaba:qwen-max',
+  ],
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [TOOL_MAP['runtime-echo:0.0.1']],
@@ -4229,7 +4235,7 @@ export const EXAMPLE_LONG_RUNNING_AGENT_OVERNIGHT_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -4296,7 +4302,7 @@ export const EXAMPLE_MCP_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -4376,7 +4382,7 @@ export const EXAMPLE_MEMORY_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -4448,7 +4454,7 @@ export const EXAMPLE_MONITORING_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -4520,7 +4526,7 @@ export const EXAMPLE_MULTI_AGENT_DATA_CLEANING_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -4588,7 +4594,7 @@ export const EXAMPLE_MULTI_AGENT_ROOT_CAUSE_ANALYSIS_AGENTSPEC_0_0_1: Agentspec 
     domain: undefined,
     enabled: false,
     listed: true,
-    model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+    model: 'bedrock:us.anthropic.claude-sonnet-5-5',
     mcpServers: [],
     skills: [
       SKILL_MAP['events:0.0.1']
@@ -4655,7 +4661,7 @@ export const EXAMPLE_NO_CODEMODE_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -4728,7 +4734,7 @@ export const EXAMPLE_NOTIFICATIONS_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [],
@@ -4800,7 +4806,7 @@ export const EXAMPLE_ONE_TRIGGER_APPROVAL_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [TOOL_MAP['runtime-sensitive-echo:0.0.1']],
@@ -4859,8 +4865,11 @@ export const EXAMPLE_ONE_TRIGGER_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: true,
   listed: false,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
-  modelAdditionals: ['alibaba:qwen-max'],
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
+  modelAdditionals: [
+    'bedrock:us.anthropic.claude-sonnet-4-6',
+    'alibaba:qwen-max',
+  ],
   mcpServers: [],
   skills: [
     SKILL_MAP['github:0.0.1']
@@ -4940,7 +4949,7 @@ export const EXAMPLE_OTEL_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -5013,7 +5022,7 @@ export const EXAMPLE_OUTPUT_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [],
@@ -5115,7 +5124,7 @@ export const EXAMPLE_PARAMETERS_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [TOOL_MAP['runtime-echo:0.0.1']],
@@ -5203,7 +5212,7 @@ export const EXAMPLE_PLAYER_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'personal-assistant',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [],
@@ -5271,7 +5280,7 @@ export const EXAMPLE_REPLACE_EXCEL_PIVOT_WORK_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -5339,7 +5348,7 @@ export const EXAMPLE_RESUMABLE_ETL_WITH_CHECKPOINTS_AGENTSPEC_0_0_1: Agentspec =
     domain: undefined,
     enabled: false,
     listed: true,
-    model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+    model: 'bedrock:us.anthropic.claude-sonnet-5-5',
     mcpServers: [],
     skills: [
       SKILL_MAP['events:0.0.1']
@@ -5407,7 +5416,7 @@ export const EXAMPLE_RUN_PYTHON_SAFELY_IN_THE_CLOUD_AGENTSPEC_0_0_1: Agentspec =
     domain: undefined,
     enabled: false,
     listed: true,
-    model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+    model: 'bedrock:us.anthropic.claude-sonnet-5-5',
     mcpServers: [],
     skills: [
       SKILL_MAP['events:0.0.1']
@@ -5474,7 +5483,7 @@ export const EXAMPLE_SANDBOX_COLAB_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [],
@@ -5542,7 +5551,7 @@ export const EXAMPLE_SANDBOX_DATALAYER_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [],
@@ -5610,7 +5619,7 @@ export const EXAMPLE_SANDBOX_DOCKER_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [],
@@ -5678,7 +5687,7 @@ export const EXAMPLE_SANDBOX_EVAL_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [],
@@ -5746,7 +5755,7 @@ export const EXAMPLE_SANDBOX_JUPYTER_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [],
@@ -5814,7 +5823,7 @@ export const EXAMPLE_SANDBOX_KAGGLE_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [],
@@ -5882,7 +5891,7 @@ export const EXAMPLE_SANDBOX_MODAL_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [],
@@ -5950,7 +5959,7 @@ export const EXAMPLE_SANDBOX_MONTY_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [],
@@ -6018,7 +6027,7 @@ export const EXAMPLE_SHARED_STATE_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [TOOL_MAP['example-display-recipe:0.0.1']],
@@ -6087,8 +6096,11 @@ export const EXAMPLE_SIMPLE_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: true,
   listed: false,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
-  modelAdditionals: ['alibaba:qwen-max'],
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
+  modelAdditionals: [
+    'bedrock:us.anthropic.claude-sonnet-4-6',
+    'alibaba:qwen-max',
+  ],
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -6177,7 +6189,7 @@ export const EXAMPLE_SKILLS_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [
     SKILL_MAP['crawl:0.0.1']
@@ -6271,7 +6283,7 @@ export const EXAMPLE_SUBAGENTS_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -6363,7 +6375,7 @@ export const EXAMPLE_TOOL_APPROVALS_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [
@@ -6479,7 +6491,7 @@ export const EXAMPLE_TOOL_BASED_GENERATIVE_UI_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [],
@@ -6544,7 +6556,7 @@ export const JUPYTER_CELL_FIXER_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [TOOL_MAP['runtime-echo:0.0.1']],
@@ -6646,8 +6658,11 @@ export const JUPYTER_NOTEBOOK_COMPACTOR_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: true,
   listed: false,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
-  modelAdditionals: ['alibaba:qwen-max'],
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
+  modelAdditionals: [
+    'bedrock:us.anthropic.claude-sonnet-4-6',
+    'alibaba:qwen-max',
+  ],
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [TOOL_MAP['runtime-echo:0.0.1']],
@@ -6756,7 +6771,7 @@ export const JUPYTER_NOTEBOOK_REPRODUCER_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [TOOL_MAP['runtime-echo:0.0.1']],
@@ -6865,7 +6880,7 @@ export const JUPYTER_NOTEBOOK_REVIEWER_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [],
@@ -6959,7 +6974,7 @@ export const JUPYTER_NOTEBOOK_WRITER_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [],
@@ -7064,7 +7079,7 @@ export const JUPYTER_TUTOR_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [TOOL_MAP['runtime-echo:0.0.1']],
@@ -7235,8 +7250,11 @@ export const WORKER_ACCOUNTANT_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'accounting',
   enabled: true,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
-  modelAdditionals: ['alibaba:qwen-max'],
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
+  modelAdditionals: [
+    'bedrock:us.anthropic.claude-sonnet-4-6',
+    'alibaba:qwen-max',
+  ],
   mcpServers: [
     MCP_SERVER_MAP['odoo:0.0.1'],
     MCP_SERVER_MAP['odoo-accounting:0.0.1'],
@@ -7346,7 +7364,7 @@ export const WORKER_AGENT_REVIEWS_SQL_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'data-engineering',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -7413,7 +7431,7 @@ export const WORKER_ANALYZE_CAMPAIGN_PERFORMANCE_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'marketing',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['filesystem:0.0.1'],
     MCP_SERVER_MAP['slack:0.0.1'],
@@ -7576,7 +7594,7 @@ export const WORKER_ANALYZE_SUPPORT_TICKETS_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'market-analyst',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['filesystem:0.0.1'],
     MCP_SERVER_MAP['slack:0.0.1'],
@@ -7702,7 +7720,7 @@ export const WORKER_AP_INVOICE_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'accounting',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['odoo:0.0.1'],
     MCP_SERVER_MAP['odoo-accounting:0.0.1'],
@@ -7776,7 +7794,7 @@ export const WORKER_AUDIT_INVENTORY_LEVELS_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'accounting',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['filesystem:0.0.1'],
     MCP_SERVER_MAP['slack:0.0.1'],
@@ -7892,7 +7910,7 @@ export const WORKER_AUDIT_PACK_BUILDER_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'accounting',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['odoo:0.0.1'],
     MCP_SERVER_MAP['odoo-accounting:0.0.1'],
@@ -7962,7 +7980,7 @@ export const WORKER_AUTOMATE_REGULATORY_REPORTING_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'accounting',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['filesystem:0.0.1'],
     MCP_SERVER_MAP['slack:0.0.1'],
@@ -8114,7 +8132,7 @@ export const WORKER_BACKTEST_AUDITOR_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'capital-markets',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['alphavantage:0.0.1'],
     MCP_SERVER_MAP['chart:0.0.1'],
@@ -8181,7 +8199,7 @@ export const WORKER_BANK_RECONCILIATION_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'accounting',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['odoo:0.0.1'],
     MCP_SERVER_MAP['odoo-accounting:0.0.1'],
@@ -8251,7 +8269,7 @@ export const WORKER_CAMPAIGN_PLANNING_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'marketing',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1'], MCP_SERVER_MAP['slack:0.0.1']],
   skills: [
     SKILL_MAP['text-summarizer:0.0.1']
@@ -8321,7 +8339,7 @@ export const WORKER_CAT_EXPOSURE_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'insurance',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['earthdata:0.0.1'],
     MCP_SERVER_MAP['tavily:0.0.1'],
@@ -8391,7 +8409,7 @@ export const WORKER_CHANGE_DETECTION_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'earth-observation',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['earthdata:0.0.1'],
     MCP_SERVER_MAP['tavily:0.0.1'],
@@ -8467,7 +8485,7 @@ export const WORKER_CLASSIFY_ROUTE_EMAILS_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'personal-assistant',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['slack:0.0.1']],
   skills: [
     SKILL_MAP['github:0.0.1']
@@ -8589,7 +8607,7 @@ export const WORKER_CMS_ASTRO_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'personal-assistant',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [],
@@ -8746,7 +8764,7 @@ export const WORKER_CODING_TUTOR_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'personal-assistant',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['tavily:0.0.1'],
     MCP_SERVER_MAP['google-workspace:0.0.1'],
@@ -8819,7 +8837,7 @@ export const WORKER_COHORT_COMPARISON_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'life-sciences',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['huggingface:0.0.1'],
     MCP_SERVER_MAP['kaggle:0.0.1'],
@@ -8889,7 +8907,7 @@ export const WORKER_COLLECTIONS_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'accounting',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['odoo:0.0.1'],
     MCP_SERVER_MAP['odoo-accounting:0.0.1'],
@@ -8959,7 +8977,7 @@ export const WORKER_COMMUNITY_RESPONSE_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'marketing',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1'], MCP_SERVER_MAP['slack:0.0.1']],
   skills: [
     SKILL_MAP['text-summarizer:0.0.1']
@@ -9029,7 +9047,7 @@ export const WORKER_COMPETITIVE_INTELLIGENCE_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'market-analyst',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['tavily:0.0.1'],
     MCP_SERVER_MAP['salesforce:0.0.1'],
@@ -9105,7 +9123,7 @@ export const WORKER_COMPLIANCE_REPORT_DRAFT_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'accounting',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -9177,7 +9195,7 @@ export const WORKER_COMPREHENSIVE_SALES_ANALYTICS_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'market-analyst',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['filesystem:0.0.1'],
     MCP_SERVER_MAP['slack:0.0.1'],
@@ -9281,7 +9299,7 @@ export const WORKER_COMPUTE_COST_OPTIMIZER_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'life-sciences',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['huggingface:0.0.1'],
     MCP_SERVER_MAP['kaggle:0.0.1'],
@@ -9351,7 +9369,7 @@ export const WORKER_CONTENT_REPURPOSING_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'marketing',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1'], MCP_SERVER_MAP['slack:0.0.1']],
   skills: [
     SKILL_MAP['text-summarizer:0.0.1']
@@ -9421,8 +9439,11 @@ export const WORKER_CRAWLER_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'market-analyst',
   enabled: true,
   listed: false,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
-  modelAdditionals: ['alibaba:qwen-max'],
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
+  modelAdditionals: [
+    'bedrock:us.anthropic.claude-sonnet-4-6',
+    'alibaba:qwen-max',
+  ],
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
     SKILL_MAP['github:0.0.1']
@@ -9540,7 +9561,7 @@ export const WORKER_CROP_MONITORING_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'earth-observation',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['earthdata:0.0.1'],
     MCP_SERVER_MAP['tavily:0.0.1'],
@@ -9610,7 +9631,7 @@ export const WORKER_CURTAILMENT_INVESTIGATOR_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'energy',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1'], MCP_SERVER_MAP['chart:0.0.1']],
   skills: [
     SKILL_MAP['text-summarizer:0.0.1']
@@ -9680,7 +9701,7 @@ export const WORKER_CUSTOMER_CHURN_ANALYSIS_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'market-analyst',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -9751,8 +9772,11 @@ export const WORKER_CUSTOMER_INTERVIEWER_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'market-analyst',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
-  modelAdditionals: ['alibaba:qwen-max'],
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
+  modelAdditionals: [
+    'bedrock:us.anthropic.claude-sonnet-4-6',
+    'alibaba:qwen-max',
+  ],
   mcpServers: [],
   skills: [
     SKILL_MAP['text-summarizer:0.0.1']
@@ -9878,7 +9902,7 @@ export const WORKER_DATA_ACQUISITION_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'data-engineering',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['kaggle:0.0.1'],
     MCP_SERVER_MAP['filesystem:0.0.1'],
@@ -9991,8 +10015,11 @@ export const WORKER_DATA_ANALYST_AGENTSPEC_0_0_2: Agentspec = {
   domain: undefined,
   enabled: true,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
-  modelAdditionals: ['alibaba:qwen-max'],
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
+  modelAdditionals: [
+    'bedrock:us.anthropic.claude-sonnet-4-6',
+    'alibaba:qwen-max',
+  ],
   mcpServers: [],
   skills: [
     SKILL_MAP['datalayer-library-publish:0.0.1']
@@ -10234,7 +10261,7 @@ export const WORKER_DISASTER_ASSESSMENT_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'earth-observation',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['earthdata:0.0.1'],
     MCP_SERVER_MAP['tavily:0.0.1'],
@@ -10310,8 +10337,11 @@ export const WORKER_DOCUMENT_QA_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'personal-assistant',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
-  modelAdditionals: ['alibaba:qwen-max'],
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
+  modelAdditionals: [
+    'bedrock:us.anthropic.claude-sonnet-4-6',
+    'alibaba:qwen-max',
+  ],
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -10383,7 +10413,7 @@ export const WORKER_END_OF_MONTH_PERFORMANCE_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'market-analyst',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['salesforce:0.0.1']],
   skills: [
     SKILL_MAP['pdf:0.0.1']
@@ -10618,7 +10648,7 @@ export const WORKER_ENERGY_TRADING_ANALYST_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'energy',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1'], MCP_SERVER_MAP['chart:0.0.1']],
   skills: [
     SKILL_MAP['text-summarizer:0.0.1']
@@ -10682,7 +10712,7 @@ export const WORKER_ENVIRONMENTAL_COMPLIANCE_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'earth-observation',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['earthdata:0.0.1'],
     MCP_SERVER_MAP['tavily:0.0.1'],
@@ -10752,7 +10782,7 @@ export const WORKER_EVENT_RESPONSE_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'insurance',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['earthdata:0.0.1'],
     MCP_SERVER_MAP['tavily:0.0.1'],
@@ -10822,7 +10852,7 @@ export const WORKER_EVIDENCE_REPOSITORY_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'market-analyst',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['tavily:0.0.1'],
     MCP_SERVER_MAP['salesforce:0.0.1'],
@@ -10892,7 +10922,7 @@ export const WORKER_EXPENSE_AUDIT_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'accounting',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['odoo:0.0.1'],
     MCP_SERVER_MAP['odoo-accounting:0.0.1'],
@@ -10962,7 +10992,7 @@ export const WORKER_EXPOSURE_DATA_QUALITY_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'insurance',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['earthdata:0.0.1'],
     MCP_SERVER_MAP['tavily:0.0.1'],
@@ -11042,7 +11072,7 @@ export const WORKER_EXTRACT_DATA_FROM_FILES_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'data-engineering',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
     SKILL_MAP['pdf:0.0.1']
@@ -11169,7 +11199,7 @@ export const WORKER_EXTRACT_KPIS_FROM_QUARTERLY_PDF_AGENTSPEC_0_0_1: Agentspec =
     domain: 'accounting',
     enabled: false,
     listed: true,
-    model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+    model: 'bedrock:us.anthropic.claude-sonnet-5-5',
     mcpServers: [],
     skills: [
       SKILL_MAP['events:0.0.1']
@@ -11242,7 +11272,7 @@ export const WORKER_FACTOR_ANALYSIS_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'capital-markets',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['alphavantage:0.0.1'],
     MCP_SERVER_MAP['chart:0.0.1'],
@@ -11309,7 +11339,7 @@ export const WORKER_FINANCIAL_VIZ_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'accounting',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['alphavantage:0.0.1'],
     MCP_SERVER_MAP['chart:0.0.1'],
@@ -11421,8 +11451,11 @@ export const WORKER_FUNCTIONAL_ANALYST_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: true,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
-  modelAdditionals: ['alibaba:qwen-max'],
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
+  modelAdditionals: [
+    'bedrock:us.anthropic.claude-sonnet-4-6',
+    'alibaba:qwen-max',
+  ],
   mcpServers: [],
   skills: [
     SKILL_MAP['datalayer-library-publish:0.0.1']
@@ -11625,7 +11658,7 @@ export const WORKER_GENERATE_WEEKLY_REPORTS_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'marketing',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['filesystem:0.0.1'],
     MCP_SERVER_MAP['slack:0.0.1'],
@@ -11768,7 +11801,7 @@ export const WORKER_GITHUB_AGENT_SPEC_0_0_1: Agentspec = {
   domain: 'data-engineering',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['google-workspace:0.0.1']],
   skills: [
     SKILL_MAP['github:0.0.1']
@@ -11869,7 +11902,7 @@ export const WORKER_GRID_FORECAST_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'energy',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1'], MCP_SERVER_MAP['chart:0.0.1']],
   skills: [
     SKILL_MAP['text-summarizer:0.0.1']
@@ -11939,7 +11972,7 @@ export const WORKER_INFORMATION_ROUTING_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'personal-assistant',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['google-workspace:0.0.1'],
     MCP_SERVER_MAP['github:0.0.1'],
@@ -12044,7 +12077,7 @@ export const WORKER_INFRASTRUCTURE_MONITORING_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'earth-observation',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['earthdata:0.0.1'],
     MCP_SERVER_MAP['tavily:0.0.1'],
@@ -12114,7 +12147,7 @@ export const WORKER_INSURANCE_CLAIMS_REVIEW_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'insurance',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -12185,7 +12218,7 @@ export const WORKER_INTERVIEW_GUIDE_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'market-analyst',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['tavily:0.0.1'],
     MCP_SERVER_MAP['salesforce:0.0.1'],
@@ -12261,7 +12294,7 @@ export const WORKER_INVENTORY_DEMAND_PLANNING_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'market-analyst',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -12328,7 +12361,7 @@ export const WORKER_JOB_HUNTER_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'personal-assistant',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['tavily:0.0.1'],
     MCP_SERVER_MAP['google-workspace:0.0.1'],
@@ -12401,8 +12434,11 @@ export const WORKER_MAIL_TRIAGE_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'personal-assistant',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
-  modelAdditionals: ['alibaba:qwen-max'],
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
+  modelAdditionals: [
+    'bedrock:us.anthropic.claude-sonnet-4-6',
+    'alibaba:qwen-max',
+  ],
   mcpServers: [MCP_SERVER_MAP['google-workspace:0.0.1']],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [],
@@ -12484,8 +12520,11 @@ export const WORKER_MARKETER_AGENTSPEC_0_0_1: Agentspec = {
       ],
     ],
   },
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
-  modelAdditionals: ['alibaba:qwen-max'],
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
+  modelAdditionals: [
+    'bedrock:us.anthropic.claude-sonnet-4-6',
+    'alibaba:qwen-max',
+  ],
   mcpServers: [
     MCP_SERVER_MAP['discord:0.0.1'],
     MCP_SERVER_MAP['linkedin:0.0.1'],
@@ -12677,7 +12716,7 @@ export const WORKER_MARKETING_ANALYTICS_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'marketing',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -12744,7 +12783,7 @@ export const WORKER_MEDICAL_RESEARCH_REVIEW_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'life-sciences',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -12817,7 +12856,7 @@ export const WORKER_MODEL_COMPARISON_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'insurance',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['earthdata:0.0.1'],
     MCP_SERVER_MAP['tavily:0.0.1'],
@@ -12887,7 +12926,7 @@ export const WORKER_MONITOR_SALES_KPIS_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'market-analyst',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
     SKILL_MAP['github:0.0.1']
@@ -13032,7 +13071,7 @@ export const WORKER_MONTH_END_CLOSE_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'accounting',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['odoo:0.0.1'],
     MCP_SERVER_MAP['odoo-accounting:0.0.1'],
@@ -13102,7 +13141,7 @@ export const WORKER_NEWS_AGGREGATOR_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'personal-assistant',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
     SKILL_MAP['text-summarizer:0.0.1']
@@ -13244,7 +13283,7 @@ export const WORKER_OPTIMIZE_DYNAMIC_PRICING_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'market-analyst',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
     SKILL_MAP['pdf:0.0.1']
@@ -13404,7 +13443,7 @@ export const WORKER_OPTIMIZE_GRID_OPERATIONS_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'energy',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
     SKILL_MAP['pdf:0.0.1']
@@ -13551,7 +13590,7 @@ export const WORKER_OPTIMIZE_SQL_QUERY_PERFORMANCE_AGENTSPEC_0_0_1: Agentspec =
     domain: 'data-engineering',
     enabled: false,
     listed: true,
-    model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+    model: 'bedrock:us.anthropic.claude-sonnet-5-5',
     mcpServers: [],
     skills: [
       SKILL_MAP['events:0.0.1']
@@ -13618,7 +13657,7 @@ export const WORKER_PERFORMANCE_ATTRIBUTION_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'capital-markets',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['alphavantage:0.0.1'],
     MCP_SERVER_MAP['chart:0.0.1'],
@@ -13689,7 +13728,7 @@ export const WORKER_PIPELINE_DEBUGGER_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'life-sciences',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['huggingface:0.0.1'],
     MCP_SERVER_MAP['kaggle:0.0.1'],
@@ -13766,7 +13805,7 @@ export const WORKER_PITCHER_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'personal-assistant',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [],
@@ -13944,7 +13983,7 @@ export const WORKER_PORTFOLIO_ACCUMULATION_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'insurance',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['earthdata:0.0.1'],
     MCP_SERVER_MAP['tavily:0.0.1'],
@@ -14014,7 +14053,7 @@ export const WORKER_PORTFOLIO_RISK_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'capital-markets',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['alphavantage:0.0.1'],
     MCP_SERVER_MAP['chart:0.0.1'],
@@ -14081,7 +14120,7 @@ export const WORKER_PREDICTIVE_MAINTENANCE_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'energy',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1'], MCP_SERVER_MAP['chart:0.0.1']],
   skills: [
     SKILL_MAP['text-summarizer:0.0.1']
@@ -14145,7 +14184,7 @@ export const WORKER_PROCESS_CITIZEN_REQUESTS_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'public-sector',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
     SKILL_MAP['pdf:0.0.1']
@@ -14300,7 +14339,7 @@ export const WORKER_PROCESS_CLINICAL_TRIAL_DATA_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'life-sciences',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
     SKILL_MAP['pdf:0.0.1']
@@ -14458,7 +14497,7 @@ export const WORKER_PROCESS_FINANCIAL_TRANSACTIONS_AGENTSPEC_0_0_1: Agentspec =
     domain: 'accounting',
     enabled: false,
     listed: true,
-    model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+    model: 'bedrock:us.anthropic.claude-sonnet-5-5',
     mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
     skills: [
       SKILL_MAP['pdf:0.0.1']
@@ -14590,7 +14629,7 @@ export const WORKER_PRODUCT_FINDER_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'personal-assistant',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['tavily:0.0.1'],
     MCP_SERVER_MAP['google-workspace:0.0.1'],
@@ -14663,7 +14702,7 @@ export const WORKER_QUANT_RESEARCH_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'capital-markets',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['alphavantage:0.0.1'],
     MCP_SERVER_MAP['chart:0.0.1'],
@@ -14730,7 +14769,7 @@ export const WORKER_RENEWABLE_ASSET_PERFORMANCE_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'energy',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1'], MCP_SERVER_MAP['chart:0.0.1']],
   skills: [
     SKILL_MAP['text-summarizer:0.0.1']
@@ -14794,7 +14833,7 @@ export const WORKER_RESEARCH_RECRUITER_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'market-analyst',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['tavily:0.0.1'],
     MCP_SERVER_MAP['salesforce:0.0.1'],
@@ -14864,7 +14903,7 @@ export const WORKER_RNA_SEQ_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'life-sciences',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['huggingface:0.0.1'],
     MCP_SERVER_MAP['kaggle:0.0.1'],
@@ -14934,7 +14973,7 @@ export const WORKER_SALES_FORECASTING_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'market-analyst',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -15001,8 +15040,11 @@ export const WORKER_SALES_PIPELINE_BOARD_REPORT_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'market-analyst',
   enabled: true,
   listed: false,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
-  modelAdditionals: ['alibaba:qwen-max'],
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
+  modelAdditionals: [
+    'bedrock:us.anthropic.claude-sonnet-4-6',
+    'alibaba:qwen-max',
+  ],
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -15074,7 +15116,7 @@ export const WORKER_SCENARIO_TESTING_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'capital-markets',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['alphavantage:0.0.1'],
     MCP_SERVER_MAP['chart:0.0.1'],
@@ -15148,7 +15190,7 @@ export const WORKER_SCHEDULED_NIGHTLY_DATA_QUALITY_CHECKS_AGENTSPEC_0_0_1: Agent
     domain: 'data-engineering',
     enabled: false,
     listed: true,
-    model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+    model: 'bedrock:us.anthropic.claude-sonnet-5-5',
     mcpServers: [],
     skills: [
       SKILL_MAP['events:0.0.1']
@@ -15219,7 +15261,7 @@ export const WORKER_SCIENTIFIC_NOTEBOOK_ASSISTANT_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'life-sciences',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -15293,8 +15335,11 @@ export const WORKER_SHOPPER_AGENTSPEC_0_0_1: Agentspec = {
   enabled: true,
   listed: true,
   optional: { mcpServers: [], skills: ['crawl'], atLeastOne: [] },
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
-  modelAdditionals: ['alibaba:qwen-max'],
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
+  modelAdditionals: [
+    'bedrock:us.anthropic.claude-sonnet-4-6',
+    'alibaba:qwen-max',
+  ],
   mcpServers: [MCP_SERVER_MAP['shopify:0.0.1']],
   skills: [
     SKILL_MAP['crawl:0.0.1']
@@ -15397,7 +15442,7 @@ export const WORKER_SINGLE_CELL_PROCESSING_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'life-sciences',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['huggingface:0.0.1'],
     MCP_SERVER_MAP['kaggle:0.0.1'],
@@ -15467,7 +15512,7 @@ export const WORKER_SOCIAL_LISTENING_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'marketing',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1'], MCP_SERVER_MAP['slack:0.0.1']],
   skills: [
     SKILL_MAP['text-summarizer:0.0.1']
@@ -15537,7 +15582,7 @@ export const WORKER_SOCIAL_MARKETER_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'marketing',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1'], MCP_SERVER_MAP['slack:0.0.1']],
   skills: [
     SKILL_MAP['text-summarizer:0.0.1']
@@ -15677,7 +15722,7 @@ export const WORKER_SPATIAL_DATA_ANALYSIS_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'earth-observation',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['earthdata:0.0.1'],
     MCP_SERVER_MAP['eurus:0.0.1'],
@@ -15764,8 +15809,11 @@ export const WORKER_STEWARD_AWS_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'cloud-operations',
   enabled: true,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
-  modelAdditionals: ['alibaba:qwen-max'],
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
+  modelAdditionals: [
+    'bedrock:us.anthropic.claude-sonnet-4-6',
+    'alibaba:qwen-max',
+  ],
   mcpServers: [],
   skills: [
     SKILL_MAP['text-summarizer:0.0.1']
@@ -15929,7 +15977,7 @@ export const WORKER_SUMMARIZE_DOCUMENTS_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'personal-assistant',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
     SKILL_MAP['pdf:0.0.1']
@@ -16044,7 +16092,7 @@ export const WORKER_SYNC_CRM_CONTACTS_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'marketing',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['filesystem:0.0.1'],
     MCP_SERVER_MAP['slack:0.0.1'],
@@ -16161,8 +16209,11 @@ export const WORKER_TERRA_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'earth-observation',
   enabled: true,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
-  modelAdditionals: ['alibaba:qwen-max'],
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
+  modelAdditionals: [
+    'bedrock:us.anthropic.claude-sonnet-4-6',
+    'alibaba:qwen-max',
+  ],
   mcpServers: [MCP_SERVER_MAP['earthdata:0.0.1']],
   skills: [
     SKILL_MAP['image:0.0.1']
@@ -16295,7 +16346,7 @@ export const WORKER_THEMATIC_ANALYSIS_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'market-analyst',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['tavily:0.0.1'],
     MCP_SERVER_MAP['salesforce:0.0.1'],
@@ -16365,7 +16416,7 @@ export const WORKER_TRAVEL_RECOMMENDER_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'personal-assistant',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['tavily:0.0.1'],
     MCP_SERVER_MAP['google-workspace:0.0.1'],
@@ -16443,8 +16494,11 @@ export const WORKER_TRAVELLER_AGENTSPEC_0_0_1: Agentspec = {
     skills: ['crawl'],
     atLeastOne: [],
   },
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
-  modelAdditionals: ['alibaba:qwen-max'],
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
+  modelAdditionals: [
+    'bedrock:us.anthropic.claude-sonnet-4-6',
+    'alibaba:qwen-max',
+  ],
   mcpServers: [
     MCP_SERVER_MAP['kiwi:0.0.1'],
     MCP_SERVER_MAP['overture:0.0.1'],
@@ -16558,7 +16612,7 @@ export const WORKER_TRENDS_SEEKER_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'personal-assistant',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['tavily:0.0.1'],
     MCP_SERVER_MAP['google-workspace:0.0.1'],
@@ -16631,7 +16685,7 @@ export const WORKER_VARIANT_ANALYSIS_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'life-sciences',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['huggingface:0.0.1'],
     MCP_SERVER_MAP['kaggle:0.0.1'],
@@ -16707,7 +16761,7 @@ export const WORKER_WEEKLY_EXECUTIVE_BRIEFING_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'personal-assistant',
   enabled: false,
   listed: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']

@@ -104,10 +104,13 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
     lines += [
         "}",
         "",
-        "#: The engines an agent may name, the default first.",
-        "RUNTIME_ENGINES: tuple[str, ...] = tuple(RUNTIME_ENGINE_CATALOGUE)",
+        "#: The engines an agent may name, the default first: the enabled ones alone.",
+        "#: A disabled engine stays in the catalogue and is not offered or accepted.",
+        "RUNTIME_ENGINES: tuple[str, ...] = tuple(",
+        "    engine_id for engine_id, spec in RUNTIME_ENGINE_CATALOGUE.items() if spec.enabled",
+        ")",
         "",
-        "#: The engine of an agent that names none.",
+        "#: The engine of an agent that names none: the first enabled one.",
         "DEFAULT_RUNTIME_ENGINE = RUNTIME_ENGINES[0]",
         "",
         "#: The harnesses each engine can run; an engine absent here runs any.",
@@ -132,7 +135,9 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
 
 def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     """The TypeScript catalogue of the runtime engines."""
-    ids = ", ".join(f"'{spec['id']}'" for spec in specs)
+    enabled = [spec for spec in specs if spec["enabled"]]
+    ids = ", ".join(f"'{spec['id']}'" for spec in enabled)
+    all_ids = ", ".join(f"'{spec['id']}'" for spec in specs)
     lines = [
         "/*",
         " * Copyright (c) 2025-2026 Datalayer, Inc.",
@@ -152,14 +157,24 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         "",
         "import type { RuntimeEngineSpec } from '../types/agentspecs';",
         "",
-        "/** The engines an agent may name (`runtime_engine`), the default first. */",
+        "/**",
+        " * The engines an agent may name (`runtime_engine`), the default first: the",
+        " * enabled ones alone. A disabled engine stays in the catalogue and is not",
+        " * offered or accepted.",
+        " */",
         f"export const RUNTIME_ENGINES = [{ids}] as const;",
         "",
         "/** What runs and hosts an agent. */",
         "export type RuntimeEngine = (typeof RUNTIME_ENGINES)[number];",
         "",
-        "/** The engine of an agent that names none. */",
-        f"export const DEFAULT_RUNTIME_ENGINE: RuntimeEngine = '{specs[0]['id']}';",
+        "/** Every engine the catalogue knows, enabled or not. */",
+        f"export const RUNTIME_ENGINE_IDS = [{all_ids}] as const;",
+        "",
+        "/** An engine of the catalogue, enabled or not. */",
+        "export type RuntimeEngineId = (typeof RUNTIME_ENGINE_IDS)[number];",
+        "",
+        "/** The engine of an agent that names none: the first enabled one. */",
+        f"export const DEFAULT_RUNTIME_ENGINE: RuntimeEngine = '{enabled[0]['id']}';",
         "",
     ]
     for spec in specs:
@@ -177,15 +192,18 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
             "",
         ]
     lines += [
-        "/** Every runtime engine, by id, the default first. */",
-        "export const RUNTIME_ENGINE_CATALOGUE: Record<RuntimeEngine, RuntimeEngineSpec> = {",
+        "/** Every runtime engine, by id, in their order: the disabled ones too. */",
+        "export const RUNTIME_ENGINE_CATALOGUE: Record<",
+        "  RuntimeEngineId,",
+        "  RuntimeEngineSpec",
+        "> = {",
     ]
     lines += [f"  {spec['id']}: {_const(spec)}," for spec in specs]
     lines += [
         "};",
         "",
         "/** How an engine is named to a person. */",
-        "export const RUNTIME_ENGINE_LABELS: Record<RuntimeEngine, string> = {",
+        "export const RUNTIME_ENGINE_LABELS: Record<RuntimeEngineId, string> = {",
     ]
     lines += [f"  {spec['id']}: {_s(spec['name'])}," for spec in specs]
     lines += [
@@ -193,7 +211,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         "",
         "/** The harnesses an engine can run; an engine absent here runs any. */",
         "export const RUNTIME_ENGINE_HARNESSES: Partial<",
-        "  Record<RuntimeEngine, readonly string[]>",
+        "  Record<RuntimeEngineId, readonly string[]>",
         "> = {",
     ]
     lines += [
@@ -204,7 +222,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     lines += [
         "};",
         "",
-        "/** Whether a value names a runtime engine. */",
+        "/** Whether a value names a runtime engine an agent may run on (an enabled one). */",
         "export function isRuntimeEngine(value: unknown): value is RuntimeEngine {",
         "  return (RUNTIME_ENGINES as readonly unknown[]).includes(value);",
         "}",
@@ -235,6 +253,10 @@ def main() -> None:
     specs = load_runtime_engine_specs(args.specs_dir)
     if not specs:
         raise SystemExit(f"Error: no runtime engine spec in {args.specs_dir}")
+    if not any(spec["enabled"] for spec in specs):
+        raise SystemExit(
+            f"Error: no runtime engine of {args.specs_dir} is enabled: there is no default."
+        )
     args.python_output.write_text(generate_python_code(specs))
     args.typescript_output.write_text(generate_typescript_code(specs))
     print(

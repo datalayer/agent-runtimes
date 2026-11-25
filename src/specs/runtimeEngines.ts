@@ -14,13 +14,23 @@
 
 import type { RuntimeEngineSpec } from '../types/agentspecs';
 
-/** The engines an agent may name (`runtime_engine`), the default first. */
+/**
+ * The engines an agent may name (`runtime_engine`), the default first: the
+ * enabled ones alone. A disabled engine stays in the catalogue and is not
+ * offered or accepted.
+ */
 export const RUNTIME_ENGINES = ['datalayer', 'kagent', 'agentcore'] as const;
 
 /** What runs and hosts an agent. */
 export type RuntimeEngine = (typeof RUNTIME_ENGINES)[number];
 
-/** The engine of an agent that names none. */
+/** Every engine the catalogue knows, enabled or not. */
+export const RUNTIME_ENGINE_IDS = ['datalayer', 'kagent', 'agentcore'] as const;
+
+/** An engine of the catalogue, enabled or not. */
+export type RuntimeEngineId = (typeof RUNTIME_ENGINE_IDS)[number];
+
+/** The engine of an agent that names none: the first enabled one. */
 export const DEFAULT_RUNTIME_ENGINE: RuntimeEngine = 'datalayer';
 
 export const DATALAYER_RUNTIME_ENGINE_0_0_1: RuntimeEngineSpec = {
@@ -59,9 +69,9 @@ export const AGENTCORE_RUNTIME_ENGINE_0_0_1: RuntimeEngineSpec = {
   enabled: true,
 };
 
-/** Every runtime engine, by id, the default first. */
+/** Every runtime engine, by id, in their order: the disabled ones too. */
 export const RUNTIME_ENGINE_CATALOGUE: Record<
-  RuntimeEngine,
+  RuntimeEngineId,
   RuntimeEngineSpec
 > = {
   datalayer: DATALAYER_RUNTIME_ENGINE_0_0_1,
@@ -70,7 +80,7 @@ export const RUNTIME_ENGINE_CATALOGUE: Record<
 };
 
 /** How an engine is named to a person. */
-export const RUNTIME_ENGINE_LABELS: Record<RuntimeEngine, string> = {
+export const RUNTIME_ENGINE_LABELS: Record<RuntimeEngineId, string> = {
   datalayer: 'Datalayer',
   kagent: 'Kagent',
   agentcore: 'AWS AgentCore',
@@ -78,13 +88,13 @@ export const RUNTIME_ENGINE_LABELS: Record<RuntimeEngine, string> = {
 
 /** The harnesses an engine can run; an engine absent here runs any. */
 export const RUNTIME_ENGINE_HARNESSES: Partial<
-  Record<RuntimeEngine, readonly string[]>
+  Record<RuntimeEngineId, readonly string[]>
 > = {
   kagent: ['pydantic-ai'],
   agentcore: ['pydantic-ai'],
 };
 
-/** Whether a value names a runtime engine. */
+/** Whether a value names a runtime engine an agent may run on (an enabled one). */
 export function isRuntimeEngine(value: unknown): value is RuntimeEngine {
   return (RUNTIME_ENGINES as readonly unknown[]).includes(value);
 }

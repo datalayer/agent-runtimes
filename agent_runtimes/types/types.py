@@ -2269,9 +2269,17 @@ class Agentspec(BaseModel):
     @field_validator("runtime_engine")
     @classmethod
     def _runtime_engine_in_catalogue(cls, value: str) -> str:
-        """An engine the runtime engine catalogue does not have is refused."""
-        from agent_runtimes.specs.runtime_engines import RUNTIME_ENGINES
+        """An engine the runtime engine catalogue does not have, or has disabled, is refused."""
+        from agent_runtimes.specs.runtime_engines import (
+            RUNTIME_ENGINE_CATALOGUE,
+            RUNTIME_ENGINES,
+        )
 
+        if value in RUNTIME_ENGINE_CATALOGUE and value not in RUNTIME_ENGINES:
+            raise ValueError(
+                f"the runtime_engine {value!r} is not enabled: one of "
+                f"{', '.join(RUNTIME_ENGINES)}"
+            )
         if value not in RUNTIME_ENGINES:
             raise ValueError(
                 f"there is no runtime_engine named {value!r}: one of "

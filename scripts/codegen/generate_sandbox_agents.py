@@ -74,7 +74,7 @@ tags:
   - {key}
 
 enabled: false
-model: "bedrock:us.anthropic.claude-sonnet-4-6"
+model: "bedrock:us.anthropic.claude-sonnet-5-5"
 harness: pydantic-ai
 runtime_engine: datalayer
 identity: datalayer-acting-agent

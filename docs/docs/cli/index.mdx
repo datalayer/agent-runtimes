@@ -219,10 +219,11 @@ Its standard output has this shape (the runtime's name, the models offered and t
      Is this support ticket urgent? 'Payouts have failed for 3 days.'
   …
 
-● Models on RUNTIME on Datalayer (ai-agents-env) (2)
-  ai-inference at … serves bedrock:us.anthropic.claude-sonnet-4-6, alibaba:qwen-max.
+● Models on RUNTIME on Datalayer (ai-agents-env) (3)
+  ai-inference at … serves bedrock:us.anthropic.claude-sonnet-5-5, bedrock:us.anthropic.claude-sonnet-4-6, alibaba:qwen-max.
 
   Cloud
+    ● bedrock:us.anthropic.claude-sonnet-5-5
     ● bedrock:us.anthropic.claude-sonnet-4-6
     ● alibaba:qwen-max
 
@@ -237,7 +238,7 @@ Its standard output has this shape (the runtime's name, the models offered and t
   alibaba:qwen-max
 
 I am Qwen, a large language model created by Alibaba Cloud.
-RUNTIME on Datalayer (ai-agents-env) does not offer bedrock:us.anthropic.claude-opus-5 to this agent: nothing was switched. ai-inference at … serves bedrock:us.anthropic.claude-sonnet-4-6, alibaba:qwen-max.
+RUNTIME on Datalayer (ai-agents-env) does not offer bedrock:us.anthropic.claude-opus-5 to this agent: nothing was switched. ai-inference at … serves bedrock:us.anthropic.claude-sonnet-5-5, bedrock:us.anthropic.claude-sonnet-4-6, alibaba:qwen-max.
 ```
 
 Only what ai-inference serves is listed: no local models, no `Not running: …` line for local runtimes. Standard error has the launch, `[1/5] /suggestions` to `[5/5] /models bedrock:us.anthropic.claude-opus-5`, and `Stopped RUNTIME.` at the end. The exit code is `0`.

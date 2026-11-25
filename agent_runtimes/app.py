@@ -78,6 +78,7 @@ from .routes import (
     mcp_router,
     mcp_ui_router,
     notifications_router,
+    owner_router,
     protocols_router,
     sandbox_router,
     set_a2a_app,
@@ -1725,6 +1726,8 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     app.include_router(spaces_router, prefix=config.api_prefix)
     # A skill publishes one owned artifact without receiving the owner's token.
     app.include_router(library_router, prefix=config.api_prefix)
+    # Who the runtime runs for, and its agent's events, asked by a skill.
+    app.include_router(owner_router, prefix=config.api_prefix)
     app.include_router(tool_approvals_router, prefix=config.api_prefix)
     app.include_router(tool_approvals_legacy_router)
     app.include_router(tool_approvals_ws_router)

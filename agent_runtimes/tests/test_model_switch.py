@@ -43,7 +43,9 @@ def _given_a_token() -> None:
     give_inference_token("the-runtime-token")
 
 
-SONNET = "bedrock:us.anthropic.claude-sonnet-4-6"
+SONNET = "bedrock:us.anthropic.claude-sonnet-5-5"
+#: The former default, which the agent may still be switched to.
+FORMER = "bedrock:us.anthropic.claude-sonnet-4-6"
 QWEN = "alibaba:qwen-max"
 OPUS = "bedrock:us.anthropic.claude-opus-5"
 SPEC = "example-simple"
@@ -154,7 +156,7 @@ def test_a_switch_recreates_the_agent_on_the_model_asked_for(
     )
     _configure(runtime, agent_id=AGENT, agent_spec=THROUGH_AI_INFERENCE)
     assert agents_route._agentspecs[AGENT]["model"] == SONNET
-    assert offered.offered_model_ids(AGENT) == [SONNET, QWEN]
+    assert offered.offered_model_ids(AGENT) == [SONNET, FORMER, QWEN]
 
     tux = _tux(runtime, monkeypatch)
     listing = _models(tux)
@@ -169,7 +171,7 @@ def test_a_switch_recreates_the_agent_on_the_model_asked_for(
     assert agents_route._agentspecs[AGENT]["model"] == QWEN
     assert creation_spy["pydantic_model"] == QWEN
     # It may be switched back: its models are the same.
-    assert offered.offered_model_ids(AGENT) == [SONNET, QWEN]
+    assert offered.offered_model_ids(AGENT) == [SONNET, FORMER, QWEN]
     _models(tux, SONNET)
     assert agents_route._agentspecs[AGENT]["model"] == SONNET
 
@@ -230,7 +232,7 @@ def test_a_library_agent_off_the_default_model_is_switched_too(
 
     tux = _tux(runtime, monkeypatch)
     tux.agent_session.model = QWEN
-    assert "Model: Bedrock Claude Sonnet 4.6" in _models(tux, SONNET)
+    assert "Model: Bedrock Claude Sonnet 5.5" in _models(tux, SONNET)
     assert agents_route._agentspecs[AGENT]["model"] == SONNET
     assert creation_spy["pydantic_model"] == SONNET
     assert offered.offered_model_ids(AGENT) == [QWEN, SONNET]

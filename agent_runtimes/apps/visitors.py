@@ -547,6 +547,7 @@ class OwnRoutesOnly:
             a_deployment_is_served,
             launched_for,
         )
+        from agent_runtimes.routes.owner import sandbox_may_ask
 
         visitors = visitors_runtime()
         served = a_deployment_is_served()
@@ -577,6 +578,9 @@ class OwnRoutesOnly:
             # A skill publishing its owner's work, from the sandbox
             # (`routes.library`), which holds no pod secret.
             or (is_loopback(host) and sandbox_may_publish(method, scope["path"]))
+            # A skill asking who the runtime runs for, or for its agent's
+            # events (`routes.owner`): no credential reaches the sandbox.
+            or (is_loopback(host) and sandbox_may_ask(method, scope["path"]))
             # Launched for a deployment, it is held here from its launch; the
             # one thing it still answers is the making of that deployment's
             # agent (`principal.agent_refused_here`, in the route).

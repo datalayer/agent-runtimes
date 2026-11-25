@@ -707,6 +707,32 @@ not listed, not loaded and not run. `GET /api/v1/configure/skills` says for
 each skill its `optional_env_vars`, its `any_of_env_vars`, which are set
 (`set_env_vars`, by name) and whether it is `ready`.
 
+**A skill that acts as the account asks the runtime, not the sandbox.** Four
+skills act as the Datalayer account their agent runs for: `datalayer-whoami`
+(who the person is), `events` (the agent's events), `datalayer-email` (a mail
+to the person) and `datalayer-library-publish` (a publication in the Library).
+None reads a key from the sandbox, which holds none: each script calls the
+runtime on the pod's loopback, and the runtime acts with the identity it
+holds. `GET /api/v1/owner` answers the account the runtime runs for (handle,
+name, email, roles, avatar), and `/api/v1/owner/events` creates, lists, reads
+and changes the agent's events at ai-agents; the mail and the publication
+have their own routes. A runtime a person started from their account answers
+with their profile. A runtime that serves an application acts as the
+application's principal, never as whoever launched it, and says its owner's
+public face alone: handle, name and avatar, no email, no roles. The visitors'
+runtime, and a runtime started with no account, run for nobody and say so in
+a sentence. Only the pod's loopback is answered, no redirect is followed with
+the identity, and on a runtime that serves an application the events are
+reached only while code the agent was let run is running.
+
+So no variable says whether such a skill can work: the runtime does.
+`GET /api/v1/configure/skills` marks the four `needs_identity`, and each is
+`ready` only while the runtime holds the identity it needs, with
+`not_ready_reason` saying why when it does not. An application's equipment
+(`GET /api/v1/apps/agents/{agent}/equipment`) says the same of each skill its
+agent declares: `ready`, and the reason beside an active skill that cannot
+work yet.
+
 **An application's runtime is launched with its Appspec.** Whoever launches
 one for an application sends its Appspec with the launch —
 `RuntimesClient.create(app_spec=…)` refuses `app_uid` without it, and so does
