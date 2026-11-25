@@ -3,6 +3,9 @@
 
 """Model functions and configuration types."""
 
+from typing import TYPE_CHECKING, Any
+
+from . import types as _types
 from .types import (
     AGENT_CAPABILITIES,
     BUILTIN_HARNESSES,
@@ -172,7 +175,24 @@ from .types import (
     harness_problems,
 )
 
+if TYPE_CHECKING:
+    from .types import RUNTIME_ENGINES
+else:
+
+    def __getattr__(name: str) -> Any:
+        """A name the runtime engine catalogue has now, as ``.types`` finds it."""
+        if name in _types._FROM_RUNTIME_ENGINES:
+            return getattr(_types, name)
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__() -> list[str]:
+    """The package's names, those read from the runtime engine catalogue included."""
+    return sorted({*globals(), *_types._FROM_RUNTIME_ENGINES})
+
+
 __all__ = [
+    "RUNTIME_ENGINES",
     "AgentSkillSpec",
     "Agentspec",
     "AgentspecOptional",
