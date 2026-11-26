@@ -137,6 +137,51 @@ def test_iam_not_reached_proves_nothing_and_is_asked_again_soon(
     assert callers.runtime_owner_uid() == ""
 
 
+def test_an_owner_another_call_named_meanwhile_is_not_undone_by_a_failed_lookup(
+    actor: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Two first calls of the owner at once: one names the owner, the other's IAM times out."""
+
+    async def concurrent_success_then_timeout(
+        url: str, token: str
+    ) -> tuple[int, tuple[str, ...]]:
+        callers._RESERVATION_OWNER["uid"] = OWNER  # the other call's lookup landed
+        raise httpx.ReadTimeout("IAM was slow for this one")
+
+    monkeypatch.setattr(callers, "_fetch_reservations", concurrent_success_then_timeout)
+    assert _proof("owner-token")[0] == callers.Proof(True, kind="owner")
+
+
+def test_a_proof_held_is_not_replaced_by_a_later_failure(
+    actor: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A proof a concurrent call of the same token stored stands over this call's failure."""
+    import hashlib
+    import time as clock
+
+    key = hashlib.sha256(b"owner-token").hexdigest()
+
+    async def fails(token: str, verifier: Any) -> tuple[callers.Proof, float]:
+        callers._PROOFS[key] = (
+            callers.Proof(True, kind="owner"),
+            clock.monotonic() + 60,
+        )
+        return callers.Proof(False, reason="unverifiable"), callers.PROOF_RETRY_SECONDS
+
+    monkeypatch.setattr(callers, "_proof_of_token", fails)
+    scope = {
+        "type": "http",
+        "method": "GET",
+        "path": "/api/v1/agents",
+        "client": ("203.0.113.9", 1),
+        "headers": [(b"authorization", b"Bearer owner-token")],
+        "query_string": b"",
+    }
+    proof = asyncio.run(callers.proves_the_runtime(scope, _Verifier()))
+    assert proof == callers.Proof(True, kind="owner")
+    assert callers._PROOFS[key][0].sufficient
+
+
 def test_an_application_s_token_never_asks(
     actor: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

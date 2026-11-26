@@ -955,6 +955,11 @@ async def proves_the_runtime(scope: Any, verifier: Optional[Any] = None) -> Proo
     proof, seconds = await _proof_of_token(token, verifier or VERIFIER)
     for stale in [k for k, (_, end) in _PROOFS.items() if end <= time.monotonic()]:
         del _PROOFS[stale]
+    held_now = _PROOFS.get(key)
+    if held_now and held_now[0].sufficient and not proof.sufficient:
+        # A concurrent call of the same token proved it meanwhile: a later
+        # failure to ask the platform does not undo that proof.
+        return held_now[0]
     while len(_PROOFS) >= CACHE_SIZE:
         del _PROOFS[next(iter(_PROOFS))]
     _PROOFS[key] = (proof, time.monotonic() + seconds)
@@ -992,6 +997,8 @@ async def _proof_of_token(token: str, verifier: Any) -> Tuple[Proof, float]:
     if not owner:
         # An actor nobody names its owner to: IAM says whose reservation it is.
         owner, reason = await owner_by_reservation(caller.uid, token)
+        # Another call's lookup may have named the owner while this one waited.
+        owner = owner or runtime_owner_uid()
         if not owner:
             seconds = (
                 PROOF_SECONDS if reason == "another-account" else PROOF_RETRY_SECONDS
