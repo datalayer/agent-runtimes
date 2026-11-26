@@ -17,7 +17,7 @@ workspace — and so a session can be handed from one to the other, which is wha
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 
 @dataclass
@@ -140,7 +140,11 @@ def older_runtime_said(version: str) -> str:
 
 
 def conversation_url(
-    server_url: str, agent: str, *, get: Any = None
+    server_url: str,
+    agent: str,
+    *,
+    get: Any = None,
+    headers: Optional[Dict[str, str]] = None,
 ) -> tuple[str, str]:
     """Where the prompt sends its turns, and what to say of it, if anything.
 
@@ -148,7 +152,9 @@ def conversation_url(
     ``agent_sessions``): one that keeps an agent's conversations as sessions
     is talked to on its agent's endpoint whose threads are sessions; one
     that does not say so — an older one, a pool not updated yet — on its
-    plain AG-UI endpoint, as before, with a sentence saying so.
+    plain AG-UI endpoint, as before, with a sentence saying so. ``headers``
+    sign the question (the local runtime's token: its loopback is no proof
+    of anybody).
 
     Raises
     ------
@@ -159,7 +165,10 @@ def conversation_url(
 
     base = server_url.rstrip("/")
     try:
-        answered = (get or httpx.get)(f"{base}/api/v1/runtime/status", timeout=30.0)
+        signed = {"headers": headers} if headers else {}
+        answered = (get or httpx.get)(
+            f"{base}/api/v1/runtime/status", timeout=30.0, **signed
+        )
     except httpx.HTTPError as refused:
         raise AgentRefused(f"The runtime did not say what it runs: {refused}") from None
     if answered.status_code >= 300:

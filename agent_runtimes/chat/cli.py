@@ -126,6 +126,7 @@ from .banner import (
     print_goodbye,
     show_banner,
 )
+from .runtime_auth import runtime_headers
 
 # Spinner frames - various styles
 SPINNER_DOTS = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
@@ -1338,7 +1339,9 @@ def run_prompts(
         # listed, paused and resumed — on a runtime that keeps them; an
         # older one is talked to as before, and said.
         try:
-            agent_url, older = conversation_url(server_url, agent_name)
+            agent_url, older = conversation_url(
+                server_url, agent_name, headers=runtime_headers()
+            )
         except AgentRefused as refused:
             _say(str(refused))
             return 1
@@ -2027,7 +2030,9 @@ def main_callback(
                 # Each thread of the prompt is a session of its agent —
                 # recorded, listed, paused and resumed — on a runtime that
                 # keeps them; an older one is talked to as before, and said.
-                url, older = conversation_url(server_url, runtime_agent_name)
+                url, older = conversation_url(
+                    server_url, runtime_agent_name, headers=runtime_headers()
+                )
                 if older:
                     startup_message = f"{startup_message}\n{GRAY}{older}{RESET}"
 
