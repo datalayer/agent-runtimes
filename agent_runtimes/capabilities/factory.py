@@ -575,7 +575,10 @@ def build_capabilities_from_agent_spec(
         capabilities.append(voicing)
 
     # Always enforce user-selected skills and MCP tool toggles.
-    capabilities.extend(build_default_choice_guardrails(agent_id=agent_id))
+    # The spec's approval patterns, already built above, ask in codemode too.
+    capabilities.extend(
+        build_default_choice_guardrails(agent_id=agent_id, capabilities=capabilities)
+    )
 
     # History compaction keeps the input under the model's declared
     # ``tokens_limit`` by summarizing older messages before each request.

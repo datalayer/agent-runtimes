@@ -343,6 +343,19 @@ def _get_agent_mcp_approved_tools_by_server(
     return approved_tools_in_force(agent_id, result, enabled_by_server, by_default)
 
 
+def is_mcp_tool_asked(agent_id: str | None, tool_name: str) -> bool:
+    """Whether the person said this tool asks before it runs, on any server of the agent.
+
+    The name may carry its server (``tavily__tavily_search``, ``tavily.tavily_search``).
+    """
+    bare = str(tool_name or "")
+    for separator in ("__", "."):
+        if separator in bare:
+            bare = bare.split(separator, 1)[1]
+    asked = _MCP_ASKED_TOOLS_BY_AGENT.get(_stream_key(agent_id), {})
+    return any(bare in tools or tool_name in tools for tools in asked.values())
+
+
 def get_agent_read_only_mcp_tools_by_server(
     agent_id: str | None,
 ) -> dict[str, list[str]]:

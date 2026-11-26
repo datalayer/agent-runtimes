@@ -79,8 +79,10 @@ def runtime(monkeypatch: pytest.MonkeyPatch) -> Iterator[Dict[str, Any]]:
     enabled = {server: list(tools) for server, tools in ENABLED.items()}
     monkeypatch.setattr(
         read_only_tools,
-        "_running_config",
-        lambda server_id, catalogue_id: configs.get(server_id),
+        "_running_configs",
+        lambda server_id, catalogue_id: (
+            [configs[server_id]] if server_id in configs else []
+        ),
     )
     monkeypatch.setattr(
         pubsub, "_get_agent_mcp_enabled_tools_by_server", lambda agent_id: enabled
@@ -292,3 +294,159 @@ def test_the_status_says_which_tools_run_without_asking(
     assert approved["overture"] == ["overture_place_details", "overture_search_places"]
     assert approved["google-workspace"] == ["search_gmail_messages"]
     assert approved["github"] == [] and approved["my-server"] == []
+
+
+# --- review of 1.8.10 -------------------------------------------------------------
+
+
+def test_a_custom_endpoint_under_a_catalogue_id_in_codemode_makes_its_tools_ask(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Trust is read off every config the runtime reaches a server with, codemode's
+    registries included: one that is not the catalogue's and the tools ask."""
+    catalogued = MCP_SERVER_CATALOG["overture"]
+    monkeypatch.setattr(read_only_tools, "_CODEMODE_CONFIGS", {})
+
+    class _Lifecycle:
+        def get_all_running_servers(self) -> list:
+            return []
+
+    class _NoManager:
+        def get_server(self, name: str) -> None:
+            return None
+
+    import agent_runtimes.mcp as mcp_package
+    import agent_runtimes.mcp.lifecycle as lifecycle
+
+    monkeypatch.setattr(lifecycle, "get_mcp_lifecycle_manager", lambda: _Lifecycle())
+    monkeypatch.setattr(mcp_package, "get_mcp_manager", lambda: _NoManager())
+    # Nothing runs it: nothing is vouched for.
+    assert (
+        read_only_tools.read_only_tools("overture", ["overture_search_places"]) == set()
+    )
+    # Codemode reaches it as the catalogue does: its read tools run without asking.
+    read_only_tools.note_codemode_config(
+        "overture", catalogued.url, catalogued.command or "", catalogued.args or []
+    )
+    assert read_only_tools.read_only_tools("overture", ["overture_search_places"]) == {
+        "overture_search_places"
+    }
+    # Another registry runs a custom endpoint under the same id: they ask.
+    read_only_tools.note_codemode_config("overture", "https://example.com/mcp", "", [])
+    assert (
+        read_only_tools.read_only_tools("overture", ["overture_search_places"]) == set()
+    )
+
+
+@pytest.mark.asyncio
+async def test_the_factory_path_asks_for_a_spec_pattern_on_a_read_tool_from_codemode(
+    runtime: Dict[str, Any],
+) -> None:
+    """The process's own agent (CLI start) is built by the factory: its MCP guardrail
+    carries the spec's patterns, so a read tool they name asks from codemode."""
+    from types import SimpleNamespace
+
+    from agent_runtimes.capabilities.factory import build_capabilities_from_agent_spec
+
+    spec = SimpleNamespace(
+        id="probe",
+        capabilities=[{"tool_approval": {"tools": ["overture_search_places"]}}],
+        guardrails=None,
+        advanced=None,
+        model=None,
+    )
+    capabilities = build_capabilities_from_agent_spec(cast(Any, spec), agent_id=AGENT)
+    [guardrail] = [
+        c for c in capabilities if isinstance(c, MCPToolsGuardrailCapability)
+    ]
+    assert guardrail.requiring_approval == ["overture_search_places"]
+    manager = _Manager()
+    guardrail._approval_manager = manager
+    names = {tool for tools in runtime["enabled"].values() for tool in tools}
+    cast(Any, guardrail)._known_mcp_tool_names = lambda: names
+    cast(Any, guardrail)._enabled_tool_names = lambda: names
+    await _from_codemode(guardrail, "overture", "overture_search_places")
+    await _from_codemode(guardrail, "overture", "overture_place_details")
+    assert manager.asked == ["overture_search_places"]
+
+
+def test_a_tool_the_person_said_must_ask_reuses_no_earlier_approval(
+    runtime: Dict[str, Any],
+) -> None:
+    from agent_runtimes.guardrails.tool_approvals import _asked_by_person
+
+    assert _asked_by_person(AGENT, "overture__overture_search_places") is False
+    asked = pubsub._MCP_ASKED_TOOLS_BY_AGENT.setdefault(pubsub._stream_key(AGENT), {})
+    asked.setdefault("overture", set()).add("overture_search_places")
+    assert _asked_by_person(AGENT, "overture__overture_search_places") is True
+    assert _asked_by_person(AGENT, "overture_search_places") is True
+    assert _asked_by_person(AGENT, "overture_place_details") is False
+
+
+@pytest.mark.parametrize("target", ["ate", "kagent"])
+def test_approvals_are_polled_over_http_on_kagent_and_agent_substrate(
+    monkeypatch: pytest.MonkeyPatch, target: str
+) -> None:
+    from agent_runtimes.routes import tool_approvals_listener as listener
+
+    monkeypatch.setenv("AGENT_RUNTIMES_TARGET", target)
+    assert listener._no_websocket() is True
+    monkeypatch.delenv("AGENT_RUNTIMES_TARGET")
+    assert listener._no_websocket() is False
+
+
+@pytest.mark.asyncio
+async def test_an_asked_tool_reuses_only_the_same_call_s_approval(
+    runtime: Dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Unticked: a recent approval of another call (or another conversation, which
+    records do not tell apart) is not reused; the very same call's is."""
+    from datetime import datetime, timezone
+
+    from agent_runtimes.guardrails.tool_approvals import (
+        ToolApprovalConfig,
+        ToolApprovalManager,
+    )
+    from agent_runtimes.routes import tool_approvals as routes
+
+    now = datetime.now(timezone.utc).isoformat()
+    earlier = routes.ToolApprovalRecord(
+        id="earlier",
+        agent_id=AGENT,
+        tool_name="overture_search_places",
+        tool_args={"q": "x"},
+        tool_call_id="call-1",
+        status="approved",
+        created_at=now,
+        updated_at=now,
+    )
+    monkeypatch.setattr(routes, "_APPROVALS", {"earlier": earlier})
+
+    class _Asked(Exception):
+        pass
+
+    async def create(req: Any) -> Any:
+        raise _Asked(req.tool_call_id)
+
+    monkeypatch.setattr(routes, "_create_approval", create)
+    manager = ToolApprovalManager(ToolApprovalConfig(agent_id=AGENT))
+
+    # Not unticked: another call within 120 s reuses it (de-duplication).
+    reused = await manager.request_and_wait(
+        "overture_search_places", {"q": "x"}, tool_call_id="call-2"
+    )
+    assert reused["id"] == "earlier"
+    # Unticked: another call asks again.
+    key = pubsub._stream_key(AGENT)
+    pubsub._MCP_ASKED_TOOLS_BY_AGENT.setdefault(key, {}).setdefault(
+        "overture", set()
+    ).add("overture_search_places")
+    with pytest.raises(_Asked):
+        await manager.request_and_wait(
+            "overture_search_places", {"q": "x"}, tool_call_id="call-2"
+        )
+    # The very same call (its retry) is still de-duplicated.
+    same = await manager.request_and_wait(
+        "overture_search_places", {"q": "x"}, tool_call_id="call-1"
+    )
+    assert same["id"] == "earlier"

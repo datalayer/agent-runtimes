@@ -60,15 +60,34 @@ def catalogue_id_of(server_id: str) -> Optional[str]:
     return None
 
 
-def _running_config(server_id: str, catalogue_id: str) -> Any:
-    """The config the runtime runs a server with: its lifecycle's, else its manager's."""
+#: What codemode's registries were built with, by the server's Python name:
+#: (url, command, args) of each config one of them executes (review of 1.8.10).
+_CODEMODE_CONFIGS: Dict[str, Set[tuple]] = {}
+
+
+def note_codemode_config(
+    name: str, url: str, command: str, args: Iterable[str]
+) -> None:
+    """Remember a config a codemode registry executes a server with, by its Python name."""
+    _CODEMODE_CONFIGS.setdefault(_python_name(name), set()).add(
+        (str(url or ""), str(command or ""), tuple(str(a) for a in args or []))
+    )
+
+
+def _running_configs(server_id: str, catalogue_id: str) -> list:
+    """Every config the runtime runs a server with under this id.
+
+    Its lifecycle's, its manager's, and those codemode's registries execute:
+    a tool may be called through any of them, so each must be the catalogue's.
+    """
     names = {server_id, catalogue_id}
+    found: list = []
     try:
         from agent_runtimes.mcp.lifecycle import get_mcp_lifecycle_manager
 
         for instance in get_mcp_lifecycle_manager().get_all_running_servers():
             if instance.server_id in names:
-                return instance.config
+                found.append(instance.config)
     except Exception:
         logger.debug("No MCP lifecycle manager to read %s from", server_id)
     try:
@@ -78,10 +97,20 @@ def _running_config(server_id: str, catalogue_id: str) -> Any:
         for name in (catalogue_id, server_id):
             config = manager.get_server(name)
             if config is not None:
-                return config
+                found.append(config)
     except Exception:
         logger.debug("No MCP manager to read %s from", server_id)
-    return None
+    for name in {_python_name(server_id), _python_name(catalogue_id)}:
+        for url, command, args in _CODEMODE_CONFIGS.get(name, ()):
+            found.append(_Reached(url, command, list(args)))
+    return found
+
+
+class _Reached:
+    """How a codemode registry reaches a server, as ``reached_as_catalogued`` reads it."""
+
+    def __init__(self, url: str, command: str, args: list) -> None:
+        self.url, self.command, self.args = url, command, args
 
 
 def reached_as_catalogued(config: Any, catalogued: Any) -> bool:
@@ -102,8 +131,11 @@ def vouched_catalogue_id(server_id: str) -> Optional[str]:
     catalogue_id = catalogue_id_of(server_id)
     if catalogue_id is None:
         return None
-    config = _running_config(server_id, catalogue_id)
-    if not reached_as_catalogued(config, MCP_SERVER_CATALOG[catalogue_id]):
+    configs = _running_configs(server_id, catalogue_id)
+    catalogued = MCP_SERVER_CATALOG[catalogue_id]
+    # Vouched only when every way the runtime reaches it is the catalogue's:
+    # one custom endpoint under the same id, and its tools ask.
+    if not configs or not all(reached_as_catalogued(c, catalogued) for c in configs):
         return None
     return catalogue_id
 

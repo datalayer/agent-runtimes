@@ -106,11 +106,14 @@ def _no_websocket() -> bool:
     Whether this runtime reaches ai-agents with no WebSocket.
 
     An Agent Substrate actor (``--target ate``), whose egress gateway refuses
-    every upgrade.
+    every upgrade, and a runtime Kagent's bridge starts (``--target kagent``),
+    whose egress is Kagent's: polling is plain HTTP, which reaches ai-agents
+    wherever a WebSocket does.
     """
     from agent_runtimes.ate.settings import is_ate_target
+    from agent_runtimes.kagent.settings import is_kagent_target
 
-    return is_ate_target()
+    return is_ate_target() or is_kagent_target()
 
 
 def _service_base(ai_agents_url: str) -> str:
