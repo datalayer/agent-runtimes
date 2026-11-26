@@ -72,7 +72,7 @@ class _Verifier:
 
 
 class _AiAgents:
-    """ai-agents' answer to `GET /apps/deployments/{uid}`, as these tests have it answer."""
+    """The answer of ai-agents to `GET /apps/deployments/{uid}`, as these tests have it answer."""
 
     def __init__(self, theirs: dict[str, str]) -> None:
         self.theirs = theirs
@@ -89,7 +89,13 @@ class _AiAgents:
 
 @pytest.fixture
 def launched(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    """A pool runtime launched for DEPLOYMENT, its owner not named to it yet."""
+    """A pool runtime launched for DEPLOYMENT, its owner not named to it yet.
+
+    Yields
+    ------
+    None
+        While the test runs; whose the deployment is is forgotten after it.
+    """
     monkeypatch.delenv("DATALAYER_USER_UID", raising=False)
     monkeypatch.delenv("DATALAYER_USER_TOKEN", raising=False)
     monkeypatch.delenv("AGENT_RUNTIMES_TARGET", raising=False)
