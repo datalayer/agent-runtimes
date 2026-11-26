@@ -573,6 +573,8 @@ async def update_local_approval_status(
 async def forward_approval_to_ai_agents(
     record: "ToolApprovalRecord",
     user_jwt_token: str | None,
+    *,
+    deployment_uid: str = "",
 ) -> str | None:
     """Best-effort forward a pending approval to the datalayer-ai-agents backend.
 
@@ -580,6 +582,12 @@ async def forward_approval_to_ai_agents(
     created via the inline ``ToolsGuardrailCapability`` path are visible in
     remote UI panels (e.g. the landing's Tool Approvals view) that poll
     the ai-agents service rather than the local agent-runtimes endpoints.
+
+    ``deployment_uid`` is said only when the token is that deployment's
+    principal's (a deployment's recommendation, asked as its application):
+    the approval then goes to the address that token is put in for, on a
+    runtime that does not hold it (`principal.principal_address`). A person's
+    own token never says it, and goes to the usual address.
     """
     if not user_jwt_token:
         return None
@@ -592,6 +600,10 @@ async def forward_approval_to_ai_agents(
         if not ai_agents_url:
             return None
         ai_agents_url = ai_agents_url.rstrip("/")
+        if deployment_uid:
+            from agent_runtimes.apps.principal import principal_address
+
+            ai_agents_url = principal_address(deployment_uid, ai_agents_url).rstrip("/")
         remote_approval_id: str | None = None
         # The session whose turn asks it: a host mapping that session is
         # delivered it.

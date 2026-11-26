@@ -432,7 +432,7 @@ def deployed(monkeypatch: pytest.MonkeyPatch) -> dict:
         lambda dep: ("principal-token", "") if dep == "dep-1" else (None, "no token."),
     )
 
-    async def forward(approval: Any, token: Any) -> str:
+    async def forward(approval: Any, token: Any, **said: Any) -> str:
         world["forwarded"].append((approval, token))
         return "approval-1"
 

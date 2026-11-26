@@ -24,6 +24,8 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
+import pathlib
+import re
 import time
 from typing import Any
 
@@ -400,6 +402,141 @@ def test_the_events_of_a_deployments_agent_are_asked_as_its_principal(
         f"{AGENTS_PRINCIPAL}/api/ai-agents/v1/agents/agent-1/events",
         f"{AGENTS}/api/ai-agents/v1/agents/agent-1/events",
     ]
+
+
+def test_what_a_deployment_asks_its_owner_to_approve_is_asked_as_its_principal(actor):
+    """A recommendation put among its owner's approvals is asked with the deployment's
+    token, so at the principal's address; an approval asked with a person's own token
+    says no deployment, and leaves for the usual address as it was sent."""
+    from agent_runtimes.routes.tool_approvals import (
+        ToolApprovalRecord,
+        forward_approval_to_ai_agents,
+    )
+
+    asyncio.run(ensure_principal_token("dep-1", None))
+    actor.left.clear()
+    asked = ToolApprovalRecord(
+        id="a-1",
+        agent_id="agent-1",
+        tool_name="approve_recommendation",
+        tool_call_id="rec-1",
+        created_at="2026-11-26T00:00:00+00:00",
+        updated_at="2026-11-26T00:00:00+00:00",
+    )
+    asyncio.run(
+        forward_approval_to_ai_agents(
+            asked, principal_token("dep-1"), deployment_uid="dep-1"
+        )
+    )
+    asyncio.run(forward_approval_to_ai_agents(asked, "a-person's-own-token"))
+    assert actor.left == [
+        (
+            "ai-agents-principal-svc.api.svc.cluster.local",
+            "/api/ai-agents/v1/tool-approvals",
+            f"Bearer {SECRET}",
+        ),
+        (
+            "ai-agents-svc.api.svc.cluster.local",
+            "/api/ai-agents/v1/tool-approvals",
+            "Bearer a-person's-own-token",
+        ),
+    ]
+
+
+# --- every call made as the principal, by module -----------------------------------
+
+#: The modules that send a deployment's principal to ai-agents or ai-inference, and
+#: what each must name to send it where it is put in.
+AS_THE_PRINCIPAL = {
+    "apps/record.py": "principal_address",
+    "apps/notifications.py": "principal_address",
+    "apps/learning.py": "principal_address",
+    "routes/owner.py": "principal_address",
+    "routes/tool_approvals.py": "principal_address",
+    "tools/recommendations.py": "principal_address",
+    "models/models.py": "inference_principal_url",
+}
+
+#: The modules that read a deployment's principal and send it somewhere it has no
+#: address of its own, or hand it on: where. None of them may name ai-agents or
+#: ai-inference; one that comes to belongs in `AS_THE_PRINCIPAL`.
+THE_PRINCIPAL_ELSEWHERE = {
+    "apps/agent.py": "IAM (the Shield's authorizer)",
+    "apps/grants.py": "IAM (standing approvals)",
+    "apps/saving.py": "Spacer (saving to a Space)",
+    "apps/documents.py": "Contents (an application's documents)",
+    "adapters/acp_agent.py": "IAM (the Shield's authorizer) and the MCP gateway",
+    "mcp/google_workspace.py": "IAM (the owner's Gmail)",
+    "mcp/lifecycle.py": "an MCP server's DATALAYER_API_KEY",
+    "identity/datalayer.py": "handed to who asks the identity provider",
+}
+
+#: Read apart, each for its reason.
+READ_APART = {
+    # Where the principal is kept, asked for and read at egress: what it sends
+    # to ai-agents is a caller's token or this runtime's proof, to ask for it.
+    "apps/principal.py",
+    # The policies' socket at ai-agents takes the principal only when it names
+    # the account the documents are read for, which the placeholder never does
+    # (`test_the_placeholder_names_no_account_for_the_policies_socket`).
+    "guardrails/managed_policies.py",
+}
+
+_READS_THE_PRINCIPAL = re.compile(
+    r"(?<![A-Za-z_])(principal_token|api_key_for|token_for|own_token_for)\("
+)
+_NAMES_THE_SERVICES = re.compile(
+    r"ai_agents_url|AI_AGENTS_URL|ai_inference_url|AI_INFERENCE_URL|/api/ai-agents/"
+)
+
+
+def _modules() -> dict[str, str]:
+    root = pathlib.Path(principal.__file__).resolve().parent.parent
+    return {
+        path.relative_to(root).as_posix(): path.read_text(encoding="utf-8")
+        for path in root.rglob("*.py")
+        if "tests" not in path.relative_to(root).parts
+    }
+
+
+def test_every_module_that_reads_the_principal_is_known_and_sends_it_where_it_is_put_in():
+    """A module that comes to read a deployment's principal is listed here with where it
+    sends it; one that sends it to ai-agents or ai-inference names the principal's address."""
+    modules = _modules()
+    known = set(AS_THE_PRINCIPAL) | set(THE_PRINCIPAL_ELSEWHERE) | READ_APART
+    assert known <= set(modules), sorted(known - set(modules))
+    readers = {
+        name for name, text in modules.items() if _READS_THE_PRINCIPAL.search(text)
+    }
+    assert readers - known == set(), (
+        "These modules read a deployment's principal and are not listed: say where each "
+        f"sends it (AS_THE_PRINCIPAL or THE_PRINCIPAL_ELSEWHERE): {sorted(readers - known)}"
+    )
+    for name, names in AS_THE_PRINCIPAL.items():
+        assert names in modules[name], (
+            f"{name} sends a deployment's principal to ai-agents or ai-inference "
+            f"without {names}: on a runtime that does not hold it, the call is refused."
+        )
+    for name in THE_PRINCIPAL_ELSEWHERE:
+        assert not _NAMES_THE_SERVICES.search(modules[name]), (
+            f"{name} reads a deployment's principal and now names ai-agents or ai-inference: "
+            "send it through principal_address and list it in AS_THE_PRINCIPAL."
+        )
+
+
+def test_the_placeholder_names_no_account_for_the_policies_socket(actor, monkeypatch):
+    """The policies' socket is held at ai-agents' usual address with a token in its query,
+    where nothing is put in: the principal's is taken only when it names the account, and
+    the placeholder names none, so it is never sent there."""
+    from agent_runtimes.guardrails import managed_policies
+
+    asyncio.run(ensure_principal_token("dep-1", None))
+    monkeypatch.setattr(principal, "deployments_served", lambda: ["dep-1"])
+    assert principal_token("dep-1") == PLACEHOLDER
+    assert managed_policies.account_of_token(PLACEHOLDER) == ""
+    policies = managed_policies.RuntimePolicies()
+    policies._credential, policies._account = "the-first-credential", "u-owner"
+    assert policies.credential_now() == "the-first-credential"
 
 
 # --- a caller is judged as itself -------------------------------------------------
