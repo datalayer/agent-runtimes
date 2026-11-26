@@ -125,9 +125,11 @@ def test_a_strangers_page_is_refused_only_where_the_loopback_stands_for_proof() 
         assert refused.value.status_code == 403 and "page" in refused.value.detail
         # From anywhere else a call proves itself with a token, as before.
         callers.refuse_a_strangers_page(_request(headers, OUTSIDE))
-        callers.refuse_a_strangers_page(
-            _request({**headers, "X-Forwarded-For": "203.0.113.9"})
-        )
+        # A forwarding header a page sends itself proves nothing.
+        with pytest.raises(HTTPException):
+            callers.refuse_a_strangers_page(
+                _request({**headers, "X-Forwarded-For": "203.0.113.9"})
+            )
     for headers in [{}, *OUR_OWN]:
         callers.refuse_a_strangers_page(_request(headers))
 
@@ -304,8 +306,9 @@ def test_a_script_and_our_own_pages_reach_what_an_agent_remembers(
 def test_a_call_from_elsewhere_is_judged_by_its_token_as_before(
     remembers: _Memory,
 ) -> None:
-    """Off the loopback, or passed on by a proxy, the address proves nothing and a
-    page presents its token to the gate: no origin is refused here."""
+    """Off the loopback the address proves nothing and a page presents its token
+    to the gate: no origin is refused here. On the loopback a forwarding header
+    the page sends itself does not make it one from elsewhere."""
     from agent_runtimes.routes import agents
 
     stranger = {"Origin": "https://evil.example"}
@@ -322,7 +325,7 @@ def test_a_call_from_elsewhere_is_judged_by_its_token_as_before(
             headers={**stranger, "X-Forwarded-For": "203.0.113.9"},
         )
         .status_code
-        == 200
+        == 403
     )
 
 

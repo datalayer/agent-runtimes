@@ -942,9 +942,7 @@ async def test_opened_by_a_person_the_report_is_signed_for_them(
         "user-1",
     )
     closing = written["state"]["root"]["children"][-1]
-    assert _words(closing).endswith(
-        "Written by ☁️ Cloud Steward, for Ana Lopez."
-    )
+    assert _words(closing).endswith("Written by ☁️ Cloud Steward, for Ana Lopez.")
 
 
 @pytest.mark.asyncio

@@ -897,21 +897,18 @@ def refuse_a_browsers_page(request: Request, detail: str) -> None:
 def refuse_a_strangers_page(request: Request) -> None:
     """Refuse (403) a stranger's page where the loopback stands for proof.
 
-    For a route the runtime's own pages call too, as a route's dependency. A
-    call from the machine itself that no proxy passed on needs no token
-    (:func:`proves_the_runtime`): there a page that is neither this machine's
-    nor the platform's is refused. Any other call is judged by the token it
-    presents, as before, and nothing is refused here.
+    For a route the runtime's own pages call too, as a route's dependency. On
+    the loopback a page that is neither this machine's nor the platform's is
+    refused, whether or not it says a proxy passed it on: a forwarding header
+    is only a header, and a page can send one (the server's CORS lets it). A
+    call from anywhere else is judged by the token it presents, as before, and
+    nothing is refused here.
     """
     from fastapi import HTTPException  # noqa: PLC0415
 
     headers = request.headers
     host = request.client.host if request.client else None
-    if (
-        is_loopback(host)
-        and not is_forwarded(headers)
-        and from_a_strangers_page(headers)
-    ):
+    if is_loopback(host) and from_a_strangers_page(headers):
         raise HTTPException(
             status_code=403,
             detail=(
