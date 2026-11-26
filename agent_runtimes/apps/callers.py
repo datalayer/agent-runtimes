@@ -787,9 +787,10 @@ async def _fetch_deployment_owner(url: str, token: str) -> Tuple[int, str]:
         if response.status_code != 200:
             return response.status_code, ""
         try:
-            deployment = (response.json() or {}).get("deployment") or {}
+            said = response.json()
         except ValueError:
             return 200, ""
+        deployment = said.get("deployment") if isinstance(said, dict) else None
         if not isinstance(deployment, dict):
             return 200, ""
         return 200, str(deployment.get("account_uid") or "")
@@ -861,14 +862,15 @@ async def owner_by_deployment(
     deployment = launched_for()
     if not deployment or not caller_uid:
         return "", "owner-unknown"
+    named = owner_key_deployment(_unverified_claims(token))
+    if named and named != deployment:
+        # A key of another deployment's runtime, whoever's: it proves nothing here.
+        return "", "another-account"
     known = _DEPLOYMENT_OWNERS.get(deployment)
     if known:
         return (known, "") if known == caller_uid else ("", "another-account")
-    named = owner_key_deployment(_unverified_claims(token))
     if named:
-        # A key of a deployment's owner: of this one, or of another's.
-        if named != deployment:
-            return "", "another-account"
+        # A key IAM minted for this deployment's owner, to run its runtime.
         _DEPLOYMENT_OWNERS[deployment] = caller_uid
         return caller_uid, ""
     url = launched_ai_agents_url()
@@ -1124,10 +1126,16 @@ async def _proof_of_token(token: str, verifier: Any) -> Tuple[Proof, float]:
         return Proof(False, reason="token-refused"), PROOF_SECONDS
     if caller.kind != "person":
         return Proof(False, reason="application-token"), PROOF_SECONDS
+    launched = launched_for()
+    named = owner_key_deployment(_unverified_claims(token))
+    if launched and named and named != launched:
+        # A key of another deployment's runtime is held to that runtime: it
+        # proves nothing here, whoever's account it names.
+        return Proof(False, reason="another-account"), PROOF_SECONDS
     owner = runtime_owner_uid()
     if owner and caller.uid == owner:
         return Proof(True, kind="owner"), PROOF_SECONDS
-    if launched_for():
+    if launched:
         # Launched for a deployment: its deployment's owner's too.
         deployment_owner, reason = await owner_by_deployment(caller.uid, token)
         # Another call's lookup may have said whose it is while this one waited.

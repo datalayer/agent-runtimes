@@ -169,6 +169,22 @@ def test_a_key_of_another_deployment_proves_nothing(
     assert ai_agents.asked == [] and callers.deployment_owner_uid() == ""
 
 
+def test_a_key_of_another_deployment_proves_nothing_once_the_owner_is_known(
+    launched: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The same account's key of another deployment, after its owner is remembered,
+    and on a runtime assigned to that account: held to its own deployment's runtime."""
+    monkeypatch.setattr(callers, "_fetch_deployment_owner", _AiAgents({}))
+    assert _proof(OWNER_KEY)[0].sufficient is True
+    assert _proof(OTHER_DEPLOYMENT_KEY)[0] == callers.Proof(
+        False, reason="another-account"
+    )
+    monkeypatch.setenv("DATALAYER_USER_UID", OWNER)
+    assert _proof(OTHER_DEPLOYMENT_KEY)[0] == callers.Proof(
+        False, reason="another-account"
+    )
+
+
 def test_the_owner_s_own_token_proves_it_when_ai_agents_answers_the_deployment_to_them(
     launched: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -268,6 +284,21 @@ def test_ai_agents_answer_is_read_by_the_deployment_s_account(
         200,
         OWNER,
     )
+
+
+@pytest.mark.parametrize("body", [[1, 2], "a sentence", 3, None, {"deployment": [1]}])
+def test_an_answer_in_another_shape_names_nobody(
+    monkeypatch: pytest.MonkeyPatch, body: Any
+) -> None:
+    transport = httpx.MockTransport(lambda request: httpx.Response(200, json=body))
+    real = httpx.AsyncClient
+
+    def client(*args: Any, **kwargs: Any) -> httpx.AsyncClient:
+        return real(*args, transport=transport, **kwargs)
+
+    monkeypatch.setattr(callers.httpx, "AsyncClient", client)
+    url = f"{AI_AGENTS}/api/ai-agents/v1/apps/deployments/{DEPLOYMENT}"
+    assert asyncio.run(callers._fetch_deployment_owner(url, "owner-token")) == (200, "")
 
 
 @pytest.mark.parametrize("first", ["success", "timeout"])
