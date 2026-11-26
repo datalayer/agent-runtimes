@@ -307,6 +307,11 @@ async def _relay_decision_to_ai_agents_ws(
     """
     import json as _json
 
+    from agent_runtimes.routes.tool_approvals_listener import _no_websocket
+
+    if _no_websocket():
+        await _relay_decision_over_http(remote_id, approved, note, user_jwt_token)
+        return
     try:
         from datalayer_core.utils.urls import DatalayerURLs
         from websockets.asyncio.client import connect as ws_connect
@@ -424,6 +429,60 @@ async def _relay_decision_to_ai_agents_ws(
             remote_id,
             exc,
             exc_info=True,
+        )
+
+
+async def _relay_decision_over_http(
+    remote_id: str,
+    approved: bool,
+    note: str | None,
+    user_jwt_token: str,
+) -> None:
+    """The decision sent to ai-agents over plain HTTP (``POST /tool-approvals/{id}/approve|reject``).
+
+    What an Agent Substrate actor does instead of the WebSocket its egress
+    gateway refuses: the same decision, by the person it waits on (the token
+    that asked it), to ai-agents' usual name, where nothing is put in.
+    """
+    try:
+        import httpx
+        from datalayer_core.utils.urls import DatalayerURLs
+
+        from agent_runtimes.routes.tool_approvals_listener import _service_base
+
+        ai_agents_url = getattr(DatalayerURLs.from_environment(), "ai_agents_url", None)
+        if not ai_agents_url:
+            logger.warning(
+                "[tool-approval:relay] ai_agents_url not configured; cannot relay decision for remote_id=%s",
+                remote_id,
+            )
+            return
+        verb = "approve" if approved else "reject"
+        async with httpx.AsyncClient(
+            timeout=10.0, headers={"Authorization": f"Bearer {user_jwt_token}"}
+        ) as client:
+            response = await client.post(
+                f"{_service_base(str(ai_agents_url))}/api/ai-agents/v1/tool-approvals/{remote_id}/{verb}",
+                json={"note": note} if note else {},
+            )
+        if response.status_code >= 300 and response.status_code != 409:
+            logger.warning(
+                "[tool-approval:relay] ai-agents answered %s to the %s of remote_id=%s",
+                response.status_code,
+                verb,
+                remote_id,
+            )
+            return
+        logger.info(
+            "[tool-approval:relay] Sent the %s of remote_id=%s over HTTP",
+            verb,
+            remote_id,
+        )
+    except Exception as exc:
+        logger.warning(
+            "[tool-approval:relay] Failed to relay decision for remote_id=%s over HTTP: %s",
+            remote_id,
+            type(exc).__name__,
         )
 
 
@@ -650,10 +709,11 @@ async def forward_approval_to_ai_agents(
         )
         return remote_approval_id
     except Exception as exc:
-        logger.debug(
+        # Said: an approval ai-agents was never told of is one nobody can decide.
+        logger.warning(
             "[tool-approval:forward] Could not sync approval %s to ai-agents: %s",
             getattr(record, "id", "?"),
-            exc,
+            type(exc).__name__,
         )
         return None
 
