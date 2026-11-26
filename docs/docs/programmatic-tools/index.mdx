@@ -128,8 +128,9 @@ Both are designed to keep WebSocket state as the source of truth while minimizin
 
 ### 1) Policy approvals (MCP/Skills)
 
-- The UI tracks approved MCP/Skill tools via explicit allowlists (no implicit auto-approval).
-- Backend approval state is synced through snapshots/events and reflected in store fields such as `approved_tools_by_server`.
+- The UI tracks approved MCP/Skill tools via explicit allowlists.
+- **Tools that only read run without asking.** An MCP tool the catalogue classes `read` (`agentspecs.actions`), on a server the catalogue vouches for (reached at its url, or run with its command and arguments, exactly as the catalogue says), is approved by default; a tool that writes, sends, buys, deletes or publishes, a tool nobody classed, and every tool of a server the catalogue does not vouch for (an `mcp.json`'s, a request's, a Kagent template's) ask until approved. A server's own `readOnlyHint` is never read: the class is the catalogue's. The person can still turn approval on for a read tool (untick **Approved** in the chat's tool menu), and that wins; so do the agent spec's `tool_approval.tools` patterns (in codemode too) and an application's Rules. An always-on runtime's scheduled run follows the same rule (`guardrails/read_only_tools.py`).
+- Backend approval state is synced through snapshots/events and reflected in store fields such as `approved_tools_by_server` (read tools included) and `read_only_tools_by_server` (the tools approved by default).
 - During execution, guardrails check these allowlists before requesting any new approval.
 
 ### 2) Deferred per-call approvals (`DeferredToolRequests`)

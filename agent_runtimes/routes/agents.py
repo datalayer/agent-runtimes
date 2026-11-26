@@ -2970,7 +2970,11 @@ async def create_agent(
             # Always apply runtime selection guardrails, even when no spec is provided.
             if capabilities is None:
                 capabilities = []
-            capabilities.extend(build_default_choice_guardrails(agent_id=agent_id))
+            capabilities.extend(
+                build_default_choice_guardrails(
+                    agent_id=agent_id, capabilities=capabilities
+                )
+            )
             # After the defaults, not before: they carry the MCP and skills
             # approval guardrails too, and an agent that asked for no
             # approvals used to get them back from here.

@@ -511,6 +511,86 @@ describe('one overlay, from the dot or the footer', () => {
   });
 });
 
+describe('a tool that only reads', () => {
+  // The user, 26 November 2026: tools classed read in the catalogue run
+  // without asking; tools that write or act still ask; approval can still be
+  // turned on per tool.
+  const status = {
+    ...STATUS,
+    servers: [
+      {
+        id: 'overture',
+        status: 'started' as const,
+        tools: [{ name: 'overture_search_places' }, { name: 'feedback' }],
+      },
+    ],
+    approved_tools_by_server: { overture: ['overture_search_places'] },
+    read_only_tools_by_server: { overture: ['overture_search_places'] },
+  };
+
+  it('is approved, said to run without asking, with the switch to be asked first', () => {
+    const asked: string[] = [];
+    const lists = equipmentLists({
+      mcpServers: [],
+      mcpStatus: status,
+      approvedMcpTools: new Map([
+        ['overture', new Set(['overture_search_places'])],
+      ]),
+    });
+    expect(lists.servers[0].tools).toEqual([
+      {
+        name: 'overture_search_places',
+        enabled: true,
+        approved: true,
+        readOnly: true,
+      },
+      { name: 'feedback', enabled: true, approved: false },
+    ]);
+    render(
+      <ThemeProvider>
+        <EquipmentMenu
+          kind="servers"
+          trigger="button"
+          lists={lists}
+          switches={switches(asked)}
+        />
+      </ThemeProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^MCP servers — / }));
+    expect(screen.getByText(EQUIPMENT_WORDS.readOnly.runs)).toBeTruthy();
+    fireEvent.click(
+      document.querySelector(
+        '[data-equipment-switch="tool-approval:overture:overture_search_places"] button',
+      ) as Element,
+    );
+    expect(asked).toEqual(['approve overture overture_search_places']);
+  });
+
+  it('says it asks first once the person turned its approval on', () => {
+    const lists = equipmentLists({
+      mcpServers: [],
+      mcpStatus: { ...status, approved_tools_by_server: { overture: [] } },
+      approvedMcpTools: new Map([['overture', new Set<string>()]]),
+    });
+    expect(lists.servers[0].tools[0]).toMatchObject({
+      approved: false,
+      readOnly: true,
+    });
+    render(
+      <ThemeProvider>
+        <EquipmentMenu
+          kind="servers"
+          trigger="button"
+          lists={lists}
+          switches={switches()}
+        />
+      </ThemeProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^MCP servers — / }));
+    expect(screen.getByText(EQUIPMENT_WORDS.readOnly.asks)).toBeTruthy();
+  });
+});
+
 describe('the switches', () => {
   it('call the conversation’s handlers, and a locked one calls nothing', () => {
     const asked: string[] = [];

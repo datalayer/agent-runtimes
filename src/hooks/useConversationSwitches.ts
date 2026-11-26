@@ -102,16 +102,23 @@ export function useConversationSwitches({
       ),
     [state],
   );
-  const approvedMcpTools = useMemo(
-    () =>
-      new Map(
-        Object.entries(state?.mcp_approved ?? {}).map(([server, tools]) => [
-          server,
-          new Set(tools),
-        ]),
-      ),
-    [state],
-  );
+  // Approved: what it approved, and what only reads (the catalogue's
+  // word), less what it said must ask.
+  const approvedMcpTools = useMemo(() => {
+    const approved = new Map<string, Set<string>>();
+    const add = (byServer: Record<string, string[]> | undefined) =>
+      Object.entries(byServer ?? {}).forEach(([server, tools]) => {
+        const kept = approved.get(server) ?? new Set<string>();
+        tools.forEach(tool => kept.add(tool));
+        approved.set(server, kept);
+      });
+    add(state?.mcp_approved);
+    add(state?.mcp_read_only);
+    Object.entries(state?.mcp_asked ?? {}).forEach(([server, tools]) =>
+      tools.forEach(tool => approved.get(server)?.delete(tool)),
+    );
+    return approved;
+  }, [state]);
   const approvedSkills = useMemo(
     () =>
       new Set(

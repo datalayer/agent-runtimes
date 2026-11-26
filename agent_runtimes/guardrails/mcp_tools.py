@@ -20,9 +20,20 @@ from .common import GuardrailBlockedError
 
 @dataclass
 class MCPToolsGuardrailCapability(AbstractCapability[Any]):
-    """Ensure disabled MCP tools cannot be invoked even when prompted."""
+    """Ensure disabled MCP tools cannot be invoked even when prompted.
+
+    An MCP tool asks a person before it runs unless it is approved: by that
+    person in the chat's tool menu, or by default when the catalogue classes
+    it read only (`read_only_tools`, through ``streams.pubsub``). A tool the
+    agent spec's approval patterns name (``tool_approval.tools``,
+    ``requiring_approval`` here) asks whatever approved it: called directly,
+    the spec's own ``ToolsGuardrailCapability`` asks; called from codemode's
+    ``execute_code`` or ``call_tool``, which that capability sees only as
+    the meta-tool, this one does.
+    """
 
     agent_id: str | None = None
+    requiring_approval: list[str] = field(default_factory=list)
     _approval_manager: Any = field(default=None, init=False, repr=False)
 
     def _enabled_tool_names(self) -> set[str]:
@@ -128,17 +139,34 @@ class MCPToolsGuardrailCapability(AbstractCapability[Any]):
             self._approval_manager = ToolApprovalManager(config)
         return self._approval_manager
 
+    def _spec_requires_approval(self, raw_tool_name: str) -> bool:
+        """Whether the agent spec's approval patterns name this tool."""
+        if not self.requiring_approval:
+            return False
+        variants: set[str] = set()
+        for name in self._tool_name_candidates(raw_tool_name):
+            variants.update({name, name.replace("-", "_"), name.replace("_", "-")})
+        return any(
+            re.search(pattern, variant, re.IGNORECASE)
+            for pattern in self.requiring_approval
+            for variant in variants
+        )
+
     async def _request_tool_approval(
         self,
         raw_tool_name: str,
         args: dict[str, Any],
+        *,
+        through_meta_tool: bool = False,
     ) -> None:
         approved_aliases: set[str] = set()
         for name in self._approved_tool_names():
             approved_aliases.add(name)
             approved_aliases.add(self._normalize_mcp_tool_name(name))
 
-        if self._tool_name_candidates(raw_tool_name) & approved_aliases:
+        if self._tool_name_candidates(raw_tool_name) & approved_aliases and not (
+            through_meta_tool and self._spec_requires_approval(raw_tool_name)
+        ):
             return
         manager = self._get_approval_manager()
         await manager.request_and_wait(
@@ -231,6 +259,7 @@ class MCPToolsGuardrailCapability(AbstractCapability[Any]):
             await self._request_tool_approval(
                 tool_name,
                 {"source_tool": "execute_code", "tool_name": tool_name},
+                through_meta_tool=True,
             )
 
     async def before_tool_execute(
@@ -248,7 +277,9 @@ class MCPToolsGuardrailCapability(AbstractCapability[Any]):
             if isinstance(requested, str) and requested.strip():
                 raw_tool_name = requested.strip()
                 self._assert_allowed_mcp_tool(raw_tool_name)
-                await self._request_tool_approval(raw_tool_name, args)
+                await self._request_tool_approval(
+                    raw_tool_name, args, through_meta_tool=True
+                )
             return args
 
         if self._is_mcp_tool_name(tool_name):
