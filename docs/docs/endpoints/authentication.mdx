@@ -25,6 +25,8 @@ A call to an owner's route presents one of these tokens, **from the machine itse
 - **The owner's Datalayer token.** The token the person is signed in with (or an API key of theirs), which the platform accepts and which names the account the runtime is assigned to.
 - **The runtime's own token.** On a Datalayer runtime, the token of its sandbox, which the platform gives the owner with the runtime's record (`token` in `GET /api/runtimes/v1/runtimes/{uid}`). On a runtime started on your machine, the token it prints when it starts (see below).
 
+Another site's page on the loopback (an `Origin` that is neither this machine's nor Datalayer's, or `Sec-Fetch-Site: cross-site`) is refused with `403` in both modes, whatever forwarding header it sends: a forwarding header is only a header, and the loopback is still its peer. A call is taken as passed on by a proxy only when its peer is not the machine itself.
+
 Two callers on the loopback need no token, each for what it alone does:
 
 - **The companion beside the runtime**, by the pod's secret, on a runtime launched for a deployment.
@@ -86,8 +88,8 @@ The log line names the route by its template, never by the path that was asked, 
 ACCESS unproven mode=log action=served method=GET route=/api/v1/agents/{agent_id}/memory reason=no-credential agent=Mozilla/5.0 origin=example.com referer=example.com source=ingress
 ```
 
-- `reason` is why the call proved nothing: `no-credential`, `loopback-no-credential` (a call from the machine itself that sent no token: a local client to give the runtime's token), `token-refused` (the platform does not accept it), `another-account`, `application-token` (a token for the application's routes), `owner-unknown` (the runtime is not assigned yet) or `unverifiable` (the platform could not be asked).
-- `agent`, `origin` and `referer` are the client's product and the hosts a browser names; `source` is where the call entered: `ingress` (a proxy passed it on), `cluster` or `loopback`.
+- `reason` is why the call proved nothing: `no-credential`, `loopback-no-credential` (a call from the machine itself that sent no token: a local client to give the runtime's token), `token-refused` (the platform does not accept it), `another-account`, `application-token` (a token for the application's routes), `owner-unknown` (the runtime is not assigned yet), `unverifiable` (the platform could not be asked) or `strangers-page` (another site's page on the loopback, refused in either mode).
+- `agent`, `origin` and `referer` are the client's product and the hosts a browser names; `source` is where the call entered: `loopback` (its peer is the machine itself, whatever headers it sends), `ingress` (a proxy passed it on) or `cluster`.
 - The line is written at most once a minute for one route, reason and caller. The counter `agent_runtimes.access.unproven` counts every call, with the same attributes.
 
 Run a deployment in `log` mode first, fix the clients the log names, and switch to `enforce` once it has stayed quiet.

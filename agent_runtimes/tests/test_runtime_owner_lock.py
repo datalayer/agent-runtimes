@@ -583,9 +583,10 @@ def test_a_harness_reaches_its_handles_routes_whatever_its_client_says(
             == 401
         )
         assert _client(apps["enforce"]).post(path, json={}).status_code == 401
-    assert counter.added == [] or all(
-        attributes["source"] != "loopback" for _, attributes in counter.added
-    )
+    # Only the calls a proxy passed on, or from elsewhere, are unproven.
+    assert {attributes["reason"] for _, attributes in counter.added} == {
+        "no-credential"
+    }
 
 
 def test_a_page_on_the_loopback_is_refused_by_a_skills_route_in_log_mode(
@@ -603,6 +604,55 @@ def test_a_page_on_the_loopback_is_refused_by_a_skills_route_in_log_mode(
         )
         assert answer.status_code == 403, (headers, answer.text)
         assert "a browser's page is not one" in answer.json()["detail"]
+
+
+@pytest.mark.parametrize("mode", ["log", "enforce"])
+def test_another_sites_page_on_the_loopback_is_refused_whatever_it_says(
+    mode: str, apps: dict[str, Any], counter: _Counter
+) -> None:
+    # A forwarding header is only a header: CORS lets a page send one, and
+    # the loopback is still its peer. Refused in both modes, never served.
+    local = _client(apps[mode], LOOPBACK)
+    for headers in (
+        {"Origin": "https://a-stranger.example"},
+        {"Origin": "https://a-stranger.example", "X-Forwarded-For": "198.51.100.7"},
+        {"Sec-Fetch-Site": "cross-site", "X-Forwarded-For": "198.51.100.7"},
+    ):
+        for method, path in (
+            ("POST", "/api/v1/agents"),
+            ("GET", "/api/v1/agents/default/memory"),
+            ("GET", "/api/v1/runtime/status"),
+        ):
+            answer = local.request(method, path, headers=headers, json={})
+            assert answer.status_code == 403, (mode, headers, path, answer.text)
+            assert answer.json() == {"detail": callers.STRANGERS_PAGE}
+    assert {attributes["reason"] for _, attributes in counter.added} == {
+        "strangers-page"
+    }
+    assert {attributes["source"] for _, attributes in counter.added} == {"loopback"}
+    # This machine's page and the platform's are no strangers: judged by their token.
+    for origin in ("http://localhost:3000", "https://datalayer.ai"):
+        assert (
+            local.get(
+                "/api/v1/runtime/status",
+                headers={"Origin": origin, **_bearer("owner-token")},
+            ).status_code
+            == 200
+        )
+
+
+def test_a_call_a_proxy_really_passed_on_is_judged_by_its_token(
+    apps: dict[str, Any],
+) -> None:
+    passed_on = _client(apps["enforce"])
+    headers = {"X-Forwarded-For": "198.51.100.7", "Origin": "https://datalayer.ai"}
+    assert passed_on.get("/api/v1/runtime/status", headers=headers).status_code == 401
+    assert (
+        passed_on.get(
+            "/api/v1/runtime/status", headers={**headers, **_bearer("owner-token")}
+        ).status_code
+        == 200
+    )
 
 
 def test_the_companion_proves_itself_by_the_pods_secret_where_one_is_held(

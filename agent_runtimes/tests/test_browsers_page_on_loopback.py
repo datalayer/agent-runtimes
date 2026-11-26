@@ -391,9 +391,18 @@ def test_the_servers_cors_answers_no_credentialed_request() -> None:
     (cors,) = [m for m in app.user_middleware if m.cls is CORSMiddleware]
     assert cors.kwargs["allow_origins"] == ["*"]
     assert cors.kwargs["allow_credentials"] is False
-    answered = TestClient(app, client=LOOPBACK).get(
+    client = TestClient(app, client=LOOPBACK)
+    plain = client.get("/health", headers={"Origin": "https://evil.example"})
+    assert plain.headers.get("access-control-allow-origin") == "*"
+    assert "access-control-allow-credentials" not in plain.headers
+    # With a cookie, Starlette may echo the origin back (some versions do, with
+    # "*" allowed and credentials off); credentials are never allowed.
+    with_cookie = client.get(
         "/health",
         headers={"Origin": "https://evil.example", "Cookie": "a=b"},
     )
-    assert answered.headers.get("access-control-allow-origin") == "*"
-    assert "access-control-allow-credentials" not in answered.headers
+    assert with_cookie.headers.get("access-control-allow-origin") in (
+        "*",
+        "https://evil.example",
+    )
+    assert "access-control-allow-credentials" not in with_cookie.headers

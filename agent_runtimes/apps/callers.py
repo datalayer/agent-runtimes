@@ -1067,6 +1067,26 @@ def refuse_a_browsers_page(request: Request, detail: str) -> None:
         )
 
 
+#: Said to another site's page on the runtime's loopback, by the lock and the routes.
+STRANGERS_PAGE = (
+    "A page that is neither this machine's nor Datalayer's reaches "
+    "nothing on this runtime's loopback."
+)
+
+
+async def strangers_page_refused(scope: Any, receive: Any, send: Any) -> None:
+    """Refuse (403) another site's page on the loopback, over HTTP or at a websocket's handshake."""
+    from starlette.responses import JSONResponse
+
+    refused = JSONResponse({"detail": STRANGERS_PAGE}, status_code=403)
+    if scope.get("type") == "websocket":
+        from starlette.websockets import WebSocket
+
+        await WebSocket(scope, receive, send).send_denial_response(refused)
+        return
+    await refused(scope, receive, send)
+
+
 def refuse_a_strangers_page(request: Request) -> None:
     """Refuse (403) a stranger's page where the loopback stands for proof.
 
@@ -1082,10 +1102,4 @@ def refuse_a_strangers_page(request: Request) -> None:
     headers = request.headers
     host = request.client.host if request.client else None
     if is_loopback(host) and from_a_strangers_page(headers):
-        raise HTTPException(
-            status_code=403,
-            detail=(
-                "A page that is neither this machine's nor Datalayer's reaches "
-                "nothing on this runtime's loopback."
-            ),
-        )
+        raise HTTPException(status_code=403, detail=STRANGERS_PAGE)

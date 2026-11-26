@@ -813,17 +813,20 @@ def caller_kind(scope: Any, headers: Mapping[str, str]) -> dict[str, str]:
 
     ``agent`` is the client's product (the first word of its User-Agent),
     ``origin`` and ``referer`` the hosts a browser names, and ``source`` where
-    the call entered: ``ingress`` (a proxy passed it on), ``loopback`` or
-    ``cluster`` (straight from another address, with no proxy before it).
+    the call entered: ``loopback`` (its peer is the machine itself, whatever
+    headers it sends), ``ingress`` (a proxy passed it on) or ``cluster``
+    (straight from another address, with no proxy before it).
     """
     from agent_runtimes.apps.callers import is_forwarded, is_loopback
 
     host = (scope.get("client") or (None,))[0]
     agent = (headers.get("user-agent") or "").split(" ", 1)[0][:60]
-    if is_forwarded(headers):
-        source = "ingress"
-    elif is_loopback(host):
+    # By the peer first: a forwarding header is only a header, and a page on
+    # the machine itself may send one.
+    if is_loopback(host):
         source = "loopback"
+    elif is_forwarded(headers):
+        source = "ingress"
     else:
         source = "cluster"
     return {
@@ -996,11 +999,32 @@ class OwnersOnly:
         if method == "OPTIONS" or route_class(method, path) != "owner":
             await self.app(scope, receive, send)
             return
-        from agent_runtimes.apps.callers import headers_of, proves_the_runtime
+        from agent_runtimes.apps.callers import (
+            from_a_strangers_page,
+            headers_of,
+            is_loopback,
+            proves_the_runtime,
+            strangers_page_refused,
+        )
 
         proof = await proves_the_runtime(scope)
         if proof.sufficient:
             await self.app(scope, receive, send)
+            return
+        headers = headers_of(scope)
+        host = (scope.get("client") or (None,))[0]
+        if is_loopback(host) and from_a_strangers_page(headers):
+            # Another site's page on the machine itself is no caller to log
+            # and serve, in either mode: whatever forwarding header it sends
+            # (a page may send one: CORS lets it), the loopback is its peer.
+            note_unproven(
+                "enforce",
+                method,
+                self.template_of(method, path),
+                "strangers-page",
+                caller_kind(scope, headers),
+            )
+            await strangers_page_refused(scope, receive, send)
             return
         note_unproven(
             self.mode,
