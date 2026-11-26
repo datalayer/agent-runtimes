@@ -475,8 +475,13 @@ class TestOnTheWire:
             ):
                 assert tracing._worker_transports_instrumented
 
-    def test_nothing_is_patched_when_nothing_is_collecting(self):
+    def test_nothing_is_patched_when_nothing_is_collecting(self, monkeypatch):
         """A patch with no story attached is a cost with no benefit."""
+        # Nothing collecting, whatever provider an earlier test of the session
+        # set globally (set once per process).
+        monkeypatch.setattr(
+            otel_trace, "get_tracer_provider", lambda: otel_trace.NoOpTracerProvider()
+        )
         assert not tracing._worker_transports_instrumented
         with attempt_span(
             an_execution(),

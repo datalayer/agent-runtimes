@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The CloudFormation templates of Datalayer Steward for AWS, read as AWS reads them:
+"""The CloudFormation templates of Cloud Steward, read as AWS reads them:
 the read role grants no action that is not a read; the change role never
 allows IAM, KMS, Organizations, account or billing actions, and sits under
 a permissions boundary that denies them.

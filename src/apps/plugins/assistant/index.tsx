@@ -467,9 +467,11 @@ export function AgentAssistant({
   // What the agent's server takes: the person's token on a Datalayer
   // runtime, the host's for its own server, none on this machine.
   const personToken = useIAMStore(state => state.token);
+  // Resolved at this render: it is handed on as data (the details' panels
+  // key their reads by it), and a host's renewal reaches them when it draws.
   const hostToken = useServerToken();
   const agentServerToken =
-    (target === 'datalayer' ? personToken : hostToken) || undefined;
+    (target === 'datalayer' ? personToken : hostToken()) || undefined;
   const agentAbout = useMemo<AssistantAbout>(
     () => ({
       name: appId,

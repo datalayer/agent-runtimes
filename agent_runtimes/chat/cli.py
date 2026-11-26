@@ -126,6 +126,7 @@ from .banner import (
     print_goodbye,
     show_banner,
 )
+from .runtime_auth import runtime_headers
 
 # Spinner frames - various styles
 SPINNER_DOTS = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
@@ -428,6 +429,13 @@ def _start_agent_runtime_server(
     from agent_runtimes.apps.session_store import STORE_VARIABLE
 
     _os.environ.setdefault(STORE_VARIABLE, "file")
+
+    # The runtime's token, drawn before its process starts, which inherits
+    # it: its loopback is no proof of anybody, and the CLI signs its calls
+    # with it (`runtime_auth`).
+    from .runtime_auth import ensure_runtime_token
+
+    ensure_runtime_token()
 
     # Shared value so the child process can report the effective port
     port_value = multiprocessing.Value("i", 0)
@@ -1331,7 +1339,9 @@ def run_prompts(
         # listed, paused and resumed — on a runtime that keeps them; an
         # older one is talked to as before, and said.
         try:
-            agent_url, older = conversation_url(server_url, agent_name)
+            agent_url, older = conversation_url(
+                server_url, agent_name, headers=runtime_headers()
+            )
         except AgentRefused as refused:
             _say(str(refused))
             return 1
@@ -2020,7 +2030,9 @@ def main_callback(
                 # Each thread of the prompt is a session of its agent —
                 # recorded, listed, paused and resumed — on a runtime that
                 # keeps them; an older one is talked to as before, and said.
-                url, older = conversation_url(server_url, runtime_agent_name)
+                url, older = conversation_url(
+                    server_url, runtime_agent_name, headers=runtime_headers()
+                )
                 if older:
                     startup_message = f"{startup_message}\n{GRAY}{older}{RESET}"
 

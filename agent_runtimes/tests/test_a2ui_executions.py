@@ -230,6 +230,10 @@ class TestTerminalRendering:
                 return {"messages": execution_to_a2ui(result)}
 
         class Client:
+            def __init__(self, **kwargs) -> None:
+                # The headers the CLI signs its local runtime's calls with.
+                self.headers = kwargs.get("headers") or {}
+
             async def __aenter__(self):
                 return self
 

@@ -7,6 +7,7 @@ import { useCallback, useMemo } from 'react';
 import { useChat, type UseChatHelpers, type UIMessage } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import { runtimeAuthHeaders } from './ownRoutes';
+import { useLatestRef } from './runtimeAuth';
 
 export interface Message {
   id: string;
@@ -68,6 +69,10 @@ export function useVercelAI(
     authToken,
   } = options;
 
+  // Read when each request is sent: the chat keeps the transport it was first
+  // given, so headers fixed at that render would send that render's token.
+  const authTokenRef = useLatestRef(authToken);
+
   // Construct the chat endpoint URL
   const apiEndpoint = `${baseUrl}/api/v1/vercel-ai/chat`;
 
@@ -78,7 +83,7 @@ export function useVercelAI(
       body: {
         agent_id: agentId,
       },
-      headers: runtimeAuthHeaders(authToken),
+      headers: () => runtimeAuthHeaders(authTokenRef.current),
     }),
   });
 

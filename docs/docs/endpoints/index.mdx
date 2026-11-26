@@ -1501,7 +1501,7 @@ All endpoints return standard error responses:
 
 ## Authentication
 
-A runtime's own routes answer its owner: a call from the machine itself, or one that carries the owner's Datalayer token or the runtime's own token.
+A runtime's own routes answer its owner: a call that carries the owner's Datalayer token or the runtime's own token, from the machine itself as from anywhere else (since 1.8.9; see [Authenticating to a Runtime](./authentication)). A skill's script in the sandbox reaches the few routes skills call without one.
 
 ```http
 Authorization: Bearer <token>

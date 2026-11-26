@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING, Optional
 
 import httpx
 
+from ..runtime_auth import runtime_headers
+
 if TYPE_CHECKING:
     from ..tux import CliTux
 
@@ -27,7 +29,7 @@ async def execute(tux: "CliTux") -> Optional[str]:
     resolved_agent_id: str | None = None
 
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(headers=runtime_headers()) as client:
             candidate_ids: list[str] = []
             if isinstance(tux.agent_id, str) and tux.agent_id.strip():
                 candidate_ids.append(tux.agent_id.strip())

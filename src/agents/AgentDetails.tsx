@@ -29,9 +29,10 @@ import {
 } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { AiAgentIcon } from '@datalayer/icons-react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { ContextPanel } from '../context/ContextPanel';
 import { runtimeAuthHeaders } from '../hooks/ownRoutes';
+import { useRuntimeQuery } from '../hooks/runtimeAuth';
 import {
   ContextInspector,
   type FullContextResponse,
@@ -448,13 +449,14 @@ export function AgentDetails({
   const [showSpecPayload, setShowSpecPayload] = useState(false);
 
   const { data: agentSpec, isLoading: specLoading } =
-    useQuery<AgentspecResponse>({
-      queryKey: ['agent-spec', agentId, apiBase, authToken],
-      queryFn: async () => {
+    useRuntimeQuery<AgentspecResponse>({
+      key: ['agent-spec', agentId, apiBase],
+      authToken,
+      queryFn: async headers => {
         const base = getApiBase(apiBase);
         const response = await fetch(
           `${base}/api/v1/configure/agents/${encodeURIComponent(agentId!)}/spec`,
-          { headers: runtimeAuthHeaders(authToken) },
+          { headers },
         );
         if (!response.ok) {
           throw new Error('Failed to fetch agent spec');

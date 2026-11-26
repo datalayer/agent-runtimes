@@ -647,6 +647,9 @@ class OwnRoutesOnly:
 #: caller's is served and logged (``log``) or refused (``enforce``).
 ACCESS_MODE_ENV = "AGENT_RUNTIMES_ACCESS_MODE"
 
+#: Where the lock says its mode in a request's scope, for the routes behind it.
+ACCESS_MODE_SCOPE_KEY = "agent_runtimes.access_mode"
+
 #: The two modes, and the one a runtime starts in when the setting is not there.
 ACCESS_MODES = ("log", "enforce")
 DEFAULT_ACCESS_MODE = "log"
@@ -810,17 +813,20 @@ def caller_kind(scope: Any, headers: Mapping[str, str]) -> dict[str, str]:
 
     ``agent`` is the client's product (the first word of its User-Agent),
     ``origin`` and ``referer`` the hosts a browser names, and ``source`` where
-    the call entered: ``ingress`` (a proxy passed it on), ``loopback`` or
-    ``cluster`` (straight from another address, with no proxy before it).
+    the call entered: ``loopback`` (its peer is the machine itself, whatever
+    headers it sends), ``ingress`` (a proxy passed it on) or ``cluster``
+    (straight from another address, with no proxy before it).
     """
     from agent_runtimes.apps.callers import is_forwarded, is_loopback
 
     host = (scope.get("client") or (None,))[0]
     agent = (headers.get("user-agent") or "").split(" ", 1)[0][:60]
-    if is_forwarded(headers):
-        source = "ingress"
-    elif is_loopback(host):
+    # By the peer first: a forwarding header is only a header, and a page on
+    # the machine itself may send one.
+    if is_loopback(host):
         source = "loopback"
+    elif is_forwarded(headers):
+        source = "ingress"
     else:
         source = "cluster"
     return {
@@ -984,6 +990,8 @@ class OwnersOnly:
         if scope["type"] not in ("http", "websocket"):
             await self.app(scope, receive, send)
             return
+        # What the routes behind read the lock's mode by (`callers.reads_the_sandbox_token`).
+        scope[ACCESS_MODE_SCOPE_KEY] = self.mode
         method = (
             "WS" if scope["type"] == "websocket" else (scope.get("method") or "GET")
         )
@@ -991,11 +999,32 @@ class OwnersOnly:
         if method == "OPTIONS" or route_class(method, path) != "owner":
             await self.app(scope, receive, send)
             return
-        from agent_runtimes.apps.callers import headers_of, proves_the_runtime
+        from agent_runtimes.apps.callers import (
+            from_a_strangers_page,
+            headers_of,
+            is_loopback,
+            proves_the_runtime,
+            strangers_page_refused,
+        )
 
         proof = await proves_the_runtime(scope)
         if proof.sufficient:
             await self.app(scope, receive, send)
+            return
+        headers = headers_of(scope)
+        host = (scope.get("client") or (None,))[0]
+        if is_loopback(host) and from_a_strangers_page(headers):
+            # Another site's page on the machine itself is no caller to log
+            # and serve, in either mode: whatever forwarding header it sends
+            # (a page may send one: CORS lets it), the loopback is its peer.
+            note_unproven(
+                "enforce",
+                method,
+                self.template_of(method, path),
+                "strangers-page",
+                caller_kind(scope, headers),
+            )
+            await strangers_page_refused(scope, receive, send)
             return
         note_unproven(
             self.mode,
@@ -1120,7 +1149,12 @@ async def _make_agent(name: str, body: Optional[Dict[str, Any]]) -> Tuple[int, s
     """Make (``body``) or delete (``None``) one of this runtime's agents, through its own API."""
     import httpx
 
-    async with httpx.AsyncClient(base_url=loopback_url(), timeout=120.0) as client:
+    from agent_runtimes.apps.callers import runtime_auth_headers
+
+    # Signed as the runtime itself: the loopback is no proof of anybody.
+    async with httpx.AsyncClient(
+        base_url=loopback_url(), timeout=120.0, headers=runtime_auth_headers()
+    ) as client:
         if body is None:
             response = await client.delete(f"/api/v1/agents/{name}")
         else:
@@ -1243,11 +1277,15 @@ async def warm(base_url: str, *, attempts: int = 60) -> List[str]:
 
     import httpx
 
+    from agent_runtimes.apps.callers import runtime_auth_headers
     from agent_runtimes.apps.loading import AppNotRunnable
 
     logger = logging.getLogger(__name__)
     made: List[str] = []
-    async with httpx.AsyncClient(base_url=base_url, timeout=120.0) as client:
+    # Signed as the runtime itself: the loopback is no proof of anybody.
+    async with httpx.AsyncClient(
+        base_url=base_url, timeout=120.0, headers=runtime_auth_headers()
+    ) as client:
         for _ in range(attempts):
             try:
                 if (await client.get("/health/ready")).status_code == 200:

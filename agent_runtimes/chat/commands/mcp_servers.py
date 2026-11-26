@@ -12,6 +12,8 @@ import httpx
 
 from agent_runtimes.agent.commands import CommandArgSpec
 
+from ..runtime_auth import runtime_headers
+
 if TYPE_CHECKING:
     from ..tux import CliTux
 
@@ -36,7 +38,7 @@ ARGS = (
 async def _get(tux: "CliTux", path: str, **kwargs: Any) -> Optional[Any]:
     """GET from this session's server, reporting rather than raising."""
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(headers=runtime_headers()) as client:
             response = await client.get(
                 f"{tux.server_url}{path}", timeout=15.0, **kwargs
             )
@@ -127,7 +129,7 @@ async def _auth(tux: "CliTux", server_id: str) -> None:
     from ..tux import STYLE_MUTED, STYLE_PRIMARY
 
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(headers=runtime_headers()) as client:
             response = await client.post(
                 f"{tux.server_url}/api/v1/mcp/servers/{server_id}/auth/start",
                 json={},
@@ -160,7 +162,7 @@ async def _logout(tux: "CliTux", server_id: str) -> None:
     from ..tux import STYLE_MUTED, STYLE_PRIMARY
 
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(headers=runtime_headers()) as client:
             response = await client.delete(
                 f"{tux.server_url}/api/v1/mcp/servers/{server_id}/auth", timeout=30.0
             )
@@ -191,7 +193,7 @@ async def _refresh(tux: "CliTux", server_id: str) -> None:
     from ..tux import STYLE_MUTED, STYLE_PRIMARY
 
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(headers=runtime_headers()) as client:
             response = await client.post(
                 f"{tux.server_url}/api/v1/mcp/servers/{server_id}/auth/refresh",
                 timeout=30.0,
@@ -236,7 +238,7 @@ async def _add(tux: "CliTux", server_id: str, rest: list[str]) -> None:
         return
 
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(headers=runtime_headers()) as client:
             response = await client.post(
                 f"{tux.server_url}/api/v1/mcp",
                 json={
@@ -264,7 +266,7 @@ async def _remove(tux: "CliTux", server_id: str) -> None:
     from ..tux import STYLE_MUTED, STYLE_PRIMARY
 
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(headers=runtime_headers()) as client:
             # Credentials first: a token we drop but never revoked is one that
             # still works in the world.
             await client.delete(
@@ -292,7 +294,7 @@ async def _toggle(tux: "CliTux", server_id: str, *, on: bool) -> None:
 
     verb = "enable" if on else "disable"
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(headers=runtime_headers()) as client:
             if on:
                 response = await client.post(
                     f"{tux.server_url}/api/v1/mcp/catalog/{server_id}/enable",

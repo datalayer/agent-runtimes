@@ -280,12 +280,6 @@ def save_file(
     }
 
 
-def _caller_is_local(request: Request) -> bool:
-    from agent_runtimes.apps.callers import is_loopback
-
-    return is_loopback(request.client.host if request.client else None)
-
-
 @router.post("/files")
 async def save_file_to_space(
     request: Request,
@@ -302,11 +296,12 @@ async def save_file_to_space(
     ),
 ) -> dict[str, Any]:
     """Keep the request's body as a file in the runtime owner's Space."""
-    if not _caller_is_local(request):
-        raise HTTPException(
-            status_code=403,
-            detail="Only the runtime's own pod keeps files in its owner's Space.",
-        )
+    # A skill's script on the pod's loopback, never a browser's page there.
+    from agent_runtimes.apps.callers import refuse_unless_a_skill
+
+    refuse_unless_a_skill(
+        request, "Only the runtime's own pod keeps files in its owner's Space."
+    )
     try:
         file_name = checked_name(name)
         file_folder = checked_folder(folder)

@@ -26,6 +26,8 @@ import httpx
 
 from agent_runtimes.tools.decisions import DecisionQuestion
 
+from ..runtime_auth import runtime_headers
+
 if TYPE_CHECKING:
     from ..tux import CliTux
 
@@ -87,7 +89,7 @@ async def refresh(tux: "CliTux") -> Optional[dict[str, Any]]:
     if known is not None and known[0] == key:
         return known[1]
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(headers=runtime_headers()) as client:
             response = await client.get(f"{key[0]}/api/v1/agents/{key[1]}", timeout=5.0)
     except httpx.HTTPError:
         return None
@@ -278,7 +280,7 @@ async def execute(tux: "CliTux", argv: str = "") -> Optional[str]:
         return None
 
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(headers=runtime_headers()) as client:
             response = await client.post(
                 f"{tux.server_url}/api/v1/configure/inference/decisions",
                 json={

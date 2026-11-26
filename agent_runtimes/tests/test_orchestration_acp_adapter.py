@@ -775,10 +775,17 @@ class TestTheTrace:
         assert TRACEPARENT.split("-")[1] in channel.headers["traceparent"]
 
     @pytest.mark.asyncio
-    async def test_an_execution_with_no_trace_carries_no_header(self):
+    async def test_an_execution_with_no_trace_carries_no_header(self, monkeypatch):
         """An invented traceparent is an orphan trace that looks real: it
         joins to nothing and sends whoever opens it looking for a parent
         that was never emitted."""
+        from opentelemetry import trace as otel_trace
+
+        # Nothing collecting, whatever provider an earlier test of the session
+        # set globally (set once per process).
+        monkeypatch.setattr(
+            otel_trace, "get_tracer_provider", lambda: otel_trace.NoOpTracerProvider()
+        )
         channel = FakeChannel(script=SPEC_UPDATES)
         store = InMemoryExecutionStore()
         execution = await store.create(

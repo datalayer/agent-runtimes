@@ -14,6 +14,7 @@
  * @module apps/plugins/agents/useSandboxService
  */
 
+import { useCallback } from 'react';
 import {
   useOptionalReactorPlatform,
   useReactorPlatform,
@@ -52,13 +53,24 @@ export function useSandboxService(): SwitchableSandboxService {
 }
 
 /**
- * The token the workspace's server takes (`AgentsConfig.serverToken`), as it
- * stands at this render; none when the host gave none, as for a server on
- * this machine, and none for a view drawn outside a workspace.
+ * The token the workspace's server takes (`AgentsConfig.serverToken`), as a
+ * getter to call right before each request: a host that renews its token
+ * without drawing again has the renewed one sent, as `createServerSandboxService`
+ * does. It answers none when the host gave none, as for a server on this
+ * machine, and none for a view drawn outside a workspace. Stable while the
+ * reactor and the token it resolves to at render are the same: a token
+ * supplied later gives a new getter, and the reads that depend on it run
+ * again.
  */
-export function useServerToken(): string | undefined {
+export function useServerToken(): () => string | undefined {
   const reactor = useOptionalReactorPlatform();
-  return serverTokenOf(
-    reactor?.getConfig<AgentsConfig>(AGENTS_PLUGIN_NAME)?.serverToken,
-  );
+  const read = () =>
+    serverTokenOf(
+      reactor?.getConfig<AgentsConfig>(AGENTS_PLUGIN_NAME)?.serverToken,
+    );
+  // A new getter when the token this render sees changes (one supplied
+  // after a refused read), so a read that depends on it is made again.
+  const now = read();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useCallback(read, [reactor, now]);
 }

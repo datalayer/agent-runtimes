@@ -66,6 +66,35 @@ def _records_changed(before: Dict[str, int], after: Dict[str, int]) -> List[str]
 
 
 @pytest.fixture(autouse=True)
+def _no_test_leaves_the_worker_transports_patched() -> Iterator[None]:
+    """No test leaves httpx instrumented for the next one (26 November 2026).
+
+    `monitoring.otel.instrument_worker_transports` patches httpx globally the
+    first time an orchestration attempt's span records, and remembers it in a
+    module flag. A test that made one record and did not put both back left
+    every later test in the session with a client that carries a
+    ``traceparent`` (found in CI: the ACP adapter's no-trace test and the
+    tracing module's not-patched test failed after the full suite before them).
+
+    Yields
+    ------
+    None
+        The test runs; httpx is put back after it.
+    """
+    yield
+    from agent_runtimes.monitoring import otel
+
+    if otel._worker_transports_instrumented:
+        try:
+            from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+
+            HTTPXClientInstrumentor().uninstrument()
+        except Exception:  # noqa: BLE001 - nothing installed is nothing patched
+            pass
+        otel._worker_transports_instrumented = False
+
+
+@pytest.fixture(autouse=True)
 def _environment_prices_of_the_test_s_own(tmp_path: Any, monkeypatch: Any) -> None:
     """Each test keeps the environment prices it lists in a file of its own (21 November 2026).
 

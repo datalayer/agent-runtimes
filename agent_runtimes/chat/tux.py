@@ -788,7 +788,15 @@ class CliTux:
             base = "wss://" + base[len("https://") :]
         elif base.startswith("http://"):
             base = "ws://" + base[len("http://") :]
-        return f"{base}/api/v1/tool-approvals/ws?agent_id={self.agent_id}"
+        url = f"{base}/api/v1/tool-approvals/ws?agent_id={self.agent_id}"
+        # A websocket carries the local runtime's token in its query.
+        import os
+        from urllib.parse import quote
+
+        from .runtime_auth import RUNTIME_TOKEN_ENV
+
+        token = (os.environ.get(RUNTIME_TOKEN_ENV) or "").strip()
+        return f"{url}&token={quote(token, safe='')}" if token else url
 
     async def _prompt_tool_approval(
         self, tool_name: str, tool_args: dict[str, Any]
@@ -1095,7 +1103,10 @@ class CliTux:
         try:
             # Create or reuse the AG-UI client for conversation history
             if self._agui_client is None:
-                headers: dict[str, str] = {}
+                from .runtime_auth import runtime_headers
+
+                # The local runtime's token (none for a runtime elsewhere).
+                headers: dict[str, str] = runtime_headers()
                 if is_session_agui_url(self.agent_url):
                     # A session's turns are signed as the session commands
                     # are: its record is written in the person's name.

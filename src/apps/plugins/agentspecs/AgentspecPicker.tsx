@@ -51,7 +51,7 @@ export function AgentspecPicker({
   useEffect(() => {
     let cancelled = false;
     void fetch(`${workspace.serverUrl}/api/v1/agents`, {
-      headers: runtimeAuthHeaders(serverToken),
+      headers: runtimeAuthHeaders(serverToken()),
     })
       .then(response => (response.ok ? response.json() : { agents: [] }))
       .then(payload => {
@@ -87,7 +87,7 @@ export function AgentspecPicker({
             method: 'POST',
             headers: {
               'content-type': 'application/json',
-              ...runtimeAuthHeaders(serverToken),
+              ...runtimeAuthHeaders(serverToken()),
             },
             body: JSON.stringify({ agent_id: agentId }),
           },

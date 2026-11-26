@@ -153,7 +153,7 @@ def test_the_session_is_resumed_before_the_lines_and_a_refusal_stops_them(
     monkeypatch.setattr(
         agent_session,
         "conversation_url",
-        lambda server, agent: (f"{server}/api/v1/ag-ui/{agent}/", ""),
+        lambda server, agent, **signed: (f"{server}/api/v1/ag-ui/{agent}/", ""),
     )
     ran: List[str] = []
 

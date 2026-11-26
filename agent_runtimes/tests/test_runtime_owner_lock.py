@@ -5,8 +5,9 @@
 
 Every route of the runtime that is not public, an application's own or
 self-proving answers a caller that proved the runtime is theirs
-(`callers.proves_the_runtime`): the machine itself, the runtime's own token,
-or its owner's Datalayer token. `apps.visitors.OwnersOnly` holds them to it,
+(`callers.proves_the_runtime`): the runtime's own token or its owner's
+Datalayer token, from the machine itself as from anywhere else, but for the
+few routes a skill's script calls from the sandbox. `apps.visitors.OwnersOnly` holds them to it,
 served and logged in ``log`` mode, refused in ``enforce`` mode; and the
 sandbox's own credentials are said to such a caller alone.
 
@@ -484,16 +485,26 @@ def test_each_kind_of_token_is_taken_where_it_should_be_and_nowhere_else(
         assert (answer.json() != {"detail": visitors.NOT_PROVEN}) is let_through
 
 
-def test_the_machine_itself_needs_no_token_unless_a_proxy_passed_the_call_on(
+def test_the_machine_itself_sends_a_token_as_anybody_does(
     apps: dict[str, Any],
 ) -> None:
+    # 1.8.9: on a person's machine a page in their browser reaches the
+    # loopback too, so an address proves nothing.
     local = _client(apps["enforce"], LOOPBACK)
-    assert local.get("/api/v1/agents").status_code == 200
+    assert local.get("/api/v1/agents/default/history").status_code == 401
+    assert local.post("/api/v1/agents", json={}).status_code == 401
     for header in ("X-Forwarded-For", "X-Forwarded-Host", "X-Real-Ip", "Forwarded"):
         assert (
-            local.get("/api/v1/agents", headers={header: "198.51.100.7"}).status_code
+            local.get(
+                "/api/v1/runtime/status", headers={header: "198.51.100.7"}
+            ).status_code
             == 401
         ), header
+    for token in ("owner-token", SANDBOX_TOKEN, callers.runtime_token()):
+        assert (
+            local.get("/api/v1/runtime/status", headers=_bearer(token)).status_code
+            == 200
+        ), token
     assert (
         local.get(
             "/api/v1/agents",
@@ -501,6 +512,210 @@ def test_the_machine_itself_needs_no_token_unless_a_proxy_passed_the_call_on(
         ).status_code
         == 200
     )
+
+
+def test_log_mode_serves_the_machine_itself_without_a_token_and_says_it(
+    apps: dict[str, Any], counter: _Counter, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.WARNING, logger="agent_runtimes.access")
+    local = _client(apps["log"], LOOPBACK)
+    assert local.get("/api/v1/runtime/status").status_code == 200
+    assert _lines(caplog) == [
+        "ACCESS unproven mode=log action=served method=GET route=/api/v1/runtime/status "
+        "reason=loopback-no-credential agent=testclient origin=- referer=- source=loopback"
+    ]
+    assert counter.added[0][1]["reason"] == "loopback-no-credential"
+
+
+SKILLS_CALLS = (
+    ("GET", "/api/v1/agents"),
+    ("GET", "/api/v1/agents/default/memory"),
+    ("POST", "/api/v1/agents/default/memory/search"),
+    ("GET", "/api/v1/owner"),
+    ("GET", "/api/v1/owner/events"),
+    ("POST", "/api/v1/configure/mail"),
+    ("POST", "/api/v1/spaces/files"),
+    ("POST", "/api/v1/library/items/01ITEM/publish"),
+    ("POST", "/api/v1/mcp/proxy/tools/call"),
+)
+
+
+@pytest.mark.parametrize("method,path", SKILLS_CALLS)
+def test_a_skills_script_in_the_sandbox_reaches_its_routes_without_a_token(
+    method: str, path: str, apps: dict[str, Any], counter: _Counter
+) -> None:
+    answer = _client(apps["enforce"], LOOPBACK).request(method, path, json={})
+    assert answer.json() != {"detail": visitors.NOT_PROVEN}, answer.text
+    assert counter.added == []
+
+
+@pytest.mark.parametrize("method,path", SKILLS_CALLS)
+def test_a_skills_routes_answer_no_page_and_nobody_elsewhere_without_a_token(
+    method: str, path: str, apps: dict[str, Any]
+) -> None:
+    page = {"Origin": "http://localhost:3000"}
+    local = _client(apps["enforce"], LOOPBACK)
+    assert local.request(method, path, headers=page, json={}).status_code == 401
+    assert (
+        local.request(
+            method, path, headers={"X-Forwarded-For": "198.51.100.7"}, json={}
+        ).status_code
+        == 401
+    )
+    assert _client(apps["enforce"]).request(method, path, json={}).status_code == 401
+
+
+def test_a_harness_reaches_its_handles_routes_whatever_its_client_says(
+    apps: dict[str, Any], counter: _Counter
+) -> None:
+    local = _client(apps["enforce"], LOOPBACK)
+    node = {"Sec-Fetch-Mode": "cors"}
+    for path in (
+        "/api/v1/mcp/lent/a-handle/mcp",
+        "/api/v1/inference/relay/a-handle/v1/messages",
+    ):
+        answer = local.post(path, headers=node, json={})
+        assert answer.json() != {"detail": visitors.NOT_PROVEN}, (path, answer.text)
+        assert (
+            local.post(
+                path, headers={"X-Forwarded-For": "198.51.100.7"}, json={}
+            ).status_code
+            == 401
+        )
+        assert _client(apps["enforce"]).post(path, json={}).status_code == 401
+    # Only the calls a proxy passed on, or from elsewhere, are unproven.
+    assert {attributes["reason"] for _, attributes in counter.added} == {
+        "no-credential"
+    }
+
+
+def test_a_page_on_the_loopback_is_refused_by_a_skills_route_in_log_mode(
+    apps: dict[str, Any],
+) -> None:
+    local = _client(apps["log"], LOOPBACK)
+    for headers in (
+        {"Origin": "http://localhost:3000"},
+        {"Sec-Fetch-Site": "same-site"},
+    ):
+        answer = local.post(
+            "/api/v1/configure/mail",
+            headers=headers,
+            json={"subject": "A page's mail", "text": "Not a skill's."},
+        )
+        assert answer.status_code == 403, (headers, answer.text)
+        assert "a browser's page is not one" in answer.json()["detail"]
+
+
+@pytest.mark.parametrize("mode", ["log", "enforce"])
+def test_another_sites_page_on_the_loopback_is_refused_whatever_it_says(
+    mode: str, apps: dict[str, Any], counter: _Counter
+) -> None:
+    # A forwarding header is only a header: CORS lets a page send one, and
+    # the loopback is still its peer. Refused in both modes, never served.
+    local = _client(apps[mode], LOOPBACK)
+    for headers in (
+        {"Origin": "https://a-stranger.example"},
+        {"Origin": "https://a-stranger.example", "X-Forwarded-For": "198.51.100.7"},
+        {"Sec-Fetch-Site": "cross-site", "X-Forwarded-For": "198.51.100.7"},
+    ):
+        for method, path in (
+            ("POST", "/api/v1/agents"),
+            ("GET", "/api/v1/agents/default/memory"),
+            ("GET", "/api/v1/runtime/status"),
+        ):
+            answer = local.request(method, path, headers=headers, json={})
+            assert answer.status_code == 403, (mode, headers, path, answer.text)
+            assert answer.json() == {"detail": callers.STRANGERS_PAGE}
+    assert {attributes["reason"] for _, attributes in counter.added} == {
+        "strangers-page"
+    }
+    assert {attributes["source"] for _, attributes in counter.added} == {"loopback"}
+    # This machine's page and the platform's are no strangers: judged by their token.
+    for origin in ("http://localhost:3000", "https://datalayer.ai"):
+        assert (
+            local.get(
+                "/api/v1/runtime/status",
+                headers={"Origin": origin, **_bearer("owner-token")},
+            ).status_code
+            == 200
+        )
+
+
+def test_a_call_a_proxy_really_passed_on_is_judged_by_its_token(
+    apps: dict[str, Any],
+) -> None:
+    passed_on = _client(apps["enforce"])
+    headers = {"X-Forwarded-For": "198.51.100.7", "Origin": "https://datalayer.ai"}
+    assert passed_on.get("/api/v1/runtime/status", headers=headers).status_code == 401
+    assert (
+        passed_on.get(
+            "/api/v1/runtime/status", headers={**headers, **_bearer("owner-token")}
+        ).status_code
+        == 200
+    )
+
+
+def test_the_companion_proves_itself_by_the_pods_secret_where_one_is_held(
+    apps: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from agent_runtimes.apps import principal
+
+    local = _client(apps["enforce"], LOOPBACK)
+    said = {callers.POD_SECRET_HEADER: "the-pods-secret"}
+    # A runtime that holds none takes no secret for one.
+    assert local.get("/api/v1/runtime/status", headers=said).status_code == 401
+    monkeypatch.setitem(principal._PROOF, "pod_secret", "the-pods-secret")
+    assert local.get("/api/v1/runtime/status", headers=said).status_code == 200
+    assert (
+        local.get(
+            "/api/v1/runtime/status", headers={callers.POD_SECRET_HEADER: "a-guess"}
+        ).status_code
+        == 401
+    )
+    assert (
+        _client(apps["enforce"]).get("/api/v1/runtime/status", headers=said).status_code
+        == 401
+    )
+
+
+def test_the_sandbox_the_pod_names_at_launch_gives_the_runtimes_token(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from agent_runtimes.services import code_sandbox_manager
+
+    class _Unconfigured:
+        def get_status(self) -> dict[str, Any]:
+            return {"jupyter_token": None}
+
+    monkeypatch.setattr(
+        code_sandbox_manager, "get_code_sandbox_manager", lambda: _Unconfigured()
+    )
+    monkeypatch.setenv(
+        "AGENT_RUNTIMES_JUPYTER_SANDBOX",
+        "http://127.0.0.1:2300/jupyter/server/pool/x?token=from-the-pod",
+    )
+    assert callers.sandbox_token() == "from-the-pod"
+    monkeypatch.delenv("AGENT_RUNTIMES_JUPYTER_SANDBOX")
+    assert callers.sandbox_token() == ""
+
+
+def test_the_runtimes_own_token_is_the_one_said_or_one_drawn(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(callers, "_RUNTIME_TOKEN", {})
+    monkeypatch.setenv(callers.RUNTIME_TOKEN_ENV, "chosen-by-whoever-started-it")
+    assert callers.runtime_token() == "chosen-by-whoever-started-it"
+    assert callers.runtime_auth_headers() == {
+        "Authorization": "Bearer chosen-by-whoever-started-it"
+    }
+    monkeypatch.setattr(callers, "_RUNTIME_TOKEN", {})
+    monkeypatch.delenv(callers.RUNTIME_TOKEN_ENV)
+    drawn = callers.runtime_token()
+    assert len(drawn) >= 32 and callers.runtime_token() == drawn
+    # Held in the process, never written where what it starts inherits it.
+    import os
+
+    assert callers.RUNTIME_TOKEN_ENV not in os.environ
 
 
 def test_a_runtime_that_is_nobodys_yet_takes_no_persons_token(
@@ -698,7 +913,12 @@ def test_log_mode_is_quiet_for_a_call_that_proved_itself(
     assert (
         client.get("/api/v1/agents", headers=_bearer(SANDBOX_TOKEN)).status_code == 200
     )
-    assert _client(apps["log"], LOOPBACK).get("/api/v1/agents").status_code == 200
+    assert (
+        _client(apps["log"], LOOPBACK)
+        .get("/api/v1/agents", headers=_bearer(callers.runtime_token()))
+        .status_code
+        == 200
+    )
     assert client.get("/health").status_code == 200
     client.get("/api/v1/apps/sessions")
     with client.websocket_connect(
@@ -831,19 +1051,34 @@ def test_the_owner_still_reads_the_sandboxs_token(
     assert codemode["sandbox"]["jupyter_token"] == SANDBOX_TOKEN
 
 
-def test_the_machine_itself_reads_it_and_a_call_a_proxy_passed_on_does_not(
+def test_the_machine_itself_reads_it_while_the_lock_logs_and_a_stranger_never(
     apps: dict[str, Any],
 ) -> None:
     local = _client(apps["log"], LOOPBACK)
+    for headers in ({}, {"Origin": "http://localhost:3000"}):
+        assert (
+            local.get("/health/startup", headers=headers).json()["sandbox"][
+                "jupyter_token"
+            ]
+            == SANDBOX_TOKEN
+        ), headers
+    for headers in (
+        {"X-Forwarded-For": "198.51.100.7"},
+        {"Origin": "https://a-stranger.example"},
+        {"Sec-Fetch-Site": "cross-site"},
+    ):
+        told = local.get("/health/startup", headers=headers)
+        assert (
+            "jupyter_token" not in _keys(told.json()) and SANDBOX_TOKEN not in told.text
+        ), headers
+    # Enforced, the machine itself sends a token to read it, as anybody does.
+    enforced = _client(apps["enforce"], LOOPBACK)
+    assert SANDBOX_TOKEN not in enforced.get("/health/startup").text
     assert (
-        local.get("/health/startup").json()["sandbox"]["jupyter_token"] == SANDBOX_TOKEN
-    )
-    passed_on = local.get(
-        "/health/startup", headers={"X-Forwarded-For": "198.51.100.7"}
-    )
-    assert (
-        "jupyter_token" not in _keys(passed_on.json())
-        and SANDBOX_TOKEN not in passed_on.text
+        enforced.get("/health/startup", headers=_bearer("owner-token")).json()[
+            "sandbox"
+        ]["jupyter_token"]
+        == SANDBOX_TOKEN
     )
 
 

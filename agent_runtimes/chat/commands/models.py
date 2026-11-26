@@ -11,6 +11,8 @@ import httpx
 
 from agent_runtimes.agent.commands import CommandArgSpec
 
+from ..runtime_auth import runtime_headers
+
 if TYPE_CHECKING:
     from ..tux import CliTux
 
@@ -57,7 +59,7 @@ async def _fetch_catalog(tux: "CliTux") -> Optional[dict[str, Any]]:
     """
     agent_id = getattr(tux, "agent_id", "") or ""
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(headers=runtime_headers()) as client:
             response = await client.get(
                 f"{tux.server_url}/api/v1/configure/models",
                 params={"agent_id": agent_id} if agent_id else None,
@@ -252,7 +254,7 @@ async def _switch(tux: "CliTux", model_id: str) -> None:
 
     agent_id = getattr(tux, "agent_id", "") or ""
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(headers=runtime_headers()) as client:
             spec_response = await client.get(
                 f"{tux.server_url}/api/v1/configure/agents/{agent_id}/spec",
                 timeout=10.0,
@@ -295,7 +297,7 @@ async def _switch(tux: "CliTux", model_id: str) -> None:
         spec["codemode"] = False
 
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(headers=runtime_headers()) as client:
             response = await client.post(
                 f"{tux.server_url}/api/v1/agents/configure-from-spec",
                 json={
@@ -359,7 +361,7 @@ async def _set_fallbacks(tux: "CliTux", ids: str) -> None:
         session.extras["model_fallbacks"] = known
 
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(headers=runtime_headers()) as client:
             response = await client.put(
                 f"{tux.server_url}/api/v1/configure/inference/provider",
                 json={"fallback_models": known},

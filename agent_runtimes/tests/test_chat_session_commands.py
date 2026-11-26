@@ -342,6 +342,31 @@ def test_an_older_runtime_is_talked_to_as_before_and_said() -> None:
         conversation_url("http://runtime", "default", get=says(503, {}))
 
 
+def test_the_local_runtime_is_asked_what_it_runs_with_its_token() -> None:
+    """1.8.9: the runtime's loopback is no proof of anybody, so the CLI asks
+    the runtime it started what it runs with that runtime's token (an
+    enforcing runtime answered the question 401, and the prompt never started).
+    """
+    from agent_runtimes.agent.session import conversation_url
+
+    asked: list[Dict[str, Any]] = []
+
+    class Answer:
+        status_code = 200
+
+        def json(self) -> Dict[str, Any]:
+            return {"agent_sessions": True}
+
+    def get(url: str, timeout: float, **kwargs: Any) -> Answer:
+        asked.append(kwargs)
+        return Answer()
+
+    signed = {"Authorization": "Bearer the-local-runtimes-token"}
+    conversation_url("http://127.0.0.1:9999", "default", get=get, headers=signed)
+    conversation_url("http://127.0.0.1:9999", "default", get=get)
+    assert asked == [{"headers": signed}, {}]
+
+
 def test_this_runtime_says_it_keeps_agent_sessions(wired: TestClient) -> None:
     said = wired.get("/api/v1/runtime/status").json()
     assert said["agent_sessions"] is True and said["version"]

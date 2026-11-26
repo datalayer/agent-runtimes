@@ -101,7 +101,7 @@ export default function A2uiView({ workspace }: AgentViewProps): JSX.Element {
             method: 'POST',
             headers: {
               'content-type': 'application/json',
-              ...runtimeAuthHeaders(serverToken),
+              ...runtimeAuthHeaders(serverToken()),
             },
             body: JSON.stringify({ code, action: action ?? null }),
           },

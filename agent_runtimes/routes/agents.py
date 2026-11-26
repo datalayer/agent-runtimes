@@ -22,12 +22,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Literal, Optional, cast
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field, model_validator
 from pydantic_ai import Agent as PydanticAgent
 from pydantic_ai import DeferredToolRequests
 
 from ..adapters.pydantic_ai_adapter import PydanticAIAdapter
+from ..apps.callers import refuse_a_strangers_page
 from ..apps.today import today_instruction
 from ..capabilities import (
     LLMContextUsageCapability,
@@ -108,6 +109,10 @@ from .vercel_ai import register_vercel_agent, unregister_vercel_agent
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/agents", tags=["agents"])
+
+#: On what an agent remembers: a page that is neither this machine's nor the
+#: platform's reaches nothing on the loopback (`callers.refuse_a_strangers_page`).
+_NO_STRANGERS_PAGE = [Depends(refuse_a_strangers_page)]
 
 # Store the API prefix for dynamic mount paths
 _api_prefix = "/api/v1"
@@ -3755,7 +3760,7 @@ async def list_agents() -> AgentListResponse:
     return AgentListResponse(agents=agents)
 
 
-@router.get("/{agent_id}/memory")
+@router.get("/{agent_id}/memory", dependencies=_NO_STRANGERS_PAGE)
 async def list_agent_memory(agent_id: str) -> dict[str, Any]:
     """List durable memories stored for an agent.
 
@@ -3775,7 +3780,7 @@ async def list_agent_memory(agent_id: str) -> dict[str, Any]:
     return {"memories": memories}
 
 
-@router.post("/{agent_id}/memory/search")
+@router.post("/{agent_id}/memory/search", dependencies=_NO_STRANGERS_PAGE)
 async def search_agent_memory(agent_id: str, request: Request) -> dict[str, Any]:
     """Search an agent's durable memory for a query string."""
     from ..memory import get_memory_backend
@@ -3838,7 +3843,7 @@ def _memory_refusal(exc: Exception) -> HTTPException:
 
 # Declared before ``DELETE /{agent_id:path}`` below, which would otherwise
 # take ``DELETE /{agent_id}/memory`` for the deletion of the agent itself.
-@router.post("/{agent_id}/memory")
+@router.post("/{agent_id}/memory", dependencies=_NO_STRANGERS_PAGE)
 async def add_agent_memory(agent_id: str, memory: MemoryToKeep) -> dict[str, Any]:
     """Keep one thing in an agent's durable memory of the person, in their words."""
     words = " ".join(memory.content.split())
@@ -3861,7 +3866,7 @@ async def add_agent_memory(agent_id: str, memory: MemoryToKeep) -> dict[str, Any
     return {"added": 1, "content": words}
 
 
-@router.delete("/{agent_id}/memory/{memory_id}")
+@router.delete("/{agent_id}/memory/{memory_id}", dependencies=_NO_STRANGERS_PAGE)
 async def forget_agent_memory(agent_id: str, memory_id: str) -> dict[str, Any]:
     """Forget one memory of the agent; somebody else's, or another agent's, is not found."""
     backend = _durable_memory_of(agent_id)
@@ -3883,7 +3888,7 @@ async def forget_agent_memory(agent_id: str, memory_id: str) -> dict[str, Any]:
     return {"forgotten": 1}
 
 
-@router.delete("/{agent_id}/memory")
+@router.delete("/{agent_id}/memory", dependencies=_NO_STRANGERS_PAGE)
 async def forget_all_agent_memory(
     agent_id: str, count: int = Query(..., ge=0)
 ) -> dict[str, Any]:

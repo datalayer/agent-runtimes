@@ -87,7 +87,7 @@ export const AGENT_PRESENTATIONS: Record<string, AgentPresentation> = {
   'worker-steward-aws': {
     id: 'worker-steward-aws',
     version: '0.0.1',
-    name: 'Datalayer Steward for AWS',
+    name: 'Cloud Steward',
     emoji: '☁️',
     description:
       "Reads your AWS account's cost recommendations, right-sizing findings and spend with a read-only role, and recommends savings, each with the evidence it read, the estimated monthly saving and the fix to review.",

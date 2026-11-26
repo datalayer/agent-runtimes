@@ -14,6 +14,7 @@ import httpx
 from rich.text import Text
 
 from ..banner import TOKENS_DOWN, TOKENS_UP
+from ..runtime_auth import runtime_headers
 
 if TYPE_CHECKING:
     from ..tux import CliTux
@@ -47,7 +48,7 @@ async def execute(tux: "CliTux") -> Optional[str]:
 
     # Connection test + fetch startup/spec metadata
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(headers=runtime_headers()) as client:
             response = await client.get(f"{tux.server_url}/health", timeout=5.0)
             if response.status_code == 200:
                 tux.console.print("  API: [green]Connected[/green]", style=STYLE_MUTED)

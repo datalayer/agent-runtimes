@@ -136,7 +136,11 @@ export function CheckpointsSidebar({
   const reload = useCallback(async () => {
     if (!serverUrl || !agentId) return;
     try {
-      const next = await listConversationCheckpoints(serverUrl, agentId, token);
+      const next = await listConversationCheckpoints(
+        serverUrl,
+        agentId,
+        token(),
+      );
       if (!alive.current) return;
       setState(next);
       setError(null);
@@ -186,7 +190,7 @@ export function CheckpointsSidebar({
     const trimmed = label.trim();
     if (!trimmed) return;
     void act('save', async () => {
-      await saveConversationCheckpoint(serverUrl, agentId, trimmed, token);
+      await saveConversationCheckpoint(serverUrl, agentId, trimmed, token());
       if (alive.current) setLabel('');
     });
   }, [act, agentId, label, serverUrl, token]);
@@ -195,7 +199,7 @@ export function CheckpointsSidebar({
     (checkpoint: ConversationCheckpoint) =>
       act(`rewind:${checkpoint.id}`, async () => {
         const settled = afterNextSnapshot();
-        await rewindConversation(serverUrl, agentId, checkpoint.id, token);
+        await rewindConversation(serverUrl, agentId, checkpoint.id, token());
         // The server pushes the rewound snapshot; ask for one too in case the
         // push raced us, then have the chat load the transcript it now has.
         agentRuntimeStore.getState().requestRefresh(agentId);
@@ -208,7 +212,12 @@ export function CheckpointsSidebar({
   const remove = useCallback(
     (checkpoint: ConversationCheckpoint) =>
       act(`delete:${checkpoint.id}`, () =>
-        deleteConversationCheckpoint(serverUrl, agentId, checkpoint.id, token),
+        deleteConversationCheckpoint(
+          serverUrl,
+          agentId,
+          checkpoint.id,
+          token(),
+        ),
       ),
     [act, agentId, serverUrl, token],
   );

@@ -388,7 +388,7 @@ class _AppRecorder(_Recorder):
         self.app = AppSpec.model_validate(
             {
                 "id": "aws-steward-agent",
-                "name": "Datalayer Steward for AWS",
+                "name": "Cloud Steward",
                 "kind": "worker",
                 "agent": "worker-steward-aws:0.0.1",
                 "emoji": "☁️",
@@ -432,7 +432,7 @@ def deployed(monkeypatch: pytest.MonkeyPatch) -> dict:
         lambda dep: ("principal-token", "") if dep == "dep-1" else (None, "no token."),
     )
 
-    async def forward(approval: Any, token: Any) -> str:
+    async def forward(approval: Any, token: Any, **said: Any) -> str:
         world["forwarded"].append((approval, token))
         return "approval-1"
 
@@ -720,7 +720,7 @@ def test_the_report_document_is_the_editors_nodes_in_reading_order() -> None:
     assert closing["type"] == "paragraph" and last["format"] == 2
     assert last["text"] == (
         "Approving hands you the change to apply; nothing was changed in your "
-        "account. Written by ☁️ Datalayer Steward for AWS, on its own."
+        "account. Written by ☁️ Cloud Steward, on its own."
     )
     # Nobody's blocks are locked: the page is its readers' to edit.
     assert all("$" not in block for block in (title, summary, table, bullets, closing))
@@ -942,9 +942,7 @@ async def test_opened_by_a_person_the_report_is_signed_for_them(
         "user-1",
     )
     closing = written["state"]["root"]["children"][-1]
-    assert _words(closing).endswith(
-        "Written by ☁️ Datalayer Steward for AWS, for Ana Lopez."
-    )
+    assert _words(closing).endswith("Written by ☁️ Cloud Steward, for Ana Lopez.")
 
 
 @pytest.mark.asyncio

@@ -112,6 +112,10 @@ class TestToggle:
                 return {}
 
         class FakeClient:
+            def __init__(self, **kwargs) -> None:
+                # The headers the CLI signs its local runtime's calls with.
+                self.headers = kwargs.get("headers") or {}
+
             async def __aenter__(self):
                 return self
 

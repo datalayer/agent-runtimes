@@ -17,6 +17,8 @@ import httpx
 
 from agent_runtimes._version import __version__
 
+from .runtime_auth import runtime_headers
+
 if TYPE_CHECKING:
     from .tux import CliTux
 
@@ -37,7 +39,7 @@ async def runtime_version(tux: "CliTux") -> str:
         answer.
     """
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(headers=runtime_headers()) as client:
             response = await client.get(
                 f"{tux.server_url}/api/v1/runtime/status", timeout=10.0
             )

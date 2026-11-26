@@ -25,10 +25,11 @@ import {
   XIcon,
   LinkExternalIcon,
 } from '@primer/octicons-react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Box, Card } from '@datalayer/primer-addons';
 import type { MCPServerConfig } from '../types';
 import { runtimeAuthHeaders } from '../hooks/ownRoutes';
+import { useRuntimeQuery } from '../hooks/runtimeAuth';
 import { getSkillSpec, getSkillSpecs } from '../specs/skills';
 import type { OAuthProvider, OAuthProviderConfig, Identity } from '../identity';
 import { IdentityCard, IdentityConnect, useIdentity } from '../identity';
@@ -668,11 +669,12 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
   onSelectedMcpServersChange,
 }) => {
   // Fetch general configuration from the backend (models, etc.)
-  const configQuery = useQuery<ConfigResponse>({
-    queryKey: ['agent-config', baseUrl, authToken],
-    queryFn: async () => {
+  const configQuery = useRuntimeQuery<ConfigResponse>({
+    key: ['agent-config', baseUrl],
+    authToken,
+    queryFn: async headers => {
       const response = await fetch(`${baseUrl}/api/v1/configure`, {
-        headers: runtimeAuthHeaders(authToken),
+        headers,
       });
       if (!response.ok) {
         throw new Error('Failed to fetch configuration');
@@ -685,11 +687,12 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
   });
 
   // Fetch MCP Config servers from mcp.json (user-defined servers)
-  const mcpServersQuery = useQuery<MCPServerConfig[]>({
-    queryKey: ['mcp-config', baseUrl, authToken],
-    queryFn: async () => {
+  const mcpServersQuery = useRuntimeQuery<MCPServerConfig[]>({
+    key: ['mcp-config', baseUrl],
+    authToken,
+    queryFn: async headers => {
       const response = await fetch(`${baseUrl}/api/v1/mcp/servers/config`, {
-        headers: runtimeAuthHeaders(authToken),
+        headers,
       });
       if (!response.ok) {
         throw new Error('Failed to fetch MCP config servers');
@@ -702,11 +705,12 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
   });
 
   // Fetch agent specs from library
-  const libraryQuery = useQuery<LibraryAgentspec[]>({
-    queryKey: ['agent-library', baseUrl, authToken],
-    queryFn: async () => {
+  const libraryQuery = useRuntimeQuery<LibraryAgentspec[]>({
+    key: ['agent-library', baseUrl],
+    authToken,
+    queryFn: async headers => {
       const response = await fetch(`${baseUrl}/api/v1/agents/library`, {
-        headers: runtimeAuthHeaders(authToken),
+        headers,
       });
       if (!response.ok) {
         throw new Error('Failed to fetch agent library');
@@ -741,28 +745,32 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
   const isFormReadOnly = isSpecMode;
 
   // Fetch skills from the backend (always available, independent of codemode)
-  const skillsQuery = useQuery<{ skills: SkillOption[]; total: number }>({
-    queryKey: ['agent-skills', baseUrl, authToken],
-    queryFn: async () => {
-      const response = await fetch(`${baseUrl}/api/v1/skills`, {
-        headers: runtimeAuthHeaders(authToken),
-      });
-      if (!response.ok) {
-        throw new Error('Failed to fetch skills');
-      }
-      return response.json();
+  const skillsQuery = useRuntimeQuery<{ skills: SkillOption[]; total: number }>(
+    {
+      key: ['agent-skills', baseUrl],
+      authToken,
+      queryFn: async headers => {
+        const response = await fetch(`${baseUrl}/api/v1/skills`, {
+          headers,
+        });
+        if (!response.ok) {
+          throw new Error('Failed to fetch skills');
+        }
+        return response.json();
+      },
+      enabled: !!baseUrl,
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      retry: 1,
     },
-    enabled: !!baseUrl,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    retry: 1,
-  });
+  );
 
   // Fetch MCP Catalog servers (predefined servers that can be enabled on-demand)
-  const catalogServersQuery = useQuery<MCPServerConfig[]>({
-    queryKey: ['mcp-catalog', baseUrl, authToken],
-    queryFn: async () => {
+  const catalogServersQuery = useRuntimeQuery<MCPServerConfig[]>({
+    key: ['mcp-catalog', baseUrl],
+    authToken,
+    queryFn: async headers => {
       const response = await fetch(`${baseUrl}/api/v1/mcp/servers/catalog`, {
-        headers: runtimeAuthHeaders(authToken),
+        headers,
       });
       if (!response.ok) {
         throw new Error('Failed to fetch MCP catalog servers');

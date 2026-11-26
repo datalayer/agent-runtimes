@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  The change role of Datalayer Steward for AWS, optional and separate from
+  The change role of Cloud Steward, optional and separate from
   its read role. Create it only if you want the agent to apply fixes a person
   approved. It grants only the kinds of change you turn on below, under a
   permissions boundary that never allows IAM, KMS, AWS Organizations,
@@ -87,7 +87,7 @@ Resources:
   Boundary:
     Type: AWS::IAM::ManagedPolicy
     Properties:
-      Description: The most Datalayer Steward for AWS may ever change.
+      Description: The most Cloud Steward may ever change.
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -124,7 +124,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       RoleName: datalayer-steward-change
-      Description: Approved fixes by Datalayer Steward for AWS, one at a time.
+      Description: Approved fixes by Cloud Steward, one at a time.
       MaxSessionDuration: 3600
       PermissionsBoundary: !Ref Boundary
       AssumeRolePolicyDocument:

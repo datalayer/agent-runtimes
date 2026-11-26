@@ -185,7 +185,7 @@ AWS_STEWARD_AGENT_APP_0_0_1 = AppSpec.model_validate(
         "schema": "agent.app/v1",
         "id": "aws-steward-agent",
         "version": "0.0.1",
-        "name": "Datalayer Steward for AWS",
+        "name": "Cloud Steward",
         "kind": "worker",
         "description": "Every morning, reads your AWS account's cost recommendations, right-sizing findings and spend with a read-only role, and recommends savings — each with the evidence it read, the estimated monthly saving and the fix for you to review. It changes nothing in the account.",
         "owner": "Datalayer <info@datalayer.io>",
@@ -1896,12 +1896,12 @@ DEMO_ACCOUNTANT_APP_0_0_9 = AppSpec.model_validate(
     }
 )
 
-DEMO_AWS_STEWARD_APP_0_0_11 = AppSpec.model_validate(
+DEMO_AWS_STEWARD_APP_0_0_12 = AppSpec.model_validate(
     {
         "schema": "agent.app/v1",
         "id": "demo-aws-steward",
-        "version": "0.0.11",
-        "name": "Steward for AWS",
+        "version": "0.0.12",
+        "name": "Cloud Steward",
         "kind": "chat",
         "description": "Recommends savings on an AWS account, each with the evidence it read, the estimated monthly saving and the fix to review: a demo over findings recorded from an example account, reading no AWS.",
         "owner": "Datalayer <info@datalayer.io>",
@@ -1961,7 +1961,7 @@ DEMO_AWS_STEWARD_APP_0_0_11 = AppSpec.model_validate(
             "layout": "chat",
             "accent": "sun",
             "theme": None,
-            "welcome": "I'm Datalayer Steward for AWS, in a demo over findings recorded from an example account: ask me where it spends more than it needs to. Each saving comes with its evidence and the fix for you to review. I change nothing.",
+            "welcome": "I'm Cloud Steward, in a demo over findings recorded from an example account: ask me where it spends more than it needs to. Each saving comes with its evidence and the fix for you to review. I change nothing.",
             "starters": [
                 {
                     "label": "Biggest savings",
@@ -8878,7 +8878,7 @@ APP_CATALOGUE: Dict[str, AppSpec] = {
     "decide": DECIDE_APP_0_0_2,
     "deck-maker": DECK_MAKER_APP_0_0_1,
     "demo-accountant": DEMO_ACCOUNTANT_APP_0_0_9,
-    "demo-aws-steward": DEMO_AWS_STEWARD_APP_0_0_11,
+    "demo-aws-steward": DEMO_AWS_STEWARD_APP_0_0_12,
     "demo-data-analyst": DEMO_DATA_ANALYST_APP_0_0_8,
     "demo-functional-analyst": DEMO_FUNCTIONAL_ANALYST_APP_0_0_3,
     "demo-marketer": DEMO_MARKETER_APP_0_0_8,

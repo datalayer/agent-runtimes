@@ -67,6 +67,7 @@ from agent_runtimes.apps.callers import (
     is_the_pod,
     origin_allowed,
     platform_origins,
+    refuse_a_strangers_page,
 )
 from agent_runtimes.apps.enforcement import sentence_of
 from agent_runtimes.apps.loading import AppNotRunnable, agent_id_of, load_app
@@ -83,6 +84,10 @@ from agent_runtimes.voice import hear, spoken_of, voice_settings
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/apps", tags=["apps"])
+
+#: On what an application remembers: a page that is neither this machine's nor the
+#: platform's reaches nothing on the loopback (`callers.refuse_a_strangers_page`).
+_NO_STRANGERS_PAGE = [Depends(refuse_a_strangers_page)]
 
 #: The id of the application each agent of this runtime runs, by agent name:
 #: ``default`` for the one ``/apps/configure`` made, and each agent made for an
@@ -3073,7 +3078,7 @@ def _remembered(entry: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-@router.get("/memories/{app}")
+@router.get("/memories/{app}", dependencies=_NO_STRANGERS_PAGE)
 async def app_memories(
     app: str, request: Request, limit: int = Query(500, ge=1, le=1000)
 ) -> Dict[str, Any]:
@@ -3091,7 +3096,7 @@ async def app_memories(
     }
 
 
-@router.delete("/memories/{app}/{memory_id}")
+@router.delete("/memories/{app}/{memory_id}", dependencies=_NO_STRANGERS_PAGE)
 async def forget_memory(app: str, memory_id: str, request: Request) -> Dict[str, Any]:
     """Forget one thing an application remembers of the caller; somebody else's is not found."""
     if not await _memory_of(app, await _whose(request)).forget(memory_id):
@@ -3111,7 +3116,7 @@ class Correction(BaseModel):
     memory: str
 
 
-@router.patch("/memories/{app}/{memory_id}")
+@router.patch("/memories/{app}/{memory_id}", dependencies=_NO_STRANGERS_PAGE)
 async def correct_memory(
     app: str, memory_id: str, correction: Correction, request: Request
 ) -> Dict[str, Any]:
@@ -3141,7 +3146,7 @@ async def correct_memory(
     return {"corrected": 1, "memory": _remembered(corrected)}
 
 
-@router.delete("/memories/{app}")
+@router.delete("/memories/{app}", dependencies=_NO_STRANGERS_PAGE)
 async def forget_everything(
     app: str, request: Request, count: int = Query(..., ge=0)
 ) -> Dict[str, Any]:

@@ -50,7 +50,7 @@ function components(): Record<string, Node> {
 }
 
 describe('a recommendation’s card', () => {
-  it('is drawn by the a2ui-surface renderer for Datalayer Steward for AWS', () => {
+  it('is drawn by the a2ui-surface renderer for Cloud Steward', () => {
     expect(AGENTSPECS['worker-steward-aws'].frontendRenderTools).toContainEqual(
       { tool: 'record_recommendation', renderer: 'a2ui-surface' },
     );

@@ -7,6 +7,7 @@ import { useContext } from 'react';
 import { useQuery, QueryClientContext } from '@tanstack/react-query';
 import { requestAPI } from '../api/handler';
 import type { RemoteConfig } from '../types/config';
+import { runtimeQueryKey } from './runtimeAuth';
 
 /**
  * Hook to safely use query when QueryClient is available.
@@ -56,11 +57,12 @@ export function useConfig(
       // Otherwise use Jupyter requestAPI.
       return requestAPI<RemoteConfig>('configure');
     },
-    queryKey: [
-      'models',
-      configEndpoint || 'jupyter-server',
-      agentId || 'global',
-    ],
+    // Keyed by the token's fingerprint too: a token given after a refused
+    // read reads again, and one caller's answer is never another's.
+    queryKey: runtimeQueryKey(
+      ['models', configEndpoint || 'jupyter-server', agentId || 'global'],
+      configEndpoint ? authToken : undefined,
+    ),
     enabled,
     retry: 1,
   });

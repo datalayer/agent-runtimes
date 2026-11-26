@@ -888,17 +888,23 @@ class TestAMail:
         assert isinstance(said, str) and "social token" in said and iam.calls == []
 
     def test_the_skill_s_route_mails_the_person_alone(self, iam):
+        from types import SimpleNamespace
+
         from fastapi import HTTPException
 
         from agent_runtimes.routes.configure import MailToMeRequest, mail_me_endpoint
 
+        # A skill's script: no Origin, no fetch metadata.
+        script = SimpleNamespace(client=SimpleNamespace(host="127.0.0.1"), headers={})
         assert asyncio.run(
-            mail_me_endpoint(MailToMeRequest(subject="Summary", text="Hi"))
+            mail_me_endpoint(script, MailToMeRequest(subject="Summary", text="Hi"))
         ) == {"sent": True, "to": "me"}
         assert iam.calls[-1][2]["to"] == "me"
         iam.mail_status = 429
         try:
-            asyncio.run(mail_me_endpoint(MailToMeRequest(subject="Summary", text="Hi")))
+            asyncio.run(
+                mail_me_endpoint(script, MailToMeRequest(subject="Summary", text="Hi"))
+            )
         except HTTPException as refused:
             assert refused.status_code == 409 and "No more mail today" in refused.detail
         else:

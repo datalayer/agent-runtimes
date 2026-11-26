@@ -60,6 +60,13 @@ export interface ProtocolConfig {
   endpoint: string;
   /** Authentication token */
   authToken?: string;
+  /**
+   * The token presented to the platform's approvals stream (ai-agents'
+   * `/ws`), when it is not `authToken`: a host's token for its own server is
+   * sent to that server and nowhere else. `null` presents none; unsaid, the
+   * stream takes `authToken`.
+   */
+  aiAgentsToken?: string | null;
   /** Agent ID */
   agentId?: string;
   /** Enable config query for models and tools */

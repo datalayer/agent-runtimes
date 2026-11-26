@@ -146,9 +146,9 @@ The Datalayer IAM and Runtimes services read it as
 `DATALAYER_AGENTCORE_AWS_SECRET_ACCESS_KEY`, with the account id as
 `DATALAYER_AWS_ACCOUNT_ID`.
 
-## The roles of Datalayer Steward for AWS
+## The roles of Cloud Steward
 
-Datalayer Steward for AWS, the Steward (the agentspec `worker-steward-aws`),
+Cloud Steward, the Steward (the agentspec `worker-steward-aws`),
 runs in AgentCore
 in your account and reads the account's cost recommendations and spend. It
 reads with a role of its own, never with its execution role's permissions.
@@ -197,7 +197,7 @@ does not use it yet: it recommends, and a person applies the fix.
 
 ### The week's report
 
-Every Monday at 8:00 the application **Datalayer Steward for AWS** reports the
+Every Monday at 8:00 the application **Cloud Steward** reports the
 week (`recommendations_report`): how many recommendations were approved,
 dismissed and are still open, the estimated monthly savings approved and
 still open, the largest savings still to act on with the evidence each rests

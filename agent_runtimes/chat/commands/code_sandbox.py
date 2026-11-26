@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING, Optional
 
 import httpx
 
+from ..runtime_auth import runtime_headers
+
 if TYPE_CHECKING:
     from ..tux import CliTux
 
@@ -38,7 +40,7 @@ async def execute(tux: "CliTux") -> Optional[str]:
     tux.console.print()
 
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(headers=runtime_headers()) as client:
             response = await client.get(f"{tux.server_url}/health/startup", timeout=5.0)
             response.raise_for_status()
             sandbox = response.json().get("sandbox", {}) or {}
