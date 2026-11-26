@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The evalset of Datalayer Steward for AWS, over recorded AWS answers.
+"""The evalset of Cloud Steward, over recorded AWS answers.
 
 The agent reads an account through AWS's own recommenders (Cost Optimization
 Hub, Compute Optimizer, Cost Explorer) and records each saving it finds. Here
@@ -254,7 +254,7 @@ def score(
 
 
 def steward(model: Any) -> Any:
-    """Datalayer Steward for AWS as a pydantic-ai agent: its system prompt and its five tools."""
+    """Cloud Steward as a pydantic-ai agent: its system prompt and its five tools."""
     from pydantic_ai import Agent
 
     from agent_runtimes.specs.agents import get_agent_spec

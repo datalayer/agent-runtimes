@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  The read role of Datalayer Steward for AWS. The Steward, running in
+  The read role of Cloud Steward. The Steward, running in
   Amazon Bedrock AgentCore in your account, assumes it (from its
   AgentCore execution role, with your organization's external id) to read
   the account's cost recommendations, spend, utilization, findings and
@@ -51,7 +51,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       RoleName: datalayer-steward-read
-      Description: Read-only access for Datalayer Steward for AWS.
+      Description: Read-only access for Cloud Steward.
       MaxSessionDuration: 3600
       AssumeRolePolicyDocument:
         Version: '2012-10-17'

@@ -1,8 +1,8 @@
 {
-  "_": "The week's report of Datalayer Steward for AWS on made-up recommendations: `document` is what agent_runtimes.tools.recommendations.recommendations_report_document writes of `recommendations` (test_tools_recommendations keeps it so). The landing's deck draws it.",
+  "_": "The week's report of Cloud Steward on made-up recommendations: `document` is what agent_runtimes.tools.recommendations.recommendations_report_document writes of `recommendations` (test_tools_recommendations keeps it so). The landing's deck draws it.",
   "start": "2026-11-09",
   "days": 7,
-  "signed": "Written by ☁️ Datalayer Steward for AWS, on its own.",
+  "signed": "Written by ☁️ Cloud Steward, on its own.",
   "recommendations": [
     {
       "id": "rec-example-0",
@@ -998,7 +998,7 @@
               "format": 2,
               "mode": "normal",
               "style": "",
-              "text": "Approving hands you the change to apply; nothing was changed in your account. Written by ☁️ Datalayer Steward for AWS, on its own.",
+              "text": "Approving hands you the change to apply; nothing was changed in your account. Written by ☁️ Cloud Steward, on its own.",
               "type": "text",
               "version": 1
             }

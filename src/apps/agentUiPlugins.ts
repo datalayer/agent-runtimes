@@ -235,7 +235,7 @@ export const AGENT_UI_PLUGINS: Readonly<Record<string, AgentUiPlugin>> = {
     chrome: earthAreaPlugin,
     Chrome: EarthAreaChip,
   },
-  // The Steward for AWS.
+  // The Cloud Steward.
   'aws-savings': { needsConnection: false, message: AwsSavingsPlugin },
   'aws-savings-badge': {
     needsConnection: false,

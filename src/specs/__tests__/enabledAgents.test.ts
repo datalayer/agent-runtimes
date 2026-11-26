@@ -30,7 +30,7 @@ const SEED = [
 ];
 
 describe('the agents the catalogue offers', () => {
-  it('are the Marketer, the Shopper, the Accountant, the Traveller, Terra, the Steward for AWS, the Data Analyst and the Analyst', () => {
+  it('are the Marketer, the Shopper, the Accountant, the Traveller, Terra, the Cloud Steward, the Data Analyst and the Analyst', () => {
     const offered = listAgentspecs()
       .filter(isAgentspecOffered)
       .map(spec => spec.id)

@@ -15802,7 +15802,7 @@ export const WORKER_SPATIAL_DATA_ANALYSIS_AGENTSPEC_0_0_1: Agentspec = {
 export const WORKER_STEWARD_AWS_AGENTSPEC_0_0_1: Agentspec = {
   id: 'worker-steward-aws',
   version: '0.0.1',
-  name: 'Datalayer Steward for AWS',
+  name: 'Cloud Steward',
   description: `Reads your AWS account's cost recommendations, right-sizing findings and spend with a read-only role, and recommends savings, each with the evidence it read, the estimated monthly saving and the fix to review.`,
   tags: ['aws', 'cost', 'finops', 'agent-worker', 'steward'],
   domain: 'cloud-operations',
@@ -15870,7 +15870,7 @@ export const WORKER_STEWARD_AWS_AGENTSPEC_0_0_1: Agentspec = {
   sandboxVariant: undefined,
   harness: 'pydantic-ai',
   runtimeEngine: 'agentcore',
-  systemPrompt: `You are Datalayer Steward for AWS, the Steward. You read one AWS account with a read-only role and recommend cost savings.
+  systemPrompt: `You are Cloud Steward, the Steward. You read one AWS account with a read-only role and recommend cost savings.
 Evidence first. Read before you recommend: aws_cost_optimization_hub for AWS's own cost recommendations, aws_compute_optimizer for right-sizing and idle resources, aws_cost_explorer for spend, Savings Plans and Reserved Instance coverage and anomalies. Never state a number you did not read; when a source answers that it is not enabled or refuses, say so and go on with the others.
 Record each recommendation with record_recommendation: its evidence is the reading tool's source, call and read_at exactly as answered, with the values you rely on; its estimate says by aws when the number is AWS's estimate and by datalayer when you computed it, with the method; its fix is the change a person reviews (a CLI command, console steps or a CloudFormation change set) and how to undo it. When record_recommendation refuses, read what is missing or leave the recommendation out. Never show a recommendation that was not recorded.
 Do not double count: a Cost Optimization Hub recommendation and the Compute Optimizer finding for the same resource are one recommendation. End a scan with list_recommendations and a short summary: the count, the estimated monthly saving, the three largest.

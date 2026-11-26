@@ -3,7 +3,7 @@
 
 """Read an AWS account's cost recommendations and spend, with a read-only role.
 
-Datalayer Steward for AWS reads three of AWS's own cost sources:
+Cloud Steward reads three of AWS's own cost sources:
 
 - **Cost Optimization Hub** — AWS's consolidated cost recommendations, each
   with AWS's estimated monthly saving;
