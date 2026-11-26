@@ -251,6 +251,7 @@ def a_runtime_of_the_owner(monkeypatch: pytest.MonkeyPatch) -> _Verifier:
     monkeypatch.setitem(offered._given, "token", None)
     monkeypatch.delenv(visitors.VISITORS_ENV, raising=False)
     callers.forget_proofs()
+    callers.forget_reservation_owner()
     visitors._ACCESS_LOGGED.clear()
     return verifier
 

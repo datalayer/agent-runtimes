@@ -639,7 +639,9 @@ def runtime_owner_uid() -> str:
     one it holds for them (``DATALAYER_USER_TOKEN``), then the one it calls
     ai-inference with (`models.offered.give_inference_token`), which every
     assigned runtime is given, with or without an agent. A principal's own
-    token names nobody.
+    token names nobody. Last, on an Agent Substrate actor (a Kagent agent's
+    runtime, given none of these: its credentials are put in at egress), the
+    account IAM said holds its reservation (:func:`owner_by_reservation`).
     """
     named = (os.environ.get("DATALAYER_USER_UID") or "").strip()
     if named:
@@ -657,7 +659,109 @@ def runtime_owner_uid() -> str:
         account = str(claims.get("sub") or claims.get("uid") or "")
         if account:
             return account
-    return ""
+    return _RESERVATION_OWNER.get("uid", "")
+
+
+# --- an actor's owner: the account whose reservation it is --------------------------
+
+#: Where IAM lists the open reservations of the account a token is (its own, and
+#: nobody else's: a person's token lists that person's).
+RESERVATIONS_PATH = "/api/iam/v1/usage/reservations"
+
+#: The account IAM said holds this actor's reservation, once it said so: a
+#: runtime is never given another owner.
+_RESERVATION_OWNER: Dict[str, str] = {}
+
+#: Asks IAM for the reservations a token's account holds: (url, token) -> (status, resource uids).
+FetchReservations = Callable[[str, str], Awaitable[Tuple[int, Tuple[str, ...]]]]
+
+
+async def _fetch_reservations(url: str, token: str) -> Tuple[int, Tuple[str, ...]]:
+    async with httpx.AsyncClient(timeout=TIMEOUT_SECONDS) as client:
+        response = await client.get(url, headers={"Authorization": f"Bearer {token}"})
+        if response.status_code != 200:
+            return response.status_code, ()
+        try:
+            listed = (response.json() or {}).get("reservations") or []
+        except ValueError:
+            return 200, ()
+        return 200, tuple(
+            str(entry.get("resource") or entry.get("id") or "").lower()
+            for entry in listed
+            if isinstance(entry, dict)
+        )
+
+
+def actor_runtime_uid() -> str:
+    """The runtime an Agent Substrate actor serves, or ``""`` on any other runtime.
+
+    Read from the files Agent Substrate projects for the actor (``rt-<uid>``,
+    `ate.identity`): its own, never a variable every clone of its template shares.
+    """
+    from agent_runtimes.ate.settings import is_ate_target
+
+    if not is_ate_target():
+        return ""
+    from agent_runtimes.ate.identity import read_identity
+    from agent_runtimes.ate.settings import ate_settings
+
+    try:
+        identity = read_identity(ate_settings().system_info_dir)
+    except (OSError, ValueError):
+        return ""
+    return (identity.runtime_uid or "") if identity is not None else ""
+
+
+async def owner_by_reservation(
+    caller_uid: str, token: str, fetch: Optional[FetchReservations] = None
+) -> Tuple[str, str]:
+    """Whether a verified person is the account an actor's reservation is held by.
+
+    A Kagent agent's runtime is an Agent Substrate actor that holds nothing of
+    its owner's (their tokens are put in at egress), so nothing in it names
+    them, and nobody names them to it: the Operator reaches it through the
+    same ingress as anybody. IAM knows: the actor serves the runtime its name
+    says (:func:`actor_runtime_uid`), whose reservation is its owner's. The
+    person's own token asks IAM for their reservations; when this runtime's
+    is one of them, they are its owner, remembered from then on.
+
+    Only on an actor launched for no deployment (an always-on application's
+    runtime answers its application's callers, and acts as its principal).
+
+    Returns
+    -------
+    tuple[str, str]
+        ``(owner, "")`` when IAM lists the reservation as the caller's;
+        ``("", reason)`` otherwise: ``owner-unknown`` (not an actor of a
+        person's own, or no IAM named), ``unverifiable`` (IAM not reached, or
+        it did not answer) or ``another-account`` (IAM answered, and the
+        reservation is not the caller's).
+    """
+    from agent_runtimes.apps.principal import a_deployment_is_served, launched_for
+
+    runtime = actor_runtime_uid()
+    if not runtime or not caller_uid or launched_for() or a_deployment_is_served():
+        return "", "owner-unknown"
+    iam = _platform_url("DATALAYER_IAM_URL")
+    if not iam:
+        return "", "owner-unknown"
+    try:
+        status, resources = await (fetch or _fetch_reservations)(
+            f"{iam}{RESERVATIONS_PATH}", token
+        )
+    except httpx.HTTPError:
+        return "", "unverifiable"
+    if status != 200:
+        return "", "unverifiable"
+    if runtime.lower() not in resources:
+        return "", "another-account"
+    _RESERVATION_OWNER["uid"] = caller_uid
+    return caller_uid, ""
+
+
+def forget_reservation_owner() -> None:
+    """Forget the account IAM said holds the reservation (the tests)."""
+    _RESERVATION_OWNER.clear()
 
 
 def _given_inference_token() -> str:
@@ -886,7 +990,13 @@ async def _proof_of_token(token: str, verifier: Any) -> Tuple[Proof, float]:
         return Proof(False, reason="application-token"), PROOF_SECONDS
     owner = runtime_owner_uid()
     if not owner:
-        return Proof(False, reason="owner-unknown"), PROOF_RETRY_SECONDS
+        # An actor nobody names its owner to: IAM says whose reservation it is.
+        owner, reason = await owner_by_reservation(caller.uid, token)
+        if not owner:
+            seconds = (
+                PROOF_SECONDS if reason == "another-account" else PROOF_RETRY_SECONDS
+            )
+            return Proof(False, reason=reason), seconds
     if caller.uid != owner:
         return Proof(False, reason="another-account"), PROOF_SECONDS
     return Proof(True, kind="owner"), PROOF_SECONDS
