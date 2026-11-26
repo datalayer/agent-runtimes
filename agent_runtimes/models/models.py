@@ -606,14 +606,27 @@ def resolve_model_for_inference_provider(
     # one is refused in a sentence (``InferenceTokenMissing``), never made
     # with another key. A deployment's agent calls with its application's
     # principal's token, and only with it.
+    from agent_runtimes.apps import egress_principal
     from agent_runtimes.apps.principal import api_key_for, deployment_of
     from agent_runtimes.apps.visitors import (
         or_visitors_key,
+        principal_key_only,
         turn_api_key,
         visitors_runtime,
     )
 
     deployment = deployment_of(app_instance)
+    principal_at_egress = bool(
+        deployment and not visitors_runtime() and egress_principal.at_egress()
+    )
+    if principal_at_egress:
+        # This runtime holds no credential: its deployment's model calls go to
+        # the address its principal's token is put in for, and only as its
+        # principal. A visitor's turn, which pays with the visitor's own
+        # token, is refused there rather than made in the application's name.
+        base_url = _normalize_ai_inference_base_url(
+            egress_principal.inference_principal_url()
+        )
     # On the visitors' runtime, every call is a visitor's, with their token
     # and nothing else; on a deployment's runtime, a visitor's
     # turn calls with their token too, so that they are held to the limits
@@ -622,6 +635,8 @@ def resolve_model_for_inference_provider(
     api_key = (
         turn_api_key
         if visitors_runtime()
+        else principal_key_only(api_key_for(deployment))
+        if principal_at_egress
         else or_visitors_key(api_key_for(deployment))
         if deployment
         else inference_api_key

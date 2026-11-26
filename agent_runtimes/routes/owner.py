@@ -630,6 +630,13 @@ async def _events(
     agent = _runtime_agent(agent_id)
     url = _events_url(agent, event_id)
     identity = _identity(agent, acting=True)
+    if identity.kind == "principal" and identity.deployment_uid:
+        # As the deployment's principal: to the address its token is put in for, on
+        # a runtime that does not hold it (`principal_address`); the path stays the one checked.
+        from agent_runtimes.apps.principal import principal_address
+
+        base = _service("ai_agents_url", "ai-agents")
+        url = principal_address(identity.deployment_uid, base) + url[len(base) :]
     answer = await _asked("ai-agents", method, url, identity.token, **kwargs)
     if answer.status_code in (401, 403):
         raise HTTPException(

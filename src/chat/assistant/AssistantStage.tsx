@@ -205,6 +205,8 @@ export type AssistantAbout = {
    */
   agentId?: string;
   apiBase?: string;
+  /** The token that server takes, when the page holds one: sent, never shown. */
+  apiToken?: string;
   /** How it is reached (`a2a`, `ag-ui`, …) and where. */
   protocol?: string;
   url?: string;

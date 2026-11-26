@@ -191,14 +191,23 @@ function useKernelConnection(
   const { connection, url, token, kernelId, kind } = sandbox;
   const live = sandboxIsLive(sandbox);
   useEffect(() => {
-    if (connection || !url || !kernelId || kind === 'browser' || !live) {
+    // Without its token the Jupyter server refuses the connection: none is
+    // opened, and the dialog lists through the agent's server instead.
+    if (
+      connection ||
+      !url ||
+      !token ||
+      !kernelId ||
+      kind === 'browser' ||
+      !live
+    ) {
       return;
     }
     const base = url.replace(/\/+$/, '') + '/';
     const serverSettings = ServerConnection.makeSettings({
       baseUrl: base,
       wsUrl: base.replace(/^http/, 'ws'),
-      token: token ?? '',
+      token,
       appendToken: true,
     });
     const opening = new KernelConnection({
@@ -289,9 +298,19 @@ export function SandboxDetailsDialog({
     () =>
       // Not before the sandbox is up: the server would start one to answer.
       !connection && sandbox.serverUrl && sandboxIsLive(sandbox)
-        ? sandboxExecuteOverHttp(sandbox.serverUrl, sandbox.agentId)
+        ? sandboxExecuteOverHttp(
+            sandbox.serverUrl,
+            sandbox.agentId,
+            sandbox.serverToken,
+          )
         : undefined,
-    [connection, sandbox.serverUrl, sandbox.agentId],
+    [
+      connection,
+      sandbox.serverUrl,
+      sandbox.agentId,
+      sandbox.serverToken,
+      sandbox.status,
+    ],
   );
 
   const url = displayUrl(sandbox.url ?? sandbox.serverUrl);

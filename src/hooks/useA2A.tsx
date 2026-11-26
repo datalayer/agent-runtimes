@@ -20,6 +20,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { runtimeAuthHeaders } from './ownRoutes';
 
 /**
  * The A2A objects this hook reads, as the JSON it receives (the 0.3 wire it
@@ -66,6 +67,11 @@ export interface UseA2AOptions {
    * Agent ID to use (default: 'demo-agent')
    */
   agentId?: string;
+  /**
+   * The caller's token, sent as `Authorization: Bearer`. A page on the
+   * runtime's machine needs none.
+   */
+  authToken?: string;
   /**
    * Whether to use streaming (default: true)
    */
@@ -140,6 +146,7 @@ export function useA2A(options: UseA2AOptions = {}): UseA2AReturn {
     onMessageReceived,
     onTaskStatusChange,
     onError,
+    authToken,
   } = options;
 
   const [isConnected, setIsConnected] = useState(false);
@@ -170,7 +177,9 @@ export function useA2A(options: UseA2AOptions = {}): UseA2AReturn {
   const connect = useCallback(async () => {
     try {
       setError(null);
-      const response = await fetch(agentCardUrl);
+      const response = await fetch(agentCardUrl, {
+        headers: runtimeAuthHeaders(authToken),
+      });
       if (!response.ok) {
         throw new Error(`Failed to fetch agent card: ${response.statusText}`);
       }
@@ -183,7 +192,7 @@ export function useA2A(options: UseA2AOptions = {}): UseA2AReturn {
       setIsConnected(false);
       onError?.(err);
     }
-  }, [agentCardUrl, onError]);
+  }, [agentCardUrl, authToken, onError]);
 
   // Disconnect
   const disconnect = useCallback(() => {
@@ -243,6 +252,7 @@ export function useA2A(options: UseA2AOptions = {}): UseA2AReturn {
       isConnected,
       streaming,
       agentCard,
+      authToken,
       generateRequestId,
       onMessageSent,
       onError,
@@ -259,6 +269,7 @@ export function useA2A(options: UseA2AOptions = {}): UseA2AReturn {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...runtimeAuthHeaders(authToken),
       },
       body: JSON.stringify({
         jsonrpc: '2.0',
@@ -310,6 +321,7 @@ export function useA2A(options: UseA2AOptions = {}): UseA2AReturn {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...runtimeAuthHeaders(authToken),
         },
         body: JSON.stringify({
           jsonrpc: '2.0',
@@ -400,6 +412,7 @@ export function useA2A(options: UseA2AOptions = {}): UseA2AReturn {
       headers: {
         'Content-Type': 'application/json',
         Accept: 'text/event-stream',
+        ...runtimeAuthHeaders(authToken),
       },
       body: JSON.stringify({
         jsonrpc: '2.0',

@@ -170,11 +170,21 @@ def is_the_pod(host: Optional[str], secret: Optional[str]) -> bool:
 
 
 def bearer_of(authorization: Optional[str]) -> str:
-    """The token of an ``Authorization: Bearer …`` header, or nothing."""
+    """The token of an ``Authorization: Bearer …`` header, or nothing.
+
+    The placeholder a runtime without credentials sends in place of one
+    (`egress_principal.PLACEHOLDER`) is nobody's token: a caller that presents
+    it presents nothing, so it is never passed on as theirs to an address
+    where a credential is put in.
+    """
     if not authorization:
         return ""
     scheme, _, token = authorization.partition(" ")
-    return token.strip() if scheme.lower() == "bearer" else ""
+    if scheme.lower() != "bearer":
+        return ""
+    from agent_runtimes.apps.egress_principal import is_placeholder
+
+    return "" if is_placeholder(token) else token.strip()
 
 
 def _unverified_claims(token: str) -> Dict[str, Any]:
@@ -600,11 +610,15 @@ def credential_of(scope: Any, headers: Optional[Mapping[str, str]] = None) -> st
     said = (headers if headers is not None else headers_of(scope)).get(
         "authorization", ""
     )
+    from agent_runtimes.apps.egress_principal import is_placeholder
+
     scheme, _, token = said.partition(" ")
     if scheme.lower() in ("bearer", "token") and token.strip():
-        return token.strip()
+        # The placeholder of a runtime without credentials is nobody's token.
+        return "" if is_placeholder(token) else token.strip()
     query = parse_qs((scope.get("query_string") or b"").decode("latin-1"))
-    return (query.get("token") or [""])[0].strip()
+    asked = (query.get("token") or [""])[0].strip()
+    return "" if is_placeholder(asked) else asked
 
 
 def runtime_owner_uid() -> str:
@@ -612,18 +626,39 @@ def runtime_owner_uid() -> str:
 
     ``DATALAYER_USER_UID``, which the Operator sets at launch or the companion
     names once when the runtime is assigned (`routes.agents._take_owner`);
-    else the account of the token the runtime was given for its owner.
+    else the account of a token the pod gave the runtime for its owner: the
+    one it holds for them (``DATALAYER_USER_TOKEN``), then the one it calls
+    ai-inference with (`models.offered.give_inference_token`), which every
+    assigned runtime is given, with or without an agent. A principal's own
+    token names nobody.
     """
     named = (os.environ.get("DATALAYER_USER_UID") or "").strip()
     if named:
         return named
-    held = (os.environ.get("DATALAYER_USER_TOKEN") or "").strip()
-    claims = _unverified_claims(held) if held else {}
-    if str(claims.get("agent_uid") or "") and claims.get("agent_uid") == claims.get(
-        "sub"
+    for held in (
+        (os.environ.get("DATALAYER_USER_TOKEN") or "").strip(),
+        _given_inference_token(),
     ):
+        claims = _unverified_claims(held) if held else {}
+        if not claims:
+            continue
+        agent = str(claims.get("agent_uid") or "")
+        if agent and agent == str(claims.get("sub") or ""):
+            continue
+        account = str(claims.get("sub") or claims.get("uid") or "")
+        if account:
+            return account
+    return ""
+
+
+def _given_inference_token() -> str:
+    """The token the pod gave this runtime to call ai-inference with, or ``""``."""
+    try:
+        from agent_runtimes.models import offered
+
+        return str(offered._given.get("token") or "")
+    except Exception:  # noqa: BLE001 - no token given is no owner said by it
         return ""
-    return str(claims.get("sub") or claims.get("uid") or "") if claims else ""
 
 
 def sandbox_token() -> str:

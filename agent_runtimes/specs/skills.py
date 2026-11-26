@@ -55,7 +55,7 @@ CRAWL_SKILL_SPEC_0_0_1 = SkillSpec(
     package=None,
     method=None,
     path=None,
-    envvars=["TAVILY_API_KEY:0.0.1"],
+    envvars=[],
     optional_env_vars=[],
     dependencies=["requests>=2.31.0", "beautifulsoup4>=4.12.0"],
     install=InstallSpec(

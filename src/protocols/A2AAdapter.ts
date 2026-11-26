@@ -219,9 +219,7 @@ export class A2AAdapter extends BaseProtocolAdapter {
 
       const response = await fetch(terminateUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.buildHeaders(),
         body: JSON.stringify({
           task_id: taskId || this.currentTaskId,
         }),

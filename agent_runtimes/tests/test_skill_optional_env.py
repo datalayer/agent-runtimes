@@ -200,18 +200,20 @@ def test_the_skills_listing_says_what_it_needs(monkeypatch: pytest.MonkeyPatch) 
 
 def test_what_was_left_out_is_said_by_name_for_a_page():
     declared = declared_secrets(get_agent_spec("worker-marketer"))
-    left = declared.left_out(_having(["GITHUB_TOKEN"]))
+    left = declared.left_out(_having([]))
     said = left.as_names()
     assert said["skills"]["image-stock"] == {
         "missing_env_vars": [],
         "one_of_env_vars": KEYS,
         "reason": "needs one of FREEPIK_API_KEY, PEXELS_API_KEY, PIXABAY_API_KEY, UNSPLASH_ACCESS_KEY",
     }
-    assert said["skills"]["crawl"] == {
-        "missing_env_vars": ["TAVILY_API_KEY"],
+    assert said["skills"]["github"] == {
+        "missing_env_vars": ["GITHUB_TOKEN"],
         "one_of_env_vars": [],
-        "reason": "needs TAVILY_API_KEY",
+        "reason": "needs GITHUB_TOKEN",
     }
+    # Crawling a page asks no key (agentspecs, 25 November 2026): never left out.
+    assert "crawl" not in said["skills"] and left.needs("skill", "crawl") is None
     assert (
         said["mcp_servers"]["discord"]["reason"]
         == "needs DISCORD_BOT_TOKEN, DISCORD_GUILD_ID"
@@ -220,4 +222,8 @@ def test_what_was_left_out_is_said_by_name_for_a_page():
         "linked_accounts": ["a linked X account"],
         "reason": "needs a linked X account",
     }
-    assert left.needs("skill", "github") is None and "github" not in said["skills"]
+    given = declared.left_out(_having(["GITHUB_TOKEN"]))
+    assert (
+        given.needs("skill", "github") is None
+        and "github" not in given.as_names()["skills"]
+    )

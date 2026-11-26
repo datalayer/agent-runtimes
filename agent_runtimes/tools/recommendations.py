@@ -730,6 +730,10 @@ async def _deployment_recommendations(
         raise LookupError(
             "The week's recommendations are not read: no ai-agents to read them from."
         )
+    from agent_runtimes.apps.principal import principal_address
+
+    # Read as the deployment's principal: where its token is put in, on a runtime that does not hold it.
+    url = principal_address(deployment_uid, url)
     async with httpx.AsyncClient(timeout=30.0) as client:
         answered = await client.get(
             f"{url.rstrip('/')}/api/ai-agents/v1/apps/deployments/{deployment_uid}/recommendations",

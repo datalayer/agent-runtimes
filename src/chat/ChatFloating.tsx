@@ -1032,6 +1032,7 @@ export function ChatFloating({
             url: protocol?.endpoint,
             agentId: protocol?.agentId,
             apiBase: runtimeBase,
+            ...(protocol?.authToken ? { apiToken: protocol.authToken } : {}),
             ...about,
           }
         : undefined,
@@ -1046,7 +1047,11 @@ export function ChatFloating({
       assistantSandboxOf(
         (codemodeStatus as { sandbox?: Record<string, unknown> | null } | null)
           ?.sandbox,
-        { agentId: protocol?.agentId, serverUrl: runtimeBase },
+        {
+          agentId: protocol?.agentId,
+          serverUrl: runtimeBase,
+          serverToken: protocol?.authToken,
+        },
       ) ??
       // An agent on a runtime can always have one: offered before it runs.
       (protocol?.agentId && runtimeBase
@@ -1055,9 +1060,16 @@ export function ChatFloating({
             status: 'not running',
             agentId: protocol.agentId,
             serverUrl: runtimeBase,
+            ...(protocol.authToken ? { serverToken: protocol.authToken } : {}),
           }
         : undefined),
-    [sandbox, codemodeStatus, protocol?.agentId, runtimeBase],
+    [
+      sandbox,
+      codemodeStatus,
+      protocol?.agentId,
+      protocol?.authToken,
+      runtimeBase,
+    ],
   );
 
   // Clear messages when endpoint/protocol changes (e.g., switching examples)

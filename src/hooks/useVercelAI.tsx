@@ -6,6 +6,7 @@
 import { useCallback, useMemo } from 'react';
 import { useChat, type UseChatHelpers, type UIMessage } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
+import { runtimeAuthHeaders } from './ownRoutes';
 
 export interface Message {
   id: string;
@@ -22,6 +23,11 @@ export interface UseVercelAIOptions {
    * Agent ID to use (default: 'demo-agent')
    */
   agentId?: string;
+  /**
+   * The caller's token, sent as `Authorization: Bearer`. A page on the
+   * runtime's machine needs none.
+   */
+  authToken?: string;
   /**
    * Callback when a message is sent
    */
@@ -59,6 +65,7 @@ export function useVercelAI(
     baseUrl = 'http://localhost:8888',
     agentId = 'demo-agent',
     onMessageSent,
+    authToken,
   } = options;
 
   // Construct the chat endpoint URL
@@ -71,6 +78,7 @@ export function useVercelAI(
       body: {
         agent_id: agentId,
       },
+      headers: runtimeAuthHeaders(authToken),
     }),
   });
 

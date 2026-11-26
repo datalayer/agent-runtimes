@@ -5,6 +5,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { agUiRefusal, refusalBody } from '../portable/agUiRefusal';
+import { runtimeAuthHeaders } from './ownRoutes';
 
 export interface Message {
   role: 'user' | 'assistant' | 'system';
@@ -21,6 +22,11 @@ export interface UseAGUIOptions {
    * Agent ID to use (default: 'demo-agent')
    */
   agentId?: string;
+  /**
+   * The caller's token, sent as `Authorization: Bearer`. A page on the
+   * runtime's machine needs none.
+   */
+  authToken?: string;
   /**
    * Auto-connect on mount
    */
@@ -70,6 +76,7 @@ export function useAgUi(options: UseAGUIOptions = {}) {
     onMessageSent,
     onMessageReceived,
     onError,
+    authToken,
   } = options;
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -141,6 +148,7 @@ export function useAgUi(options: UseAGUIOptions = {}) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            ...runtimeAuthHeaders(authToken),
           },
           body: JSON.stringify(requestBody),
         });
@@ -206,7 +214,7 @@ export function useAgUi(options: UseAGUIOptions = {}) {
         setIsSending(false);
       }
     },
-    [endpointUrl, onMessageSent, onMessageReceived, onError],
+    [endpointUrl, authToken, onMessageSent, onMessageReceived, onError],
   );
 
   // Auto-connect on mount

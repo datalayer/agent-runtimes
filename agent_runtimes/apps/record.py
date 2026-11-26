@@ -389,6 +389,20 @@ def token_for(deployment_uid: str) -> Tuple[Optional[str], str]:
     return (token, "") if token else (None, "no token.")
 
 
+def _written_at(deployment_uid: str, url: str) -> str:
+    """Where a record is written: ai-agents as this runtime knows it; for a deployment
+    whose principal the runtime acts as without holding its token, the address that
+    token is put in for (`principal.principal_address`). A person's record, written
+    with their own token, always goes to the usual address.
+    """
+    deployment = deployment_uid.strip()
+    if not deployment:
+        return url
+    from agent_runtimes.apps.principal import principal_address
+
+    return principal_address(deployment, url)
+
+
 #: The person's own token during a Preview's run, whose request token is
 #: theirs narrowed to the Spaces its application is granted.
 _PERSONS_OWN: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
@@ -441,6 +455,7 @@ async def send_to_ai_agents(body: Dict[str, Any]) -> None:
         raise RecordNotSent(
             f"The record of {body.get('app_uid')} is not sent: no ai-agents."
         )
+    url = _written_at(str(body.get("deployment_uid") or ""), url)
     async with httpx.AsyncClient(timeout=10.0) as client:
         response = await client.post(
             f"{url.rstrip('/')}/api/ai-agents/v1/apps/records",
@@ -486,6 +501,7 @@ async def keep_sound_in_ai_agents(
         raise RecordNotSent(
             f"The sound of {params.get('app_uid')} is not kept: no ai-agents."
         )
+    url = _written_at(str(params.get("deployment_uid") or ""), url)
     async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.post(
             f"{url.rstrip('/')}/api/ai-agents/v1/apps/records/audio",

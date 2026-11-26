@@ -16,6 +16,7 @@
 
 import type { Kernel } from '@jupyterlab/services';
 import type { KernelVariablesExecution } from '@datalayer/jupyter-react';
+import { runtimeAuthHeaders } from '../../hooks/ownRoutes';
 
 /** Where a sandbox runs. */
 export type AssistantSandboxKind =
@@ -62,6 +63,11 @@ export type AssistantSandbox = {
    * the agent's sandbox, when the page has no kernel connection to it.
    */
   serverUrl?: string;
+  /**
+   * The token that server takes, when the page holds one: sent with what is
+   * run there, never shown. A server on this machine needs none.
+   */
+  serverToken?: string;
 };
 
 /** The statuses of a sandbox that has something to read. */
@@ -138,7 +144,12 @@ const text = (value: unknown): string | undefined =>
  */
 export function assistantSandboxOf(
   status: Record<string, unknown> | null | undefined,
-  options: { agentId?: string; serverUrl?: string; state?: string } = {},
+  options: {
+    agentId?: string;
+    serverUrl?: string;
+    serverToken?: string;
+    state?: string;
+  } = {},
 ): AssistantSandbox | undefined {
   if (!status) {
     return undefined;
@@ -168,23 +179,29 @@ export function assistantSandboxOf(
     agentId: options.agentId,
     environment: text(status.environment_name),
     serverUrl: options.serverUrl,
+    ...(options.serverToken ? { serverToken: options.serverToken } : {}),
   };
 }
 
 /**
  * Run code in an agent's sandbox through its agent-runtimes server
  * (`POST /api/v1/sandbox/execute`), whatever the variant: what a page with
- * no kernel connection to the sandbox lists its variables with.
+ * no kernel connection to the sandbox lists its variables with. The token is
+ * the caller's for that server, sent when there is one.
  */
 export function sandboxExecuteOverHttp(
   serverUrl: string,
   agentId?: string,
+  token?: string,
 ): (code: string) => Promise<KernelVariablesExecution> {
   const base = serverUrl.replace(/\/+$/, '').replace(/\/api\/v1$/, '');
   return async code => {
     const response = await fetch(`${base}/api/v1/sandbox/execute`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: {
+        'content-type': 'application/json',
+        ...runtimeAuthHeaders(token),
+      },
       body: JSON.stringify({ code, agent_id: agentId }),
     });
     if (!response.ok) {

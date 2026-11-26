@@ -26,14 +26,17 @@ export {
 } from './browserService';
 export {
   createServerSandboxService,
+  serverTokenOf,
   summarize,
   type SandboxExecution,
   type SandboxService,
   type SandboxStatusPayload,
+  type ServerToken,
 } from './service';
 export {
   useOptionalSandboxService,
   useSandboxService,
+  useServerToken,
 } from './useSandboxService';
 export { SandboxStatusBridge } from './SandboxStatusBridge';
 export { SandboxSelector } from './SandboxSelector';

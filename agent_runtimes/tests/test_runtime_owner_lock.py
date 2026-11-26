@@ -237,6 +237,7 @@ def apps() -> dict[str, Any]:
 @pytest.fixture(autouse=True)
 def a_runtime_of_the_owner(monkeypatch: pytest.MonkeyPatch) -> _Verifier:
     """A runtime assigned to OWNER, holding a sandbox token, with the platform faked."""
+    from agent_runtimes.models import offered
     from agent_runtimes.services import code_sandbox_manager
 
     verifier = _Verifier()
@@ -246,6 +247,7 @@ def a_runtime_of_the_owner(monkeypatch: pytest.MonkeyPatch) -> _Verifier:
     )
     monkeypatch.setenv("DATALAYER_USER_UID", OWNER)
     monkeypatch.delenv("DATALAYER_USER_TOKEN", raising=False)
+    monkeypatch.setitem(offered._given, "token", None)
     monkeypatch.delenv(visitors.VISITORS_ENV, raising=False)
     callers.forget_proofs()
     visitors._ACCESS_LOGGED.clear()
@@ -520,22 +522,50 @@ def test_the_owner_is_whom_the_runtime_was_assigned_or_whose_token_it_holds(
 ) -> None:
     import jwt
 
+    from agent_runtimes.models import offered
+
+    def minted(**claims: Any) -> str:
+        return jwt.encode(claims, "k" * 32, algorithm="HS256")
+
+    monkeypatch.setitem(offered._given, "token", None)
     assert callers.runtime_owner_uid() == OWNER
     monkeypatch.delenv("DATALAYER_USER_UID")
     assert callers.runtime_owner_uid() == ""
-    monkeypatch.setenv(
-        "DATALAYER_USER_TOKEN",
-        jwt.encode({"sub": "01HELD"}, "k" * 32, algorithm="HS256"),
-    )
+    # A runtime assigned with no agent is given the token it calls ai-inference
+    # with, its owner's: it is theirs by that.
+    monkeypatch.setitem(offered._given, "token", minted(sub="01ASSIGNED"))
+    assert callers.runtime_owner_uid() == "01ASSIGNED"
+    monkeypatch.setenv("DATALAYER_USER_TOKEN", minted(sub="01HELD"))
     assert callers.runtime_owner_uid() == "01HELD"
-    # A principal's own token is nobody's.
-    monkeypatch.setenv(
-        "DATALAYER_USER_TOKEN",
-        jwt.encode(
-            {"sub": "01AGENT", "agent_uid": "01AGENT"}, "k" * 32, algorithm="HS256"
-        ),
-    )
+    # A principal's own token is nobody's, wherever it is held.
+    principal = minted(sub="01AGENT", agent_uid="01AGENT")
+    monkeypatch.setenv("DATALAYER_USER_TOKEN", principal)
+    assert callers.runtime_owner_uid() == "01ASSIGNED"
+    monkeypatch.setitem(offered._given, "token", principal)
     assert callers.runtime_owner_uid() == ""
+    monkeypatch.setitem(offered._given, "token", "not-a-token")
+    assert callers.runtime_owner_uid() == ""
+
+
+def test_a_runtime_assigned_with_no_agent_takes_its_owners_token(
+    apps: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import jwt
+
+    from agent_runtimes.models import offered
+
+    monkeypatch.delenv("DATALAYER_USER_UID")
+    monkeypatch.setitem(
+        offered._given, "token", jwt.encode({"sub": OWNER}, "k" * 32, algorithm="HS256")
+    )
+    client = _client(apps["enforce"])
+    assert (
+        client.get("/api/v1/agents", headers=_bearer("owner-token")).status_code == 200
+    )
+    assert (
+        client.get("/api/v1/agents", headers=_bearer("another-token")).status_code
+        == 401
+    )
 
 
 def test_a_websocket_takes_its_token_from_the_query(apps: dict[str, Any]) -> None:

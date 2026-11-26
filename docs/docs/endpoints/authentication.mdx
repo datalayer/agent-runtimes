@@ -41,6 +41,8 @@ wss://<runtime>/api/v1/configure/sandbox/ws?agent_id=default&token=<token>
 
 A token of another kind proves nothing on an owner's route: an application's visitor, embed, host or principal token reaches the application's routes, which verify it themselves, and nothing else.
 
+In TypeScript, `runtimeAuthHeaders(token)` and `runtimeSocketUrl(url, token)` (exported from the package's `hooks/ownRoutes`) build the header and the websocket's address, and send nothing when no token is held, which is right for a page on the same machine as its runtime. The hooks, adapters and panels that call a runtime take the token as an optional `authToken`.
+
 ## What a caller that proved nothing is told of the sandbox
 
 `GET /health/startup`, `GET /api/v1/runtime/status`, `GET /api/v1/configure/codemode/status`, `GET /api/v1/configure/agents/{agent_id}/spec` and the frames of the `/api/v1/configure/sandbox/ws` websocket describe the sandbox: its variant, its address, its kernel, whether it runs. The sandbox's token is in those answers only for a caller that proved the runtime is theirs; for anybody else the `jupyter_token` key is not there, and an address carries no `token` parameter. The monitoring stream and the skills' catalogue never carry it.

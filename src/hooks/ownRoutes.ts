@@ -66,3 +66,28 @@ export function runtimeModelsUrl(
   }
   return `${base(agentServerUrl)}/api/v1/configure/models?agent_id=${encodeURIComponent(agentId)}`;
 }
+
+/**
+ * The header a runtime's routes read to know their caller: the signed-in
+ * person's token, or the runtime's own. None without a token: a page on the
+ * runtime's machine needs none, and the call is sent as it always was.
+ */
+export function runtimeAuthHeaders(
+  token?: string | null,
+): Record<string, string> {
+  const held = token?.trim();
+  return held ? { Authorization: `Bearer ${held}` } : {};
+}
+
+/**
+ * A runtime websocket's address with the same token in its `token` query
+ * parameter, a browser being unable to set a header on a websocket. The
+ * address is returned as given without a token, or when it names one already.
+ */
+export function runtimeSocketUrl(url: string, token?: string | null): string {
+  const held = token?.trim();
+  if (!held || /[?&]token=/.test(url)) {
+    return url;
+  }
+  return `${url}${url.includes('?') ? '&' : '?'}token=${encodeURIComponent(held)}`;
+}

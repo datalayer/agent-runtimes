@@ -35,6 +35,7 @@ import {
 import { SandboxStatusBridge } from './SandboxStatusBridge';
 import { DatalayerAgentMount } from './DatalayerAgentMount';
 import type { ServiceManagerSource } from './browserService';
+import type { ServerToken } from './service';
 import { AgentSummaryPanel } from './AgentSummaryPanel';
 import {
   AnonymousKeyBadge,
@@ -70,6 +71,14 @@ export { AGENTS_PLUGIN_NAME };
 export type AgentsConfig = {
   /** Server the server-backed targets are reached through. */
   serverUrl: string;
+  /**
+   * The token that server takes, when it asks for one: sent with what the
+   * workspace asks of it (`Authorization: Bearer`, the `token` query of its
+   * websocket). Unsaid for a server on this machine, which needs none. A
+   * Datalayer runtime is not this server: it is spoken to with the person's
+   * own token.
+   */
+  serverToken?: ServerToken;
   /**
    * Where the sandbox starts.
    *
@@ -235,6 +244,7 @@ export const AgentsPlugin = definePlugin<AgentsConfig, unknown, AgentsOutput>({
       team,
       sandbox: createSwitchableSandboxService({
         serverUrl: config.serverUrl,
+        serverToken: config.serverToken,
         // Pinned when there is no choice to make: a host that hid the control
         // must not be started on a target the reader cannot move off — unless
         // the host fixed the target itself, as an application deployed on

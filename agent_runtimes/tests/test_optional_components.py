@@ -41,8 +41,8 @@ def test_the_catalogue_says_what_the_marketer_and_the_shopper_start_without():
     # No bluesky server (agentspecs 0.0.192) nor x server (0.0.194): Bluesky and X
     # are read and acted on with the linked account.
     assert marketer.optional.mcp_servers == ["discord", "linkedin"]
+    # Crawling a page asks no key (agentspecs, 25 November 2026): never something it starts without.
     assert marketer.optional.skills == [
-        "crawl",
         "github",
         "datalayer-email",
         "image-stock",
@@ -77,8 +77,9 @@ def test_the_catalogue_says_what_the_marketer_and_the_shopper_start_without():
     assert "linkedin" in [server.id for server in marketer.mcp_servers]
     assert "read nothing back" in " ".join((marketer.system_prompt or "").split())
     shopper = get_agent_spec("worker-shopper")
-    assert shopper is not None and shopper.optional is not None
-    assert shopper.optional.skills == ["crawl"]
+    # Nothing of the Shopper's is optional since its crawl skill asks no key.
+    assert shopper is not None and shopper.optional is None
+    assert "crawl" in [skill.split(":")[0] for skill in shopper.skills]
     assert get_agent_spec("worker-terra").optional is None
 
 
@@ -160,10 +161,11 @@ def test_linkedin_counts_for_the_group_with_its_session_from_settings(
 
 def test_what_is_not_set_up_is_left_out_and_said():
     declared = declared_secrets(get_agent_spec("worker-marketer"))
-    left = declared.left_out(_having(["GITHUB_TOKEN"]))
+    left = declared.left_out(_having([]))
     assert left.servers == {"discord": NETWORKS["discord"]}
     # image-stock requires nothing and has none of its provider keys (agentspecs 0.0.218).
-    assert left.skills == {"crawl": ["TAVILY_API_KEY"], "image-stock": []}
+    # crawl asks no key (25 November 2026): it is never left out.
+    assert left.skills == {"github": ["GITHUB_TOKEN"], "image-stock": []}
     assert left.tools == {
         "social-post-bluesky": ["a linked Bluesky account"],
         "social-read-bluesky": ["a linked Bluesky account"],
@@ -181,9 +183,10 @@ def test_what_is_not_set_up_is_left_out_and_said():
     }
     sentence = left.sentence()
     assert "the MCP server discord (no DISCORD_BOT_TOKEN" in sentence
-    assert "the skill crawl (no TAVILY_API_KEY)" in sentence
+    assert "the skill github (no GITHUB_TOKEN)" in sentence
+    assert "crawl" not in sentence
     assert "say that you cannot" in sentence
-    everything = sum(NETWORKS.values(), []) + ["GITHUB_TOKEN", "TAVILY_API_KEY"]
+    everything = sum(NETWORKS.values(), []) + ["GITHUB_TOKEN"]
     assert not declared.left_out(_having(everything)).servers
     assert declared.left_out(_having(everything)).skills == {"image-stock": []}
     assert not declared.left_out(_having([*everything, "PEXELS_API_KEY"])).skills
@@ -214,6 +217,8 @@ async def test_the_agent_starts_without_them_and_is_told(
     monkeypatch: pytest.MonkeyPatch,
     creation_spy: dict[str, object],  # noqa: F811
 ) -> None:
+    # TAVILY_API_KEY is not set either: the crawl skill asks no key (agentspecs,
+    # 25 November 2026), so it is there all the same.
     for name in ("X_BEARER_TOKEN", "TAVILY_API_KEY"):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("GITHUB_TOKEN", "a-token")
@@ -242,12 +247,13 @@ async def test_the_agent_starts_without_them_and_is_told(
     adapter_kwargs = creation_spy["adapter_kwargs"]
     assert isinstance(adapter_kwargs, dict)
     assert [s.id for s in adapter_kwargs["selected_mcp_servers"]] == ["github"]
-    assert seen["skills"] == ["github:0.0.1"]
+    assert seen["skills"] == ["crawl:0.0.1", "github:0.0.1"]
     pydantic_kwargs = creation_spy["pydantic_kwargs"]
     assert isinstance(pydantic_kwargs, dict)
     instructions = " ".join(str(part) for part in pydantic_kwargs["instructions"])
     assert "You market." in instructions
     assert (
         "Started without what the person has not set up: the MCP server x "
-        "(no X_BEARER_TOKEN); the skill crawl (no TAVILY_API_KEY)." in instructions
+        "(no X_BEARER_TOKEN)." in instructions
     )
+    assert "the skill crawl" not in instructions

@@ -11214,7 +11214,7 @@ WORKER_MARKETER_AGENTSPEC_0_0_1 = Agentspec(
     listed=True,
     optional={
         "mcp_servers": ["discord", "linkedin"],
-        "skills": ["crawl", "github", "datalayer-email", "image-stock"],
+        "skills": ["github", "datalayer-email", "image-stock"],
         "backend_tools": [
             "social-post-x",
             "social-read-x",
@@ -13745,7 +13745,6 @@ WORKER_SHOPPER_AGENTSPEC_0_0_1 = Agentspec(
     domain="personal-assistant",
     enabled=True,
     listed=True,
-    optional={"mcp_servers": [], "skills": ["crawl"], "at_least_one": []},
     model="bedrock:us.anthropic.claude-sonnet-5-5",
     model_additionals=["bedrock:us.anthropic.claude-sonnet-4-6", "alibaba:qwen-max"],
     inference_provider=None,
@@ -14761,7 +14760,7 @@ WORKER_TRAVELLER_AGENTSPEC_0_0_1 = Agentspec(
     listed=True,
     optional={
         "mcp_servers": ["overture", "booking-com", "google-maps"],
-        "skills": ["crawl"],
+        "skills": [],
         "at_least_one": [],
     },
     model="bedrock:us.anthropic.claude-sonnet-5-5",

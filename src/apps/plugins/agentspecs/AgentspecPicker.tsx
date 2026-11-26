@@ -18,6 +18,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { ActionList, ActionMenu, Spinner } from '@primer/react';
 import type { AgentWorkspaceContext } from '../../core';
+import { useServerToken } from '../agents/useSandboxService';
+import { runtimeAuthHeaders } from '../../../hooks/ownRoutes';
 import { getAgentspecs } from '../../../specs/agents';
 
 type AgentSummary = {
@@ -32,6 +34,7 @@ export function AgentspecPicker({
 }: {
   workspace: AgentWorkspaceContext;
 }): JSX.Element | null {
+  const serverToken = useServerToken();
   const [agents, setAgents] = useState<AgentSummary[]>([]);
   const [switching, setSwitching] = useState(false);
   const [active, setActive] = useState(workspace.agentId);
@@ -47,7 +50,9 @@ export function AgentspecPicker({
 
   useEffect(() => {
     let cancelled = false;
-    void fetch(`${workspace.serverUrl}/api/v1/agents`)
+    void fetch(`${workspace.serverUrl}/api/v1/agents`, {
+      headers: runtimeAuthHeaders(serverToken),
+    })
       .then(response => (response.ok ? response.json() : { agents: [] }))
       .then(payload => {
         if (!cancelled) {
@@ -61,7 +66,7 @@ export function AgentspecPicker({
     return () => {
       cancelled = true;
     };
-  }, [workspace.serverUrl, sandboxTarget, sandboxState]);
+  }, [workspace.serverUrl, serverToken, sandboxTarget, sandboxState]);
 
   // The workspace can be pointed at a different agent while this is mounted —
   // the host re-renders it with a new `agentId` — and a name captured once at
@@ -80,7 +85,10 @@ export function AgentspecPicker({
           )}/agent`,
           {
             method: 'POST',
-            headers: { 'content-type': 'application/json' },
+            headers: {
+              'content-type': 'application/json',
+              ...runtimeAuthHeaders(serverToken),
+            },
             body: JSON.stringify({ agent_id: agentId }),
           },
         );
@@ -101,6 +109,7 @@ export function AgentspecPicker({
       workspace.conversationId,
       workspace.serverUrl,
       workspace.setAgentId,
+      serverToken,
     ],
   );
 

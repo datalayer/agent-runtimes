@@ -27,7 +27,8 @@ describe('an agent’s optional servers and skills', () => {
       // no x server either (agentspecs 0.0.194).
       mcpServers: ['discord', 'linkedin'],
       // Stock photos, set up by any one provider's key (agentspecs 0.0.218).
-      skills: ['crawl', 'github', 'datalayer-email', 'image-stock'],
+      // Crawling a page asks no key (25 November 2026): never optional.
+      skills: ['github', 'datalayer-email', 'image-stock'],
       // Set up by an X, Bluesky or LinkedIn account linked in Settings
       // (agentspecs 0.0.189, LinkedIn 0.0.190).
       backendTools: [
@@ -66,9 +67,11 @@ describe('an agent’s optional servers and skills', () => {
     // X is read and acted on with the linked account: no x server, no key.
     expect(marketer.mcpServers.map(server => server.id)).not.toContain('x');
     expect(isAgentspecComponentOptional(marketer, 'skill', 'pdf')).toBe(false);
-    expect(getAgentspecs('worker-shopper')!.optional?.skills).toEqual([
-      'crawl',
-    ]);
+    // Nothing of the Shopper's is optional since its crawl skill asks no key.
+    expect(getAgentspecs('worker-shopper')!.optional).toBeUndefined();
+    expect(isAgentspecComponentOptional(marketer, 'skill', 'crawl')).toBe(
+      false,
+    );
     expect(getAgentspecs('worker-terra')!.optional).toBeUndefined();
   });
 
