@@ -307,3 +307,19 @@ def test_two_concurrent_first_calls_leave_the_owner_proven(
     after = asyncio.run(callers.proves_the_runtime(_owner_scope(), _Verifier()))
     assert after == callers.Proof(True, kind="owner")
     assert callers.runtime_owner_uid() == OWNER
+
+
+@pytest.mark.parametrize("body", [[1, 2], "a sentence", None, {"reservations": "x"}])
+def test_iam_s_list_in_another_shape_is_unverifiable(
+    actor: Path, monkeypatch: pytest.MonkeyPatch, body: Any
+) -> None:
+    transport = httpx.MockTransport(lambda request: httpx.Response(200, json=body))
+    real = httpx.AsyncClient
+
+    def client(*args: Any, **kwargs: Any) -> httpx.AsyncClient:
+        return real(*args, transport=transport, **kwargs)
+
+    monkeypatch.setattr(callers.httpx, "AsyncClient", client)
+    proof, seconds = _proof("owner-token")
+    assert proof == callers.Proof(False, reason="unverifiable")
+    assert seconds == callers.PROOF_RETRY_SECONDS

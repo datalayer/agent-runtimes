@@ -672,6 +672,9 @@ RESERVATIONS_PATH = "/api/iam/v1/usage/reservations"
 #: runtime is never given another owner.
 _RESERVATION_OWNER: Dict[str, str] = {}
 
+#: The status a fetch says for a 200 whose body is not in the shape asked: unverifiable.
+UNEXPECTED_ANSWER = 0
+
 #: Asks IAM for the reservations a token's account holds: (url, token) -> (status, resource uids).
 FetchReservations = Callable[[str, str], Awaitable[Tuple[int, Tuple[str, ...]]]]
 
@@ -682,9 +685,13 @@ async def _fetch_reservations(url: str, token: str) -> Tuple[int, Tuple[str, ...
         if response.status_code != 200:
             return response.status_code, ()
         try:
-            listed = (response.json() or {}).get("reservations") or []
+            said = response.json()
         except ValueError:
-            return 200, ()
+            return UNEXPECTED_ANSWER, ()
+        listed = said.get("reservations") if isinstance(said, dict) else None
+        if not isinstance(listed, list):
+            # An answer in another shape says nothing: asked again soon.
+            return UNEXPECTED_ANSWER, ()
         return 200, tuple(
             str(entry.get("resource") or entry.get("id") or "").lower()
             for entry in listed
@@ -789,10 +796,10 @@ async def _fetch_deployment_owner(url: str, token: str) -> Tuple[int, str]:
         try:
             said = response.json()
         except ValueError:
-            return 200, ""
+            return UNEXPECTED_ANSWER, ""
         deployment = said.get("deployment") if isinstance(said, dict) else None
         if not isinstance(deployment, dict):
-            return 200, ""
+            return UNEXPECTED_ANSWER, ""
         return 200, str(deployment.get("account_uid") or "")
 
 
@@ -818,6 +825,47 @@ def owner_key_deployment(claims: Mapping[str, Any]) -> str:
         if isinstance(detail, dict) and detail.get("type") == DEPLOYMENT_RUNTIME_DETAIL:
             return str(detail.get("deployment_uid") or "").strip()
     return ""
+
+
+#: The detail naming one context a key acts on (``kind: sandbox``: a runtime, by its uid).
+CONTEXT_DETAIL = "datalayer_context"
+
+
+def key_scope_refused(claims: Mapping[str, Any]) -> bool:
+    """Whether a key scoped to a deployment's runtime is presented to another runtime.
+
+    A key IAM mints for a deployment's owner to run its runtime proves
+    something only on that runtime, whoever's account it names: on a runtime
+    launched for that deployment (`principal.launched_for`), or on the runtime
+    the key itself names (a Kagent actor, which no proof reaches, known by its
+    own name: :func:`actor_runtime_uid`). Anywhere else, never. A token scoped
+    to no deployment is not read here.
+    """
+    from agent_runtimes.apps.principal import launched_for
+
+    named = owner_key_deployment(claims)
+    if not named:
+        return False
+    launched = launched_for()
+    if launched:
+        return named != launched
+    runtime = actor_runtime_uid().lower()
+    details = claims.get("authorization_details")
+    if isinstance(details, str):
+        import json
+
+        try:
+            details = json.loads(details)
+        except ValueError:
+            return True
+    sandboxes = {
+        str(detail.get("uid") or "").lower()
+        for detail in (details if isinstance(details, list) else ())
+        if isinstance(detail, dict)
+        and detail.get("type") == CONTEXT_DETAIL
+        and detail.get("kind") == "sandbox"
+    }
+    return not (runtime and runtime in sandboxes)
 
 
 def deployment_owner_uid() -> str:
@@ -1127,10 +1175,10 @@ async def _proof_of_token(token: str, verifier: Any) -> Tuple[Proof, float]:
     if caller.kind != "person":
         return Proof(False, reason="application-token"), PROOF_SECONDS
     launched = launched_for()
-    named = owner_key_deployment(_unverified_claims(token))
-    if launched and named and named != launched:
-        # A key of another deployment's runtime is held to that runtime: it
-        # proves nothing here, whoever's account it names.
+    if key_scope_refused(_unverified_claims(token)):
+        # A key of a deployment's runtime is held to that runtime: it proves
+        # nothing here, whoever's account it names, before any owner known here
+        # (the runtime's, its deployment's, its reservation's) is read.
         return Proof(False, reason="another-account"), PROOF_SECONDS
     owner = runtime_owner_uid()
     if owner and caller.uid == owner:

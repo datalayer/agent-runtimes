@@ -27,6 +27,7 @@ DEPLOYMENT = "01DEPLOYMENT"
 OWNER = "01OWNER"
 LAUNCHER = "01LAUNCHER"
 AI_AGENTS = "https://ai-agents.example.com"
+ACTOR = "01m8c9a2b3c4d5e6f7g8h9jkmn"
 
 
 def _key(deployment: str, sub: str = OWNER) -> str:
@@ -254,7 +255,8 @@ def test_a_runtime_launched_for_no_deployment_does_not_ask(
     ai_agents = _AiAgents({"owner-token": OWNER})
     monkeypatch.setattr(callers, "_fetch_deployment_owner", ai_agents)
     monkeypatch.setattr(principal, "_PROOF", {})
-    assert _proof(OWNER_KEY)[0] == callers.Proof(False, reason="owner-unknown")
+    # A key of a deployment's runtime is held to that runtime.
+    assert _proof(OWNER_KEY)[0] == callers.Proof(False, reason="another-account")
     assert _proof("owner-token")[0] == callers.Proof(False, reason="owner-unknown")
     assert ai_agents.asked == []
 
@@ -298,7 +300,10 @@ def test_an_answer_in_another_shape_names_nobody(
 
     monkeypatch.setattr(callers.httpx, "AsyncClient", client)
     url = f"{AI_AGENTS}/api/ai-agents/v1/apps/deployments/{DEPLOYMENT}"
-    assert asyncio.run(callers._fetch_deployment_owner(url, "owner-token")) == (200, "")
+    assert asyncio.run(callers._fetch_deployment_owner(url, "owner-token")) == (
+        callers.UNEXPECTED_ANSWER,
+        "",
+    )
 
 
 @pytest.mark.parametrize("first", ["success", "timeout"])
@@ -332,3 +337,56 @@ def test_two_concurrent_first_calls_leave_the_owner_proven(
     after = asyncio.run(callers.proves_the_runtime(_scope("owner-token"), _Verifier()))
     assert after == callers.Proof(True, kind="owner")
     assert callers.deployment_owner_uid() == OWNER
+
+
+def _kagent_key(deployment: str, runtime: str) -> str:
+    """The key the keeper mints on Kagent: the deployment's, naming the actor's runtime."""
+    claims = jwt.decode(_key(deployment), options={"verify_signature": False})
+    claims["authorization_details"].append(
+        {
+            "type": "datalayer_context",
+            "kind": "sandbox",
+            "uid": runtime,
+            "actions": ["write"],
+        }
+    )
+    return jwt.encode(claims, "not-verified-here", algorithm="HS256")
+
+
+def test_a_deployment_s_key_proves_nothing_on_a_person_s_own_runtime(
+    launched: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Held to its deployment's runtime: on its owner's own runtime (launched for no
+    deployment) it proves nothing, while the owner's own token still does."""
+    monkeypatch.setattr(principal, "_PROOF", {})
+    monkeypatch.setenv("DATALAYER_USER_UID", OWNER)
+    assert _proof(OWNER_KEY)[0] == callers.Proof(False, reason="another-account")
+    assert _proof("owner-token")[0] == callers.Proof(True, kind="owner")
+
+
+@pytest.mark.parametrize(
+    ("runtime", "proven"),
+    [(ACTOR.upper(), True), ("01m8c4f8r89ar40pamvbtjxj4h", False)],
+)
+def test_on_a_kagent_actor_the_key_naming_its_runtime_proves_it(
+    launched: None,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Any,
+    runtime: str,
+    proven: bool,
+) -> None:
+    """An actor knows no deployment (no proof reaches it): the keeper's key there
+    names the actor's own runtime, and proves nothing on any other."""
+    (tmp_path / "actor-name").write_text(f"rt-{ACTOR}\n")
+    (tmp_path / "atespace").write_text("datalayer-runtimes\n")
+    (tmp_path / "actor-uid").write_text("a1\n")
+    monkeypatch.setenv("AGENT_RUNTIMES_TARGET", "ate")
+    monkeypatch.setenv("ATE_SYSTEM_INFO_DIR", str(tmp_path))
+    monkeypatch.setattr(principal, "_PROOF", {})
+    monkeypatch.setenv("DATALAYER_USER_UID", OWNER)
+    key = _kagent_key(DEPLOYMENT, runtime)
+    TOKENS[key] = Caller(kind="person", uid=OWNER)
+    try:
+        assert _proof(key)[0].sufficient is proven
+    finally:
+        TOKENS.pop(key)
