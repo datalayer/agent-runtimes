@@ -263,3 +263,47 @@ def test_iam_s_list_is_read_by_each_reservation_s_resource(
         )
     )
     assert status == 200 and resources == (RUNTIME, "01only-an-id")
+
+
+def _owner_scope() -> dict[str, Any]:
+    return {
+        "type": "http",
+        "method": "GET",
+        "path": "/api/v1/agents",
+        "client": ("203.0.113.9", 1),
+        "headers": [(b"authorization", b"Bearer owner-token")],
+        "query_string": b"",
+    }
+
+
+@pytest.mark.parametrize("first", ["success", "timeout"])
+def test_two_concurrent_first_calls_leave_the_owner_proven(
+    actor: Path, monkeypatch: pytest.MonkeyPatch, first: str
+) -> None:
+    """Two first calls of the owner at once, one lookup succeeding and one timing
+    out, in either order: the owner stays proven for the calls after them."""
+    asked: list[int] = []
+
+    async def fetch(url: str, token: str) -> tuple[int, tuple[str, ...]]:
+        n = len(asked)
+        asked.append(n)
+        succeeds = (n == 0) == (first == "success")
+        await asyncio.sleep(0.05 if n == 0 else 0.1)
+        if succeeds:
+            return 200, (RUNTIME,)
+        raise httpx.ReadTimeout("IAM was slow for this one")
+
+    monkeypatch.setattr(callers, "_fetch_reservations", fetch)
+
+    async def both() -> list[callers.Proof]:
+        return list(
+            await asyncio.gather(
+                callers.proves_the_runtime(_owner_scope(), _Verifier()),
+                callers.proves_the_runtime(_owner_scope(), _Verifier()),
+            )
+        )
+
+    asyncio.run(both())
+    after = asyncio.run(callers.proves_the_runtime(_owner_scope(), _Verifier()))
+    assert after == callers.Proof(True, kind="owner")
+    assert callers.runtime_owner_uid() == OWNER
