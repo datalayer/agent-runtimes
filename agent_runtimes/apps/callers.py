@@ -49,6 +49,7 @@ from typing import Any, Awaitable, Callable, Dict, Mapping, Optional, Tuple
 
 import httpx
 import jwt
+from starlette.requests import Request
 
 #: The audience of an app embed token (`datalayer_common.authn.app_embed`).
 APP_EMBED_AUDIENCE = "datalayer:app:embed"
@@ -824,3 +825,97 @@ def origin_allowed(origin: Optional[str], allowed: Tuple[str, ...]) -> bool:
     if is_loopback_origin(origin):
         return True
     return origin.rstrip("/") in {entry.rstrip("/") for entry in allowed}
+
+
+# --- a browser's page on the machine itself -----------------------------------
+#
+# On a person's own machine a page they opened in a browser reaches the
+# runtime's loopback too, and the server's CORS answers any origin: the
+# loopback alone is neither proof of a skill nor of the person. A browser's
+# request says a browser made it and a script's does not; the routes that
+# take the loopback's word read it here, and nowhere else.
+
+#: What a browser puts on a request and a skill's script does not.
+BROWSER_HEADERS = ("origin", "sec-fetch-site", "sec-fetch-mode", "sec-fetch-dest")
+
+
+def from_a_browser(headers: Mapping[str, str]) -> bool:
+    """Whether a request says a browser made it: an ``Origin`` or fetch metadata."""
+    return any(name in headers for name in BROWSER_HEADERS)
+
+
+def from_a_strangers_page(headers: Mapping[str, str]) -> bool:
+    """Whether a browser's page that is neither this machine's nor the platform's asks.
+
+    By the origin it names (:func:`origin_allowed` with :func:`platform_origins`;
+    ``null`` is nobody's); a request that names none is a stranger's when its
+    fetch metadata says another site made it. A script, which says neither, is
+    no page at all.
+    """
+    if "origin" in headers:
+        origin = headers.get("origin") or "null"
+        return not origin_allowed(origin, platform_origins())
+    return (headers.get("sec-fetch-site") or "").strip().lower() == "cross-site"
+
+
+def refuse_unless_a_skill(request: Request, detail: str) -> None:
+    """Refuse (403) a caller that is not a skill's script on the pod's loopback.
+
+    For a route only a skill calls. ``detail`` is said to a caller from
+    elsewhere; a browser's page on the loopback is told it is not one, before
+    anything is read.
+
+    Parameters
+    ----------
+    request : starlette.requests.Request
+        The request.
+    detail : str
+        Who alone may call, in a sentence.
+    """
+    from fastapi import HTTPException  # noqa: PLC0415
+
+    if not is_loopback(request.client.host if request.client else None):
+        raise HTTPException(status_code=403, detail=detail)
+    refuse_a_browsers_page(request, detail)
+
+
+def refuse_a_browsers_page(request: Request, detail: str) -> None:
+    """Refuse (403) a request a browser made, wherever it comes from.
+
+    For a route only a skill calls and that names no address of its own:
+    ``detail`` says who alone may call.
+    """
+    from fastapi import HTTPException  # noqa: PLC0415
+
+    if from_a_browser(request.headers):
+        raise HTTPException(
+            status_code=403,
+            detail=f"{detail.rstrip('.')}: a browser's page is not one.",
+        )
+
+
+def refuse_a_strangers_page(request: Request) -> None:
+    """Refuse (403) a stranger's page where the loopback stands for proof.
+
+    For a route the runtime's own pages call too, as a route's dependency. A
+    call from the machine itself that no proxy passed on needs no token
+    (:func:`proves_the_runtime`): there a page that is neither this machine's
+    nor the platform's is refused. Any other call is judged by the token it
+    presents, as before, and nothing is refused here.
+    """
+    from fastapi import HTTPException  # noqa: PLC0415
+
+    headers = request.headers
+    host = request.client.host if request.client else None
+    if (
+        is_loopback(host)
+        and not is_forwarded(headers)
+        and from_a_strangers_page(headers)
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "A page that is neither this machine's nor Datalayer's reaches "
+                "nothing on this runtime's loopback."
+            ),
+        )

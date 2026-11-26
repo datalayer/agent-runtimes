@@ -379,13 +379,11 @@ def sandbox_may_ask(method: str, path: str) -> bool:
     )
 
 
-#: What a browser puts on a request and a skill's script does not.
-_BROWSER_HEADERS = ("origin", "sec-fetch-site", "sec-fetch-mode", "sec-fetch-dest")
-
-
 def from_a_browser(request: Request) -> bool:
-    """Whether a request says a browser made it: an ``Origin`` or fetch metadata."""
-    return any(name in request.headers for name in _BROWSER_HEADERS)
+    """Whether a request says a browser made it (`callers.from_a_browser`)."""
+    from agent_runtimes.apps import callers
+
+    return callers.from_a_browser(request.headers)
 
 
 def _local(request: Request) -> None:
@@ -397,21 +395,11 @@ def _local(request: Request) -> None:
     metadata) and a script's does not: one that does is refused, before any
     identity is read.
     """
-    from agent_runtimes.routes.spaces import _caller_is_local
+    from agent_runtimes.apps.callers import refuse_unless_a_skill
 
-    if not _caller_is_local(request):
-        raise HTTPException(
-            status_code=403,
-            detail="Only a skill in this runtime's pod asks who it runs for.",
-        )
-    if from_a_browser(request):
-        raise HTTPException(
-            status_code=403,
-            detail=(
-                "Only a skill in this runtime's pod asks who it runs for: "
-                "a browser's page is not one."
-            ),
-        )
+    refuse_unless_a_skill(
+        request, "Only a skill in this runtime's pod asks who it runs for."
+    )
 
 
 def _identity(agent_id: str = "", *, acting: bool = False) -> Identity:

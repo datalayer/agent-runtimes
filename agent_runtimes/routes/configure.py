@@ -423,7 +423,7 @@ class MailToMeRequest(BaseModel):
 
 
 @router.post("/mail")
-async def mail_me_endpoint(body: MailToMeRequest) -> dict[str, Any]:
+async def mail_me_endpoint(request: Request, body: MailToMeRequest) -> dict[str, Any]:
     """Send one mail to the person this runtime runs for, through Datalayer's mailer.
 
     The datalayer-skills `email` skill calls it from the sandbox: the runtime
@@ -432,9 +432,13 @@ async def mail_me_endpoint(body: MailToMeRequest) -> dict[str, Any]:
     the runtime or the sandbox. A runtime given no social token (a visitor's, a
     deployment's) sends none.
     """
+    from agent_runtimes.apps.callers import refuse_a_browsers_page
     from agent_runtimes.routes.owner import mail_place_refusal
     from agent_runtimes.tools.social import send_mail
 
+    # A skill's script mails its person; a page they opened in a browser, which
+    # reaches the runtime's loopback on their own machine, does not.
+    refuse_a_browsers_page(request, "Only a skill of this runtime mails its person.")
     # Where a mail may be sent from is one predicate, the skill's readiness
     # reads it too: never from a runtime that serves an application or
     # visitors, whoever reaches this route there.

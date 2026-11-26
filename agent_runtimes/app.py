@@ -1689,7 +1689,10 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],  # Allow all origins
-        allow_credentials=True,
+        # No credentialed request: the runtime's clients send a bearer token (a
+        # ``token`` query on a websocket), never a cookie, and with credentials
+        # allowed a request carrying a cookie has its own origin echoed back.
+        allow_credentials=False,
         allow_methods=["*"],  # Allow all methods
         allow_headers=["*"],  # Allow all headers
         expose_headers=["*"],  # Expose all headers to the client

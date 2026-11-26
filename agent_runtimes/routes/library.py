@@ -18,7 +18,8 @@ import httpx
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from agent_runtimes.routes.spaces import _caller_is_local, owner_token
+from agent_runtimes.apps.callers import refuse_unless_a_skill
+from agent_runtimes.routes.spaces import owner_token
 
 router = APIRouter(prefix="/library", tags=["library"])
 
@@ -80,22 +81,16 @@ async def publish_item(
     item_uid: str, body: PublishItem, request: Request
 ) -> dict[str, Any]:
     """Publish an owned artifact, after an explicit confirmation."""
-    if not _caller_is_local(request):
-        raise HTTPException(
-            403, "Only a skill in this runtime's pod may publish its owner's work."
-        )
+    # A skill's script on the pod's loopback, never a browser's page there
+    # (`callers.refuse_unless_a_skill`).
+    refuse_unless_a_skill(
+        request, "Only a skill in this runtime's pod may publish its owner's work."
+    )
     # Where a publication may be made is one predicate, read by the gate and
     # by the skill's readiness too: enforced here as well, since the pod's
     # loopback is answered whole on a runtime that holds no pod secret.
-    from agent_runtimes.routes.owner import from_a_browser, publication_place_refusal
+    from agent_runtimes.routes.owner import publication_place_refusal
 
-    if from_a_browser(request):
-        # On a person's own machine a page reaches the loopback too.
-        raise HTTPException(
-            403,
-            "Only a skill in this runtime's pod may publish its owner's work: "
-            "a browser's page is not one.",
-        )
     not_here = publication_place_refusal()
     if not_here:
         raise HTTPException(403, not_here)
