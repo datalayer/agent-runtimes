@@ -190,3 +190,43 @@ async def test_a_tavily_only_codemode_agent_without_the_key_reaches_no_server(
         str(part) for part in creation_spy["pydantic_kwargs"]["instructions"]
     )
     assert "the MCP server tavily (no TAVILY_API_KEY)" in instructions
+
+
+def test_serve_with_an_agent_leaves_tavily_out_without_the_key_and_says_so(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The process's own agent (``serve --agent-id``) leaves out what a created one does."""
+    from agent_runtimes.app import startup_left_out
+
+    monkeypatch.delenv("TAVILY_API_KEY", raising=False)
+    monkeypatch.setenv("GITHUB_TOKEN", "a-token")
+    spec = get_agent_spec("worker-crawler")
+    left_out, skills, sentence = startup_left_out(spec, list(spec.skills))
+    assert left_out.servers == {"tavily": ["TAVILY_API_KEY"]}
+    assert skills == list(spec.skills)
+    assert "the MCP server tavily (no TAVILY_API_KEY)" in sentence
+
+
+def test_serve_with_an_agent_keeps_tavily_with_the_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from agent_runtimes.app import startup_left_out
+
+    monkeypatch.setenv("TAVILY_API_KEY", KEY)
+    monkeypatch.setenv("GITHUB_TOKEN", "a-token")
+    spec = get_agent_spec("worker-crawler")
+    left_out, _, sentence = startup_left_out(spec, list(spec.skills))
+    assert not left_out and sentence == ""
+
+
+def test_the_crawler_cog_leaves_tavily_out_without_the_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An application's cog reaches the runtime as its agent's spec: its optional Tavily is left out the same way."""
+    from agent_runtimes.specs.cogs import COG_CRAWLER_AGENTSPEC_0_0_1 as cog
+
+    assert cog.optional is not None and cog.optional.mcp_servers == ["tavily"]
+    declared = declared_secrets(cog)
+    assert declared.left_out(_having()).servers["tavily"] == ["TAVILY_API_KEY"]
+    assert not [s for s in declared.missing(_having(), who="cog") if "TAVILY" in s]
+    assert "tavily" not in declared.left_out(_having("TAVILY_API_KEY")).servers

@@ -159,6 +159,46 @@ def _is_reload_parent_process() -> bool:
     return "--reload" in sys.argv and mp.current_process().name == "MainProcess"
 
 
+def startup_left_out(
+    agent_spec: Any, skills: list[str], *, skills_overridden: bool = False
+) -> tuple[Any, list[str], str]:
+    """
+    What an agent started with the process leaves out, as a created one does.
+
+    The spec's optional servers and skills not set up here (``left_out_of``,
+    the one place that decides it for every path), its skills without those
+    left out unless the command line chose them, and the sentence its
+    instructions end with. Backend tools are not counted: this path registers
+    every one.
+
+    Parameters
+    ----------
+    agent_spec : Any
+        The agent's spec, from the catalogue.
+    skills : list[str]
+        The skills it starts with.
+    skills_overridden : bool
+        Whether the command line chose the skills (then they are kept).
+
+    Returns
+    -------
+    tuple[Any, list[str], str]
+        The ``LeftOut``, the skills kept, and the sentence ("" when nothing
+        is left out).
+    """
+    from .guardrails.declared_secrets import declared_secrets
+    from .routes.agents import left_out_of
+
+    left_out = dataclasses.replace(left_out_of(declared_secrets(agent_spec)), tools={})
+    if left_out.skills and not skills_overridden:
+        skills = [
+            skill
+            for skill in skills
+            if str(skill).split(":", 1)[0] not in left_out.skills
+        ]
+    return left_out, skills, (left_out.sentence() if left_out else "")
+
+
 async def _create_and_register_cli_agent(
     app: FastAPI,
     agent_id: str,
@@ -1327,22 +1367,9 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                 mcp_manager = get_mcp_manager()
                 lifecycle_manager = get_mcp_lifecycle_manager()
 
-                # What the spec declares optional and is not set up for here:
-                # its servers and skills are left out, and the agent is told.
-                from .guardrails.declared_secrets import declared_secrets
-                from .routes.agents import left_out_of
-
-                # Servers and skills alone: this path registers every backend tool.
-                left_out = dataclasses.replace(
-                    left_out_of(declared_secrets(agent_spec)), tools={}
+                left_out, skills_list, started_without = startup_left_out(
+                    agent_spec, skills_list, skills_overridden=bool(skills_str)
                 )
-                if left_out.skills and not skills_str:
-                    skills_list = [
-                        skill
-                        for skill in skills_list
-                        if str(skill).split(":", 1)[0] not in left_out.skills
-                    ]
-                started_without = left_out.sentence() if left_out else ""
                 if left_out:
                     logger.info(
                         "Default agent starts without %s (not set up)",
