@@ -14,7 +14,7 @@ follows the same rule.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, cast
+from typing import Any, Dict, Iterator, List, cast
 
 import pytest
 from pydantic_ai.messages import ToolCallPart
@@ -66,7 +66,7 @@ class _Manager:
 
 
 @pytest.fixture
-def runtime(monkeypatch: pytest.MonkeyPatch) -> Dict[str, Any]:
+def runtime(monkeypatch: pytest.MonkeyPatch) -> Iterator[Dict[str, Any]]:
     """A runtime running ENABLED, its configs by server, no approval given yet."""
     configs = _configs()
     enabled = {server: list(tools) for server, tools in ENABLED.items()}
