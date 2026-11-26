@@ -22,7 +22,7 @@ Every route of a runtime is one of four kinds. A route that is not listed as one
 
 A call to an owner's route presents one of these tokens, **from the machine itself as from anywhere else**. Since 1.8.9 an address proves nothing: on a person's own machine a web page open in their browser reaches the runtime's loopback too, so a call from `127.0.0.1` without a token is no longer taken as the owner's.
 
-- **The owner's Datalayer token.** The token the person is signed in with (or an API key of theirs), which the platform accepts and which names the account the runtime is assigned to.
+- **The owner's Datalayer token.** The token the person is signed in with (or an API key of theirs), which the platform accepts and which names the account the runtime is assigned to. On a Kagent agent's runtime, which is given nothing of its owner's, the account it is assigned to is the one whose reservation it is: the runtime asks IAM, with the caller's own token, whether that reservation is theirs, once, and remembers the answer.
 - **The runtime's own token.** On a Datalayer runtime, the token of its sandbox, which the platform gives the owner with the runtime's record (`token` in `GET /api/runtimes/v1/runtimes/{uid}`). On a runtime started on your machine, the token it prints when it starts (see below).
 
 Another site's page on the loopback (an `Origin` that is neither this machine's nor Datalayer's, or `Sec-Fetch-Site: cross-site`) is refused with `403` in both modes, whatever forwarding header it sends: a forwarding header is only a header, and the loopback is still its peer. A call is taken as passed on by a proxy only when its peer is not the machine itself.
@@ -88,7 +88,7 @@ The log line names the route by its template, never by the path that was asked, 
 ACCESS unproven mode=log action=served method=GET route=/api/v1/agents/{agent_id}/memory reason=no-credential agent=Mozilla/5.0 origin=example.com referer=example.com source=ingress
 ```
 
-- `reason` is why the call proved nothing: `no-credential`, `loopback-no-credential` (a call from the machine itself that sent no token: a local client to give the runtime's token), `token-refused` (the platform does not accept it), `another-account`, `application-token` (a token for the application's routes), `owner-unknown` (the runtime is not assigned yet), `unverifiable` (the platform could not be asked) or `strangers-page` (another site's page on the loopback, refused in either mode).
+- `reason` is why the call proved nothing: `no-credential`, `loopback-no-credential` (a call from the machine itself that sent no token: a local client to give the runtime's token), `token-refused` (the platform does not accept it), `another-account`, `application-token` (a token for the application's routes), `owner-unknown` (the runtime is not assigned yet), `unverifiable` (the platform could not be asked: on a Kagent agent's runtime before 26 November 2026, its egress did not reach IAM) or `strangers-page` (another site's page on the loopback, refused in either mode).
 - `agent`, `origin` and `referer` are the client's product and the hosts a browser names; `source` is where the call entered: `loopback` (its peer is the machine itself, whatever headers it sends), `ingress` (a proxy passed it on) or `cluster`.
 - The line is written at most once a minute for one route, reason and caller. The counter `agent_runtimes.access.unproven` counts every call, with the same attributes.
 
