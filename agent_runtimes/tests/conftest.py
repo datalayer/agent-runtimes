@@ -75,6 +75,11 @@ def _no_test_leaves_the_worker_transports_patched() -> Iterator[None]:
     every later test in the session with a client that carries a
     ``traceparent`` (found in CI: the ACP adapter's no-trace test and the
     tracing module's not-patched test failed after the full suite before them).
+
+    Yields
+    ------
+    None
+        The test runs; httpx is put back after it.
     """
     yield
     from agent_runtimes.monitoring import otel
