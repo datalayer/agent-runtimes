@@ -14,6 +14,7 @@ Provides a configurable FastAPI application with:
 
 import asyncio
 import contextlib
+import dataclasses
 import json
 import logging
 import multiprocessing as mp
@@ -158,6 +159,46 @@ def _is_reload_parent_process() -> bool:
     return "--reload" in sys.argv and mp.current_process().name == "MainProcess"
 
 
+def startup_left_out(
+    agent_spec: Any, skills: list[str], *, skills_overridden: bool = False
+) -> tuple[Any, list[str], str]:
+    """
+    What an agent started with the process leaves out, as a created one does.
+
+    The spec's optional servers and skills not set up here (``left_out_of``,
+    the one place that decides it for every path), its skills without those
+    left out unless the command line chose them, and the sentence its
+    instructions end with. Backend tools are not counted: this path registers
+    every one.
+
+    Parameters
+    ----------
+    agent_spec : Any
+        The agent's spec, from the catalogue.
+    skills : list[str]
+        The skills it starts with.
+    skills_overridden : bool
+        Whether the command line chose the skills (then they are kept).
+
+    Returns
+    -------
+    tuple[Any, list[str], str]
+        The ``LeftOut``, the skills kept, and the sentence ("" when nothing
+        is left out).
+    """
+    from .guardrails.declared_secrets import declared_secrets
+    from .routes.agents import left_out_of
+
+    left_out = dataclasses.replace(left_out_of(declared_secrets(agent_spec)), tools={})
+    if left_out.skills and not skills_overridden:
+        skills = [
+            skill
+            for skill in skills
+            if str(skill).split(":", 1)[0] not in left_out.skills
+        ]
+    return left_out, skills, (left_out.sentence() if left_out else "")
+
+
 async def _create_and_register_cli_agent(
     app: FastAPI,
     agent_id: str,
@@ -168,6 +209,7 @@ async def _create_and_register_cli_agent(
     api_prefix: str,
     protocol: str = "vercel-ai",
     sandbox_variant: str | None = None,
+    started_without: str = "",
 ) -> dict[str, Any]:
     """
     Create and register an agent from CLI options.
@@ -190,6 +232,9 @@ async def _create_and_register_cli_agent(
             'datalayer', 'google-colab', 'kaggle', 'monty', 'modal',
             'daytona', 'cloudflare', 'coreweave', 'e2b', 'agentcore' — runs it at that
             provider, under the credentials this process holds for it.
+        started_without: What the agent is told it starts without (its
+            spec's optional servers and skills not set up here), appended to
+            its instructions; empty when nothing is left out.
 
     Returns:
         A dictionary with startup information about the registered agent and
@@ -503,6 +548,8 @@ async def _create_and_register_cli_agent(
     # installed skills, their scripts, parameters, and usage.
     if skills_prompt_section:
         system_prompt = system_prompt + "\n\n" + skills_prompt_section
+    if started_without:
+        system_prompt = system_prompt + "\n\n" + started_without
 
     tool_ids = list(agent_spec.backend_tools or [])
     capabilities = build_capabilities_from_agent_spec(
@@ -1320,6 +1367,15 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                 mcp_manager = get_mcp_manager()
                 lifecycle_manager = get_mcp_lifecycle_manager()
 
+                left_out, skills_list, started_without = startup_left_out(
+                    agent_spec, skills_list, skills_overridden=bool(skills_str)
+                )
+                if left_out:
+                    logger.info(
+                        "Default agent starts without %s (not set up)",
+                        sorted(left_out.servers) + sorted(left_out.skills),
+                    )
+
                 if no_catalog_mcp_servers:
                     # Skip all catalog MCP servers (both from agent spec and CLI --mcp-servers)
                     # But still store the agent spec servers so they can be started later via API
@@ -1357,11 +1413,18 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                     logger.info(
                         "No CLI --mcp-servers specified: using agent spec servers"
                     )
-                    for mcp_server in agent_spec.mcp_servers:
+                    # What it declares optional and is not set up for here is
+                    # left out, as a created agent's is (agentspecs 0.0.188).
+                    spec_servers = [
+                        server
+                        for server in agent_spec.mcp_servers
+                        if server.id not in left_out.servers
+                    ]
+                    for mcp_server in spec_servers:
                         mcp_manager.add_server(mcp_server)
-                    all_mcp_servers = list(agent_spec.mcp_servers)
+                    all_mcp_servers = list(spec_servers)
                     logger.info(
-                        f"Loaded {len(agent_spec.mcp_servers)} MCP servers from agent spec"
+                        f"Loaded {len(spec_servers)} MCP servers from agent spec"
                     )
 
                 # Under Kagent, the RemoteMCPServer tools of the Agent's
@@ -1423,6 +1486,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                     api_prefix=config.api_prefix,
                     protocol=protocol,
                     sandbox_variant=sandbox_variant,
+                    started_without=started_without,
                 )
                 # Store startup info on app.state so the /health/startup
                 # endpoint can expose it to CLI consumers (e.g. agent).

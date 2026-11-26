@@ -238,6 +238,17 @@ def _normalize_tool_args_for_match(raw_args: Any) -> dict[str, str]:
     return normalized
 
 
+def _asked_by_person(agent_id: str | None, tool_name: str) -> bool:
+    """Whether the person said this tool must ask (the tool menu): no reuse of an earlier approval."""
+    try:
+        from agent_runtimes.streams.pubsub import is_mcp_tool_asked
+
+        return is_mcp_tool_asked(agent_id, tool_name)
+    except Exception:
+        # Fail safe: when it cannot be read, nothing earlier is reused.
+        return True
+
+
 def _approval_envelope_matches(
     approval: Any,
     *,
@@ -567,7 +578,11 @@ class ToolApprovalManager:
                         parse_exc,
                     )
                     continue
-                if 0 <= age <= recent_window_seconds:
+                # A tool the person said must ask (the tool menu, unticking
+                # Approved) asks on each call: only the same call is reused.
+                if 0 <= age <= recent_window_seconds and not _asked_by_person(
+                    self.config.agent_id, tool_name
+                ):
                     logger.info(
                         "[tool-approval:request_and_wait] Tool '%s' already approved "
                         "recently for the same envelope (approval_id=%s, age=%.2fs) — skipping",

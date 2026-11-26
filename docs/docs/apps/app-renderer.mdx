@@ -444,7 +444,9 @@ What is said of a secret is the *name* of its variable, never its value.
 
 **The switches.** Each overlay has the conversation's switches: a server's tools all at once
 (**Enable all**) or one by one, each tool's approval, each skill, all the skills, each skill's
-approval, and **Codemode** where the chat offers it. Over the runtime's monitoring stream where
+approval, and **Codemode** where the chat offers it. A tool the catalogue classes as only reading
+is approved from the start (*Reads only: runs without asking*); unticking **Approved** makes it ask
+first. Over the runtime's monitoring stream where
 it is open; otherwise — the visitors' runtime, a deployment's — through the session API,
 `PUT /api/v1/apps/sessions/{uid}/switches` ([the session API](./session-api.mdx)), for that
 conversation alone, with the visitor's token or the person's: never the deployment's agent nor

@@ -2028,6 +2028,7 @@ export const EXAMPLE_CODEMODE_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
@@ -2931,6 +2932,7 @@ export const EXAMPLE_FULL_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
@@ -4302,6 +4304,7 @@ export const EXAMPLE_MCP_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
@@ -4661,6 +4664,7 @@ export const EXAMPLE_NO_CODEMODE_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
@@ -8269,6 +8273,7 @@ export const WORKER_CAMPAIGN_PLANNING_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'marketing',
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1'], MCP_SERVER_MAP['slack:0.0.1']],
   skills: [
@@ -8339,6 +8344,7 @@ export const WORKER_CAT_EXPOSURE_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'insurance',
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['earthdata:0.0.1'],
@@ -8409,6 +8415,7 @@ export const WORKER_CHANGE_DETECTION_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'earth-observation',
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['earthdata:0.0.1'],
@@ -8764,6 +8771,7 @@ export const WORKER_CODING_TUTOR_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'personal-assistant',
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['tavily:0.0.1'],
@@ -8977,6 +8985,7 @@ export const WORKER_COMMUNITY_RESPONSE_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'marketing',
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1'], MCP_SERVER_MAP['slack:0.0.1']],
   skills: [
@@ -9047,6 +9056,7 @@ export const WORKER_COMPETITIVE_INTELLIGENCE_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'market-analyst',
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['tavily:0.0.1'],
@@ -9369,6 +9379,7 @@ export const WORKER_CONTENT_REPURPOSING_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'marketing',
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1'], MCP_SERVER_MAP['slack:0.0.1']],
   skills: [
@@ -9439,6 +9450,7 @@ export const WORKER_CRAWLER_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'market-analyst',
   enabled: true,
   listed: false,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   modelAdditionals: [
     'bedrock:us.anthropic.claude-sonnet-4-6',
@@ -9561,6 +9573,7 @@ export const WORKER_CROP_MONITORING_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'earth-observation',
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['earthdata:0.0.1'],
@@ -9631,6 +9644,7 @@ export const WORKER_CURTAILMENT_INVESTIGATOR_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'energy',
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1'], MCP_SERVER_MAP['chart:0.0.1']],
   skills: [
@@ -9902,6 +9916,7 @@ export const WORKER_DATA_ACQUISITION_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'data-engineering',
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['kaggle:0.0.1'],
@@ -10261,6 +10276,7 @@ export const WORKER_DISASTER_ASSESSMENT_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'earth-observation',
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['earthdata:0.0.1'],
@@ -10648,6 +10664,7 @@ export const WORKER_ENERGY_TRADING_ANALYST_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'energy',
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1'], MCP_SERVER_MAP['chart:0.0.1']],
   skills: [
@@ -10712,6 +10729,7 @@ export const WORKER_ENVIRONMENTAL_COMPLIANCE_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'earth-observation',
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['earthdata:0.0.1'],
@@ -10782,6 +10800,7 @@ export const WORKER_EVENT_RESPONSE_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'insurance',
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['earthdata:0.0.1'],
@@ -10852,6 +10871,7 @@ export const WORKER_EVIDENCE_REPOSITORY_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'market-analyst',
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['tavily:0.0.1'],
@@ -10992,6 +11012,7 @@ export const WORKER_EXPOSURE_DATA_QUALITY_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'insurance',
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['earthdata:0.0.1'],
@@ -11902,6 +11923,7 @@ export const WORKER_GRID_FORECAST_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'energy',
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1'], MCP_SERVER_MAP['chart:0.0.1']],
   skills: [
@@ -12077,6 +12099,7 @@ export const WORKER_INFRASTRUCTURE_MONITORING_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'earth-observation',
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['earthdata:0.0.1'],
@@ -12218,6 +12241,7 @@ export const WORKER_INTERVIEW_GUIDE_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'market-analyst',
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['tavily:0.0.1'],
@@ -12361,6 +12385,7 @@ export const WORKER_JOB_HUNTER_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'personal-assistant',
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['tavily:0.0.1'],
@@ -12856,6 +12881,7 @@ export const WORKER_MODEL_COMPARISON_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'insurance',
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['earthdata:0.0.1'],
@@ -13141,6 +13167,7 @@ export const WORKER_NEWS_AGGREGATOR_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'personal-assistant',
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
@@ -13983,6 +14010,7 @@ export const WORKER_PORTFOLIO_ACCUMULATION_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'insurance',
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['earthdata:0.0.1'],
@@ -14120,6 +14148,7 @@ export const WORKER_PREDICTIVE_MAINTENANCE_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'energy',
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1'], MCP_SERVER_MAP['chart:0.0.1']],
   skills: [
@@ -14629,6 +14658,7 @@ export const WORKER_PRODUCT_FINDER_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'personal-assistant',
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['tavily:0.0.1'],
@@ -14769,6 +14799,7 @@ export const WORKER_RENEWABLE_ASSET_PERFORMANCE_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'energy',
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1'], MCP_SERVER_MAP['chart:0.0.1']],
   skills: [
@@ -14833,6 +14864,7 @@ export const WORKER_RESEARCH_RECRUITER_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'market-analyst',
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['tavily:0.0.1'],
@@ -15511,6 +15543,7 @@ export const WORKER_SOCIAL_LISTENING_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'marketing',
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1'], MCP_SERVER_MAP['slack:0.0.1']],
   skills: [
@@ -15581,6 +15614,7 @@ export const WORKER_SOCIAL_MARKETER_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'marketing',
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1'], MCP_SERVER_MAP['slack:0.0.1']],
   skills: [
@@ -16345,6 +16379,7 @@ export const WORKER_THEMATIC_ANALYSIS_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'market-analyst',
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['tavily:0.0.1'],
@@ -16415,6 +16450,7 @@ export const WORKER_TRAVEL_RECOMMENDER_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'personal-assistant',
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['tavily:0.0.1'],
@@ -16611,6 +16647,7 @@ export const WORKER_TRENDS_SEEKER_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'personal-assistant',
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   mcpServers: [
     MCP_SERVER_MAP['tavily:0.0.1'],

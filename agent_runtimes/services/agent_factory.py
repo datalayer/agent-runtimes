@@ -380,6 +380,11 @@ def create_codemode_toolset(
 
             hosted = hosted_url(mcp_server.id)
             if hosted:
+                from agent_runtimes.guardrails.read_only_tools import (
+                    note_codemode_config,
+                )
+
+                note_codemode_config(normalized_name, hosted, "", [])
                 registry.add_server(
                     MCPServerConfig(
                         name=normalized_name,
@@ -396,16 +401,27 @@ def create_codemode_toolset(
                 )
                 continue
 
+            from agent_runtimes.guardrails.read_only_tools import note_codemode_config
+
+            codemode_url = mcp_server.url if mcp_server.transport == "http" else ""
+            codemode_args = [
+                expand_env_vars(a) if isinstance(a, str) else a
+                for a in (mcp_server.args or [])
+            ]
+            if codemode_url or mcp_server.command:
+                note_codemode_config(
+                    normalized_name,
+                    codemode_url,
+                    mcp_server.command or "",
+                    codemode_args,
+                )
             registry.add_server(
                 MCPServerConfig(
                     name=normalized_name,
-                    url=mcp_server.url if mcp_server.transport == "http" else "",
+                    url=codemode_url,
                     command=mcp_server.command or "",
                     # ${VAR} and ${VAR:-default}, as the lifecycle manager expands them.
-                    args=[
-                        expand_env_vars(a) if isinstance(a, str) else a
-                        for a in (mcp_server.args or [])
-                    ],
+                    args=codemode_args,
                     env=server_env,
                     enabled=mcp_server.enabled,
                 )

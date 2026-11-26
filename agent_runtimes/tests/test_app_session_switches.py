@@ -65,6 +65,7 @@ def test_a_server_a_tool_and_an_approval_are_switched_from_all_on() -> None:
     assert switched.as_dict() == {
         "mcp_tools": {"kiwi": ["search-flight"], "overture": []},
         "mcp_approved": {"kiwi": ["search-flight"]},
+        "mcp_asked": {},
         "skills": {},
         "skills_approved": {},
     }
@@ -270,9 +271,19 @@ def _opened(client: TestClient, thread: str, person: str) -> None:
     )
 
 
+#: What the catalogue says runs without asking of OFFERED (`guardrails.read_only_tools`).
+READ_ONLY = {"overture": ["overture_search_places"]}
+
+
+def _unswitched() -> Dict[str, Any]:
+    """A conversation's answer before it switched anything."""
+    return {**ConversationSwitches().as_dict(), "mcp_read_only": READ_ONLY}
+
+
 @pytest.fixture()
 def offered(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(switches, "offered_of", lambda agent: OFFERED)
+    monkeypatch.setattr(switches, "read_only_of", lambda offered: READ_ONLY)
 
 
 def test_a_conversations_switches_are_its_own(
@@ -291,6 +302,8 @@ def test_a_conversations_switches_are_its_own(
     )
     assert switched.status_code == 200, switched.text
     assert switched.json()["skills"] == {"travel-planning": False}
+    # Beside the switches, the tools that run without asking unless switched.
+    assert switched.json()["mcp_read_only"] == READ_ONLY
     assert remote.get(url, headers=as_("ada")).json()["skills"] == {
         "travel-planning": False
     }
@@ -307,7 +320,7 @@ def test_a_conversations_switches_are_its_own(
     bobs = remote.get(
         "/api/v1/apps/sessions/thread-bob-01/switches", headers=as_("bob")
     ).json()
-    assert bobs == ConversationSwitches().as_dict()
+    assert bobs == _unswitched()
     # Nobody unnamed.
     assert remote.get(url).status_code == 401
     # No such conversation.
@@ -417,7 +430,7 @@ def test_a_visitors_switches_are_their_conversations_alone(
         remote.get(
             "/api/v1/apps/sessions/session-v002/switches", headers=as_("visitor-2")
         ).json()
-        == ConversationSwitches().as_dict()
+        == _unswitched()
     )
     assert (
         remote.put(

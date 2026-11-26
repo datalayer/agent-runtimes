@@ -29,6 +29,14 @@ the release gates, decided 2026-10-14). Its approvals are read one
 by one instead — ``GET /tool-approvals/{id}`` takes a narrowed token for the
 approvals it asked — every ``NARROWED_POLL_SECONDS`` until each is decided:
 it learns of nothing else of the person's.
+
+On an Agent Substrate actor (``--target ate``: Kagent) every approval is read
+that way, whatever the token: the egress gateway refuses a WebSocket upgrade
+("egress denied: WebSocket upgrades are not supported", Substrate 1.0), so a
+listener there never connects, and an approval waited on there could never be
+decided (the drill of 26 November 2026). Polling is plain HTTP, which the
+gateway carries to ai-agents' usual name with the token the turn carries,
+nothing put in.
 """
 
 from __future__ import annotations
@@ -91,6 +99,21 @@ def is_narrowed(jwt: str) -> bool:
     return "authorization_details" in claims or bool(
         str(claims.get("task_grant_uid") or "").strip()
     )
+
+
+def _no_websocket() -> bool:
+    """
+    Whether this runtime reaches ai-agents with no WebSocket.
+
+    An Agent Substrate actor (``--target ate``), whose egress gateway refuses
+    every upgrade, and a runtime Kagent's bridge starts (``--target kagent``),
+    whose egress is Kagent's: polling is plain HTTP, which reaches ai-agents
+    wherever a WebSocket does.
+    """
+    from agent_runtimes.ate.settings import is_ate_target
+    from agent_runtimes.kagent.settings import is_kagent_target
+
+    return is_ate_target() or is_kagent_target()
 
 
 def _service_base(ai_agents_url: str) -> str:
@@ -252,6 +275,13 @@ async def _run_listener(jwt: str) -> None:
     if is_narrowed(jwt):
         logger.info(
             "[tool-approval:watch] A narrowed token: its approvals are read at ai-agents one by one"
+        )
+        await _watch_approvals(jwt, str(ai_agents_url))
+        return
+    if _no_websocket():
+        logger.info(
+            "[tool-approval:watch] An Agent Substrate actor, whose egress carries no WebSocket: "
+            "its approvals are read at ai-agents one by one"
         )
         await _watch_approvals(jwt, str(ai_agents_url))
         return

@@ -34,8 +34,13 @@ logger = logging.getLogger(__name__)
 
 _STREAM_SUBSCRIBERS: dict[str, set[asyncio.Queue[AgentStreamMessage]]] = {}
 _MCP_ENABLED_TOOLS_BY_AGENT: dict[str, dict[str, set[str]]] = {}
-# Tracks approved tools per agent per server (allowlist; default = none approved).
+# Tracks the tools a person approved per agent per server. A tool the
+# catalogue classes read only is approved without being listed here
+# (`guardrails.read_only_tools`); every other tool asks until it is.
 _MCP_APPROVED_TOOLS_BY_AGENT: dict[str, dict[str, set[str]]] = {}
+# Tracks the tools a person said must ask, per agent per server: over the
+# read-only default, and over an approval given inline in the chat.
+_MCP_ASKED_TOOLS_BY_AGENT: dict[str, dict[str, set[str]]] = {}
 _SKILLS_BY_AGENT: dict[str, dict[str, dict[str, Any]]] = {}
 
 
@@ -314,28 +319,78 @@ def _get_agent_mcp_approved_tools_by_server(
     """Get approved MCP tools per server for an agent.
 
     The universe of tools for each server is the set of currently *enabled*
-    tools. By default none are approved until explicitly toggled.
+    tools. A tool the catalogue classes read only is approved by default
+    (`guardrails.read_only_tools`); any other is approved once a person
+    approves it. A tool the person said must ask is not approved, whatever
+    its class. The same with nobody in the conversation: an always-on
+    runtime's scheduled run follows the same rule.
     """
     from agent_runtimes.apps.switches import approved_tools_in_force
+    from agent_runtimes.guardrails.read_only_tools import read_only_tools_by_server
 
     key = _stream_key(agent_id)
     approved_by_server = _MCP_APPROVED_TOOLS_BY_AGENT.get(key, {})
+    asked_by_server = _MCP_ASKED_TOOLS_BY_AGENT.get(key, {})
     enabled_by_server = _get_agent_mcp_enabled_tools_by_server(agent_id)
+    by_default = read_only_tools_by_server(enabled_by_server)
     result: dict[str, list[str]] = {}
     for server_id, enabled_tool_names in enabled_by_server.items():
-        approved = approved_by_server.get(server_id, set())
+        approved = approved_by_server.get(server_id, set()) | by_default.get(
+            server_id, set()
+        )
+        approved -= asked_by_server.get(server_id, set())
         result[server_id] = sorted(set(enabled_tool_names) & approved)
-    return approved_tools_in_force(agent_id, result, enabled_by_server)
+    return approved_tools_in_force(agent_id, result, enabled_by_server, by_default)
+
+
+def is_mcp_tool_asked(agent_id: str | None, tool_name: str) -> bool:
+    """Whether the person said this tool asks before it runs, on any server of the agent.
+
+    The name may carry its server (``tavily__tavily_search``, ``tavily.tavily_search``).
+    """
+    bare = str(tool_name or "")
+    for separator in ("__", "."):
+        if separator in bare:
+            bare = bare.split(separator, 1)[1]
+    asked = _MCP_ASKED_TOOLS_BY_AGENT.get(_stream_key(agent_id), {})
+    return any(bare in tools or tool_name in tools for tools in asked.values())
+
+
+def get_agent_read_only_mcp_tools_by_server(
+    agent_id: str | None,
+) -> dict[str, list[str]]:
+    """
+    The enabled MCP tools that run without asking by default, by server.
+
+    Those the catalogue classes read only, on a server it vouches for.
+    """
+    from agent_runtimes.guardrails.read_only_tools import read_only_tools_by_server
+
+    enabled_by_server = _get_agent_mcp_enabled_tools_by_server(agent_id)
+    return {
+        server_id: sorted(tools)
+        for server_id, tools in read_only_tools_by_server(enabled_by_server).items()
+    }
 
 
 def get_agent_approved_mcp_tool_names(agent_id: str | None) -> set[str]:
-    """Return the set of approved MCP tool names for an agent."""
+    """Return the set of approved MCP tool names for an agent.
+
+    The names are bare, across servers: a name two enabled servers share is
+    approved only when each of them approves it, so a tool of one server is
+    never let run on the approval of another's tool of the same name.
+    """
     by_server = _get_agent_mcp_approved_tools_by_server(agent_id)
     names: set[str] = set()
     for tool_names in by_server.values():
         for tool_name in tool_names:
             if isinstance(tool_name, str) and tool_name.strip():
                 names.add(tool_name.strip())
+    for server_id, enabled in _get_agent_mcp_enabled_tools_by_server(agent_id).items():
+        approved_here = set(by_server.get(server_id, []))
+        for tool_name in enabled:
+            if tool_name not in approved_here:
+                names.discard(tool_name)
     return names
 
 
@@ -770,6 +825,7 @@ def purge_agent_stream_state(agent_id: str | None) -> None:
     _SKILLS_BY_AGENT.pop(key, None)
     _MCP_ENABLED_TOOLS_BY_AGENT.pop(key, None)
     _MCP_APPROVED_TOOLS_BY_AGENT.pop(key, None)
+    _MCP_ASKED_TOOLS_BY_AGENT.pop(key, None)
     _STREAM_SUBSCRIBERS.pop(key, None)
 
 
@@ -928,6 +984,10 @@ async def build_monitoring_snapshot_payload(
         )
         mcp_status["approved_tools_by_server"] = (
             _get_agent_mcp_approved_tools_by_server(agent_id)
+        )
+        # The tools that run without asking unless the person says otherwise.
+        mcp_status["read_only_tools_by_server"] = (
+            get_agent_read_only_mcp_tools_by_server(agent_id)
         )
     codemode_status = build_codemode_status(agent_id)
 
@@ -1115,15 +1175,24 @@ async def _handle_mcp_server_tool_approve(
     websocket: Any,
     list_approvals: Any | None,
 ) -> None:
-    """Handle a per-tool approval toggle for a specific MCP server."""
+    """Handle a per-tool approval toggle for a specific MCP server.
+
+    The person's word over the default both ways: approved, the tool runs
+    without asking; not approved, it asks, even a tool that only reads.
+    """
     key = _stream_key(agent_id)
     server_approved = _MCP_APPROVED_TOOLS_BY_AGENT.setdefault(key, {}).setdefault(
         server_id, set()
     )
+    server_asked = _MCP_ASKED_TOOLS_BY_AGENT.setdefault(key, {}).setdefault(
+        server_id, set()
+    )
     if approved:
         server_approved.add(tool_name)
+        server_asked.discard(tool_name)
     else:
         server_approved.discard(tool_name)
+        server_asked.add(tool_name)
     logger.info(
         "[ws:mcp_server_tool_approve] agent_id=%s server_id=%s tool=%s approved=%s",
         agent_id,

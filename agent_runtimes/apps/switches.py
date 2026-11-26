@@ -85,6 +85,8 @@ class ConversationSwitches:
     """The tools on, by server, for the servers it switched."""
     mcp_approved: Dict[str, Set[str]] = field(default_factory=dict)
     """The tools approved, by server, for the servers whose approvals it switched."""
+    mcp_asked: Dict[str, Set[str]] = field(default_factory=dict)
+    """The tools it said must ask, by server: over the read-only default."""
     skills: Dict[str, bool] = field(default_factory=dict)
     skills_approved: Dict[str, bool] = field(default_factory=dict)
 
@@ -93,6 +95,7 @@ class ConversationSwitches:
         return {
             "mcp_tools": {k: sorted(v) for k, v in self.mcp_tools.items()},
             "mcp_approved": {k: sorted(v) for k, v in self.mcp_approved.items()},
+            "mcp_asked": {k: sorted(v) for k, v in self.mcp_asked.items() if v},
             "skills": dict(self.skills),
             "skills_approved": dict(self.skills_approved),
         }
@@ -155,11 +158,14 @@ class ConversationSwitches:
             tool = _named(said, "tool", kind)
             self._tool(offered, server, tool)
             approved = _flag(said, "approved", kind)
-            kept = self.mcp_approved.setdefault(server, set())
+            approved_here = self.mcp_approved.setdefault(server, set())
+            asked_here = self.mcp_asked.setdefault(server, set())
             if approved:
-                kept.add(tool)
+                approved_here.add(tool)
+                asked_here.discard(tool)
             else:
-                kept.discard(tool)
+                approved_here.discard(tool)
+                asked_here.add(tool)
         elif kind == "skill":
             skill = _named(said, "skill", kind)
             self._skill(offered, skill)
@@ -273,15 +279,38 @@ def approved_tools_in_force(
     agent_id: Optional[str],
     approved_by_server: Dict[str, List[str]],
     enabled_by_server: Dict[str, List[str]],
+    by_default: Optional[Mapping[str, Set[str]]] = None,
 ) -> Dict[str, List[str]]:
-    """An agent's tools approved by server, as the conversation under way switched them."""
+    """An agent's tools approved by server, as the conversation under way switched them.
+
+    ``by_default`` are the tools approved unless somebody says they ask: those
+    the catalogue classes read only (`guardrails.read_only_tools`). What the
+    conversation said must ask asks, whatever the tool's class.
+    """
     switched = in_force(agent_id)
     if switched is None:
         return approved_by_server
+    defaults = by_default or {}
     result = dict(approved_by_server)
     for server, tools in switched.mcp_approved.items():
-        result[server] = sorted(set(enabled_by_server.get(server, [])) & tools)
+        approved = set(tools) | set(defaults.get(server, set()))
+        approved -= switched.mcp_asked.get(server, set())
+        result[server] = sorted(set(enabled_by_server.get(server, [])) & approved)
     return result
+
+
+def read_only_of(offered: Offered) -> Dict[str, List[str]]:
+    """
+    The tools of what a conversation may switch that run without asking by default.
+
+    By server: those the catalogue classes read only.
+    """
+    from agent_runtimes.guardrails.read_only_tools import read_only_tools_by_server
+
+    return {
+        server: sorted(tools)
+        for server, tools in read_only_tools_by_server(offered.servers).items()
+    }
 
 
 def skills_in_force(

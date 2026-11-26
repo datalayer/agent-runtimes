@@ -295,6 +295,15 @@ NEEDS_A_SECRET = {
     **ASSISTANT,
     "id": "scout",
     "name": "Scout",
+    # Its github skill requires GITHUB_TOKEN (Tavily, which example-mcp names,
+    # is optional since agentspecs 0.1.24: it would start without it).
+    "agent": "example-skills:0.0.1",
+}
+
+STARTS_WITHOUT_TAVILY = {
+    **ASSISTANT,
+    "id": "searcher",
+    "name": "Searcher",
     "agent": "example-mcp:0.0.1",
 }
 
@@ -313,13 +322,14 @@ def test_the_declared_secrets_are_read_as_the_caller_and_held_by_the_process(
         asked.append(bearer)
         return dict(held)
 
-    async def needs_tavily(
+    async def needs_github(
         deployment: str, version: Optional[int], bearer: Optional[str]
     ) -> Dict[str, Any]:
         return {"spec": NEEDS_A_SECRET, "code": None, "version": 1, "app_uid": "app-2"}
 
-    monkeypatch.setattr(principal, "_read_from_ai_agents", needs_tavily)
+    monkeypatch.setattr(principal, "_read_from_ai_agents", needs_github)
     monkeypatch.delenv("OTHER_SECRET", raising=False)
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
     secrets.use_secrets_reader(from_iam)
     try:
         # Missing: the invocation is refused in a sentence, and no agent is made.
@@ -327,21 +337,57 @@ def test_the_declared_secrets_are_read_as_the_caller_and_held_by_the_process(
             "/invocations", headers=as_("ada"), json={"prompt": "Hi"}
         )
         assert refused.status_code == 422
-        assert "the MCP server tavily needs TAVILY_API_KEY" in refused.json()["detail"]
+        assert "the skill github needs GITHUB_TOKEN" in refused.json()["detail"]
         assert made == [] and asked == ["ada"]
         # Present: given to this process, and nothing it did not declare.
-        held["TAVILY_API_KEY"] = "tvly-test"
+        held["GITHUB_TOKEN"] = "ghp-test"
         answered = agentcore.post(
             "/invocations", headers=as_("ada"), json={"prompt": "Hi"}
         )
         assert answered.json() == {"response": "Heard 1: Hi", "status": "success"}
-        assert os.environ["TAVILY_API_KEY"] == "tvly-test"
+        assert os.environ["GITHUB_TOKEN"] == "ghp-test"
         assert "OTHER_SECRET" not in os.environ
-        assert "TAVILY_API_KEY" in given_names()
+        assert "GITHUB_TOKEN" in given_names()
         assert len(made) == 1 and asked == ["ada", "ada"]
     finally:
         secrets.use_secrets_reader(None)
-        forget_given(["TAVILY_API_KEY"])
+        forget_given(["GITHUB_TOKEN"])
+
+
+def test_an_agent_whose_tavily_is_optional_starts_without_the_key(
+    monkeypatch: pytest.MonkeyPatch, deployed: Any, agentcore: TestClient
+) -> None:
+    """example-mcp names Tavily optional (agentspecs 0.1.24): without the key it is
+    not refused, and no key is given to the process."""
+    from agent_runtimes.agentcore import secrets
+
+    runtime, made = deployed
+
+    async def from_iam(bearer: str) -> Dict[str, str]:
+        return {}
+
+    async def searcher(
+        deployment: str, version: Optional[int], bearer: Optional[str]
+    ) -> Dict[str, Any]:
+        return {
+            "spec": STARTS_WITHOUT_TAVILY,
+            "code": None,
+            "version": 1,
+            "app_uid": "app-4",
+        }
+
+    monkeypatch.setattr(principal, "_read_from_ai_agents", searcher)
+    monkeypatch.delenv("TAVILY_API_KEY", raising=False)
+    secrets.use_secrets_reader(from_iam)
+    try:
+        answered = agentcore.post(
+            "/invocations", headers=as_("ada"), json={"prompt": "Hi"}
+        )
+        assert answered.status_code == 200, answered.text
+        assert len(made) == 1
+        assert "TAVILY_API_KEY" not in os.environ
+    finally:
+        secrets.use_secrets_reader(None)
 
 
 def test_an_agent_that_declares_no_secret_asks_iam_for_none(

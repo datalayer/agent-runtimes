@@ -142,6 +142,53 @@ describe('useConversationSwitches', () => {
     ]);
   });
 
+  it('counts what only reads as approved, less what the conversation said must ask', async () => {
+    const answer: ConversationSwitchesState = {
+      ...EMPTY,
+      mcp_approved: { overture: [], kiwi: ['search-flight'] },
+      mcp_asked: { overture: ['overture_search_places'] },
+      mcp_read_only: {
+        overture: ['overture_search_places', 'overture_place_details'],
+      },
+    };
+    const asked: unknown[] = [];
+    const client = {
+      switches: async () => answer,
+      switchIn: async (_uid: string, switched: unknown) => {
+        asked.push(switched);
+        return answer;
+      },
+    };
+    const { seen } = probe({
+      client,
+      uid: 'thread-1',
+      held: true,
+      skillOn: () => true,
+    });
+    await waitFor(() => expect(seen.current?.started).toBe(true));
+    expect(seen.current?.approvedMcpTools.get('overture')).toEqual(
+      new Set(['overture_place_details']),
+    );
+    expect(seen.current?.approvedMcpTools.get('kiwi')).toEqual(
+      new Set(['search-flight']),
+    );
+    // A reader runs without asking: its switch asks to be asked first.
+    act(() =>
+      seen.current?.onToggleMcpToolApproval(
+        'overture',
+        'overture_place_details',
+      ),
+    );
+    expect(asked).toEqual([
+      {
+        kind: 'tool_approval',
+        server: 'overture',
+        tool: 'overture_place_details',
+        approved: false,
+      },
+    ]);
+  });
+
   it('says a refused switch in the runtime’s sentence', async () => {
     const { client } = runtime();
     const { seen } = probe({

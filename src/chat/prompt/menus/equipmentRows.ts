@@ -49,6 +49,10 @@ export const EQUIPMENT_WORDS = {
   enableAll: 'Enable all',
   enabled: 'Enabled',
   approved: 'Approved',
+  readOnly: {
+    runs: 'Reads only: runs without asking. Untick Approved to be asked first.',
+    asks: 'Reads only: asks first, as you chose.',
+  },
   codemode: 'Codemode',
   codemodeOn:
     'MCP tools reached through meta-tools (search_tools, execute_code).',
@@ -102,6 +106,8 @@ export type ToolRow = {
   description?: string;
   enabled: boolean;
   approved: boolean;
+  /** Classed read only by the catalogue: approved unless the person says otherwise. */
+  readOnly?: boolean;
 };
 
 /** An MCP server, with its tools and why its switches cannot be used. */
@@ -335,6 +341,9 @@ function serverRows(sources: EquipmentSources): ServerRow[] {
     const names = listed.map(tool => tool.name);
     const enabled = enabledToolsOf(sources.enabledMcpTools, switchId, names);
     const approved = sources.approvedMcpTools?.get(switchId);
+    const readOnly = parseReadOnlyMcpToolsByServer(sources.mcpStatus)?.get(
+      switchId,
+    );
     const tools: ToolRow[] =
       state === 'started'
         ? listed.map(tool => ({
@@ -342,6 +351,7 @@ function serverRows(sources: EquipmentSources): ServerRow[] {
             ...(tool.description ? { description: tool.description } : {}),
             enabled: enabled.has(tool.name),
             approved: approved?.has(tool.name) ?? false,
+            ...(readOnly?.has(tool.name) ? { readOnly: true } : {}),
           }))
         : [];
     const toolsOn = tools.filter(tool => tool.enabled).length;
@@ -557,6 +567,23 @@ export function parseEnabledMcpToolsByServer(
   return toolsByServer(
     (mcpStatusData as { enabled_tools_by_server?: unknown })
       .enabled_tools_by_server,
+  );
+}
+
+/**
+ * The tools of each server that run without asking unless the person turns
+ * approval on (the catalogue classes them read only), as the runtime's status
+ * says; null without one.
+ */
+export function parseReadOnlyMcpToolsByServer(
+  mcpStatusData: unknown,
+): Map<string, Set<string>> | null {
+  if (!mcpStatusData || typeof mcpStatusData !== 'object') {
+    return null;
+  }
+  return toolsByServer(
+    (mcpStatusData as { read_only_tools_by_server?: unknown })
+      .read_only_tools_by_server,
   );
 }
 

@@ -575,7 +575,10 @@ def build_capabilities_from_agent_spec(
         capabilities.append(voicing)
 
     # Always enforce user-selected skills and MCP tool toggles.
-    capabilities.extend(build_default_choice_guardrails(agent_id=agent_id))
+    # The spec's approval patterns, already built above, ask in codemode too.
+    capabilities.extend(
+        build_default_choice_guardrails(agent_id=agent_id, capabilities=capabilities)
+    )
 
     # History compaction keeps the input under the model's declared
     # ``tokens_limit`` by summarizing older messages before each request.
@@ -650,9 +653,24 @@ def order_before_approvals(capabilities: list[Any]) -> list[Any]:
     return rest[:insert_at] + early + rest[insert_at:]
 
 
-def build_default_choice_guardrails(agent_id: str | None = None) -> list[Any]:
-    """Build default guardrails that honor runtime user tool/skill selections."""
+def build_default_choice_guardrails(
+    agent_id: str | None = None,
+    capabilities: list[Any] | None = None,
+) -> list[Any]:
+    """Build default guardrails that honor runtime user tool/skill selections.
+
+    ``capabilities`` are the spec's, already built: the tools its approval
+    patterns name ask in codemode too, read only or not.
+    """
+    requiring_approval = [
+        pattern
+        for capability in capabilities or []
+        if isinstance(capability, ToolsGuardrailCapability)
+        for pattern in capability.config.tools_requiring_approval
+    ]
     return [
         SkillsGuardrailCapability(agent_id=agent_id),
-        MCPToolsGuardrailCapability(agent_id=agent_id),
+        MCPToolsGuardrailCapability(
+            agent_id=agent_id, requiring_approval=requiring_approval
+        ),
     ]

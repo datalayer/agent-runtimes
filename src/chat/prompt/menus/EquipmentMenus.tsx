@@ -334,6 +334,13 @@ function ServerBlock({
                 {tool.name}
               </Text>
               <Line>{tool.description}</Line>
+              {tool.readOnly ? (
+                <Line>
+                  {tool.approved
+                    ? EQUIPMENT_WORDS.readOnly.runs
+                    : EQUIPMENT_WORDS.readOnly.asks}
+                </Line>
+              ) : null}
             </Box>
             <Box display="flex" alignItems="center" gap={3}>
               <Switch

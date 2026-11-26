@@ -155,6 +155,11 @@ export interface McpToolsetsStatusResponse {
   enabled_tools_by_server?: Record<string, string[]>;
   enabled_tools_count?: number;
   approved_tools_by_server?: Record<string, string[]>;
+  /**
+   * The tools that run without asking unless the person turns approval on:
+   * those the catalogue classes read only, on a server it vouches for.
+   */
+  read_only_tools_by_server?: Record<string, string[]>;
 }
 
 import { defaultIndicatorColors } from '@datalayer/primer-addons/lib/theme';

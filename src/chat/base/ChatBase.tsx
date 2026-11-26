@@ -1927,8 +1927,9 @@ function ChatBaseInner({
   const [enabledMcpTools, setEnabledMcpTools] = useState<
     Map<string, Set<string>>
   >(new Map());
-  // approvedMcpTools tracks which MCP server tools are approved per server.
-  // Default: no tools approved until explicitly toggled.
+  // approvedMcpTools tracks which MCP server tools are approved per server,
+  // as the runtime's snapshot says: the tools the catalogue classes read only
+  // are approved until the person says they ask; others until approved.
   const [approvedMcpTools, setApprovedMcpTools] = useState<
     Map<string, Set<string>>
   >(new Map());
@@ -3233,7 +3234,7 @@ function ChatBaseInner({
     (serverId: string, toolName: string) => {
       setApprovedMcpTools(prev => {
         const newMap = new Map(prev);
-        // Default: if no entry for this server, no tool is approved.
+        // No entry for this server: none of its tools is approved yet.
         const serverTools = new Set(prev.get(serverId) ?? []);
         const currentlyApproved = serverTools.has(toolName);
         if (currentlyApproved) {

@@ -2459,9 +2459,30 @@ async def session_switches(uid: str, request: Request) -> Dict[str, Any]:
 
     Only what it switched: the rest is as the agent has it. Read by whoever
     may drive the session — its visitor, its person — and nobody else.
+    Beside them, ``mcp_read_only``: the tools that run without asking unless
+    the conversation says they ask (`_switches_answer`).
     """
     live, _ = await _held(uid, request)
-    return live.switches.as_dict()
+    return _switches_answer(live)
+
+
+def _switches_answer(live: Any) -> Dict[str, Any]:
+    """
+    A conversation's switches, with the tools that run without asking by default.
+
+    The tools of its agent's running servers (``mcp_read_only``): those the
+    catalogue classes read only (`guardrails.read_only_tools`).
+    """
+    from agent_runtimes.apps import switches
+
+    answer = live.switches.as_dict()
+    try:
+        answer["mcp_read_only"] = switches.read_only_of(
+            switches.offered_of(live.agent_id)
+        )
+    except switches.SwitchRefused:
+        answer["mcp_read_only"] = {}
+    return answer
 
 
 @router.put("/sessions/{uid}/switches")
@@ -2487,7 +2508,7 @@ async def switch_in_session(
         live.switches.switch(body, switches.offered_of(live.agent_id))
     except switches.SwitchRefused as refused:
         raise _refused(refused) from None
-    return live.switches.as_dict()
+    return _switches_answer(live)
 
 
 @router.post("/sessions/{uid}/window")

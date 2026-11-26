@@ -2314,12 +2314,17 @@ async def create_agent(
             request.memory, request.memory_config = agent_memory(
                 running_app, request.app_instance
             )
+        # Every server it named left out (a Tavily-only agent without the key,
+        # or on Kagent): it reaches none, never every server the runtime knows.
+        every_server_left_out = False
         if left_out.servers:
-            selected_mcp_servers = [
+            kept_servers = [
                 server
                 for server in selected_mcp_servers
                 if _ref_id_of(server.id) not in left_out.servers
             ]
+            every_server_left_out = bool(selected_mcp_servers) and not kept_servers
+            selected_mcp_servers = kept_servers
             request.selected_mcp_servers = selected_mcp_servers
 
         # When codemode is NOT enabled, we start the servers explicitly here
@@ -2719,8 +2724,13 @@ async def create_agent(
             # held the configure for as long as its start took (72 s on r1,
             # 8 November 2026). The bindings of each server are added once it
             # is up (`_start_mcp_servers_for_agent`).
-            disable_mcp_for_codemode = request.mcp_servers_in_background or (
-                selected_mcp_servers_explicit and len(request.selected_mcp_servers) == 0
+            disable_mcp_for_codemode = (
+                request.mcp_servers_in_background
+                or every_server_left_out
+                or (
+                    selected_mcp_servers_explicit
+                    and len(request.selected_mcp_servers) == 0
+                )
             )
             mcp_manager = get_mcp_manager()
             if not disable_mcp_for_codemode and not mcp_manager.get_servers():
@@ -2960,7 +2970,11 @@ async def create_agent(
             # Always apply runtime selection guardrails, even when no spec is provided.
             if capabilities is None:
                 capabilities = []
-            capabilities.extend(build_default_choice_guardrails(agent_id=agent_id))
+            capabilities.extend(
+                build_default_choice_guardrails(
+                    agent_id=agent_id, capabilities=capabilities
+                )
+            )
             # After the defaults, not before: they carry the MCP and skills
             # approval guardrails too, and an agent that asked for no
             # approvals used to get them back from here.
@@ -3216,7 +3230,7 @@ async def create_agent(
             # and execute_code-only sandbox mode.
             codemode_builder = None
             if request.enable_codemode or request.sandbox_variant:
-                disable_mcp_for_codemode = (
+                disable_mcp_for_codemode = every_server_left_out or (
                     selected_mcp_servers_explicit
                     and len(request.selected_mcp_servers) == 0
                 )

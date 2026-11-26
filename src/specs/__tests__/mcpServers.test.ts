@@ -53,17 +53,15 @@ describe('the MCP server catalogue', () => {
 
   it('carries what each tool does to the world, and the day it was checked', () => {
     const tavily = MCP_SERVER_LIBRARY.tavily;
-    expect(tavily.actions?.checked).toBe('2026-11-25');
+    expect(tavily.actions?.checked).toBe('2026-10-02');
     expect(tavily.actions?.tools).toMatchObject({
       tavily_search: 'read',
       tavily_crawl: 'read',
     });
-    // Tavily's hosted server: the key in a header, never in an address or an environment.
-    expect(tavily.url).toBe('https://mcp.tavily.com/mcp/');
-    expect(tavily.headers).toEqual({
-      Authorization: 'Bearer ${TAVILY_API_KEY}',
-    });
-    expect(tavily.env ?? {}).toEqual({});
+    // A local process again (agentspecs 0.1.24): the key in its environment, codemode reaches it.
+    expect(tavily.command).toBe('npx');
+    expect(tavily.args).toEqual(['-y', 'tavily-mcp']);
+    expect(tavily.env).toEqual({ TAVILY_API_KEY: '${TAVILY_API_KEY}' });
     // A server not read off yet says so: no tool classed, unknown is the most restricted.
     expect(MCP_SERVER_LIBRARY.github.actions?.tools).toEqual({});
     expect(MCP_SERVER_LIBRARY.github.actions?.checked).toBeUndefined();

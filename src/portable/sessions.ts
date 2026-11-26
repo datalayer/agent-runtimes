@@ -79,6 +79,13 @@ export type ConversationSwitchesState = {
   mcp_tools: Record<string, string[]>;
   /** The tools approved, by server, for the servers whose approvals it switched. */
   mcp_approved: Record<string, string[]>;
+  /** The tools it said must ask, by server: over the read-only default. */
+  mcp_asked?: Record<string, string[]>;
+  /**
+   * The tools of its agent's running servers that run without asking unless
+   * it says they ask: those the catalogue classes read only.
+   */
+  mcp_read_only?: Record<string, string[]>;
   skills: Record<string, boolean>;
   skills_approved: Record<string, boolean>;
 };
