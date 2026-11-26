@@ -871,7 +871,13 @@ function ChatBaseInner({
   );
   const activeAgentId = protocolConfig?.agentId || runtimeId;
   const historyScopeId = runtimeId || activeAgentId;
-  const aiAgentsAuthToken = protocolConfig?.authToken;
+  // The platform's approvals stream takes its own token when the protocol
+  // names one (`aiAgentsToken`, `null` for none): a host's token for its own
+  // server is not presented there.
+  const aiAgentsAuthToken =
+    protocolConfig && protocolConfig.aiAgentsToken !== undefined
+      ? protocolConfig.aiAgentsToken || undefined
+      : protocolConfig?.authToken;
 
   // ── Ephemeral notebook (in-memory) ──────────────────────────────────────
   // A stable notebook id scoped to this chat instance. Must match the id used

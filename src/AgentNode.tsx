@@ -61,6 +61,7 @@ import { ShareAccessComponent } from '@datalayer/core/lib/components/sharing';
 import { useAgentNodeThemeStore } from './agent-node/themeStore';
 import { AgentNodeGallery } from './agent-node/AgentNodeGallery';
 import { runtimeAuthHeaders } from './hooks/ownRoutes';
+import { useLatestRef } from './hooks/runtimeAuth';
 import { Chat } from './chat';
 import type { EphemeralRuntimeOverride } from './chat/notebook/EphemeralNotebook';
 import type { Suggestion } from './types/chat';
@@ -458,8 +459,7 @@ export function AgentNode() {
   // The signed-in person's token, as the node's routes read it: sent with
   // what the page asks of the node, nothing before sign-in. Read through a
   // ref so that a call made later carries the token of that moment.
-  const tokenRef = useRef(token);
-  tokenRef.current = token;
+  const tokenRef = useLatestRef(token);
   const nodeAuthHeaders = useCallback(
     () => runtimeAuthHeaders(tokenRef.current),
     [],
@@ -966,18 +966,27 @@ export function AgentNode() {
     // Inline mode has no close action, but the prop is required.
   }, []);
 
+  // The node's configuration, read again whenever the caller changes (a
+  // sign-in, a bootstrap, a sign-out). Loaded only once a read succeeded:
+  // a refused or failed read leaves the defaults on screen but not loaded,
+  // so nothing saves them over the configuration the node keeps. A read
+  // made for an earlier caller is dropped when it answers late.
   useEffect(() => {
+    const controller = new AbortController();
+    setConfigurationLoaded(false);
     const load = async () => {
       try {
         const response = await fetch(
           `${AGENT_RUNTIMES_BASE_URL}/api/v1/agent-node/configuration`,
-          { headers: nodeAuthHeaders() },
+          { headers: nodeAuthHeaders(), signal: controller.signal },
         );
-        if (!response.ok) {
-          setConfigurationLoaded(true);
+        if (!response.ok || controller.signal.aborted) {
           return;
         }
         const payload = await response.json();
+        if (controller.signal.aborted) {
+          return;
+        }
         const loadedConfiguration = {
           ...DEFAULT_CONFIGURATION,
           ...(payload?.configuration || {}),
@@ -986,26 +995,30 @@ export function AgentNode() {
         if (loadedConfiguration.active_agent_id) {
           setSelectedAgentId(loadedConfiguration.active_agent_id);
         }
-      } catch {
-        // Ignore initial-load failures in local development.
-      } finally {
         setConfigurationLoaded(true);
+      } catch {
+        // Not loaded: a later caller reads again.
       }
     };
     load();
-  }, []);
+    return () => controller.abort();
+  }, [token, nodeAuthHeaders]);
 
   useEffect(() => {
+    const controller = new AbortController();
     const loadInferenceProvider = async () => {
       try {
         const response = await fetch(
           `${AGENT_RUNTIMES_BASE_URL}/api/v1/configure/inference/provider`,
-          { headers: nodeAuthHeaders() },
+          { headers: nodeAuthHeaders(), signal: controller.signal },
         );
-        if (!response.ok) {
+        if (!response.ok || controller.signal.aborted) {
           return;
         }
         const payload = await response.json();
+        if (controller.signal.aborted) {
+          return;
+        }
         const provider = payload?.provider;
         if (provider === 'local' || provider === 'datalayer') {
           setInferenceProvider(provider);
@@ -1015,7 +1028,8 @@ export function AgentNode() {
       }
     };
     loadInferenceProvider();
-  }, []);
+    return () => controller.abort();
+  }, [token, nodeAuthHeaders]);
 
   useEffect(() => {
     if (inferenceProvider !== 'datalayer') {
@@ -1025,12 +1039,16 @@ export function AgentNode() {
     }
     // The runtime's answer, as it had it from ai-inference: no list of its
     // own when that answer is empty or did not come — the sentence says why.
+    const controller = new AbortController();
     const loadInferenceModels = async () => {
       try {
         const response = await fetch(
           `${AGENT_RUNTIMES_BASE_URL}/api/v1/configure/inference/models`,
-          { headers: nodeAuthHeaders() },
+          { headers: nodeAuthHeaders(), signal: controller.signal },
         );
+        if (controller.signal.aborted) {
+          return;
+        }
         if (!response.ok) {
           setInferenceModels([]);
           setInferenceModelsNote(
@@ -1039,11 +1057,17 @@ export function AgentNode() {
           return;
         }
         const payload: InferenceModelResponse = await response.json();
+        if (controller.signal.aborted) {
+          return;
+        }
         setInferenceModels(
           Array.isArray(payload.models) ? payload.models.filter(Boolean) : [],
         );
         setInferenceModelsNote(payload.note ?? null);
       } catch (error) {
+        if (controller.signal.aborted) {
+          return;
+        }
         setInferenceModels([]);
         setInferenceModelsNote(
           `The runtime did not list its models (${String(error)}).`,
@@ -1051,7 +1075,8 @@ export function AgentNode() {
       }
     };
     loadInferenceModels();
-  }, [inferenceProvider]);
+    return () => controller.abort();
+  }, [inferenceProvider, token, nodeAuthHeaders]);
 
   // If the container was started with DATALAYER_API_KEY, the backend exchanges
   // it for a session token via /auth/bootstrap so the UI can skip sign-in.
@@ -1361,6 +1386,15 @@ export function AgentNode() {
   };
 
   const saveConfiguration = async () => {
+    // Nothing is saved before the node's own configuration was read: the
+    // defaults on screen would replace it.
+    if (!configurationLoaded) {
+      const message =
+        'The node configuration has not been read yet: sign in, then save.';
+      setError(message);
+      showBanner('error', message);
+      return;
+    }
     setIsSaving(true);
     setError(null);
     try {
@@ -1922,7 +1956,7 @@ export function AgentNode() {
                   <Button
                     variant="primary"
                     onClick={saveConfiguration}
-                    disabled={isSaving}
+                    disabled={isSaving || !configurationLoaded}
                   >
                     {isSaving ? 'Saving...' : 'Save'}
                   </Button>
@@ -1958,20 +1992,23 @@ export function AgentNode() {
                   };
                   setConfiguration(nextConfiguration);
                   // Persist mode=private so Chat stays enabled and the node
-                  // advertises the active agent state to the sync loop.
-                  void fetch(
-                    `${AGENT_RUNTIMES_BASE_URL}/api/v1/agent-node/configuration`,
-                    {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                        ...nodeAuthHeaders(),
+                  // advertises the active agent state to the sync loop: only
+                  // over a configuration read from the node, never defaults.
+                  if (configurationLoaded) {
+                    void fetch(
+                      `${AGENT_RUNTIMES_BASE_URL}/api/v1/agent-node/configuration`,
+                      {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          ...nodeAuthHeaders(),
+                        },
+                        body: JSON.stringify(nextConfiguration),
                       },
-                      body: JSON.stringify(nextConfiguration),
-                    },
-                  ).catch(() => {
-                    // Best-effort persistence; local state already switched.
-                  });
+                    ).catch(() => {
+                      // Best-effort persistence; local state already switched.
+                    });
+                  }
                   if (isSaasOnlyChat) {
                     showBanner(
                       'info',

@@ -14,8 +14,7 @@ import {
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { Heading, Text, ProgressBar, Spinner } from '@primer/react';
-import { useQuery } from '@tanstack/react-query';
-import { runtimeAuthHeaders } from '../hooks/ownRoutes';
+import { useRuntimeQuery } from '../hooks/runtimeAuth';
 
 /**
  * Context category child item
@@ -110,13 +109,14 @@ export function ContextUsage({
     data: contextData,
     isLoading,
     error,
-  } = useQuery<ContextDetailsResponse>({
-    queryKey: ['context-details', agentId, baseUrl, authToken],
-    queryFn: async () => {
+  } = useRuntimeQuery<ContextDetailsResponse>({
+    key: ['context-details', agentId, baseUrl],
+    authToken,
+    queryFn: async headers => {
       const apiBase = baseUrl || getLocalApiBase();
       const response = await fetch(
         `${apiBase}/api/v1/configure/agents/${encodeURIComponent(agentId)}/context-details`,
-        { headers: runtimeAuthHeaders(authToken) },
+        { headers },
       );
       if (!response.ok) {
         throw new Error('Failed to fetch context details');

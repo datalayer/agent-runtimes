@@ -2041,9 +2041,12 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
               endpoint: runsApp
                 ? `${agentServerUrl}/api/v1/apps/agents/${encodeURIComponent(agentId)}/ag-ui/`
                 : `${agentServerUrl}/api/v1/ag-ui/${agentId}/`,
-              // The person's token only: the chat presents its token to the
-              // platform's approvals stream too, which the host's is not for.
-              ...(personToken ? { authToken: personToken } : {}),
+              // The runtime's routes take the agent server's token: the
+              // person's, else the host's for its own server (a Local or
+              // Jupyter workspace). The platform's approvals stream takes the
+              // person's alone, which the host's is not for.
+              ...(agentServerToken ? { authToken: agentServerToken } : {}),
+              aiAgentsToken: personToken ?? null,
               // Its session's ui channel (RU-W): what its answers
               // show, its steps and its elements, beside the run's text.
               ...(runsApp
@@ -2077,6 +2080,7 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
       agentServerUrl,
       runsApp,
       personToken,
+      agentServerToken,
       ownRoutesOnly,
     ],
   );
@@ -2099,7 +2103,7 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
   const configQuery = useConfig(
     !inPage && protocol?.type === 'ag-ui',
     protocol?.type === 'ag-ui' ? protocol.configEndpoint : undefined,
-    undefined,
+    agentServerToken,
     agentId,
   );
   const skillsQuery = useSkills(true);

@@ -617,6 +617,14 @@ export function Chat({
   ]);
 
   const protocolConfig = protocolConfigResult.config;
+  // The token the runtime's routes are sent: the one given, else the one a
+  // transport configuration given outright carries (returned unchanged
+  // above). The details panel, the thread's reads and the sessions take it.
+  const runtimeToken =
+    authTokenProp ??
+    (typeof transport === 'object' && transport !== null
+      ? transport.authToken
+      : undefined);
 
   // Set initialized once protocol config is built
   useEffect(() => {
@@ -693,7 +701,7 @@ export function Chat({
             agentBaseUrl: baseUrl,
             agentId: resolvedAgentId,
             uid: wantedThread.id,
-            token: authTokenProp,
+            token: runtimeToken,
           });
           if (current) {
             setOpenedThread({
@@ -731,7 +739,7 @@ export function Chat({
     wantedThread?.fromRuntime,
     baseUrl,
     resolvedAgentId,
-    authTokenProp,
+    runtimeToken,
   ]);
   const chatThread = wantedThread?.fromRuntime
     ? openedThread?.given === wantedThread.id
@@ -779,10 +787,10 @@ export function Chat({
     () =>
       appSessionsClient({
         baseUrl,
-        getAccessToken: () => authTokenProp,
+        getAccessToken: () => runtimeToken,
         fetch: (input, init) => fetch(input, init),
       }),
-    [baseUrl, authTokenProp],
+    [baseUrl, runtimeToken],
   );
   const sessionActionsRef = useRef(sessionActions);
   sessionActionsRef.current = sessionActions;
@@ -878,10 +886,10 @@ export function Chat({
       baseUrl
         ? {
             serverUrl: baseUrl,
-            ...(authTokenProp ? { token: authTokenProp } : {}),
+            ...(runtimeToken ? { token: runtimeToken } : {}),
           }
         : undefined,
-    [browserSessions, uiChrome, baseUrl, authTokenProp],
+    [browserSessions, uiChrome, baseUrl, runtimeToken],
   );
   /*
    * The agent's own UI plugins (`uiPlugins`), on a platform of this chat's:
@@ -1061,7 +1069,7 @@ export function Chat({
                   messageCount={messageCount}
                   agentId={agentId}
                   apiBase={baseUrl}
-                  authToken={authTokenProp}
+                  authToken={runtimeToken}
                   identityProviders={identityProviders}
                   onIdentityConnect={onIdentityConnect}
                   onIdentityDisconnect={onIdentityDisconnect}

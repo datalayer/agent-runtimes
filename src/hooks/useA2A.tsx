@@ -21,6 +21,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { runtimeAuthHeaders } from './ownRoutes';
+import { useLatestRef } from './runtimeAuth';
 
 /**
  * The A2A objects this hook reads, as the JSON it receives (the 0.3 wire it
@@ -173,12 +174,16 @@ export function useA2A(options: UseA2AOptions = {}): UseA2AReturn {
     return requestIdRef.current;
   }, []);
 
+  // The token as it stands when each request is sent: a send polls its task
+  // for up to a minute, and a token renewed meanwhile is the one that goes.
+  const authTokenRef = useLatestRef(authToken);
+
   // Connect to agent (fetch agent card)
   const connect = useCallback(async () => {
     try {
       setError(null);
       const response = await fetch(agentCardUrl, {
-        headers: runtimeAuthHeaders(authToken),
+        headers: runtimeAuthHeaders(authTokenRef.current),
       });
       if (!response.ok) {
         throw new Error(`Failed to fetch agent card: ${response.statusText}`);
@@ -192,7 +197,7 @@ export function useA2A(options: UseA2AOptions = {}): UseA2AReturn {
       setIsConnected(false);
       onError?.(err);
     }
-  }, [agentCardUrl, authToken, onError]);
+  }, [agentCardUrl, authTokenRef, onError]);
 
   // Disconnect
   const disconnect = useCallback(() => {
@@ -269,7 +274,7 @@ export function useA2A(options: UseA2AOptions = {}): UseA2AReturn {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...runtimeAuthHeaders(authToken),
+        ...runtimeAuthHeaders(authTokenRef.current),
       },
       body: JSON.stringify({
         jsonrpc: '2.0',
@@ -321,7 +326,7 @@ export function useA2A(options: UseA2AOptions = {}): UseA2AReturn {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...runtimeAuthHeaders(authToken),
+          ...runtimeAuthHeaders(authTokenRef.current),
         },
         body: JSON.stringify({
           jsonrpc: '2.0',
@@ -412,7 +417,7 @@ export function useA2A(options: UseA2AOptions = {}): UseA2AReturn {
       headers: {
         'Content-Type': 'application/json',
         Accept: 'text/event-stream',
-        ...runtimeAuthHeaders(authToken),
+        ...runtimeAuthHeaders(authTokenRef.current),
       },
       body: JSON.stringify({
         jsonrpc: '2.0',
@@ -513,6 +518,21 @@ export function useA2A(options: UseA2AOptions = {}): UseA2AReturn {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoConnect]);
+
+  // A token given after the card was refused (before sign-in): ask again.
+  const connectRef = useLatestRef(connect);
+  const isConnectedRef = useLatestRef(isConnected);
+  const firstTokenRef = useRef(true);
+  useEffect(() => {
+    if (firstTokenRef.current) {
+      firstTokenRef.current = false;
+      return;
+    }
+    if (autoConnect && authToken && !isConnectedRef.current) {
+      void connectRef.current();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authToken]);
 
   return {
     isConnected,

@@ -27,6 +27,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { runtimeSocketUrl } from './ownRoutes';
+import { useLatestRef } from './runtimeAuth';
 
 // Import from official ACP SDK
 import {
@@ -235,6 +236,12 @@ export function useAcp(options: UseAcpOptions): UseAcpReturn {
   >(new Map());
   const reconnectAttemptsRef = useRef(0);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // The token as it stands when a connection is attempted, a retry included:
+  // a retry scheduled by a socket's close must not send the token of the
+  // render that opened it.
+  const authTokenRef = useLatestRef(authToken);
+  // The socket last opened, connecting or open.
+  const attemptRef = useRef<WebSocket | null>(null);
 
   // Generate unique message ID
   const generateId = useCallback(() => {
@@ -487,8 +494,12 @@ export function useAcp(options: UseAcpOptions): UseAcpReturn {
     onConnectionChange?.('connecting');
 
     try {
-      const fullUrl = runtimeSocketUrl(`${wsUrl}/${agentId}`, authToken);
+      const fullUrl = runtimeSocketUrl(
+        `${wsUrl}/${agentId}`,
+        authTokenRef.current,
+      );
       const ws = new WebSocket(fullUrl);
+      attemptRef.current = ws;
 
       ws.onopen = async () => {
         wsRef.current = ws;
@@ -566,7 +577,8 @@ export function useAcp(options: UseAcpOptions): UseAcpReturn {
         if (reconnectAttemptsRef.current < reconnectAttempts) {
           reconnectAttemptsRef.current++;
           reconnectTimeoutRef.current = setTimeout(() => {
-            connect();
+            // The latest `connect`, so the latest address and handlers.
+            void connectRef.current();
           }, reconnectDelay);
         }
       };
@@ -579,7 +591,7 @@ export function useAcp(options: UseAcpOptions): UseAcpReturn {
   }, [
     wsUrl,
     agentId,
-    authToken,
+    authTokenRef,
     reconnectAttempts,
     reconnectDelay,
     handleMessage,
@@ -587,6 +599,8 @@ export function useAcp(options: UseAcpOptions): UseAcpReturn {
     onConnectionChange,
     onError,
   ]);
+
+  const connectRef = useLatestRef(connect);
 
   // Disconnect from agent
   const disconnect = useCallback(() => {
@@ -598,6 +612,9 @@ export function useAcp(options: UseAcpOptions): UseAcpReturn {
     reconnectAttemptsRef.current = reconnectAttempts; // Prevent auto-reconnect
 
     if (wsRef.current) {
+      // Closed on purpose: its close schedules no retry and touches no state
+      // of a connection opened after it.
+      wsRef.current.onclose = null;
       wsRef.current.close();
       wsRef.current = null;
     }
@@ -694,6 +711,34 @@ export function useAcp(options: UseAcpOptions): UseAcpReturn {
       disconnect();
     };
   }, [autoConnect]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // A token given or renewed while no connection is open (one refused before
+  // sign-in, its retries spent): try again with it, the retries counted anew.
+  // An open connection is kept: its token was read when it was opened.
+  const firstTokenRef = useRef(true);
+  useEffect(() => {
+    if (firstTokenRef.current) {
+      firstTokenRef.current = false;
+      return;
+    }
+    if (!autoConnect || !authToken) {
+      return;
+    }
+    const attempt = attemptRef.current;
+    if (
+      attempt &&
+      (attempt.readyState === WebSocket.OPEN ||
+        attempt.readyState === WebSocket.CONNECTING)
+    ) {
+      return;
+    }
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+    reconnectAttemptsRef.current = 0;
+    void connectRef.current();
+  }, [authToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
     // Connection management

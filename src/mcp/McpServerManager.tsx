@@ -22,10 +22,11 @@ import {
   CheckIcon,
   SearchIcon,
 } from '@primer/octicons-react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
 import type { McpServerSelection } from '../types';
 import { runtimeAuthHeaders } from '../hooks/ownRoutes';
+import { useRuntimeQuery } from '../hooks/runtimeAuth';
 import type { MCPServerManager as MCPServer } from '../types/mcp';
 
 export interface McpServerManagerProps {
@@ -72,11 +73,12 @@ export function McpServerManager({
   const [error, setError] = useState<string | null>(null);
 
   // Fetch all available servers (catalog + mcp.json running servers)
-  const catalogQuery = useQuery<MCPServer[]>({
-    queryKey: ['mcp-available', baseUrl, authToken],
-    queryFn: async () => {
+  const catalogQuery = useRuntimeQuery<MCPServer[]>({
+    key: ['mcp-available', baseUrl],
+    authToken,
+    queryFn: async headers => {
       const response = await fetch(`${baseUrl}/api/v1/mcp/servers/available`, {
-        headers: runtimeAuthHeaders(authToken),
+        headers,
       });
       if (!response.ok) {
         throw new Error('Failed to fetch available MCP servers');
