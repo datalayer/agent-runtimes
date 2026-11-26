@@ -27,6 +27,16 @@ import {
   useRuntimeQuery,
 } from '../runtimeAuth';
 import { useAcp } from '../useAcp';
+import { useA2A } from '../useA2A';
+import { useServerToken } from '../../apps/plugins/agents/useSandboxService';
+
+const reactorMock = vi.hoisted(() => ({
+  platform: undefined as unknown,
+}));
+vi.mock('@datalayer/reactor/react', () => ({
+  useOptionalReactorPlatform: () => reactorMock.platform,
+  useReactorPlatform: () => reactorMock.platform,
+}));
 
 const SRC = join(__dirname, '..', '..');
 
@@ -175,6 +185,83 @@ describe('useAcp', () => {
     expect(FakeSocket.instances).toHaveLength(1);
     rerender({ token: 'signed-in' });
     expect(FakeSocket.instances.map(tokenOf)).toEqual([null, 'signed-in']);
+  });
+
+  it('uses a token given while a socket was connecting once that socket is refused, its retries spent', () => {
+    vi.useFakeTimers();
+    FakeSocket.instances = [];
+    vi.stubGlobal('WebSocket', FakeSocket);
+    const { rerender } = renderHook(
+      ({ token }: { token?: string }) =>
+        useAcp({
+          wsUrl: 'ws://runtime/api/v1/acp/ws',
+          agentId: 'a1',
+          authToken: token,
+          reconnectAttempts: 0,
+        }),
+      { initialProps: { token: undefined as string | undefined } },
+    );
+    rerender({ token: 'signed-in' });
+    expect(FakeSocket.instances).toHaveLength(1);
+    act(() => FakeSocket.instances[0].refuse());
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(FakeSocket.instances.map(tokenOf)).toEqual([null, 'signed-in']);
+  });
+});
+
+describe('useA2A', () => {
+  it("keeps the card a token's request read when an earlier request is refused after it", async () => {
+    const answers: Array<(response: Response) => void> = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        () =>
+          new Promise<Response>(resolve => {
+            answers.push(resolve);
+          }),
+      ),
+    );
+    const { result, rerender } = renderHook(
+      ({ token }: { token?: string }) =>
+        useA2A({ baseUrl: 'http://runtime', agentId: 'a1', authToken: token }),
+      { initialProps: { token: undefined as string | undefined } },
+    );
+    rerender({ token: 'signed-in' });
+    await waitFor(() => expect(answers).toHaveLength(2));
+    await act(async () => {
+      answers[1](new Response(JSON.stringify({ name: 'a1' }), { status: 200 }));
+    });
+    await waitFor(() => expect(result.current.isConnected).toBe(true));
+    await act(async () => {
+      answers[0](new Response('', { status: 401, statusText: 'Unauthorized' }));
+    });
+    expect(result.current.isConnected).toBe(true);
+    expect(result.current.error).toBeNull();
+  });
+});
+
+describe('useServerToken', () => {
+  it('gives a new getter when the token the host gives changes, and reads it when called', () => {
+    const config: { serverToken?: string | (() => string | undefined) } = {};
+    reactorMock.platform = { getConfig: () => config };
+    const { result, rerender } = renderHook(() => useServerToken());
+    const before = result.current;
+    expect(before()).toBeUndefined();
+    rerender();
+    expect(result.current).toBe(before);
+    config.serverToken = 'host';
+    rerender();
+    expect(result.current).not.toBe(before);
+    expect(result.current()).toBe('host');
+    // A getter the host renews without drawing again is read at the call.
+    let renewed = 'one';
+    config.serverToken = () => renewed;
+    rerender();
+    const getter = result.current;
+    renewed = 'two';
+    expect(getter()).toBe('two');
   });
 });
 

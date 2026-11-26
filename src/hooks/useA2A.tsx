@@ -177,9 +177,13 @@ export function useA2A(options: UseA2AOptions = {}): UseA2AReturn {
   // The token as it stands when each request is sent: a send polls its task
   // for up to a minute, and a token renewed meanwhile is the one that goes.
   const authTokenRef = useLatestRef(authToken);
+  const cardAttemptRef = useRef(0);
 
   // Connect to agent (fetch agent card)
   const connect = useCallback(async () => {
+    // Only the latest card request says whether the agent is reached: one
+    // made before a token was given may answer after it, refused.
+    const attempt = ++cardAttemptRef.current;
     try {
       setError(null);
       const response = await fetch(agentCardUrl, {
@@ -189,9 +193,15 @@ export function useA2A(options: UseA2AOptions = {}): UseA2AReturn {
         throw new Error(`Failed to fetch agent card: ${response.statusText}`);
       }
       const card = (await response.json()) as AgentCard;
+      if (attempt !== cardAttemptRef.current) {
+        return;
+      }
       setAgentCard(card);
       setIsConnected(true);
     } catch (e) {
+      if (attempt !== cardAttemptRef.current) {
+        return;
+      }
       const err = e instanceof Error ? e : new Error(String(e));
       setError(err);
       setIsConnected(false);

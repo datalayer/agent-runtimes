@@ -58,15 +58,19 @@ export function useSandboxService(): SwitchableSandboxService {
  * without drawing again has the renewed one sent, as `createServerSandboxService`
  * does. It answers none when the host gave none, as for a server on this
  * machine, and none for a view drawn outside a workspace. Stable while the
- * reactor is the same, so it is safe in a callback's dependencies.
+ * reactor and the token it resolves to at render are the same: a token
+ * supplied later gives a new getter, and the reads that depend on it run
+ * again.
  */
 export function useServerToken(): () => string | undefined {
   const reactor = useOptionalReactorPlatform();
-  return useCallback(
-    () =>
-      serverTokenOf(
-        reactor?.getConfig<AgentsConfig>(AGENTS_PLUGIN_NAME)?.serverToken,
-      ),
-    [reactor],
-  );
+  const read = () =>
+    serverTokenOf(
+      reactor?.getConfig<AgentsConfig>(AGENTS_PLUGIN_NAME)?.serverToken,
+    );
+  // A new getter when the token this render sees changes (one supplied
+  // after a refused read), so a read that depends on it is made again.
+  const now = read();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useCallback(read, [reactor, now]);
 }

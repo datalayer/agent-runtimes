@@ -242,6 +242,9 @@ export function useAcp(options: UseAcpOptions): UseAcpReturn {
   const authTokenRef = useLatestRef(authToken);
   // The socket last opened, connecting or open.
   const attemptRef = useRef<WebSocket | null>(null);
+  // A token came while a socket was still connecting: if that socket closes,
+  // the next attempt is the token's, whatever retries are left.
+  const tokenRetryPendingRef = useRef(false);
 
   // Generate unique message ID
   const generateId = useCallback(() => {
@@ -504,6 +507,7 @@ export function useAcp(options: UseAcpOptions): UseAcpReturn {
       ws.onopen = async () => {
         wsRef.current = ws;
         reconnectAttemptsRef.current = 0;
+        tokenRetryPendingRef.current = false;
         setConnectionState('connected');
         onConnectionChange?.('connected');
 
@@ -573,6 +577,16 @@ export function useAcp(options: UseAcpOptions): UseAcpReturn {
         setConnectionState('disconnected');
         onConnectionChange?.('disconnected');
 
+        // A token given while this socket was connecting: try again with it,
+        // the retries counted anew.
+        if (tokenRetryPendingRef.current) {
+          tokenRetryPendingRef.current = false;
+          reconnectAttemptsRef.current = 0;
+          reconnectTimeoutRef.current = setTimeout(() => {
+            void connectRef.current();
+          }, 0);
+          return;
+        }
         // Attempt reconnection
         if (reconnectAttemptsRef.current < reconnectAttempts) {
           reconnectAttemptsRef.current++;
@@ -610,6 +624,7 @@ export function useAcp(options: UseAcpOptions): UseAcpReturn {
     }
 
     reconnectAttemptsRef.current = reconnectAttempts; // Prevent auto-reconnect
+    tokenRetryPendingRef.current = false;
 
     if (wsRef.current) {
       // Closed on purpose: its close schedules no retry and touches no state
@@ -730,6 +745,8 @@ export function useAcp(options: UseAcpOptions): UseAcpReturn {
       (attempt.readyState === WebSocket.OPEN ||
         attempt.readyState === WebSocket.CONNECTING)
     ) {
+      tokenRetryPendingRef.current =
+        attempt.readyState === WebSocket.CONNECTING;
       return;
     }
     if (reconnectTimeoutRef.current) {
