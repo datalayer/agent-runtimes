@@ -118,6 +118,7 @@ __all__ = [
     "is_held_principal",
     "kernel_holds_owner_secrets",
     "launched_app",
+    "launched_ai_agents_url",
     "launched_for",
     "owner_of",
     "preview_grants",
@@ -318,6 +319,16 @@ def launched_for() -> str:
     person's own runtime's do.
     """
     return _PROOF.get("deployment_uid", "")
+
+
+def launched_ai_agents_url() -> str:
+    """The ai-agents this runtime knew as it was given its proof, or ``""`` without one.
+
+    Where the runtime asks whose the deployment it was launched for is
+    (`callers.owner_by_deployment`): the one ai-agents it trusts with its
+    proof, whatever the environment says since.
+    """
+    return _PROOF.get("ai_agents_url", "")
 
 
 def kernel_holds_owner_secrets() -> bool:
