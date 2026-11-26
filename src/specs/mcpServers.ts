@@ -1538,24 +1538,25 @@ export const TAVILY_MCP_SERVER_0_0_1: MCPServer = {
   description: 'Web search and research capabilities via Tavily API',
   icon: '@primer/octicons-react:search',
   emoji: '🔍',
-  url: 'https://mcp.tavily.com/mcp/',
-  args: [],
-  headers: { Authorization: 'Bearer ${TAVILY_API_KEY}' },
-  transport: 'streamable-http',
+  url: '',
+  command: 'npx',
+  args: ['-y', 'tavily-mcp'],
+  transport: 'stdio',
   enabled: true,
   isAvailable: false,
   tools: [],
   requiredEnvVars: ['TAVILY_API_KEY:0.0.1'],
   tags: ['search', 'research', 'web'],
+  env: { TAVILY_API_KEY: '${TAVILY_API_KEY}' },
   documentationUrl: 'https://docs.tavily.com',
   signupUrl: 'https://app.tavily.com',
   apiKeyUrl: 'https://app.tavily.com/home',
   setup:
     'A key from the [Tavily dashboard](https://app.tavily.com/home), in `TAVILY_API_KEY`; the docs are at [docs.tavily.com](https://docs.tavily.com).',
   install: {
-    type: 'remote',
-    command: '',
-    note: "Nothing to install: Tavily's hosted MCP server, reached at its URL with your TAVILY_API_KEY.",
+    type: 'npm',
+    command: 'npm install -g tavily-mcp',
+    note: 'Needs Node.js; `npx -y` also fetches it at start.',
   },
   actions: {
     tools: {
@@ -1565,8 +1566,8 @@ export const TAVILY_MCP_SERVER_0_0_1: MCPServer = {
       tavily_map: 'read',
       tavily_research: 'read',
     },
-    checked: '2026-11-25',
-    note: "Read off the running server's tools/list: every tool searches or reads the web; none changes anything.",
+    checked: '2026-10-02',
+    note: 'Every tool searches or reads the web; none changes anything.',
   },
 };
 

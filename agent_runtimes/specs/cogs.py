@@ -38,6 +38,7 @@ COG_CRAWLER_AGENTSPEC_0_0_1 = Agentspec(
     domain="market-analyst",
     enabled=True,
     listed=False,
+    optional={"mcp_servers": ["tavily"], "skills": [], "at_least_one": []},
     model="bedrock:us.anthropic.claude-sonnet-5-5",
     model_additionals=["bedrock:us.anthropic.claude-sonnet-4-6", "alibaba:qwen-max"],
     inference_provider=None,

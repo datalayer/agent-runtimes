@@ -1001,7 +1001,7 @@ export const SERVER_ACTIONS: Record<string, ServerActionsSpec> = {
     signs: {},
   },
   tavily: {
-    checked: '2026-11-25',
+    checked: '2026-10-02',
     default: [],
     tools: {
       tavily_search: ['read'],

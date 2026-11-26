@@ -115,6 +115,7 @@ const COG_CRAWLER_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'market-analyst',
   enabled: true,
   listed: false,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
   modelAdditionals: [
     'bedrock:us.anthropic.claude-sonnet-4-6',
