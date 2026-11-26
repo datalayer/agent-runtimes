@@ -300,8 +300,11 @@ def approved_tools_in_force(
 
 
 def read_only_of(offered: Offered) -> Dict[str, List[str]]:
-    """The tools of what a conversation may switch that run without asking by
-    default, by server: those the catalogue classes read only."""
+    """
+    The tools of what a conversation may switch that run without asking by default.
+
+    By server: those the catalogue classes read only.
+    """
     from agent_runtimes.guardrails.read_only_tools import read_only_tools_by_server
 
     return {

@@ -2467,9 +2467,12 @@ async def session_switches(uid: str, request: Request) -> Dict[str, Any]:
 
 
 def _switches_answer(live: Any) -> Dict[str, Any]:
-    """A conversation's switches, with the tools of its agent's running servers
-    that run without asking by default (``mcp_read_only``): those the
-    catalogue classes read only (`guardrails.read_only_tools`)."""
+    """
+    A conversation's switches, with the tools that run without asking by default.
+
+    The tools of its agent's running servers (``mcp_read_only``): those the
+    catalogue classes read only (`guardrails.read_only_tools`).
+    """
     from agent_runtimes.apps import switches
 
     answer = live.switches.as_dict()
