@@ -102,8 +102,12 @@ def is_narrowed(jwt: str) -> bool:
 
 
 def _no_websocket() -> bool:
-    """Whether this runtime reaches ai-agents with no WebSocket: an Agent Substrate actor
-    (``--target ate``), whose egress gateway refuses every upgrade."""
+    """
+    Whether this runtime reaches ai-agents with no WebSocket.
+
+    An Agent Substrate actor (``--target ate``), whose egress gateway refuses
+    every upgrade.
+    """
     from agent_runtimes.ate.settings import is_ate_target
 
     return is_ate_target()

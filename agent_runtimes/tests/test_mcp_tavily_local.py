@@ -24,6 +24,10 @@ from agent_runtimes.mcp.catalog_mcp_servers import MCP_SERVER_CATALOG
 from agent_runtimes.services.agent_factory import create_codemode_toolset
 from agent_runtimes.specs.actions import SERVER_ACTIONS
 from agent_runtimes.specs.agents import get_agent_spec
+from agent_runtimes.tests.test_agents_create_integration import (  # noqa: F401
+    _DummyRequest,
+    creation_spy,
+)
 
 TAVILY = MCP_SERVER_CATALOG["tavily"]
 KEY = "tvly-a-key-of-the-person-0123456789"
@@ -148,3 +152,41 @@ def test_every_catalogue_agent_that_names_tavily_may_start_without_it() -> None:
         assert spec.optional is not None and "tavily" in spec.optional.mcp_servers, (
             spec.id
         )
+
+
+@pytest.mark.asyncio
+async def test_a_tavily_only_codemode_agent_without_the_key_reaches_no_server(
+    monkeypatch: pytest.MonkeyPatch,
+    creation_spy: dict[str, object],  # noqa: F811
+) -> None:
+    """Left out, Tavily empties the selection: codemode is built with no MCP
+    server, never with every server the runtime knows (review of 1.8.10)."""
+    from agent_runtimes.routes import agents as agents_route
+    from agent_runtimes.routes.agents import CreateAgentRequest, create_agent
+
+    monkeypatch.delenv("TAVILY_API_KEY", raising=False)
+    built: list[dict[str, Any]] = []
+
+    class _Toolset:
+        pass
+
+    def build(*_args: Any, **kwargs: Any) -> Any:
+        built.append(kwargs)
+        return _Toolset()
+
+    monkeypatch.setattr(agents_route, "_build_codemode_toolset", build)
+    request = CreateAgentRequest(
+        name="Searcher",
+        agent_spec={
+            "systemPrompt": "You search.",
+            "mcpServers": [{"id": "tavily", "origin": "catalog"}],
+            "optional": {"mcpServers": ["tavily"]},
+        },
+        enable_codemode=True,
+    )
+    await create_agent(request, _DummyRequest())
+    assert built and all(call["disable_mcp_servers"] is True for call in built)
+    instructions = " ".join(
+        str(part) for part in creation_spy["pydantic_kwargs"]["instructions"]
+    )
+    assert "the MCP server tavily (no TAVILY_API_KEY)" in instructions
