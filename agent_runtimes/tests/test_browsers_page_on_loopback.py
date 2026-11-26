@@ -18,7 +18,7 @@ tests hold, with one check for every route (`apps.callers`):
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from fastapi import FastAPI
@@ -142,7 +142,12 @@ def test_a_browsers_page_keeps_no_file_in_the_owners_space(
     from agent_runtimes.routes import spaces
 
     read: list[str] = []
-    monkeypatch.setattr(spaces, "owner_token", lambda: read.append("token") or "")
+
+    def owner_token() -> str:
+        read.append("token")
+        return ""
+
+    monkeypatch.setattr(spaces, "owner_token", owner_token)
     refused = _served(spaces.router).post(
         "/api/v1/spaces/files?name=a.txt", content=b"hello", headers=headers
     )
@@ -157,7 +162,12 @@ def test_a_skills_script_still_reaches_the_space_and_only_from_the_pod(
     from agent_runtimes.routes import spaces
 
     read: list[str] = []
-    monkeypatch.setattr(spaces, "owner_token", lambda: read.append("token") or "")
+
+    def owner_token() -> str:
+        read.append("token")
+        return ""
+
+    monkeypatch.setattr(spaces, "owner_token", owner_token)
     passed = _served(spaces.router).post(
         "/api/v1/spaces/files?name=a.txt", content=b"hello"
     )
@@ -258,7 +268,8 @@ def remembers() -> Any:
     )
 
     backend = _Memory()
-    register_memory_backend("crawler", backend)
+    # A stand-in with only the methods the routes call.
+    register_memory_backend("crawler", cast(Any, backend))
     yield backend
     unregister_memory_backend("crawler")
 
