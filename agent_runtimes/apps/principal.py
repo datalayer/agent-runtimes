@@ -113,6 +113,7 @@ __all__ = [
     "give_principal_token",
     "give_runtime_proof",
     "holds_principal_token",
+    "holds_a_pod_secret",
     "pod_secret_is",
     "is_held_principal",
     "kernel_holds_owner_secrets",
@@ -234,6 +235,11 @@ def _keep_from_this_user() -> None:
         raise ValueError(
             f"This process cannot be made private: {os.strerror(ctypes.get_errno())}."
         )
+
+
+def holds_a_pod_secret() -> bool:
+    """Whether this runtime holds the pod's secret: one launched for a deployment, once given its proof."""
+    return _PROOF.get("pod_secret") is not None
 
 
 def pod_secret_is(given: Optional[str]) -> bool:

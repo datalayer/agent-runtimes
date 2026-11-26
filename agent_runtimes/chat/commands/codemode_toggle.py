@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING, Optional
 
 import httpx
 
+from ..runtime_auth import runtime_headers
+
 if TYPE_CHECKING:
     from ..tux import CliTux
 
@@ -24,7 +26,7 @@ async def execute(tux: "CliTux") -> Optional[str]:
 
     # First get current status
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(headers=runtime_headers()) as client:
             status_url = f"{tux.server_url}/api/v1/configure/codemode/status"
             status_response = await client.get(
                 status_url,
@@ -42,7 +44,7 @@ async def execute(tux: "CliTux") -> Optional[str]:
 
     # Toggle to opposite state
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(headers=runtime_headers()) as client:
             url = f"{tux.server_url}/api/v1/configure/codemode/toggle"
             response = await client.post(
                 url,

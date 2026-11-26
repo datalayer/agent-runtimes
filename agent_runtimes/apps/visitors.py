@@ -647,6 +647,9 @@ class OwnRoutesOnly:
 #: caller's is served and logged (``log``) or refused (``enforce``).
 ACCESS_MODE_ENV = "AGENT_RUNTIMES_ACCESS_MODE"
 
+#: Where the lock says its mode in a request's scope, for the routes behind it.
+ACCESS_MODE_SCOPE_KEY = "agent_runtimes.access_mode"
+
 #: The two modes, and the one a runtime starts in when the setting is not there.
 ACCESS_MODES = ("log", "enforce")
 DEFAULT_ACCESS_MODE = "log"
@@ -984,6 +987,8 @@ class OwnersOnly:
         if scope["type"] not in ("http", "websocket"):
             await self.app(scope, receive, send)
             return
+        # What the routes behind read the lock's mode by (`callers.reads_the_sandbox_token`).
+        scope[ACCESS_MODE_SCOPE_KEY] = self.mode
         method = (
             "WS" if scope["type"] == "websocket" else (scope.get("method") or "GET")
         )
@@ -1120,7 +1125,12 @@ async def _make_agent(name: str, body: Optional[Dict[str, Any]]) -> Tuple[int, s
     """Make (``body``) or delete (``None``) one of this runtime's agents, through its own API."""
     import httpx
 
-    async with httpx.AsyncClient(base_url=loopback_url(), timeout=120.0) as client:
+    from agent_runtimes.apps.callers import runtime_auth_headers
+
+    # Signed as the runtime itself: the loopback is no proof of anybody.
+    async with httpx.AsyncClient(
+        base_url=loopback_url(), timeout=120.0, headers=runtime_auth_headers()
+    ) as client:
         if body is None:
             response = await client.delete(f"/api/v1/agents/{name}")
         else:
@@ -1243,11 +1253,15 @@ async def warm(base_url: str, *, attempts: int = 60) -> List[str]:
 
     import httpx
 
+    from agent_runtimes.apps.callers import runtime_auth_headers
     from agent_runtimes.apps.loading import AppNotRunnable
 
     logger = logging.getLogger(__name__)
     made: List[str] = []
-    async with httpx.AsyncClient(base_url=base_url, timeout=120.0) as client:
+    # Signed as the runtime itself: the loopback is no proof of anybody.
+    async with httpx.AsyncClient(
+        base_url=base_url, timeout=120.0, headers=runtime_auth_headers()
+    ) as client:
         for _ in range(attempts):
             try:
                 if (await client.get("/health/ready")).status_code == 200:

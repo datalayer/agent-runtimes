@@ -25,6 +25,8 @@ from typing import TYPE_CHECKING, Optional
 
 import httpx
 
+from ..runtime_auth import runtime_headers
+
 if TYPE_CHECKING:
     from ..tux import CliTux
 
@@ -101,7 +103,7 @@ async def execute(tux: "CliTux") -> Optional[str]:
     tux.console.print("● Connecting to Datalayer…", style=STYLE_PRIMARY)
 
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(headers=runtime_headers()) as client:
             base = f"{tux.server_url}/api/v1/mcp"
             response = await client.post(base, json=server, timeout=30.0)
             if response.status_code == 409:

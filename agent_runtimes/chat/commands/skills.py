@@ -11,6 +11,8 @@ import httpx
 
 from agent_runtimes.agent.commands import CommandArgSpec
 
+from ..runtime_auth import runtime_headers
+
 if TYPE_CHECKING:
     from ..tux import CliTux
 
@@ -46,7 +48,7 @@ ARGS = (
 async def _fetch(tux: "CliTux") -> Optional[dict[str, Any]]:
     """The skill catalog with readiness, from this session's server."""
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(headers=runtime_headers()) as client:
             response = await client.get(
                 f"{tux.server_url}/api/v1/configure/skills",
                 params={"agent_id": getattr(tux, "agent_id", "") or ""},
@@ -69,7 +71,7 @@ async def _read_spec(tux: "CliTux") -> Optional[dict[str, Any]]:
     """The running agent's spec, which is where enablement lives."""
     agent_id = getattr(tux, "agent_id", "") or ""
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(headers=runtime_headers()) as client:
             response = await client.get(
                 f"{tux.server_url}/api/v1/configure/agents/{agent_id}/spec",
                 timeout=10.0,
@@ -220,7 +222,7 @@ async def _toggle(tux: "CliTux", skill_id: str, *, on: bool) -> None:
 
     agent_id = getattr(tux, "agent_id", "") or ""
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(headers=runtime_headers()) as client:
             response = await client.post(
                 f"{tux.server_url}/api/v1/agents/configure-from-spec",
                 json={
@@ -272,7 +274,7 @@ async def _add(tux: "CliTux", skill_id: str) -> None:
             f"*{skill.dependencies!r}], capture_output=True, text=True).stdout[-2000:])"
         )
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(headers=runtime_headers()) as client:
                 response = await client.post(
                     f"{tux.server_url}/api/v1/sandbox/execute",
                     json={"code": code},

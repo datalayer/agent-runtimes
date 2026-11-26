@@ -318,6 +318,47 @@ def start_node_jupyter_server(host: str = "127.0.0.1") -> Optional["object"]:
     return proc
 
 
+def announce_runtime_token(host: str, port: int) -> Optional[str]:
+    """Draw the token of a runtime started on this machine, and say it.
+
+    The runtime's loopback is no proof of anybody (1.8.9): a client on this
+    machine sends the runtime's token, as one elsewhere does
+    (`apps.callers.runtime_token`). ``AGENT_RUNTIMES_TOKEN`` when it is set,
+    said by whoever started the server (the CLI, an editor), and then not
+    printed; else drawn here, set in the environment so that a reloader's or
+    a worker's process takes the same, and printed once on the terminal,
+    never to the log. A Datalayer runtime (``DATALAYER_RUNTIME_ID``) draws
+    none here: its owner holds its Jupyter token from the platform's record.
+
+    Returns
+    -------
+    str | None
+        The token drawn and printed, or ``None``.
+    """
+    import secrets
+    import sys
+
+    from agent_runtimes.apps.callers import RUNTIME_TOKEN_ENV
+
+    if (os.environ.get("DATALAYER_RUNTIME_ID") or "").strip():
+        return None
+    if (os.environ.get(RUNTIME_TOKEN_ENV) or "").strip():
+        return None
+    token = secrets.token_urlsafe(32)
+    os.environ[RUNTIME_TOKEN_ENV] = token
+    shown = "127.0.0.1" if host in ("0.0.0.0", "::", "[::]") else host  # nosec B104
+    print(
+        "\nThis runtime's token (send it as 'Authorization: Bearer <token>', or as\n"
+        "the 'token' query parameter of a websocket; set AGENT_RUNTIMES_TOKEN to\n"
+        f"choose it):\n\n    {token}\n\n"
+        f"    curl -H 'Authorization: Bearer {token}' "
+        f"http://{shown}:{port}/api/v1/agents\n",
+        file=sys.stderr,
+        flush=True,
+    )
+    return token
+
+
 def serve_server(
     host: str = "127.0.0.1",
     port: int = 0,
@@ -651,6 +692,8 @@ def serve_server(
         # relays runs to. Loopback whatever the bind address, which may be
         # ``0.0.0.0``.
         os.environ["AGENT_NODE_LOCAL_URL"] = f"http://127.0.0.1:{actual_port}"
+
+    announce_runtime_token(host, actual_port)
 
     logger.info(f"Starting agent-runtimes server on {host}:{actual_port}")
     logger.info(f"API docs available at http://{host}:{actual_port}/docs")

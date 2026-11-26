@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING, Optional
 
 import httpx
 
+from ..runtime_auth import runtime_headers
+
 if TYPE_CHECKING:
     from ..tux import CliTux
 
@@ -23,7 +25,7 @@ async def execute(tux: "CliTux") -> Optional[str]:
     from ..tux import STYLE_PRIMARY, SessionStats
 
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(headers=runtime_headers()) as client:
             url = f"{tux.server_url}/api/v1/configure/agents/{tux.agent_id}/context-details/reset"
             response = await client.post(url, timeout=10.0)
             response.raise_for_status()

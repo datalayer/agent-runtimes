@@ -13,6 +13,7 @@ import httpx
 from agent_runtimes.agent.commands import CommandArgSpec
 
 from ..pages import split_jupyter_url
+from ..runtime_auth import runtime_headers
 
 if TYPE_CHECKING:
     from ..tux import CliTux
@@ -97,7 +98,7 @@ async def _mint_handoff(tux: "CliTux", view: str) -> Optional[str]:
     }
 
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(headers=runtime_headers()) as client:
             response = await client.post(
                 f"{tux.server_url}/api/v1/agent/sessions/{session_id}/handoff",
                 json=body,

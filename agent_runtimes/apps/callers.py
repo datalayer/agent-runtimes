@@ -32,10 +32,12 @@ answered because the installation's owner opened it to visitors:
 a ``visitor`` caller, named by its pseudonymous id, for its one
 deployment (see :func:`is_host_visitor`).
 
-A call from the machine itself — a developer's ``localhost``, the companion
-beside the runtime — needs no token. Every other call that cannot be verified
-is refused: a runtime that does not know where IAM is refuses, rather than
-lets through.
+An address is no proof of anybody (decided 26 November 2026: on a person's
+own machine a page in their browser reaches the loopback too). The runtime's
+own routes take a token from the machine itself as from anywhere else
+(:func:`proves_the_runtime`), but for the few a skill's script calls from the
+sandbox, which holds none. Every call that cannot be verified is refused: a
+runtime that does not know where IAM is refuses, rather than lets through.
 """
 
 from __future__ import annotations
@@ -43,6 +45,8 @@ from __future__ import annotations
 import hashlib
 import ipaddress
 import os
+import re
+import secrets
 import time
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, Dict, Mapping, Optional, Tuple
@@ -574,11 +578,15 @@ FORWARDED_HEADERS = ("x-forwarded-for", "x-forwarded-host", "x-real-ip", "forwar
 class Proof:
     """Whether a call proved the runtime is its caller's, and how or why not.
 
-    ``kind`` when it did: ``pod`` (the machine itself: the companion, the
-    sandbox, a developer's localhost), ``sandbox-token`` (the runtime's own
-    Jupyter token, which its owner holds from the platform's record) or
-    ``owner`` (the owner's Datalayer token). ``reason`` when it did not, in a
-    word a log line can be counted by.
+    ``kind`` when it did: ``pod`` (the companion, by the pod's secret, on a
+    runtime that holds one), ``skill`` (a skill's script in the sandbox, on
+    one of the few routes it calls: :func:`is_a_skills_call`),
+    ``sandbox-token`` (the runtime's own Jupyter token, which its owner holds
+    from the platform's record), ``runtime-token`` (the token of this
+    process: :func:`runtime_token`) or ``owner`` (the owner's Datalayer
+    token). ``reason`` when it did not, in a word a log line can be counted
+    by: ``loopback-no-credential`` for a call from the machine itself that
+    sent none.
     """
 
     sufficient: bool
@@ -663,42 +671,179 @@ def _given_inference_token() -> str:
 
 
 def sandbox_token() -> str:
-    """The token of the runtime's own Jupyter sandbox, or ``""`` when it has none."""
+    """The token of the runtime's own Jupyter sandbox, or ``""`` when it has none.
+
+    What its sandbox manager holds; before the companion configures it, the
+    token of the sandbox the pod names at launch
+    (``AGENT_RUNTIMES_JUPYTER_SANDBOX``, whose ``token`` the platform gives
+    the owner with the runtime's record), so that a call signed with it is
+    the owner's from the runtime's first second.
+    """
     try:
         from agent_runtimes.services.code_sandbox_manager import (
             get_code_sandbox_manager,
         )
 
-        return str(get_code_sandbox_manager().get_status().get("jupyter_token") or "")
+        held = str(get_code_sandbox_manager().get_status().get("jupyter_token") or "")
     except Exception:  # noqa: BLE001 - no sandbox is no token
+        held = ""
+    if held:
+        return held
+    from urllib.parse import parse_qs, urlsplit
+
+    from agent_runtimes.apps.egress_principal import is_placeholder
+
+    named = (os.environ.get("AGENT_RUNTIMES_JUPYTER_SANDBOX") or "").strip()
+    try:
+        said = (parse_qs(urlsplit(named).query).get("token") or [""])[0].strip()
+    except ValueError:
         return ""
+    return "" if not said or is_placeholder(said) else said
+
+
+#: Where the runtime's own token is said, for a runtime started on a person's
+#: machine (`agent-runtimes serve`, the CLI's local runtime) or by a client
+#: that starts one and signs its calls with it.
+RUNTIME_TOKEN_ENV = "AGENT_RUNTIMES_TOKEN"
+
+_RUNTIME_TOKEN: Dict[str, str] = {}
+
+
+def runtime_token() -> str:
+    """The token this runtime's process takes as its own, and signs its calls to itself with.
+
+    :data:`RUNTIME_TOKEN_ENV` when it is set; else one drawn when first asked,
+    held in this process alone and never written to its environment, so that
+    nothing it starts inherits it. Whoever holds it proves the runtime is
+    theirs, as the owner does: `agent-runtimes serve` on a person's machine
+    prints it, and the runtime's own calls to itself send it
+    (:func:`runtime_auth_headers`).
+    """
+    held = _RUNTIME_TOKEN.get("token")
+    if held is None:
+        from agent_runtimes.apps.egress_principal import is_placeholder
+
+        said = (os.environ.get(RUNTIME_TOKEN_ENV) or "").strip()
+        held = said if said and not is_placeholder(said) else secrets.token_urlsafe(32)
+        _RUNTIME_TOKEN["token"] = held
+    return held
+
+
+def runtime_auth_headers() -> Dict[str, str]:
+    """The headers of the runtime's own calls to itself (:func:`runtime_token`)."""
+    return {"Authorization": f"Bearer {runtime_token()}"}
+
+
+#: The routes a skill's script calls on the runtime's loopback, from the
+#: sandbox, which holds no credential: by method, and the path's pattern.
+#: The few that are its owner's otherwise; each guards itself too (a browser's
+#: page refused, `refuse_unless_a_skill`; on a runtime held to its
+#: application's routes, only while code the agent was let run is running,
+#: `apps.visitors.OwnRoutesOnly` and `enforcement.code_is_running`).
+SKILL_ROUTES: Tuple[Tuple[frozenset, "re.Pattern[str]"], ...] = (
+    # The runtime's agents, to find its only one (the memory skills).
+    (frozenset({"GET"}), re.compile(r"^/api/v1/agents/?$")),
+    # An agent's memory (`memory_*` skills).
+    (
+        frozenset({"GET", "POST", "DELETE"}),
+        re.compile(r"^/api/v1/agents/[^/]+/memory(/search|/[^/]+)?/?$"),
+    ),
+    # Who the runtime runs for, and its agent's events (`whoami`, `events`).
+    (frozenset({"GET"}), re.compile(r"^/api/v1/owner/?$")),
+    (
+        frozenset({"GET", "POST", "PATCH"}),
+        re.compile(r"^/api/v1/owner/events(/[^/]+)?/?$"),
+    ),
+    # A file saved to a Space, a mail to the person, the owner's work published.
+    (frozenset({"POST"}), re.compile(r"^/api/v1/spaces/files/?$")),
+    (frozenset({"POST"}), re.compile(r"^/api/v1/configure/mail/?$")),
+    (frozenset({"POST"}), re.compile(r"^/api/v1/library/items/[^/]+/publish/?$")),
+    # The sandbox's tool calls (codemode's bindings).
+    (
+        frozenset({"GET", "POST", "PUT", "PATCH", "DELETE"}),
+        re.compile(r"^/api/v1/mcp/proxy/"),
+    ),
+)
+
+#: What a harness reaches on the loopback by a handle it was given, which the
+#: route asks (`routes.mcp_lent`, `routes.inference_relay`): its lent toolsets
+#: and its model relay. A harness's client may say fetch metadata (Node's
+#: fetch does), so a browser's headers are not read here: the handle, which
+#: only the harness holds, is the proof.
+HANDLE_ROUTES = re.compile(r"^/api/v1/(mcp/lent|inference/relay)/")
+
+
+def is_a_skills_call(
+    method: str, path: str, host: Optional[str], headers: Mapping[str, str]
+) -> bool:
+    """Whether a call without a credential is a skill's script in the sandbox.
+
+    On the loopback, passed on by no proxy, made by no browser (no ``Origin``,
+    no fetch metadata: :func:`from_a_browser`), to one of :data:`SKILL_ROUTES`;
+    or a harness on one of :data:`HANDLE_ROUTES`, whose route asks the handle
+    it was given. A page on the machine itself is no skill, whatever it calls.
+    """
+    if not is_loopback(host) or is_forwarded(headers):
+        return False
+    if HANDLE_ROUTES.match(path) is not None:
+        return True
+    if from_a_browser(headers):
+        return False
+    asked = "GET" if method == "HEAD" else method
+    return any(
+        asked in methods and pattern.match(path) is not None
+        for methods, pattern in SKILL_ROUTES
+    )
 
 
 async def proves_the_runtime(scope: Any, verifier: Optional[Any] = None) -> Proof:
     """Whether an HTTP request or a websocket handshake proves the runtime is its caller's.
 
-    The machine itself needs no token, as on every other route: a call from
-    loopback that no proxy passed on (the companion, the sandbox's own tool
-    calls, a developer's page on ``localhost``). Any other call presents a
-    token (:func:`credential_of`): the runtime's own Jupyter token, which the
-    platform gives its owner with the runtime's record, or a Datalayer token
-    the platform accepts for the account the runtime is assigned to. A token
-    of another kind (an application's visitor, embed, host or principal token)
+    A call presents a token (:func:`credential_of`), from the machine itself
+    as from anywhere else (decided 26 November 2026: on a person's own
+    machine a page in their browser reaches the loopback too): the runtime's
+    own Jupyter token, which the platform gives its owner with the runtime's
+    record; the token of this process (:func:`runtime_token`), which a local
+    runtime prints and its own calls to itself send; or a Datalayer token the
+    platform accepts for the account the runtime is assigned to. A token of
+    another kind (an application's visitor, embed, host or principal token)
     proves nothing here: those reach the application's routes, which verify
     them themselves.
+
+    Without a token, two callers on the loopback only: the companion, by the
+    pod's secret, on a runtime that holds one (`principal.pod_secret_is`);
+    and a skill's script in the sandbox, on the few routes it calls
+    (:func:`is_a_skills_call`). Any other call from the loopback without a
+    token proves nothing (``loopback-no-credential``).
     """
     import hmac
 
+    from agent_runtimes.apps.principal import holds_a_pod_secret, pod_secret_is
+
     headers = headers_of(scope)
     host = (scope.get("client") or (None,))[0]
-    if is_loopback(host) and not is_forwarded(headers):
-        return Proof(True, kind="pod")
     token = credential_of(scope, headers)
     if not token:
-        return Proof(False, reason="no-credential")
+        local = is_loopback(host) and not is_forwarded(headers)
+        if (
+            local
+            and holds_a_pod_secret()
+            and pod_secret_is(headers.get(POD_SECRET_HEADER.lower()))
+        ):
+            return Proof(True, kind="pod")
+        method = (
+            "WS" if scope.get("type") == "websocket" else (scope.get("method") or "GET")
+        )
+        if is_a_skills_call(method, scope.get("path") or "", host, headers):
+            return Proof(True, kind="skill")
+        return Proof(
+            False, reason="loopback-no-credential" if local else "no-credential"
+        )
     held = sandbox_token()
     if held and hmac.compare_digest(token.encode("utf-8"), held.encode("utf-8")):
         return Proof(True, kind="sandbox-token")
+    if hmac.compare_digest(token.encode("utf-8"), runtime_token().encode("utf-8")):
+        return Proof(True, kind="runtime-token")
     key = hashlib.sha256(token.encode()).hexdigest()
     remembered = _PROOFS.get(key)
     if remembered and remembered[1] > time.monotonic():
@@ -780,12 +925,40 @@ def without_sandbox_credentials(answer: Any) -> Any:
 async def sandbox_answer(connection: Any, answer: Any) -> Any:
     """An answer about the sandbox, as this caller may read it.
 
-    ``connection`` is a request or a websocket. Whole for a caller that proved
-    the runtime is theirs; without the sandbox's credentials for anybody else.
+    ``connection`` is a request or a websocket. Whole for a caller that may
+    read the sandbox's token (:func:`reads_the_sandbox_token`); without the
+    sandbox's credentials for anybody else.
     """
-    if (await proves_the_runtime(connection.scope)).sufficient:
+    if await reads_the_sandbox_token(connection.scope):
         return answer
     return without_sandbox_credentials(answer)
+
+
+async def reads_the_sandbox_token(scope: Any) -> bool:
+    """Whether a caller is told the sandbox's token in what it reads of the sandbox.
+
+    A caller that proved the runtime is theirs (:func:`proves_the_runtime`).
+    While the lock only logs (``log`` mode), also a call from the machine
+    itself that sent no token and is no stranger's page (a script, or a page
+    of this machine or of the platform: :func:`from_a_strangers_page`), as
+    before 1.8.9, so that a local page that does not sign its calls yet keeps
+    its kernel; its call is logged as ``loopback-no-credential``. In
+    ``enforce`` mode, never.
+    """
+    proof = await proves_the_runtime(scope)
+    if proof.sufficient:
+        return True
+    if proof.reason != "loopback-no-credential":
+        return False
+    from agent_runtimes.apps.visitors import ACCESS_MODE_SCOPE_KEY, access_mode
+
+    mode = scope.get(ACCESS_MODE_SCOPE_KEY)
+    if mode is None:
+        try:
+            mode = access_mode()
+        except ValueError:
+            return False
+    return mode == "log" and not from_a_strangers_page(headers_of(scope))
 
 
 def is_loopback_origin(origin: str) -> bool:

@@ -1715,18 +1715,18 @@ async def sandbox_status_ws(websocket: WebSocket, agent_id: str | None = None) -
     The token and kernel travel with the URL because the browser is a real
     client of this sandbox: the workspace's editors connect to that Jupyter
     server directly, and a URL on its own is an address they cannot use. The
-    token is in the frames of a caller that proved the runtime is theirs
-    (`callers.proves_the_runtime`: the machine itself, or the ``token`` query
-    parameter); for anybody else the key is not there.
+    token is in the frames of a caller that may read it
+    (`callers.reads_the_sandbox_token`: the ``token`` query parameter of the
+    owner or of the runtime); for anybody else the key is not there.
     """
     from agent_runtimes.apps.callers import (
-        proves_the_runtime,
+        reads_the_sandbox_token,
         without_sandbox_credentials,
     )
 
     # Decided once, at the handshake: the token and the address's own token
-    # travel only to a caller that proved the runtime is theirs.
-    proven = (await proves_the_runtime(websocket.scope)).sufficient
+    # travel only to a caller that may read them.
+    proven = await reads_the_sandbox_token(websocket.scope)
     await websocket.accept()
     logger.debug("Sandbox status WebSocket connected")
     status_queue = _subscribe_sandbox_status(agent_id)

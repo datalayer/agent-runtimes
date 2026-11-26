@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING, Optional
 import httpx
 from rich.text import Text
 
+from ..runtime_auth import runtime_headers
+
 if TYPE_CHECKING:
     from ..tux import CliTux
 
@@ -22,7 +24,7 @@ SHORTCUT = "escape x"
 async def execute(tux: "CliTux") -> Optional[str]:
     """Display context usage visualization."""
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(headers=runtime_headers()) as client:
             url = f"{tux.server_url}/api/v1/configure/agents/{tux.agent_id}/context-table?show_context=false"
             response = await client.get(url, timeout=10.0)
             response.raise_for_status()

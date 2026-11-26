@@ -429,6 +429,13 @@ def _start_agent_runtime_server(
 
     _os.environ.setdefault(STORE_VARIABLE, "file")
 
+    # The runtime's token, drawn before its process starts, which inherits
+    # it: its loopback is no proof of anybody, and the CLI signs its calls
+    # with it (`runtime_auth`).
+    from .runtime_auth import ensure_runtime_token
+
+    ensure_runtime_token()
+
     # Shared value so the child process can report the effective port
     port_value = multiprocessing.Value("i", 0)
 

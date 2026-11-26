@@ -20,11 +20,31 @@ Every route of a runtime is one of four kinds. A route that is not listed as one
 
 ## Proving the runtime is yours
 
-A call to an owner's route is answered when it is one of these:
+A call to an owner's route presents one of these tokens, **from the machine itself as from anywhere else**. Since 1.8.9 an address proves nothing: on a person's own machine a web page open in their browser reaches the runtime's loopback too, so a call from `127.0.0.1` without a token is no longer taken as the owner's.
 
-- **The machine itself.** A call from loopback that no proxy passed on: the companion beside the runtime, the sandbox's own tool calls, a developer's page on `localhost`. It needs no token.
 - **The owner's Datalayer token.** The token the person is signed in with (or an API key of theirs), which the platform accepts and which names the account the runtime is assigned to.
-- **The runtime's own token.** The token of the runtime's sandbox, which the platform gives the owner with the runtime's record (`token` in `GET /api/runtimes/v1/runtimes/{uid}`).
+- **The runtime's own token.** On a Datalayer runtime, the token of its sandbox, which the platform gives the owner with the runtime's record (`token` in `GET /api/runtimes/v1/runtimes/{uid}`). On a runtime started on your machine, the token it prints when it starts (see below).
+
+Two callers on the loopback need no token, each for what it alone does:
+
+- **The companion beside the runtime**, by the pod's secret, on a runtime launched for a deployment.
+- **A skill's script in the sandbox**, which holds no credential, on the few routes skills call: the runtime's agents (`GET /api/v1/agents`), an agent's memory (`/api/v1/agents/{agent_id}/memory`, `/memory/search`, `/memory/{memory_id}`), who the runtime runs for and its agent's events (`/api/v1/owner`, `/api/v1/owner/events`), `POST /api/v1/spaces/files`, `POST /api/v1/configure/mail`, `POST /api/v1/library/items/{uid}/publish`, and the sandbox's tool calls (`/api/v1/mcp/proxy/*`). Only from the loopback, passed on by no proxy, and made by no browser: a request that carries an `Origin` or fetch metadata is a page, and a page is no skill. A harness's lent toolsets and model relay (`/api/v1/mcp/lent/*`, `/api/v1/inference/relay/*`) are reached from the loopback by the handle the harness was given, which the route asks. On a runtime that serves an application, these answer only while code the agent was let run is running.
+
+### A runtime on your machine
+
+`agent-runtimes serve` prints the runtime's token once on the terminal when it starts (never to its log):
+
+```text
+This runtime's token (send it as 'Authorization: Bearer <token>', or as
+the 'token' query parameter of a websocket; set AGENT_RUNTIMES_TOKEN to
+choose it):
+
+    3q2-…
+
+    curl -H 'Authorization: Bearer 3q2-…' http://127.0.0.1:8765/api/v1/agents
+```
+
+Set `AGENT_RUNTIMES_TOKEN` before starting it to choose the token yourself, as a client that starts a runtime does: the `agent` CLI draws one for the runtime it starts and signs every call with it. Local scripts and tools that call a runtime must send its token like any other client.
 
 Send either token as a bearer:
 
@@ -41,7 +61,7 @@ wss://<runtime>/api/v1/configure/sandbox/ws?agent_id=default&token=<token>
 
 A token of another kind proves nothing on an owner's route: an application's visitor, embed, host or principal token reaches the application's routes, which verify it themselves, and nothing else.
 
-In TypeScript, `runtimeAuthHeaders(token)` and `runtimeSocketUrl(url, token)` (exported from the package's `hooks/ownRoutes`) build the header and the websocket's address, and send nothing when no token is held, which is right for a page on the same machine as its runtime. The hooks, adapters and panels that call a runtime take the token as an optional `authToken`.
+In TypeScript, `runtimeAuthHeaders(token)` and `runtimeSocketUrl(url, token)` (exported from the package's `hooks/ownRoutes`) build the header and the websocket's address, and send nothing when no token is held. The hooks, adapters and panels that call a runtime take the token as an optional `authToken`: a page on the same machine as its runtime passes the runtime's token too.
 
 ## What a caller that proved nothing is told of the sandbox
 
@@ -55,7 +75,7 @@ The lock runs in one of two modes, set by `AGENT_RUNTIMES_ACCESS_MODE` and read 
 
 | Mode | A call to an owner's route that proves nothing |
 |------|-----------------------------------------------|
-| `log` (the default) | Is served as before, and said in one line of the runtime's log and on one OpenTelemetry counter. |
+| `log` (the default) | Is served as before, and said in one line of the runtime's log and on one OpenTelemetry counter. A call from the machine itself without a token is still told the sandbox's token, unless it comes from another site's page. |
 | `enforce` | Is refused: `401` with a sentence over HTTP, a denial at the handshake for a websocket. |
 
 Any other value stops the runtime from starting: it never takes a setting it cannot read for either mode.
@@ -66,7 +86,7 @@ The log line names the route by its template, never by the path that was asked, 
 ACCESS unproven mode=log action=served method=GET route=/api/v1/agents/{agent_id}/memory reason=no-credential agent=Mozilla/5.0 origin=example.com referer=example.com source=ingress
 ```
 
-- `reason` is why the call proved nothing: `no-credential`, `token-refused` (the platform does not accept it), `another-account`, `application-token` (a token for the application's routes), `owner-unknown` (the runtime is not assigned yet) or `unverifiable` (the platform could not be asked).
+- `reason` is why the call proved nothing: `no-credential`, `loopback-no-credential` (a call from the machine itself that sent no token: a local client to give the runtime's token), `token-refused` (the platform does not accept it), `another-account`, `application-token` (a token for the application's routes), `owner-unknown` (the runtime is not assigned yet) or `unverifiable` (the platform could not be asked).
 - `agent`, `origin` and `referer` are the client's product and the hosts a browser names; `source` is where the call entered: `ingress` (a proxy passed it on), `cluster` or `loopback`.
 - The line is written at most once a minute for one route, reason and caller. The counter `agent_runtimes.access.unproven` counts every call, with the same attributes.
 
