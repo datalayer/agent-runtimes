@@ -67,7 +67,14 @@ class _Manager:
 
 @pytest.fixture
 def runtime(monkeypatch: pytest.MonkeyPatch) -> Iterator[Dict[str, Any]]:
-    """A runtime running ENABLED, its configs by server, no approval given yet."""
+    """
+    A runtime running ENABLED, its configs by server, no approval given yet.
+
+    Yields
+    ------
+    Dict[str, Any]
+        Its configs and enabled tools, by server.
+    """
     configs = _configs()
     enabled = {server: list(tools) for server, tools in ENABLED.items()}
     monkeypatch.setattr(

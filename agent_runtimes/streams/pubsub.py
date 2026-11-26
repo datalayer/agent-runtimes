@@ -346,8 +346,11 @@ def _get_agent_mcp_approved_tools_by_server(
 def get_agent_read_only_mcp_tools_by_server(
     agent_id: str | None,
 ) -> dict[str, list[str]]:
-    """The enabled MCP tools that run without asking by default, by server:
-    those the catalogue classes read only, on a server it vouches for."""
+    """
+    The enabled MCP tools that run without asking by default, by server.
+
+    Those the catalogue classes read only, on a server it vouches for.
+    """
     from agent_runtimes.guardrails.read_only_tools import read_only_tools_by_server
 
     enabled_by_server = _get_agent_mcp_enabled_tools_by_server(agent_id)
