@@ -9,6 +9,14 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
+- **1.9.1** (27 November 2026), every application's session in its opener's list:
+  - **a session a run starts names its agent**: a hosted page's chat sends its first turn before its session is opened, and the record started the session with no facts, an agent of `""`; ai-agents then listed it nowhere, not in its opener's Open sessions nor as theirs to read. The run now writes the live session's facts, else its application's agent, for every application (found on r1 with crop-monitoring).
+  - **Poppy in the chat**: the Personal Agent Protocol's tools read *Poppy <action> · <company>*, their ids kept, and what the company answered is drawn under the row: products as cards, a quote or a test order with its total.
+  - **the MCP and skills dots beside Send are off unless a host asks**: the footer carries them.
+  - **the MCP menu opens at once**: a server's tools are folded behind *Show N tools*.
+  - **the canvas editor's floating Controls start beside the editor**, on its right, the editor narrowed by its room.
+  - the inline embed mounts with its prompt unfocused; *The user's own* in every label; the plugins dialog scrolls once.
+
 - **1.9.0** (27 November 2026), no more `example-` and `demo-` specs:
   - **every agent and application is a plain spec for one work** (agentspecs 0.2.0; the user, 27 November 2026): the code, the examples, the capacity plugins, the tests and the docs name the new ids, and the old ones fail, with no alias. The two base agents are `chat-agent` (was example-simple: the default cloud agent, the Studio's blank application) and `blank` (was example-blank: the Online Shop's and a Python application's). The protocol and capacity agents behind the examples take the work they do (`world-clock`, `plan-tracker`, `web-researcher`, `web-researcher-codemode`, `python-runner` and `python-runner-<variant>`, `approved-automation`, `text-normalizer`, `document-writer`, `deck-writer`, `arena-player`, `coding-agent-<harness>`, and the others: the map is agentspecs 0.2.0's changelog); the no-codemode plugin runs `web-researcher` (codemode off, carried from example-no-codemode); the capacities table in the Applications docs names the agent each plugin mounts. The Stages' member deployments are `<app>-stage` (a slug is a public address). The visitors' try-outs of the seed agents are `<agent>-tryout`, the Demo Shop is the Online Shop (`online-shop`, its `online-shop-*` tools in `agent_runtimes.tools.online_shop`, the Shopper's link `ask_online_shop`). `make specs-sandbox-variants` writes the Python Runners. Tests: the touched suites (Python and TypeScript), the evals golden reports regenerated.
 
