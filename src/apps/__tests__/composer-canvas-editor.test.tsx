@@ -39,6 +39,7 @@ import {
 } from '../composer/AppCanvasEditor';
 import {
   besideEditor,
+  besideFullEditor,
   clampDock,
   DOCK_COOKIE,
   keepDock,
@@ -973,6 +974,20 @@ describe('the controls dock (asked 14 October 2026)', () => {
     expect(besideEditor(2000, 1100)).toEqual({ editorWidth: 1100, x: 1566 });
     // The home page's frame: the editor gives way so the dock fits, and stays centred.
     expect(besideEditor(1618, 1100)).toEqual({ editorWidth: 850, x: 1250 });
+  });
+
+  it('floats beside a full editor on its right, the editor narrowed by its room, and always starts there (27 November 2026)', () => {
+    // 360 wide, 16 from the editor, 8 from the frame's edge.
+    expect(besideFullEditor(1400)).toEqual({ editorWidth: 1016, x: 1032 });
+    // Too narrow for both: the editor whole, the dock over its right-hand side.
+    expect(besideFullEditor(800)).toEqual({ editorWidth: 800, x: 432 });
+    const shell = readFileSync(
+      join(__dirname, '..', 'composer', 'DesignerShell.tsx'),
+      'utf8',
+    );
+    // Left floating somewhere: the next visit starts it beside the editor again; the pin floats it there too.
+    expect(shell).toContain('kept.floating ||');
+    expect(shell).toContain('onDock(true, null);');
   });
 
   it('stays in the designer, whatever it is dragged to', () => {

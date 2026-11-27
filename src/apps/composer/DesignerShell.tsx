@@ -299,6 +299,26 @@ export function besideEditor(
   return { editorWidth, x };
 }
 
+/**
+ * An editor as wide as its frame, with its dock floating: narrowed on its right
+ * by a dock's room, the dock beside it there (the user, 27 November 2026: "show
+ * the dock at the right of the canvas editor"). A frame too narrow for both
+ * keeps the editor whole and the dock over its right-hand side.
+ */
+export function besideFullEditor(frameWidth: number): {
+  editorWidth: number;
+  x: number;
+} {
+  const room = DOCK_WIDTH + DOCK_GAP + DOCK_MARGIN;
+  if (frameWidth - room < 480) {
+    return {
+      editorWidth: frameWidth,
+      x: Math.max(DOCK_MARGIN, frameWidth - DOCK_WIDTH - DOCK_MARGIN),
+    };
+  }
+  return { editorWidth: frameWidth - room, x: frameWidth - room + DOCK_GAP };
+}
+
 /** The dock kept inside the designer's frame, whatever it is dragged to or the frame becomes. */
 export function clampDock(
   position: DockPosition,
@@ -587,8 +607,8 @@ export function DesignerDock({
     if (floating) {
       onDock(false, position);
     } else {
-      // Floated where it stood: over the surface's right-hand side.
-      onDock(true, clampDock(at(), measure()));
+      // Floated beside the editor, on its right: no position, the shell places it (the user, 27 November 2026).
+      onDock(true, null);
     }
   };
 
@@ -749,14 +769,23 @@ export function DesignerShell({
   const [dock, setDock] = useState(
     () => kept ?? { floating: false, position: null },
   );
+  // Floating, it always starts beside the editor on its right, wherever it was left (the user, 27 November
+  // 2026); the cookie keeps whether it floats, and where it was moved to until the next visit.
   const [follows, setFollows] = useState(
-    () => kept === null || (initialDock === 'right' && !dock.floating),
+    () =>
+      kept === null ||
+      kept.floating ||
+      (initialDock === 'right' && !dock.floating),
   );
   const onDock = useCallback(
     (floating: boolean, position: DockPosition | null) => {
-      // Moved, floated or docked by the reader: it no longer follows the editor.
-      setFollows(false);
-      setDock({ floating, position });
+      // Floated without a place (its header's pin): beside the editor, following it. Moved or docked: no longer.
+      setFollows(floating && position === null);
+      setDock(previous =>
+        floating && position === null
+          ? { ...previous, floating }
+          : { floating, position },
+      );
       keepDock(floating, position);
     },
     [],
@@ -769,7 +798,7 @@ export function DesignerShell({
     }
     const x = contentWidth
       ? besideEditor(frameWidth, contentWidth).x
-      : Math.max(DOCK_MARGIN, frameWidth - DOCK_WIDTH - DOCK_MARGIN);
+      : besideFullEditor(frameWidth).x;
     setDock(previous =>
       previous.floating &&
       previous.position?.x === x &&
@@ -781,9 +810,12 @@ export function DesignerShell({
   // Floating, the dock leaves the grid: the surface takes the whole width — a spread editor its own width, less
   // what a dock needs on either side of it.
   const floating = dock.floating && dock.position !== null;
+  // Floating, the editor leaves the dock its room on the right: a spread editor centred, a full one narrowed.
   const editorWidth =
-    contentWidth && floating && frameWidth
-      ? besideEditor(frameWidth, contentWidth).editorWidth
+    floating && frameWidth
+      ? contentWidth
+        ? besideEditor(frameWidth, contentWidth).editorWidth
+        : besideFullEditor(frameWidth).editorWidth
       : contentWidth;
   return (
     // The frame a floating dock ranges over; the editor in it, centred at its own width when it has one.
@@ -806,7 +838,7 @@ export function DesignerShell({
         gap={3}
         alignItems="start"
         maxWidth={editorWidth}
-        mx={editorWidth ? 'auto' : undefined}
+        mx={contentWidth ? 'auto' : undefined}
       >
         <Box minWidth={0}>
           {caption}
