@@ -120,6 +120,18 @@ async def test_a_session_is_sent_with_what_it_did():
     assert "woken_by" not in body["entries"][0]["payload"]
 
 
+async def test_a_session_a_run_opens_names_its_applications_agent():
+    """A hosted page's chat runs before its session is opened: the record's
+    ``session`` entry still names the agent, without its version, or the
+    record lists the session nowhere (27 November 2026)."""
+    agent, sent = recorded(app(["conversations"]), "Hello.")
+    await agent.run("hi")
+    opened = sent[0]["entries"][0]
+    assert opened["kind"] == "session"
+    assert opened["payload"]["agent"] == "cog-crawler"
+    assert opened["payload"]["state"] == "open"
+
+
 async def test_a_test_session_says_it_is_a_test_and_of_which_launch():
     agent, sent = recorded(
         app(["outputs"]),

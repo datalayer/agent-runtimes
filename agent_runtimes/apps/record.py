@@ -1638,6 +1638,23 @@ class AppRecordCapability(AbstractCapability[Any]):
     def _key(self, ctx: RunContext[Any]) -> str:
         return str(ctx.run_id or ctx.conversation_id or "run")
 
+    def _facts_of(self, session: str) -> Dict[str, Any]:
+        """The session's shape when a run is the first to start it.
+
+        The live session's own when the runtime holds one; else its
+        application's agent, without its version. A run that came before
+        its session was opened (a hosted page's chat sends its first turn
+        at once) wrote a ``session`` entry naming an agent of ``""``, and
+        the record lists such a session nowhere: not in its opener's
+        sessions, not as theirs to read (found on r1, 27 November 2026).
+        """
+        from agent_runtimes.apps.sessions import _SESSIONS
+
+        live = _SESSIONS.get(session)
+        if live is not None:
+            return live.facts()
+        return {"agent": str(self.recorder.app.agent or "").split(":", 1)[0]}
+
     @staticmethod
     def _asked(ctx: RunContext[Any]) -> str:
         """What the person asked in this run: its prompt, else the last one in its messages."""
@@ -1664,7 +1681,7 @@ class AppRecordCapability(AbstractCapability[Any]):
         spoken = heard()
         if spoken is not None:
             self._spoken[self._key(ctx)] = spoken.as_payload()
-        self.recorder.start(session)
+        self.recorder.start(session, facts=self._facts_of(session))
         self.recorder.ran(session)
         # A person's Approve or Dismiss on a recommendation's card arrives as
         # their turn: kept in the record before the agent reads it.

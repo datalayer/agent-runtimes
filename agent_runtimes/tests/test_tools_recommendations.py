@@ -338,9 +338,9 @@ async def test_the_record_keeps_the_press_before_the_agent_reads_the_turn(
     session.added.clear()
 
     class Recorder(_Recorder):
-        app = SimpleNamespace(id="aws-steward-agent")
+        app = SimpleNamespace(id="aws-steward-agent", agent="worker-steward-aws:0.0.1")
 
-        def start(self, uid: str) -> None:
+        def start(self, uid: str, **_: object) -> None:
             pass
 
         def ran(self, uid: str) -> None:
