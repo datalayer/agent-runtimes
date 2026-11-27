@@ -63,7 +63,7 @@ AGENT = "accounting"
 DEPLOYMENT = "dep-7"
 OWNER = "owner-1"
 OUTSIDE = ("203.0.113.9", 50000)
-STABLE = "https://r1.example/api/ai-agents/v1/apps/deployments/at/demo-accounting/a2a"
+STABLE = "https://r1.example/api/ai-agents/v1/apps/deployments/at/accounting-stage/a2a"
 
 #: Tokens as IAM would verify them: the owner's own, the key IAM mints of the
 #: owner for its always-on runtime (a person's, the owner's uid), another person's,

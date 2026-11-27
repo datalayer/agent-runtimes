@@ -361,7 +361,7 @@ describe('a visitor’s application', () => {
 
   it('says, in ai-agents’ words, an address a visitor may not talk to, and the token it takes', async () => {
     const read = await readVisitorApp({
-      app: 'demo-accounting',
+      app: 'accounting-stage',
       fetcher: answer(
         200,
         opened(

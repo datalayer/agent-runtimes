@@ -13,7 +13,7 @@
  * - **an example Datalayer keeps warm for visitors** (`web-research`,
  *   `customer-interview`): its Appspec from the catalogue this bundle
  *   carries; the visitors' runtime answers its id;
- * - **an application at its address** (`demo-accounting`): ai-agents'
+ * - **an application at its address** (`accounting-stage`): ai-agents'
  *   `GET /apps/deployments/at/<slug>` without a token says what its page is
  *   drawn from — the Appspec of the version it runs — and whether somebody
  *   signed out may talk to it (`session.opens`); the visitors' runtime
