@@ -2512,8 +2512,8 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
     mcpStatusData: mcpStatus,
     showMcpMenu: config?.showMcpMenu ?? true,
     showSkillsMenu: config?.showSkillsMenu ?? true,
-    showInlineEquipmentMenus:
-      config?.showInlineEquipmentMenus ?? !anonymousConfig,
+    // The footer alone, unless a host asks for the dots (27 November 2026).
+    showInlineEquipmentMenus: config?.showInlineEquipmentMenus ?? false,
     skills: skillsQuery.data?.skills ?? [],
     skillsLoading: skillsQuery.isLoading,
     enabledSkills,

@@ -1214,3 +1214,22 @@ describe('a server’s tools, folded', () => {
     expect(document.querySelector('[data-equipment-tool]')).toBeNull();
   });
 });
+
+describe('the dots beside Send, or the footer (27 November 2026)', () => {
+  it('draws the MCP and skills dots only when a host asks: the footer carries them', async () => {
+    const { readFileSync } = await import('fs');
+    const { join } = await import('path');
+    const prompt = readFileSync(
+      join(__dirname, '..', 'prompt', 'InputPrompt.tsx'),
+      'utf8',
+    );
+    expect(prompt).toContain('showInlineEquipmentMenus = false,');
+    const chat = readFileSync(
+      join(__dirname, '..', '..', 'apps', 'plugins', 'chat', 'ChatView.tsx'),
+      'utf8',
+    );
+    expect(chat).toContain(
+      'showInlineEquipmentMenus: config?.showInlineEquipmentMenus ?? false,',
+    );
+  });
+});

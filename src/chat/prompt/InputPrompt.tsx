@@ -412,7 +412,9 @@ export function InputPrompt({
   showToolsMenu,
   showMcpMenu = showToolsMenu,
   showSkillsMenu,
-  showInlineEquipmentMenus = true,
+  // Off unless asked: the footer carries MCP and skills (the user, 27 November 2026: "don't show the
+  // mcp nor skill indicators in the input prompt, show them only in the footer").
+  showInlineEquipmentMenus = false,
   showSuggestionsMenu = true,
   suggestions,
   codemodeEnabled,

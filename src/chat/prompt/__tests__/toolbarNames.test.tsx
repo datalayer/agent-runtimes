@@ -116,6 +116,8 @@ describe('the composer’s toolbar, read by name', () => {
         {...APP_COMPOSER}
         showMcpMenu
         showSkillsMenu
+        // The dots, asked for: off by default since 27 November 2026.
+        showInlineEquipmentMenus
         mcpStatusData={STARTING}
         skills={[{ id: 'pdf', name: 'PDF' }] as never}
         enabledSkills={new Set(['pdf'])}
@@ -223,7 +225,13 @@ describe('the composer’s toolbar, read by name', () => {
   });
 
   it('stands its pulsing dot still under reduced motion', () => {
-    draw(<InputPrompt {...APP_COMPOSER} mcpStatusData={STARTING} />);
+    draw(
+      <InputPrompt
+        {...APP_COMPOSER}
+        showInlineEquipmentMenus
+        mcpStatusData={STARTING}
+      />,
+    );
     const css = styles();
     expect(css).toMatch(/equipment-pulse/);
     // styled-components 5 writes the prefixed property first, 6 writes it
