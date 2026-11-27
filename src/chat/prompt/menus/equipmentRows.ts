@@ -36,6 +36,11 @@ import type { SkillInfo } from '../../../types/skills';
 import { SKILLS_CATALOG } from '../../../specs/skills';
 
 export const EQUIPMENT_WORDS = {
+  /** A server's folded tools, on the button that shows them. */
+  toolsShow: (count: number, on: number): string =>
+    `Show ${count} ${count === 1 ? 'tool' : 'tools'}${on === count ? '' : ` (${on} on)`}`,
+  /** On the button that folds them again. */
+  toolsHide: 'Hide the tools',
   switches:
     'What this conversation uses: switch a server, its tools or a skill on or off.',
   declared:

@@ -557,6 +557,10 @@ describe('a tool that only reads', () => {
       </ThemeProvider>,
     );
     fireEvent.click(screen.getByRole('button', { name: /^MCP servers — / }));
+    // A server's tools are folded until shown.
+    document
+      .querySelectorAll('[data-equipment-tools-toggle]')
+      .forEach(button => fireEvent.click(button));
     expect(screen.getByText(EQUIPMENT_WORDS.readOnly.runs)).toBeTruthy();
     fireEvent.click(
       document.querySelector(
@@ -587,6 +591,10 @@ describe('a tool that only reads', () => {
       </ThemeProvider>,
     );
     fireEvent.click(screen.getByRole('button', { name: /^MCP servers — / }));
+    // A server's tools are folded until shown.
+    document
+      .querySelectorAll('[data-equipment-tools-toggle]')
+      .forEach(button => fireEvent.click(button));
     expect(screen.getByText(EQUIPMENT_WORDS.readOnly.asks)).toBeTruthy();
   });
 });
@@ -611,6 +619,10 @@ describe('the switches', () => {
       </ThemeProvider>,
     );
     fireEvent.click(screen.getByRole('button', { name: /^MCP servers — / }));
+    // A server's tools are folded until shown.
+    document
+      .querySelectorAll('[data-equipment-tools-toggle]')
+      .forEach(button => fireEvent.click(button));
     const press = (name: string) =>
       fireEvent.click(
         document.querySelector(
@@ -687,6 +699,10 @@ describe('a refused switch', () => {
       </ThemeProvider>,
     );
     fireEvent.click(screen.getByRole('button', { name: /^MCP servers — / }));
+    // A server's tools are folded until shown.
+    document
+      .querySelectorAll('[data-equipment-tools-toggle]')
+      .forEach(button => fireEvent.click(button));
     expect(screen.getByRole('alert').textContent).toBe(
       'kiwi has no tool book.',
     );
@@ -705,6 +721,10 @@ describe('a refused switch', () => {
       </ThemeProvider>,
     );
     fireEvent.click(screen.getByRole('button', { name: /^MCP servers — / }));
+    // A server's tools are folded until shown.
+    document
+      .querySelectorAll('[data-equipment-tools-toggle]')
+      .forEach(button => fireEvent.click(button));
     fireEvent.click(
       document.querySelector(
         '[data-equipment-switch="server:kiwi"] button',
@@ -1162,5 +1182,35 @@ describe('the skills the generated specs name', () => {
       expect(spec.description.length, id).toBeGreaterThan(20);
       expect(spec.icon && spec.emoji, id).toBeTruthy();
     }
+  });
+});
+
+describe('a server’s tools, folded', () => {
+  it('opens with the servers only, its tools drawn once shown, and folds them again', () => {
+    render(
+      <ThemeProvider>
+        <EquipmentMenu
+          kind="servers"
+          trigger="button"
+          lists={equipmentLists({
+            equipment: { source: 'live', ...TRAVELLER },
+            mcpStatus: STATUS,
+          })}
+          switches={switches([])}
+        />
+      </ThemeProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^MCP servers — / }));
+    expect(document.querySelector('[data-equipment-tool]')).toBeNull();
+    const toggle = document.querySelector(
+      '[data-equipment-tools-toggle]',
+    ) as HTMLElement;
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(toggle.textContent).toMatch(/^Show \d+ tools?/);
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(document.querySelector('[data-equipment-tool]')).not.toBeNull();
+    fireEvent.click(toggle);
+    expect(document.querySelector('[data-equipment-tool]')).toBeNull();
   });
 });

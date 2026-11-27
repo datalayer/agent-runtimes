@@ -288,6 +288,11 @@ function ServerBlock({
   // Without its tools listed, the server is on unless switched off whole.
   const allOn = names.length > 0 ? toolsOn === names.length : row.on;
   const marks = marksOfMcpServer({ id: row.id });
+  // Its tools folded until asked for: a server of a hundred tools drew two
+  // switches each before the overlay could open, about a second (the user,
+  // 27 November 2026); the server's own switch still sets them all.
+  const [toolsShown, setToolsShown] = useState(false);
+  const toolsId = `${labelId}-tools`;
   return (
     <Box
       role="group"
@@ -321,52 +326,70 @@ function ServerBlock({
           }
         />
       </Box>
-      {row.tools.map(tool => {
-        const toolId = `${labelId}-tool-${tool.name}`;
-        return (
-          <Box
-            key={tool.name}
-            sx={{ ...ROW_SX, pl: 5 }}
-            data-equipment-tool={`${row.id}:${tool.name}`}
+      {row.tools.length > 0 ? (
+        <Box px={3} pb={2} pl={5}>
+          <Button
+            variant="invisible"
+            size="small"
+            aria-expanded={toolsShown}
+            aria-controls={toolsId}
+            onClick={() => setToolsShown(shown => !shown)}
+            data-equipment-tools-toggle={row.id}
           >
-            <Box flex={1} minWidth={0}>
-              <Text id={toolId} sx={{ fontSize: 1 }}>
-                {tool.name}
-              </Text>
-              <Line>{tool.description}</Line>
-              {tool.readOnly ? (
-                <Line>
-                  {tool.approved
-                    ? EQUIPMENT_WORDS.readOnly.runs
-                    : EQUIPMENT_WORDS.readOnly.asks}
-                </Line>
-              ) : null}
+            {toolsShown
+              ? EQUIPMENT_WORDS.toolsHide
+              : EQUIPMENT_WORDS.toolsShow(row.tools.length, toolsOn)}
+          </Button>
+        </Box>
+      ) : null}
+      <Box id={toolsId} hidden={!toolsShown}>
+        {(toolsShown ? row.tools : []).map(tool => {
+          const toolId = `${labelId}-tool-${tool.name}`;
+          return (
+            <Box
+              key={tool.name}
+              sx={{ ...ROW_SX, pl: 5 }}
+              data-equipment-tool={`${row.id}:${tool.name}`}
+            >
+              <Box flex={1} minWidth={0}>
+                <Text id={toolId} sx={{ fontSize: 1 }}>
+                  {tool.name}
+                </Text>
+                <Line>{tool.description}</Line>
+                {tool.readOnly ? (
+                  <Line>
+                    {tool.approved
+                      ? EQUIPMENT_WORDS.readOnly.runs
+                      : EQUIPMENT_WORDS.readOnly.asks}
+                  </Line>
+                ) : null}
+              </Box>
+              <Box display="flex" alignItems="center" gap={3}>
+                <Switch
+                  word={EQUIPMENT_WORDS.enabled}
+                  name={`tool:${row.id}:${tool.name}`}
+                  checked={tool.enabled}
+                  labelledBy={toolId}
+                  locked={row.locked}
+                  onToggle={() =>
+                    switches.onToggleMcpTool(row.switchId, tool.name)
+                  }
+                />
+                <Switch
+                  word={EQUIPMENT_WORDS.approved}
+                  name={`tool-approval:${row.id}:${tool.name}`}
+                  checked={tool.approved}
+                  labelledBy={toolId}
+                  locked={row.locked}
+                  onToggle={() =>
+                    switches.onToggleMcpToolApproval(row.switchId, tool.name)
+                  }
+                />
+              </Box>
             </Box>
-            <Box display="flex" alignItems="center" gap={3}>
-              <Switch
-                word={EQUIPMENT_WORDS.enabled}
-                name={`tool:${row.id}:${tool.name}`}
-                checked={tool.enabled}
-                labelledBy={toolId}
-                locked={row.locked}
-                onToggle={() =>
-                  switches.onToggleMcpTool(row.switchId, tool.name)
-                }
-              />
-              <Switch
-                word={EQUIPMENT_WORDS.approved}
-                name={`tool-approval:${row.id}:${tool.name}`}
-                checked={tool.approved}
-                labelledBy={toolId}
-                locked={row.locked}
-                onToggle={() =>
-                  switches.onToggleMcpToolApproval(row.switchId, tool.name)
-                }
-              />
-            </Box>
-          </Box>
-        );
-      })}
+          );
+        })}
+      </Box>
     </Box>
   );
 }
