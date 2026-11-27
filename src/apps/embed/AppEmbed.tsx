@@ -946,6 +946,9 @@ export function AppEmbed({
         {...(session.thread ? { thread: session.thread } : {})}
         // The visitor's language, when the host says it.
         {...(language ? { language } : {})}
+        // In someone else's page: the caret stays where the reader is, or
+        // the page scrolls down to the embed as it loads (the user, 27 November 2026).
+        autoFocusPrompt={false}
       />
     </>
   );
