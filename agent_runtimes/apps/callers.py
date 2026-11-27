@@ -148,19 +148,19 @@ def is_loopback(host: Optional[str]) -> bool:
         return False
 
 
-#: The header the pod's companion is told by, on a runtime launched for a deployment.
+#: The header the pod's companion is told by, on any runtime it gave its secret.
 POD_SECRET_HEADER = "X-Datalayer-Pod-Secret"
 
 
 def is_the_pod(host: Optional[str], secret: Optional[str]) -> bool:
     """Whether a call comes from the pod itself.
 
-    On a runtime launched for a deployment an address proves nothing: its
-    sandbox, and a harness in this container, share the pod's loopback. There
-    the pod is the companion, known by the secret it gave with the runtime's
-    proof (`principal.give_runtime_proof`), held by these two alone. On any
-    other runtime nothing here acts as anybody but the person whose it is, and
-    loopback is the machine itself.
+    In a pod an address proves nothing: the sandbox, and a harness in this
+    container, share the pod's loopback. There the pod is the companion, known
+    by the secret it gave as it started (`principal.give_pod_secret`), held by
+    these two alone, a person's own runtime as a deployment's. On a runtime
+    that holds none (no companion beside it: a developer's own, or a pod's
+    before its companion gave it), loopback is the machine itself.
 
     Parameters
     ----------
@@ -581,7 +581,8 @@ class Proof:
     ``kind`` when it did: ``pod`` (the companion, by the pod's secret, on a
     runtime that holds one), ``skill`` (a skill's script in the sandbox, on
     one of the few routes it calls: :func:`is_a_skills_call`),
-    ``sandbox-token`` (the runtime's own Jupyter token, which its owner holds
+    ``handle`` (a harness on the loopback, on a route that asks the handle
+    it was given: :data:`HANDLE_ROUTES`), ``sandbox-token`` (the runtime's own Jupyter token, which its owner holds
     from the platform's record), ``runtime-token`` (the token of this
     process: :func:`runtime_token`) or ``owner`` (the owner's Datalayer
     token). ``reason`` when it did not, in a word a log line can be counted
@@ -1093,6 +1094,10 @@ async def proves_the_runtime(scope: Any, verifier: Optional[Any] = None) -> Proo
     proves nothing here: those reach the application's routes, which verify
     them themselves.
 
+    A harness on the loopback sends the handle it was given as it would a
+    token, to the few routes that ask it themselves (:data:`HANDLE_ROUTES`):
+    those are passed to the route, the handle unread here.
+
     Without a token, two callers on the loopback only: the companion, by the
     pod's secret, on a runtime that holds one (`principal.pod_secret_is`);
     and a skill's script in the sandbox, on the few routes it calls
@@ -1105,6 +1110,13 @@ async def proves_the_runtime(scope: Any, verifier: Optional[Any] = None) -> Proo
 
     headers = headers_of(scope)
     host = (scope.get("client") or (None,))[0]
+    path = scope.get("path") or ""
+    if HANDLE_ROUTES.match(path) is not None and is_a_skills_call(
+        scope.get("method") or "GET", path, host, headers
+    ):
+        # A harness sends its handle as it would a token: the route asks it
+        # (`routes.inference_relay`, `routes.mcp_lent`), never IAM.
+        return Proof(True, kind="handle")
     token = credential_of(scope, headers)
     if not token:
         local = is_loopback(host) and not is_forwarded(headers)

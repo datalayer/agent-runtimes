@@ -53,10 +53,12 @@ the kernel, where the code the model writes runs (`kernel_holds_owner_secrets`).
 
 **The pod is not its loopback.** Code the model writes runs in the sandbox, and a
 harness's commands in this very container, and both reach this server on
-127.0.0.1. So a runtime launched for a deployment is given a secret with its
-proof, by the companion, and from then on the pod is who sends it
-(`callers.is_the_pod`). It is given before anything but the platform's images
-runs in the pod, is written nowhere, and is in no environment. Its containers
+127.0.0.1. So every runtime its companion runs beside, a person's own as a
+deployment's, is given a secret by the companion (`give_pod_secret`), and from
+then on the pod is who sends it (`callers.is_the_pod`). It is given before
+anything but the platform's images runs in the pod (as the companion starts, on
+a pooled pod before it is anybody's), is written nowhere, and is in no
+environment. Its containers
 do not share processes, so the sandbox cannot read this process; a harness here
 runs as the same user, so the process is first made undumpable
 (`_keep_from_this_user`): no process of that user reads its memory or its
@@ -110,6 +112,7 @@ __all__ = [
     "ensure_principal_token",
     "forget_principal_token",
     "gateway_toolsets_of_the_run",
+    "give_pod_secret",
     "give_principal_token",
     "give_runtime_proof",
     "holds_principal_token",
@@ -239,20 +242,55 @@ def _keep_from_this_user() -> None:
 
 
 def holds_a_pod_secret() -> bool:
-    """Whether this runtime holds the pod's secret: one launched for a deployment, once given its proof."""
+    """Whether this runtime holds the pod's secret: once its companion gave it (`give_pod_secret`)."""
     return _PROOF.get("pod_secret") is not None
 
 
 def pod_secret_is(given: Optional[str]) -> bool:
     """Whether ``given`` is the pod's secret, on a runtime that holds one.
 
-    A runtime launched for no deployment holds none, and answers ``True``:
-    see `callers.is_the_pod`.
+    A runtime that holds none (no companion gave it one yet, or none runs
+    beside it: a developer's own) answers ``True``: see `callers.is_the_pod`.
     """
     held = _PROOF.get("pod_secret")
     if held is None:
         return True
     return hmac.compare_digest((given or "").encode("utf-8"), held.encode("utf-8"))
+
+
+def give_pod_secret(pod_secret: str) -> None:
+    """
+    Keep the secret this runtime's companion is told by from now on, on any
+    runtime a companion runs beside (decided 27 November 2026).
+
+    A person's own runtime was given none, so its companion's calls were the
+    loopback's alone, which proves nothing (`callers.proves_the_runtime`).
+    The companion gives it as it starts, on a pooled pod before it is anybody's
+    (before anything but the platform's images runs in it), and again first in
+    its start hooks. Given once: the same secret again is no change, another
+    is refused.
+
+    Parameters
+    ----------
+    pod_secret : str
+        What the companion holds, and from now on sends on every call.
+
+    Raises
+    ------
+    ValueError
+        When none is given, another is held, or this process cannot be kept
+        from its user.
+    """
+    secret = (pod_secret or "").strip()
+    if not secret:
+        raise ValueError("No pod secret was given.")
+    held = _PROOF.get("pod_secret")
+    if held is not None:
+        if not hmac.compare_digest(secret.encode("utf-8"), held.encode("utf-8")):
+            raise ValueError("This runtime holds another pod secret.")
+        return
+    _keep_from_this_user()
+    _PROOF["pod_secret"] = secret
 
 
 def give_runtime_proof(proof: str, pod_secret: str) -> str:
@@ -291,10 +329,9 @@ def give_runtime_proof(proof: str, pod_secret: str) -> str:
     secret = (pod_secret or "").strip()
     if not secret:
         raise ValueError("A proof comes with the pod's secret.")
-    _keep_from_this_user()
+    give_pod_secret(secret)
     _PROOF.update(
         token=token,
-        pod_secret=secret,
         deployment_uid=deployment,
         ai_agents_url=(DatalayerURLs.from_environment().ai_agents_url or "").rstrip(
             "/"
