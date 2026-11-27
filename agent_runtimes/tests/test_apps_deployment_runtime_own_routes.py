@@ -67,6 +67,8 @@ OWN = {
     ("DELETE", "/api/v1/apps/a2a"),
     ("POST", "/api/v1/apps/principal"),
     ("PUT", "/api/v1/apps/runtime-proof"),
+    # The pod's secret, which only the pod gives (refused to anybody else, by itself).
+    ("PUT", "/api/v1/apps/pod-secret"),
     ("GET", "/api/v1/apps/agents/{agent}/deployment"),
     # What it runs with, which its composer lists.
     ("GET", "/api/v1/apps/agents/{agent}/equipment"),
