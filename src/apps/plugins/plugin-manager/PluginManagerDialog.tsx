@@ -93,12 +93,8 @@ export function PluginManagerDialog({
       position={{ narrow: 'fullscreen', regular: 'center', wide: 'center' }}
       returnFocusRef={returnFocusRef as RefObject<HTMLElement> | undefined}
     >
-      <Box
-        data-plugin-manager-dialog=""
-        minHeight={360}
-        maxHeight="calc(100vh - 160px)"
-        overflowY="auto"
-      >
+      {/* The dialog's body scrolls; this box does not, or the list has two scrollbars. */}
+      <Box data-plugin-manager-dialog="" minHeight={360}>
         {platform ? (
           <PluginsManagerView
             protectedPlugins={[
