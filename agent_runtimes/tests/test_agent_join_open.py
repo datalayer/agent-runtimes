@@ -98,8 +98,8 @@ def test_the_record_says_where_it_runs() -> None:
             {
                 "uid": "s-1",
                 "state": "open",
-                "app_uid": "agent:assistant",
-                "agent": "assistant",
+                "app_uid": "agent:chat-agent",
+                "agent": "chat-agent",
                 "runs_on": {"kind": "agentcore", "arn": "arn:aws:x"},
             }
         ],
@@ -193,7 +193,7 @@ def test_an_applications_open_session_is_joined_with_no_launch(
                 "id": "decide",
                 "name": "Decide",
                 "kind": "chat",
-                "agent": "assistant",
+                "agent": "chat-agent",
             },
             "",
         ),

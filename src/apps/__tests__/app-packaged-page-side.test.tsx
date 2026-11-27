@@ -125,7 +125,7 @@ describe('a component that is a file of its folder', () => {
         id: 'dial-desk',
         name: 'Dial desk',
         kind: 'chat',
-        agent: 'assistant',
+        agent: 'chat-agent',
         interface: {
           layout: 'chat',
           custom_components: [

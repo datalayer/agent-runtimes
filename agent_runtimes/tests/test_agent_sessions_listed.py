@@ -75,19 +75,19 @@ def _described() -> List[Dict[str, Any]]:
             **base,
             "uid": "agent-paused",
             "state": "paused",
-            "app_uid": "agent:assistant",
+            "app_uid": "agent:chat-agent",
         },
         {
             **base,
             "uid": "agent-open",
             "state": "open",
-            "app_uid": "agent:assistant",
+            "app_uid": "agent:chat-agent",
         },
         {
             **base,
             "uid": "agent-ended",
             "state": "ended",
-            "app_uid": "agent:assistant",
+            "app_uid": "agent:chat-agent",
         },
         {**base, "uid": "preview-paused", "state": "paused", "app_uid": "app-1"},
         {

@@ -13,7 +13,7 @@
  * and renders beautiful weather cards directly in the chat conversation,
  * similar to the AG-UI Dojo implementation.
  *
- * Backend: managed AG-UI agent runtime (agentspec: weather-assistant)
+ * Backend: managed AG-UI agent runtime (agentspec: weather-agent)
  */
 
 import React, { useCallback, useMemo } from 'react';
@@ -67,7 +67,7 @@ const weatherRenderers: Record<string, SpecRenderer> = {
  * - Loading states while fetching data
  */
 const AGENT_NAME = 'ag-ui-backend-tools';
-const AGENTSPEC_ID = 'weather-assistant';
+const AGENTSPEC_ID = 'weather-agent';
 
 const AgUiBackendToolRenderingExample: React.FC = () => {
   const brandColor = useThemeBrandColor();

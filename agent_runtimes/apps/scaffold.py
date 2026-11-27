@@ -8,7 +8,7 @@ and — written in Python — the ``app.py`` that is its source, the spec beside
 it built from it (`agent apps build`), so the two agree from the start:
 
 - **blank**: a chat or a widget, its agent the one a blank application starts
-  with in the Studio (``assistant``) — written in Python, the blank
+  with in the Studio (``chat-agent``) — written in Python, the blank
   agent this process builds (``blank``); a worker or a decision says more
   than a name (what starts its work, what it decides), so it starts from an
   example;
@@ -46,7 +46,7 @@ from agent_runtimes.apps.build import build
 from agent_runtimes.apps.loading import AppNotRunnable
 
 #: The agentspec a blank application starts with, as in the Studio.
-BLANK_AGENT = "assistant:0.0.1"
+BLANK_AGENT = "chat-agent:0.0.1"
 
 #: The agentspec a blank ``app.py`` starts with: a model and
 #: nothing else — no prompt of its own over the application's instructions,

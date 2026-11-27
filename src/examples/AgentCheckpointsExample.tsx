@@ -9,7 +9,7 @@
  * Checkpoints, at the two levels the runtime offers them.
  *
  * On the Local target (and any sandbox), the capability is the agent's own
- * conversation checkpoints: the `checkpoints-assistant` agent snapshots its
+ * conversation checkpoints: the `checkpoints-agent` agent snapshots its
  * conversation after every turn, saves a named checkpoint on request, lists
  * them and rewinds to one — and the checkpoints sidebar shows them, saves one
  * between turns and rewinds the chat.

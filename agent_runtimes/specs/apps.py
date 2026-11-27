@@ -2008,7 +2008,7 @@ DECIDE_APP_0_0_2 = AppSpec.model_validate(
         "kind": "chat",
         "description": "Answers a question about a text — a ticket, a message, a review — by asking Jev a typed decision: yes or no, one of named options, or a score, each with its confidence.",
         "owner": "Datalayer <info@datalayer.io>",
-        "agent": "assistant:0.0.1",
+        "agent": "chat-agent:0.0.1",
         "team": "",
         "instructions": 'Answer every question about a text by asking a typed decision with the decide tool: the text as it was given is the state, and the question is one of noul (does a statement hold: yes or no), choice (which of the options named) or score (which step of a scale, lowest first). Then say the answer in plain words with its probability or its confidence, for example "Urgent: yes (0.87)". When the question names no options for a choice or no scale for a score, ask for them rather than inventing them. When nothing was decided, say why in a sentence.',
         "model": "",

@@ -297,7 +297,7 @@ NEEDS_A_SECRET = {
     "name": "Scout",
     # Its github skill requires GITHUB_TOKEN (Tavily, which web-researcher names,
     # is optional since agentspecs 0.1.24: it would start without it).
-    "agent": "skills-assistant:0.0.1",
+    "agent": "skills-agent:0.0.1",
 }
 
 STARTS_WITHOUT_TAVILY = {

@@ -46,7 +46,7 @@ An agentspec says what runs and hosts it on the line after its `harness`
 (see [Agentspecs](../agentspecs#harness-and-runtime-engine)). An agent meant
 for Kagent says `runtime_engine: kagent`, and keeps the `pydantic-ai` harness:
 Kagent serves it through the agent-runtimes server. The catalogue's example is
-`kagent-assistant`, a simple conversational agent with no MCP servers of its own
+`kagent-chat`, a simple conversational agent with no MCP servers of its own
 (the template's remote MCP servers are added at start), no skills, no frontend
 tools and the `eval` sandbox, since no Jupyter server runs beside it in the
 actor. Set it as the Harness's `AGENT_SPEC_ID`, with a release of
@@ -84,7 +84,7 @@ spec:
     command: ["/opt/kagent-bridge/bin/python", "-I", "/opt/kagent-bridge/bridge.py"]
   env:
     - name: AGENT_SPEC_ID
-      value: kagent-assistant
+      value: kagent-chat
   substrate:
     workerPoolRef:
       name: kagent-default

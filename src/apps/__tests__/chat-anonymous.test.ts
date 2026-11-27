@@ -87,7 +87,7 @@ describe('the limited preview', () => {
     // …named by the indicator, though the workspace's spec is the bootstrap one.
     expect(
       limitedPreviewDisabled({
-        datalayerAgentSpecId: 'assistant',
+        datalayerAgentSpecId: 'chat-agent',
         disabledUi: workspace.disabledUi,
       }),
     ).toEqual(expect.arrayContaining(['X budget']));

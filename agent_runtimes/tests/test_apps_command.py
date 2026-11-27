@@ -174,7 +174,7 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
     }
     assert all(report.verdict != NOT_READY for report in reports.values())
     assert reports["web-research"].setup == []
-    # Its agent, assistant, the neutral default: enabled, out of the pickers
+    # Its agent, chat-agent, the neutral default: enabled, out of the pickers
     # since agentspecs 0.0.187 (listed: false).
     assert reports["decide"].setup == []
     # The public pages' demos run on the seven agents the catalogue enables.

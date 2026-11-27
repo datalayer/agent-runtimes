@@ -42,7 +42,7 @@ from agent_runtimes.apps.visitors import OwnRoutesOnly, path_answered
 from agent_runtimes.models.models import remember_app_instance
 
 SHIPPED = "shop-shipped"
-BOOTSTRAP = "assistant"
+BOOTSTRAP = "chat-agent"
 OUTSIDE = ("203.0.113.9", 50000)
 POD = ("127.0.0.1", 50000)
 

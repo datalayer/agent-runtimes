@@ -606,7 +606,7 @@ export function appDatalayerCreatePayload(
  */
 /** No host plugins: one array, so that it never reads as a change. */
 /** The agentspec a runtime is allocated with before an application's agent is created on it. */
-export const DATALAYER_BOOTSTRAP_AGENTSPEC = 'assistant';
+export const DATALAYER_BOOTSTRAP_AGENTSPEC = 'chat-agent';
 
 const NO_PLUGINS: PluginRef[] = [];
 

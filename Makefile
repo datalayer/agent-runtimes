@@ -410,11 +410,11 @@ agents: # agents
 
 agent-full: # agent-full
 	@$(BEDROCK_ENV) \
-		agent --eggs --agentspec-id skills-assistant
+		agent --eggs --agentspec-id skills-agent
 
 agent-simple: # agent-simple
 	@$(BEDROCK_ENV) \
-		agent --eggs --agentspec-id assistant
+		agent --eggs --agentspec-id chat-agent
 
 agent-demo-codemode: # agent-demo-codemode
 	@$(BEDROCK_ENV) \

@@ -347,89 +347,6 @@ playing until the arena says the game is over.
     identity="datalayer-acting-agent",
 )
 
-ASSISTANT_AGENTSPEC_0_0_1 = Agentspec(
-    id="assistant",
-    version="0.0.1",
-    name="Assistant",
-    description="A simple conversational agent with one tool, decide: it asks Jev typed questions (yes or no with a probability, a choice, a score) through datalayer-ai-inference. No MCP servers, no skills beyond events.",
-    tags=["workflow", "automation", "analysis"],
-    domain=None,
-    enabled=True,
-    listed=False,
-    model="bedrock:us.anthropic.claude-sonnet-5-5",
-    model_additionals=["bedrock:us.anthropic.claude-sonnet-4-6", "alibaba:qwen-max"],
-    inference_provider=None,
-    mcp_servers=[],
-    skills=["events:0.0.1"],
-    backend_tools=["runtime-echo:0.0.1", "decide:0.0.1"],
-    frontend_tools=["jupyter-notebook:0.0.1", "lexical-document:0.0.1"],
-    environment_name="ai-agents-env",
-    icon="agent",
-    emoji="🤖",
-    color="indigo",
-    suggestions=[
-        AgentSuggestion(text="Tell me a joke", summary="Tell a joke"),
-        AgentSuggestion(
-            text="Explain quantum computing in simple terms",
-            summary="Quantum computing, simply",
-        ),
-        AgentSuggestion(
-            text="Help me brainstorm ideas for a weekend project",
-            summary="Weekend project ideas",
-        ),
-        AgentSuggestion(
-            text="Summarize the key points of a topic I describe",
-            summary="Summarize a topic",
-        ),
-        AgentSuggestion(
-            text="Is this support ticket urgent? 'Payouts have failed for 3 days.'",
-            summary="Decide: is it urgent?",
-        ),
-        AgentSuggestion(
-            text="Which team should handle: 'I was charged twice'? Billing, Tech or Sales.",
-            summary="Decide: which team?",
-        ),
-        AgentSuggestion(
-            text="Score how positive this review is from 1 to 5: 'Setup took an hour, but support answered fast and it works.'",
-            summary="Decide: score a review",
-        ),
-    ],
-    welcome_message="Hi! I'm a simple assistant. I'm happy to chat, answer questions and help you think through ideas, and I can decide: ask me whether a ticket is urgent, which team should take it, or how positive a review is. ",
-    welcome_notebook=None,
-    welcome_document=None,
-    sandbox_variant="jupyter-server",
-    harness="pydantic-ai",
-    runtime_engine="datalayer",
-    system_prompt="""You are a helpful, friendly AI assistant. You have no MCP servers. You have a decide tool: when asked whether something holds (yes or no), which of named options fits, or where something sits on a scale, call decide with the text as the state and one typed question (noul, choice or score), then answer with what it decided and its probability or confidence. For anything else, answer from your training knowledge, be concise, and let the user know if a question is outside your knowledge.
-""",
-    system_prompt_codemode_addons=None,
-    goal=None,
-    delegable=[],
-    protocol=None,
-    ui=[],
-    protocols=[],
-    trigger=None,
-    model_configuration=None,
-    mcp_server_tools=None,
-    guardrails=None,
-    evals=None,
-    codemode=None,
-    output=None,
-    advanced=None,
-    checkpoints=None,
-    authorization_policy=None,
-    policy={"shield": {"egress": ["*"]}},
-    notifications=None,
-    memory="ephemeral",
-    decisions="jev:0.0.1",
-    pre_hooks=None,
-    post_hooks=None,
-    tool_hooks=None,
-    parameters=None,
-    subagents=None,
-    identity="datalayer-acting-agent",
-)
-
 BLANK_AGENTSPEC_0_0_1 = Agentspec(
     id="blank",
     version="0.0.1",
@@ -597,10 +514,93 @@ Your tool calls also run through the pydantic-ai tool execution hooks: before_to
     identity="datalayer-acting-agent",
 )
 
-CHECKPOINTS_ASSISTANT_AGENTSPEC_0_0_1 = Agentspec(
-    id="checkpoints-assistant",
+CHAT_AGENT_SPEC_0_0_1 = Agentspec(
+    id="chat-agent",
     version="0.0.1",
-    name="Checkpoints Assistant",
+    name="Chat Agent",
+    description="A simple conversational agent with one tool, decide: it asks Jev typed questions (yes or no with a probability, a choice, a score) through datalayer-ai-inference. No MCP servers, no skills beyond events.",
+    tags=["workflow", "automation", "analysis"],
+    domain=None,
+    enabled=True,
+    listed=False,
+    model="bedrock:us.anthropic.claude-sonnet-5-5",
+    model_additionals=["bedrock:us.anthropic.claude-sonnet-4-6", "alibaba:qwen-max"],
+    inference_provider=None,
+    mcp_servers=[],
+    skills=["events:0.0.1"],
+    backend_tools=["runtime-echo:0.0.1", "decide:0.0.1"],
+    frontend_tools=["jupyter-notebook:0.0.1", "lexical-document:0.0.1"],
+    environment_name="ai-agents-env",
+    icon="agent",
+    emoji="🤖",
+    color="indigo",
+    suggestions=[
+        AgentSuggestion(text="Tell me a joke", summary="Tell a joke"),
+        AgentSuggestion(
+            text="Explain quantum computing in simple terms",
+            summary="Quantum computing, simply",
+        ),
+        AgentSuggestion(
+            text="Help me brainstorm ideas for a weekend project",
+            summary="Weekend project ideas",
+        ),
+        AgentSuggestion(
+            text="Summarize the key points of a topic I describe",
+            summary="Summarize a topic",
+        ),
+        AgentSuggestion(
+            text="Is this support ticket urgent? 'Payouts have failed for 3 days.'",
+            summary="Decide: is it urgent?",
+        ),
+        AgentSuggestion(
+            text="Which team should handle: 'I was charged twice'? Billing, Tech or Sales.",
+            summary="Decide: which team?",
+        ),
+        AgentSuggestion(
+            text="Score how positive this review is from 1 to 5: 'Setup took an hour, but support answered fast and it works.'",
+            summary="Decide: score a review",
+        ),
+    ],
+    welcome_message="Hi! I'm a simple assistant. I'm happy to chat, answer questions and help you think through ideas, and I can decide: ask me whether a ticket is urgent, which team should take it, or how positive a review is. ",
+    welcome_notebook=None,
+    welcome_document=None,
+    sandbox_variant="jupyter-server",
+    harness="pydantic-ai",
+    runtime_engine="datalayer",
+    system_prompt="""You are a helpful, friendly AI assistant. You have no MCP servers. You have a decide tool: when asked whether something holds (yes or no), which of named options fits, or where something sits on a scale, call decide with the text as the state and one typed question (noul, choice or score), then answer with what it decided and its probability or confidence. For anything else, answer from your training knowledge, be concise, and let the user know if a question is outside your knowledge.
+""",
+    system_prompt_codemode_addons=None,
+    goal=None,
+    delegable=[],
+    protocol=None,
+    ui=[],
+    protocols=[],
+    trigger=None,
+    model_configuration=None,
+    mcp_server_tools=None,
+    guardrails=None,
+    evals=None,
+    codemode=None,
+    output=None,
+    advanced=None,
+    checkpoints=None,
+    authorization_policy=None,
+    policy={"shield": {"egress": ["*"]}},
+    notifications=None,
+    memory="ephemeral",
+    decisions="jev:0.0.1",
+    pre_hooks=None,
+    post_hooks=None,
+    tool_hooks=None,
+    parameters=None,
+    subagents=None,
+    identity="datalayer-acting-agent",
+)
+
+CHECKPOINTS_AGENT_SPEC_0_0_1 = Agentspec(
+    id="checkpoints-agent",
+    version="0.0.1",
+    name="Checkpoints Agent",
     description="An assistant whose conversation is checkpointed: a snapshot after every turn, named checkpoints saved on request, listed, and the conversation rewound to any of them.",
     tags=["checkpoints", "durability", "workflow"],
     domain=None,
@@ -630,13 +630,13 @@ CHECKPOINTS_ASSISTANT_AGENTSPEC_0_0_1 = Agentspec(
             summary="Rewind to baseline",
         ),
     ],
-    welcome_message="Checkpoints Assistant ready. I snapshot our conversation after every turn; ask me to save a named checkpoint, list them, or rewind to one.",
+    welcome_message="Checkpoints Agent ready. I snapshot our conversation after every turn; ask me to save a named checkpoint, list them, or rewind to one.",
     welcome_notebook=None,
     welcome_document=None,
     sandbox_variant="jupyter-server",
     harness="pydantic-ai",
     runtime_engine="datalayer",
-    system_prompt="""You are the Checkpoints Assistant. Your conversation is checkpointed: a snapshot is taken automatically after every turn, and you have three tools — `save_checkpoint` to save a named snapshot now, `list_checkpoints` to see what exists, and `rewind_to` to set the conversation back to one of them, which discards everything after it once your turn ends.
+    system_prompt="""You are the Checkpoints Agent. Your conversation is checkpointed: a snapshot is taken automatically after every turn, and you have three tools — `save_checkpoint` to save a named snapshot now, `list_checkpoints` to see what exists, and `rewind_to` to set the conversation back to one of them, which discards everything after it once your turn ends.
 When asked to save, call `save_checkpoint` with the label given. When asked to list, call `list_checkpoints` and report each checkpoint with its label, turn and message count. When asked to rewind, find the checkpoint's id with `list_checkpoints` if you do not have it, call `rewind_to`, and tell the person in one line what the conversation is going back to.
 Answer in the conversation, briefly, and only with the tools you actually have; never call a tool you were not given.""",
     system_prompt_codemode_addons=None,
@@ -1565,10 +1565,10 @@ beautifully. Just acknowledge that you've created the haiku.
     identity="datalayer-acting-agent",
 )
 
-HOOKS_ASSISTANT_AGENTSPEC_0_0_1 = Agentspec(
-    id="hooks-assistant",
+HOOKS_AGENT_SPEC_0_0_1 = Agentspec(
+    id="hooks-agent",
     version="0.0.1",
-    name="Hooks Assistant",
+    name="Hooks Agent",
     description="Reports what the sandbox lifecycle hooks did: the pre-hook that installs a package and writes a marker before the agent starts, the post-hook that writes one when it stops, and the per-tool hooks around sensitive calls.",
     tags=["workflow", "automation", "analysis"],
     domain=None,
@@ -1616,12 +1616,12 @@ HOOKS_ASSISTANT_AGENTSPEC_0_0_1 = Agentspec(
     sandbox_variant="eval",
     harness="pydantic-ai",
     runtime_engine="datalayer",
-    system_prompt="""You are the Hooks Assistant: you report what the lifecycle hooks did.
+    system_prompt="""You are the Hooks Agent: you report what the lifecycle hooks did.
 The sandbox pre-hook ran before this agent started and did three things:
 1. Installed the Python package 'rich' (pip install). 2. Wrote a UTF-8 marker file to /tmp/agent_runtimes_pre_hook_demo.txt
-   with the content: "pre-hook executed for hooks-assistant at <timestamp>".
+   with the content: "pre-hook executed for hooks-agent at <timestamp>".
 3. Defined these Python variables in the sandbox namespace:
-   - hook_name    (str) - "hooks-assistant:pre"
+   - hook_name    (str) - "hooks-agent:pre"
    - hook_ran_at  (str) - ISO-8601 timestamp of when the pre-hook ran
    - hook_env     (dict) - subset of os.environ captured at hook time
 
@@ -1653,12 +1653,12 @@ When the user asks about hooks, use execute_code to show concrete evidence: read
     pre_hooks={
         "packages": ["rich"],
         "sandbox": [
-            'import datetime\nimport os\nfrom pathlib import Path\n\nhook_name = "hooks-assistant:pre"\nhook_ran_at = datetime.datetime.now().isoformat()\nhook_env = {\n    k: os.environ[k]\n    for k in ("PATH", "HOME", "DATALAYER_CODE_SANDBOX_VARIANT")\n    if k in os.environ\n}\n\nPath(\'/tmp/agent_runtimes_pre_hook_demo.txt\').write_text(\n    f\'pre-hook executed for hooks-assistant at {hook_ran_at}\\n\',\n    encoding=\'utf-8\',\n)\nprint(f"[hooks-assistant] pre-hook done: hook_ran_at={hook_ran_at!r}")\n'
+            'import datetime\nimport os\nfrom pathlib import Path\n\nhook_name = "hooks-agent:pre"\nhook_ran_at = datetime.datetime.now().isoformat()\nhook_env = {\n    k: os.environ[k]\n    for k in ("PATH", "HOME", "DATALAYER_CODE_SANDBOX_VARIANT")\n    if k in os.environ\n}\n\nPath(\'/tmp/agent_runtimes_pre_hook_demo.txt\').write_text(\n    f\'pre-hook executed for hooks-agent at {hook_ran_at}\\n\',\n    encoding=\'utf-8\',\n)\nprint(f"[hooks-agent] pre-hook done: hook_ran_at={hook_ran_at!r}")\n'
         ],
     },
     post_hooks={
         "sandbox": [
-            "import datetime\nfrom pathlib import Path\n\npost_ran_at = datetime.datetime.now().isoformat()\nPath('/tmp/agent_runtimes_post_hook_demo.txt').write_text(\n    f'post-hook executed for hooks-assistant at {post_ran_at}\\n',\n    encoding='utf-8',\n)\nprint(f\"[hooks-assistant] post-hook done: post_ran_at={post_ran_at!r}\")\n"
+            "import datetime\nfrom pathlib import Path\n\npost_ran_at = datetime.datetime.now().isoformat()\nPath('/tmp/agent_runtimes_post_hook_demo.txt').write_text(\n    f'post-hook executed for hooks-agent at {post_ran_at}\\n',\n    encoding='utf-8',\n)\nprint(f\"[hooks-agent] post-hook done: post_ran_at={post_ran_at!r}\")\n"
         ]
     },
     tool_hooks={
@@ -1675,17 +1675,17 @@ When the user asks about hooks, use execute_code to show concrete evidence: read
         ],
         "after_tool_execute": [
             {
-                "python": '# Post hook receives execution result payload in `payload`.\nprint(\n"[hooks-assistant] after_tool_execute",\n    payload.get("tool"),\n    payload.get("status"),\n    payload.get("decision"),\n)\n'
+                "python": '# Post hook receives execution result payload in `payload`.\nprint(\n"[hooks-agent] after_tool_execute",\n    payload.get("tool"),\n    payload.get("status"),\n    payload.get("decision"),\n)\n'
             }
         ],
         "on_tool_execute_error": [
             {
-                "python": 'print(\n    "[hooks-assistant] on_tool_execute_error",\n    payload.get("tool"),\n    payload.get("error_type"),\n    payload.get("decision"),\n)\n'
+                "python": 'print(\n    "[hooks-agent] on_tool_execute_error",\n    payload.get("tool"),\n    payload.get("error_type"),\n    payload.get("decision"),\n)\n'
             }
         ],
         "deferred_tool_calls": [
             {
-                "python": '# Demonstrates the deferred hook key in spec config.\nprint("[hooks-assistant] deferred_tool_calls invoked")\n'
+                "python": '# Demonstrates the deferred hook key in spec config.\nprint("[hooks-agent] deferred_tool_calls invoked")\n'
             }
         ],
     },
@@ -2519,10 +2519,10 @@ On execution: where you can run code, run it to show a result rather than assert
     identity="datalayer-acting-agent",
 )
 
-KAGENT_ASSISTANT_AGENTSPEC_0_0_1 = Agentspec(
-    id="kagent-assistant",
+KAGENT_CHAT_AGENTSPEC_0_0_1 = Agentspec(
+    id="kagent-chat",
     version="0.0.1",
-    name="kagent Assistant",
+    name="kagent Chat",
     description="A simple conversational agent run by kagent: a kagent Agent whose Harness is agent-runtimes, each conversation a session actor of Agent Substrate, suspended when idle and resumed on the next message. Reached through kagent's A2A gateway at /agents/{namespace}/{name}.",
     tags=["kagent", "substrate", "a2a"],
     domain=None,
@@ -2586,10 +2586,10 @@ KAGENT_ASSISTANT_AGENTSPEC_0_0_1 = Agentspec(
     identity="datalayer-acting-agent",
 )
 
-MEMORY_ASSISTANT_AGENTSPEC_0_0_1 = Agentspec(
-    id="memory-assistant",
+MEMORY_AGENT_SPEC_0_0_1 = Agentspec(
+    id="memory-agent",
     version="0.0.1",
-    name="Memory Assistant",
+    name="Memory Agent",
     description="Remembers durable preferences and key facts across conversations with the Mem0 backend, recalls them when asked and searches its memory.",
     tags=["customer-support", "workflow", "routing"],
     domain=None,
@@ -2619,13 +2619,13 @@ MEMORY_ASSISTANT_AGENTSPEC_0_0_1 = Agentspec(
             summary="Search memory",
         ),
     ],
-    welcome_message="Memory Assistant ready. I persist stable facts and preferences (name, preferences, constraints), and can recall them across turns/restarts. I do not persist every transient sentence.",
+    welcome_message="Memory Agent ready. I persist stable facts and preferences (name, preferences, constraints), and can recall them across turns/restarts. I do not persist every transient sentence.",
     welcome_notebook=None,
     welcome_document=None,
     sandbox_variant="jupyter-server",
     harness="pydantic-ai",
     runtime_engine="datalayer",
-    system_prompt="""You are the Memory Assistant. Capture durable user preferences and key facts, recall them accurately when asked, and summarize memory context clearly. Persist only durable, user-relevant information (identity, long-lived preferences, standing constraints, recurring goals). Do not persist one-off chatter, greetings, or ephemeral filler. When asked to remember something, confirm what was stored and suggest verifying it in the Memory Inspector.""",
+    system_prompt="""You are the Memory Agent. Capture durable user preferences and key facts, recall them accurately when asked, and summarize memory context clearly. Persist only durable, user-relevant information (identity, long-lived preferences, standing constraints, recurring goals). Do not persist one-off chatter, greetings, or ephemeral filler. When asked to remember something, confirm what was stored and suggest verifying it in the Memory Inspector.""",
     system_prompt_codemode_addons=None,
     goal=None,
     delegable=[],
@@ -2978,10 +2978,10 @@ IMPORTANT:
     identity="datalayer-acting-agent",
 )
 
-PROJECT_ASSISTANT_AGENTSPEC_0_0_1 = Agentspec(
-    id="project-assistant",
+PROJECT_AGENT_SPEC_0_0_1 = Agentspec(
+    id="project-agent",
     version="0.0.1",
-    name="Project Assistant",
+    name="Project Agent",
     description="An assistant dedicated to one project, for a role and in a tone set at launch, its parameters checked against a JSON schema.",
     tags=["workflow", "automation", "analysis"],
     domain=None,
@@ -3037,7 +3037,7 @@ PROJECT_ASSISTANT_AGENTSPEC_0_0_1 = Agentspec(
     decisions=None,
     pre_hooks={
         "sandbox": [
-            'demo_params = """{{demo_params}}"""\nprint(f"[project-assistant] demo_params initialized: {demo_params!r}")\n'
+            'demo_params = """{{demo_params}}"""\nprint(f"[project-agent] demo_params initialized: {demo_params!r}")\n'
         ]
     },
     post_hooks=None,
@@ -4125,10 +4125,10 @@ Keep your responses brief and friendly.
     identity="datalayer-acting-agent",
 )
 
-SKILLS_ASSISTANT_AGENTSPEC_0_0_1 = Agentspec(
-    id="skills-assistant",
+SKILLS_AGENT_SPEC_0_0_1 = Agentspec(
+    id="skills-agent",
     version="0.0.1",
-    name="Skills Assistant",
+    name="Skills Agent",
     description="Uses skills from several sources — built-in file skills and package-registered ones (GitHub, PDF, crawl, events) — searches the web with Tavily, and asks for approval before a sensitive tool.",
     tags=[
         "workflow",
@@ -4205,7 +4205,7 @@ SKILLS_ASSISTANT_AGENTSPEC_0_0_1 = Agentspec(
             text="Tell me a joke using your skills.", summary="A joke from your skills"
         ),
     ],
-    welcome_message="Hi! I am the Skills Assistant. I can use built-in file skills and package-registered skills such as datalayer-whoami.",
+    welcome_message="Hi! I am the Skills Agent. I can use built-in file skills and package-registered skills such as datalayer-whoami.",
     welcome_notebook=None,
     welcome_document=None,
     sandbox_variant="jupyter-server",
@@ -4766,10 +4766,10 @@ USAGE_MONITOR_AGENTSPEC_0_0_1 = Agentspec(
     identity="datalayer-acting-agent",
 )
 
-WEATHER_ASSISTANT_AGENTSPEC_0_0_1 = Agentspec(
-    id="weather-assistant",
+WEATHER_AGENT_SPEC_0_0_1 = Agentspec(
+    id="weather-agent",
     version="0.0.1",
-    name="Weather Assistant",
+    name="Weather Agent",
     description="An AG-UI weather assistant that fetches real weather data with a backend tool for the frontend to render as a weather card.",
     tags=["workflow", "automation", "analysis"],
     domain=None,
@@ -13786,10 +13786,10 @@ AGENTSPECS: Dict[str, Agentspec] = {
     "agent-shell": AGENT_SHELL_AGENTSPEC_0_0_1,
     "approved-automation": APPROVED_AUTOMATION_AGENTSPEC_0_0_1,
     "arena-player": ARENA_PLAYER_AGENTSPEC_0_0_1,
-    "assistant": ASSISTANT_AGENTSPEC_0_0_1,
     "blank": BLANK_AGENTSPEC_0_0_1,
     "budget-guard": BUDGET_GUARD_AGENTSPEC_0_0_1,
-    "checkpoints-assistant": CHECKPOINTS_ASSISTANT_AGENTSPEC_0_0_1,
+    "chat-agent": CHAT_AGENT_SPEC_0_0_1,
+    "checkpoints-agent": CHECKPOINTS_AGENT_SPEC_0_0_1,
     "coding-agent-claude-code": CODING_AGENT_CLAUDE_CODE_AGENTSPEC_0_0_1,
     "coding-agent-codex": CODING_AGENT_CODEX_AGENTSPEC_0_0_1,
     "coding-agent-fast-agent": CODING_AGENT_FAST_AGENT_SPEC_0_0_1,
@@ -13803,7 +13803,7 @@ AGENTSPECS: Dict[str, Agentspec] = {
     "form-builder": FORM_BUILDER_AGENTSPEC_0_0_1,
     "github-repositories": GITHUB_REPOSITORIES_AGENTSPEC_0_0_1,
     "haiku-writer": HAIKU_WRITER_AGENTSPEC_0_0_1,
-    "hooks-assistant": HOOKS_ASSISTANT_AGENTSPEC_0_0_1,
+    "hooks-agent": HOOKS_AGENT_SPEC_0_0_1,
     "jupyter-cell-fixer": JUPYTER_CELL_FIXER_AGENTSPEC_0_0_1,
     "jupyter-notebook-compactor": JUPYTER_NOTEBOOK_COMPACTOR_AGENTSPEC_0_0_1,
     "jupyter-notebook-reproducer": JUPYTER_NOTEBOOK_REPRODUCER_AGENTSPEC_0_0_1,
@@ -13811,13 +13811,13 @@ AGENTSPECS: Dict[str, Agentspec] = {
     "jupyter-notebook-writer": JUPYTER_NOTEBOOK_WRITER_AGENTSPEC_0_0_1,
     "jupyter-output-presenter": JUPYTER_OUTPUT_PRESENTER_AGENTSPEC_0_0_1,
     "jupyter-tutor": JUPYTER_TUTOR_AGENTSPEC_0_0_1,
-    "kagent-assistant": KAGENT_ASSISTANT_AGENTSPEC_0_0_1,
-    "memory-assistant": MEMORY_ASSISTANT_AGENTSPEC_0_0_1,
+    "kagent-chat": KAGENT_CHAT_AGENTSPEC_0_0_1,
+    "memory-agent": MEMORY_AGENT_SPEC_0_0_1,
     "notifier": NOTIFIER_AGENTSPEC_0_0_1,
     "one-shot-task": ONE_SHOT_TASK_AGENTSPEC_0_0_1,
     "output-formatter": OUTPUT_FORMATTER_AGENTSPEC_0_0_1,
     "plan-tracker": PLAN_TRACKER_AGENTSPEC_0_0_1,
-    "project-assistant": PROJECT_ASSISTANT_AGENTSPEC_0_0_1,
+    "project-agent": PROJECT_AGENT_SPEC_0_0_1,
     "provider-switcher": PROVIDER_SWITCHER_AGENTSPEC_0_0_1,
     "python-runner-colab": PYTHON_RUNNER_COLAB_AGENTSPEC_0_0_1,
     "python-runner-datalayer": PYTHON_RUNNER_DATALAYER_AGENTSPEC_0_0_1,
@@ -13833,7 +13833,7 @@ AGENTSPECS: Dict[str, Agentspec] = {
     "research-writer": RESEARCH_WRITER_AGENTSPEC_0_0_1,
     "researcher-a2a": RESEARCHER_A2A_AGENTSPEC_0_0_1,
     "restaurant-finder": RESTAURANT_FINDER_AGENTSPEC_0_0_1,
-    "skills-assistant": SKILLS_ASSISTANT_AGENTSPEC_0_0_1,
+    "skills-agent": SKILLS_AGENT_SPEC_0_0_1,
     "story-writer": STORY_WRITER_AGENTSPEC_0_0_1,
     "task-planner": TASK_PLANNER_AGENTSPEC_0_0_1,
     "telemetry-explorer": TELEMETRY_EXPLORER_AGENTSPEC_0_0_1,
@@ -13841,7 +13841,7 @@ AGENTSPECS: Dict[str, Agentspec] = {
     "text-normalizer": TEXT_NORMALIZER_AGENTSPEC_0_0_1,
     "ui-surface-designer": UI_SURFACE_DESIGNER_AGENTSPEC_0_0_1,
     "usage-monitor": USAGE_MONITOR_AGENTSPEC_0_0_1,
-    "weather-assistant": WEATHER_ASSISTANT_AGENTSPEC_0_0_1,
+    "weather-agent": WEATHER_AGENT_SPEC_0_0_1,
     "web-researcher-codemode": WEB_RESEARCHER_CODEMODE_AGENTSPEC_0_0_1,
     "web-researcher": WEB_RESEARCHER_AGENTSPEC_0_0_1,
     "worker-accountant": WORKER_ACCOUNTANT_AGENTSPEC_0_0_1,

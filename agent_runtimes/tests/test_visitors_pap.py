@@ -59,7 +59,7 @@ def world(monkeypatch: Any) -> Any:
 
     monkeypatch.setattr(datalayer_gateway, "tracing_client", client)
     monkeypatch.setattr(visitors_pap, "_ask", ask)
-    monkeypatch.setenv(visitors.VISITORS_ENV, "assistant")
+    monkeypatch.setenv(visitors.VISITORS_ENV, "chat-agent")
     monkeypatch.setenv(visitors_pap.KEY_ENV, "visitors-runtime-key")
     visitors_pap.forget()
     pap_connections.forget()

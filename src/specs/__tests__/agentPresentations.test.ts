@@ -51,6 +51,6 @@ describe('the agents’ presentations', () => {
     expect(getAgentPresentation('worker-marketer:0.0.1')?.tagline).toBe(
       'Plans, drafts, reads the replies',
     );
-    expect(getAgentPresentation('assistant')).toBeUndefined();
+    expect(getAgentPresentation('chat-agent')).toBeUndefined();
   });
 });
