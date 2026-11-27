@@ -137,6 +137,7 @@ APPLICATION = {
     ("POST", "/api/v1/apps/sessions/{uid}/window"),
     ("POST", "/api/v1/apps/visitors/agent"),
     ("PUT", "/api/v1/apps/a2a"),
+    ("PUT", "/api/v1/apps/pod-secret"),
     ("PUT", "/api/v1/apps/runtime-proof"),
     ("PUT", "/api/v1/apps/sessions/{uid}/archived"),
     ("PUT", "/api/v1/apps/sessions/{uid}/settings"),

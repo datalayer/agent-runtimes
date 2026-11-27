@@ -760,6 +760,55 @@ async def stop_serving_over_a2a(
     return {"success": True, "stopped": stopped}
 
 
+class PodSecretRequest(BaseModel):
+    """What the companion gives any runtime it runs beside, as it starts."""
+
+    pod_secret: str = Field(
+        ...,
+        description="What the companion holds, and is told by from now on: "
+        "in a pod an address proves nothing",
+    )
+
+
+@router.put("/pod-secret")
+async def pod_secret(body: PodSecretRequest, request: Request) -> Dict[str, Any]:
+    """Keep the secret the runtime's companion is told by from now on.
+
+    Any runtime a companion runs beside: a person's own, which is given no
+    proof, as a deployment's (decided 27 November 2026: a call of the loopback
+    alone proves nothing, so the companion's own calls need this). Given once,
+    by the pod itself, before anything but the platform's images runs in it:
+    a call passed on by a proxy, a browser's page, or one that does not send
+    the secret already held, is refused; the same secret again is no change. Nobody reads it back.
+    See `agent_runtimes.apps.principal.give_pod_secret`.
+    """
+    from agent_runtimes.apps.callers import (
+        from_a_browser,
+        headers_of,
+        is_forwarded,
+    )
+    from agent_runtimes.apps.principal import give_pod_secret
+
+    headers = headers_of(request.scope)
+    if (
+        is_forwarded(headers)
+        or from_a_browser(headers)
+        or not is_the_pod(
+            request.client.host if request.client else None,
+            request.headers.get(POD_SECRET_HEADER),
+        )
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Only the runtime's own pod gives it its secret.",
+        )
+    try:
+        give_pod_secret(body.pod_secret)
+    except ValueError as refused:
+        raise HTTPException(status_code=422, detail=str(refused)) from None
+    return {"success": True}
+
+
 class RuntimeProofRequest(BaseModel):
     """What the companion gives a runtime launched for a deployment."""
 
