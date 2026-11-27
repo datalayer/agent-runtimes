@@ -3,7 +3,7 @@
 
 """The Traveller's demo reaches Google Maps with the demo account's own key (the user, 19 November 2026).
 
-``demo-traveller`` connects to ``google-maps`` read only, in its owner's account, and
+``traveller-tryout`` connects to ``google-maps`` read only, in its owner's account, and
 optional. On the visitors' runtime its key is read from one place alone: the secrets of the
 account that keeps the demo books (the runtime holds that account's own key,
 ``DATALAYER_BATTLE_BOOKS_API_KEY``), for a public deployment of that very account
@@ -42,7 +42,7 @@ DEMO_TRAVELLER = (
     / "agentspecs"
     / "agentspecs"
     / "apps"
-    / "demo-traveller.yaml"
+    / "traveller-tryout.yaml"
 )
 BOOKS = "books-key-of-the-demo-account"
 DEMO_ACCOUNT = "u-datalayer-demo"
@@ -85,7 +85,7 @@ class _Lifecycle:
 def visitors(monkeypatch: pytest.MonkeyPatch):
     battle_books.forget_books_key()
     monkeypatch.setenv(BOOKS_KEY_ENV, BOOKS)
-    monkeypatch.setenv("AGENT_RUNTIMES_VISITORS", "demo-traveller")
+    monkeypatch.setenv("AGENT_RUNTIMES_VISITORS", "traveller-tryout")
     monkeypatch.delenv("GOOGLE_MAPS_API_KEY", raising=False)
 
     async def whoami(key: str) -> str:
@@ -121,14 +121,14 @@ def _instance(owner: str = DEMO_ACCOUNT) -> dict[str, Any]:
         "app_uid": "01TRAVELLER",
         "deployment_uid": "dep-traveller",
         "version": 3,
-        "visitor_app": "at:demo-traveller",
+        "visitor_app": "at:traveller-tryout",
         "owner_uid": owner,
     }
 
 
 async def _make(spy: dict, instance: dict[str, Any]) -> tuple[list[str], str]:
     request = CreateAgentRequest(
-        name="at-demo-traveller",
+        name="at-traveller-tryout",
         agent_spec_id="worker-traveller",
         app_spec=_demo_traveller(),
         app_instance=instance,
@@ -222,7 +222,7 @@ async def test_only_the_demos_runs_reach_a_server_started_with_the_secret(
         ),
         SimpleNamespace(server="kiwi:0.0.1", access="read", acts_as="owner"),
     ]
-    battle_books.remember_owners_servers("at-demo-traveller", connections)
+    battle_books.remember_owners_servers("at-traveller-tryout", connections)
     battle_books.note_started_with_owners_secrets("google-maps")
     toolsets = [SimpleNamespace(id="google-maps"), SimpleNamespace(id="kiwi")]
 
@@ -242,7 +242,7 @@ async def test_only_the_demos_runs_reach_a_server_started_with_the_secret(
 
 
 async def owner_servers(found: Any, instance: dict[str, Any]) -> frozenset[str]:
-    return await found("at-demo-traveller", instance)
+    return await found("at-traveller-tryout", instance)
 
 
 @pytest.mark.asyncio
@@ -259,7 +259,7 @@ async def test_the_page_lists_google_maps_only_when_it_runs_with_the_secret(
     )
 
     def rows() -> dict[str, dict]:
-        found = equipment_module.equipment_of_agent("at-demo-traveller")
+        found = equipment_module.equipment_of_agent("at-traveller-tryout")
         assert found is not None
         return {row["id"]: row for row in found["mcp_servers"]}
 

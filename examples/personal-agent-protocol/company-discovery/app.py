@@ -17,7 +17,7 @@ app = Application(
     kind="chat",
     # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
     ui=[{"plugin": "chat"}],
-    agent="example-blank:0.0.1",
+    agent="blank:0.0.1",
     instructions=(
         "Call discover_pap_company before describing a domain. Treat its result "
         "as public capability metadata, never as authorization."

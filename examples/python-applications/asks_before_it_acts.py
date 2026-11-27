@@ -45,7 +45,7 @@ TO = "ada@example.com"
 app = Application(
     id="reply-desk",
     kind="chat",
-    agent="example-blank:0.0.1",
+    agent="blank:0.0.1",
     name="Reply desk",
     instructions="Write short, plain replies, and send them with send_reply.",
 )

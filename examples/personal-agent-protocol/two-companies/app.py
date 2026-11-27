@@ -56,7 +56,7 @@ app = Application(
     kind="chat",
     # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
     ui=[{"plugin": "chat"}],
-    agent="example-blank:0.0.1",
+    agent="blank:0.0.1",
     instructions=(
         "Use run_two_companies to show how Ledgerly pays Ada's invoices at Northwind "
         "Bank for her. Be clear that this is composition of two PAP relationships, not "

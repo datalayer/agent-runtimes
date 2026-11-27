@@ -45,7 +45,7 @@ def _threads(sent: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 
 async def test_its_code_names_tags_and_describes_its_conversation() -> None:
-    application = Application(id="desk", agent="example-simple")
+    application = Application(id="desk", agent="chat-agent")
 
     @application.start
     async def opened(session: Session) -> None:
@@ -78,7 +78,7 @@ async def test_its_code_names_tags_and_describes_its_conversation() -> None:
 
 
 async def test_what_a_conversation_is_called_is_refused_beyond_its_limits() -> None:
-    application = Application(id="desk", agent="example-simple")
+    application = Application(id="desk", agent="chat-agent")
     host, sent = _host(application)
     session = await host.open(uid="s-2")
     with pytest.raises(ValueError, match="at most 200 characters"):
@@ -102,7 +102,7 @@ async def test_what_a_conversation_is_called_is_refused_beyond_its_limits() -> N
 
 
 async def test_feedback_reaches_its_code() -> None:
-    application = Application(id="desk", agent="example-simple")
+    application = Application(id="desk", agent="chat-agent")
     heard: List[Feedback] = []
 
     @application.feedback
@@ -116,7 +116,7 @@ async def test_feedback_reaches_its_code() -> None:
     assert heard == [word]
     assert application.handler("feedback") is said
     # Without one, nothing runs.
-    plain, _ = _host(Application(id="plain", agent="example-simple"))
+    plain, _ = _host(Application(id="plain", agent="chat-agent"))
     assert await plain.feedback(await plain.open(uid="s-4"), word) is False
 
 

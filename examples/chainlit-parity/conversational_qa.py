@@ -35,7 +35,7 @@ from agent_runtimes.apps import (
     run_sync,
 )
 
-AGENT = "example-blank:0.0.1"
+AGENT = "blank:0.0.1"
 
 app = Application(
     id="conversational-qa",

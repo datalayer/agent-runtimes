@@ -50,7 +50,7 @@ import { MCP_SERVER_LIBRARY } from '../specs/mcpServers';
 
 const queryClient = new QueryClient();
 const AGENT_NAME = 'mcp-example-agent';
-// Must match agentspecs/agentspecs/agents/example-mcp.yaml `id`.
+// Must match agentspecs/agentspecs/agents/web-researcher.yaml `id`.
 
 /** A tool discovered from a running MCP server. */
 interface McpToolInfo {

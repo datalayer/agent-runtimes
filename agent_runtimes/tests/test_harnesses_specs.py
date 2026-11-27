@@ -130,7 +130,7 @@ class TestTheHarnessCatalogue:
 
     def test_every_catalogue_agent_names_a_harness_the_catalogue_knows(self) -> None:
         """A built-in one (pydantic-ai, vercel-ai) or a harness of the catalogue
-        (agentspecs 0.0.101's example-harness-claude-code names claude-code)."""
+        (agentspecs 0.0.101's coding-agent-claude-code names claude-code)."""
         for spec in list_agentspecs():
             assert spec.harness in ("pydantic-ai", "vercel-ai", *HARNESS_CATALOGUE), (
                 spec.id
@@ -269,9 +269,7 @@ class TestWhatAHarnessCannotHonourIsRefusedAtLoad:
                 id="a",
                 name="A",
                 harness="claude-code",
-                subagents={
-                    "agents": [{"id": "helper", "agent_spec_id": "example-blank"}]
-                },
+                subagents={"agents": [{"id": "helper", "agent_spec_id": "blank"}]},
             )
         with pytest.raises(ValidationError, match="names no command"):
             Agentspec(id="a", name="A", harness="custom")

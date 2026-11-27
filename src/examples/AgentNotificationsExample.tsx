@@ -9,7 +9,7 @@
  * Demonstrates notification channels for agents: in-app toasts, email digests,
  * Slack webhook integrations, and notification preference management.
  *
- * - Creates a local agent-runtimes agent using the `example-notifications` spec
+ * - Creates a local agent-runtimes agent using the `notifier` spec
  * - Shows a notification center alongside the chat where users can configure
  *   channels and review recent notifications
  */
@@ -55,7 +55,7 @@ const queryClient = new QueryClient();
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const AGENT_NAME = 'notification-example-agent';
-const AGENTSPEC_ID = 'example-notifications';
+const AGENTSPEC_ID = 'notifier';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 

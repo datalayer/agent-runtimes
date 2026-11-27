@@ -10,7 +10,7 @@
  * that render UI components. Unlike frontend tools, these are backend
  * tools that return structured data to be rendered on the frontend.
  *
- * Backend: managed AG-UI agent runtime (agentspec: example-agentic-generative-ui)
+ * Backend: managed AG-UI agent runtime (agentspec: plan-tracker)
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
@@ -324,7 +324,7 @@ const PlanDisplay: React.FC<{
  * - Interactive step selection with Confirm/Reject buttons
  */
 const AGENT_NAME = 'ag-ui-generative-ui';
-const AGENTSPEC_ID = 'example-agentic-generative-ui';
+const AGENTSPEC_ID = 'plan-tracker';
 
 const AgUiToolsBasedGenUiExample: React.FC = () => {
   const brandColor = useThemeBrandColor();

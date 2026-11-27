@@ -115,7 +115,7 @@ subagents:
   subagents:
     - name: researcher
       description: "A separate research agent, reached over A2A"
-      ref: example-a2a-researcher:0.0.1
+      ref: researcher-a2a:0.0.1
       a2a:
         launch: auto      # local | cloud | auto (default)
     - name: reviewer
@@ -195,7 +195,7 @@ The `AgentSubagentsExample` demonstrates the full workflow:
 EXAMPLE=AgentSubagentsExample npm run dev
 ```
 
-This creates an orchestrator agent from the `example-subagents` spec with a researcher
+This creates an orchestrator agent from the `research-writer` spec with a researcher
 and writer subagent. The sidebar shows available subagents and delegation tools.
 
 ### Suggestions to Try
@@ -206,7 +206,7 @@ and writer subagent. The sidebar shows available subagents and delegation tools.
 
 ## Demo Spec
 
-The built-in `example-subagents` spec is available in `agentspecs/agentspecs/agents/example-subagents.yaml` and demonstrates:
+The built-in `research-writer` spec is available in `agentspecs/agentspecs/agents/research-writer.yaml` and demonstrates:
 
 - Two subagents (researcher and writer) with distinct roles
 - A general-purpose subagent included as fallback

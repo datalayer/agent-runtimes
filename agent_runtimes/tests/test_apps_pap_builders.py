@@ -24,7 +24,7 @@ from agent_runtimes.apps.build import build
 
 
 def _order_desk() -> Application:
-    app = Application("order-desk-py", "chat", agent="example-blank:0.0.1")
+    app = Application("order-desk-py", "chat", agent="blank:0.0.1")
     app.company_connection(
         "manzanita",
         "manzanita.examples.datalayer.run",
@@ -39,7 +39,7 @@ def _order_desk() -> Application:
 
 
 def _exchange_desk() -> Application:
-    app = Application("exchange-desk-py", "chat", agent="example-blank:0.0.1")
+    app = Application("exchange-desk-py", "chat", agent="blank:0.0.1")
     app.as_company(
         signed_out=True,
         interfaces=["agent", "openapi"],
@@ -101,7 +101,7 @@ def test_the_company_role_is_exchange_desks_block() -> None:
 SOURCE = '''
 from agent_runtimes.apps import Application
 
-app = Application("both-roles", "chat", agent="example-blank:0.0.1")
+app = Application("both-roles", "chat", agent="blank:0.0.1")
 app.company_connection(
     "northwind", "northwind.example", access="write", scopes=["invoices:read", "invoices:write"],
     extensions=["operations"],
@@ -152,14 +152,14 @@ def test_agent_apps_build_writes_the_same_appspec_for_both_roles(
     ],
 )
 def test_a_company_is_a_domain_never_an_endpoint(company: str, why: str) -> None:
-    app = Application("x", "chat", agent="example-blank:0.0.1")
+    app = Application("x", "chat", agent="blank:0.0.1")
     with pytest.raises(ValidationError, match=why):
         app.company_connection("orders", company)
     assert "pap" not in app.document
 
 
 def test_what_the_builders_refuse() -> None:
-    app = Application("x", "chat", agent="example-blank:0.0.1")
+    app = Application("x", "chat", agent="blank:0.0.1")
     with pytest.raises(ValidationError):
         app.company_connection("orders", "shop.example", sign_in=["password"])
 
@@ -183,11 +183,11 @@ def test_what_the_builders_refuse() -> None:
         app.company_operation("orders.refund", summary="Refund {order_id}.")(stray)
     # The list-of-strings form of PAP draft 0.2 is refused (0.3: each scope says what it allows).
     with pytest.raises(ValidationError, match="valid dictionary"):
-        Application("z", "chat", agent="example-blank:0.0.1").as_company(
+        Application("z", "chat", agent="blank:0.0.1").as_company(
             scopes=["orders:read"]  # type: ignore[list-item]  # the old shape, refused
         )
     with pytest.raises(ValidationError, match="names at least one"):
-        Application("y", "chat", agent="example-blank:0.0.1").as_company(
+        Application("y", "chat", agent="blank:0.0.1").as_company(
             scopes=[{"name": "orders:read", "description": "Read your orders"}],
             extensions=[],
             personal_agents="registered",
@@ -197,7 +197,7 @@ def test_what_the_builders_refuse() -> None:
 def test_a_company_may_offer_personal_agents_no_sign_in() -> None:
     """`auth.disabled` (PAP 0.3 as published §3.2): off unless said; on, written as
     `sign_in_disabled`, and the company answers signed out only."""
-    quiet = Application("q", "chat", agent="example-blank:0.0.1")
+    quiet = Application("q", "chat", agent="blank:0.0.1")
     assert (
         quiet.as_company(
             scopes=[{"name": "orders:read", "description": "Read your orders"}]
@@ -205,7 +205,7 @@ def test_a_company_may_offer_personal_agents_no_sign_in() -> None:
         is False
     )
     assert "sign_in_disabled" not in quiet._pap()["company"]
-    closed = Application("c", "chat", agent="example-blank:0.0.1")
+    closed = Application("c", "chat", agent="blank:0.0.1")
     role = closed.as_company(
         scopes=[{"name": "orders:read", "description": "Read your orders"}],
         sign_in_disabled=True,
@@ -214,11 +214,11 @@ def test_a_company_may_offer_personal_agents_no_sign_in() -> None:
         role.sign_in_disabled and closed._pap()["company"]["sign_in_disabled"] is True
     )
     # Its public skills published to personal agents: off unless said.
-    publishing = Application("p", "chat", agent="example-blank:0.0.1")
+    publishing = Application("p", "chat", agent="blank:0.0.1")
     assert publishing.as_company(publish_skills=True).publish_skills is True
     assert publishing._pap()["company"]["publish_skills"] is True
     with pytest.raises(ValidationError, match="answers them signed out"):
-        Application("n", "chat", agent="example-blank:0.0.1").as_company(
+        Application("n", "chat", agent="blank:0.0.1").as_company(
             scopes=[{"name": "orders:read", "description": "Read your orders"}],
             sign_in_disabled=True,
             signed_out=False,
@@ -227,7 +227,7 @@ def test_a_company_may_offer_personal_agents_no_sign_in() -> None:
 
 def test_a_companys_website_flags_are_written_as_the_appspec_says_them() -> None:
     """PAP draft 0.4 §6: `web_unscoped` with the website, `web_disabled` without it; off unless said."""
-    full = Application("w", "chat", agent="example-blank:0.0.1")
+    full = Application("w", "chat", agent="blank:0.0.1")
     assert (
         full.as_company(interfaces=("agent", "web"), web_unscoped=True).web_unscoped
         is True
@@ -236,12 +236,10 @@ def test_a_companys_website_flags_are_written_as_the_appspec_says_them() -> None
         full._pap()["company"]["web_unscoped"] is True
         and "web_disabled" not in full._pap()["company"]
     )
-    away = Application("a", "chat", agent="example-blank:0.0.1")
+    away = Application("a", "chat", agent="blank:0.0.1")
     assert away.as_company(web_disabled=True).web_disabled is True
     with pytest.raises(ValidationError, match="add the `web` interface"):
-        Application("x", "chat", agent="example-blank:0.0.1").as_company(
-            web_unscoped=True
-        )
+        Application("x", "chat", agent="blank:0.0.1").as_company(web_unscoped=True)
 
 
 def test_an_application_says_what_it_speaks_and_where_it_renders() -> None:
@@ -251,7 +249,7 @@ def test_an_application_says_what_it_speaks_and_where_it_renders() -> None:
     app = Application(
         "speaker",
         "chat",
-        agent="example-blank:0.0.1",
+        agent="blank:0.0.1",
         protocols=["mcp", "a2a"],
         ui=[{"plugin": "a2ui-surface", "renderer": "a2ui"}, {"plugin": "chat"}],
     )
@@ -274,7 +272,7 @@ def test_an_application_refuses_a_renderer_named_as_its_ui() -> None:
         Application(
             "speaker",
             "chat",
-            agent="example-blank:0.0.1",
+            agent="blank:0.0.1",
             ui=["a2ui"],  # type: ignore[list-item]  # the old shape, refused
         ).spec
 
@@ -320,6 +318,6 @@ def test_an_operation_is_the_persons_to_approve_there_is_no_builder_to_give_it_a
     None
 ):
     """Operations v2: nothing declares an approval in advance at a company."""
-    app = Application("ledger", "chat", agent="example-blank:0.0.1")
+    app = Application("ledger", "chat", agent="blank:0.0.1")
     assert not hasattr(app, "company_standing_permission")
     assert "user_approval_required" not in signature(app.company_operation).parameters

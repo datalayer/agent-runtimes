@@ -50,7 +50,7 @@ app = Application(
     kind="chat",
     # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
     ui=[{"plugin": "chat"}],
-    agent="example-blank:0.0.1",
+    agent="blank:0.0.1",
     instructions=(
         "Use explain_sign_in_display. Never repeat a sign-in link or code: the "
         "page shows them to the person."

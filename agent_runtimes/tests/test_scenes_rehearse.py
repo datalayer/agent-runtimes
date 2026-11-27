@@ -814,7 +814,7 @@ def test_a_runtime_member_is_launched_for_its_application_and_needs_a_key(
     # Launched for Accounting's own Appspec, so that the runtime is given the
     # secrets its connections declare, not the bootstrap agent's none.
     [(agent_id, kwargs)] = asked["launches"]
-    assert agent_id == "example-simple" and kwargs["app_spec"]["id"] == "accounting"
+    assert agent_id == "chat-agent" and kwargs["app_spec"]["id"] == "accounting"
     assert kwargs["label"] == "🧾 Accounting"
     assert [launch.runtime_name for launch in launches] == ["rt-1"]
     accounting = stage.members["accounting"]

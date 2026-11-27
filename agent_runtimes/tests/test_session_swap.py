@@ -32,7 +32,7 @@ from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
     runtime,
 )
 
-HARNESS_AGENT = "example-harness-codex"
+HARNESS_AGENT = "coding-agent-codex"
 FRAMEWORK_AGENT = next(
     spec.id
     for spec in list_agentspecs()
@@ -305,7 +305,7 @@ def test_the_old_agent_route_is_gone_and_the_agent_session_swaps_through_the_new
     assert agent_session.agent_id == HARNESS_AGENT and agent_session.said.startswith(
         "This conversation was with notes-assistant until turn 1"
     )
-    with pytest.raises(AgentRefused, match="is with example-harness-codex already"):
+    with pytest.raises(AgentRefused, match="is with coding-agent-codex already"):
         agent_session.with_agent(HARNESS_AGENT)
 
 

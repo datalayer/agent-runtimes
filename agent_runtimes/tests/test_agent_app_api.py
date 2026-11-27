@@ -785,7 +785,7 @@ def test_the_local_agent_is_its_agents_prompt_then_the_applications_instructions
     app = Application(
         id="writer",
         kind="chat",
-        agent="example-a2a-writer",
+        agent="writer-a2a",
         instructions="Write short.",
     )
     agent = local_agent(app.spec)

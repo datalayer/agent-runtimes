@@ -543,7 +543,7 @@ class TestTheMarketersNetworks:
         APPS_DIR = Path(agentspecs.__file__).parent / "apps"
 
         _linked(monkeypatch)
-        demo = yaml.safe_load((APPS_DIR / "demo-marketer.yaml").read_text())
+        demo = yaml.safe_load((APPS_DIR / "marketer-tryout.yaml").read_text())
         declared = declared_secrets(
             self.marketer, app_spec=demo, app_instance={"deployment_uid": "dep-1"}
         )

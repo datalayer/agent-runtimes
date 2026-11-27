@@ -220,7 +220,7 @@ def test_a_visitor_is_told_by_the_battle_ai_inference_says() -> None:
 # account, with it. Nobody else's deployment does.
 
 DEMO_ACCOUNT = "u-datalayer-demo"
-DEMO_AGENT = "at-demo-accountant"
+DEMO_AGENT = "at-accountant-tryout"
 
 
 def _connection(server: str, access: str = "read", acts_as: str = "owner") -> Any:
@@ -247,7 +247,7 @@ def demo(monkeypatch: pytest.MonkeyPatch):
         "app_uid": "01ACCOUNTANT",
         "deployment_uid": "dep-accountant",
         "version": 7,
-        "visitor_app": "at:demo-accountant",
+        "visitor_app": "at:accountant-tryout",
         "owner_uid": DEMO_ACCOUNT,
     }
     remember_app_instance(DEMO_AGENT, instance)

@@ -52,7 +52,7 @@ APP = {
     "id": "board-pack",
     "name": "Board pack",
     "kind": "chat",
-    "agent": "example-a2a-writer",
+    "agent": "writer-a2a",
     "instructions": "Write short.",
     "context": ["board-reporting", "org-house-style"],
 }
@@ -171,7 +171,7 @@ async def test_the_runtime_gives_its_agent_the_organization_s_contexts(
     http.headers = {"authorization": "Bearer the-caller"}
     request = CreateAgentRequest(
         name="board-pack",
-        agent_spec_id="example-a2a-writer",
+        agent_spec_id="writer-a2a",
         app_spec=APP,
         app_instance={"app_uid": "app-1", "organization_uid": "01ORG"},
     )
@@ -192,7 +192,7 @@ async def test_the_runtime_refuses_it_when_its_organization_s_contexts_cannot_be
     http.headers = {"authorization": "Bearer the-caller"}
     request = CreateAgentRequest(
         name="board-pack",
-        agent_spec_id="example-a2a-writer",
+        agent_spec_id="writer-a2a",
         app_spec={**APP, "context": ["board-reporting"]},
         app_instance={"app_uid": "app-1", "organization_uid": "01ORG"},
     )
@@ -430,7 +430,7 @@ class TestADisabledContext:
         http.headers = {"authorization": "Bearer the-caller"}
         request = CreateAgentRequest(
             name="board-pack",
-            agent_spec_id="example-a2a-writer",
+            agent_spec_id="writer-a2a",
             app_spec=APP,
             app_instance={"app_uid": "app-1", "organization_uid": "01ORG"},
         )
@@ -450,7 +450,7 @@ class TestADisabledContext:
         http.headers = {"authorization": "Bearer the-caller"}
         request = CreateAgentRequest(
             name="board-pack",
-            agent_spec_id="example-a2a-writer",
+            agent_spec_id="writer-a2a",
             app_spec=APP,
             app_instance={"app_uid": "app-1", "organization_uid": "01ORG"},
         )

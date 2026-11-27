@@ -17,7 +17,7 @@ On this machine (1)
    A session is a folder of ~/.datalayer/sessions, named by its uid, kept until you delete it, seen only here and resumed by a runtime on this machine.
   |   # | Session                    | State  | Kind  | Agent           | Turns | Age | Title                           |
   | --: | -------------------------- | ------ | ----- | --------------- | ----: | --- | ------------------------------- |
-❯ |   1 | 01M74VPWT51K7HF7VMJW0N8APT | paused | agent | example-simple  |     2 | 2h  | My name is Ada and I sell tea.  |
+❯ |   1 | 01M74VPWT51K7HF7VMJW0N8APT | paused | agent | chat-agent  |     2 | 2h  | My name is Ada and I sell tea.  |
 On Datalayer (2)
    A session is in your Datalayer account's record, seen on the web, in the desktop app and from any machine signed in, and resumed on a runtime Datalayer launches. Signed out, only the sessions on this machine are listed.
   |   # | Session                    | State  | Kind  | Agent           | Turns | Age | Title                           |
@@ -330,15 +330,15 @@ later `agent --resume <uid>`, or the session picked as `agent` starts,
 launches a new runtime, which rebuilds the conversation from the record:
 
 ```text
-$ agent --cloud -a example-simple --prompt "Please remember the word tangerine. Reply with just OK." --prompt /pause
+$ agent --cloud -a chat-agent --prompt "Please remember the word tangerine. Reply with just OK." --prompt /pause
 OK
-Paused 01M74Z… (example-simple, 1 turn): it is kept in the record.
-Resume it: `agent` lists it as it starts; or `agent --resume 01M74Z…`; or `agent --cloud -a example-simple`, then `/resume 01M74Z…`.
+Paused 01M74Z… (chat-agent, 1 turn): it is kept in the record.
+Resume it: `agent` lists it as it starts; or `agent --resume 01M74Z…`; or `agent --cloud -a chat-agent`, then `/resume 01M74Z…`.
 On the web: https://datalayer.ai/sessions, under Paused sessions.
 $ agent --resume 01M74Z… --prompt "Which word did I ask you to remember? The word only." --prompt /pause
-Resumed 01M74Z… (example-simple): 1 turn replayed. Your next message goes on with it; /pause, /swap, /clone and /export act on it.
+Resumed 01M74Z… (chat-agent): 1 turn replayed. Your next message goes on with it; /pause, /swap, /clone and /export act on it.
 tangerine
-Paused 01M74Z… (example-simple, 2 turns): it is kept in the record.
+Paused 01M74Z… (chat-agent, 2 turns): it is kept in the record.
 ```
 
 The runtime's lines (launched, given back) go to standard error.
@@ -360,7 +360,7 @@ On this machine (1)
    resumed by a runtime on this machine.
   |   # | Session                    | State  | Kind  | Agent          | Turns | Age | Title                          |
   | --: | -------------------------- | ------ | ----- | -------------- | ----: | --- | ------------------------------ |
-  |   1 | 01M74VPWT51K7HF7VMJW0N8APT | paused | agent | example-simple |     2 | 2h  | My name is Ada and I sell tea. |
+  |   1 | 01M74VPWT51K7HF7VMJW0N8APT | paused | agent | chat-agent |     2 | 2h  | My name is Ada and I sell tea. |
 On Datalayer (2)
    A session is in your Datalayer account's record, seen on the web, in the desktop app and from any machine signed in,
    and resumed on a runtime Datalayer launches. Signed out, only the sessions on this machine are listed.

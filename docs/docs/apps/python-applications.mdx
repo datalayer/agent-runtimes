@@ -295,7 +295,7 @@ calls write the `pap` block the Spec and the Canvas write, checked by
 agentspecs' own models; `agent apps build` writes the same Appspec:
 
 ```python
-app = Application("books", "chat", agent="example-blank:0.0.1")
+app = Application("books", "chat", agent="blank:0.0.1")
 
 # A personal agent at Northwind, in each person's own account.
 app.company_connection(
@@ -331,7 +331,7 @@ Instinct's Personal Agent Consent & Trust) is one call; it writes the `pact`
 block *Add a business* writes in the Studio, and lists `pact` in `protocols`:
 
 ```python
-app = Application("travel-desk", "chat", agent="example-blank:0.0.1")
+app = Application("travel-desk", "chat", agent="blank:0.0.1")
 
 app.business_connection(
     "example-air", "air.examples.datalayer.run",
@@ -861,7 +861,7 @@ that runs it honours it.
 from agent_runtimes.apps import Application, Session
 from support_crm import SOURCES, extension   # a Reactor extension, installed
 
-app = Application(id="support-desk-plus", kind="chat", agent="example-blank:0.0.1",
+app = Application(id="support-desk-plus", kind="chat", agent="blank:0.0.1",
                   instructions="Look a customer up with lookup_customer.")
 
 GREETINGS = app.contribution_point("support-desk-plus.greetings")   # others extend it
@@ -1506,15 +1506,15 @@ is refused with `AppNotRunnable` rather than left out, as is an application
 that names no model. A host may pass its own `agent=` factory, as the
 example does.
 
-**The blank agent.** `example-blank` is the catalogue's agent for an
+**The blank agent.** `blank` is the catalogue's agent for an
 application written in Python: a model (Claude Sonnet, through Bedrock here
 and ai-inference on Datalayer) and nothing else — no prompt of its own, no
 MCP servers, no skills, no tools. So `local_agent` builds it in your
 process, and what the agent is told is the application's instructions alone:
-`Application(id="echo-desk", agent="example-blank:0.0.1", instructions="You
+`Application(id="echo-desk", agent="blank:0.0.1", instructions="You
 are Echo Desk…")` answers as Echo Desk. Its tools are the application's own
 (`@app.tool`). `agent apps init --python` starts a blank `app.py` with it. The
-Studio's blank application keeps `example-simple`, which has a decide tool
+Studio's blank application keeps `chat-agent`, which has a decide tool
 and the events skill — so it runs on a runtime, not in your process.
 
 On a Datalayer runtime the agent's model is called through ai-inference,
@@ -1848,7 +1848,7 @@ And the three examples of Chainlit's documentation (its *Examples* pages;
 `AppHost` with a scripted model. All but the voice assistant were also run on a real model: the
 document QA, the SQL, the tools, the file analysis and the three examples of
 the documentation in this process, the copilot under `uvicorn copilot:api`.
-All but the voice assistant run on the blank agent, `example-blank`, built in
+All but the voice assistant run on the blank agent, `blank`, built in
 this process. The voice assistant has not run on a real model, nor has the
 copilot been seen in a browser: the embed it loads does not load yet.
 
@@ -1860,7 +1860,7 @@ copilot been seen in a browser: the embed it loads does not load yet.
 
 What the rebuilds found missing and Agent now has: a step that streams
 (`step.stream`, [Steps](#steps)), a blank agent built in this process
-(`example-blank`, [The agent](#the-agent)), and each tool call of the agent
+(`blank`, [The agent](#the-agent)), and each tool call of the agent
 as a step in this process too; and, from the documentation's *Text to SQL*,
 the model's settings for one call (`model_settings`).
 

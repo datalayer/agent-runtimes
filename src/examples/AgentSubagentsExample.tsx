@@ -8,7 +8,7 @@
  *
  * Multi-agent delegation with the in-repo subagents capability. The
  * orchestrator runs on the local agent-runtimes server, created there by the
- * Agent from the `example-subagents` blueprint; its researcher and writer are
+ * Agent from the `research-writer` blueprint; its researcher and writer are
  * subagents inside its process, each run in an isolated child run.
  *
  * - The chat is the demonstration: no notebook or document beside it
@@ -38,7 +38,7 @@ import type { SubAgentspecConfig } from '../types/agentspecs';
 const AGENT_PLUGINS_AGENTSUB = [AgentSubagentsPlugin];
 
 const AGENT_NAME = 'subagents-example-agent';
-const AGENTSPEC_ID = 'example-subagents';
+const AGENTSPEC_ID = 'research-writer';
 
 /** The subagents the orchestrator can delegate to, from its spec. */
 const declaredSubagents = (): readonly SubAgentspecConfig[] =>

@@ -54,7 +54,7 @@ async def asking(
     uid: str, question: Any
 ) -> Tuple[sessions.LiveSession, List[Any], List[Dict[str, Any]]]:
     """A session whose code asks ``question`` in its turn, waiting for it."""
-    application = Application(id="notes-assistant", agent="example-simple")
+    application = Application(id="notes-assistant", agent="chat-agent")
     live = sessions.LiveSession(
         uid=uid,
         agent_id="notes-assistant",
@@ -280,7 +280,7 @@ async def test_a_question_asked_is_said_on_the_record_by_its_kind_only() -> None
     async def send(body: Dict[str, Any]) -> None:
         sent.append(body)
 
-    application = Application(id="notes-assistant", agent="example-simple")
+    application = Application(id="notes-assistant", agent="chat-agent")
     live = sessions.LiveSession(
         uid="session-ask-record",
         agent_id="notes-assistant",

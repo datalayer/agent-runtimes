@@ -37,7 +37,7 @@ const AGENT_PLUGINS_AGENTSKI = [AgentSkillsPlugin];
 
 const queryClient = new QueryClient();
 const AGENT_NAME = 'skills-example-agent';
-const AGENTSPEC_ID = 'example-skills';
+const AGENTSPEC_ID = 'skills-agent';
 
 const SkillCard: React.FC<{
   skill: SkillInfo;

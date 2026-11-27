@@ -26,7 +26,7 @@ export const ACCOUNTING_STAGE_0_0_1: StageSpec = {
   app: 'accounting:0.0.2',
   battle: '',
   deployments: {
-    accounting: 'demo-accounting',
+    accounting: 'accounting-stage',
   },
   public: false,
   enabled: true,
@@ -45,7 +45,7 @@ export const BUY_FROM_A_SHOP_STAGE_0_0_1: StageSpec = {
   app: '',
   battle: '',
   deployments: {
-    'demo-shop': 'demo-shop',
+    'online-shop': 'online-shop',
   },
   public: true,
   enabled: true,
@@ -64,7 +64,7 @@ export const CODING_AGENT_BEHIND_THE_SHIELD_STAGE_0_0_1: StageSpec = {
   app: '',
   battle: '',
   deployments: {
-    'code-explainer': 'demo-code-explainer',
+    'code-explainer': 'code-explainer-stage',
   },
   public: true,
   enabled: true,
@@ -83,7 +83,7 @@ export const CROP_MONITORING_STAGE_0_0_1: StageSpec = {
   app: '',
   battle: '',
   deployments: {
-    'crop-monitoring': 'demo-crop-monitoring',
+    'crop-monitoring': 'crop-monitoring-stage',
   },
   public: true,
   enabled: true,
@@ -102,8 +102,8 @@ export const DISASTER_ASSESSMENT_STAGE_0_0_1: StageSpec = {
   app: '',
   battle: '',
   deployments: {
-    'disaster-assessment': 'demo-disaster-assessment',
-    'change-detection': 'demo-change-detection',
+    'disaster-assessment': 'disaster-assessment-stage',
+    'change-detection': 'change-detection-stage',
   },
   public: true,
   enabled: true,
@@ -122,7 +122,7 @@ export const MONTH_END_CLOSE_STAGE_0_0_1: StageSpec = {
   app: '',
   battle: '',
   deployments: {
-    'month-end-close': 'demo-month-end-close',
+    'month-end-close': 'month-end-close-stage',
   },
   public: true,
   enabled: true,
@@ -243,7 +243,7 @@ export const SALES_AND_ACCOUNTING_STAGE_0_0_1: StageSpec = {
   app: '',
   battle: '',
   deployments: {
-    accounting: 'demo-accounting',
+    accounting: 'accounting-stage',
   },
   public: true,
   enabled: true,

@@ -60,7 +60,7 @@ CREATED = {
         "started_at": "1791481000.000",
         "expired_at": "1791482800.000",
         "unmetered": False,
-        "agent_spec_id": "example-blank",
+        "agent_spec_id": "blank",
     },
 }
 
@@ -86,7 +86,7 @@ def datalayer_env(tmp_path: Path, **extra: str) -> dict[str, str]:
     return {
         "DATALAYER_RUNTIME_ENVIRONMENT": "ai-agents-env",
         "DATALAYER_RUN_URL": RUN_URL + "/",
-        "AGENT_SPEC_ID": "example-blank",
+        "AGENT_SPEC_ID": "blank",
         "DATALAYER_API_KEY_FILE": str(key),
         "DATALAYER_RUNTIME_STATE_DIR": str(tmp_path / "data"),
         **extra,
@@ -392,7 +392,7 @@ def request_for() -> datalayer.RuntimeRequest:
         {
             "DATALAYER_RUNTIME_ENVIRONMENT": "ai-agents-env",
             "DATALAYER_RUN_URL": RUN_URL,
-            "AGENT_SPEC_ID": "example-blank",
+            "AGENT_SPEC_ID": "blank",
             "DATALAYER_API_KEY": KEY,
             "DATALAYER_RUNTIME_MINUTES": "15",
         },
@@ -423,7 +423,7 @@ def test_launch_goes_the_normal_path_as_kagent_for_the_agent(
     assert len(posts) == 1
     body = posts[0]
     assert body["client_id"] == "kagent" and body["agent_uid"] == "team-a/reviewer"
-    assert body["agent_spec_id"] == "example-blank"
+    assert body["agent_spec_id"] == "blank"
     assert body["environment"] == {"name": "ai-agents-env"}
     assert body["credits_limit"] == pytest.approx(0.01 * 60 * 15)
     assert launched == {

@@ -317,7 +317,7 @@ def test_a_new_runtime_asks_for_an_environment_then_an_agentspec(
 def test_an_application_s_launch_carries_its_appspec(datalayer: FakeDatalayer) -> None:
     app = {"schema": "agent.app/v1", "id": "web-research"}
     started = launch.launch_cloud(
-        "example-simple", reconnect=False, can_ask=False, minutes=5, app_spec=app
+        "chat-agent", reconnect=False, can_ask=False, minutes=5, app_spec=app
     )
     try:
         # Its connections' secrets given at launch.
@@ -343,9 +343,7 @@ def test_an_application_is_never_offered_a_running_runtime(
         lambda running, can_ask: _kept(offered, running, None),
     )
     app = {"schema": "agent.app/v1", "id": "web-research"}
-    started = launch.launch_cloud(
-        "example-simple", can_ask=False, minutes=5, app_spec=app
-    )
+    started = launch.launch_cloud("chat-agent", can_ask=False, minutes=5, app_spec=app)
     try:
         assert offered == [] and not started.attached
         assert datalayer.created["app_spec"] == app
@@ -418,7 +416,7 @@ def test_a_runtime_gone_back_to_is_left_running_without_somebody_to_ask() -> Non
 class FakeRuntime:
     """A cloud agent runtime: what the slash commands read, and who asked."""
 
-    def __init__(self, spec_id: str = "example-simple", library: tuple = ()):
+    def __init__(self, spec_id: str = "chat-agent", library: tuple = ()):
         self.spec_id = spec_id
         self.library = set(library) | {spec_id}
         self.seen: List[tuple[str, str, Optional[str]]] = []
@@ -559,7 +557,7 @@ def test_going_back_with_another_agentspec_reconfigures_the_runtimes_agent(
 ) -> None:
     runtime, relay = cloud_runtime
     assert not ensure_agentspec(
-        relay.url, "example-simple", runtime_name="runtime-9", token="the-token"
+        relay.url, "chat-agent", runtime_name="runtime-9", token="the-token"
     )
     assert runtime.configured == []
     assert ensure_agentspec(
@@ -723,7 +721,7 @@ def test_a_refusal_is_one_sentence_and_the_exit(
     datalayer.credits = 0.0
     with pytest.raises(typer.Exit):
         cli._launch_on_datalayer(
-            "example-simple", environment=None, minutes=None, runtime=None
+            "chat-agent", environment=None, minutes=None, runtime=None
         )
     out = capsys.readouterr().out
     assert "Credits: 0.00 left." in out
@@ -747,7 +745,7 @@ def test_on_datalayer_no_agentspec_list_is_shown(
     try:
         out = capsys.readouterr().out
         assert "Credits: 100.00 left." in out
-        assert "The runtime's agent is example-simple" in out
+        assert "The runtime's agent is chat-agent" in out
         assert datalayer.created["environment"] == "ai-agents-env"
     finally:
         started.relay.stop()
@@ -832,14 +830,12 @@ def test_the_agentspecs_offered_on_datalayer_are_the_enabled_ones() -> None:
             runtime_engine="datalayer",
         ),
         Spec(
-            id="example-simple",
+            id="chat-agent",
             enabled=True,
             description="Simple.",
             runtime_engine="datalayer",
         ),
-        Spec(
-            id="example-kagent", enabled=True, description="", runtime_engine="kagent"
-        ),
+        Spec(id="kagent-chat", enabled=True, description="", runtime_engine="kagent"),
         Spec(id="off", enabled=False, description="Off.", runtime_engine="datalayer"),
         Spec(
             id="unlisted",
@@ -850,8 +846,8 @@ def test_the_agentspecs_offered_on_datalayer_are_the_enabled_ones() -> None:
         ),
     ]
     assert launch.agentspec_choices(specs) == [
-        ("example-kagent (runs on kagent)", "example-kagent"),
-        ("example-simple — Simple.", "example-simple"),
+        ("chat-agent — Simple.", "chat-agent"),
+        ("kagent-chat (runs on kagent)", "kagent-chat"),
         ("worker-crawler — Crawls.", "worker-crawler"),
     ]
     seen: List[str] = []
@@ -861,8 +857,8 @@ def test_the_agentspecs_offered_on_datalayer_are_the_enabled_ones() -> None:
         return "worker-crawler"
 
     assert launch.choose_agentspec(specs, can_ask=True, ask=ask) == "worker-crawler"
-    assert seen == ["example-simple"]
-    assert launch.choose_agentspec(specs, can_ask=False) == "example-simple"
+    assert seen == ["chat-agent"]
+    assert launch.choose_agentspec(specs, can_ask=False) == "chat-agent"
     with pytest.raises(KeyboardInterrupt):
         launch.choose_agentspec(specs, can_ask=True, ask=lambda *a: None)
 
@@ -871,7 +867,7 @@ def test_agent_offers_the_eight_agents_the_catalogue_enables() -> None:
     """agentspecs 0.0.187 (the user, 14 November 2026): the cloud picker and the
     local one offer the agents the catalogue enables and lists, the eight seed
     agents (the Traveller since 15 November 2026, the Data Analyst since
-    18 November 2026, the Functional Analyst since 19 November 2026); example-simple,
+    18 November 2026, the Functional Analyst since 19 November 2026); chat-agent,
     enabled and not listed, stays the neutral default."""
     from agent_runtimes.chat import cli
     from agent_runtimes.specs.agents import get_agent_spec, list_agentspecs
@@ -888,6 +884,6 @@ def test_agent_offers_the_eight_agents_the_catalogue_enables() -> None:
     ]
     assert [value for _, value in launch.agentspec_choices(list_agentspecs())] == seed
     assert cli.offered_agentspec_ids() == seed
-    simple = get_agent_spec("example-simple")
+    simple = get_agent_spec("chat-agent")
     assert simple is not None and simple.enabled and not simple.listed
-    assert launch.choose_agentspec(list_agentspecs(), can_ask=False) == "example-simple"
+    assert launch.choose_agentspec(list_agentspecs(), can_ask=False) == "chat-agent"

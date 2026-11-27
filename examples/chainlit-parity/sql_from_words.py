@@ -17,7 +17,7 @@ OpenAI client is the developer's: the application's agent is the model.
 
 from agent_runtimes.apps import Application, Session
 
-AGENT = "example-blank:0.0.1"
+AGENT = "blank:0.0.1"
 
 app = Application(
     id="sql-from-words",

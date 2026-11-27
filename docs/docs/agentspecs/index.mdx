@@ -143,8 +143,8 @@ record and on the usage the platform records for it (`runtime_engine`), and
 the platform's usage lists Kagent's apart.
 
 ```yaml
-# agentspecs/agents/example-kagent.yaml
-id: example-kagent
+# agentspecs/agents/kagent-chat.yaml
+id: kagent-chat
 model: "bedrock:us.anthropic.claude-sonnet-4-6"
 harness: pydantic-ai
 runtime_engine: kagent
@@ -256,7 +256,7 @@ notifications:
 ```
 
 ```yaml
-id: example-tool-approvals
+id: approved-automation
 tool_hooks:
 	before_tool_execute:
 		- function: agent_runtimes.integrations.tool_policy:evaluate_tool_request

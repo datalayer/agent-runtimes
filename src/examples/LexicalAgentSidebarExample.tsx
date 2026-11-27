@@ -59,7 +59,7 @@ const DEFAULT_AGENT_ID =
   import.meta.env.VITE_AGENT_ID || 'lexical-sidebar-agent-runtime-example';
 
 /** The agentspec this example's agent is built from. */
-const AGENTSPEC_ID = 'example-document-agent-sidebar';
+const AGENTSPEC_ID = 'document-writer';
 
 /**
  * The plugins that need a kernel, and the kernel they need.

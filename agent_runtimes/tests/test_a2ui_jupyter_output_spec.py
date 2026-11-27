@@ -7,7 +7,7 @@ from agent_runtimes.specs.agents import get_agent_spec
 
 
 def test_a2ui_jupyter_output_chat_spec_drives_the_frontend_demo_tool() -> None:
-    spec = get_agent_spec("example-a2ui-jupyter-output")
+    spec = get_agent_spec("jupyter-output-presenter")
 
     assert spec is not None
     assert spec.protocol == "vercel-ai"

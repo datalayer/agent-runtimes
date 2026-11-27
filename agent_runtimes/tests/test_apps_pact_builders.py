@@ -18,7 +18,7 @@ from agent_runtimes.apps import Application
 
 
 def _travel_desk() -> Application:
-    app = Application("travel-desk-py", "chat", agent="example-blank:0.0.1")
+    app = Application("travel-desk-py", "chat", agent="blank:0.0.1")
     app.business_connection(
         "example-air",
         "air.examples.datalayer.run",
@@ -73,7 +73,7 @@ def test_what_is_refused_is_never_kept(brand: str, kwargs: dict, says: str) -> N
 
 
 def test_no_audience_no_connection() -> None:
-    app = Application("no-audience", "chat", agent="example-blank:0.0.1")
+    app = Application("no-audience", "chat", agent="blank:0.0.1")
     with pytest.raises(TypeError):
         app.business_connection("air", "air.example")  # type: ignore[call-arg]
     assert "pact" not in app.document
@@ -81,7 +81,7 @@ def test_no_audience_no_connection() -> None:
 
 def test_as_business_writes_the_business_and_lists_pact() -> None:
     """The application (decided 2026-10-13) as a PACT business."""
-    app = Application("air-desk", "chat", agent="example-blank:0.0.1")
+    app = Application("air-desk", "chat", agent="blank:0.0.1")
     agent = {
         "issuer": "https://agent.example/pact",
         "jwks_uri": "https://agent.example/pact/jwks.json",
@@ -102,7 +102,7 @@ def test_as_business_writes_the_business_and_lists_pact() -> None:
     built = parse_app(app.document)
     assert built.pact.business.enabled and built.protocols == ["pact"]
     # Nobody registered: refused, nothing kept.
-    other = Application("nobody", "chat", agent="example-blank:0.0.1")
+    other = Application("nobody", "chat", agent="blank:0.0.1")
     with pytest.raises(ValidationError, match="name at least one"):
         other.as_business(registered_agents=[])
     assert "pact" not in other.document

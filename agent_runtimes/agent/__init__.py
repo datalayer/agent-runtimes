@@ -11,7 +11,7 @@ The lifecycle, written in Python::
 
     from agent_runtimes import agent
 
-    app = agent.app(id="echo-desk", name="Echo Desk", kind="chat", agent="example-simple:0.0.1")
+    app = agent.app(id="echo-desk", name="Echo Desk", kind="chat", agent="chat-agent:0.0.1")
     scene = agent.scene("desk-and-sales", "Desk & Sales")
     agent.stage(scene, runs_in={"desk": "browser"})
 

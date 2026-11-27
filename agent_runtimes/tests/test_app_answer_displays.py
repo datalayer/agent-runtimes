@@ -42,7 +42,7 @@ async def _ignore(body: Dict[str, Any]) -> None:
 
 
 async def hosted(uid: str) -> tuple[sessions.LiveSession, List[Any]]:
-    application = Application(id="notes-assistant", agent="example-simple")
+    application = Application(id="notes-assistant", agent="chat-agent")
     pressed: List[Any] = []
 
     @application.action("again", payload=Row)

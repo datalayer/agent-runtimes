@@ -6,7 +6,7 @@
 /**
  * `AIApplication`, the React component of the host's own page (the user,
  * 16 November 2026): in visitor mode it reads a name as the element does —
- * `demo-marketer` at its address — and draws it on the visitors' runtime in
+ * `marketer-tryout` at its address — and draws it on the visitors' runtime in
  * the anonymous preview, the Marketer's connections locked in its title
  * bar; in runtime mode it speaks to the agent already on the person's
  * runtime and makes nothing there; and `<datalayer-app>` draws through it.
@@ -86,16 +86,16 @@ const pluginNamed = (plugins: unknown[], name: string): any =>
     )
     .find((plugin: any) => plugin?.name === name);
 
-/** ai-agents' answer for `demo-marketer` at its address, as a visitor reads it. */
+/** ai-agents' answer for `marketer-tryout` at its address, as a visitor reads it. */
 const atDemoMarketer = () =>
   vi.fn(async (url: string) => {
     expect(url).toBe(
-      'https://r1.example/api/ai-agents/v1/apps/deployments/at/demo-marketer',
+      'https://r1.example/api/ai-agents/v1/apps/deployments/at/marketer-tryout',
     );
     return new Response(
       JSON.stringify({
         success: true,
-        spec: dumpAppspec(getApp('demo-marketer')!),
+        spec: dumpAppspec(getApp('marketer-tryout')!),
         deployment: { app_name: 'Marketer' },
         session: { opens: true },
         runs_code: false,
@@ -116,7 +116,7 @@ afterEach(() => {
 });
 
 describe('AIApplication in visitor mode', () => {
-  it('reads demo-marketer at its address, a skeleton meanwhile, and runs it on the visitors’ runtime in the anonymous preview, its connections locked', async () => {
+  it('reads marketer-tryout at its address, a skeleton meanwhile, and runs it on the visitors’ runtime in the anonymous preview, its connections locked', async () => {
     let release: () => void = () => undefined;
     const gate = new Promise<void>(resolve => {
       release = resolve;
@@ -132,7 +132,7 @@ describe('AIApplication in visitor mode', () => {
     const onSignIn = vi.fn();
     const { container, root } = await render(
       <AIApplication
-        app="demo-marketer"
+        app="marketer-tryout"
         runsOn={{
           kind: 'visitor',
           api: 'https://r1.example/',
@@ -151,12 +151,12 @@ describe('AIApplication in visitor mode', () => {
     expect(container.querySelector('[data-application-skeleton]')).toBeNull();
     const agentProps = seen.agent.at(-1)!;
     expect(agentProps).toMatchObject({
-      agentId: 'at-demo-marketer',
+      agentId: 'at-marketer-tryout',
       runAsAnonymous: true,
       maxTurns: 10,
       datalayerVisitors: {
         url: 'https://r1.example/api/runtime-visitors',
-        app: 'at:demo-marketer',
+        app: 'at:marketer-tryout',
         inferenceUrl: 'https://r1.example',
       },
     });
@@ -175,7 +175,7 @@ describe('AIApplication in visitor mode', () => {
     const onAction = vi.fn();
     const { root } = await render(
       <AIApplication
-        app="demo-marketer"
+        app="marketer-tryout"
         runsOn={{
           kind: 'visitor',
           api: 'https://r1.example/',
@@ -278,7 +278,7 @@ describe('AIApplication in runtime mode', () => {
       }),
     );
 
-    const demo = getApp('demo-data-analyst');
+    const demo = getApp('data-analyst-tryout');
     expect(demo?.version).toBe('0.0.8');
     expect(demo?.agent).toBe('worker-data-analyst:0.0.2');
     expect(demo?.instructions).toContain(

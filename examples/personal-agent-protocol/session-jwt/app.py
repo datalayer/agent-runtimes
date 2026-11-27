@@ -33,7 +33,7 @@ app = Application(
     kind="chat",
     # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
     ui=[{"plugin": "chat"}],
-    agent="example-blank:0.0.1",
+    agent="blank:0.0.1",
     instructions=(
         "Use explain_session_jwt to explain how a Session JWT protects a request. Never "
         "ask for or expose a private key, access token, Session JWT, delegation, JWK, "

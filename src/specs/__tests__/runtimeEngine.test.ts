@@ -41,7 +41,7 @@ describe('runtimeEngine', () => {
 
   it('is Kagent for the Kagent example alone, on pydantic-ai', () => {
     const onKagent = specs.filter(spec => spec.runtimeEngine === 'kagent');
-    expect(onKagent.map(spec => spec.id)).toEqual(['example-kagent']);
+    expect(onKagent.map(spec => spec.id)).toEqual(['kagent-chat']);
     expect(onKagent[0].harness).toBe('pydantic-ai');
   });
 

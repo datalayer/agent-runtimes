@@ -17,7 +17,7 @@ app = Application(
     kind="chat",
     # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
     ui=[{"plugin": "chat"}],
-    agent="example-blank:0.0.1",
+    agent="blank:0.0.1",
     instructions=(
         "Call inspect_pap_agent before describing an agent identity. Report only "
         "the verified public summary returned by the tool."

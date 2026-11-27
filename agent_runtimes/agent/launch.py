@@ -51,7 +51,7 @@ DEFAULT_ENVIRONMENT = "ai-agents-env"
 #: The agentspec a new cloud runtime is launched with unless ``-a`` names
 #: another: the launch path configures an agent only from an agentspec (the
 #: companion's ``run-start-hooks``), and this is the one ``agent`` starts with.
-DEFAULT_CLOUD_AGENTSPEC = "example-simple"
+DEFAULT_CLOUD_AGENTSPEC = "chat-agent"
 
 #: Where the last answer to *where?* is kept, to offer it first next time.
 PREFERENCES = Path.home() / ".datalayer" / "agent.json"
@@ -757,7 +757,7 @@ def agentspec_choices(specs: list[Any]) -> list[tuple[str, str]]:
     """The agentspecs offered on Datalayer, by id, each with its description.
 
     Those the catalogue enables and lists: an enabled agent kept out of the
-    pickers (``listed: false``, agentspecs 0.0.187), as ``example-simple``,
+    pickers (``listed: false``, agentspecs 0.0.187), as ``chat-agent``,
     runs by id without being offered. The runtime reaches the models through
     Datalayer: none is held back for this machine's keys, as the local picker
     does.
@@ -783,9 +783,9 @@ def choose_agentspec(
     """The agentspec of a new cloud runtime: the person's pick among the offered ones.
 
     The catalogue's enabled and listed agents are offered (the home page's
-    five), ``example-simple`` proposed when it is one of them, the first
+    five), ``chat-agent`` proposed when it is one of them, the first
     otherwise. Without somebody to ask, or with no agentspec to offer, it is
-    ``example-simple``, the neutral default: enabled, not listed (agentspecs
+    ``chat-agent``, the neutral default: enabled, not listed (agentspecs
     0.0.187), so it runs though it is not offered.
     """
     choices = agentspec_choices(specs)

@@ -8,7 +8,7 @@
  * typed-decision model, from the chat and from the floating assistant.
  *
  * The *Decide* application of the catalogue (agentspecs `apps/decide.yaml`)
- * in the Agent workspace, on the Local target: its agent — `example-simple`
+ * in the Agent workspace, on the Local target: its agent — `chat-agent`
  * with the `decide` tool — runs on the local agent-runtimes server, and
  * answers a question about a text by asking a typed decision. The floating
  * assistant beside it offers *Ask a decision* in its balloon: the situation,

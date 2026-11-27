@@ -4,7 +4,7 @@
  */
 
 /**
- * The demo shop's product cards (16 November 2026): a grid of products with
+ * The online shop's product cards (16 November 2026): a grid of products with
  * their photos, a placeholder while each photo loads and the product's name
  * when it cannot be drawn, a quote and a test order with their total; and the
  * Shopper's comparison and basket with the products' photos.

@@ -24,7 +24,7 @@ app = Application(
     "chat",
     # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
     ui=[{"plugin": "chat"}, {"plugin": "pap-sign-in"}],
-    agent="example-blank:0.0.1",
+    agent="blank:0.0.1",
     name="PAP Company Connection",
     description=(
         "A company reached as a personal agent through Datalayer's gateway: "

@@ -53,7 +53,7 @@ describe('the Composer’s button, every application’s', () => {
   });
 
   it('is drawn once for an application that lists it, where it lists it', () => {
-    const app = APP_CATALOGUE['demo-accountant'];
+    const app = APP_CATALOGUE['accountant-tryout'];
     expect(drawnUiOf(app)).toEqual([...app.ui, { plugin: PLUGIN_MANAGER }]);
     expect(
       names(appPreset(app).plugins).filter(

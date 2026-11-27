@@ -355,7 +355,7 @@ def main_callback(
         help=(
             "Run the agent on Datalayer, in a cloud runtime billed by the second, "
             "without asking where (chat mode): an environment is picked, not an "
-            "agentspec; the agent is example-simple unless -a names another. "
+            "agentspec; the agent is chat-agent unless -a names another. "
             "Needs `datalayer login` or DATALAYER_API_KEY."
         ),
     ),

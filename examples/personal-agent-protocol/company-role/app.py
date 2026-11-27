@@ -32,7 +32,7 @@ app = Application(
     "chat",
     # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
     ui=[{"plugin": "chat"}],
-    agent="example-blank:0.0.1",
+    agent="blank:0.0.1",
     name="PAP Company Role",
     description=(
         "An application that is a company personal agents work with: an "

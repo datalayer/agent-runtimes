@@ -9,7 +9,7 @@
  * The code sandbox: the agent runs Python through `execute_code` in a sandbox
  * the server manages, and the page shows that sandbox.
  *
- * - The Agent workspace creates the `example-code-sandbox` agent on the Local target
+ * - The Agent workspace creates the `python-runner` agent on the Local target
  * - A control above the chat switches this agent's sandbox variant (eval /
  *   jupyter) live, through `/agents/{id}/sandbox/ensure`
  * - A sidebar follows the sandbox over `/configure/sandbox/ws`: its variant,

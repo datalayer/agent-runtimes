@@ -33,7 +33,7 @@ async def _nothing(_body: Any = None) -> None:
 
 
 def runs_app() -> Application:
-    return Application(id="runs-desk", kind="chat", agent="example-simple")
+    return Application(id="runs-desk", kind="chat", agent="chat-agent")
 
 
 async def opened(channel: Any) -> Any:

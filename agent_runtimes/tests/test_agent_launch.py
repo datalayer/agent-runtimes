@@ -405,7 +405,7 @@ def test_the_record_datalayer_sets_a_runtime_up_with_is_told_from_the_pools() ->
 
     # What configure-from-spec records: the request the agent was created from.
     configured = CreateAgentRequest(
-        name="default", agent_spec_id="example-simple"
+        name="default", agent_spec_id="chat-agent"
     ).model_dump()
     configured.pop("jupyter_sandbox", None)
     assert launch.set_up_by_datalayer(configured)
@@ -416,8 +416,8 @@ def test_the_record_datalayer_sets_a_runtime_up_with_is_told_from_the_pools() ->
     assert '"id": getattr(agent_spec, "id", agent_id)' in booted_source
     assert '"selected_mcp_servers"' not in booted_source
     booted = {
-        "id": "example-simple",
-        "agent_spec_id": "example-simple",
+        "id": "chat-agent",
+        "agent_spec_id": "chat-agent",
         "mcp_servers": [],
     }
     assert not launch.set_up_by_datalayer(booted)

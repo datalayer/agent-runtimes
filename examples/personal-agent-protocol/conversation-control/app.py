@@ -46,7 +46,7 @@ app = Application(
     kind="chat",
     # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
     ui=[{"plugin": "chat"}],
-    agent="example-blank:0.0.1",
+    agent="blank:0.0.1",
     instructions=(
         "Use explain_conversation_control to explain how a PAP conversation is signed "
         "in to, handed to the user directly or to a person at the company, and closed. "

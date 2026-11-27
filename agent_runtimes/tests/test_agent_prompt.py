@@ -143,7 +143,7 @@ def served(
     runtime: FastAPI,  # noqa: F811
     creation_spy: dict[str, object],  # noqa: F811
 ) -> FastAPI:
-    """``example-simple`` on Sonnet, ai-inference serving Sonnet and Qwen."""
+    """``chat-agent`` on Sonnet, ai-inference serving Sonnet and Qwen."""
     set_inference_models(
         InferenceModels(served=(SONNET, QWEN), url="u", note="serves both")
     )
@@ -258,7 +258,7 @@ def test_a_cloud_run_stops_the_runtime_unless_kept(
     assert on_datalayer.created == {
         "environment": "ai-agents-env",
         "time_reservation": 5,
-        "agent_spec_id": "example-simple",
+        "agent_spec_id": "chat-agent",
     }
     assert on_datalayer.stopped == ["runtime-1"]
     captured = capsys.readouterr()
@@ -266,7 +266,7 @@ def test_a_cloud_run_stops_the_runtime_unless_kept(
     assert "Models on runtime-1 on Datalayer (ai-agents-env) (2)" in captured.out
     assert "Launching" not in captured.out
     # The launch, the steps and the stop are on standard error.
-    assert "The runtime's agent is example-simple" in captured.err
+    assert "The runtime's agent is chat-agent" in captured.err
     assert "[2/2] /help" in captured.err
     assert "Stopped cloud agent runtime runtime-1." in captured.err
     assert not ANSI.search(captured.out) and not ANSI.search(captured.err)
@@ -355,7 +355,7 @@ def test_on_this_machine_the_agent_is_named_and_the_server_stopped(
         cli, "_start_agent_runtime_server", lambda agent_id, **kwargs: (process, 9)
     )
     monkeypatch.setattr(cli, "_wait_for_server", lambda host, port, timeout: False)
-    assert cli.run_prompts(["/models"], agent_id="example-simple") == 1
+    assert cli.run_prompts(["/models"], agent_id="chat-agent") == 1
     assert "did not start on this machine" in capsys.readouterr().err
     assert process.terminated
 
@@ -383,7 +383,7 @@ def test_prompt_is_an_option_of_agent_and_of_agent_chat(
         [
             "--cloud",
             "-a",
-            "example-simple",
+            "chat-agent",
             "-m",
             "10",
             "-q",
@@ -395,7 +395,7 @@ def test_prompt_is_an_option_of_agent_and_of_agent_chat(
     assert result.exit_code == 3, result.output
     prompts, options = called[0]
     assert prompts == ["/models", "Hi"]
-    assert options["cloud"] and options["agent_id"] == "example-simple"
+    assert options["cloud"] and options["agent_id"] == "chat-agent"
     assert options["minutes"] == 10 and not options["keep"]
 
     help_text = re.sub(

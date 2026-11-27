@@ -97,7 +97,7 @@ def crm() -> ReactorExtension:
 
 
 def greeter() -> Application:
-    app = Application(id="greeter", kind="chat", agent="example-simple")
+    app = Application(id="greeter", kind="chat", agent="chat-agent")
     app.contribute(SOURCES, {"name": "greetings"}, id="greetings")
     return app
 
@@ -161,7 +161,7 @@ async def test_what_it_contributes_is_on_the_hosts_platform_and_goes_with_it() -
 async def test_its_own_point_is_extended_by_another_plugin_and_read_by_its_code() -> (
     None
 ):
-    app = Application(id="greeter", kind="chat", agent="example-simple")
+    app = Application(id="greeter", kind="chat", agent="chat-agent")
     greetings = app.contribution_point("greeter.greetings")
 
     @app.start

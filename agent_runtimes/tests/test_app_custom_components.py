@@ -38,7 +38,7 @@ async def _nothing(_body: Any = None) -> None:
 
 
 def gauge_app(kind: str = "chat") -> Application:
-    app = Application(id="load-desk", kind=kind, agent="example-simple")
+    app = Application(id="load-desk", kind=kind, agent="chat-agent")
     app.custom_component("Gauge", **GAUGE)
     return app
 
@@ -100,7 +100,7 @@ def test_it_is_of_its_application_only() -> None:
     with pytest.raises(ValueError, match="The catalog has no component 'Gauge'"):
         component_node("load", "Gauge", label="Load")
     with pytest.raises(ValueError, match="The catalog has no component 'Gauge'"):
-        Application(id="other", kind="chat", agent="example-simple").component(
+        Application(id="other", kind="chat", agent="chat-agent").component(
             "load", "Gauge", label="Load"
         )
     with pytest.raises(AppNotRunnable, match="There is no component named 'Gauge'"):
@@ -109,7 +109,7 @@ def test_it_is_of_its_application_only() -> None:
                 "id": "other",
                 "name": "Other",
                 "kind": "chat",
-                "agent": "example-simple",
+                "agent": "chat-agent",
                 "interface": {"components": ["Gauge"]},
             }
         )
@@ -158,7 +158,7 @@ async def test_a_widgets_page_shows_an_output_with_it() -> None:
         app.output("bare", "Gauge")
     with pytest.raises(ValueError, match="a component of its own"):
         app.output("dial", "Dial")
-    blind = Application(id="blind", kind="widget", agent="example-simple")
+    blind = Application(id="blind", kind="widget", agent="chat-agent")
     blind.custom_component("Badge", **{**GAUGE, "shows": [], "sends": []})
     with pytest.raises(ValueError, match="which shows nothing"):
         blind.output("badge", "Badge", label="x")

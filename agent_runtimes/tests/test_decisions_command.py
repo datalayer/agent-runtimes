@@ -33,7 +33,7 @@ from agent_runtimes.routes import configure as configure_route
 from agent_runtimes.tools.decisions import agent_decisions, decisions_info
 
 #: Two agents of the runtime: one whose spec names decisions, one whose does not.
-DECIDER = "example-simple"
+DECIDER = "chat-agent"
 PLAIN = "plain-agent"
 
 #: httpx's own client, kept before any test replaces it.

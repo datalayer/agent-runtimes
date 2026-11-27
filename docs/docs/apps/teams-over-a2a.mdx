@@ -360,9 +360,9 @@ deploying it:
 
 ```bash
 agent apps push accounting.yaml --app <application uid>
-agent apps deploy <application uid> --slug demo-accounting \
+agent apps deploy <application uid> --slug accounting-stage \
   --visibility public --always-on --spend-limit 50 --a2a --visitors
-#  A2A: https://r1.datalayer.run/api/ai-agents/v1/apps/deployments/at/demo-accounting/a2a/  (open to visitors)
+#  A2A: https://r1.datalayer.run/api/ai-agents/v1/apps/deployments/at/accounting-stage/a2a/  (open to visitors)
 ```
 
 `--no-a2a` and `--no-visitors` turn each off; `--not-always-on` stops keeping

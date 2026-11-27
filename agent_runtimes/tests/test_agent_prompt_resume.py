@@ -34,7 +34,7 @@ def _row(uid: str, **fields: Any) -> Paused:
         "where": ON_DATALAYER,
         "store": RECORD,
         "started_at": "2026-11-11T09:00:00+00:00",
-        "app_uid": "agent:example-simple",
+        "app_uid": "agent:chat-agent",
         "state": "paused",
     }
     said.update(fields)
@@ -83,7 +83,7 @@ def test_resume_with_prompt_goes_on_with_the_session_where_it_lives(
     assert options["resume"] == "01CLOUDAGENT"
     # On Datalayer, where it ran, with its agentspec: nobody is asked.
     assert options["cloud"] and not options["local"]
-    assert options["agent_id"] == "example-simple"
+    assert options["agent_id"] == "chat-agent"
 
 
 def test_continue_with_prompt_takes_the_most_recent_and_reads_its_files(

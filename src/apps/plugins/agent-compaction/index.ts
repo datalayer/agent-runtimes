@@ -6,7 +6,7 @@
 /**
  * `@datalayer/agent-plugin-agent-compaction` — history compaction, as a capacity.
  *
- * Mounts the `example-compaction` agent, a long-winded one, under a context
+ * Mounts the `story-writer` agent, a long-winded one, under a context
  * token budget: once the history grows past it, older turns are summarized.
  * Cast from the shared capacity mould; the openers are the spec's own.
  *
@@ -30,7 +30,7 @@ export function createAgentCompactionPlugin(maxTokens: number) {
     key: 'compaction',
     displayName: 'Agent Compaction',
     description: `History compaction under a ${maxTokens.toLocaleString()} token budget.`,
-    specId: 'example-compaction',
+    specId: 'story-writer',
     octicon: 'history',
     emoji: '🗜️',
     createPayload: { compactionMaxTokens: maxTokens },

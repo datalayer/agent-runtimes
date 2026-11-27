@@ -44,7 +44,7 @@ def _kept(
     store: FileSessionStore,
     uid: str,
     state: str = "paused",
-    agent: str = "example-simple",
+    agent: str = "chat-agent",
 ) -> None:
     entries: List[Dict[str, Any]] = [
         {
@@ -117,7 +117,7 @@ def _move(
             source=source,
             destination=destination,
             by="ada",
-            catalogue_agent=lambda agent: agent == "example-simple",
+            catalogue_agent=lambda agent: agent == "chat-agent",
             **more,
         )
     )
@@ -393,10 +393,10 @@ def test_the_picker_in_a_terminal_answers_the_key_pressed(
 
 def _many(here: int, there: int) -> List[Paused]:
     return [
-        Paused(f"here-{n}", "agent", "example-simple", "T", ON_THIS_MACHINE, "file", "")
+        Paused(f"here-{n}", "agent", "chat-agent", "T", ON_THIS_MACHINE, "file", "")
         for n in range(here)
     ] + [
-        Paused(f"there-{n}", "agent", "example-simple", "T", ON_DATALAYER, "record", "")
+        Paused(f"there-{n}", "agent", "chat-agent", "T", ON_DATALAYER, "record", "")
         for n in range(there)
     ]
 
@@ -514,8 +514,8 @@ def test_what_resumes_and_what_starts_over() -> None:
     )
     assert resume_command(agent) == ["--resume", "01M7AGENT"]
     assert start_over_command(
-        Paused("u", "agent", "example-simple", "T", "local", "file", "")
-    ) == ["-a", "example-simple", "--local"]
+        Paused("u", "agent", "chat-agent", "T", "local", "file", "")
+    ) == ["-a", "chat-agent", "--local"]
     assert start_over_command(
         Paused(
             "u", "application", "decide", "T", "cloud", "record", "", app_uid="decide"
@@ -560,7 +560,7 @@ def test_a_uid_stays_the_same_from_this_machine_to_datalayer_and_back(
     assert there[1]["payload"]["asked"] == "My name is Ada."
     assert "sk-secret" not in json.dumps(there) and done.redactions == 1
     assert there[-1]["payload"]["transferred_from"] == "local"
-    assert record.writes[0]["app_uid"] == "agent:example-simple"
+    assert record.writes[0]["app_uid"] == "agent:chat-agent"
     # Ended here, saying where it went: not resumed twice.
     here = asyncio.run(ThisMachine(files).entries(uid))
     assert here[-1]["kind"] == "ended"
@@ -573,7 +573,7 @@ def test_a_uid_stays_the_same_from_this_machine_to_datalayer_and_back(
         record.write(
             "the-token",
             {
-                "app_uid": "agent:example-simple",
+                "app_uid": "agent:chat-agent",
                 "session_uid": uid,
                 "version": 0,
                 "entries": [
@@ -637,7 +637,7 @@ def test_a_transfer_is_refused_in_a_sentence(files: FileSessionStore) -> None:
         {
             "kind": "session",
             "payload": {"state": "open"},
-            "app_uid": "agent:example-simple",
+            "app_uid": "agent:chat-agent",
         }
     ]
     with pytest.raises(
@@ -701,7 +701,7 @@ def test_a_new_sessions_uid_is_a_ulid_wherever_it_is_minted() -> None:
     from agent_runtimes.apps import AppHost, Application
     from agent_runtimes.apps.session import MemoryChannel
 
-    host = AppHost(Application(id="desk", agent="example-simple"), MemoryChannel())
+    host = AppHost(Application(id="desk", agent="chat-agent"), MemoryChannel())
     try:
         assert is_ulid(host._session().uid)
     finally:
@@ -809,10 +809,10 @@ def test_delete_without_a_uid_goes_through_every_session_and_asks_each() -> None
     from agent_runtimes.commands import sessions as command
 
     rows = [
-        Paused("01-a", "agent", "example-simple", "A", ON_THIS_MACHINE, "file", ""),
-        Paused("01-b", "agent", "example-simple", "B", ON_DATALAYER, "record", ""),
-        Paused("01-c", "agent", "example-simple", "C", ON_DATALAYER, "record", ""),
-        Paused("01-d", "agent", "example-simple", "D", ON_THIS_MACHINE, "file", ""),
+        Paused("01-a", "agent", "chat-agent", "A", ON_THIS_MACHINE, "file", ""),
+        Paused("01-b", "agent", "chat-agent", "B", ON_DATALAYER, "record", ""),
+        Paused("01-c", "agent", "chat-agent", "C", ON_DATALAYER, "record", ""),
+        Paused("01-d", "agent", "chat-agent", "D", ON_THIS_MACHINE, "file", ""),
     ]
     answers = {
         "01-a": command.DELETE_YES,
@@ -853,7 +853,7 @@ def test_stop_ends_the_walk_and_deletes_nothing_more() -> None:
     from agent_runtimes.commands import sessions as command
 
     rows = [
-        Paused(f"01-{n}", "agent", "example-simple", "T", ON_THIS_MACHINE, "file", "")
+        Paused(f"01-{n}", "agent", "chat-agent", "T", ON_THIS_MACHINE, "file", "")
         for n in range(3)
     ]
     replies = iter([command.DELETE_YES, command.DELETE_STOP, command.DELETE_YES])

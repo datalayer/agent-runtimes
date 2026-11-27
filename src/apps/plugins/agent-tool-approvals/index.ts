@@ -6,7 +6,7 @@
 /**
  * `@datalayer/agent-plugin-agent-tool-approvals` — tool approvals, as a capacity.
  *
- * Mounts the `example-tool-approvals` agent: two echo tools, one of which is
+ * Mounts the `approved-automation` agent: two echo tools, one of which is
  * held for a person's approval before it runs. Cast from the shared capacity
  * mould; the openers are the spec's own.
  *
@@ -29,7 +29,7 @@ export interface ToolApprovalsCapacityOptions {
 export function createAgentToolApprovalsPlugin(
   options: ToolApprovalsCapacityOptions = {},
 ) {
-  const specId = options.specId ?? 'example-tool-approvals';
+  const specId = options.specId ?? 'approved-automation';
   const disableToolApprovals = options.disableToolApprovals ?? false;
   return defineAgentCapacityPlugin({
     key: 'tool-approvals',

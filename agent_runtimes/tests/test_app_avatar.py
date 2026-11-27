@@ -18,7 +18,7 @@ from agent_runtimes.apps import Application
 
 
 def _app(**kwargs: Any) -> Application:
-    return Application("avatar-py", "chat", agent="example-blank:0.0.1", **kwargs)
+    return Application("avatar-py", "chat", agent="blank:0.0.1", **kwargs)
 
 
 def test_an_avatar_by_id_is_written_as_the_spec_says_it() -> None:

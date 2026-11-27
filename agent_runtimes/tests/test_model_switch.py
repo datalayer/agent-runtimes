@@ -4,7 +4,7 @@
 """``agent``'s ``/models <id>`` on an agent created from a library agentspec.
 
 Driven through the runtime's own routes — ``/configure/models``, the agent's
-creation spec and ``configure-from-spec`` — on ``example-simple``, whose
+creation spec and ``configure-from-spec`` — on ``chat-agent``, whose
 agentspec runs on Sonnet 4.6 and lists ``alibaba:qwen-max`` beside it.
 """
 
@@ -48,7 +48,7 @@ SONNET = "bedrock:us.anthropic.claude-sonnet-5-5"
 FORMER = "bedrock:us.anthropic.claude-sonnet-4-6"
 QWEN = "alibaba:qwen-max"
 OPUS = "bedrock:us.anthropic.claude-opus-5"
-SPEC = "example-simple"
+SPEC = "chat-agent"
 AGENT = "chat"
 
 
@@ -215,7 +215,7 @@ def test_a_library_agent_off_the_default_model_is_switched_too(
 ) -> None:
     """Its library spec's model no longer wins over the model asked for.
 
-    ``example-simple`` on Qwen, with Sonnet 4.6 — the runtime's default
+    ``chat-agent`` on Qwen, with Sonnet 4.6 — the runtime's default
     model — beside it: the library spec's model used to be applied first,
     and the forwarded spec's only while the default was still in place, so
     a switch recreated the agent on Qwen again.

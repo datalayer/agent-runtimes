@@ -493,7 +493,7 @@ def test_the_terminal_shows_an_author_an_edit_a_removal_and_ends_the_session() -
     """A terminal does not write over what it printed."""
     from agent_runtimes.apps import Session
 
-    app = Application(id="interview", agent="example-simple")
+    app = Application(id="interview", agent="chat-agent")
     ended: List[str] = []
 
     @app.start
@@ -541,7 +541,7 @@ def test_the_terminal_shows_an_author_an_edit_a_removal_and_ends_the_session() -
 
 def test_the_terminal_runs_an_applications_commands() -> None:
     """``/<command> words`` — the code answers the one it has, else its prompt is sent."""
-    app = Application(id="desk", agent="example-simple")
+    app = Application(id="desk", agent="chat-agent")
     app.command("summarise", "Summarise", prompt="Summarise: {input}")
     heard: List[str] = []
 

@@ -37,7 +37,7 @@ app = Application(
     name="Support desk, extended",
     description="A support desk that composes a CRM plugin, with Reactor.",
     kind="chat",
-    agent="example-blank:0.0.1",
+    agent="blank:0.0.1",
     instructions=(
         "You are the support desk of Example Inc. When a customer gives their "
         "email, look them up with lookup_customer before answering about their "

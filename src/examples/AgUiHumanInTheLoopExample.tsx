@@ -10,7 +10,7 @@
  * Human in the Loop example backend. This shows how to implement
  * approval workflows where the human must approve generated plans.
  *
- * Backend: managed AG-UI agent runtime (agentspec: example-human-in-the-loop)
+ * Backend: managed AG-UI agent runtime (agentspec: task-planner)
  *
  * Pattern: contributes a renderer for the tool (a Reactor plugin, see
  * `useToolRenderers`) that receives a respond callback for human-in-the-loop
@@ -343,7 +343,7 @@ const renderTaskStepsTool = (context: ToolCallRenderContext) => {
  * - UI state changes based on user actions
  */
 const AGENT_NAME = 'ag-ui-human-in-the-loop';
-const AGENTSPEC_ID = 'example-human-in-the-loop';
+const AGENTSPEC_ID = 'task-planner';
 
 const AgUiHumanInTheLoopExample: React.FC = () => {
   const brandColor = useThemeBrandColor();

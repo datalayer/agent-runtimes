@@ -295,16 +295,16 @@ NEEDS_A_SECRET = {
     **ASSISTANT,
     "id": "scout",
     "name": "Scout",
-    # Its github skill requires GITHUB_TOKEN (Tavily, which example-mcp names,
+    # Its github skill requires GITHUB_TOKEN (Tavily, which web-researcher names,
     # is optional since agentspecs 0.1.24: it would start without it).
-    "agent": "example-skills:0.0.1",
+    "agent": "skills-agent:0.0.1",
 }
 
 STARTS_WITHOUT_TAVILY = {
     **ASSISTANT,
     "id": "searcher",
     "name": "Searcher",
-    "agent": "example-mcp:0.0.1",
+    "agent": "web-researcher:0.0.1",
 }
 
 
@@ -357,7 +357,7 @@ def test_the_declared_secrets_are_read_as_the_caller_and_held_by_the_process(
 def test_an_agent_whose_tavily_is_optional_starts_without_the_key(
     monkeypatch: pytest.MonkeyPatch, deployed: Any, agentcore: TestClient
 ) -> None:
-    """example-mcp names Tavily optional (agentspecs 0.1.24): without the key it is
+    """web-researcher names Tavily optional (agentspecs 0.1.24): without the key it is
     not refused, and no key is given to the process."""
     from agent_runtimes.agentcore import secrets
 
@@ -401,7 +401,7 @@ def test_an_agent_that_declares_no_secret_asks_iam_for_none(
     async def plain_chat(
         deployment: str, version: Optional[int], bearer: Optional[str]
     ) -> Dict[str, Any]:
-        spec = {**ASSISTANT, "id": "chat", "agent": "example-agentic-chat:0.0.1"}
+        spec = {**ASSISTANT, "id": "chat", "agent": "world-clock:0.0.1"}
         return {"spec": spec, "code": None, "version": 1, "app_uid": "app-3"}
 
     monkeypatch.setattr(principal, "_read_from_ai_agents", plain_chat)

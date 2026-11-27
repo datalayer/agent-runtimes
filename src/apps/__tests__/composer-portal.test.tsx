@@ -71,14 +71,14 @@ afterEach(() => {
 
 /** The agents of the public home, and their demos. */
 const SEED_AGENTS: Record<string, string> = {
-  'worker-marketer': 'demo-marketer',
-  'worker-shopper': 'demo-shopper',
-  'worker-accountant': 'demo-accountant',
-  'worker-traveller': 'demo-traveller',
-  'worker-terra': 'demo-terra',
-  'worker-steward-aws': 'demo-aws-steward',
-  'worker-data-analyst': 'demo-data-analyst',
-  'worker-functional-analyst': 'demo-functional-analyst',
+  'worker-marketer': 'marketer-tryout',
+  'worker-shopper': 'shopper-tryout',
+  'worker-accountant': 'accountant-tryout',
+  'worker-traveller': 'traveller-tryout',
+  'worker-terra': 'terra-tryout',
+  'worker-steward-aws': 'aws-steward-tryout',
+  'worker-data-analyst': 'data-analyst-tryout',
+  'worker-functional-analyst': 'functional-analyst-tryout',
 };
 
 const themed = (node: React.ReactNode) => (
@@ -151,7 +151,7 @@ describe('the Composer’s button', () => {
   });
 
   it('shows the workspace’s application, drawn by its host’s Composer when it contributes one', async () => {
-    const app = APP_CATALOGUE['demo-terra'];
+    const app = APP_CATALOGUE['terra-tryout'];
     const hosted: string[] = [];
     const HostComposer = ({ app: shown }: { app: AppSpec }) => {
       hosted.push(shown.id);
@@ -178,13 +178,13 @@ describe('the Composer’s button', () => {
     );
     const dialog = await screen.findByRole('dialog');
     expect(
-      dialog.querySelector('[data-composer-portal="demo-terra"]'),
+      dialog.querySelector('[data-composer-portal="terra-tryout"]'),
     ).toBeTruthy();
     expect(dialog.querySelector('[data-host-composer]')?.textContent).toBe(
       app.name,
     );
     expect(dialog.querySelector('[data-composer-canvas]')).toBeNull();
-    expect(hosted).toContain('demo-terra');
+    expect(hosted).toContain('terra-tryout');
   });
 
   it('shows the view its host hands through the context where no workspace hosts the chat', async () => {
@@ -209,7 +209,7 @@ describe('the Composer’s button', () => {
   });
 
   it('closes with its close button', async () => {
-    const app = APP_CATALOGUE['demo-marketer'];
+    const app = APP_CATALOGUE['marketer-tryout'];
     withPlatform([applicationPlugin(app, app)]);
     render(themed(<ComposerPortalButton />));
     act(() =>
@@ -224,10 +224,10 @@ describe('the Composer’s button', () => {
 
 describe('the Composer’s own content', () => {
   it('reads the application on the Composer’s own editors: its Canvas, its YAML and its Python, read only', async () => {
-    const app = APP_CATALOGUE['demo-marketer'];
+    const app = APP_CATALOGUE['marketer-tryout'];
     const { container } = render(themed(<ComposerSource app={app} />));
     const canvas = container.querySelector(
-      '[data-composer-canvas="demo-marketer"]',
+      '[data-composer-canvas="marketer-tryout"]',
     );
     expect(canvas).toBeTruthy();
     // The Canvas editor, loaded on first view, as a picture: its graph and its panels
@@ -244,7 +244,7 @@ describe('the Composer’s own content', () => {
     await waitFor(() =>
       expect(yaml?.querySelector('[data-app-yaml-editor]')).toBeTruthy(),
     );
-    expect(yaml?.textContent).toContain('id: demo-marketer');
+    expect(yaml?.textContent).toContain('id: marketer-tryout');
     // Read only: no checks under the text, which is not being written.
     expect(yaml?.querySelector('[role="status"]')).toBeNull();
     act(() => screen.getByRole('button', { name: 'Python' }).click());
@@ -259,7 +259,7 @@ describe('the Composer’s own content', () => {
   }, 30_000);
 
   it('knows the Python of the catalogue’s applications only', () => {
-    expect(composerPython({ id: 'demo-marketer' }).how).toBe('ejected');
+    expect(composerPython({ id: 'marketer-tryout' }).how).toBe('ejected');
     expect(composerPython({ id: 'worker-marketer' })).toEqual({
       code: null,
       how: 'none',
@@ -267,7 +267,7 @@ describe('the Composer’s own content', () => {
   });
 
   it('shows the workspace’s application, else the chat’s agent as one', () => {
-    const app = APP_CATALOGUE['demo-shopper'];
+    const app = APP_CATALOGUE['shopper-tryout'];
     expect(composedApplication(app, 'worker-marketer')).toBe(app);
     expect(composedApplication(undefined, 'worker-marketer')?.agent).toBe(
       'worker-marketer',

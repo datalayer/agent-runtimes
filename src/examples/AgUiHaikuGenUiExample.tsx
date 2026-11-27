@@ -14,7 +14,7 @@
  * This follows the AG-UI Dojo pattern where tool results are rendered
  * as UI components in both locations.
  *
- * Backend: managed AG-UI agent runtime (agentspec: example-haiku-generative-ui)
+ * Backend: managed AG-UI agent runtime (agentspec: haiku-writer)
  */
 import React, {
   useState,
@@ -102,7 +102,7 @@ HaikuDisplayWithRef.displayName = 'HaikuDisplayWithRef';
  * - Japanese/English text rendering
  */
 const AGENT_NAME = 'ag-ui-haiku';
-const AGENTSPEC_ID = 'example-haiku-generative-ui';
+const AGENTSPEC_ID = 'haiku-writer';
 
 const AgUiHaikuGenUiExample: React.FC = () => {
   const brandColor = useThemeBrandColor();

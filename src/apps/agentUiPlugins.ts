@@ -203,7 +203,7 @@ export const AGENT_UI_PLUGINS: Readonly<Record<string, AgentUiPlugin>> = {
     Chrome: BasketTotalChip,
   },
   'pap-purchase': { needsConnection: true, message: PapPurchasePlugin },
-  // The demo shop, in its own chat and in the Shopper's.
+  // The online shop, in its own chat and in the Shopper's.
   'product-cards': { needsConnection: false, message: ProductCardsPlugin },
   // The Accountant.
   'bank-reconciliation': {

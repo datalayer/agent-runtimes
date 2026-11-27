@@ -7,7 +7,7 @@ agentspecs 0.1.22 made the catalogue's ``tavily`` Tavily's hosted server
 (Streamable HTTP, the key in a header). Codemode's registry takes a server's
 address only for ``transport == "http"`` and agent-codemode's server config
 carries no headers, so every codemode agent saw Tavily with no tool
-(``worker-crawler``, ``example-codemode``). agentspecs 0.1.24 puts back
+(``worker-crawler``, ``web-researcher-codemode``). agentspecs 0.1.24 puts back
 ``npx -y tavily-mcp`` with ``TAVILY_API_KEY`` in its environment (the user,
 26 November 2026), and every agent that names it lists it optional: started
 whenever the key is there, left out without it, never refused.
@@ -114,7 +114,7 @@ async def test_a_codemode_registry_has_tavily_s_tools_when_the_key_is_there(
     ]
 
 
-@pytest.mark.parametrize("agent_id", ["worker-crawler", "example-codemode"])
+@pytest.mark.parametrize("agent_id", ["worker-crawler", "web-researcher-codemode"])
 def test_an_agent_that_names_it_starts_it_with_the_key_and_without_it_otherwise(
     agent_id: str,
 ) -> None:
@@ -147,7 +147,7 @@ def test_every_catalogue_agent_that_names_tavily_may_start_without_it() -> None:
         if "tavily"
         in [getattr(server, "id", server) for server in spec.mcp_servers or []]
     ]
-    assert len(naming) >= 37
+    assert len(naming) >= 35
     for spec in naming:
         assert spec.optional is not None and "tavily" in spec.optional.mcp_servers, (
             spec.id

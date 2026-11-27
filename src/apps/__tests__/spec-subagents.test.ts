@@ -13,8 +13,8 @@ import { getAgentspecs } from '../../specs/agents';
 import { specSubagents } from '../plugins/agents/specSubagents';
 
 describe('specSubagents', () => {
-  it('reads the example-subagents spec: researcher, writer, and a generalist', () => {
-    const subagents = specSubagents(getAgentspecs('example-subagents'));
+  it('reads the research-writer spec: researcher, writer, and a generalist', () => {
+    const subagents = specSubagents(getAgentspecs('research-writer'));
     expect(subagents.map(entry => entry.name)).toEqual([
       'researcher',
       'writer',

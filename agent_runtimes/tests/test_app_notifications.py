@@ -278,7 +278,7 @@ def test_an_applications_agent_is_given_its_channels_not_its_agents(
         name="triage-notifies",
         transport="vercel-ai",
         # An agent whose own spec names channels: an application's are used instead.
-        app_spec={**APP, "agent": "example-notifications:0.0.1"},
+        app_spec={**APP, "agent": "notifier:0.0.1"},
         app_instance={"app_uid": "app-1"},
     )
     asyncio.run(create_agent(request, _DummyRequest()))

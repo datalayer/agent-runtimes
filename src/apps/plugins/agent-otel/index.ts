@@ -6,7 +6,7 @@
 /**
  * `@datalayer/agent-plugin-agent-otel` — observability, as a capacity.
  *
- * Mounts the `example-otel` agent: a conversation over the workspace's own
+ * Mounts the `telemetry-explorer` agent: a conversation over the workspace's own
  * traces, logs and metrics. Cast from the shared capacity mould.
  *
  * The openers are the spec's own.
@@ -23,7 +23,7 @@ export const AgentOtelPlugin = defineAgentCapacityPlugin({
   displayName: 'Agent OTel',
   description:
     'Connect an agent to your traces, logs, and metrics and chat about them.',
-  specId: 'example-otel',
+  specId: 'telemetry-explorer',
   octicon: 'telescope',
   emoji: '🔭',
 });

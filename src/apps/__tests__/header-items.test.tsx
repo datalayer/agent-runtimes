@@ -80,14 +80,14 @@ const HEADERS = [
 
 /** Each seed agent, its public demo and its header UI. */
 const SEED: Record<string, [string, string]> = {
-  'worker-marketer': ['demo-marketer', 'social-header'],
-  'worker-shopper': ['demo-shopper', 'shop-header'],
-  'worker-accountant': ['demo-accountant', 'books-header'],
-  'worker-traveller': ['demo-traveller', 'trip-header'],
-  'worker-terra': ['demo-terra', 'earth-header'],
-  'worker-steward-aws': ['demo-aws-steward', 'aws-header'],
-  'worker-data-analyst': ['demo-data-analyst', 'notebook-header'],
-  'worker-functional-analyst': ['demo-functional-analyst', 'analysis-header'],
+  'worker-marketer': ['marketer-tryout', 'social-header'],
+  'worker-shopper': ['shopper-tryout', 'shop-header'],
+  'worker-accountant': ['accountant-tryout', 'books-header'],
+  'worker-traveller': ['traveller-tryout', 'trip-header'],
+  'worker-terra': ['terra-tryout', 'earth-header'],
+  'worker-steward-aws': ['aws-steward-tryout', 'aws-header'],
+  'worker-data-analyst': ['data-analyst-tryout', 'notebook-header'],
+  'worker-functional-analyst': ['functional-analyst-tryout', 'analysis-header'],
 };
 
 const item = (ui: string, id: string): UiHeaderItemSpec =>

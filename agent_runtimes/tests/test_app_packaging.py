@@ -38,7 +38,7 @@ pytest.importorskip("agentspecs.apps")
 APP_PY = """
 from agent_runtimes.apps import Application
 
-app = Application(id="dial-desk", name="Dial desk", kind="chat", agent="example-simple")
+app = Application(id="dial-desk", name="Dial desk", kind="chat", agent="chat-agent")
 app.custom_component(
     "Dial",
     description="A dial, from nothing to its most.",

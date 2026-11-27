@@ -840,7 +840,7 @@ async def test_the_codes_messages_change_and_its_end_runs_on_the_session() -> No
     from agent_runtimes.apps import AppHost, Application, Session
     from agent_runtimes.apps.callers import Caller
 
-    application = Application(id="notes-assistant", agent="example-simple")
+    application = Application(id="notes-assistant", agent="chat-agent")
     said: List[str] = []
 
     @application.end
@@ -946,7 +946,7 @@ async def test_what_an_answer_shows_is_a_surface_under_its_message() -> None:
     from agent_runtimes.apps import AppHost, Application
     from agent_runtimes.apps.callers import Caller
 
-    application = Application(id="notes-assistant", agent="example-simple")
+    application = Application(id="notes-assistant", agent="chat-agent")
     app = application.spec
     # What it shows is on the record with the answer, under `outputs`.
     recorded = app.model_copy(
@@ -1045,7 +1045,7 @@ async def test_a_step_is_said_whole_beside_ag_uis_step() -> None:
     from agent_runtimes.apps import AppHost, Application
     from agent_runtimes.apps.callers import Caller
 
-    application = Application(id="notes-assistant", agent="example-simple")
+    application = Application(id="notes-assistant", agent="chat-agent")
     app = application.spec
     live = sessions.LiveSession(
         uid="session-0017",

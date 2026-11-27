@@ -6,7 +6,7 @@
 /**
  * `@datalayer/agent-plugin-agent-a2a` — the capacity, as a plugin.
  *
- * Mounts the `example-a2a` agent: an orchestrator whose researcher and writer
+ * Mounts the `research-writer-a2a` agent: an orchestrator whose researcher and writer
  * are separate agents reached over the A2A protocol, launched beside it on
  * the local server or on Datalayer runtimes when it runs in the cloud. Cast
  * from the shared capacity mould; see `apps/plugins/agent-capacity`. The
@@ -23,7 +23,7 @@ export const AgentA2APlugin = defineAgentCapacityPlugin({
   key: 'a2a',
   displayName: 'Agent A2A',
   description: 'Delegation to separate agents over the A2A protocol',
-  specId: 'example-a2a',
+  specId: 'research-writer-a2a',
   octicon: 'broadcast',
   emoji: '📡',
 });

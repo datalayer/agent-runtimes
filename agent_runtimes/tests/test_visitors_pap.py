@@ -23,8 +23,8 @@ from agent_runtimes.apps.rules import ASK_FIRST, DO_IT
 from agent_runtimes.mcp import datalayer_gateway
 from agent_runtimes.models.models import remember_app_instance
 
-AGENT = "agent-demo-shopper"
-SHOP = "demo-shop.agent.datalayer.ai"
+AGENT = "agent-shopper-tryout"
+SHOP = "online-shop.agent.datalayer.ai"
 OTHER = "manzanita.examples.datalayer.run"
 TOKEN = "visitors-principal-token"
 
@@ -59,7 +59,7 @@ def world(monkeypatch: Any) -> Any:
 
     monkeypatch.setattr(datalayer_gateway, "tracing_client", client)
     monkeypatch.setattr(visitors_pap, "_ask", ask)
-    monkeypatch.setenv(visitors.VISITORS_ENV, "example-simple")
+    monkeypatch.setenv(visitors.VISITORS_ENV, "chat-agent")
     monkeypatch.setenv(visitors_pap.KEY_ENV, "visitors-runtime-key")
     visitors_pap.forget()
     pap_connections.forget()

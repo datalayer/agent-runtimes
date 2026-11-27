@@ -68,7 +68,7 @@ const queryClient = new QueryClient();
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const AGENT_NAME = 'eval-example-agent';
-const AGENTSPEC_ID = 'example-evals';
+const AGENTSPEC_ID = 'text-normalizer';
 
 /** The model the example's agentspec names; no spec or no model is an error. */
 const AGENTSPEC_MODEL = (() => {

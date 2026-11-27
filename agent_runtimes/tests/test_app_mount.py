@@ -225,7 +225,7 @@ async def test_a_window_message_is_what_json_writes() -> None:
     assert channel.events == [WindowMessage(session.uid, {"seen": "/cart"})]
     with pytest.raises(ValueError, match="what JSON writes"):
         await session.send_window_message({"when": object()})
-    plain = Application(id="plain", kind="chat", agent="example-simple")
+    plain = Application(id="plain", kind="chat", agent="chat-agent")
     plain_host = AppHost(
         plain, MemoryChannel(), recorder=AppRecorder(app=plain.spec, send=nothing)
     )
@@ -238,12 +238,12 @@ def test_an_application_is_mounted_under_a_path_of_its_own() -> None:
         with pytest.raises(ValueError, match="a path of its own"):
             helpdesk().mount(FastAPI(), path=wrong)
     assert mounting.agent_spec_id("cog-crawler:0.0.1") == "cog-crawler"
-    assert mounting.agent_spec_id("example-simple") == "example-simple"
+    assert mounting.agent_spec_id("chat-agent") == "chat-agent"
     page = mounting.page_of(helpdesk(), "https://shop.example/assistant")
     assert "token=" not in page
     # What the spec says cannot end the element it is written in.
     tricky = Application(
-        id="tricky", kind="chat", agent="example-simple", description="</script><b>"
+        id="tricky", kind="chat", agent="chat-agent", description="</script><b>"
     )
     assert "</script><b>" not in mounting.page_of(tricky, "https://x")
 

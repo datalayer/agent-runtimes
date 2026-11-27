@@ -12,7 +12,7 @@
  *
  * This is the simplest AG-UI example showing basic chat with tool use.
  *
- * Backend: managed AG-UI agent runtime (agentspec: example-agentic-chat)
+ * Backend: managed AG-UI agent runtime (agentspec: world-clock)
  */
 
 import React, { useMemo } from 'react';
@@ -35,7 +35,7 @@ import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
  * - Floating popup interface
  */
 const AGENT_NAME = 'ag-ui-agentic';
-const AGENTSPEC_ID = 'example-agentic-chat';
+const AGENTSPEC_ID = 'world-clock';
 
 const AgUiAgenticExample: React.FC = () => {
   const agentName = useMemo(() => uniqueAgentId(AGENT_NAME), []);

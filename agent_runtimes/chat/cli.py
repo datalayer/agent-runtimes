@@ -650,7 +650,7 @@ def offered_agentspec_ids() -> list[str]:
     """The ids of the agents the catalogue offers, sorted: the ones `agent` offers.
 
     Enabled and listed: an enabled agent kept out of the pickers (``listed:
-    false``, agentspecs 0.0.187), as ``example-simple``, runs by id only.
+    false``, agentspecs 0.0.187), as ``chat-agent``, runs by id only.
     """
     from agent_runtimes.specs.agents import list_agentspecs
 
@@ -1561,7 +1561,7 @@ def main_callback(
 
         agent --runtime <name>       # Back to an agent runtime running on Datalayer
 
-        agent --cloud -a example-simple --prompt "/models" --prompt "Hello"
+        agent --cloud -a chat-agent --prompt "/models" --prompt "Hello"
 
     Where the agent runs is asked first — on this machine, or on Datalayer
     when signed in — unless --local, --cloud or --runtime says so. Without a

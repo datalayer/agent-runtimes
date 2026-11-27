@@ -43,7 +43,7 @@ app = Application(
     kind="chat",
     # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
     ui=[{"plugin": "chat"}],
-    agent="example-blank:0.0.1",
+    agent="blank:0.0.1",
     instructions=(
         "Use explain_account_tokens to explain PAP refresh tokens. Never ask for or "
         "expose a refresh token, access token, delegated key, assertion, or Session JWT."

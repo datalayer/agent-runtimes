@@ -39,7 +39,7 @@ const ScenePlugin = defineA2uiScenePlugin({
   load: () => import('./scenes/A2UiViewerScene'),
 });
 
-const AGENTSPEC_ID = 'example-a2ui-viewer';
+const AGENTSPEC_ID = 'ui-surface-designer';
 
 const A2UiViewerExample: React.FC = () => {
   /*

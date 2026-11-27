@@ -31,7 +31,7 @@ from agent_runtimes.client.agent_client import (
     terminate_local_agent_runtime,
 )
 
-DEFAULT_AGENT_SPEC_ID = "example-simple"
+DEFAULT_AGENT_SPEC_ID = "chat-agent"
 
 app = typer.Typer(
     name="agents",

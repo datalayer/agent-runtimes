@@ -139,9 +139,9 @@ def _keep(
     held_by: Any = None,
 ) -> None:
     payload: Dict[str, Any] = {
-        "app": "agent:example-simple",
+        "app": "agent:chat-agent",
         "state": "open",
-        "agent": "example-simple",
+        "agent": "chat-agent",
         "runs_on": runs_on or HERE,
     }
     if held_by:
@@ -151,9 +151,7 @@ def _keep(
     ]
     if state != "open":
         entries.append({"kind": state, "summary": state, "payload": {"state": state}})
-    asyncio.run(
-        store.append(uid, entries, app_uid="agent:example-simple", opened_by="")
-    )
+    asyncio.run(store.append(uid, entries, app_uid="agent:chat-agent", opened_by=""))
 
 
 @pytest.fixture()

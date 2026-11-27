@@ -6,7 +6,7 @@
 /**
  * `@datalayer/agent-plugin-agent-notifications` — the capacity, as a plugin.
  *
- * Mounts the `example-notifications` agent and offers what it is worth asking. Cast
+ * Mounts the `notifier` agent and offers what it is worth asking. Cast
  * from the shared capacity mould; see `apps/plugins/agent-capacity`.
  *
  * The openers are the spec's own.
@@ -23,7 +23,7 @@ export const AgentNotificationsPlugin = defineAgentCapacityPlugin({
   key: 'notifications',
   displayName: 'Agent Notifications',
   description: '${unreadCount} unread notification${unreadCount !== 1 ? ',
-  specId: 'example-notifications',
+  specId: 'notifier',
   octicon: 'bell',
   emoji: '🔔',
 });

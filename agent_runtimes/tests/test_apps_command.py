@@ -150,7 +150,7 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
         # The Personal Agent Protocol's recorded journeys as applications.
         "order-tracker",
         "shop-concierge",
-        # A person's Shopper asking the Demo Shop over A2A (the Buy from a shop Stage).
+        # A person's Shopper asking the Online Shop over A2A (the Buy from a shop Stage).
         "shopper",
         "live-shop-chat",
         "sign-in-desk",
@@ -159,22 +159,22 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
         # A coding agent behind the Shield, lent one repository to read (agentspecs 0.0.137).
         "code-explainer",
         # The home page's live demos, moved from the landing (agentspecs 0.0.186).
-        "demo-marketer",
-        "demo-shopper",
-        "demo-terra",
-        "demo-traveller",
-        "demo-accountant",
-        "demo-aws-steward",
+        "marketer-tryout",
+        "shopper-tryout",
+        "terra-tryout",
+        "traveller-tryout",
+        "accountant-tryout",
+        "aws-steward-tryout",
         # The seventh seed agent's demo (agentspecs 0.0.215).
-        "demo-data-analyst",
+        "data-analyst-tryout",
         # The eighth seed agent's demo, the Functional Analyst (agentspecs 0.1.4).
-        "demo-functional-analyst",
-        # The Demo Shop, a company of DummyJSON's products (agentspecs 0.0.204).
-        "demo-shop",
+        "functional-analyst-tryout",
+        # The Online Shop, a company of DummyJSON's products (agentspecs 0.0.204).
+        "online-shop",
     }
     assert all(report.verdict != NOT_READY for report in reports.values())
     assert reports["web-research"].setup == []
-    # Its agent, example-simple, the neutral default: enabled, out of the pickers
+    # Its agent, chat-agent, the neutral default: enabled, out of the pickers
     # since agentspecs 0.0.187 (listed: false).
     assert reports["decide"].setup == []
     # The public pages' demos run on the seven agents the catalogue enables.
@@ -187,7 +187,7 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
         "aws-steward",
         "data-analyst",
     ):
-        assert reports[f"demo-{demo}"].setup == [], demo
+        assert reports[f"{demo}-tryout"].setup == [], demo
     # Gmail's server is offered since agentspecs 0.0.128; Inbox triage's worker is out of
     # the picker since agentspecs 0.0.164 (enabled: false), so its setup names it.
     assert reports["inbox-triage"].setup == [

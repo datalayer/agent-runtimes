@@ -37,9 +37,9 @@ def _kept(store: FileSessionStore, uid: str, app_uid: str, state: str) -> None:
             "kind": "session",
             "summary": "A session started",
             "payload": {
-                "app": "example-simple",
+                "app": "chat-agent",
                 "state": "open",
-                "agent": "example-simple",
+                "agent": "chat-agent",
                 "title": f"Title of {uid}",
                 "runs_on": {"kind": "runtime", "uid": "local"},
             },
@@ -124,9 +124,9 @@ def _cloud_sessions() -> List[Dict[str, Any]]:
         },
         {
             "uid": "own-machine-1",
-            "app_uid": "agent:example-simple",
+            "app_uid": "agent:chat-agent",
             "state": "paused",
-            "agent": "example-simple",
+            "agent": "chat-agent",
             "title": "Kept on Datalayer, ran here",
             "runs_on": {"kind": "runtime", "uid": "local"},
             "started_at": "2026-11-11T10:00:00+00:00",
@@ -138,9 +138,9 @@ def _cloud_sessions() -> List[Dict[str, Any]]:
 @pytest.fixture()
 def files(tmp_path: Path) -> FileSessionStore:
     store = FileSessionStore(root=tmp_path / "sessions")
-    _kept(store, "local-paused-1", "agent:example-simple", "paused")
-    _kept(store, "local-open-1", "agent:example-simple", "open")
-    _kept(store, "local-ended-1", "agent:example-simple", "ended")
+    _kept(store, "local-paused-1", "agent:chat-agent", "paused")
+    _kept(store, "local-open-1", "agent:chat-agent", "open")
+    _kept(store, "local-ended-1", "agent:chat-agent", "ended")
     return store
 
 
@@ -164,13 +164,13 @@ def test_the_rows_from_this_machine_and_from_datalayer(files: FileSessionStore) 
     assert by_uid["local-paused-1"] == Paused(
         uid="local-paused-1",
         kind="agent",
-        agent="example-simple",
+        agent="chat-agent",
         title="Title of local-paused-1",
         where="local",
         store="file",
         started_at=by_uid["local-paused-1"].started_at,
         turns=1,
-        app_uid="agent:example-simple",
+        app_uid="agent:chat-agent",
         runs_on="runtime",
         runs_on_id="local",
     )
@@ -308,7 +308,7 @@ def test_each_session_is_resumed_where_it_lives(files: FileSessionStore) -> None
     plan = resume_plan(by_uid["local-paused-1"])
     # Kept in files: its server reads the files, signed in or not.
     assert (plan.agent, plan.cloud, plan.session_store) == (
-        "example-simple",
+        "chat-agent",
         False,
         "file",
     )

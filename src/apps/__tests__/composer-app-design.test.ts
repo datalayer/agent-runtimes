@@ -462,11 +462,11 @@ describe('the Agents of the toolbox: a coding agent behind the Shield', () => {
       expect.arrayContaining(['claude-code', 'codex']),
     );
     expect(agents.find(part => part.harness === 'claude-code')?.example).toBe(
-      'example-harness-claude-code',
+      'coding-agent-claude-code',
     );
     // Every harness of the catalogue has its agent now; an organization's own (custom) is never offered.
     expect(agents.map(part => [part.harness, part.example])).toEqual(
-      agents.map(part => [part.harness, `example-harness-${part.harness}`]),
+      agents.map(part => [part.harness, `coding-agent-${part.harness}`]),
     );
     expect(agents.some(part => part.harness === 'custom')).toBe(false);
   });
@@ -495,7 +495,7 @@ describe('the Agents of the toolbox: a coding agent behind the Shield', () => {
     expect(added.id).toBe('agent');
     expect(added.at).toEqual({ path: [], keys: AGENT_KEYS });
     expect((added.data as Record<string, unknown>).agent).toBe(
-      'example-harness-claude-code',
+      'coding-agent-claude-code',
     );
   });
 });

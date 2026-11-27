@@ -410,11 +410,11 @@ agents: # agents
 
 agent-full: # agent-full
 	@$(BEDROCK_ENV) \
-		agent --eggs --agentspec-id example-full
+		agent --eggs --agentspec-id skills-agent
 
 agent-simple: # agent-simple
 	@$(BEDROCK_ENV) \
-		agent --eggs --agentspec-id example-simple
+		agent --eggs --agentspec-id chat-agent
 
 agent-demo-codemode: # agent-demo-codemode
 	@$(BEDROCK_ENV) \
@@ -455,8 +455,8 @@ specs-ui-frontend-tools: ## export the frontend tools each UI plugin contributes
 specs-manifests-check: ## fail when the exported plugin manifests are not what the specs give
 	python scripts/codegen/export_plugin_manifests.py --check $(PLUGIN_MANIFESTS_ARGS)
 
-specs-sandbox-variants: ## scaffold sandbox example agent specs for all supported sandbox variants
-	$(call step,Generating sandbox variant example agents)
+specs-sandbox-variants: ## scaffold the Python Runner agent specs, one per supported sandbox variant
+	$(call step,Generating the Python Runner agents)
 	python scripts/codegen/generate_sandbox_agents.py \
 	  --agents-dir $(AGENTSPECS_DIR)/agentspecs/agents
 

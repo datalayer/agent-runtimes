@@ -31,7 +31,7 @@ from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
     runtime,
 )
 
-HARNESS_AGENT = "example-harness-codex"
+HARNESS_AGENT = "coding-agent-codex"
 
 
 class Console:

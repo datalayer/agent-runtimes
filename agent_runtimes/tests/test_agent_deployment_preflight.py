@@ -201,7 +201,7 @@ def _rows(deployments: Dict[str, Dict[str, Any]], **session: Any) -> Any:
         deployments,
         {},
         ("open", "paused", "ended"),
-        lambda spec: spec == "example-simple",
+        lambda spec: spec == "chat-agent",
     )
     return row
 
@@ -228,7 +228,5 @@ def test_a_session_of_an_agent_that_left_the_catalogue_is_not_listed() -> None:
         agent="retired-agent"
     ) and not is_listed(gone)
     assert "no longer an agentspec of the catalogue" in why_not("resume", gone)
-    kept = _rows(
-        {}, app_uid="agent:example-simple", deployment_uid="", agent="example-simple"
-    )
+    kept = _rows({}, app_uid="agent:chat-agent", deployment_uid="", agent="chat-agent")
     assert kept.why_not == "" and is_listed(kept)

@@ -157,7 +157,7 @@ describe('the stage of a scene', () => {
 
   it('serves each member on a runtime on a local port of its own, Accounting on 8767', () => {
     expect(sceneRuntimeMembers()).toEqual([
-      'demo-shop',
+      'online-shop',
       'code-explainer',
       'crop-monitoring',
       'disaster-assessment',
@@ -167,7 +167,7 @@ describe('the stage of a scene', () => {
     ]);
     // What serve_scenes.py gives by the same rule.
     expect(sceneRuntimePorts()).toEqual({
-      'demo-shop': 8768,
+      'online-shop': 8768,
       'code-explainer': 8769,
       'crop-monitoring': 8770,
       'disaster-assessment': 8771,

@@ -6,7 +6,7 @@
 /**
  * `@datalayer/agent-plugin-agent-guardrails` — the capacity, as a plugin.
  *
- * Mounts the `example-guardrails` agent and offers what it is worth asking. Cast
+ * Mounts the `budget-guard` agent and offers what it is worth asking. Cast
  * from the shared capacity mould; see `apps/plugins/agent-capacity`.
  *
  * The openers are the spec's own.
@@ -24,7 +24,7 @@ export const AgentGuardrailsPlugin = defineAgentCapacityPlugin({
   displayName: 'Agent Guardrails',
   description:
     'Cost guardrail with OTEL-backed gauge and hook-aware approvals (before_tool_execute, after_tool_execute, on_tool_execute_error, deferred_tool_calls)',
-  specId: 'example-guardrails',
+  specId: 'budget-guard',
   octicon: 'shield-lock',
   emoji: '🚧',
 });

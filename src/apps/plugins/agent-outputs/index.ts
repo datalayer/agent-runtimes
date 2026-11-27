@@ -6,7 +6,7 @@
 /**
  * `@datalayer/agent-plugin-agent-outputs` — structured outputs, as a capacity.
  *
- * Mounts the `example-output` agent, which answers with exactly one
+ * Mounts the `output-formatter` agent, which answers with exactly one
  * structured block — a Markdown table, a JSON object, an ECharts chart or a
  * downloadable file — for the example's side panel to detect and render.
  * Cast from the shared capacity mould; the openers are the spec's own.
@@ -24,7 +24,7 @@ export const AgentOutputsPlugin = defineAgentCapacityPlugin({
   displayName: 'Agent Outputs',
   description:
     'Structured outputs: a table, JSON, a chart or a file per answer.',
-  specId: 'example-output',
+  specId: 'output-formatter',
   octicon: 'log',
   emoji: '📤',
 });

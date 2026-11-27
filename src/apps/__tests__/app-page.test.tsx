@@ -62,7 +62,7 @@ function appOf(
     ...app,
     id: `a-${kind}`,
     name: `A ${kind}`,
-    agent: 'example-simple:0.0.1',
+    agent: 'chat-agent:0.0.1',
     goal: kind === 'worker' ? 'Keep the inbox sorted.' : '',
     interface: { ...app.interface, ...overrides },
   };

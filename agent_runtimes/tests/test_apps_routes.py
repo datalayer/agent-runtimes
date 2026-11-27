@@ -284,7 +284,7 @@ def test_feedback_is_heard_by_its_code(
 
     keeps = {**WEB_RESEARCH, "record": {"include": ["outputs", "feedback"]}}
     assert client.post("/api/v1/apps/configure", json={"app": keeps}).status_code == 200
-    application = Application(id="web-research", agent="example-simple")
+    application = Application(id="web-research", agent="chat-agent")
     heard: list = []
 
     @application.feedback
@@ -413,7 +413,7 @@ def test_configure_with_no_organization_takes_none_off_and_says_so(client: Any) 
 
 APP_PY = """from agent_runtimes.apps import Application, Session
 
-app = Application(id="hello", kind="chat", agent="example-simple:0.0.1", name="Hello")
+app = Application(id="hello", kind="chat", agent="chat-agent:0.0.1", name="Hello")
 
 
 @app.start

@@ -5,7 +5,7 @@
 
 /**
  * The Agent plugins of the outputs example (`AgentOutputsExample`): the
- * `example-output` agent, the chat's spreadsheet renderer, and the Cells
+ * `output-formatter` agent, the chat's spreadsheet renderer, and the Cells
  * agent tools on the last spreadsheet answered. The agent runs on a server,
  * so the page names the bundle whose tools it hands it — `cells`, the grid's
  * tools, run on this page's reactor — through the chat extras.

@@ -7,7 +7,7 @@
  * `@datalayer/agent-plugin-agent-a2ui-jupyter-output` — Jupyter outputs on
  * A2UI surfaces, as a capacity.
  *
- * Mounts the `example-a2ui-jupyter-output` agent: each demonstration runs
+ * Mounts the `jupyter-output-presenter` agent: each demonstration runs
  * real code in the sandbox and lands its kernel outputs — streams, figures,
  * tables, tracebacks, widgets — on the conversation. On the browser target
  * the loop turns in the page and the blueprint is inert; on Local the same
@@ -26,7 +26,7 @@ export const AgentA2uiJupyterOutputPlugin = defineAgentCapacityPlugin({
   displayName: 'Agent A2UI Jupyter Output',
   description:
     'Kernel outputs — streams, figures, tables, errors, widgets — rendered as surfaces.',
-  specId: 'example-a2ui-jupyter-output',
+  specId: 'jupyter-output-presenter',
   octicon: 'log',
   emoji: '📓',
   suggestions: [

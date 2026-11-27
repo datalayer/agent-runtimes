@@ -122,7 +122,7 @@ class TestTheProvider:
     def test_on_datalayer_every_agent_goes_through_ai_inference(
         self, datalayer_runtime: list[httpx.Request], monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # example-simple's agentspec says `local`; the runtime decides.
+        # chat-agent's agentspec says `local`; the runtime decides.
         monkeypatch.setattr(
             agents_route, "_agentspecs", {"chat": {"inference_provider": "local"}}
         )

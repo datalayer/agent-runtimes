@@ -38,7 +38,7 @@ export const BUY_FROM_A_SHOP_SCENE_0_0_1: SceneSpec = {
       runsIn: 'browser',
       talksTo: [
         {
-          member: 'demo-shop',
+          member: 'online-shop',
           over: 'a2a',
         },
       ],
@@ -48,18 +48,18 @@ export const BUY_FROM_A_SHOP_SCENE_0_0_1: SceneSpec = {
         line: 'I shop for you, and bring back what the shop says.',
       },
       brief:
-        'Ask the Demo Shop for every product, quote and order, one request each time, and report what it answers without adding to it. Do not question the audience first: a cue is the whole of what it says, and nobody is standing there to answer you back. A cue that says what to place an order for is the go-ahead: ask the shop to place that test order.',
+        'Ask the Online Shop for every product, quote and order, one request each time, and report what it answers without adding to it. Do not question the audience first: a cue is the whole of what it says, and nobody is standing there to answer you back. A cue that says what to place an order for is the go-ahead: ask the shop to place that test order.',
       overrides: {},
     },
     {
-      member: 'demo-shop',
-      app: 'demo-shop:0.0.1',
+      member: 'online-shop',
+      app: 'online-shop:0.0.1',
       ref: '',
       server: '',
       role: 'contributor',
       runsIn: 'runtime',
       persona: {
-        name: 'Demo Shop',
+        name: 'Online Shop',
         face: '🛍️',
         line: 'I answer from my own catalogue; my orders are test orders.',
       },
@@ -73,7 +73,7 @@ export const BUY_FROM_A_SHOP_SCENE_0_0_1: SceneSpec = {
     period: 'today',
     language: 'en',
     assumes:
-      "Two agents over A2A — your Shopper in your browser, the Demo Shop on Datalayer — on the shop's own catalogue of 24 products. Its orders are test orders: nothing is charged and nothing ships.",
+      "Two agents over A2A — your Shopper in your browser, the Online Shop on Datalayer — on the shop's own catalogue of 24 products. Its orders are test orders: nothing is charged and nothing ships.",
   },
   script: [
     {
@@ -87,13 +87,13 @@ export const BUY_FROM_A_SHOP_SCENE_0_0_1: SceneSpec = {
       moves: [
         {
           who: 'shopper',
-          asks: 'demo-shop',
+          asks: 'online-shop',
           over: 'a2a',
           what: "the shop's products for tennis",
           tool: '',
         },
         {
-          who: 'demo-shop',
+          who: 'online-shop',
           asks: '',
           what: 'its tennis racket and tennis ball, each with its price, rating and stock',
           tool: '',
@@ -124,13 +124,13 @@ export const BUY_FROM_A_SHOP_SCENE_0_0_1: SceneSpec = {
       moves: [
         {
           who: 'shopper',
-          asks: 'demo-shop',
+          asks: 'online-shop',
           over: 'a2a',
           what: 'a quote for two tennis balls and one tennis racket',
           tool: '',
         },
         {
-          who: 'demo-shop',
+          who: 'online-shop',
           asks: '',
           what: 'each line and the total, summed by the shop',
           tool: '',
@@ -160,13 +160,13 @@ export const BUY_FROM_A_SHOP_SCENE_0_0_1: SceneSpec = {
       moves: [
         {
           who: 'shopper',
-          asks: 'demo-shop',
+          asks: 'online-shop',
           over: 'a2a',
           what: 'a test order of two tennis balls and one tennis racket',
           tool: '',
         },
         {
-          who: 'demo-shop',
+          who: 'online-shop',
           asks: '',
           what: "the test order's number, and that nothing is charged and nothing ships",
           tool: '',
@@ -192,7 +192,7 @@ export const BUY_FROM_A_SHOP_SCENE_0_0_1: SceneSpec = {
         x: 0.25,
         y: 0.5,
       },
-      'demo-shop': {
+      'online-shop': {
         x: 0.75,
         y: 0.5,
       },
@@ -219,8 +219,8 @@ export const BUY_FROM_A_SHOP_SCENE_0_0_1: SceneSpec = {
         beat: 'find',
         lines: [
           'You → Shopper',
-          'Shopper → Demo Shop',
-          'Demo Shop: words',
+          'Shopper → Online Shop',
+          'Online Shop: words',
           'Shopper: words',
         ],
         mustSay: ['racket'],
@@ -231,8 +231,8 @@ export const BUY_FROM_A_SHOP_SCENE_0_0_1: SceneSpec = {
         beat: 'quote',
         lines: [
           'You → Shopper',
-          'Shopper → Demo Shop',
-          'Demo Shop: words',
+          'Shopper → Online Shop',
+          'Online Shop: words',
           'Shopper: words',
         ],
         mustSay: ['63.97'],
@@ -242,8 +242,8 @@ export const BUY_FROM_A_SHOP_SCENE_0_0_1: SceneSpec = {
         beat: 'order',
         lines: [
           'You → Shopper',
-          'Shopper → Demo Shop',
-          'Demo Shop: words',
+          'Shopper → Online Shop',
+          'Online Shop: words',
           'Shopper: words',
         ],
         mustSay: ['TEST-'],
@@ -258,7 +258,7 @@ export const BUY_FROM_A_SHOP_SCENE_0_0_1: SceneSpec = {
         "The shop's tools are tested in process against its bundled catalogue: the tennis products, a quote of 63.97 USD summed by the tool, a test order charging nothing.",
       ],
       unverified: [
-        'Not played yet: the Demo Shop must be kept always on under the demo account (demo-shop) for the Shopper to reach it.',
+        'Not played yet: the Online Shop must be kept always on under the demo account (online-shop) for the Shopper to reach it.',
       ],
     },
   },
@@ -266,7 +266,7 @@ export const BUY_FROM_A_SHOP_SCENE_0_0_1: SceneSpec = {
     account: 'demo',
     page: '/',
     addresses: {
-      'demo-shop': 'DATALAYER_DEMO_SCENE_BUY_FROM_A_SHOP_DEMO_SHOP_A2A_URL',
+      'online-shop': 'DATALAYER_DEMO_SCENE_BUY_FROM_A_SHOP_DEMO_SHOP_A2A_URL',
     },
   },
   actors: [],
@@ -435,7 +435,7 @@ export const CODING_AGENT_BEHIND_THE_SHIELD_SCENE_0_0_1: SceneSpec = {
   actors: [],
   lines: [],
   live: '',
-  setup: ["The agent 'example-harness-opencode:0.0.1' is not enabled."],
+  setup: ["The agent 'coding-agent-opencode:0.0.1' is not enabled."],
   played: {
     at: '2026-10-30T06:00:14+00:00',
     where: 'on Datalayer',

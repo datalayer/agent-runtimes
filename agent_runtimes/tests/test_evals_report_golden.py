@@ -58,7 +58,7 @@ EVALSET: dict[str, Any] = {
     ],
     "report_evaluators": [],
     "tags": ["reference"],
-    "metadata": {"agentspec_ids": ["worker-data-analyst", "example-evals"]},
+    "metadata": {"agentspec_ids": ["worker-data-analyst", "text-normalizer"]},
     "cases": [
         {
             "id": f"case-{index}",
@@ -173,7 +173,7 @@ def _run(
     }
 
 
-EXPERIMENTS = [_experiment(1, "worker-data-analyst"), _experiment(2, "example-evals")]
+EXPERIMENTS = [_experiment(1, "worker-data-analyst"), _experiment(2, "text-normalizer")]
 RUNS: dict[str, list[dict[str, Any]]] = {
     # Newest first, the way the store lists them.
     "experiment-1": [
@@ -182,8 +182,8 @@ RUNS: dict[str, list[dict[str, Any]]] = {
         _run(1, 1, [True, True, False, False, True, False], "worker-data-analyst"),
     ],
     "experiment-2": [
-        _run(2, 2, [True, False, False, False, True, False], "example-evals"),
-        _run(2, 1, [True, False, False, False, True, True], "example-evals"),
+        _run(2, 2, [True, False, False, False, True, False], "text-normalizer"),
+        _run(2, 1, [True, False, False, False, True, True], "text-normalizer"),
     ],
 }
 
@@ -461,7 +461,7 @@ def test_a_run_document_narrows_to_its_experiment_and_reads_its_tasks(frozen_rep
         "wrong_answer · 1 task" in text
         and "It answered 0; 157 customers repeat." in text
     )
-    assert "example-evals" not in text.split("Pairwise deltas")[0]
+    assert "text-normalizer" not in text.split("Pairwise deltas")[0]
     assert document["root"]["children"][0]["$"]["evidence"]["run"] == "run-1-3"
 
 

@@ -10,7 +10,7 @@
  * Reactor plugin with a Python half of its own, and here it is mounted into
  * an agent workspace — its list in the sidebar, its view as an editor beside
  * the conversation, its commands in the palette and in a menu on the
- * composer, and its tools in the agent's hands. `example-decks` writes a deck
+ * composer, and its tools in the agent's hands. `deck-writer` writes a deck
  * as data, saves it, opens it, and steps through it while you talk.
  *
  * Everything runs in the browser: the agent on the Vercel AI harness, the
@@ -46,7 +46,7 @@ const AgentDecksExample: React.FC = () => (
     <Box height="100%" minHeight={0}>
       <AgentEmbed
         target="browser"
-        agentId="example-decks"
+        agentId="deck-writer"
         /* The deck open beside the chat from the first frame. */
         defaultEditor="deck"
         /* The header carries the editor choice — deck, notebook, document, or

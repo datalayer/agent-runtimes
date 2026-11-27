@@ -28,7 +28,7 @@ from agent_runtimes.routes import acp
 from agent_runtimes.routes import apps as apps_routes
 from agent_runtimes.tests.test_apps_a2a import Accounting
 
-STABLE = "https://r1.example/api/ai-agents/v1/apps/deployments/at/demo-accounting/a2a"
+STABLE = "https://r1.example/api/ai-agents/v1/apps/deployments/at/accounting-stage/a2a"
 AUTHORIZED = apps_routes.Authorized(LOCAL, None)
 #: The pod's own request: no token (the keeper's routes read the caller's bearer).
 REQUEST = Request({"type": "http", "headers": []})

@@ -33,35 +33,35 @@ export const SANDBOX_CAPACITIES: SandboxCapacity[] = [
   {
     key: 'sandbox-eval',
     variant: 'eval',
-    specId: 'example-sandbox-eval',
+    specId: 'python-runner-eval',
     displayName: 'Eval Sandbox',
     description: 'In-process Python execution for quick local iteration.',
   },
   {
     key: 'sandbox-jupyter',
     variant: 'jupyter-server',
-    specId: 'example-sandbox-jupyter',
+    specId: 'python-runner-jupyter',
     displayName: 'Jupyter Sandbox',
     description: 'Kernel-backed execution with notebook-compatible behavior.',
   },
   {
     key: 'sandbox-docker',
     variant: 'docker',
-    specId: 'example-sandbox-docker',
+    specId: 'python-runner-docker',
     displayName: 'Docker Sandbox',
     description: 'Containerized execution for stronger process isolation.',
   },
   {
     key: 'sandbox-datalayer',
     variant: 'datalayer',
-    specId: 'example-sandbox-datalayer',
+    specId: 'python-runner-datalayer',
     displayName: 'Datalayer Sandbox',
     description: 'Cloud sandbox runtime powered by Datalayer environments.',
   },
   {
     key: 'sandbox-colab',
     variant: 'google-colab',
-    specId: 'example-sandbox-colab',
+    specId: 'python-runner-colab',
     displayName: 'Colab Sandbox',
     description:
       'Google Colab runtime connector (reuse an already-running kernel).',
@@ -69,7 +69,7 @@ export const SANDBOX_CAPACITIES: SandboxCapacity[] = [
   {
     key: 'sandbox-kaggle',
     variant: 'kaggle',
-    specId: 'example-sandbox-kaggle',
+    specId: 'python-runner-kaggle',
     displayName: 'Kaggle Sandbox',
     description:
       'Kaggle runtime connector (create kernel with API token or attach existing).',
@@ -77,7 +77,7 @@ export const SANDBOX_CAPACITIES: SandboxCapacity[] = [
   {
     key: 'sandbox-monty',
     variant: 'monty',
-    specId: 'example-sandbox-monty',
+    specId: 'python-runner-monty',
     displayName: 'Monty Sandbox',
     description: 'Secure in-process interpreter focused on safe snippets.',
   },

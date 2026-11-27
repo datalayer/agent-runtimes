@@ -7,7 +7,7 @@ A visitor without an account only reads (`visitors.visitor_refusal`), and acts
 in nobody's name: the visitors' runtime holds no principal for the
 applications it serves. One kind of application is let further: a public
 deployment whose platform keeps a shared demo account at one company — the
-Shopper's public demo buying test orders at Datalayer's Demo Shop. For it,
+Shopper's public demo buying test orders at Datalayer's Online Shop. For it,
 ai-agents answers this runtime — and nobody else, with this runtime's own key
 (``DATALAYER_RUNTIME_VISITORS_API_KEY``, taken out of the environment the
 first time) — the deployment's principal token, narrowed to its grant, and

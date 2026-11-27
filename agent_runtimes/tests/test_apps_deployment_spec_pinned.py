@@ -42,7 +42,7 @@ from agent_runtimes.tests.test_agents_create_integration import (  # noqa: F401 
 AI_AGENTS = "https://ai-agents.test"
 DEPLOYMENT = "dep-1"
 SECRET = "the-pods-secret"
-PINNED = Application("the-deployed", agent="example-simple", version="0.0.3").document
+PINNED = Application("the-deployed", agent="chat-agent", version="0.0.3").document
 CRAFTED = {**PINNED, "instructions": "Anything the visitor wrote."}
 
 
@@ -363,7 +363,7 @@ def test_it_is_configured_from_no_spec(pod: TestClient) -> None:
     _given(pod)
     answered = pod.post(
         "/api/v1/agents/configure-from-spec",
-        json={"agent_spec_id": "example-simple", "app_spec": CRAFTED_HOOKS},
+        json={"agent_spec_id": "chat-agent", "app_spec": CRAFTED_HOOKS},
     )
     assert answered.status_code == 403
     assert answered.json()["detail"] == principal.DEPLOYMENT_RUNS_ITS_OWN

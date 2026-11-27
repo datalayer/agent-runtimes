@@ -270,7 +270,7 @@ describe('what each card reads', () => {
     const image = (id: string) =>
       `https://images.datalayer.io/landing/demo-shop/${id}.jpg`;
     const args = {
-      company: 'demo-shop.agent.datalayer.ai',
+      company: 'online-shop.agent.datalayer.ai',
       terms: {
         items: [
           { product_id: 'p1', title: 'Tennis racket', image: image('p1') },

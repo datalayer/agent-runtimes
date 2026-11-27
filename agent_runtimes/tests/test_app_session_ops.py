@@ -58,7 +58,7 @@ def _stable(value: Any, ids: Dict[str, str]) -> Any:
 
 
 async def _session_events() -> Dict[str, Any]:
-    application = Application(id="runs-desk", kind="chat", agent="example-simple")
+    application = Application(id="runs-desk", kind="chat", agent="chat-agent")
     app = application.spec
     live = sessions.LiveSession(
         uid="session-ru3",

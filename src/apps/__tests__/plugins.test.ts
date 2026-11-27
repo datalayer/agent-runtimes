@@ -411,7 +411,7 @@ describe('moving the sandbox', () => {
           localAgent: {
             createPayload: {
               agent_library: 'pydantic-ai',
-              agent_spec_id: 'example-simple',
+              agent_spec_id: 'chat-agent',
             },
           },
         }),
@@ -446,7 +446,7 @@ describe('moving the sandbox', () => {
     expect(asked[1].body).toMatchObject({
       name: 'agent-workspace',
       transport: 'ag-ui',
-      agent_spec_id: 'example-simple',
+      agent_spec_id: 'chat-agent',
       sandbox_variant: 'jupyter-server',
     });
     // Empty, not absent: the one spelling that means "no server named".
@@ -482,7 +482,7 @@ describe('moving the sandbox', () => {
           localAgent: {
             createPayload: {
               agent_library: 'pydantic-ai',
-              agent_spec_id: 'example-simple',
+              agent_spec_id: 'chat-agent',
             },
           },
         }),
@@ -511,7 +511,7 @@ describe('moving the sandbox', () => {
     expect(asked[1].body).toMatchObject({
       name: 'agent-workspace',
       transport: 'ag-ui',
-      agent_spec_id: 'example-simple',
+      agent_spec_id: 'chat-agent',
     });
   });
 

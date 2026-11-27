@@ -117,11 +117,11 @@ describe('a visitor’s application', () => {
     });
   });
 
-  it('runs an example the visitors’ runtime does not keep at the address of its name, drawn from the bundle’s Appspec, never the deployment’s copy (the landing’s demo-marketer)', async () => {
+  it('runs an example the visitors’ runtime does not keep at the address of its name, drawn from the bundle’s Appspec, never the deployment’s copy (the landing’s marketer-tryout)', async () => {
     // The deployment's copy: an older version, without the title bar's items.
     const deployed = {
       schema: 'agent.app/v1',
-      id: 'demo-marketer',
+      id: 'marketer-tryout',
       version: '0.0.3',
       name: 'Marketer (deployed copy)',
       kind: 'chat',
@@ -130,7 +130,7 @@ describe('a visitor’s application', () => {
       presentation: 'The deployed words.',
     };
     const bundled = emptyAppspec('chat');
-    bundled.id = 'demo-marketer';
+    bundled.id = 'marketer-tryout';
     bundled.name = 'Marketer';
     bundled.version = '0.0.5';
     bundled.agent = 'worker-marketer:0.0.1';
@@ -138,17 +138,17 @@ describe('a visitor’s application', () => {
     bundled.presentation = 'The bundled words.';
     const fetcher = answer(200, opened(deployed));
     const read = await readVisitorApp({
-      app: 'demo-marketer',
+      app: 'marketer-tryout',
       fetcher,
-      catalogue: id => (id === 'demo-marketer' ? bundled : undefined),
+      catalogue: id => (id === 'marketer-tryout' ? bundled : undefined),
     });
     // Asked only where it runs and whether a visitor may talk to it.
     expect(calledWith(fetcher)).toBe(
-      `${DEFAULT_API}/api/ai-agents/v1/apps/deployments/at/demo-marketer`,
+      `${DEFAULT_API}/api/ai-agents/v1/apps/deployments/at/marketer-tryout`,
     );
     expect(read.kind).toBe('visitors');
     if (read.kind !== 'visitors') return;
-    expect(read.visitors.app).toBe('at:demo-marketer');
+    expect(read.visitors.app).toBe('at:marketer-tryout');
     expect(read.app.version).toBe('0.0.5');
     expect(read.app.name).toBe('Marketer');
     expect(read.app.presentation).toBe('The bundled words.');
@@ -157,14 +157,14 @@ describe('a visitor’s application', () => {
 
   it('draws each demo agent of the landing from this bundle’s catalogue, whatever its deployment says', async () => {
     const demos = [
-      'demo-marketer',
-      'demo-shopper',
-      'demo-accountant',
-      'demo-traveller',
-      'demo-terra',
-      'demo-aws-steward',
-      'demo-data-analyst',
-      'demo-functional-analyst',
+      'marketer-tryout',
+      'shopper-tryout',
+      'accountant-tryout',
+      'traveller-tryout',
+      'terra-tryout',
+      'aws-steward-tryout',
+      'data-analyst-tryout',
+      'functional-analyst-tryout',
     ];
     for (const id of demos) {
       const bundled = getApp(id);
@@ -205,7 +205,7 @@ describe('a visitor’s application', () => {
 
   it('still refuses a bundled example its deployment does not open to visitors, or runs elsewhere', async () => {
     const closed = await readVisitorApp({
-      app: 'demo-marketer',
+      app: 'marketer-tryout',
       fetcher: answer(200, {
         success: true,
         runs_code: false,
@@ -218,7 +218,7 @@ describe('a visitor’s application', () => {
     });
     expect(closed.kind).toBe('said');
     const kept = await readVisitorApp({
-      app: 'demo-marketer',
+      app: 'marketer-tryout',
       fetcher: answer(200, {
         success: true,
         runs_code: true,
@@ -230,7 +230,7 @@ describe('a visitor’s application', () => {
     expect(kept.kind).toBe('visitors');
     if (kept.kind !== 'visitors') return;
     expect(kept.visitors.url).toBe('https://r1.example/kept/demo');
-    expect(kept.app.id).toBe('demo-marketer');
+    expect(kept.app.id).toBe('marketer-tryout');
   });
 
   it('finds nothing for an example the visitors’ runtime does not keep when no address of its name is deployed, naming the ones it keeps to the developer', async () => {
@@ -361,7 +361,7 @@ describe('a visitor’s application', () => {
 
   it('says, in ai-agents’ words, an address a visitor may not talk to, and the token it takes', async () => {
     const read = await readVisitorApp({
-      app: 'demo-accounting',
+      app: 'accounting-stage',
       fetcher: answer(
         200,
         opened(

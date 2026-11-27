@@ -11,11 +11,11 @@
     },
     {
       "experiment_names": [
-        "example-evals"
+        "text-normalizer"
       ],
       "experiments": 1,
-      "id": "example-evals",
-      "name": "example-evals",
+      "id": "text-normalizer",
+      "name": "text-normalizer",
       "runs": 2
     }
   ],
@@ -1062,8 +1062,8 @@
       "stddev_pass_rate": 0.13608276348795434
     },
     {
-      "agent_spec_id": "example-evals",
-      "agent_spec_name": "example-evals",
+      "agent_spec_id": "text-normalizer",
+      "agent_spec_name": "text-normalizer",
       "baseline_pass_rate": 0.5,
       "consecutive_comparisons": [
         {
@@ -1215,7 +1215,7 @@
           },
           "status": "completed",
           "summary": {
-            "agent_spec_id": "example-evals",
+            "agent_spec_id": "text-normalizer",
             "execution_target": "cloud",
             "launch_source": "datalayer-core",
             "run_mode": "batch"
@@ -1366,7 +1366,7 @@
           },
           "status": "completed",
           "summary": {
-            "agent_spec_id": "example-evals",
+            "agent_spec_id": "text-normalizer",
             "execution_target": "cloud",
             "launch_source": "datalayer-core",
             "run_mode": "batch"
@@ -1394,7 +1394,7 @@
         "run-2-1"
       ],
       "mean_pass_rate": 0.41666666666666663,
-      "name": "example-evals",
+      "name": "text-normalizer",
       "report_analyses": [
         {
           "kind": "scalar",
@@ -1624,7 +1624,7 @@
           },
           "status": "completed",
           "summary": {
-            "agent_spec_id": "example-evals",
+            "agent_spec_id": "text-normalizer",
             "execution_target": "cloud",
             "launch_source": "datalayer-core",
             "run_mode": "batch"
@@ -1775,7 +1775,7 @@
           },
           "status": "completed",
           "summary": {
-            "agent_spec_id": "example-evals",
+            "agent_spec_id": "text-normalizer",
             "execution_target": "cloud",
             "launch_source": "datalayer-core",
             "run_mode": "batch"
@@ -1829,7 +1829,7 @@
           0.33333333333333337
         ],
         [
-          "example-evals",
+          "text-normalizer",
           0.3333333333333333,
           0.5,
           -0.16666666666666669
@@ -1841,7 +1841,7 @@
       "name": "Latest Pass Rate By Experiment",
       "x": [
         "worker-data-analyst",
-        "example-evals"
+        "text-normalizer"
       ],
       "y": [
         0.8333333333333334,
@@ -1861,7 +1861,7 @@
       "name": "Recent Runs",
       "rows": [
         "worker-data-analyst",
-        "example-evals"
+        "text-normalizer"
       ],
       "values": [
         [
@@ -1888,7 +1888,7 @@
       "name": "Pairwise Deltas",
       "pairs": [
         {
-          "baseline": "example-evals",
+          "baseline": "text-normalizer",
           "baseline_pass_rate": 0.3333333333333333,
           "candidate": "worker-data-analyst",
           "candidate_pass_rate": 0.8333333333333334,
@@ -1897,7 +1897,7 @@
         {
           "baseline": "worker-data-analyst",
           "baseline_pass_rate": 0.8333333333333334,
-          "candidate": "example-evals",
+          "candidate": "text-normalizer",
           "candidate_pass_rate": 0.3333333333333333,
           "delta_pass_rate": -0.5
         }

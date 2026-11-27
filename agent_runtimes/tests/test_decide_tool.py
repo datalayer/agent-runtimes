@@ -212,7 +212,7 @@ def test_the_tool_is_a_reader_and_the_simple_agent_has_it_through_its_decisions(
     assert spec is not None and spec.approval == "auto"
     assert spec.runtime.package == "agent_runtimes.tools.decisions"
     assert BACKEND_TOOL_ACTIONS["decide"] == ["read"]
-    simple = get_agent_spec("example-simple")
+    simple = get_agent_spec("chat-agent")
     assert simple is not None and simple.decisions == "jev:0.0.1"
     assert "decide:0.0.1" in simple.backend_tools
     assert any("urgent" in s.text for s in simple.suggestions)

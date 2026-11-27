@@ -37,7 +37,7 @@ from agent_runtimes.tests.test_apps_guards import scripted
 
 
 def desk() -> Application:
-    app = Application(id="reply-desk", kind="chat", agent="example-blank:0.0.1")
+    app = Application(id="reply-desk", kind="chat", agent="blank:0.0.1")
     app.rule("send a reply", applies_to="send", behaviour="ask_first")
     app.record(include=["decisions", "outputs"])
 
@@ -87,9 +87,7 @@ async def test_the_record_is_kept_in_memory_unless_a_recorder_is_given():
 
 
 def test_record_is_a_plain_call_and_from_spec_validates_when_the_spec_is_read():
-    app = Application(
-        id="digest", kind="worker", agent="example-blank:0.0.1", goal="A digest"
-    )
+    app = Application(id="digest", kind="worker", agent="blank:0.0.1", goal="A digest")
     assert app.record(include=["outputs"], keep_for="90_days") == {
         "include": ["outputs"],
         "keep_for": "90_days",
@@ -118,13 +116,13 @@ def test_record_is_a_plain_call_and_from_spec_validates_when_the_spec_is_read():
 
 @pytest.mark.asyncio
 async def test_a_schedule_is_a_workers_refused_at_the_decorator_and_ticked_by_name():
-    chat = Application(id="chat", kind="chat", agent="example-blank:0.0.1")
+    chat = Application(id="chat", kind="chat", agent="blank:0.0.1")
     with pytest.raises(
         ValueError, match='chat is a chat, and a schedule is a worker\'s.*kind="worker"'
     ):
         chat.schedule("0 9 * * *")
     worker = Application(
-        id="digest", kind="worker", agent="example-blank:0.0.1", goal="A digest"
+        id="digest", kind="worker", agent="blank:0.0.1", goal="A digest"
     )
     worker.record(include=["outputs"])
     ticks: list = []
@@ -167,7 +165,7 @@ async def test_one_word_each_uid_press_and_opened_by():
 
 
 def test_a_rule_is_declared_by_what_it_says():
-    app = Application(id="desk", kind="chat", agent="example-blank:0.0.1")
+    app = Application(id="desk", kind="chat", agent="blank:0.0.1")
     rule = app.rule(says="refund an order", applies_to="send", behaviour="ask_first")
     assert (
         rule.action == "refund an order"
@@ -227,7 +225,7 @@ async def test_a_memory_channel_says_its_steps_as_they_are_now():
 
 
 def test_every_kind_the_record_keeps_is_under_an_include_word():
-    app = Application(id="desk", kind="chat", agent="example-blank:0.0.1")
+    app = Application(id="desk", kind="chat", agent="blank:0.0.1")
     # `audio` is kept only by an application that listens (`interface.voice`).
     for word in sorted(set(INCLUDED_BY.values()) - {"audio"}):
         app.record(include=[word])

@@ -75,19 +75,19 @@ def _described() -> List[Dict[str, Any]]:
             **base,
             "uid": "agent-paused",
             "state": "paused",
-            "app_uid": "agent:example-simple",
+            "app_uid": "agent:chat-agent",
         },
         {
             **base,
             "uid": "agent-open",
             "state": "open",
-            "app_uid": "agent:example-simple",
+            "app_uid": "agent:chat-agent",
         },
         {
             **base,
             "uid": "agent-ended",
             "state": "ended",
-            "app_uid": "agent:example-simple",
+            "app_uid": "agent:chat-agent",
         },
         {**base, "uid": "preview-paused", "state": "paused", "app_uid": "app-1"},
         {
@@ -249,7 +249,7 @@ def _mixed() -> List[List[str]]:
         _row(
             UID,
             title="List my GitHub repositories, names only.",
-            agent="example-github-repositories",
+            agent="coding-agent-claude-code",
         ),
         _row(HEX, title=""),
         _row(SCHEDULED, title=LONG),
@@ -296,7 +296,7 @@ def test_in_a_terminal_a_row_is_one_line_and_the_title_takes_the_rest(
     if width >= 160:
         # Nothing but the long uid and the long title is cut, and the title
         # takes all that is left.
-        assert agents[0] == "example-github-repositories"
+        assert agents[0] == "coding-agent-claude-code"
         assert titles[0] == "List my GitHub repositories, names only."
         assert titles[2].endswith("…") and len(titles[2]) > 40
 

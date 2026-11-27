@@ -77,7 +77,7 @@ async def _nothing(_body: Any = None) -> None:
 
 
 def talker(voice: bool = True) -> Application:
-    application = Application(id="talker", kind="chat", agent="example-simple")
+    application = Application(id="talker", kind="chat", agent="chat-agent")
     if voice:
         application.spec.interface.voice = application.spec.interface.voice.model_copy(
             update={"enabled": True, "output": "always", "voice": "kokoro-af-heart"}

@@ -61,7 +61,7 @@ const AGENT_ID = 'assistant';
 /**
  * Make sure the server has the assistant's agent: `npm run examples` starts
  * the server with none, so the page creates it from the
- * `example-agentic-chat` spec the first time, over AG-UI, the spec's own
+ * `world-clock` spec the first time, over AG-UI, the spec's own
  * protocol.
  */
 async function ensureAssistantAgent(): Promise<void> {
@@ -79,7 +79,7 @@ async function ensureAssistantAgent(): Promise<void> {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
       name: AGENT_ID,
-      agent_spec_id: 'example-agentic-chat',
+      agent_spec_id: 'world-clock',
       transport: 'ag-ui',
     }),
   });

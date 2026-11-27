@@ -50,7 +50,7 @@ with skeletons while it loads, in the application's theme. The page reads it at
 its own `/api/gallery`, behind the page's access check (anybody for a public
 agent, the people allowed for a private one), each read counted under the
 caller's rate cap. The answer is kept ten minutes: a page seen often calls the
-agent once in that time, recorded as a call by its `web` address. The Demo Shop's
+agent once in that time, recorded as a call by its `web` address. The Online Shop's
 `listProducts` carries it:
 
 ```yaml
@@ -96,7 +96,7 @@ action is not done twice. A caller with no Session has nobody to ask: it is answ
 
 ```bash
 # Anybody, or a key: refused, nothing done.
-curl -s -X POST https://demo-shop.api.datalayer.ai/orders \
+curl -s -X POST https://online-shop.api.datalayer.ai/orders \
   -H 'Content-Type: application/json' -d '{"items": [{"product_id": "tennis-ball"}]}'
 # 403 {"error": "approval_required", "detail": "This is done only once the person approved it. …"}
 ```

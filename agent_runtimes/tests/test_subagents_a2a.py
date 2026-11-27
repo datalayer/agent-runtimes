@@ -37,7 +37,7 @@ def _remote(name: str = "researcher") -> SubagentDefinition:
     return SubagentDefinition(
         name=name,
         description="Facts, over A2A",
-        a2a=A2ARemoteTarget(spec_id="example-a2a-researcher"),
+        a2a=A2ARemoteTarget(spec_id="researcher-a2a"),
     )
 
 
@@ -47,8 +47,8 @@ class TestDefinitions:
             A2ARemoteTarget()
 
     def test_the_spec_id_drops_the_version(self) -> None:
-        assert spec_id_of("example-a2a-researcher:0.0.1") == "example-a2a-researcher"
-        assert spec_id_of("example-a2a-researcher") == "example-a2a-researcher"
+        assert spec_id_of("researcher-a2a:0.0.1") == "researcher-a2a"
+        assert spec_id_of("researcher-a2a") == "researcher-a2a"
         # A team's seat has a colon that is no version.
         assert spec_id_of("team:jupyter/reviewer") == "team:jupyter/reviewer"
         assert spec_id_of(None) is None
@@ -62,7 +62,7 @@ class TestDefinitions:
                 SubAgentspecConfig(
                     name="researcher",
                     description="Facts",
-                    ref="example-a2a-researcher:0.0.1",
+                    ref="researcher-a2a:0.0.1",
                     a2a=A2ASubagentConfig(launch="local"),
                 )
             ],
@@ -74,7 +74,7 @@ class TestDefinitions:
         assert "researcher" not in cap._agents
         target = cap._remotes["researcher"].a2a
         assert target is not None
-        assert target.spec_id == "example-a2a-researcher"
+        assert target.spec_id == "researcher-a2a"
         assert target.launch == "local"
         instructions = cap.get_instructions()
         assert instructions is not None
@@ -353,7 +353,7 @@ class TestDelegation:
 
         assert result.output == "done"
         # Launched on the first delegation, reused on the second.
-        assert launches == [("researcher", "example-a2a-researcher")]
+        assert launches == [("researcher", "researcher-a2a")]
         assert [event["phase"] for event in emitted] == [
             "start", "status", "status", "text", "end",
             "start", "status", "text", "end",
@@ -518,7 +518,7 @@ class TestEnsureAgent:
             base_url="http://127.0.0.1:8765/",
             agent_name="a2a-researcher",
             token="",
-            agent_spec_id="example-a2a-researcher",
+            agent_spec_id="researcher-a2a",
             transport="a2a",
         )
         assert agent_id == "a2a-researcher"
@@ -558,7 +558,7 @@ class TestEnsureAgent:
             base_url="http://127.0.0.1:8765",
             agent_name="a2a-researcher",
             token="tok",
-            agent_spec_id="example-a2a-researcher",
+            agent_spec_id="researcher-a2a",
             transport="a2a",
         )
         assert agent_id == "a2a-researcher"

@@ -211,7 +211,7 @@ export function AgentWorkspaceExample({
           promptPlacement,
           showAgentVariants,
           teamId,
-          localAgentSpec: 'example-simple',
+          localAgentSpec: 'chat-agent',
           // The demonstration's switches. Each is left out rather than
           // mounted-and-hidden: the sidebar is drawn only when something
           // contributes to it, so leaving these out is what removes the column.

@@ -2,10 +2,11 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Generate example sandbox agent specs for each sandbox variant.
+"""Generate the Python Runner agent specs, one per sandbox variant.
 
-This keeps sandbox demonstration specs aligned with supported sandbox variants
-so examples can offer a consistent variant picker.
+This keeps the Python Runners aligned with the supported sandbox variants, so
+the examples and the code-sandboxes capacity plugins offer a consistent
+variant picker.
 """
 
 from __future__ import annotations
@@ -13,8 +14,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-# Variant → the short key its spec goes by, so the ids stay the ones the
-# examples and the code-sandboxes capacity plugins already name.
+# Variant → the short key its spec goes by (python-runner-<key>), the ids the
+# examples and the code-sandboxes capacity plugins name.
 VARIANTS: dict[str, str] = {
     "eval": "eval",
     "jupyter-server": "jupyter",
@@ -53,20 +54,20 @@ def _content_for_variant(variant: str) -> str:
     key = VARIANTS[variant]
     title = _TITLES[variant]
     where = _WHERE[variant]
-    spec_id = f"example-sandbox-{key}"
+    spec_id = f"python-runner-{key}"
     return f"""# Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-# Agent Specification: Sandbox Variant ({variant})
+# Agent Specification: Python Runner ({variant} sandbox)
 # Scaffolded by scripts/codegen/generate_sandbox_agents.py — edit the template
 # there, not this file. Used by AgentCodeSandboxesExample.
 
 id: {spec_id}
 version: 0.0.1
-name: Example Sandbox {title} Agent
+name: Python Runner on {title}
 description: >-
-  Demonstrates the '{variant}' code sandbox: Python the agent runs through
-  execute_code executes {where}.
+  Runs Python for every computation, script or check asked for, through
+  execute_code in the '{variant}' code sandbox: {where}.
 
 tags:
   - sandbox
@@ -115,7 +116,7 @@ welcome_message: >-
   executes {where}.
 
 system_prompt: >-
-  You are the {title} sandbox example agent. Any computation, script or
+  You run Python on the {title} sandbox. Any computation, script or
   check the person asks for is done by running Python in the sandbox with
   `execute_code` — never by working it out yourself. Run the code, report
   what it printed, briefly, and when asked where the code ran, answer from
@@ -140,7 +141,7 @@ def generate_specs(agents_dir: Path) -> int:
     agents_dir.mkdir(parents=True, exist_ok=True)
     count = 0
     for variant, key in VARIANTS.items():
-        path = agents_dir / f"example-sandbox-{key}.yaml"
+        path = agents_dir / f"python-runner-{key}.yaml"
         path.write_text(_content_for_variant(variant), encoding="utf-8")
         count += 1
     return count
@@ -148,7 +149,7 @@ def generate_specs(agents_dir: Path) -> int:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Generate example sandbox agentspec files by sandbox variant."
+        description="Generate the Python Runner agentspec files, one per sandbox variant."
     )
     parser.add_argument(
         "--agents-dir",
@@ -159,7 +160,7 @@ def main() -> None:
     args = parser.parse_args()
 
     generated = generate_specs(args.agents_dir)
-    print(f"Generated {generated} sandbox variant agentspec files in {args.agents_dir}")
+    print(f"Generated {generated} Python Runner agentspec files in {args.agents_dir}")
 
 
 if __name__ == "__main__":

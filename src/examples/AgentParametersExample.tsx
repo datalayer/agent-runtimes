@@ -20,7 +20,7 @@ const AGENT_PLUGINS_AGENTPAR = [AgentParametersPlugin];
 
 setupPrimerPortals();
 
-const AGENTSPEC_ID = 'example-parameters';
+const AGENTSPEC_ID = 'project-agent';
 const AGENT_NAME = 'parameters-demo';
 
 type LibrarySpecResponse = {
@@ -254,7 +254,7 @@ const AgentParametersExample: React.FC = () => {
             Launch Parameterized Agent
           </Heading>
           <Text sx={{ color: 'fg.muted', fontSize: 1, maxWidth: 620 }}>
-            Load the runtime schema directly from example-parameters, fill the
+            Load the runtime schema directly from project-agent, fill the
             generated form, then launch with validated parameters.
           </Text>
 

@@ -49,7 +49,7 @@ async def _ignore(body: Dict[str, Any]) -> None:
 
 def held(uid: str) -> Tuple[sessions.LiveSession, List[Any]]:
     """A session of ada's held here, whose answer shows a button."""
-    application = Application(id="notes-assistant", agent="example-simple")
+    application = Application(id="notes-assistant", agent="chat-agent")
     pressed: List[Any] = []
 
     @application.action("again", payload=Row)

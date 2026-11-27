@@ -1317,7 +1317,7 @@ def _application_of(path: Path) -> Any:
 
 #: The agentspec a local server is started with before an application is
 #: configured on it; the application's own agent replaces it.
-BOOTSTRAP_AGENT_SPEC_ID = "example-simple"
+BOOTSTRAP_AGENT_SPEC_ID = "chat-agent"
 
 
 def configure_on(

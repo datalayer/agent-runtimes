@@ -19,7 +19,7 @@ runner = CliRunner(
     env={"NO_COLOR": "1", "TERM": "dumb", "_TYPER_STANDARD_TRACEBACK": "1"}
 )
 
-VALID_AGENT_ID = "example-simple"
+VALID_AGENT_ID = "chat-agent"
 
 
 @pytest.fixture(autouse=True)

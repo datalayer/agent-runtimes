@@ -6,7 +6,7 @@
 /**
  * `@datalayer/agent-plugin-agent-subagents` — the capacity, as a plugin.
  *
- * Mounts the `example-subagents` agent and offers what it is worth asking. Cast
+ * Mounts the `research-writer` agent and offers what it is worth asking. Cast
  * from the shared capacity mould; see `apps/plugins/agent-capacity`.
  *
  * The openers are the spec's own.
@@ -23,7 +23,7 @@ export const AgentSubagentsPlugin = defineAgentCapacityPlugin({
   key: 'subagents',
   displayName: 'Agent Subagents',
   description: 'Multi-agent delegation with researcher & writer',
-  specId: 'example-subagents',
+  specId: 'research-writer',
   octicon: 'people',
   emoji: '👥',
 });

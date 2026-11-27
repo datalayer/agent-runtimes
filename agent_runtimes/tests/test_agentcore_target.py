@@ -556,12 +556,12 @@ def test_agent_agentcore_deploy_status_invoke_sessions_destroy(cli) -> None:
     from agent_runtimes.__main__ import app
 
     runner, control_stub, data_stub, state = cli
-    spec = "example-simple"
+    spec = "chat-agent"
     control_stub.add_response(
         "create_agent_runtime",
         _created(),
         {
-            "agentRuntimeName": "datalayer_example_simple",
+            "agentRuntimeName": "datalayer_chat_agent",
             "agentRuntimeArtifact": {"containerConfiguration": {"containerUri": IMAGE}},
             "roleArn": ROLE,
             "networkConfiguration": {"networkMode": "PUBLIC"},
@@ -574,7 +574,7 @@ def test_agent_agentcore_deploy_status_invoke_sessions_destroy(cli) -> None:
     )
     control_stub.add_response(
         "get_agent_runtime",
-        _got("READY", "datalayer_example_simple"),
+        _got("READY", "datalayer_chat_agent"),
         {"agentRuntimeId": RUNTIME_ID},
     )
     control_stub.add_response(
@@ -609,7 +609,7 @@ def test_agent_agentcore_deploy_status_invoke_sessions_destroy(cli) -> None:
         ],
     )
     assert deployed.exit_code == 0, deployed.output
-    assert f"example-simple deployed as {ARN} (UPDATING)." in deployed.output
+    assert f"chat-agent deployed as {ARN} (UPDATING)." in deployed.output
     assert (
         json.loads(state.read_text())["deployments"][spec]["deployment"]["arn"] == ARN
     )
@@ -634,7 +634,7 @@ def test_agent_agentcore_deploy_status_invoke_sessions_destroy(cli) -> None:
         "get_agent_runtime",
         {
             "agentRuntimeArn": ARN,
-            "agentRuntimeName": "datalayer_example_simple",
+            "agentRuntimeName": "datalayer_chat_agent",
             "agentRuntimeId": RUNTIME_ID,
             "agentRuntimeVersion": "1",
             "createdAt": NOW,
@@ -647,7 +647,7 @@ def test_agent_agentcore_deploy_status_invoke_sessions_destroy(cli) -> None:
     )
     status = runner.invoke(app, ["agentcore", "status", spec])
     assert status.exit_code == 0, status.output
-    assert f"example-simple: READY — {ARN} (version 1)" in status.output
+    assert f"chat-agent: READY — {ARN} (version 1)" in status.output
 
     from botocore.stub import ANY
 
@@ -698,8 +698,7 @@ def test_agent_agentcore_deploy_status_invoke_sessions_destroy(cli) -> None:
     )
     destroyed = runner.invoke(app, ["agentcore", "destroy", spec])
     assert (
-        destroyed.exit_code == 0
-        and f"example-simple: {ARN} DELETING." in destroyed.output
+        destroyed.exit_code == 0 and f"chat-agent: {ARN} DELETING." in destroyed.output
     )
     assert json.loads(state.read_text())["deployments"] == {}
     gone = runner.invoke(app, ["agentcore", "status", spec])
@@ -719,7 +718,7 @@ def test_agent_agentcore_refuses_an_unknown_agentspec_and_a_lone_audience(cli) -
         and "is not an agentspec of the catalogue" in unknown.output
     )
     lone = runner.invoke(
-        app, ["agentcore", "deploy", "example-simple", *base, "--audience", ARN]
+        app, ["agentcore", "deploy", "chat-agent", *base, "--audience", ARN]
     )
     assert lone.exit_code == 1 and "give its --discovery-url" in lone.output
 

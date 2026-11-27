@@ -324,7 +324,7 @@ export const AgentOutputsSheetsPlugin = definePlugin({
 /**
  * The Cells agent tools (`cells_read_range`, `cells_insert_chart`, …) on the
  * last spreadsheet answered. Its bundle id is `cells`, the frontend toolset
- * the `example-output` spec names.
+ * the `output-formatter` spec names.
  */
 export const AgentOutputsSheetToolsPlugin = cellsAgentToolsPlugin({
   model: latestSheetModel,

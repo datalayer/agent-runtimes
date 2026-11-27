@@ -8,8 +8,8 @@ and — written in Python — the ``app.py`` that is its source, the spec beside
 it built from it (`agent apps build`), so the two agree from the start:
 
 - **blank**: a chat or a widget, its agent the one a blank application starts
-  with in the Studio (``example-simple``) — written in Python, the blank
-  agent this process builds (``example-blank``); a worker or a decision says more
+  with in the Studio (``chat-agent``) — written in Python, the blank
+  agent this process builds (``blank``); a worker or a decision says more
   than a name (what starts its work, what it decides), so it starts from an
   example;
 - **from an example** of the catalogue (``--from support-desk``): its spec,
@@ -46,13 +46,13 @@ from agent_runtimes.apps.build import build
 from agent_runtimes.apps.loading import AppNotRunnable
 
 #: The agentspec a blank application starts with, as in the Studio.
-BLANK_AGENT = "example-simple:0.0.1"
+BLANK_AGENT = "chat-agent:0.0.1"
 
 #: The agentspec a blank ``app.py`` starts with: a model and
 #: nothing else — no prompt of its own over the application's instructions,
 #: nothing only a runtime brings — so an `AppHost` builds it in this process
 #: as a runtime does.
-BLANK_PYTHON_AGENT = "example-blank:0.0.1"
+BLANK_PYTHON_AGENT = "blank:0.0.1"
 
 #: The kinds a blank application can be: the others say more than a name.
 BLANK_KINDS = ("chat", "widget")

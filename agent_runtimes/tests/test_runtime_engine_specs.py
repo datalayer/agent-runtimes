@@ -87,15 +87,15 @@ class TestTheCatalogue:
         }
 
     def test_the_kagent_example_runs_on_kagent_with_pydantic_ai(self) -> None:
-        spec = get_agent_spec("example-kagent")
+        spec = get_agent_spec("kagent-chat")
         assert spec is not None
         assert (spec.runtime_engine, spec.harness) == ("kagent", "pydantic-ai")
         assert [s.id for s in list_agentspecs() if s.runtime_engine == "kagent"] == [
-            "example-kagent"
+            "kagent-chat"
         ]
 
     def test_the_agent_it_is_modelled_on_runs_on_datalayer(self) -> None:
-        spec = get_agent_spec("example-simple")
+        spec = get_agent_spec("chat-agent")
         assert spec is not None and spec.runtime_engine == "datalayer"
 
     def test_a_cog_keeps_the_engine_of_the_agent_it_extends(self) -> None:

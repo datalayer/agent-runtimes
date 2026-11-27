@@ -35,7 +35,7 @@ app = Application(
     kind="chat",
     # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
     ui=[{"plugin": "chat"}],
-    agent="example-blank:0.0.1",
+    agent="blank:0.0.1",
     instructions=(
         "Use explain_mediated_sign_in to explain PAP Mediated Sign-In. Never ask the "
         "user for a password or one-time code in chat: the host's own protected input "

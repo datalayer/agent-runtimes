@@ -75,7 +75,7 @@ def test_an_agent_has_decide_exactly_when_its_spec_names_decisions() -> None:
         if agent.decisions:
             assert decisions_spec(agent.decisions).enabled, agent.id
             deciders.append(agent.id)
-    assert "example-simple" in deciders
+    assert "chat-agent" in deciders
     # Not every agent decides.
     assert len(deciders) < len(list_agentspecs())
 
@@ -187,7 +187,7 @@ def test_the_generator_refuses_an_application_deciding_through_an_agent_that_doe
     from generate_decisions import check_app_decisions
 
     check_app_decisions(
-        [{"id": "ok", "agent": "example-simple:0.0.1", "backend_tools": ["decide"]}],
+        [{"id": "ok", "agent": "chat-agent:0.0.1", "backend_tools": ["decide"]}],
         CLONE / "apps",
     )
     with pytest.raises(SystemExit) as refused:

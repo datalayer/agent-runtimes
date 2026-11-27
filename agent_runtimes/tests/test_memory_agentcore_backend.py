@@ -35,7 +35,7 @@ from agent_runtimes.memory.config import MemoryNotConfigured  # noqa: E402
 REGION = "us-east-1"
 MEMORY = "datalayer_memory-AbCdEf1234"
 USER = "01JUSERULID0000000000000000"
-AGENT = "example-memory"
+AGENT = "memory-agent"
 NOW = datetime(2026, 11, 11, tzinfo=timezone.utc)
 STRATEGY = "semantic-AbCdEf1234"
 R1 = "mem-" + "1" * 40

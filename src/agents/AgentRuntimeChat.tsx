@@ -37,7 +37,7 @@ import type { Protocol, Suggestion } from '../types';
  * Props for {@link AgentRuntimeChat}.
  */
 export interface AgentRuntimeChatProps {
-  /** Agentspec id to launch, e.g. `example-analyze-excel-spreadsheet`. */
+  /** Agentspec id to launch, e.g. `worker-spreadsheet-analyst`. */
   agentSpecId: string;
   /** Human-friendly title shown in the chat header. */
   title?: string;

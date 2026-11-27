@@ -62,10 +62,10 @@ PARENT = {
     "depth": 0,
     "accountUid": "org-1",
 }
-RESEARCHER = A2ARemoteTarget(spec_id="example-a2a-researcher")
+RESEARCHER = A2ARemoteTarget(spec_id="researcher-a2a")
 #: The binding ``delegate_task`` asks for that subagent with.
 RESEARCHER_BINDING = AgentBinding(
-    agent_id="example-a2a-researcher",
+    agent_id="researcher-a2a",
     capability="researcher",
     protocol=AgentProtocol.A2A,
 )
@@ -273,7 +273,7 @@ class TestAnOrchestratedRunAsksForItsChildren:
             command.agent.protocol.value,
             command.objective.goal,
         ) == (
-            "example-a2a-researcher",
+            "researcher-a2a",
             "a2a",
             "Find the facts",
         )

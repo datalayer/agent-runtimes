@@ -68,7 +68,7 @@ const element = (
 const link = (label: string, href: string) =>
   element('a', [text(label)], { href });
 
-const marketer = APP_CATALOGUE['demo-marketer'];
+const marketer = APP_CATALOGUE['marketer-tryout'];
 
 beforeEach(() => navigate.mockClear());
 afterEach(() => cleanup());

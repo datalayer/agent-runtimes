@@ -60,7 +60,7 @@ import { useRuntimeTarget } from './utils/runtimeTargetStore';
 
 const EXAMPLE_ID = 'A2UiJupyterOutputExample';
 const AGENT_NAME = 'a2ui-jupyter-output';
-const AGENTSPEC_ID = 'example-a2ui-jupyter-output';
+const AGENTSPEC_ID = 'jupyter-output-presenter';
 
 /*
  * The six kinds, as a value as well as a type.
