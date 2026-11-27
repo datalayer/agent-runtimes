@@ -28,6 +28,12 @@ import type {
   DisplayToolCallStatus,
 } from '../../types';
 import { SpecMark, hasMark, type Marks } from '../marks';
+import {
+  OrderCard,
+  PRODUCT_CARDS_WORDS,
+  ProductGrid,
+  readProductCards,
+} from '../../apps/plugins/product-cards';
 import { useChatWords } from '../ChatLanguage';
 import type { ChatWords } from '../words';
 
@@ -163,12 +169,94 @@ function getStatusDisplay(
  * Format tool name for display (convert snake_case to Title Case)
  */
 function formatToolName(name: string): string {
+  const poppy = poppyToolOf(name);
+  if (poppy) {
+    return `Poppy ${titled(poppy.action)}${poppy.company ? ` · ${titled(poppy.company)}` : ''}`;
+  }
+  return titled(name);
+}
+
+function titled(name: string): string {
   return name
     .replace(/_/g, ' ')
     .replace(/([a-z])([A-Z])/g, '$1 $2')
     .split(' ')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
+}
+
+/**
+ * A Personal Agent Protocol tool, which the chat calls Poppy (the user, 27
+ * November 2026): `pap_<action>` (a visitor's) or `pap_<company>_pap_<action>`
+ * (a company's, its domain in plain characters, `pap_connections.server_id`).
+ * Its id is kept; only what is shown says Poppy.
+ */
+export function poppyToolOf(
+  name: string,
+): { action: string; company: string } | null {
+  const company = /^pap_(.+?)_{1,2}pap_([a-z_]+)$/.exec(name);
+  if (company) {
+    return { company: company[1], action: company[2] };
+  }
+  const bare = /^pap_([a-z_]+)$/.exec(name);
+  return bare ? { company: '', action: bare[1] } : null;
+}
+
+/** What a Poppy tool's company answered: its `body`, from `{status, body}` or its JSON. */
+export function poppyBodyOf(result: unknown): Record<string, unknown> | null {
+  let value = result;
+  if (typeof value === 'string') {
+    try {
+      value = JSON.parse(value);
+    } catch {
+      return null;
+    }
+  }
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+  const body = (value as Record<string, unknown>).body;
+  return body && typeof body === 'object'
+    ? (body as Record<string, unknown>)
+    : (value as Record<string, unknown>);
+}
+
+/** A Poppy tool's answer drawn: products as cards, a quote or a test order with its total. */
+function PoppyResult({
+  result,
+}: {
+  result: unknown;
+}): React.ReactElement | null {
+  const body = poppyBodyOf(result);
+  if (!body) {
+    return null;
+  }
+  const cards = readProductCards(body);
+  if (cards.kind === 'products') {
+    return <ProductGrid products={cards.products} count={cards.count} />;
+  }
+  if (cards.kind === 'quote' || cards.kind === 'test_order') {
+    const test = cards.kind === 'test_order';
+    return (
+      <OrderCard
+        title={
+          test
+            ? PRODUCT_CARDS_WORDS.testOrder(cards.orderId)
+            : PRODUCT_CARDS_WORDS.quote
+        }
+        note={
+          test
+            ? PRODUCT_CARDS_WORDS.testOrderNote
+            : PRODUCT_CARDS_WORDS.quoteNote
+        }
+        lines={cards.lines}
+        currency={cards.currency}
+        total={cards.total}
+        test={test}
+      />
+    );
+  }
+  return null;
 }
 
 /**
@@ -388,6 +476,15 @@ export function ToolCallDisplay({
           </Text>
         )}
       </Box>
+
+      {/* A Poppy tool's answer, drawn without opening the row (the user, 27 November 2026). */}
+      {status === 'complete' &&
+      result !== undefined &&
+      poppyToolOf(toolName) ? (
+        <Box px={compact ? 1 : 2} data-poppy-result="">
+          <PoppyResult result={result} />
+        </Box>
+      ) : null}
 
       {/* Expanded content */}
       {isExpanded && (
