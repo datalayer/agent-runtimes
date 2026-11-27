@@ -39,7 +39,7 @@ SEEN = 0
 app = Application(
     id="morning-digest",
     kind="worker",
-    agent="example-blank:0.0.1",
+    agent="blank:0.0.1",
     name="Morning digest",
     goal="A digest of what arrived, each weekday morning.",
 )

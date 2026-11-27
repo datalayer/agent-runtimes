@@ -1,7 +1,7 @@
 # PAP Shop
 
-A shop and a person's own agent, both in a local runtime: the Demo Shop
-(the catalogue's `demo-shop` application) published as a PAP company by
+A shop and a person's own agent, both in a local runtime: the Online Shop
+(the catalogue's `online-shop` application) published as a PAP company by
 `PapCompanyCapability`, and Ada's personal agent buying from it with
 `PapPersonalAgentCapability`.
 
@@ -9,7 +9,7 @@ A shop and a person's own agent, both in a local runtime: the Demo Shop
   Appspec's: the operation is derived from its `openapi` (`placeOrder`,
   `x-pap`);
 - its A2A route answers from the shop's own tools
-  (`agent_runtimes.tools.demo_shop`), which read the catalogue bundled with
+  (`agent_runtimes.tools.online_shop`), which read the catalogue bundled with
   the application — 24 products, their photos at `images.datalayer.io` — as
   the shop's agent does on a runtime, with no model here;
 - before signing in, the personal agent asks for tennis gear under 60 USD and

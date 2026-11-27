@@ -7,10 +7,10 @@
  * `@datalayer/agent-plugin-agent-codemode` — codemode, as a capacity.
  *
  * Two plugins from one mould, because codemode is best understood as a
- * comparison: {@link AgentCodemodePlugin} mounts the `example-codemode`
+ * comparison: {@link AgentCodemodePlugin} mounts the `web-researcher-codemode`
  * agent, whose MCP tools are converted into programmatic tools the model
  * composes in code; {@link AgentNoCodemodePlugin} mounts
- * `example-no-codemode`, the same tools raw. The codemode example mounts
+ * `web-researcher`, the same tools raw. The codemode example mounts
  * both side by side and hands each pane the same task.
  *
  * The openers are the specs' own — the same first task on both sides, so
@@ -30,7 +30,7 @@ export const AgentCodemodePlugin = defineAgentCapacityPlugin({
   key: 'codemode',
   displayName: 'Agent Codemode',
   description: 'MCP tools converted into programmatic tools.',
-  specId: 'example-codemode',
+  specId: 'web-researcher-codemode',
   octicon: 'code-square',
   emoji: '🧑‍💻',
   codemode: true,
@@ -40,7 +40,7 @@ export const AgentNoCodemodePlugin = defineAgentCapacityPlugin({
   key: 'no-codemode',
   displayName: 'Agent MCP Tools (No Codemode)',
   description: 'Raw MCP tools without codemode conversion.',
-  specId: 'example-no-codemode',
+  specId: 'web-researcher',
   octicon: 'tools',
   emoji: '🔧',
   codemode: false,

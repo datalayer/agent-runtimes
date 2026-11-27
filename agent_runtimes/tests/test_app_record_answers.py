@@ -182,7 +182,7 @@ def test_a_swapped_in_recorder_goes_on_with_the_session_without_a_second_opening
         first = AppRecorder(app=app, send=send)
         first.start(
             "s-3",
-            facts={"agent": "example-harness-claude-code", "harness": "claude-code"},
+            facts={"agent": "coding-agent-claude-code", "harness": "claude-code"},
         )
         first.ran("s-3")
         await settle()
@@ -191,15 +191,15 @@ def test_a_swapped_in_recorder_goes_on_with_the_session_without_a_second_opening
         second.ran("s-3")
         await settle()
         third = AppRecorder(app=app, send=send)
-        third.start("s-3", resumed=True, facts={"agent": "example-agentic-chat"})
+        third.start("s-3", resumed=True, facts={"agent": "world-clock"})
         third.ran("s-3")
         await settle()
 
     asyncio.run(run())
     kinds = [[e["kind"] for e in body["entries"]] for body in sent]
     assert kinds == [["session", "run"], ["run"], ["session", "run"]]
-    assert sent[0]["entries"][0]["payload"]["agent"] == "example-harness-claude-code"
-    assert sent[2]["entries"][0]["payload"]["agent"] == "example-agentic-chat"
+    assert sent[0]["entries"][0]["payload"]["agent"] == "coding-agent-claude-code"
+    assert sent[2]["entries"][0]["payload"]["agent"] == "world-clock"
     assert sent[2]["entries"][0]["payload"]["resumed"] is True
 
 
@@ -216,7 +216,7 @@ def test_a_swapped_in_recorder_keeps_the_sessions_opener() -> None:
         app = recorder_of_triage([]).app
         first = AppRecorder(app=app, send=send)
         first.opened("s-4", "ada", "Ada")
-        first.start("s-4", facts={"agent": "example-harness-claude-code"})
+        first.start("s-4", facts={"agent": "coding-agent-claude-code"})
         first.ran("s-4")
         await asyncio.sleep(0)
         await asyncio.sleep(0)

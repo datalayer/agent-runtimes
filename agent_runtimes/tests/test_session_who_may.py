@@ -78,7 +78,7 @@ def _open_as(uid: str, caller: Caller) -> sessions.LiveSession:
 OPERATIONS: Dict[str, Any] = {
     "clone": ("POST", "/clone", {}),
     "export": ("GET", "/export", None),
-    "swap": ("POST", "/agent", {"agent": "example-harness-codex"}),
+    "swap": ("POST", "/agent", {"agent": "coding-agent-codex"}),
     "rename": ("PUT", "/title", {"title": "Mine"}),
     "end": ("POST", "/end", None),
     "resume": ("POST", "/resume", {}),

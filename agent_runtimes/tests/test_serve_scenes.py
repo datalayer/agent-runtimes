@@ -34,7 +34,7 @@ def test_every_runtime_member_of_every_scene_is_served_once_in_order(
     serve_scenes,
 ) -> None:
     assert serve_scenes.runtime_members() == [
-        "demo-shop",
+        "online-shop",
         "code-explainer",
         "crop-monitoring",
         "disaster-assessment",
@@ -49,7 +49,7 @@ def test_accounting_keeps_its_port_and_the_others_take_the_next_ones(
 ) -> None:
     members = serve_scenes.runtime_members()
     assert serve_scenes.ports_of(members) == {
-        "demo-shop": 8768,
+        "online-shop": 8768,
         "code-explainer": 8769,
         "crop-monitoring": 8770,
         "disaster-assessment": 8771,

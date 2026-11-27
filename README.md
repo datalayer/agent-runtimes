@@ -29,10 +29,10 @@ npm install @datalayer/agent-runtimes   # the React components
 With a model key in the environment (for example `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` or AWS Bedrock credentials):
 
 ```bash
-agent --local -a example-simple
+agent --local -a assistant
 ```
 
-`agent` starts a local server with the `example-simple` agent and opens a chat in the terminal. `agent-runtimes serve --port 8765` starts the server on its own, for the web components.
+`agent` starts a local server with the `assistant` agent and opens a chat in the terminal. `agent-runtimes serve --port 8765` starts the server on its own, for the web components.
 
 ![The agent CLI: a question, a code execution, the answer](https://images.datalayer.io/products/agent-runtimes/agent-runtimes-agent-cli.gif)
 

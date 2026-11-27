@@ -1,11 +1,11 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The demo shop's tools: its catalogue, a quote and a test order.
+"""The online shop's tools: its catalogue, a quote and a test order.
 
-Datalayer's demo shop (the ``demo-shop`` application of agentspecs) sells
+Datalayer's online shop (the ``online-shop`` application of agentspecs) sells
 nothing: its catalogue is a snapshot bundled with the application
-(``agentspecs/apps/demo-shop/catalog.json``) — 24 products, their texts from
+(``agentspecs/apps/online-shop/catalog.json``) — 24 products, their texts from
 DummyJSON and their photos from Shopify's Burst, served from
 ``images.datalayer.io`` — read here and never from the network. Every answer
 comes from that file:
@@ -44,7 +44,7 @@ __all__ = [
 
 #: What a test order is, said wherever a person sees one.
 TEST_ORDER_NOTE = (
-    "A test order of Datalayer's demo shop: nothing is charged, nothing ships "
+    "A test order of Datalayer's online shop: nothing is charged, nothing ships "
     "and nothing is kept."
 )
 
@@ -70,7 +70,7 @@ def catalogue() -> Dict[str, Any]:
     """The snapshot, as the application bundles it."""
     text = (
         files("agentspecs.apps")
-        .joinpath("demo-shop/catalog.json")
+        .joinpath("online-shop/catalog.json")
         .read_text(encoding="utf-8")
     )
     return json.loads(text)
@@ -99,7 +99,7 @@ def _shown(products: List[Dict[str, Any]], **said: Any) -> Dict[str, Any]:
 
 
 def list_products(category: str = "") -> Any:
-    """List the demo shop's products, all of them or those of one category.
+    """List the online shop's products, all of them or those of one category.
 
     Args:
         category: One of the shop's categories (``groceries``, ``kitchen``,
@@ -127,7 +127,7 @@ def find_products(
     min_price: Optional[float] = None,
     max_price: Optional[float] = None,
 ) -> Any:
-    """Find the demo shop's products by words, category and price.
+    """Find the online shop's products by words, category and price.
 
     Args:
         query: Words to look for in a product's title, description or brand;
@@ -171,7 +171,7 @@ def find_products(
 
 
 def get_product(product_id: str) -> Any:
-    """One product of the demo shop, with its description.
+    """One product of the online shop, with its description.
 
     Args:
         product_id: The product's id, as a list answered it (``tennis-ball``).
@@ -232,7 +232,7 @@ def _priced(items: Any) -> Any:
 
 
 def quote_basket(items: List[Dict[str, Any]]) -> Any:
-    """Price a basket from the demo shop's catalogue: each line and the total.
+    """Price a basket from the online shop's catalogue: each line and the total.
 
     A quote, not an order: nothing is reserved.
 
@@ -257,7 +257,7 @@ def quote_basket(items: List[Dict[str, Any]]) -> Any:
 
 
 def place_test_order(items: List[Dict[str, Any]]) -> Any:
-    """Place a test order at the demo shop: nothing is charged, nothing ships.
+    """Place a test order at the online shop: nothing is charged, nothing ships.
 
     Answers what an order of that basket would be, with a test order number;
     nothing is charged, nothing ships and nothing is kept. Place it only once

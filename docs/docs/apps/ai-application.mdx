@@ -31,7 +31,7 @@ Marketer demo at its address, with ten turns in the preview:
 ```tsx
 <div style={{ height: 560 }}>
   <AIApplication
-    app="demo-marketer"
+    app="marketer-tryout"
     runsOn={{ kind: 'visitor', maxTurns: 10, onSignIn: () => goToSignIn() }}
   />
 </div>
@@ -61,7 +61,7 @@ import {
 
 | Prop | What it is |
 | --- | --- |
-| `app` | An Appspec, or a name: a catalogue example (`web-research`), an application at its address on Datalayer (`demo-marketer`), or a decision's id. A name is read before anything is drawn. |
+| `app` | An Appspec, or a name: a catalogue example (`web-research`), an application at its address on Datalayer (`marketer-tryout`), or a decision's id. A name is read before anything is drawn. |
 | `runsOn` | Where it runs: `visitor`, `runtime`, `server` or `datalayer` (see below). |
 | `theme` | `host` (the default) uses the page's primer-addons theme. `own` uses the application's own theme, `agent` unless the Appspec names one, as the element does. |
 | `height` | The height of an inline application. By default it fills its container (`100%`). |

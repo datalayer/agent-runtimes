@@ -34,7 +34,7 @@ export type HarnessLookups = {
   harness: (harnessId: string) => HarnessSpec | undefined;
 };
 
-/** An agent reference without its version: `example-harness-claude-code:0.0.1` is `example-harness-claude-code`. */
+/** An agent reference without its version: `coding-agent-claude-code:0.0.1` is `coding-agent-claude-code`. */
 const idOf = (ref: string): string => ref.split(':')[0];
 
 /** The harness an application's agent runs on; none for an agent of the platform's own (pydantic-ai). */

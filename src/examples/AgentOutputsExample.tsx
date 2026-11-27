@@ -7,7 +7,7 @@
  * AgentOutputsExample
  *
  * Demonstrates rich output rendering for agent responses. The agent (spec
- * `example-output`) is prompted to return exactly one of four output types per
+ * `output-formatter`) is prompted to return exactly one of four output types per
  * response:
  *   - TABLE  → GitHub-flavored Markdown table
  *   - JSON   → ```json fenced block

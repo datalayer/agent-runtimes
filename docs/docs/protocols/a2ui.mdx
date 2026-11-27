@@ -20,12 +20,12 @@ A2UI is not a transport: its messages travel inside another protocol's answer.
 ## Enable it
 
 Give an agent the backend tool `example-render-a2ui-surface`, as the agentspec
-`example-a2ui-agent` does: it turns a declarative field specification from the
+`form-builder` does: it turns a declarative field specification from the
 model into a validated surface, and its messages reach the page over
 [AG-UI](./ag-ui).
 
 ```bash
-agent-runtimes serve --agent-id example-a2ui-agent --protocol ag-ui --port 8765
+agent-runtimes serve --agent-id form-builder --protocol ag-ui --port 8765
 ```
 
 An Appspec's UI plugin says when it is exposed through A2UI (`ui`, `renderer: a2ui`).
@@ -46,7 +46,7 @@ These serve two example agents, and they need that SDK:
 | `POST /api/v1/a2ui/support-assistant` | The support assistant, likewise |
 | `GET /api/v1/a2ui/restaurant/health`, `GET /api/v1/a2ui/support-assistant/health` | `healthy`, or `unhealthy` with the reason |
 
-The restaurant finder runs the agentspec `example-a2ui-restaurant`: its model and
+The restaurant finder runs the agentspec `restaurant-finder`: its model and
 instructions come from there, and `AGENT_RUNTIMES_MODEL`, when set, overrides the
 model (the same override every spec-driven agent takes).
 

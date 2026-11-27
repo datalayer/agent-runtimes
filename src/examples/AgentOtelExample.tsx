@@ -62,7 +62,7 @@ const OTEL_URL_ENV: string = import.meta.env.VITE_DATALAYER_OTEL_URL ?? '';
 const DEFAULT_AGENT_PROTOCOL: Protocol = 'vercel-ai';
 
 /** Spec id this example always launches. */
-const AGENTSPEC_ID = 'example-otel';
+const AGENTSPEC_ID = 'telemetry-explorer';
 
 // ─── AgentLaunchPanel ──────────────────────────────────────────────────────
 
@@ -106,7 +106,7 @@ const AgentLaunchPanel: React.FC<AgentLaunchPanelProps> = ({
     }
   }, [baseUrl, onConnected]);
 
-  // Auto-launch the example-otel agent on mount.
+  // Auto-launch the telemetry-explorer agent on mount.
   useEffect(() => {
     if (launchedRef.current || isConnected) return;
     launchedRef.current = true;
@@ -241,7 +241,7 @@ const AgentOtelExampleInner: React.FC<{
 
   // ── Agent state ─────────────────────────────────────────────────
   //
-  // The launch panel creates the `example-otel` agent and reports its id; the
+  // The launch panel creates the `telemetry-explorer` agent and reports its id; the
   // AgentEmbed below runs on the Local target pointed at that same id, so its
   // `ensureLocalAgent` finds the created agent and reuses it rather than
   // making a second one. The bespoke launcher and its Disconnect control are

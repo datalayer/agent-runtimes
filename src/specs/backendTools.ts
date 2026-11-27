@@ -138,114 +138,6 @@ export const DECIDE_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   emoji: '⚖️',
 };
 
-export const DEMO_SHOP_FIND_PRODUCTS_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec =
-  {
-    id: 'demo-shop-find-products',
-    version: '0.0.1',
-    name: 'Find Demo Shop Products',
-    description:
-      "Find the demo shop's products by words, category and price range, the cheapest first, each with its photo, price, rating and stock. Drawn as a grid of product cards.",
-    tags: ['shopping', 'demo', 'demo-shop'],
-    enabled: true,
-    ui: [{ plugin: 'product-cards' }],
-    approval: 'auto',
-    timeout: undefined,
-    requiresApproval: false,
-    runtime: {
-      language: 'python',
-      package: 'agent_runtimes.tools.demo_shop',
-      method: 'find_products',
-    },
-    icon: '@primer/octicons-react:search',
-    emoji: '🔎',
-  };
-
-export const DEMO_SHOP_GET_PRODUCT_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
-  id: 'demo-shop-get-product',
-  version: '0.0.1',
-  name: 'Get a Demo Shop Product',
-  description:
-    'One product of the demo shop with its photo, price, rating, stock and description. Drawn as a product card.',
-  tags: ['shopping', 'demo', 'demo-shop'],
-  enabled: true,
-  ui: [{ plugin: 'product-cards' }],
-  approval: 'auto',
-  timeout: undefined,
-  requiresApproval: false,
-  runtime: {
-    language: 'python',
-    package: 'agent_runtimes.tools.demo_shop',
-    method: 'get_product',
-  },
-  icon: '@primer/octicons-react:package',
-  emoji: '📦',
-};
-
-export const DEMO_SHOP_LIST_PRODUCTS_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec =
-  {
-    id: 'demo-shop-list-products',
-    version: '0.0.1',
-    name: 'List Demo Shop Products',
-    description:
-      "List the demo shop's products, all or one category's, each with its photo, price, rating and stock. Drawn as a grid of product cards.",
-    tags: ['shopping', 'demo', 'demo-shop'],
-    enabled: true,
-    ui: [{ plugin: 'product-cards' }],
-    approval: 'auto',
-    timeout: undefined,
-    requiresApproval: false,
-    runtime: {
-      language: 'python',
-      package: 'agent_runtimes.tools.demo_shop',
-      method: 'list_products',
-    },
-    icon: '@primer/octicons-react:apps',
-    emoji: '🛍️',
-  };
-
-export const DEMO_SHOP_PLACE_TEST_ORDER_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec =
-  {
-    id: 'demo-shop-place-test-order',
-    version: '0.0.1',
-    name: 'Place a Demo Shop Test Order',
-    description:
-      "Place a test order of a basket at the demo shop: answered with a test order number, and nothing is charged, nothing ships and nothing is kept. Placed only once the person said to. Drawn with each product's photo.",
-    tags: ['shopping', 'demo', 'demo-shop'],
-    enabled: true,
-    ui: [{ plugin: 'product-cards' }],
-    approval: 'auto',
-    timeout: undefined,
-    requiresApproval: false,
-    runtime: {
-      language: 'python',
-      package: 'agent_runtimes.tools.demo_shop',
-      method: 'place_test_order',
-    },
-    icon: '@primer/octicons-react:check-circle',
-    emoji: '✅',
-  };
-
-export const DEMO_SHOP_QUOTE_BASKET_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
-  id: 'demo-shop-quote-basket',
-  version: '0.0.1',
-  name: 'Quote a Demo Shop Basket',
-  description:
-    "Price a basket of the demo shop's products from its catalogue: each line and the total, summed by the tool. A quote, not an order: nothing is reserved. Drawn with each product's photo.",
-  tags: ['shopping', 'demo', 'demo-shop'],
-  enabled: true,
-  ui: [{ plugin: 'product-cards' }],
-  approval: 'auto',
-  timeout: undefined,
-  requiresApproval: false,
-  runtime: {
-    language: 'python',
-    package: 'agent_runtimes.tools.demo_shop',
-    method: 'quote_basket',
-  },
-  icon: '@primer/octicons-react:list-ordered',
-  emoji: '🧾',
-};
-
 export const DISPLAY_RECIPE_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   id: 'display-recipe',
   version: '0.0.1',
@@ -531,6 +423,116 @@ export const LIST_RECOMMENDATIONS_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   icon: '@primer/octicons-react:list-ordered',
   emoji: '📋',
 };
+
+export const ONLINE_SHOP_FIND_PRODUCTS_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec =
+  {
+    id: 'online-shop-find-products',
+    version: '0.0.1',
+    name: 'Find Online Shop Products',
+    description:
+      "Find the online shop's products by words, category and price range, the cheapest first, each with its photo, price, rating and stock. Drawn as a grid of product cards.",
+    tags: ['shopping', 'demo', 'online-shop'],
+    enabled: true,
+    ui: [{ plugin: 'product-cards' }],
+    approval: 'auto',
+    timeout: undefined,
+    requiresApproval: false,
+    runtime: {
+      language: 'python',
+      package: 'agent_runtimes.tools.online_shop',
+      method: 'find_products',
+    },
+    icon: '@primer/octicons-react:search',
+    emoji: '🔎',
+  };
+
+export const ONLINE_SHOP_GET_PRODUCT_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec =
+  {
+    id: 'online-shop-get-product',
+    version: '0.0.1',
+    name: 'Get an Online Shop Product',
+    description:
+      'One product of the online shop with its photo, price, rating, stock and description. Drawn as a product card.',
+    tags: ['shopping', 'demo', 'online-shop'],
+    enabled: true,
+    ui: [{ plugin: 'product-cards' }],
+    approval: 'auto',
+    timeout: undefined,
+    requiresApproval: false,
+    runtime: {
+      language: 'python',
+      package: 'agent_runtimes.tools.online_shop',
+      method: 'get_product',
+    },
+    icon: '@primer/octicons-react:package',
+    emoji: '📦',
+  };
+
+export const ONLINE_SHOP_LIST_PRODUCTS_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec =
+  {
+    id: 'online-shop-list-products',
+    version: '0.0.1',
+    name: 'List Online Shop Products',
+    description:
+      "List the online shop's products, all or one category's, each with its photo, price, rating and stock. Drawn as a grid of product cards.",
+    tags: ['shopping', 'demo', 'online-shop'],
+    enabled: true,
+    ui: [{ plugin: 'product-cards' }],
+    approval: 'auto',
+    timeout: undefined,
+    requiresApproval: false,
+    runtime: {
+      language: 'python',
+      package: 'agent_runtimes.tools.online_shop',
+      method: 'list_products',
+    },
+    icon: '@primer/octicons-react:apps',
+    emoji: '🛍️',
+  };
+
+export const ONLINE_SHOP_PLACE_TEST_ORDER_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec =
+  {
+    id: 'online-shop-place-test-order',
+    version: '0.0.1',
+    name: 'Place an Online Shop Test Order',
+    description:
+      "Place a test order of a basket at the online shop: answered with a test order number, and nothing is charged, nothing ships and nothing is kept. Placed only once the person said to. Drawn with each product's photo.",
+    tags: ['shopping', 'demo', 'online-shop'],
+    enabled: true,
+    ui: [{ plugin: 'product-cards' }],
+    approval: 'auto',
+    timeout: undefined,
+    requiresApproval: false,
+    runtime: {
+      language: 'python',
+      package: 'agent_runtimes.tools.online_shop',
+      method: 'place_test_order',
+    },
+    icon: '@primer/octicons-react:check-circle',
+    emoji: '✅',
+  };
+
+export const ONLINE_SHOP_QUOTE_BASKET_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec =
+  {
+    id: 'online-shop-quote-basket',
+    version: '0.0.1',
+    name: 'Quote an Online Shop Basket',
+    description:
+      "Price a basket of the online shop's products from its catalogue: each line and the total, summed by the tool. A quote, not an order: nothing is reserved. Drawn with each product's photo.",
+    tags: ['shopping', 'demo', 'online-shop'],
+    enabled: true,
+    ui: [{ plugin: 'product-cards' }],
+    approval: 'auto',
+    timeout: undefined,
+    requiresApproval: false,
+    runtime: {
+      language: 'python',
+      package: 'agent_runtimes.tools.online_shop',
+      method: 'quote_basket',
+    },
+    icon: '@primer/octicons-react:list-ordered',
+    emoji: '🧾',
+  };
 
 export const RECOMMENDATIONS_REPORT_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   id: 'recommendations-report',
@@ -1207,12 +1209,6 @@ export const BACKEND_TOOL_CATALOG: Record<string, BackendToolSpec> = {
   'create-plan': CREATE_PLAN_BACKEND_TOOL_SPEC_0_0_1,
   'current-time': CURRENT_TIME_BACKEND_TOOL_SPEC_0_0_1,
   decide: DECIDE_BACKEND_TOOL_SPEC_0_0_1,
-  'demo-shop-find-products': DEMO_SHOP_FIND_PRODUCTS_BACKEND_TOOL_SPEC_0_0_1,
-  'demo-shop-get-product': DEMO_SHOP_GET_PRODUCT_BACKEND_TOOL_SPEC_0_0_1,
-  'demo-shop-list-products': DEMO_SHOP_LIST_PRODUCTS_BACKEND_TOOL_SPEC_0_0_1,
-  'demo-shop-place-test-order':
-    DEMO_SHOP_PLACE_TEST_ORDER_BACKEND_TOOL_SPEC_0_0_1,
-  'demo-shop-quote-basket': DEMO_SHOP_QUOTE_BASKET_BACKEND_TOOL_SPEC_0_0_1,
   'display-recipe': DISPLAY_RECIPE_BACKEND_TOOL_SPEC_0_0_1,
   'example-create-plan': EXAMPLE_CREATE_PLAN_BACKEND_TOOL_SPEC_0_0_1,
   'example-current-time': EXAMPLE_CURRENT_TIME_BACKEND_TOOL_SPEC_0_0_1,
@@ -1229,6 +1225,14 @@ export const BACKEND_TOOL_CATALOG: Record<string, BackendToolSpec> = {
   'get-weather': GET_WEATHER_BACKEND_TOOL_SPEC_0_0_1,
   'github-repositories': GITHUB_REPOSITORIES_BACKEND_TOOL_SPEC_0_0_1,
   'list-recommendations': LIST_RECOMMENDATIONS_BACKEND_TOOL_SPEC_0_0_1,
+  'online-shop-find-products':
+    ONLINE_SHOP_FIND_PRODUCTS_BACKEND_TOOL_SPEC_0_0_1,
+  'online-shop-get-product': ONLINE_SHOP_GET_PRODUCT_BACKEND_TOOL_SPEC_0_0_1,
+  'online-shop-list-products':
+    ONLINE_SHOP_LIST_PRODUCTS_BACKEND_TOOL_SPEC_0_0_1,
+  'online-shop-place-test-order':
+    ONLINE_SHOP_PLACE_TEST_ORDER_BACKEND_TOOL_SPEC_0_0_1,
+  'online-shop-quote-basket': ONLINE_SHOP_QUOTE_BASKET_BACKEND_TOOL_SPEC_0_0_1,
   'recommendations-report': RECOMMENDATIONS_REPORT_BACKEND_TOOL_SPEC_0_0_1,
   'record-recommendation': RECORD_RECOMMENDATION_BACKEND_TOOL_SPEC_0_0_1,
   'runtime-echo': RUNTIME_ECHO_BACKEND_TOOL_SPEC_0_0_1,

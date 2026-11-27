@@ -4,11 +4,11 @@
  */
 
 /**
- * The demo shop's answers, read for its product cards. Pure.
+ * The online shop's answers, read for its product cards. Pure.
  *
  * Its tools answer `{shown: 'products', products}`, `{shown: 'quote',
  * lines, total}` and `{shown: 'test_order', order_id, lines, total}`
- * (`agent_runtimes.tools.demo_shop`); its operations, called over MCP or
+ * (`agent_runtimes.tools.online_shop`); its operations, called over MCP or
  * PAP, answer the same `products`, `lines` and `total` without `shown`.
  *
  * @module apps/plugins/product-cards/read

@@ -38,7 +38,7 @@ HANDBOOK = Path(__file__).with_name("handbook.txt")
 app = Application(
     id="handbook-desk",
     kind="chat",
-    agent="example-blank:0.0.1",
+    agent="blank:0.0.1",
     name="Handbook desk",
     instructions="Answer from the passage you are given, in one or two sentences.",
 )

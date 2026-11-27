@@ -3,11 +3,11 @@
 
 """A shop and a person's own agent, both in a local runtime.
 
-The company is the Demo Shop, the catalogue's ``demo-shop`` application,
+The company is the Online Shop, the catalogue's ``online-shop`` application,
 published as a PAP company by ``PapCompanyCapability`` with the scopes and
 the one operation its Appspec declares (``orders.place``, derived from its
 ``openapi``). Its A2A route answers from the shop's own tools
-(``agent_runtimes.tools.demo_shop``), as the shop's agent does on a runtime,
+(``agent_runtimes.tools.online_shop``), as the shop's agent does on a runtime,
 with no model here: it finds products, quotes a basket and, asked to place an
 order, proposes it rather than placing it. Once the person confirmed that
 exact revision, the perform turn redeems its one-use ticket and places the
@@ -52,10 +52,10 @@ from agent_runtimes.pap import (
     PapPersonalAgentCapability,
 )
 from agent_runtimes.protocols import protocols_platform
-from agent_runtimes.tools import demo_shop
+from agent_runtimes.tools import online_shop
 
 DOMAIN = "shop.example"
-SHOP = get_app("demo-shop")
+SHOP = get_app("online-shop")
 assert SHOP is not None and SHOP.pap is not None
 # Its scopes and its operation as its Appspec says them; a local company offers
 # its agent alone (its A2A route): at Datalayer the shop also answers at its
@@ -66,13 +66,13 @@ app = Application(
     id="pap-shop",
     name="PAP Shop",
     description=(
-        "The Demo Shop published as a PAP company by a local runtime, and a "
+        "The Online Shop published as a PAP company by a local runtime, and a "
         "person's own agent buying from it: find, quote, a test order approved."
     ),
     kind="chat",
     # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
     ui=[{"plugin": "chat"}],
-    agent="example-blank:0.0.1",
+    agent="blank:0.0.1",
     instructions="Use walk_through.",
 )
 
@@ -106,7 +106,7 @@ def _said(answer: Any) -> str:
 
 
 async def shop_route(request: httpx.Request) -> httpx.Response:
-    """The Demo Shop's A2A route, answering as its agent does in a company turn."""
+    """The Online Shop's A2A route, answering as its agent does in a company turn."""
     message = json.loads(request.content)["params"]["message"]
     turn = pap_turn_of(message["metadata"])
     assert turn is not None
@@ -114,7 +114,7 @@ async def shop_route(request: httpx.Request) -> httpx.Response:
     if turn.ticket:
         performing = await redeem(turn, "")
         assert performing.tool == "place_test_order"
-        placed = demo_shop.place_test_order(**performing.terms)
+        placed = online_shop.place_test_order(**performing.terms)
         parts = [
             {"kind": "text", "text": _said(placed)},
             {
@@ -136,11 +136,11 @@ async def shop_route(request: httpx.Request) -> httpx.Response:
             },
         ]
     elif text.lower().startswith("quote"):
-        parts = [{"kind": "text", "text": _said(demo_shop.quote_basket(_items(text)))}]
+        parts = [{"kind": "text", "text": _said(online_shop.quote_basket(_items(text)))}]
     else:
         under = re.search(r"under (\d+(?:\.\d+)?)", text)
         query = re.sub(r"^find\s+|\s*under .*$", "", text, flags=re.IGNORECASE)
-        found = demo_shop.find_products(
+        found = online_shop.find_products(
             query, max_price=float(under.group(1)) if under else None
         )
         parts = [{"kind": "text", "text": _said(found)}]
@@ -184,7 +184,7 @@ class PersonsHost:
 
 @app.tool(does="read")
 async def walk_through() -> dict[str, Any]:
-    """Publish the Demo Shop as a company, then buy from it as Ada's personal agent."""
+    """Publish the Online Shop as a company, then buy from it as Ada's personal agent."""
 
     clock = MutableClock()
     network = InProcessNetwork()
@@ -196,7 +196,7 @@ async def walk_through() -> dict[str, Any]:
             domain=DOMAIN,
             company=COMPANY,
             application=A2AApplication(
-                "https://runtime.local/api/v1/a2a/demo-shop", http_client=a2a
+                "https://runtime.local/api/v1/a2a/online-shop", http_client=a2a
             ),
             accounts=Accounts(),
             http_client=network.client(),

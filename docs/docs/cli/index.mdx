@@ -5,7 +5,7 @@ title: Agent CLI
 
 # Agent CLI
 
-The `agent-runtimes` package provides a command-line interface for starting and managing the Agent Runtimes server. It is installed as `agent` (and as `agent-runtimes`: the same commands). Below, `agent --local -a example-simple` starts a local server with the `example-simple` agent and chats with it in the terminal:
+The `agent-runtimes` package provides a command-line interface for starting and managing the Agent Runtimes server. It is installed as `agent` (and as `agent-runtimes`: the same commands). Below, `agent --local -a assistant` starts a local server with the `assistant` agent and chats with it in the terminal:
 
 ![The agent CLI: a question, a code execution, the answer](https://images.datalayer.io/products/agent-runtimes/agent-runtimes-agent-cli.gif)
 
@@ -81,14 +81,14 @@ Models: the runtime's own, through Datalayer — not this machine's keys; /model
     - kaggle-cpu — Kaggle notebook sessions, interactively against..., not priced  (cannot launch an agent (no agent capability))
     - modal-gpu — Containers on Modal, with or without a GPU atta..., not priced  (cannot launch an agent (no agent capability))
     …
-The runtime's agent is example-simple, the agent loop starts with: a runtime is configured from an agentspec. -a <agentspec> for another.
+The runtime's agent is assistant, the agent loop starts with: a runtime is configured from an agentspec. -a <agentspec> for another.
 ? For how many minutes? (0.05 credits a minute; stopped when you leave, if you say so) [30]
-Launching example-simple on Datalayer (ai-agents-env, 30 min, at most 1.44 credits)…
+Launching assistant on Datalayer (ai-agents-env, 30 min, at most 1.44 credits)…
 ● Runtime 01k… on Datalayer — ai-agents-env, reserved 30 min (at most 1.44 credits)
 ```
 
 - **Environments**: every environment that declares its capabilities is listed, with its description and its cost per minute. Only those with the `agent` capability (`ai-agents-env` today) can be picked; the others are greyed out with the reason. The default is the first that can launch an agent. Without anybody to ask, `ai-agents-env` is taken, or the only environment that can hold an agent; when several others could, `agent` asks you to name one with `--environment`. Your own environments declare no capabilities, so they are not listed, but you can still name one with `--environment`. Naming one that says it cannot hold an agent is refused.
-- **The agent**: the platform configures a runtime's agent only from an agentspec. Without `-a`, it is `example-simple`, the agent `agent` starts with, and one grey line says so. `-a <agentspec>` picks another; your local API keys never filter it.
+- **The agent**: the platform configures a runtime's agent only from an agentspec. Without `-a`, it is `assistant`, the agent `agent` starts with, and one grey line says so. `-a <agentspec>` picks another; your local API keys never filter it.
 - **Running runtimes**: if you already have an agent runtime running, `agent` offers to go back to it before launching a new one, so you do not pay twice. `--runtime <name>` attaches without asking. If you also pass `-a`, the runtime's agent is reconfigured from that agentspec.
 - **Cost**: a minute costs the environment's burning rate. The reservation (`--minutes`, 30 by default) caps what the runtime can cost, and it is checked against the credits you have left before the launch.
 - **Unmetered**: with `DATALAYER_MAGIC_API_KEY` set in the environment (the platform's magic key, a secret), every runtime the client creates is sent it (`magic_api_key` on `POST /runtimes`), and the platform starts it unmetered: it consumes no credits and never expires. No minutes are asked and no credit is checked; `--minutes` is still validated and sent, and ignored. Unset, nothing is sent. The key is never printed or logged.
@@ -98,7 +98,7 @@ Each refusal is one sentence, and nothing is launched: not signed in, no credits
 
 ```bash
 agent --local                          # on this machine, without asking
-agent --cloud                          # on Datalayer: pick an environment; the agent is example-simple
+agent --cloud                          # on Datalayer: pick an environment; the agent is assistant
 agent --cloud -a crawler               # on Datalayer, a new runtime for the crawler agent
 agent --cloud -a crawler -m 15 --keep  # reserved for 15 minutes, left running at the end
 agent --runtime 01k…                   # back to a running agent runtime
@@ -109,7 +109,7 @@ agent --cloud -a crawler "Summarize the news"  # one query, then the runtime is 
 
 A runtime on Datalayer calls its models **through datalayer-ai-inference, with your own token**. It never calls a provider such as Bedrock with keys of its own:
 
-- **Every agent goes through ai-inference.** This holds whatever its agentspec's `inference_provider` says. An agentspec that says `local`, such as `example-simple`, still runs locally on your machine, and on Datalayer through ai-inference.
+- **Every agent goes through ai-inference.** This holds whatever its agentspec's `inference_provider` says. An agentspec that says `local`, such as `assistant`, still runs locally on your machine, and on Datalayer through ai-inference.
 - **The token is yours, narrowed to ai-inference.** When the runtime is assigned to you, IAM mints it from your session. It can call ai-inference's chat completions, its model list and its decisions, and every other Datalayer service refuses it. It lasts as long as the runtime's reservation. Every model call is metered on your account, as a call from the Datalayer UI is.
 - **What is offered is what ai-inference serves.** With your token, the runtime asks ai-inference which models it serves, and offers your agent those of its agentspec's `model` and `model_additionals` that ai-inference serves, such as Qwen (`alibaba:qwen-max`) beside Claude Sonnet. Only those are listed: a model of the agent's that ai-inference does not serve is left out, and so are local models and runtimes (Ollama, LM Studio, …), which a runtime going through ai-inference does not call. The same holds on this machine when the provider is `datalayer`.
 - **Before the token arrives, nothing is called.** A runtime waiting in the pool has no user, so it has no token yet. Until it is assigned, `/models` says `This runtime has no ai-inference token yet: …`, every model is marked `No ai-inference token`, and a message fails with that sentence.
@@ -121,11 +121,11 @@ A runtime on Datalayer calls its models **through datalayer-ai-inference, with y
 Not every agent decides. An agent has the capability only when its agentspec names a decisions spec, written as `memory` is:
 
 ```yaml
-# agents/example-simple.yaml
+# agents/assistant.yaml
 decisions: jev:0.0.1
 ```
 
-A decisions spec (agentspecs `decisions/`, see [Decisions](https://agentspecs.datalayer.tech/agents/decisions)) says which model is asked, which question types it answers and the limits of one call. `jev` asks Jev on Workers AI (`cloudflare:wrk/typesafe/jev`), answers the three question types, at most 10 questions about a text of at most 20 000 characters. The capability brings the `decide` tool: an agent that names `decisions` has it, asked of that spec's model, and it is not listed under `backend_tools`. An agentspec that lists `decide` without naming `decisions` is refused in a sentence (`The agent … lists the backend tool decide but its spec names no decisions: add decisions: jev:0.0.1 to its agentspec, which brings the tool.`). *A Simple Agent* (`example-simple`), the default cloud agent, names `decisions: jev:0.0.1`, and suggests three decisions to try: is a support ticket urgent, which team should handle a request, how positive a review is.
+A decisions spec (agentspecs `decisions/`, see [Decisions](https://agentspecs.datalayer.tech/agents/decisions)) says which model is asked, which question types it answers and the limits of one call. `jev` asks Jev on Workers AI (`cloudflare:wrk/typesafe/jev`), answers the three question types, at most 10 questions about a text of at most 20 000 characters. The capability brings the `decide` tool: an agent that names `decisions` has it, asked of that spec's model, and it is not listed under `backend_tools`. An agentspec that lists `decide` without naming `decisions` is refused in a sentence (`The agent … lists the backend tool decide but its spec names no decisions: add decisions: jev:0.0.1 to its agentspec, which brings the tool.`). *A Simple Agent* (`assistant`), the default cloud agent, names `decisions: jev:0.0.1`, and suggests three decisions to try: is a support ticket urgent, which team should handle a request, how positive a review is.
 
 For an agent that decides, the start of `agent` says so among its parts (`Decisions     jev:0.0.1 (cloudflare:wrk/typesafe/jev)`), `/agents` says it under the agent, and the runtime says it to its clients (`decisions` of `GET /api/v1/agents/{agent_id}`, `agentDecisions` of `/api/v1/configure?agent_id=`).
 
@@ -149,7 +149,7 @@ With an agent that decides, you can ask its decision model yourself, without goi
 A runtime older than `agent` that does not have the route says so in a sentence, with its version (`… (agent-runtimes 1.3.32) does not say decisions (/decisions): it is older than this loop (1.3.33).`).
 
 ```bash
-agent --local -a example-simple --no-codemode \
+agent --local -a assistant --no-codemode \
   --prompt "Is this support ticket urgent? 'Payouts have failed for 3 days.' Use your decision tool."
 ```
 
@@ -178,7 +178,7 @@ To check a runtime's models from a script or CI, without typing them in, see [Ru
 It runs **on this machine** unless you say `--cloud`:
 
 - **On this machine** (`--local`, the default), name the agent with `-a <agentspec>`. The local server `agent` starts is stopped at the end.
-- **On Datalayer** (`--cloud`), a new cloud runtime is launched for the run, as interactive `agent --cloud` launches one. `-a` names its agent (`example-simple` when you leave it out), `-e` its environment (`ai-agents-env` by default) and `-m` how many minutes to reserve (30 by default). `-r <name>` runs the lines on a runtime that is already running instead, and nothing is launched.
+- **On Datalayer** (`--cloud`), a new cloud runtime is launched for the run, as interactive `agent --cloud` launches one. `-a` names its agent (`assistant` when you leave it out), `-e` its environment (`ai-agents-env` by default) and `-m` how many minutes to reserve (30 by default). `-r <name>` runs the lines on a runtime that is already running instead, and nothing is launched.
 - **At the end** the cloud runtime is stopped, also when a line fails or you press Ctrl-C. `--keep` leaves it running, and `agent` prints how to stop it (`agent agents terminate <name>`). A runtime you attached to with `-r` was running before, so it is left running.
 
 **Nothing is asked.** Every choice comes from the options or their defaults. When a choice would need a person, the run stops before anything starts and says why in one sentence: no `-a` on this machine, several environments that could hold the agent and none named, or a number of minutes out of range.
@@ -199,7 +199,7 @@ A slash command that **refuses** what it is asked has not failed: it did its job
 Check what a Datalayer runtime suggests and offers, switch to Qwen, ask it who it is, then try a model the runtime does not serve:
 
 ```bash
-agent --cloud -a example-simple -m 10 \
+agent --cloud -a assistant -m 10 \
   --prompt "/suggestions" \
   --prompt "/models" \
   --prompt "/models alibaba:qwen-max" \
@@ -246,14 +246,14 @@ Only what ai-inference serves is listed: no local models, no `Not running: …` 
 In CI, keep the output and fail the job when a line fails:
 
 ```bash
-agent --cloud -a example-simple -m 5 \
+agent --cloud -a assistant -m 5 \
   -q "/models" \
   -q "Answer with the single word: ready" \
   > answers.txt
 grep -qi "ready" answers.txt
 ```
 
-Datalayer needs your credentials in the job: set `DATALAYER_API_KEY`. On this machine the same lines run against a local server, for example `agent --local -a example-simple -q "/models"`.
+Datalayer needs your credentials in the job: set `DATALAYER_API_KEY`. On this machine the same lines run against a local server, for example `agent --local -a assistant -q "/models"`.
 
 ### Tool calls waiting on your approval
 
@@ -297,7 +297,7 @@ agent apps init desk --from support-desk --python   # its spec held in an app.py
 agent apps init --examples                          # the examples to start from
 ```
 
-A blank application is a chat or a widget, its agent the one a blank application starts with in the Studio (`example-simple`); written in Python (`--python`), the blank agent `example-blank` — a model and nothing else, which its `app.py` runs in your own process with the application's instructions alone. A worker says what starts its work and its goal, and a decision what it decides, so they start from an example. From an example, the folder holds its spec, and its `app.py` when it was written in Python (`customer-interview`, `exchange-desk`, `report-from-a-file`), with the new id. What is written passes the checks `agent apps validate` makes of a spec, or nothing is written. A folder that is there is never overwritten. `--dir` says where the folder goes.
+A blank application is a chat or a widget, its agent the one a blank application starts with in the Studio (`assistant`); written in Python (`--python`), the blank agent `blank` — a model and nothing else, which its `app.py` runs in your own process with the application's instructions alone. A worker says what starts its work and its goal, and a decision what it decides, so they start from an example. From an example, the folder holds its spec, and its `app.py` when it was written in Python (`customer-interview`, `exchange-desk`, `report-from-a-file`), with the new id. What is written passes the checks `agent apps validate` makes of a spec, or nothing is written. A folder that is there is never overwritten. `--dir` says where the folder goes.
 
 Beside them, `tests/test_app.py` is what the folder's CI runs with `pytest tests`: the spec passes the instant checks, each of its test conversations (`tests.cases`) says what it is asked and what it should do, and, in Python, the `app.py` still builds the `app.yaml` committed beside it. A starting repository, then: commit the folder and its checks pass from the first push. The test conversations themselves are asked of a model by a validation run — push it (`agent apps push app.yaml`), then *Run its tests* on its Validate tab — and the safety set every application answers with `agent apps validate app.yaml --safety --local`.
 

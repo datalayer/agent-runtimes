@@ -46,7 +46,7 @@ app = Application(
     kind="chat",
     # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
     ui=[{"plugin": "chat"}],
-    agent="example-blank:0.0.1",
+    agent="blank:0.0.1",
     instructions=(
         "Use explain_direct_sign_in to explain the trusted browser boundary. "
         "Never request or expose an authorization URL, state, verifier, code, or token."

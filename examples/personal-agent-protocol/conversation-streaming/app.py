@@ -74,7 +74,7 @@ app = Application(
     kind="chat",
     # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
     ui=[{"plugin": "chat"}],
-    agent="example-blank:0.0.1",
+    agent="blank:0.0.1",
     instructions=(
         "Use explain_conversation_streaming to explain PAP conversation streaming. "
         "Text deltas are for display only: never act on one. Never expose tokens or Session JWTs."

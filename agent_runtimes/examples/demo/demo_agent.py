@@ -214,15 +214,15 @@ def create_pydantic_demo_agent() -> tuple[Any, AgentInfo]:
         from agent_runtimes.adapters.pydantic_ai import PydanticAIAdapter
         from agent_runtimes.specs.agents import get_agent_spec
 
-        # A simple Pydantic AI agent on the model of `example-blank`, the
+        # A simple Pydantic AI agent on the model of `blank`, the
         # catalogue's agent that is a model and nothing else; the environment
         # variable AGENT_RUNTIMES_MODEL, when set, overrides it.
-        spec = get_agent_spec("example-blank")
+        spec = get_agent_spec("blank")
         model = os.environ.get("AGENT_RUNTIMES_MODEL") or (spec.model if spec else None)
         if not model:
             raise ValueError(
                 "No model: AGENT_RUNTIMES_MODEL is unset and agentspec "
-                "'example-blank' names no model"
+                "'blank' names no model"
             )
         pydantic_agent = Agent(
             model,

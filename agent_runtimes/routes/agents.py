@@ -2179,8 +2179,8 @@ async def create_agent(
                     status_code=422,
                     detail={"problems": refused.problems},
                 ) from None
-            # Its own backend tools beside its agent's (the Demo Shop's
-            # demo-shop-* tools): a local process refuses an application
+            # Its own backend tools beside its agent's (the Online Shop's
+            # online-shop-* tools): a local process refuses an application
             # with backend tools and sends it to a runtime, which brings them.
             known_tools = {_ref_id_of(tool) for tool in request.backend_tools}
             request.backend_tools = list(request.backend_tools) + [

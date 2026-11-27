@@ -66,7 +66,7 @@ class TestASeatIsNamedByItsTeam:
 
     def test_an_id_naming_no_seat_names_none(self) -> None:
         team = list_team_specs()[0]
-        assert team_seat("example-a2a-researcher") is None
+        assert team_seat("researcher-a2a") is None
         assert team_seat(seat_agent_id("no-such-team", SUPERVISOR)) is None
         assert team_seat(seat_agent_id(team.id, "no-such-member")) is None
         assert team_seat(f"team:{team.id}") is None

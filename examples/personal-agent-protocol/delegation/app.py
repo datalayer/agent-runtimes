@@ -81,7 +81,7 @@ app = Application(
     kind="chat",
     # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
     ui=[{"plugin": "chat"}],
-    agent="example-blank:0.0.1",
+    agent="blank:0.0.1",
     instructions=(
         "Use explain_delegation to explain what a PAP delegation says. Never ask "
         "for or claim to expose a delegation, key, subject, jti, or token."

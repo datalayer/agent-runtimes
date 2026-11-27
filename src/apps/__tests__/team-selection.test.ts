@@ -36,7 +36,7 @@ describe('the jupyter team', () => {
       'worker-data-analyst',
       'jupyter-notebook-reviewer',
       'jupyter-notebook-writer',
-      'example-decks',
+      'deck-writer',
       'jupyter-tutor',
       'jupyter-notebook-compactor',
     ]);

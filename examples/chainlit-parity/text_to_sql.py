@@ -23,7 +23,7 @@ from datetime import date
 
 from agent_runtimes.apps import Application, Session
 
-AGENT = "example-blank:0.0.1"
+AGENT = "blank:0.0.1"
 
 app = Application(
     id="text-to-sql",

@@ -10,7 +10,7 @@
  * and the AI agent using AG-UI. This example shows a recipe builder where
  * both the user and the AI can modify the shared state.
  *
- * Backend: managed AG-UI agent runtime (agentspec: example-shared-state)
+ * Backend: managed AG-UI agent runtime (agentspec: recipe-builder)
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
@@ -306,7 +306,7 @@ const RecipeDisplay: React.FC<{
  * - Editable UI that updates shared state
  */
 const AGENT_NAME = 'ag-ui-shared-state';
-const AGENTSPEC_ID = 'example-shared-state';
+const AGENTSPEC_ID = 'recipe-builder';
 
 const AgUiSharedStateExample: React.FC = () => {
   const brandColor = useThemeBrandColor();

@@ -7,7 +7,7 @@
  * A2UiAgentExample
  *
  * A comprehensive, real-world A2UI generative-UI example. The agent
- * (agentspec: `example-a2ui-agent`) exposes a single backend tool,
+ * (agentspec: `form-builder`) exposes a single backend tool,
  * `render_a2ui_surface`, that turns a natural-language request into a
  * validated A2UI v0.9 surface (createSurface + updateComponents +
  * updateDataModel). The frontend renders the returned messages live:
@@ -50,7 +50,7 @@ import { AgentA2uiPlugin } from '../apps/plugins/agent-a2ui';
 setupPrimerPortals();
 
 const AGENT_NAME = 'a2ui-agent';
-const AGENTSPEC_ID = 'example-a2ui-agent';
+const AGENTSPEC_ID = 'form-builder';
 
 const SUGGESTIONS = [
   {

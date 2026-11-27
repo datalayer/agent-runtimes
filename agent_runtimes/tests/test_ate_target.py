@@ -314,17 +314,17 @@ def test_serve_target_ate_listens_on_80_without_an_agent(
 def test_serve_target_ate_serves_the_agentspec_of_the_template(
     monkeypatch: pytest.MonkeyPatch, no_server: list[dict[str, Any]]
 ) -> None:
-    monkeypatch.setenv("AGENT_SPEC_ID", "example-blank")
+    monkeypatch.setenv("AGENT_SPEC_ID", "blank")
     monkeypatch.setenv("ATE_PORT", "8081")
     serve_server(target=Target.ate)
     assert no_server[0]["port"] == 8081
-    assert os.environ["AGENT_RUNTIMES_DEFAULT_AGENT"] == "example-blank"
+    assert os.environ["AGENT_RUNTIMES_DEFAULT_AGENT"] == "blank"
 
 
 def test_serve_target_ate_refuses_another_agent_id(
     monkeypatch: pytest.MonkeyPatch, no_server: list[dict[str, Any]]
 ) -> None:
-    monkeypatch.setenv("AGENT_SPEC_ID", "example-blank")
+    monkeypatch.setenv("AGENT_SPEC_ID", "blank")
     with pytest.raises(ServeError, match="not --agent-id"):
         serve_server(agent_id="crawler", target=Target.ate)
     assert not no_server

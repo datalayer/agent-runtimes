@@ -6,7 +6,7 @@
 /**
  * An agentspec's own subagents, as agents the in-page loop can hand work to.
  *
- * A spec such as `example-subagents` declares a researcher and a writer under
+ * A spec such as `research-writer` declares a researcher and a writer under
  * `subagents`; on a server the pydantic-ai harness turns those into delegation
  * tools. In the page the loop turns with the Vercel AI SDK, and until now it
  * read subagents from a *team* only — so the same spec, run in the browser,

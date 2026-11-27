@@ -234,7 +234,7 @@ def test_run_imports_the_spec_makes_the_experiments_validates_launches_and_watch
             "run",
             str(fake.spec_path),
             "--agent-spec-ids",
-            "worker-data-analyst,example-evals",
+            "worker-data-analyst,text-normalizer",
             "--concurrency",
             "2",
             "--budget",
@@ -263,7 +263,7 @@ def test_run_imports_the_spec_makes_the_experiments_validates_launches_and_watch
     created = [kwargs for name, kwargs in fake.calls if name == "create_experiment"]
     assert [item["config"]["subject"] for item in created] == [
         {"kind": "agentspec", "ref": "worker-data-analyst"},
-        {"kind": "agentspec", "ref": "example-evals"},
+        {"kind": "agentspec", "ref": "text-normalizer"},
     ]
     assert all(
         item["config"]["execution_target"] == "cloud"

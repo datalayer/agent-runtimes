@@ -29,7 +29,7 @@ feature while keeping protocol secrets outside model context.
 | [`company-role`](./company-role/)                         | `pap.company`: propose, approve, perform once             | Proposals, revisions and gate decisions           |
 | [`local-personal-agent`](./local-personal-agent/)         | `PapPersonalAgentCapability` with the host's reactor      | Summaries only; tokens and device code withheld   |
 | [`local-company`](./local-company/)                       | `PapCompanyCapability`: the application as a company      | What the person was shown; ticket used once       |
-| [`shop`](./shop/)                                         | The Demo Shop and a personal agent buying from it         | Products, a quote, a test order approved once     |
+| [`shop`](./shop/)                                         | The Online Shop and a personal agent buying from it         | Products, a quote, a test order approved once     |
 
 Every example runs against the PAP Python SDK 0.37 — Agent Runtimes pins
 `personal-agent-protocol[ui]>=0.37.0,<0.38` — at the one version Agent Runtimes

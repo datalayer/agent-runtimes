@@ -46,7 +46,7 @@ APP = {
     "id": "shield-example",
     "name": "Shield example",
     "kind": "chat",
-    "agent": "example-harness-claude-code",
+    "agent": "coding-agent-claude-code",
     "record": {
         "include": [
             "conversations",

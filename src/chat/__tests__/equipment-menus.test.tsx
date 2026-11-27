@@ -56,7 +56,7 @@ import { iconOf, loadIconPackage, parseIconRef } from '../marks';
 
 /** What the runtime answers for the Marketer with GITHUB_TOKEN alone set up. */
 const ANSWER = {
-  agent: 'at-demo-marketer',
+  agent: 'at-marketer-tryout',
   mcp_servers: [
     {
       id: 'discord',
@@ -796,7 +796,7 @@ describe('useEquipment', () => {
     render(
       <Probe
         agentServerUrl="https://r"
-        agentId="at-demo-marketer"
+        agentId="at-marketer-tryout"
         token="visitor-token"
         specId="worker-marketer:0.0.1"
         enabled
@@ -812,7 +812,7 @@ describe('useEquipment', () => {
     await waitFor(() => expect(read().modelsSource).toBe('live'));
     expect(read().models).toEqual(['bedrock:claude', 'alibaba:qwen-max']);
     expect(asked.find(each => each.url.endsWith('/equipment'))).toEqual({
-      url: 'https://r/api/v1/apps/agents/at-demo-marketer/equipment',
+      url: 'https://r/api/v1/apps/agents/at-marketer-tryout/equipment',
       authorization: 'Bearer visitor-token',
     });
   });
@@ -836,7 +836,7 @@ describe('useEquipment', () => {
     render(
       <Probe
         agentServerUrl="https://r"
-        agentId="at-demo-marketer"
+        agentId="at-marketer-tryout"
         token="visitor-token"
         specId="worker-marketer"
         enabled

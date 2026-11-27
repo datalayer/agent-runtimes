@@ -19,7 +19,7 @@ app = Application(
     name="Dial desk",
     description="A desk with a dial of its own, drawn from its package.",
     kind="widget",
-    agent="example-simple",
+    agent="assistant",
     # Its interface (R8): the conversation, its page laid out with
     # the Canvas's blocks, and the components it packages.
     ui=[

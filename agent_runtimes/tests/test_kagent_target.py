@@ -55,7 +55,7 @@ def write_config(tmp_path: Path, agent: dict[str, Any]) -> Path:
 
 def env_of(tmp_path: Path, agent: dict[str, Any], **extra: str) -> dict[str, str]:
     return {
-        "AGENT_SPEC_ID": "example-blank",
+        "AGENT_SPEC_ID": "blank",
         "KAGENT_CONFIG_PATH": str(write_config(tmp_path, agent)),
         **extra,
     }
@@ -86,7 +86,7 @@ def test_settings_from_kagent_configuration(tmp_path: Path) -> None:
             },
         )
     )
-    assert settings.spec_id == "example-blank"
+    assert settings.spec_id == "blank"
     assert (settings.host, settings.port) == ("127.0.0.1", 8765)
     assert settings.model is not None
     assert settings.model.model_id == "openai:bedrock:us.anthropic.claude-sonnet-4-6"
@@ -274,7 +274,7 @@ def test_serve_target_kagent_configures_the_agent(
     serve_server(host="0.0.0.0", port=9999, target=Target.kagent)  # nosec B104 - overridden
     assert no_server[0]["host"] == "127.0.0.1" and no_server[0]["port"] == 8765
     assert os.environ["AGENT_RUNTIMES_TARGET"] == "kagent"
-    assert os.environ["AGENT_RUNTIMES_DEFAULT_AGENT"] == "example-blank"
+    assert os.environ["AGENT_RUNTIMES_DEFAULT_AGENT"] == "blank"
     assert os.environ["AGENT_RUNTIMES_PROTOCOL"] == "a2a"
     assert os.environ["AGENT_RUNTIMES_MODEL"] == "openai:gpt-5-mini"
     assert os.environ["AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE"] == "local"

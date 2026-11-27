@@ -9,7 +9,7 @@
  * The unified Chat component, with whatever agent the selected runtime target
  * can give it.
  *
- * Against a runtime that means creating one from the `example-simple` spec
+ * Against a runtime that means creating one from the `assistant` spec
  * over the REST API and talking to its endpoint. In the browser it means the
  * in-page harness: the spec asks for `pydantic-ai`, but a page has no server
  * to turn that loop, so the location decides and the Vercel AI SDK runs it
@@ -40,7 +40,7 @@ import { Chat } from '../chat';
 
 setupPrimerPortals();
 
-const AGENTSPEC_ID = 'example-simple';
+const AGENTSPEC_ID = 'assistant';
 const AGENT_NAME = 'simple';
 
 const SPEC = AGENTSPECS[AGENTSPEC_ID];

@@ -69,7 +69,7 @@ app = Application(
     kind="chat",
     # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
     ui=[{"plugin": "chat"}],
-    agent="example-blank:0.0.1",
+    agent="blank:0.0.1",
     instructions=(
         "Use explain_session_lifecycle to explain signed-out PAP Session start "
         "and restart. Never ask for or expose a subject, Session ID, Session JWT, "

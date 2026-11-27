@@ -374,7 +374,7 @@ describe('what a visitor sees locked (the user, 15 November 2026)', () => {
   });
 
   it('comes with the demo Marketer’s agent on the visitors’ path, though its app names only the chat', () => {
-    const app = APP_CATALOGUE['demo-marketer'];
+    const app = APP_CATALOGUE['marketer-tryout'];
     expect(app.agent).toMatch(/^worker-marketer/);
     expect(appPreset(app, { visitor: true }).plugins.map(nameOf)).toContain(
       LOCKED,

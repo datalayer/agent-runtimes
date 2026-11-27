@@ -27,7 +27,7 @@ import { useAgentRuntimeApprovals } from '../stores/agentRuntimeStore';
 
 const queryClient = new QueryClient();
 const AGENT_NAME_PREFIX = 'tool-approval-example-agent';
-const DEFAULT_AGENTSPEC_ID = 'example-tool-approvals';
+const DEFAULT_AGENTSPEC_ID = 'approved-automation';
 
 const getSelectedAgentspecIdFromUi = (): string => {
   const params = new URLSearchParams(window.location.search);

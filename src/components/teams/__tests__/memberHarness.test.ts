@@ -18,7 +18,7 @@ import {
 describe('a member’s harness', () => {
   it('is its agent’s on a runtime, by its catalogue name', () => {
     expect(
-      memberHarnessOf({ agent: 'example-harness-opencode:0.0.1' }, 'runtime'),
+      memberHarnessOf({ agent: 'coding-agent-opencode:0.0.1' }, 'runtime'),
     ).toEqual({ id: 'opencode', name: 'OpenCode' });
   });
 

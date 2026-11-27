@@ -6,7 +6,7 @@
 /**
  * `@datalayer/agent-plugin-agent-monitoring` — the capacity, as a plugin.
  *
- * Mounts the `example-monitoring` agent and offers what it is worth asking. Cast
+ * Mounts the `usage-monitor` agent and offers what it is worth asking. Cast
  * from the shared capacity mould; see `apps/plugins/agent-capacity`.
  *
  * The openers are the spec's own.
@@ -23,7 +23,7 @@ export const AgentMonitoringPlugin = defineAgentCapacityPlugin({
   key: 'monitoring',
   displayName: 'Agent Monitoring',
   description: '${alerts.length} active alert${alerts.length !== 1 ? ',
-  specId: 'example-monitoring',
+  specId: 'usage-monitor',
   octicon: 'pulse',
   emoji: '📈',
 });

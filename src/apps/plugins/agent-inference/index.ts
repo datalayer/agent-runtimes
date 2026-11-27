@@ -6,7 +6,7 @@
 /**
  * `@datalayer/agent-plugin-agent-inference` — the inference provider, as a capacity.
  *
- * Mounts the `example-inference` agent on a given inference provider — the
+ * Mounts the `provider-switcher` agent on a given inference provider — the
  * server's own model access, or Datalayer's inference service. Cast from the
  * shared capacity mould; the openers are the spec's own.
  *
@@ -27,7 +27,7 @@ export function createAgentInferencePlugin(provider: InferenceProviderKind) {
     key: 'inference',
     displayName: 'Agent Inference Provider',
     description: `Model calls through the ${provider} inference provider.`,
-    specId: 'example-inference',
+    specId: 'provider-switcher',
     octicon: 'cpu',
     emoji: '🧠',
     createPayload: { inferenceProvider: provider },

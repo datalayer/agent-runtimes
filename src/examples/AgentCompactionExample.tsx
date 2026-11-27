@@ -42,7 +42,7 @@ import { AI_MODEL_CATALOGUE } from '../specs';
 import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 
 const AGENT_NAME = 'compaction-example-agent';
-const AGENTSPEC_ID = 'example-compaction';
+const AGENTSPEC_ID = 'story-writer';
 const MIN_MAX_TOKENS = 1000;
 const DEFAULT_MAX_TOKENS = 4000;
 

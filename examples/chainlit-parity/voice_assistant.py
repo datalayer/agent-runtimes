@@ -25,7 +25,7 @@ from typing import List
 
 from agent_runtimes.apps import Application, Session, UploadedFile
 
-AGENT = "example-a2a-writer:0.0.1"
+AGENT = "writer-a2a:0.0.1"
 
 app = Application.from_spec(
     {

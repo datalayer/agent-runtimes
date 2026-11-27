@@ -8,7 +8,7 @@
  *
  * Delegation to separate agents over the A2A protocol. The orchestrator runs
  * on the local agent-runtimes server, created there by the Agent from the
- * `example-a2a` blueprint; its researcher and writer are not subagents inside
+ * `research-writer-a2a` blueprint; its researcher and writer are not subagents inside
  * its process but agents of their own, launched on the first delegation —
  * beside the orchestrator on the local server, or on Datalayer runtimes when
  * the orchestrator itself runs in the cloud — and spoken to over A2A.
@@ -33,7 +33,7 @@ import { A2ASidebarPlugin } from '../apps/plugins/a2a-sidebar';
 import { getAgentspecs } from '../specs/agents';
 
 const AGENT_NAME = 'a2a-example-agent';
-const AGENTSPEC_ID = 'example-a2a';
+const AGENTSPEC_ID = 'research-writer-a2a';
 
 /** The agents the orchestrator reaches over A2A, from its spec. */
 const remoteAgentCount = (): number =>

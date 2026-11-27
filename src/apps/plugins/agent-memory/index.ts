@@ -6,7 +6,7 @@
 /**
  * `@datalayer/agent-plugin-agent-memory` — the capacity, as a plugin.
  *
- * Mounts the `example-memory` agent and offers what it is worth asking. Cast
+ * Mounts the `memory-assistant` agent and offers what it is worth asking. Cast
  * from the shared capacity mould; see `apps/plugins/agent-capacity`.
  *
  * The openers are the spec's own.
@@ -22,7 +22,7 @@ export const AgentMemoryPlugin = defineAgentCapacityPlugin({
   key: 'memory',
   displayName: 'Agent Memory',
   description: 'Agent with persistent memory',
-  specId: 'example-memory',
+  specId: 'memory-assistant',
   octicon: 'database',
   emoji: '🧠',
 });

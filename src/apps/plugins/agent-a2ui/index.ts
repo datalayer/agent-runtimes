@@ -6,7 +6,7 @@
 /**
  * `@datalayer/agent-plugin-agent-a2ui` — generated surfaces, as a capacity.
  *
- * Mounts the `example-a2ui-agent` agent: ask for a form or a configurator
+ * Mounts the `form-builder` agent: ask for a form or a configurator
  * and the answer arrives as an interactive A2UI surface, rendered in the
  * workspace's a2ui view. Cast from the shared capacity mould.
  *
@@ -21,7 +21,7 @@ export const AgentA2uiPlugin = defineAgentCapacityPlugin({
   key: 'a2ui',
   displayName: 'Agent A2UI',
   description: 'Generate interactive A2UI surfaces from plain requests.',
-  specId: 'example-a2ui-agent',
+  specId: 'form-builder',
   octicon: 'browser',
   emoji: '🪟',
   suggestions: [

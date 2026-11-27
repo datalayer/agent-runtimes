@@ -397,11 +397,11 @@ image pruner's keep-list know the tags.
 
 ## On r1 (drilled 15 October 2026, runtime image 0.0.44 on agent-runtimes 1.5.33)
 
-- **The platform path.** `agent --cloud -a example-harness-claude-code -q …`
+- **The platform path.** `agent --cloud -a coding-agent-claude-code -q …`
   got a fresh 0.0.44 pool pod, and the companion's `configure-from-spec`,
   asking the runtime which secrets its specs declare, was told the harness's
   key; the account holds none, so the runtime was refused in a sentence before
-  the agent was made — *example-harness-claude-code is not set up: the harness
+  the agent was made — *coding-agent-claude-code is not set up: the harness
   claude-code needs ANTHROPIC_API_KEY, which this runtime was not given: add
   it to the account's secrets (or set it before a local run), then configure
   it again. The runtime was stopped.* — and stopped: nothing left in the pool.
@@ -451,7 +451,7 @@ and **Shield Policy** (`@datalayer/agent-shield`'s types and
   boundary and is not routed.
 - `plane local` running a harness beside the local runtime (its second
   half); the Studio's Toolbox offering the catalogue's harnesses — an
-  application names `example-harness-claude-code` by hand today.
+  application names `coding-agent-claude-code` by hand today.
 - **Served over every protocol** — see [that page](./transports): MCP lent
   through the gateway and the A2A face are built; the `diff`
   and `terminal` displays are drawn by the web chat and the embed, the

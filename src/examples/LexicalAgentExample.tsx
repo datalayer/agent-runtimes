@@ -57,7 +57,7 @@ const LEXICAL_ID = 'agui-lexical-example';
 const AGENT_ID = 'lexical-agent-runtime-example';
 
 /** The agentspec this example's agent is built from. */
-const AGENTSPEC_ID = 'example-document-agent';
+const AGENTSPEC_ID = 'document-writer';
 
 /**
  * Hook to ensure the example-agent exists on the server.

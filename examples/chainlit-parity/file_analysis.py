@@ -22,7 +22,7 @@ from typing import List, Optional
 
 from agent_runtimes.apps import Application, Session, UploadedFile
 
-AGENT = "example-blank:0.0.1"
+AGENT = "blank:0.0.1"
 
 app = Application.from_spec(
     {

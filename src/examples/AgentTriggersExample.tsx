@@ -79,7 +79,7 @@ const queryClient = new QueryClient();
 
 const AGENT_NAME = 'trigger-example-agent';
 const APPROVAL_AGENT_NAME = 'trigger-approval-agent';
-const APPROVAL_AGENTSPEC_ID = 'example-tool-approvals';
+const APPROVAL_AGENTSPEC_ID = 'approved-automation';
 const ONCE_TRIGGER_PROMPT =
   "List the user's top 3 public and top 3 private GitHub repositories, ranked by recent activity, and provide a brief summary of each. Execute exactly two tool calls: run_skill_script(skill_name='github', script_name='list_repos', kwargs={visibility:'public', sort:'updated', limit:3, format:'json'}) and run_skill_script(skill_name='github', script_name='list_repos', kwargs={visibility:'private', sort:'updated', limit:3, format:'json'}). Do not call list_skills/load_skill/read_skill_resource. Do not retry. If a tool call fails, report failure_reason/error/stderr exactly as returned.";
 const ONCE_TRIGGER_APPROVAL_PROMPT =

@@ -6,7 +6,7 @@
 /**
  * `@datalayer/agent-plugin-agent-skills` — the capacity, as a plugin.
  *
- * Mounts the `example-skills` agent and offers what it is worth asking. Cast
+ * Mounts the `skills-assistant` agent and offers what it is worth asking. Cast
  * from the shared capacity mould; see `apps/plugins/agent-capacity`.
  *
  * The openers are the spec's own.
@@ -22,7 +22,7 @@ export const AgentSkillsPlugin = defineAgentCapacityPlugin({
   key: 'skills',
   displayName: 'Agent Skills',
   description: 'Agent Skills',
-  specId: 'example-skills',
+  specId: 'skills-assistant',
   octicon: 'mortar-board',
   emoji: '🎓',
 });

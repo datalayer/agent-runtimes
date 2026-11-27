@@ -56,10 +56,10 @@ describe('the Stage catalogue', () => {
       '🤝',
       true,
     ]);
-    expect(stage?.deployments).toEqual({ accounting: 'demo-accounting' });
+    expect(stage?.deployments).toEqual({ accounting: 'accounting' });
     expect(getStage('disaster-assessment')?.deployments).toEqual({
-      'disaster-assessment': 'demo-disaster-assessment',
-      'change-detection': 'demo-change-detection',
+      'disaster-assessment': 'disaster-assessment',
+      'change-detection': 'change-detection',
     });
     // A scripted scene and a Battle play on no deployment of their own.
     expect(getStage('pap-approve-once')?.deployments).toEqual({});

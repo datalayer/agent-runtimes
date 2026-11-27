@@ -57,7 +57,7 @@ afterEach(() => {
 
 const presented = (presentation = 'What it is.'): AppSpec => {
   const app = emptyAppspec('chat');
-  app.id = 'demo-marketer';
+  app.id = 'marketer-tryout';
   app.name = 'Marketer';
   app.presentation = presentation;
   return app;

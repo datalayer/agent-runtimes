@@ -11,7 +11,7 @@
  * in the page itself — no custom element, no script of its own to load —
  * and what the element is a thin wrapper around.
  *
- *   <AIApplication app="demo-marketer" runsOn={{ kind: 'visitor', maxTurns: 10 }} />
+ *   <AIApplication app="marketer-tryout" runsOn={{ kind: 'visitor', maxTurns: 10 }} />
  *
  *   <AIApplication
  *     app={agentAppspec(spec)}
@@ -20,7 +20,7 @@
  *
  * **What** it shows (`app`): an Appspec, or a name — an example of the
  * catalogue (`web-research`), an application at its address on Datalayer
- * (`demo-marketer`), or a decision's id, framed from Datalayer's run page. A
+ * (`marketer-tryout`), or a decision's id, framed from Datalayer's run page. A
  * name is read as the element reads one (`readVisitorApp`), a skeleton in its
  * place meanwhile, never a sentence that says it loads; what cannot be run
  * is said in one sentence, in place (fail fast).

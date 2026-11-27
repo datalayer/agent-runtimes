@@ -29,7 +29,7 @@ import { AgentEmbed } from '../apps';
 import { createAgentInferencePlugin } from '../apps/plugins/agent-inference';
 import { useAIAgentsWebSocket } from '../hooks';
 
-const AGENTSPEC_ID = 'example-inference';
+const AGENTSPEC_ID = 'provider-switcher';
 const AGENT_NAME = 'inference-provider-example-agent';
 const queryClient = new QueryClient();
 

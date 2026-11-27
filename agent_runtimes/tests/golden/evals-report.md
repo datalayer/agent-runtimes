@@ -16,7 +16,7 @@
 | Agentspec ID        | Agentspec           | Model | Version | Experiments | Runs | Details                                                               |
 | :------------------ | :------------------ | :---- | :------ | ----------: | ---: | :-------------------------------------------------------------------- |
 | worker-data-analyst | worker-data-analyst | -     | -       |           1 |    3 | [Open](https://datalayer.app/settings/agentspecs/worker-data-analyst) |
-| example-evals       | example-evals       | -     | -       |           1 |    2 | [Open](https://datalayer.app/settings/agentspecs/example-evals)       |
+| text-normalizer     | text-normalizer     | -     | -       |           1 |    2 | [Open](https://datalayer.app/settings/agentspecs/text-normalizer)     |
 
 
 ## Evaluator Results
@@ -46,21 +46,21 @@ Pass rate for each case across every fetched run (all experiments and agentspecs
 
 Compare how each case performs across agentspecs (for example codemode vs no-codemode).
 
-| Case                 | worker-data-analyst | example-evals |
-| :------------------- | ------------------: | ------------: |
-| row-count            |              100.0% |        100.0% |
-| exact-duplicate-rows |              100.0% |          0.0% |
-| duplicate-customers  |                0.0% |          0.0% |
-| duplicate-rows       |               33.3% |          0.0% |
-| largest-plan         |              100.0% |        100.0% |
-| unique-customers     |               66.7% |         50.0% |
+| Case                 | worker-data-analyst | text-normalizer |
+| :------------------- | ------------------: | --------------: |
+| row-count            |              100.0% |          100.0% |
+| exact-duplicate-rows |              100.0% |            0.0% |
+| duplicate-customers  |                0.0% |            0.0% |
+| duplicate-rows       |               33.3% |            0.0% |
+| largest-plan         |              100.0% |          100.0% |
+| unique-customers     |               66.7% |           50.0% |
 
 ## Experiment Overview
 
 | Experiment          | Agentspec           | Runs (fetched/total) | Latest | Baseline | Drift       | Latest-2 Delta |
 | :------------------ | :------------------ | -------------------: | -----: | -------: | ----------: | -------------: |
 | worker-data-analyst | worker-data-analyst |                  3/3 |  83.3% |    50.0% | 🟢 +33.3 pts |    🟢 +16.7 pts |
-| example-evals       | example-evals       |                  2/2 |  33.3% |    50.0% | 🔴 -16.7 pts |    🔴 -16.7 pts |
+| text-normalizer     | text-normalizer     |                  2/2 |  33.3% |    50.0% | 🔴 -16.7 pts |    🔴 -16.7 pts |
 
 ## Comparison Combinations
 
@@ -69,7 +69,7 @@ Compare how each case performs across agentspecs (for example codemode vs no-cod
 | Rank | Experiment          | Latest |
 | ---: | :------------------ | -----: |
 |    1 | worker-data-analyst |  83.3% |
-|    2 | example-evals       |  33.3% |
+|    2 | text-normalizer     |  33.3% |
 
 Latest pass-rate histogram (pts):
 `   0.0 to   12.5 pts |░░░░░░░░░░░░░░░░░░░░| 0`
@@ -85,7 +85,7 @@ Latest pass-rate histogram (pts):
 
 | Rank | Experiment          | Drift       |
 | ---: | :------------------ | ----------: |
-|    1 | example-evals       | 🔴 -16.7 pts |
+|    1 | text-normalizer     | 🔴 -16.7 pts |
 |    2 | worker-data-analyst | 🟢 +33.3 pts |
 
 Drift histogram (delta pts):
@@ -102,7 +102,7 @@ Drift histogram (delta pts):
 
 | Rank | Experiment          | StdDev    | Mean  |
 | ---: | :------------------ | --------: | ----: |
-|    1 | example-evals       |  8.33 pts | 41.7% |
+|    1 | text-normalizer     |  8.33 pts | 41.7% |
 |    2 | worker-data-analyst | 13.61 pts | 66.7% |
 
 ### Token Usage Across Runs By Experiment
@@ -112,13 +112,13 @@ Total tokens across fetched runs for each experiment. Trends are ordered oldest 
 | Experiment          | Runs With Tokens | Latest Tokens | Mean Tokens | Total Tokens | Token Trend |
 | :------------------ | ---------------: | ------------: | ----------: | -----------: | :---------- |
 | worker-data-analyst |              3/3 |         9,000 |       9,000 |       27,000 | `▇▇▇`       |
-| example-evals       |              2/2 |         9,000 |       9,000 |       18,000 | `▇▇`        |
+| text-normalizer     |              2/2 |         9,000 |       9,000 |       18,000 | `▇▇`        |
 
 ### Pairwise Latest-Pass Deltas
 
-| Pair                                 | Left Latest | Right Latest | Delta (Left-Right) |
-| :----------------------------------- | ----------: | -----------: | -----------------: |
-| worker-data-analyst vs example-evals |       83.3% |        33.3% |        🟢 +50.0 pts |
+| Pair                                   | Left Latest | Right Latest | Delta (Left-Right) |
+| :------------------------------------- | ----------: | -----------: | -----------------: |
+| worker-data-analyst vs text-normalizer |       83.3% |        33.3% |        🟢 +50.0 pts |
 
 Pairwise latest-delta histogram (pts):
 `  50.0 to   50.0 pts |████████████████████| 1`
@@ -138,17 +138,17 @@ Pairwise latest-delta histogram (pts):
 
 ### Cross-Agentspec Pairwise Latest-Pass Deltas
 
-| Pair                                                                       | Left Latest | Right Latest | Delta (Left-Right) |
-| :------------------------------------------------------------------------- | ----------: | -----------: | -----------------: |
-| worker-data-analyst (worker-data-analyst) vs example-evals (example-evals) |       83.3% |        33.3% |        🟢 +50.0 pts |
+| Pair                                                                           | Left Latest | Right Latest | Delta (Left-Right) |
+| :----------------------------------------------------------------------------- | ----------: | -----------: | -----------------: |
+| worker-data-analyst (worker-data-analyst) vs text-normalizer (text-normalizer) |       83.3% |        33.3% |        🟢 +50.0 pts |
 
 ### Insight Highlights
 
 - Top latest pass-rate: worker-data-analyst (83.3%).
-- Lowest latest pass-rate: example-evals (33.3%).
+- Lowest latest pass-rate: text-normalizer (33.3%).
 - Strongest positive drift: worker-data-analyst (🟢 +33.3 pts).
-- Strongest negative drift: example-evals (🔴 -16.7 pts).
-- Stability leader: example-evals (stddev=8.33 pts, mean=41.7%).
+- Strongest negative drift: text-normalizer (🔴 -16.7 pts).
+- Stability leader: text-normalizer (stddev=8.33 pts, mean=41.7%).
 
 Drift balance meter:
 `NEG ███████ (1) | FLAT · (0) | POS ███████ (1)`
@@ -172,12 +172,12 @@ Full configuration, cases, heatmaps, per-experiment timelines, and per-run detai
 - Runs analysed: 3
 - Details: [Open in Datalayer](https://datalayer.app/settings/agentspecs/worker-data-analyst)
 
-### example-evals
+### text-normalizer
 
-- ID: `example-evals`
-- Experiments (1): example-evals
+- ID: `text-normalizer`
+- Experiments (1): text-normalizer
 - Runs analysed: 2
-- Details: [Open in Datalayer](https://datalayer.app/settings/agentspecs/example-evals)
+- Details: [Open in Datalayer](https://datalayer.app/settings/agentspecs/text-normalizer)
 
 ## Appendix: Evaluator Configuration
 
@@ -248,7 +248,7 @@ The JSON block below is rendered directly from the top-level `report_analyses` p
         0.33333333333333337
       ],
       [
-        "example-evals",
+        "text-normalizer",
         0.3333333333333333,
         0.5,
         -0.16666666666666669
@@ -260,7 +260,7 @@ The JSON block below is rendered directly from the top-level `report_analyses` p
     "name": "Latest Pass Rate By Experiment",
     "x": [
       "worker-data-analyst",
-      "example-evals"
+      "text-normalizer"
     ],
     "y": [
       0.8333333333333334,
@@ -280,7 +280,7 @@ The JSON block below is rendered directly from the top-level `report_analyses` p
     "name": "Recent Runs",
     "rows": [
       "worker-data-analyst",
-      "example-evals"
+      "text-normalizer"
     ],
     "values": [
       [
@@ -307,7 +307,7 @@ The JSON block below is rendered directly from the top-level `report_analyses` p
     "name": "Pairwise Deltas",
     "pairs": [
       {
-        "baseline": "example-evals",
+        "baseline": "text-normalizer",
         "baseline_pass_rate": 0.3333333333333333,
         "candidate": "worker-data-analyst",
         "candidate_pass_rate": 0.8333333333333334,
@@ -316,7 +316,7 @@ The JSON block below is rendered directly from the top-level `report_analyses` p
       {
         "baseline": "worker-data-analyst",
         "baseline_pass_rate": 0.8333333333333334,
-        "candidate": "example-evals",
+        "candidate": "text-normalizer",
         "candidate_pass_rate": 0.3333333333333333,
         "delta_pass_rate": -0.5
       }
@@ -333,7 +333,7 @@ Pass-rate heatmap by experiment and run window:
 Experiment           | r01 r02 r03 r04 r05 r06 r07 r08 r09 r10 r11 r12
 ----------------------------------------------------------------------
 worker-data-analyst  | ▓ ▓ ▓ · · · · · · · · ·
-example-evals        | ▒ ▓ · · · · · · · · · ·
+text-normalizer      | ▒ ▓ · · · · · · · · · ·
 Legend: low='░' .. high='█' (r01=latest fetched run, '·'=no run)
 ```
 
@@ -343,7 +343,7 @@ Consecutive delta heatmap (A-B) by experiment:
 Experiment           | d01 d02 d03 d04 d05 d06 d07 d08 d09 d10 d11 d12
 ----------------------------------------------------------------------
 worker-data-analyst  | +▒ +░ ·· ·· ·· ·· ·· ·· ·· ·· ·· ··
-example-evals        | -░ ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ··
+text-normalizer      | -░ ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ··
 Legend: dNN are consecutive deltas (A-B), sign shows direction, magnitude uses '░'..'█', '··'=no comparison
 ```
 
@@ -372,9 +372,9 @@ Token usage sparkline: `▇▇▇`
 | run-1-3 | run-1-2 |  83.3% |  66.7% | 🟢 +16.7 pts |
 | run-1-2 | run-1-1 |  66.7% |  50.0% | 🟢 +16.7 pts |
 
-### example-evals
+### text-normalizer
 
-Agentspec: [example-evals](https://datalayer.app/settings/agentspecs/example-evals)
+Agentspec: [text-normalizer](https://datalayer.app/settings/agentspecs/text-normalizer)
 Evalset run details: [Open run page](https://datalayer.app/benchmarks/evalset-reference)
 
 #### Run Timeline
@@ -1537,9 +1537,9 @@ Raw usage payload:
 
 </details>
 
-### example-evals
+### text-normalizer
 
-Agentspec: example-evals
+Agentspec: text-normalizer
 
 | # | Run ID                                                               | Status    | Pass Rate | Cases (pass/total) | Avg Score | Total Tokens | Credits | Created              | Failure Cause |
 | --: | :------------------------------------------------------------------- | :-------- | --------: | -----------------: | --------: | -----------: | ------: | :------------------- | :------------ |
@@ -1876,7 +1876,7 @@ Raw usage payload:
 
 ```json
 {
-  "agent_spec_id": "example-evals",
+  "agent_spec_id": "text-normalizer",
   "execution_target": "cloud",
   "launch_source": "datalayer-core",
   "run_mode": "batch"
@@ -2252,7 +2252,7 @@ Raw usage payload:
 
 ```json
 {
-  "agent_spec_id": "example-evals",
+  "agent_spec_id": "text-normalizer",
   "execution_target": "cloud",
   "launch_source": "datalayer-core",
   "run_mode": "batch"

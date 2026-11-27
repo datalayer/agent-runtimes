@@ -120,7 +120,7 @@ describe('a Chat block on a chat application’s page', () => {
     ...emptyAppspec('chat'),
     id: 'support',
     name: 'Support',
-    agent: 'example-simple:0.0.1',
+    agent: 'assistant:0.0.1',
     interface: {
       ...emptyAppspec('chat').interface,
       layout: 'page',
@@ -298,7 +298,7 @@ describe('what the page draws is what the Canvas can place (R-01b)', () => {
     ...emptyAppspec('widget'),
     id: 'rows',
     name: 'Rows',
-    agent: 'example-simple:0.0.1',
+    agent: 'assistant:0.0.1',
     interface: {
       ...emptyAppspec('widget').interface,
       layout: 'page',

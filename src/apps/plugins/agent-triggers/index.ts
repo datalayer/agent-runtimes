@@ -6,7 +6,7 @@
 /**
  * `@datalayer/agent-plugin-agent-triggers` — triggers, as a capacity.
  *
- * Mounts the `example-one-trigger` agent: an agent whose turns are started
+ * Mounts the `one-shot-task` agent: an agent whose turns are started
  * by cron schedules, webhooks and event subscriptions rather than only by a
  * person typing. Cast from the shared capacity mould.
  *
@@ -25,7 +25,7 @@ export const AgentTriggersPlugin = defineAgentCapacityPlugin({
   displayName: 'Agent Triggers',
   description:
     'Turns started by cron schedules, webhooks and event subscriptions.',
-  specId: 'example-one-trigger',
+  specId: 'one-shot-task',
   octicon: 'clock',
   emoji: '⏰',
 });

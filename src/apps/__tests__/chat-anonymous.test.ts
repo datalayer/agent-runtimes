@@ -78,7 +78,7 @@ describe('the limited preview', () => {
   });
 
   it('names an app’s own disabled features, passed through the preset', () => {
-    const app = APP_CATALOGUE['demo-marketer'];
+    const app = APP_CATALOGUE['marketer-tryout'];
     const { workspace } = appPreset(app, { visitor: true });
     // What the app's own `ui` and its agent's keep from a visitor…
     expect(workspace.disabledUi).toEqual(
@@ -87,7 +87,7 @@ describe('the limited preview', () => {
     // …named by the indicator, though the workspace's spec is the bootstrap one.
     expect(
       limitedPreviewDisabled({
-        datalayerAgentSpecId: 'example-simple',
+        datalayerAgentSpecId: 'assistant',
         disabledUi: workspace.disabledUi,
       }),
     ).toEqual(expect.arrayContaining(['X budget']));
@@ -97,7 +97,7 @@ describe('the limited preview', () => {
   });
 
   it('passes nothing of an app for a person signed in', () => {
-    const app = APP_CATALOGUE['demo-marketer'];
+    const app = APP_CATALOGUE['marketer-tryout'];
     expect(appPreset(app).workspace.disabledUi).toBeUndefined();
     expect(
       appPreset(app, { kept: { visitor: false } }).workspace.disabledUi,

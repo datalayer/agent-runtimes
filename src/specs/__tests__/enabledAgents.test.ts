@@ -10,7 +10,7 @@
  * The new agent page, the chats, the assign menu and `agent`'s pickers offer what
  * the catalogue enables and lists (`isAgentspecOffered`), and nothing else, so
  * these flags are the whole list. `listed: false` (agentspecs 0.0.187) keeps
- * an enabled agent out of the pickers: example-simple, the neutral default,
+ * an enabled agent out of the pickers: assistant, the neutral default,
  * runs by id and for the applications that name it.
  */
 
@@ -39,7 +39,7 @@ describe('the agents the catalogue offers', () => {
   });
 
   it('leave out an enabled agent that is not listed', () => {
-    for (const id of ['example-simple', 'example-blank']) {
+    for (const id of ['assistant', 'blank']) {
       const spec = getAgentspecs(id);
       expect(spec?.enabled).toBe(true);
       expect(spec?.listed).toBe(false);

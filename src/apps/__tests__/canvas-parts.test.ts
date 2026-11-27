@@ -161,7 +161,7 @@ describe('the toolbox is what the enabled plugins contribute', () => {
     // goose, OpenCode, OpenHands and fast-agent alike.
     const claude = parts.find(part => part.id === 'agent:claude-code');
     expect(claude?.harness).toBe('claude-code');
-    expect(claude?.example).toBe('example-harness-claude-code');
+    expect(claude?.example).toBe('coding-agent-claude-code');
     expect(claude?.enabled).toBe(true);
     const codex = parts.find(part => part.id === 'agent:codex');
     expect(codex?.enabled).toBe(true);
@@ -176,7 +176,7 @@ describe('the toolbox is what the enabled plugins contribute', () => {
     ]) {
       const part = parts.find(item => item.id === `agent:${harness}`);
       expect(part?.harness).toBe(harness);
-      expect(part?.example).toBe(`example-harness-${harness}`);
+      expect(part?.example).toBe(`coding-agent-${harness}`);
       expect(part?.says).not.toContain(
         'No agent of the catalogue runs on it yet.',
       );

@@ -1257,7 +1257,7 @@ export const AgentCommand =
  * The application a workspace draws, as its renderer says it: its Appspec in
  * the words the person reads. What a host's plugin reads of the application
  * it was added to — its name, its face, its `presentation` — without the
- * host having read the spec itself (`<AIApplication app="demo-marketer">`
+ * host having read the spec itself (`<AIApplication app="marketer-tryout">`
  * reads a name). One per workspace, contributed by `AppRenderer`; none in a
  * workspace that draws no application.
  */

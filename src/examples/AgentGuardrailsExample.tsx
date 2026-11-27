@@ -67,7 +67,7 @@ import { createChatExtrasPlugin } from '../apps/plugins/chat-extras';
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const AGENT_NAME = 'guardrails-example-agent';
-const AGENTSPEC_ID = 'example-guardrails';
+const AGENTSPEC_ID = 'budget-guard';
 const OTEL_BASE_URL_ENV = import.meta.env.VITE_OTEL_BASE_URL;
 // Consume-side OTEL override (DATALAYER_OTEL_IN_URL). When set, telemetry is
 // read from here instead of VITE_OTEL_BASE_URL (e.g. prod during local dev).

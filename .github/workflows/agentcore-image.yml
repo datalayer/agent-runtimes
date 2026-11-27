@@ -37,7 +37,7 @@ env:
   ECR_REPOSITORY: datalayer/agent-runtimes-agentcore
   # A catalogue agentspec with no MCP server and no skill: it configures at
   # start without any credential, and /ping calls no model.
-  SMOKE_AGENT_SPEC_ID: example-agentic-chat
+  SMOKE_AGENT_SPEC_ID: world-clock
 
 jobs:
   version:

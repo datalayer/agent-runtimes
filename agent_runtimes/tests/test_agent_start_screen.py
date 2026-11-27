@@ -44,13 +44,13 @@ def _rows() -> List[Paused]:
         Paused(
             "01M75JVX5C26R21YXGM1Q0W204",
             "agent",
-            "example-simple",
+            "assistant",
             "List my GitHub repositories, names only.",
             ON_THIS_MACHINE,
             "file",
             "2026-11-11T11:00:00Z",
             turns=2,
-            app_uid="agent:example-simple",
+            app_uid="agent:assistant",
         ),
         Paused(
             "72a52412b51f401ab91555394f4ef82c",

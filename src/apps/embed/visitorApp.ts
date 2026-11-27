@@ -21,7 +21,7 @@
  *   or, for a version with code of its own (`runs_code`), its deployment's
  *   always-on runtime (`always_on_runtime.url`), which runs that code;
  * - **an example of this bundle deployed at the address of its name** (the
- *   landing's demo agents, `demo-marketer`): drawn from the Appspec this
+ *   landing's demo agents, `marketer-tryout`): drawn from the Appspec this
  *   bundle carries — its UI, its title bar's items, its presentation, its
  *   starters, its frontend tools — never from the deployment's copy (the
  *   user, 18 November 2026: "the demo agents' specs must not be loaded from
@@ -202,7 +202,7 @@ export async function readVisitorApp({
       };
     }
     // An example the visitors' runtime does not keep may be deployed at an
-    // address of the same name (the landing's demo-marketer and the like,
+    // address of the same name (the landing's marketer-tryout and the like,
     // whose specs the catalogue carries since 14 November 2026): read it there.
     if (!SLUG.test(named)) {
       return { kind: 'said', text: notKeptSentence(named) };

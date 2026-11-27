@@ -6,7 +6,7 @@
 /**
  * `@datalayer/agent-plugin-agent-parameters` — the capacity, as a plugin.
  *
- * Mounts the `example-parameters` agent and offers what it is worth asking. Cast
+ * Mounts the `project-assistant` agent and offers what it is worth asking. Cast
  * from the shared capacity mould; see `apps/plugins/agent-capacity`.
  *
  * The openers are the spec's own.
@@ -23,7 +23,7 @@ export const AgentParametersPlugin = defineAgentCapacityPlugin({
   key: 'parameters',
   displayName: 'Agent Parameters',
   description: 'Role: ${String(formData.role ?? ',
-  specId: 'example-parameters',
+  specId: 'project-assistant',
   octicon: 'sliders',
   emoji: '🎚️',
 });

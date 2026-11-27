@@ -6,7 +6,7 @@
 /**
  * `@datalayer/agent-plugin-agent-evals` — the capacity, as a plugin.
  *
- * Mounts the `example-evals` agent and offers what it is worth asking. Cast
+ * Mounts the `text-normalizer` agent and offers what it is worth asking. Cast
  * from the shared capacity mould; see `apps/plugins/agent-capacity`.
  *
  * The openers are the spec's own.
@@ -22,7 +22,7 @@ export const AgentEvalsPlugin = defineAgentCapacityPlugin({
   key: 'evals',
   displayName: 'Agent Evals',
   description: 'Agent Evals',
-  specId: 'example-evals',
+  specId: 'text-normalizer',
   octicon: 'beaker',
   emoji: '🧪',
 });

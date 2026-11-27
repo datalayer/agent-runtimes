@@ -173,7 +173,7 @@ To make a plane's template, for the environment `ai-agents-env`:
 ```bash
 agent-runtimes-ate template --atespace datalayer-runtimes --name ai-agents-env \
   --image <registry>/agent-runtimes-ate@sha256:<digest> \
-  --agent-spec-id example-simple --wakeup-timeout-seconds 180 \
+  --agent-spec-id assistant --wakeup-timeout-seconds 180 \
   | kubectl ate create actor-template -f -
 ```
 

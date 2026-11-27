@@ -71,7 +71,7 @@ describe('describeRemoteAgents', () => {
     {
       name: 'researcher',
       description: 'Facts',
-      ref: 'example-a2a-researcher:0.0.1',
+      ref: 'researcher-a2a:0.0.1',
       a2a: { launch: 'auto' },
     },
     { name: 'local-writer', description: 'In process', instructions: 'Write' },
@@ -83,7 +83,7 @@ describe('describeRemoteAgents', () => {
     expect(agents[0]).toMatchObject({
       status: 'idle',
       launch: 'auto',
-      ref: 'example-a2a-researcher:0.0.1',
+      ref: 'researcher-a2a:0.0.1',
     });
   });
 

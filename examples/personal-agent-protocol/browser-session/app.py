@@ -119,7 +119,7 @@ app = Application(
     kind="chat",
     # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
     ui=[{"plugin": "chat"}],
-    agent="example-blank:0.0.1",
+    agent="blank:0.0.1",
     instructions=(
         "Use explain_browser_session to explain how a personal agent joins its own "
         "browser to a PAP Session. Never request or expose a join code, Session JWT, "

@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 #: The agentspec this example's agent runs: its model and instructions. The
 #: environment variable AGENT_RUNTIMES_MODEL, when set, overrides its model.
-RESTAURANT_AGENTSPEC_ID = "example-a2ui-restaurant"
+RESTAURANT_AGENTSPEC_ID = "restaurant-finder"
 
 
 #: The A2UI v0.9 basic catalog (`a2ui-core`), the one the client renderer registers.
@@ -421,7 +421,7 @@ def create_restaurant_agent(base_url: str) -> Agent[RestaurantDeps, str]:
     """
     Create a new restaurant agent instance with the given base URL.
 
-    Its model and instructions are the agentspec ``example-a2ui-restaurant``'s;
+    Its model and instructions are the agentspec ``restaurant-finder``'s;
     ``AGENT_RUNTIMES_MODEL``, when set, overrides the model. With neither, it
     raises rather than pick one.
     """
