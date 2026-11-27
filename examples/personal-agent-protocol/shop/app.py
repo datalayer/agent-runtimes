@@ -136,7 +136,9 @@ async def shop_route(request: httpx.Request) -> httpx.Response:
             },
         ]
     elif text.lower().startswith("quote"):
-        parts = [{"kind": "text", "text": _said(online_shop.quote_basket(_items(text)))}]
+        parts = [
+            {"kind": "text", "text": _said(online_shop.quote_basket(_items(text)))}
+        ]
     else:
         under = re.search(r"under (\d+(?:\.\d+)?)", text)
         query = re.sub(r"^find\s+|\s*under .*$", "", text, flags=re.IGNORECASE)

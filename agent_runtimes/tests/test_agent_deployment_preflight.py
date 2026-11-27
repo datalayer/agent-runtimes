@@ -228,7 +228,5 @@ def test_a_session_of_an_agent_that_left_the_catalogue_is_not_listed() -> None:
         agent="retired-agent"
     ) and not is_listed(gone)
     assert "no longer an agentspec of the catalogue" in why_not("resume", gone)
-    kept = _rows(
-        {}, app_uid="agent:assistant", deployment_uid="", agent="assistant"
-    )
+    kept = _rows({}, app_uid="agent:assistant", deployment_uid="", agent="assistant")
     assert kept.why_not == "" and is_listed(kept)

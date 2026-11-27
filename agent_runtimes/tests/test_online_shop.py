@@ -42,7 +42,9 @@ def test_a_list_and_a_search_answer_product_cards_the_cheapest_first():
         "tennis-ball",
         "baseball-ball",
     ]
-    glasses = online_shop.find_products("sunglasses", category="sunglasses", min_price=24)
+    glasses = online_shop.find_products(
+        "sunglasses", category="sunglasses", min_price=24
+    )
     assert all(24 <= product["price"] for product in glasses["products"])
     assert online_shop.find_products("tent")["products"] == []
     assert online_shop.list_products("tents").startswith(

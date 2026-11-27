@@ -698,8 +698,7 @@ def test_agent_agentcore_deploy_status_invoke_sessions_destroy(cli) -> None:
     )
     destroyed = runner.invoke(app, ["agentcore", "destroy", spec])
     assert (
-        destroyed.exit_code == 0
-        and f"assistant: {ARN} DELETING." in destroyed.output
+        destroyed.exit_code == 0 and f"assistant: {ARN} DELETING." in destroyed.output
     )
     assert json.loads(state.read_text())["deployments"] == {}
     gone = runner.invoke(app, ["agentcore", "status", spec])

@@ -343,9 +343,7 @@ def test_an_application_is_never_offered_a_running_runtime(
         lambda running, can_ask: _kept(offered, running, None),
     )
     app = {"schema": "agent.app/v1", "id": "web-research"}
-    started = launch.launch_cloud(
-        "assistant", can_ask=False, minutes=5, app_spec=app
-    )
+    started = launch.launch_cloud("assistant", can_ask=False, minutes=5, app_spec=app)
     try:
         assert offered == [] and not started.attached
         assert datalayer.created["app_spec"] == app

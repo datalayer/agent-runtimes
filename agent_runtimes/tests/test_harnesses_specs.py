@@ -269,9 +269,7 @@ class TestWhatAHarnessCannotHonourIsRefusedAtLoad:
                 id="a",
                 name="A",
                 harness="claude-code",
-                subagents={
-                    "agents": [{"id": "helper", "agent_spec_id": "blank"}]
-                },
+                subagents={"agents": [{"id": "helper", "agent_spec_id": "blank"}]},
             )
         with pytest.raises(ValidationError, match="names no command"):
             Agentspec(id="a", name="A", harness="custom")

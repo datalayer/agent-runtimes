@@ -151,9 +151,7 @@ def _keep(
     ]
     if state != "open":
         entries.append({"kind": state, "summary": state, "payload": {"state": state}})
-    asyncio.run(
-        store.append(uid, entries, app_uid="agent:assistant", opened_by="")
-    )
+    asyncio.run(store.append(uid, entries, app_uid="agent:assistant", opened_by=""))
 
 
 @pytest.fixture()

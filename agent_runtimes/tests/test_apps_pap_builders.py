@@ -239,9 +239,7 @@ def test_a_companys_website_flags_are_written_as_the_appspec_says_them() -> None
     away = Application("a", "chat", agent="blank:0.0.1")
     assert away.as_company(web_disabled=True).web_disabled is True
     with pytest.raises(ValidationError, match="add the `web` interface"):
-        Application("x", "chat", agent="blank:0.0.1").as_company(
-            web_unscoped=True
-        )
+        Application("x", "chat", agent="blank:0.0.1").as_company(web_unscoped=True)
 
 
 def test_an_application_says_what_it_speaks_and_where_it_renders() -> None:

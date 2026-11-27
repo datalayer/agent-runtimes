@@ -87,9 +87,7 @@ async def test_the_record_is_kept_in_memory_unless_a_recorder_is_given():
 
 
 def test_record_is_a_plain_call_and_from_spec_validates_when_the_spec_is_read():
-    app = Application(
-        id="digest", kind="worker", agent="blank:0.0.1", goal="A digest"
-    )
+    app = Application(id="digest", kind="worker", agent="blank:0.0.1", goal="A digest")
     assert app.record(include=["outputs"], keep_for="90_days") == {
         "include": ["outputs"],
         "keep_for": "90_days",
