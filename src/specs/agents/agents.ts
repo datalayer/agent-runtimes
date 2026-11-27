@@ -541,7 +541,7 @@ export const APPROVED_AUTOMATION_AGENTSPEC_0_0_1: Agentspec = {
   version: '0.0.1',
   name: 'Approved Automation',
   description: `Prepares the work and runs the safe steps itself; every sensitive action — a deletion, a report sent, a notification — waits for a person's approval, and each decision (allow, deny, approval needed, delegated) is logged for audit.`,
-  tags: ['compliance', 'human-approval', 'audit', 'workflow', 'automation'],
+  tags: ['compliance', 'human-approval', 'audit'],
   domain: undefined,
   enabled: false,
   listed: true,
@@ -577,10 +577,6 @@ export const APPROVED_AUTOMATION_AGENTSPEC_0_0_1: Agentspec = {
     {
       text: 'Explain how deferred_tool_calls resolves approval-required tool calls inline when decisions already exist.',
       summary: 'Deferred tool calls',
-    },
-    {
-      text: 'Use /home/datalayer/datasets/datalayer-nfs/compliance/approval_queue.csv to propose automation actions and require explicit human approval before execution.',
-      summary: 'Approval-gated automation',
     },
   ],
   welcomeMessage:
@@ -2743,15 +2739,8 @@ export const JUPYTER_TUTOR_AGENTSPEC_0_0_1: Agentspec = {
   id: 'jupyter-tutor',
   version: '0.0.1',
   name: 'Jupyter Tutor',
-  description: `Teaches you Python in the notebook you have open — explaining what your code does, why it broke, and what to try next, and leaving you able to write the next cell yourself. It also sets interactive, executable exercises and gives step-by-step feedback on them.`,
-  tags: [
-    'notebook',
-    'teaching',
-    'learning',
-    'python',
-    'personal-assistant',
-    'agent-worker',
-  ],
+  description: `Teaches you Python in the notebook you have open — explaining what your code does, why it broke, and what to try next, and leaving you able to write the next cell yourself.`,
+  tags: ['notebook', 'teaching', 'learning', 'python'],
   domain: undefined,
   enabled: false,
   listed: true,
@@ -3129,6 +3118,65 @@ export const NOTIFIER_AGENTSPEC_0_0_1: Agentspec = {
   parameters: undefined,
   subagents: undefined,
   identity: 'datalayer-acting-agent',
+};
+
+export const ONE_SHOT_APPROVED_TASK_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'one-shot-approved-task',
+  version: '0.0.1',
+  name: 'One-shot Approved Task',
+  description: `Runs its trigger prompt once with a manual tool approval: when launched, it executes its trigger prompt once and invokes the runtime-sensitive-echo tool, which requires manual approval before execution. After completion, the runtime is terminated automatically.`,
+  tags: ['workflow', 'human-approval', 'automation'],
+  domain: undefined,
+  enabled: false,
+  listed: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
+  mcpServers: [],
+  skills: [].filter(Boolean) as SkillSpec[],
+  backendTools: [TOOL_MAP['runtime-sensitive-echo:0.0.1']],
+  frontendTools: [FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1']],
+  environmentName: 'ai-agents-env',
+  icon: 'shield',
+  emoji: '🛡️',
+  color: 'red',
+  suggestions: [],
+  welcomeMessage: undefined,
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter-server',
+  harness: 'pydantic-ai',
+  runtimeEngine: 'datalayer',
+  systemPrompt: undefined,
+  systemPromptCodemodeAddons: undefined,
+  goal: `Call runtime_sensitive_echo exactly once with message="Tool approval demo executed" and reason="audit". Do not call any other tool.`,
+  delegable: [],
+  protocol: undefined,
+  ui: [],
+  protocols: [],
+  trigger: {
+    type: 'once',
+    description: 'Run once with approval and terminate',
+    prompt:
+      "Call runtime_sensitive_echo exactly once with message='Tool approval demo executed' and reason='audit'. Do not call any other tool.",
+  },
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  checkpoints: undefined,
+  authorizationPolicy: undefined,
+  policy: { shield: { egress: ['*'] } },
+  notifications: undefined,
+  memory: 'ephemeral',
+  decisions: undefined,
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+  identity: 'datalayer-service-agent',
 };
 
 export const ONE_SHOT_TASK_AGENTSPEC_0_0_1: Agentspec = {
@@ -4106,14 +4154,7 @@ export const PYTHON_RUNNER_AGENTSPEC_0_0_1: Agentspec = {
   version: '0.0.1',
   name: 'Python Runner',
   description: `Runs Python in a managed sandbox for every computation, script, loop, data check or file asked for — never working it out itself — and reports what it printed.`,
-  tags: [
-    'sandbox',
-    'code-execution',
-    'python',
-    'operations',
-    'notebook',
-    'automation',
-  ],
+  tags: ['sandbox', 'code-execution', 'python'],
   domain: undefined,
   enabled: false,
   listed: true,
@@ -4138,10 +4179,6 @@ export const PYTHON_RUNNER_AGENTSPEC_0_0_1: Agentspec = {
     {
       text: 'Write and run Python that draws a matplotlib bar chart of five programming languages by popularity and saves it as chart.png, then tell me the file size.',
       summary: 'Bar chart saved to chart.png',
-    },
-    {
-      text: 'Use /home/datalayer/datasets/datalayer-nfs/notebooks/experiment_metrics.csv and execute Python in a controlled runtime with clear safety and output notes.',
-      summary: 'Python in a controlled runtime',
     },
   ],
   welcomeMessage:
@@ -4564,8 +4601,9 @@ export const SKILLS_AGENT_SPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: false,
   listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
   model: 'bedrock:us.anthropic.claude-sonnet-5-5',
-  mcpServers: [],
+  mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
     SKILL_MAP['crawl:0.0.1']
       ? toAgentSkillSpec(SKILL_MAP['crawl:0.0.1'])
@@ -4589,8 +4627,14 @@ export const SKILLS_AGENT_SPEC_0_0_1: Agentspec = {
       ? toAgentSkillSpec(SKILL_MAP['datalayer-whoami:1.0.0'])
       : undefined,
   ].filter(Boolean) as SkillSpec[],
-  backendTools: [],
-  frontendTools: [],
+  backendTools: [
+    TOOL_MAP['runtime-echo:0.0.1'],
+    TOOL_MAP['runtime-sensitive-echo:0.0.1'],
+  ],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
   environmentName: 'ai-agents-env',
   icon: 'briefcase',
   emoji: '🧰',
@@ -5448,7 +5492,7 @@ export const WEB_RESEARCHER_AGENTSPEC_0_0_1: Agentspec = {
   mcpServerTools: undefined,
   guardrails: undefined,
   evals: undefined,
-  codemode: undefined,
+  codemode: { enabled: false },
   output: undefined,
   advanced: undefined,
   checkpoints: undefined,
@@ -6020,6 +6064,73 @@ export const WORKER_AP_INVOICE_AGENTSPEC_0_0_1: Agentspec = {
   identity: 'datalayer-acting-agent',
 };
 
+export const WORKER_APPROVED_AUTOMATION_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'worker-approved-automation',
+  version: '0.0.1',
+  name: 'Human-Approved Automation',
+  description: `Let AI prepare the work while humans approve sensitive actions, final reports, or external notifications before they happen.`,
+  tags: ['workflow', 'human-approval', 'automation'],
+  domain: undefined,
+  enabled: false,
+  listed: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  backendTools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'shield-check',
+  emoji: '📊',
+  color: 'green',
+  suggestions: [
+    {
+      text: 'Use /home/datalayer/datasets/datalayer-nfs/compliance/approval_queue.csv to propose automation actions and require explicit human approval before execution.',
+      summary: 'Approval-gated automation',
+    },
+  ],
+  welcomeMessage:
+    'Hi! I can help with human-approved automation. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter-server',
+  harness: 'pydantic-ai',
+  runtimeEngine: 'datalayer',
+  systemPrompt: `You are a specialized assistant for this gallery workflow: Human-Approved Automation. Objective: Let AI prepare the work while humans approve sensitive actions, final reports, or external notifications before they happen. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+  systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+  goal: undefined,
+  delegable: [],
+  protocol: undefined,
+  ui: [],
+  protocols: [],
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+  output: undefined,
+  advanced: undefined,
+  checkpoints: undefined,
+  authorizationPolicy: undefined,
+  policy: { shield: { egress: ['*'] } },
+  notifications: undefined,
+  memory: 'ephemeral',
+  decisions: undefined,
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+  identity: 'datalayer-acting-agent',
+};
+
 export const WORKER_AUDIT_INVENTORY_LEVELS_AGENTSPEC_0_0_1: Agentspec = {
   id: 'worker-audit-inventory-levels',
   version: '0.0.1',
@@ -6495,6 +6606,77 @@ export const WORKER_BANK_RECONCILIATION_AGENTSPEC_0_0_1: Agentspec = {
   identity: 'datalayer-acting-agent',
 };
 
+export const WORKER_CAMPAIGN_PLANNING_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'worker-campaign-planning',
+  version: '0.0.1',
+  name: 'Campaign Planner',
+  description: `Plans content calendars and campaign tasks across channels.`,
+  tags: ['marketing', 'agent-worker'],
+  domain: 'marketing',
+  enabled: false,
+  listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
+  mcpServers: [MCP_SERVER_MAP['tavily:0.0.1'], MCP_SERVER_MAP['slack:0.0.1']],
+  skills: [
+    SKILL_MAP['text-summarizer:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['text-summarizer:0.0.1'])
+      : undefined,
+    SKILL_MAP['crawl:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['crawl:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  backendTools: [
+    TOOL_MAP['runtime-echo:0.0.1'],
+    TOOL_MAP['runtime-sensitive-echo:0.0.1'],
+  ],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'megaphone',
+  emoji: '📣',
+  color: 'violet',
+  suggestions: [],
+  welcomeMessage: undefined,
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter-server',
+  harness: 'pydantic-ai',
+  runtimeEngine: 'datalayer',
+  systemPrompt: `You are the Campaign Planning Worker, an autonomous agent worker in the marketing domain. Plans content calendars and campaign tasks across channels. Work step by step, show your reasoning and evidence, and require explicit human approval before any external or irreversible action.`,
+  systemPromptCodemodeAddons: undefined,
+  goal: `Plan a content calendar and campaign tasks aligned to goals and channels.`,
+  delegable: [{ id: 'document.author' }],
+  protocol: 'vercel-ai',
+  ui: [{ plugin: 'a2ui-surface', renderer: 'a2ui' }],
+  protocols: [],
+  trigger: undefined,
+  modelConfig: { temperature: 0.5, max_tokens: 4096 },
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true },
+  output: undefined,
+  advanced: undefined,
+  checkpoints: undefined,
+  authorizationPolicy: undefined,
+  policy: { shield: { egress: ['*'] } },
+  notifications: undefined,
+  memory: 'mem0',
+  decisions: undefined,
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+  identity: 'datalayer-acting-agent',
+};
+
 export const WORKER_CAT_EXPOSURE_AGENTSPEC_0_0_1: Agentspec = {
   id: 'worker-cat-exposure',
   version: '0.0.1',
@@ -6758,6 +6940,73 @@ export const WORKER_CLASSIFY_ROUTE_EMAILS_AGENTSPEC_0_0_1: Agentspec = {
   identity: 'datalayer-service-agent',
 };
 
+export const WORKER_CLOUD_PYTHON_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'worker-cloud-python',
+  version: '0.0.1',
+  name: 'Run Python Safely in the Cloud',
+  description: `Let AI execute Python in a controlled runtime instead of only suggesting code you still need to copy and run manually.`,
+  tags: ['operations', 'notebook', 'automation'],
+  domain: undefined,
+  enabled: false,
+  listed: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  backendTools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'shield',
+  emoji: '📊',
+  color: 'green',
+  suggestions: [
+    {
+      text: 'Use /home/datalayer/datasets/datalayer-nfs/notebooks/experiment_metrics.csv and execute Python in a controlled runtime with clear safety and output notes.',
+      summary: 'Python in a controlled runtime',
+    },
+  ],
+  welcomeMessage:
+    'Hi! I can help with run python safely in the cloud. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter-server',
+  harness: 'pydantic-ai',
+  runtimeEngine: 'datalayer',
+  systemPrompt: `You are a specialized assistant for this gallery workflow: Run Python Safely in the Cloud. Objective: Let AI execute Python in a controlled runtime instead of only suggesting code you still need to copy and run manually. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+  systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+  goal: undefined,
+  delegable: [],
+  protocol: undefined,
+  ui: [],
+  protocols: [],
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+  output: undefined,
+  advanced: undefined,
+  checkpoints: undefined,
+  authorizationPolicy: undefined,
+  policy: { shield: { egress: ['*'] } },
+  notifications: undefined,
+  memory: 'ephemeral',
+  decisions: undefined,
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+  identity: 'datalayer-acting-agent',
+};
+
 export const WORKER_CMS_ASTRO_AGENTSPEC_0_0_1: Agentspec = {
   id: 'worker-cms-astro',
   version: '0.0.1',
@@ -6913,6 +7162,80 @@ Use only tools actually provided to you.
   policy: { shield: { egress: ['*'] } },
   notifications: undefined,
   memory: 'ephemeral',
+  decisions: undefined,
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+  identity: 'datalayer-acting-agent',
+};
+
+export const WORKER_CODING_TUTOR_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'worker-coding-tutor',
+  version: '0.0.1',
+  name: 'Coding Tutor',
+  description: `Teaches coding through interactive, executable exercises and step-by-step feedback.`,
+  tags: ['personal-assistant', 'agent-worker'],
+  domain: 'personal-assistant',
+  enabled: false,
+  listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
+  mcpServers: [
+    MCP_SERVER_MAP['tavily:0.0.1'],
+    MCP_SERVER_MAP['google-workspace:0.0.1'],
+  ],
+  skills: [
+    SKILL_MAP['text-summarizer:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['text-summarizer:0.0.1'])
+      : undefined,
+    SKILL_MAP['crawl:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['crawl:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  backendTools: [
+    TOOL_MAP['runtime-echo:0.0.1'],
+    TOOL_MAP['runtime-sensitive-echo:0.0.1'],
+  ],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'code',
+  emoji: '🤖',
+  color: 'purple',
+  suggestions: [],
+  welcomeMessage: undefined,
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter-server',
+  harness: 'pydantic-ai',
+  runtimeEngine: 'datalayer',
+  systemPrompt: `You are the Coding Tutor, an autonomous agent worker in the personal assistant domain. Teaches coding through interactive, executable exercises and step-by-step feedback. Work step by step, show your reasoning and evidence, and require explicit human approval before any external or irreversible action.`,
+  systemPromptCodemodeAddons: undefined,
+  goal: `Teach coding interactively with executable exercises and give clear, incremental feedback.`,
+  delegable: [{ id: 'code.execute' }],
+  protocol: 'vercel-ai',
+  ui: [{ plugin: 'a2ui-surface', renderer: 'a2ui' }],
+  protocols: [],
+  trigger: undefined,
+  modelConfig: { temperature: 0.5, max_tokens: 4096 },
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true },
+  output: undefined,
+  advanced: undefined,
+  checkpoints: undefined,
+  authorizationPolicy: undefined,
+  policy: { shield: { egress: ['*'] } },
+  notifications: undefined,
+  memory: 'mem0',
   decisions: undefined,
   preHooks: undefined,
   postHooks: undefined,
@@ -7286,15 +7609,8 @@ export const WORKER_COMPREHENSIVE_SALES_ANALYTICS_AGENTSPEC_0_0_1: Agentspec = {
   id: 'worker-comprehensive-sales-analytics',
   version: '0.0.1',
   name: 'Comprehensive Sales Analytics',
-  description: `A multi-agent team that replaces a single KPI monitor with four specialized agents: a Data Collector that pulls real-time CRM metrics, an Anomaly Detector that flags statistical outliers, a Trend Analyzer that identifies patterns and forecasts, and a Report Generator that compiles executive dashboards and sends alerts. Together they deliver deeper insights, faster detection, and richer reporting than any single agent could. It also sends the daily KPI report from the CRM: the key figures, their trends and what needs attention.`,
-  tags: [
-    'market-analyst',
-    'agent-worker',
-    'sales',
-    'analytics',
-    'kpi',
-    'customer-support',
-  ],
+  description: `A multi-agent team that replaces a single KPI monitor with four specialized agents: a Data Collector that pulls real-time CRM metrics, an Anomaly Detector that flags statistical outliers, a Trend Analyzer that identifies patterns and forecasts, and a Report Generator that compiles executive dashboards and sends alerts. Together they deliver deeper insights, faster detection, and richer reporting than any single agent could.`,
+  tags: ['market-analyst', 'agent-worker', 'sales', 'analytics', 'kpi'],
   domain: 'market-analyst',
   enabled: false,
   listed: true,
@@ -7323,18 +7639,7 @@ export const WORKER_COMPREHENSIVE_SALES_ANALYTICS_AGENTSPEC_0_0_1: Agentspec = {
   icon: 'graph',
   emoji: '📈',
   color: 'green',
-  suggestions: [
-    {
-      text: "Show me today's sales KPI dashboard",
-      summary: "Today's KPI dashboard",
-    },
-    { text: 'What are the current revenue trends?', summary: 'Revenue trends' },
-    {
-      text: 'Flag any KPIs that deviate more than 10% from targets',
-      summary: 'KPIs off by 10%',
-    },
-    { text: 'Generate a weekly summary report', summary: 'Weekly summary' },
-  ],
+  suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
   welcomeDocument: undefined,
@@ -9985,6 +10290,149 @@ ask for it or agree to it.
   identity: 'datalayer-acting-agent',
 };
 
+export const WORKER_GENERATE_WEEKLY_REPORTS_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'worker-generate-weekly-reports',
+  version: '0.0.1',
+  name: 'Generate Weekly Reports',
+  description: `Aggregates data across marketing, sales, and operations departments. Generates structured weekly reports with charts, KPI summaries, trend analysis, and executive-level takeaways.`,
+  tags: ['marketing', 'agent-worker', 'sales', 'reporting'],
+  domain: 'marketing',
+  enabled: false,
+  listed: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
+  mcpServers: [
+    MCP_SERVER_MAP['filesystem:0.0.1'],
+    MCP_SERVER_MAP['slack:0.0.1'],
+  ],
+  skills: [
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  backendTools: [],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'file',
+  emoji: '📝',
+  color: 'red',
+  suggestions: [
+    {
+      text: "Generate this week's executive report",
+      summary: "This week's executive report",
+    },
+    {
+      text: 'Show marketing KPIs for the last 7 days',
+      summary: 'Marketing KPIs, 7 days',
+    },
+    {
+      text: "Compare this week's sales to last week",
+      summary: 'Sales week over week',
+    },
+    {
+      text: 'What were the top operational issues this week?',
+      summary: 'Top operational issues',
+    },
+  ],
+  welcomeMessage:
+    "Hello! I'm the Weekly Report Generator. Every Monday I aggregate data from marketing, sales, and operations to produce a structured executive report with charts, KPI summaries, and actionable takeaways.\n",
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter-server',
+  harness: 'pydantic-ai',
+  runtimeEngine: 'datalayer',
+  systemPrompt: `You are a weekly reporting agent that aggregates data across departments. Your responsibilities: - Query marketing, sales, and operations data from the data warehouse - Calculate key performance indicators for each department - Identify week-over-week trends, wins, and areas of concern - Generate visualizations (charts, tables) for each metric - Compile a structured executive report in PDF format - Include an executive summary with the top 3 takeaways - Use Codemode for all data queries and chart generation - Send the final report via email and Slack on Monday morning
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: `Aggregate data across marketing, sales, and operations departments every Monday. Generate a structured executive report with charts, KPI summaries, trend analysis, and the top 3 actionable takeaways for leadership.`,
+  delegable: [
+    { id: 'data.analyse' },
+    { id: 'data.visualise' },
+    { id: 'document.summarise' },
+    { id: 'report.author' },
+  ],
+  protocol: 'vercel-ai',
+  ui: [{ plugin: 'a2ui-surface', renderer: 'a2ui' }],
+  protocols: [],
+  trigger: {
+    type: 'schedule',
+    cron: '0 6 * * 1',
+    description: 'Every Monday at 6:00 AM UTC',
+    prompt:
+      'Run the scheduled workflow and produce the configured deliverable.',
+  },
+  modelConfig: { temperature: 0.2, max_tokens: 8192 },
+  mcpServerTools: [
+    {
+      server: 'Data Warehouse',
+      tools: [
+        { name: 'query_marketing_data', approval: 'auto' },
+        { name: 'query_sales_data', approval: 'auto' },
+        { name: 'query_operations_data', approval: 'auto' },
+      ],
+    },
+    {
+      server: 'Visualization Engine',
+      tools: [
+        { name: 'generate_charts', approval: 'auto' },
+        { name: 'create_dashboard', approval: 'auto' },
+      ],
+    },
+    {
+      server: 'Document Generator',
+      tools: [
+        { name: 'compile_report', approval: 'auto' },
+        { name: 'send_report', approval: 'manual' },
+      ],
+    },
+  ],
+  guardrails: [
+    {
+      name: 'Data Engineering Power User',
+      identity_provider: 'datalayer',
+      identity_name: 'reports-bot@acme.com',
+      permissions: {
+        'read:data': true,
+        'write:data': true,
+        'execute:code': true,
+        'access:internet': true,
+        'send:email': true,
+        'deploy:production': false,
+      },
+      token_limits: { per_run: '80K', per_day: '500K', per_month: '5M' },
+    },
+  ],
+  evals: [
+    { name: 'Report Completeness', category: 'coding', task_count: 100 },
+    { name: 'Data Accuracy', category: 'reasoning', task_count: 250 },
+  ],
+  codemode: { enabled: true, token_reduction: '~90%', speedup: '~2× faster' },
+  output: { type: 'PDF', template: 'weekly_executive_report.pdf' },
+  advanced: {
+    cost_limit: '$8.00 per run',
+    time_limit: '600 seconds',
+    max_iterations: 60,
+    validation: 'Report must include all department KPIs and trend charts',
+  },
+  checkpoints: undefined,
+  authorizationPolicy: '',
+  policy: { shield: { egress: ['*'] } },
+  notifications: { email: 'robert.w@company.com', slack: '#weekly-reports' },
+  memory: 'ephemeral',
+  decisions: undefined,
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+  identity: 'datalayer-service-agent',
+};
+
 export const WORKER_GITHUB_AGENT_SPEC_0_0_1: Agentspec = {
   id: 'worker-github-agent',
   version: '0.0.1',
@@ -11115,6 +11563,151 @@ export const WORKER_MODEL_COMPARISON_AGENTSPEC_0_0_1: Agentspec = {
   identity: 'datalayer-acting-agent',
 };
 
+export const WORKER_MONITOR_SALES_KPIS_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'worker-monitor-sales-kpis',
+  version: '0.0.1',
+  name: 'Monitor Sales KPIs',
+  description: `Monitor and analyze sales KPIs from the CRM system. Generate daily reports summarizing key performance metrics, identify trends, and flag anomalies. Send notifications when KPIs deviate more than 10% from targets.`,
+  tags: ['market-analyst', 'agent-worker', 'sales', 'customer-support', 'kpi'],
+  domain: 'market-analyst',
+  enabled: false,
+  listed: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
+  mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
+  skills: [
+    SKILL_MAP['github:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['github:0.0.1'])
+      : undefined,
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  backendTools: [
+    TOOL_MAP['runtime-echo:0.0.1'],
+    TOOL_MAP['runtime-sensitive-echo:0.0.1'],
+    TOOL_MAP['runtime-send-mail:0.0.1'],
+  ],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'graph',
+  emoji: '📊',
+  color: 'green',
+  suggestions: [
+    {
+      text: "Show me today's sales KPI dashboard",
+      summary: "Today's KPI dashboard",
+    },
+    { text: 'What are the current revenue trends?', summary: 'Revenue trends' },
+    {
+      text: 'Flag any KPIs that deviate more than 10% from targets',
+      summary: 'KPIs off by 10%',
+    },
+    { text: 'Generate a weekly summary report', summary: 'Weekly summary' },
+  ],
+  welcomeMessage:
+    "Hello! I'm the Sales KPI Monitor. I continuously track your CRM data, generate daily reports on key performance metrics, and alert you when KPIs deviate significantly from targets.\n",
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter-server',
+  harness: 'pydantic-ai',
+  runtimeEngine: 'datalayer',
+  systemPrompt: `You are a sales analytics agent that monitors CRM data and tracks key performance indicators. Your responsibilities: - Fetch sales data from the CRM system daily - Calculate and track KPIs: revenue, conversion rate, pipeline velocity,
+  deal size, and customer acquisition cost
+- Identify trends and anomalies in the data - Generate structured reports with charts and summaries - Send notifications when any KPI deviates more than 10% from its target - Always provide data-backed insights with specific numbers - Use Codemode for data processing to minimize token usage
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: `Monitor and analyze sales KPIs from the CRM system. Generate daily reports summarizing key performance metrics, identify trends, and flag anomalies. Send notifications when KPIs deviate more than 10% from targets.`,
+  delegable: [
+    { id: 'data.analyse' },
+    { id: 'document.summarise' },
+    { id: 'document.extract' },
+    { id: 'report.author' },
+    { id: 'support.respond' },
+  ],
+  protocol: 'vercel-ai',
+  ui: [{ plugin: 'a2ui-surface', renderer: 'a2ui' }],
+  protocols: [],
+  trigger: {
+    type: 'schedule',
+    cron: '0 8 * * *',
+    description: 'Every day at 8:00 AM UTC',
+    prompt:
+      'Run the scheduled workflow and produce the configured deliverable.',
+  },
+  modelConfig: { temperature: 0.3, max_tokens: 4096 },
+  mcpServerTools: [
+    {
+      server: 'CRM Data Server',
+      tools: [
+        { name: 'get_sales_data', approval: 'auto' },
+        { name: 'get_customer_list', approval: 'auto' },
+        { name: 'update_records', approval: 'manual' },
+      ],
+    },
+    {
+      server: 'Analytics Server',
+      tools: [
+        { name: 'run_analysis', approval: 'auto' },
+        { name: 'generate_charts', approval: 'auto' },
+      ],
+    },
+  ],
+  guardrails: [
+    {
+      name: 'Default Platform User',
+      identity_provider: 'datalayer',
+      identity_name: 'alice@acme.com',
+      permissions: {
+        'read:data': true,
+        'write:data': true,
+        'execute:code': true,
+        'access:internet': true,
+        'send:email': false,
+        'deploy:production': false,
+      },
+      token_limits: { per_run: '50K', per_day: '500K', per_month: '5M' },
+    },
+  ],
+  evals: [
+    { name: 'SWE-bench', category: 'coding', task_count: 2294 },
+    { name: 'HumanEval', category: 'coding', task_count: 164 },
+    { name: 'GPQA Diamond', category: 'reasoning', task_count: 448 },
+    { name: 'TruthfulQA', category: 'safety', task_count: 817 },
+  ],
+  codemode: { enabled: true, token_reduction: '~90%', speedup: '~2× faster' },
+  output: { type: 'Notebook', template: 'kpi_report_template.ipynb' },
+  advanced: {
+    cost_limit: '$5.00 per run',
+    time_limit: '300 seconds',
+    max_iterations: 50,
+    validation: 'Output must contain required KPI fields',
+    checkpoint_interval: 30,
+    context_window: {
+      max_tokens: 100000,
+      eviction_strategy: 'sliding_window',
+      summary_threshold: 0.85,
+    },
+  },
+  checkpoints: undefined,
+  authorizationPolicy: '',
+  policy: { shield: { egress: ['*'] } },
+  notifications: { email: 'marcus.r@company.com', slack: '#sales-kpis' },
+  memory: 'mem0',
+  decisions: undefined,
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+  identity: 'datalayer-service-agent',
+};
+
 export const WORKER_MONTH_END_CLOSE_AGENTSPEC_0_0_1: Agentspec = {
   id: 'worker-month-end-close',
   version: '0.0.1',
@@ -11189,14 +11782,8 @@ export const WORKER_NEWS_AGGREGATOR_AGENTSPEC_0_0_1: Agentspec = {
   id: 'worker-news-aggregator',
   version: '0.0.1',
   name: 'News Aggregator',
-  description: `Creates a personalized daily news briefing based on each user's preferred topics, sources, companies, and industries. It filters out noise, identifies important developments, and delivers a concise summary of what matters most. It also tracks emerging trends across its sources and says what is gaining momentum.`,
-  tags: [
-    'research',
-    'summarization',
-    'monitoring',
-    'personal-assistant',
-    'agent-worker',
-  ],
+  description: `Creates a personalized daily news briefing based on each user's preferred topics, sources, companies, and industries. It filters out noise, identifies important developments, and delivers a concise summary of what matters most.`,
+  tags: ['research', 'summarization', 'monitoring'],
   domain: 'personal-assistant',
   enabled: false,
   listed: true,
@@ -12875,6 +13462,80 @@ export const WORKER_PROCESS_FINANCIAL_TRANSACTIONS_AGENTSPEC_0_0_1: Agentspec =
     subagents: undefined,
     identity: 'datalayer-service-agent',
   };
+
+export const WORKER_PRODUCT_FINDER_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'worker-product-finder',
+  version: '0.0.1',
+  name: 'Product Finder',
+  description: `Researches and compares products against a user's criteria and budget.`,
+  tags: ['personal-assistant', 'agent-worker'],
+  domain: 'personal-assistant',
+  enabled: false,
+  listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
+  mcpServers: [
+    MCP_SERVER_MAP['tavily:0.0.1'],
+    MCP_SERVER_MAP['google-workspace:0.0.1'],
+  ],
+  skills: [
+    SKILL_MAP['text-summarizer:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['text-summarizer:0.0.1'])
+      : undefined,
+    SKILL_MAP['crawl:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['crawl:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  backendTools: [
+    TOOL_MAP['runtime-echo:0.0.1'],
+    TOOL_MAP['runtime-sensitive-echo:0.0.1'],
+  ],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'search',
+  emoji: '🤖',
+  color: 'purple',
+  suggestions: [],
+  welcomeMessage: undefined,
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter-server',
+  harness: 'pydantic-ai',
+  runtimeEngine: 'datalayer',
+  systemPrompt: `You are the Product Finder, an autonomous agent worker in the personal assistant domain. Researches and compares products against a user's criteria and budget. Work step by step, show your reasoning and evidence, and require explicit human approval before any external or irreversible action.`,
+  systemPromptCodemodeAddons: undefined,
+  goal: `Research and compare products against the user's criteria and recommend the best fit.`,
+  delegable: [{ id: 'research.gather' }],
+  protocol: 'vercel-ai',
+  ui: [{ plugin: 'a2ui-surface', renderer: 'a2ui' }],
+  protocols: [],
+  trigger: undefined,
+  modelConfig: { temperature: 0.5, max_tokens: 4096 },
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true },
+  output: undefined,
+  advanced: undefined,
+  checkpoints: undefined,
+  authorizationPolicy: undefined,
+  policy: { shield: { egress: ['*'] } },
+  notifications: undefined,
+  memory: 'mem0',
+  decisions: undefined,
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+  identity: 'datalayer-acting-agent',
+};
 
 export const WORKER_QUANT_RESEARCH_AGENTSPEC_0_0_1: Agentspec = {
   id: 'worker-quant-research',
@@ -14882,6 +15543,80 @@ export const WORKER_THEMATIC_ANALYSIS_AGENTSPEC_0_0_1: Agentspec = {
   identity: 'datalayer-acting-agent',
 };
 
+export const WORKER_TRAVEL_RECOMMENDER_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'worker-travel-recommender',
+  version: '0.0.1',
+  name: 'Travel Recommender',
+  description: `Researches travel options and builds personalized itineraries with source comparison.`,
+  tags: ['personal-assistant', 'agent-worker'],
+  domain: 'personal-assistant',
+  enabled: false,
+  listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
+  mcpServers: [
+    MCP_SERVER_MAP['tavily:0.0.1'],
+    MCP_SERVER_MAP['google-workspace:0.0.1'],
+  ],
+  skills: [
+    SKILL_MAP['text-summarizer:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['text-summarizer:0.0.1'])
+      : undefined,
+    SKILL_MAP['crawl:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['crawl:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  backendTools: [
+    TOOL_MAP['runtime-echo:0.0.1'],
+    TOOL_MAP['runtime-sensitive-echo:0.0.1'],
+  ],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'globe',
+  emoji: '🤖',
+  color: 'purple',
+  suggestions: [],
+  welcomeMessage: undefined,
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter-server',
+  harness: 'pydantic-ai',
+  runtimeEngine: 'datalayer',
+  systemPrompt: `You are the Travel Recommender, an autonomous agent worker in the personal assistant domain. Researches travel options and builds personalized itineraries with source comparison. Work step by step, show your reasoning and evidence, and require explicit human approval before any external or irreversible action.`,
+  systemPromptCodemodeAddons: undefined,
+  goal: `Research travel options and build a personalized itinerary, comparing sources and prices.`,
+  delegable: [{ id: 'research.gather' }],
+  protocol: 'vercel-ai',
+  ui: [{ plugin: 'a2ui-surface', renderer: 'a2ui' }],
+  protocols: [],
+  trigger: undefined,
+  modelConfig: { temperature: 0.5, max_tokens: 4096 },
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true },
+  output: undefined,
+  advanced: undefined,
+  checkpoints: undefined,
+  authorizationPolicy: undefined,
+  policy: { shield: { egress: ['*'] } },
+  notifications: undefined,
+  memory: 'mem0',
+  decisions: undefined,
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+  identity: 'datalayer-acting-agent',
+};
+
 export const WORKER_TRAVELLER_AGENTSPEC_0_0_1: Agentspec = {
   id: 'worker-traveller',
   version: '0.0.1',
@@ -15005,6 +15740,80 @@ export const WORKER_TRAVELLER_AGENTSPEC_0_0_1: Agentspec = {
   identity: 'datalayer-acting-agent',
 };
 
+export const WORKER_TRENDS_SEEKER_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'worker-trends-seeker',
+  version: '0.0.1',
+  name: 'Trends Seeker',
+  description: `Tracks emerging trends across sources and summarizes what is gaining momentum.`,
+  tags: ['personal-assistant', 'agent-worker'],
+  domain: 'personal-assistant',
+  enabled: false,
+  listed: true,
+  optional: { mcpServers: ['tavily'], skills: [], atLeastOne: [] },
+  model: 'bedrock:us.anthropic.claude-sonnet-5-5',
+  mcpServers: [
+    MCP_SERVER_MAP['tavily:0.0.1'],
+    MCP_SERVER_MAP['google-workspace:0.0.1'],
+  ],
+  skills: [
+    SKILL_MAP['text-summarizer:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['text-summarizer:0.0.1'])
+      : undefined,
+    SKILL_MAP['crawl:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['crawl:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  backendTools: [
+    TOOL_MAP['runtime-echo:0.0.1'],
+    TOOL_MAP['runtime-sensitive-echo:0.0.1'],
+  ],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'graph',
+  emoji: '🤖',
+  color: 'purple',
+  suggestions: [],
+  welcomeMessage: undefined,
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter-server',
+  harness: 'pydantic-ai',
+  runtimeEngine: 'datalayer',
+  systemPrompt: `You are the Trends Seeker, an autonomous agent worker in the personal assistant domain. Tracks emerging trends across sources and summarizes what is gaining momentum. Work step by step, show your reasoning and evidence, and require explicit human approval before any external or irreversible action.`,
+  systemPromptCodemodeAddons: undefined,
+  goal: `Track emerging trends across sources and summarize what is worth attention and why.`,
+  delegable: [{ id: 'document.summarise' }],
+  protocol: 'vercel-ai',
+  ui: [{ plugin: 'a2ui-surface', renderer: 'a2ui' }],
+  protocols: [],
+  trigger: undefined,
+  modelConfig: { temperature: 0.5, max_tokens: 4096 },
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true },
+  output: undefined,
+  advanced: undefined,
+  checkpoints: undefined,
+  authorizationPolicy: undefined,
+  policy: { shield: { egress: ['*'] } },
+  notifications: undefined,
+  memory: 'mem0',
+  decisions: undefined,
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+  identity: 'datalayer-acting-agent',
+};
+
 export const WORKER_VARIANT_ANALYSIS_AGENTSPEC_0_0_1: Agentspec = {
   id: 'worker-variant-analysis',
   version: '0.0.1',
@@ -15079,15 +15888,13 @@ export const WORKER_WEEKLY_EXECUTIVE_BRIEFING_AGENTSPEC_0_0_1: Agentspec = {
   id: 'worker-weekly-executive-briefing',
   version: '0.0.1',
   name: 'Weekly Executive Briefing',
-  description: `Generate a weekly executive summary with KPI deltas, top risks, and recommended actions from operational and analytics data. It aggregates marketing, sales and operations data into one structured weekly report.`,
+  description: `Generate a weekly executive summary with KPI deltas, top risks, and recommended actions from operational and analytics data.`,
   tags: [
     'personal-assistant',
     'agent-worker',
     'analytics',
     'reporting',
     'risk',
-    'marketing',
-    'sales',
   ],
   domain: 'personal-assistant',
   enabled: false,
@@ -15112,22 +15919,6 @@ export const WORKER_WEEKLY_EXECUTIVE_BRIEFING_AGENTSPEC_0_0_1: Agentspec = {
     {
       text: 'Use /home/datalayer/datasets/datalayer-nfs/sales/sales_pipeline.csv to produce a weekly executive briefing with trends, risks, and actions.',
       summary: 'Weekly executive briefing',
-    },
-    {
-      text: "Generate this week's executive report",
-      summary: "This week's executive report",
-    },
-    {
-      text: 'Show marketing KPIs for the last 7 days',
-      summary: 'Marketing KPIs, 7 days',
-    },
-    {
-      text: "Compare this week's sales to last week",
-      summary: 'Sales week over week',
-    },
-    {
-      text: 'What were the top operational issues this week?',
-      summary: 'Top operational issues',
     },
   ],
   welcomeMessage:
@@ -15392,6 +16183,7 @@ export const AGENTSPECS: Record<string, Agentspec> = {
   'kagent-chat': KAGENT_CHAT_AGENTSPEC_0_0_1,
   'memory-agent': MEMORY_AGENT_SPEC_0_0_1,
   notifier: NOTIFIER_AGENTSPEC_0_0_1,
+  'one-shot-approved-task': ONE_SHOT_APPROVED_TASK_AGENTSPEC_0_0_1,
   'one-shot-task': ONE_SHOT_TASK_AGENTSPEC_0_0_1,
   'output-formatter': OUTPUT_FORMATTER_AGENTSPEC_0_0_1,
   'plan-tracker': PLAN_TRACKER_AGENTSPEC_0_0_1,
@@ -15429,6 +16221,7 @@ export const AGENTSPECS: Record<string, Agentspec> = {
   'worker-analyze-support-tickets':
     WORKER_ANALYZE_SUPPORT_TICKETS_AGENTSPEC_0_0_1,
   'worker-ap-invoice': WORKER_AP_INVOICE_AGENTSPEC_0_0_1,
+  'worker-approved-automation': WORKER_APPROVED_AUTOMATION_AGENTSPEC_0_0_1,
   'worker-audit-inventory-levels':
     WORKER_AUDIT_INVENTORY_LEVELS_AGENTSPEC_0_0_1,
   'worker-audit-pack-builder': WORKER_AUDIT_PACK_BUILDER_AGENTSPEC_0_0_1,
@@ -15436,10 +16229,13 @@ export const AGENTSPECS: Record<string, Agentspec> = {
     WORKER_AUTOMATE_REGULATORY_REPORTING_AGENTSPEC_0_0_1,
   'worker-backtest-auditor': WORKER_BACKTEST_AUDITOR_AGENTSPEC_0_0_1,
   'worker-bank-reconciliation': WORKER_BANK_RECONCILIATION_AGENTSPEC_0_0_1,
+  'worker-campaign-planning': WORKER_CAMPAIGN_PLANNING_AGENTSPEC_0_0_1,
   'worker-cat-exposure': WORKER_CAT_EXPOSURE_AGENTSPEC_0_0_1,
   'worker-change-detection': WORKER_CHANGE_DETECTION_AGENTSPEC_0_0_1,
   'worker-classify-route-emails': WORKER_CLASSIFY_ROUTE_EMAILS_AGENTSPEC_0_0_1,
+  'worker-cloud-python': WORKER_CLOUD_PYTHON_AGENTSPEC_0_0_1,
   'worker-cms-astro': WORKER_CMS_ASTRO_AGENTSPEC_0_0_1,
+  'worker-coding-tutor': WORKER_CODING_TUTOR_AGENTSPEC_0_0_1,
   'worker-cohort-comparison': WORKER_COHORT_COMPARISON_AGENTSPEC_0_0_1,
   'worker-collections': WORKER_COLLECTIONS_AGENTSPEC_0_0_1,
   'worker-community-response': WORKER_COMMUNITY_RESPONSE_AGENTSPEC_0_0_1,
@@ -15483,6 +16279,8 @@ export const AGENTSPECS: Record<string, Agentspec> = {
   'worker-factor-analysis': WORKER_FACTOR_ANALYSIS_AGENTSPEC_0_0_1,
   'worker-financial-viz': WORKER_FINANCIAL_VIZ_AGENTSPEC_0_0_1,
   'worker-functional-analyst': WORKER_FUNCTIONAL_ANALYST_AGENTSPEC_0_0_1,
+  'worker-generate-weekly-reports':
+    WORKER_GENERATE_WEEKLY_REPORTS_AGENTSPEC_0_0_1,
   'worker-github-agent': WORKER_GITHUB_AGENT_SPEC_0_0_1,
   'worker-grid-forecast': WORKER_GRID_FORECAST_AGENTSPEC_0_0_1,
   'worker-information-routing': WORKER_INFORMATION_ROUTING_AGENTSPEC_0_0_1,
@@ -15500,6 +16298,7 @@ export const AGENTSPECS: Record<string, Agentspec> = {
   'worker-medical-research-review':
     WORKER_MEDICAL_RESEARCH_REVIEW_AGENTSPEC_0_0_1,
   'worker-model-comparison': WORKER_MODEL_COMPARISON_AGENTSPEC_0_0_1,
+  'worker-monitor-sales-kpis': WORKER_MONITOR_SALES_KPIS_AGENTSPEC_0_0_1,
   'worker-month-end-close': WORKER_MONTH_END_CLOSE_AGENTSPEC_0_0_1,
   'worker-news-aggregator': WORKER_NEWS_AGGREGATOR_AGENTSPEC_0_0_1,
   'worker-notebook-builder': WORKER_NOTEBOOK_BUILDER_AGENTSPEC_0_0_1,
@@ -15525,6 +16324,7 @@ export const AGENTSPECS: Record<string, Agentspec> = {
     WORKER_PROCESS_CLINICAL_TRIAL_DATA_AGENTSPEC_0_0_1,
   'worker-process-financial-transactions':
     WORKER_PROCESS_FINANCIAL_TRANSACTIONS_AGENTSPEC_0_0_1,
+  'worker-product-finder': WORKER_PRODUCT_FINDER_AGENTSPEC_0_0_1,
   'worker-quant-research': WORKER_QUANT_RESEARCH_AGENTSPEC_0_0_1,
   'worker-renewable-asset-performance':
     WORKER_RENEWABLE_ASSET_PERFORMANCE_AGENTSPEC_0_0_1,
@@ -15553,7 +16353,9 @@ export const AGENTSPECS: Record<string, Agentspec> = {
   'worker-sync-crm-contacts': WORKER_SYNC_CRM_CONTACTS_AGENTSPEC_0_0_1,
   'worker-terra': WORKER_TERRA_AGENTSPEC_0_0_1,
   'worker-thematic-analysis': WORKER_THEMATIC_ANALYSIS_AGENTSPEC_0_0_1,
+  'worker-travel-recommender': WORKER_TRAVEL_RECOMMENDER_AGENTSPEC_0_0_1,
   'worker-traveller': WORKER_TRAVELLER_AGENTSPEC_0_0_1,
+  'worker-trends-seeker': WORKER_TRENDS_SEEKER_AGENTSPEC_0_0_1,
   'worker-variant-analysis': WORKER_VARIANT_ANALYSIS_AGENTSPEC_0_0_1,
   'worker-weekly-executive-briefing':
     WORKER_WEEKLY_EXECUTIVE_BRIEFING_AGENTSPEC_0_0_1,

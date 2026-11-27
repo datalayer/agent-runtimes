@@ -147,7 +147,7 @@ def test_every_catalogue_agent_that_names_tavily_may_start_without_it() -> None:
         if "tavily"
         in [getattr(server, "id", server) for server in spec.mcp_servers or []]
     ]
-    assert len(naming) >= 29
+    assert len(naming) >= 35
     for spec in naming:
         assert spec.optional is not None and "tavily" in spec.optional.mcp_servers, (
             spec.id

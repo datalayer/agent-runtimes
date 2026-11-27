@@ -302,13 +302,14 @@ The shipped roster, each demonstrated by the example of the same name:
 
 | Plugin | Spec | Capacity |
 |---|---|---|
+| `agent-a2a` | `research-writer-a2a` | delegation to agents over A2A |
 | `agent-a2ui` | `form-builder` | generated interactive A2UI surfaces |
 | `agent-a2ui-jupyter-output` | `jupyter-output-presenter` | kernel outputs on surfaces |
-| `agent-sandbox-*` (×7) | `example-sandbox-*` | one per sandbox variant — eval, jupyter, docker, datalayer, colab, kaggle, monty — each pinning `sandbox_variant` |
-| `agent-checkpoints` | `monitor-sales-kpis` | pause/resume checkpointing |
-| `agent-code-sandbox` | `skills-agent` | the full code sandbox |
+| `agent-sandbox-*` (×7) | `python-runner-*` | one per sandbox variant — eval, jupyter, docker, datalayer, colab, kaggle, monty — each pinning `sandbox_variant` |
+| `agent-checkpoints` | `checkpoints-agent` | checkpoints: saved, listed, rewound |
+| `agent-code-sandbox` | `python-runner` | Python run in a managed code sandbox |
 | `agent-codemode` / `agent-no-codemode` | `web-researcher-codemode` / `web-researcher` | MCP tools as programmatic tools, and the raw comparison |
-| `agent-compaction` | `usage-monitor` | context compaction |
+| `agent-compaction` | `story-writer` | context compaction |
 | `agent-evals` | `text-normalizer` | evaluation runs |
 | `agent-guardrails` | `budget-guard` | cost guardrails and policy denies |
 | `agent-hooks` | `hooks-agent` | lifecycle and tool hooks |
