@@ -403,7 +403,7 @@ def _written_at(deployment_uid: str, url: str) -> str:
     return principal_address(deployment, url)
 
 
-#: The person's own token during a Preview's run, whose request token is
+#: The user's own token during a Preview's run, whose request token is
 #: theirs narrowed to the Spaces its application is granted.
 _PERSONS_OWN: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
     "agent_preview_persons_own_token", default=None

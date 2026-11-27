@@ -19,7 +19,7 @@ The calls, as botocore names them:
 - ``bedrock-agentcore``: ``invoke_agent_runtime`` (a turn; the answer read
   as ``text/event-stream``), ``stop_runtime_session`` (stop).
 
-The person's own AWS credentials are used, as boto3 finds them; nothing here
+The user's own AWS credentials are used, as boto3 finds them; nothing here
 holds a Datalayer account.
 """
 

@@ -575,7 +575,7 @@ export function ChatFloating({
    * they are written, the state following the sound.
    */
   const [voiceItems, setVoiceItems] = useState<readonly unknown[]>([]);
-  // The person's own settings, followed as the voice menu changes them.
+  // The user's own settings, followed as the voice menu changes them.
   const [personVoice] = useVoiceSettings();
   const settledVoiceOf = useMemo(
     () => (voice ? settledVoice(voice, personVoice) : undefined),

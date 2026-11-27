@@ -249,7 +249,7 @@ export type SceneOwnApp = {
   connections: readonly { server: string; only?: readonly string[] }[];
 };
 
-/** The person's own applications, by uid — the reference a scene's cast writes for one. */
+/** The user's own applications, by uid — the reference a scene's cast writes for one. */
 export type SceneOwnApps = Readonly<Record<string, SceneOwnApp>>;
 
 /** A member's application: the catalogue's, else one of the person's own. */

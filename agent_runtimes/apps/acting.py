@@ -269,7 +269,7 @@ async def acting_token(deployment_uid: str, bearer: Optional[str]) -> str:
     deployment_uid : str
         The deployment the agent serves.
     bearer : str | None
-        The person's own token, as their request carries it.
+        The user's own token, as their request carries it.
 
     Returns
     -------

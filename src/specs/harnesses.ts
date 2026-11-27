@@ -692,7 +692,7 @@ export const LISTED_HARNESSES: ListedHarness[] = [
     licenceSource: 'https://github.com/cline/cline/blob/main/LICENSE',
     termsSource: 'https://cline.bot/tos',
     credential:
-      "The person's own provider API key (a Cline account's keys may not be transferred or resold)",
+      "The user's own provider API key (a Cline account's keys may not be transferred or resold)",
     servedToThirdParties: 'permitted',
     note: "Cline's terms cover its hosted account and Cline-provided keys, forbidding their transfer or resale; served to third parties with each person's own provider key.",
   },
@@ -1078,7 +1078,7 @@ export const LISTED_HARNESSES: ListedHarness[] = [
     licenceSource: 'https://github.com/stakpak/agent/blob/main/LICENSE',
     termsSource: 'https://github.com/stakpak/agent/blob/main/LICENSE',
     credential:
-      "The person's own Anthropic or OpenAI key, or a Stakpak API key (STAKPAK_API_KEY)",
+      "The user's own Anthropic or OpenAI key, or a Stakpak API key (STAKPAK_API_KEY)",
     servedToThirdParties: 'permitted',
     note: "Stakpak's hosted-key service terms were not read; the open-source client with one's own key is what is permitted.",
   },

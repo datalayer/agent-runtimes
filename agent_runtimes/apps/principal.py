@@ -1590,7 +1590,7 @@ async def ensure_preview_token(
     """
     The token a Preview runs with, asked for when none is held or it runs out.
 
-    The person's own, narrowed by ai-agents and IAM to what the Appspec the
+    The user's own, narrowed by ai-agents and IAM to what the Appspec the
     Preview runs grants (``permissions.spaces``, and the companies of its
     ``pap.connections`` in the person's name) — nothing
     when it grants nothing — asked for with the person's token, as a

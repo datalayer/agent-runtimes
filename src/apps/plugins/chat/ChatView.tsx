@@ -1561,7 +1561,7 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
    * workspace's composer, which this view holds — the words written in it as
    * they are heard. The chat speaks its answers itself (`voice` below).
    */
-  // The person's own settings, followed as the voice menu changes them.
+  // The user's own settings, followed as the voice menu changes them.
   const [personVoice] = useVoiceSettings();
   const voice = useMemo(
     () => (config?.voice ? settledVoice(config.voice, personVoice) : undefined),

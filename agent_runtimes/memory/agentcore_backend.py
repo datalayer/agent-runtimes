@@ -26,7 +26,7 @@ region come from the agentspec's ``memory_config`` (``memory_id``,
 (``AGENT_RUNTIMES_AGENTCORE_MEMORY_ID``, ``AWS_REGION``,
 ``AGENT_RUNTIMES_AGENTCORE_MEMORY_NAMESPACES``). With no namespaces
 configured, they are read once from the memory's strategies
-(``GetMemory`` on the control plane). The person's own AWS credentials are
+(``GetMemory`` on the control plane). The user's own AWS credentials are
 used, as boto3 finds them.
 """
 

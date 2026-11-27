@@ -1081,7 +1081,7 @@ export type AppThemeMode = 'light' | 'dark' | 'auto';
 
 /**
  * The theme an application runs in by default: at its address,
- * embedded, in the Studio's Preview and as an example. The person's own
+ * embedded, in the Studio's Preview and as an example. The user's own
  * when unsaid; the mode, when unsaid, is the person's.
  */
 export interface AppThemeSpec {

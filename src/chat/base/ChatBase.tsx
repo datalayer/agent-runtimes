@@ -4093,7 +4093,7 @@ function ChatBaseInner({
   // Voice (V1): what was said and put in the composer, until sent.
   const spokenRef = useRef<SpokenMetadata | undefined>(undefined);
   // Its voice with what it leaves unsaid filled in: Datalayer's models and packages.
-  // The person's own settings, followed as the voice menu changes them.
+  // The user's own settings, followed as the voice menu changes them.
   const [personVoice] = useVoiceSettings();
   const settled = useMemo(
     () => (voice ? settledVoice(voice, personVoice) : undefined),

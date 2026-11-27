@@ -816,7 +816,7 @@ export function reduceConversation(
                 item,
                 result,
                 limits.toolText,
-                // The person's own answer (an approval decided, steps
+                // The user's own answer (an approval decided, steps
                 // confirmed): nothing waits after it.
                 event.answered === true,
               )

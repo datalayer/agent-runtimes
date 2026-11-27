@@ -191,7 +191,7 @@ export function directClient({
   return {
     ticket,
     /**
-     * The person's own words, sent as theirs: a ticket, then the words with
+     * The user's own words, sent as theirs: a ticket, then the words with
      * it. Refused in the gateway's sentence, and never retried.
      */
     send: async (target: DirectTarget, text: string): Promise<DirectAnswer> => {

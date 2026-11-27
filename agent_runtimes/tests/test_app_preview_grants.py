@@ -8,7 +8,7 @@ only the Spaces its application is granted, as its deployments do. As its
 session opens, and on each of its requests, the runtime asks ai-agents with
 the person's token for a token of theirs narrowed to the Spaces the Appspec
 it runs grants, keeps it, asks again before it runs out, and its runs carry
-it in place of the person's; without one, nothing runs. The person's own
+it in place of the person's; without one, nothing runs. The user's own
 token stays for what reaches no Space — the application's documents.
 """
 
