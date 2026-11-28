@@ -41,9 +41,7 @@ describe('an application in the chat', () => {
     // MCP servers, skills and frontend tools stay available in the footer.
     expect(chat).toContain('showMcpMenu: config?.showMcpMenu ?? true,');
     expect(chat).toContain('showSkillsMenu: config?.showSkillsMenu ?? true,');
-    expect(chat).toContain(
-      'config?.showInlineEquipmentMenus ?? !anonymousConfig',
-    );
+    expect(chat).toContain('config?.showInlineEquipmentMenus ?? false,');
     expect(presets).toContain('showMcpMenu?: boolean;');
     expect(presets).toContain('showSkillsMenu?: boolean;');
     expect(presets).toContain('showInlineEquipmentMenus?: boolean;');
