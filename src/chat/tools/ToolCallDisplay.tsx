@@ -28,6 +28,9 @@ import type {
   DisplayToolCallStatus,
 } from '../../types';
 import { SpecMark, hasMark, type Marks } from '../marks';
+import { poppyToolOf } from './poppy';
+
+export { poppyToolOf } from './poppy';
 import {
   OrderCard,
   PRODUCT_CARDS_WORDS,
@@ -183,23 +186,6 @@ function titled(name: string): string {
     .split(' ')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
-}
-
-/**
- * A Personal Agent Protocol tool, which the chat calls Poppy (the user, 27
- * November 2026): `pap_<action>` (a visitor's) or `pap_<company>_pap_<action>`
- * (a company's, its domain in plain characters, `pap_connections.server_id`).
- * Its id is kept; only what is shown says Poppy.
- */
-export function poppyToolOf(
-  name: string,
-): { action: string; company: string } | null {
-  const company = /^pap_(.+?)_{1,2}pap_([a-z_]+)$/.exec(name);
-  if (company) {
-    return { company: company[1], action: company[2] };
-  }
-  const bare = /^pap_([a-z_]+)$/.exec(name);
-  return bare ? { company: '', action: bare[1] } : null;
 }
 
 /** What a Poppy tool's company answered: its `body`, from `{status, body}` or its JSON. */

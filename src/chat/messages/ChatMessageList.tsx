@@ -266,6 +266,28 @@ type SubagentAvatarConfig = Required<
   >
 >;
 
+/** A message with no words and nothing else to show: no text, and no part but empty text. */
+export function isEmptyMessage(message: ChatMessage): boolean {
+  // Still being written, or carrying something of its own to show: never empty.
+  if (
+    message.live ||
+    message.displays?.length ||
+    message.toolCalls?.length ||
+    message.toolChips?.length ||
+    message.activityType
+  ) {
+    return false;
+  }
+  if (typeof message.content === 'string') {
+    return message.content.trim() === '';
+  }
+  const parts = (message.content ?? []) as Array<{
+    type: string;
+    text?: string;
+  }>;
+  return parts.every(part => part.type === 'text' && !(part.text ?? '').trim());
+}
+
 const SUBAGENT_AVATAR_CONFIG: SubagentAvatarConfig = {
   userAvatar: <PersonIcon size={14} />,
   assistantAvatar: <DependabotIcon size={14} />,
@@ -1098,6 +1120,16 @@ export function ChatMessageList({
           </Box>
         </Box>
       );
+    }
+
+    /*
+     * An answer that says nothing, between two steps: no bubble (the user, 28
+     * November 2026: an empty message after a Poppy tool's cards). A model
+     * opens a text message before its next tool call and writes nothing in
+     * it. The last item is kept: an empty one there is an answer arriving.
+     */
+    if (!isUser && index < displayItems.length - 1 && isEmptyMessage(message)) {
+      return null;
     }
 
     // Optionally hide assistant messages that follow a rendered tool call

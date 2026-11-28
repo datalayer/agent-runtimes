@@ -20,6 +20,7 @@ import { SKILLS_CATALOG } from '../../specs/skills';
 import { FRONTEND_TOOL_CATALOG } from '../../specs/frontendTools';
 import { BACKEND_TOOL_CATALOG } from '../../specs/backendTools';
 import { frontendToolName } from '../../tools/frontendToolNames';
+import { POPPY_ICON, poppyToolOf } from '../tools/poppy';
 
 /** The two marks of a catalogue entry. */
 export interface Marks {
@@ -29,7 +30,7 @@ export interface Marks {
 }
 
 /** What a tool call is, by who it belongs to. */
-export type ToolKind = 'mcp' | 'skill' | 'frontend' | 'runtime';
+export type ToolKind = 'mcp' | 'skill' | 'frontend' | 'runtime' | 'poppy';
 
 export interface ToolMarks extends Marks {
   kind: ToolKind;
@@ -184,6 +185,15 @@ export function marksOfToolCall(
   const skillId = skillIdOfCall(toolName, args);
   if (skillId) {
     return { kind: 'skill', ownerId: skillId, ...marksOfSkill(skillId) };
+  }
+  // A Personal Agent Protocol tool, called Poppy: the protocol's icon, before its gateway's server could claim it (the user, 28 November 2026).
+  const poppy = poppyToolOf(toolName);
+  if (poppy) {
+    return {
+      kind: 'poppy',
+      ownerId: poppy.company || 'poppy',
+      icon: POPPY_ICON,
+    };
   }
   const server = mcpServers.find(candidate =>
     candidate.tools.some(tool => tool.name === toolName),
