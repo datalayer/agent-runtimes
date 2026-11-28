@@ -1324,6 +1324,22 @@ export const AgentSlots = {
    */
   chatHeader: 'agent.chatHeader',
   /**
+   * Who answers, in the chat's title bar: what stands in place of the agent's
+   * face and name the chat draws itself (`apps/plugins/agent-identity`: the
+   * agent's emoji, name and what it does, from its presentation). The status
+   * beside it (*Ready*) and the (i) stay the chat's. Empty, the chat names the
+   * agent as it always has.
+   */
+  chatHeaderTitle: 'agent.chatHeader.title',
+  /**
+   * The trailing end of the chat's title bar: items placed after the chat's
+   * own controls, full screen included, and kept on the bar however narrow
+   * it is (pinned, never in its "…" menu) — what must be found at the right
+   * edge, such as the agent chooser (`apps/plugins/agent-chooser`). The same
+   * toolbar as `chatHeader`'s items, at its end.
+   */
+  chatHeaderEnd: 'agent.chatHeader.end',
+  /**
    * Above the conversation, under the chat's title bar: a band, as the
    * anonymous preview's box stands (the `banner` placement of an agent's UI,
    * 15 November 2026: *Link LinkedIn in Settings*). Empty, nothing drawn.

@@ -129,6 +129,10 @@ export async function mountOf(spec: UISpec): Promise<Mount> {
  * application's interface a Maker chooses.
  */
 export const NOT_UI: Record<string, string> = {
+  'agent-identity':
+    "A host's plugin: the page that shows an application adds it (`renderer.plugins`) to name the agent in the chat's title bar from its presentation (`AgentSlots.chatHeaderTitle`); no Appspec names it.",
+  'agent-chooser':
+    "A host's plugin, made with what the host offers (`agentChooserPlugin({ groups, onChoose })`): the agents behind the apps grid at the end of the chat's title bar (`AgentSlots.chatHeaderEnd`); no Appspec names it.",
   'agent-presentation':
     "A host's plugin: the page that shows an application adds it (`renderer.plugins`) to present the application from its spec's `presentation` in the left panel; no Appspec names it.",
   shell:

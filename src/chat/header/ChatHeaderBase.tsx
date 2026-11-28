@@ -98,6 +98,13 @@ export interface ChatBaseHeaderProps {
    */
   disableReason?: string;
   brandIcon?: ReactNode;
+  /**
+   * Who answers, drawn by somebody else: in place of the face (`brandIcon`),
+   * the `title` and the `subtitle` — what a plugin puts in
+   * `AgentSlots.chatHeaderTitle`. The leading control, the status
+   * (`headerContent`) and the (i) stay where they are.
+   */
+  headerTitle?: ReactNode;
   headerContent?: ReactNode;
   /**
    * What leads the title row, before the agent's face and name: a control
@@ -180,6 +187,7 @@ export function ChatBaseHeader({
   subtitle,
   disableReason,
   brandIcon,
+  headerTitle,
   headerContent,
   headerLeading,
   headerActions,
@@ -371,8 +379,8 @@ export function ChatBaseHeader({
         >
           {headerLeading}
           {kernelIndicatorPlacement === 'left' && kernelIndicatorElement}
-          {brandIcon || <AiAgentIcon colored size={20} />}
-          {(title || subtitle) && (
+          {headerTitle ?? (brandIcon || <AiAgentIcon colored size={20} />)}
+          {!headerTitle && (title || subtitle) && (
             <Box
               display="flex"
               flexDirection="column"

@@ -52,6 +52,7 @@ import {
   useSlotComponents,
 } from '@datalayer/reactor/react';
 import { ChatBase } from '../../../chat/base/ChatBase';
+import { headerSlotItems } from './headerSlotItems';
 import { useChatAvailability } from '../../../chat/base/ChatAvailability';
 import {
   offeredModels as offeredModelsFor,
@@ -1652,6 +1653,10 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
   const promptStatus = useSlotComponents(AgentSlots.promptStatus);
   // Same question for the chat's own title bar, which plugins may add to.
   const chatHeaderItems = useSlotComponents(AgentSlots.chatHeader);
+  // Its trailing end, after full screen (`AgentSlots.chatHeaderEnd`), and who
+  // answers, when a plugin names the agent (`AgentSlots.chatHeaderTitle`).
+  const chatHeaderEndItems = useSlotComponents(AgentSlots.chatHeaderEnd);
+  const chatHeaderTitleItems = useSlotComponents(AgentSlots.chatHeaderTitle);
   // And for the band above the conversation (an agent's `banner` UI).
   const chatBannerItems = useSlotComponents(AgentSlots.chatBanner);
 
@@ -2951,22 +2956,35 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
                   ? headerProps => (
                       <HeaderComponent
                         workspace={workspace}
-                        header={
+                        header={{
+                          ...headerProps,
                           /* The chat's view, when the host keeps it: the
                              title bar's toggle, given to the header only —
                              the chat itself stays where the workspace
                              places it, whichever view is picked. */
-                          workspace.chatViewModes
+                          ...(workspace.chatViewModes
                             ? {
-                                ...headerProps,
                                 chatViewMode: workspace.chatViewModes.value,
                                 onChatViewModeChange:
                                   workspace.chatViewModes.onChange,
                                 offeredViewModes:
                                   workspace.chatViewModes.offered,
                               }
-                            : headerProps
-                        }
+                            : null),
+                          /* Who answers, when a plugin names the agent
+                             (`AgentSlots.chatHeaderTitle`): in place of the
+                             face and the name drawn here. */
+                          ...(chatHeaderTitleItems.length > 0
+                            ? {
+                                headerTitle: (
+                                  <ReactorSlot
+                                    slot={AgentSlots.chatHeaderTitle}
+                                    props={{ workspace }}
+                                  />
+                                ),
+                              }
+                            : null),
+                        }}
                       />
                     )
                   : undefined
@@ -3047,15 +3065,7 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
                 /* What plugins put in the title bar (`AgentSlots.chatHeader`),
                    each contribution its own item — the slot's own list, so a
                    contribution that draws nothing takes no room. */
-                ...chatHeaderItems.map(entry => {
-                  const Contributed = entry.Component;
-                  return {
-                    key: `slot-${entry.slot}:${entry.id}`,
-                    type: 'custom' as const,
-                    priority: -1,
-                    render: () => <Contributed workspace={workspace} />,
-                  };
-                }),
+                ...headerSlotItems(chatHeaderItems, workspace, 'items'),
                 /* The right panel's toggle, trailing the bar on the side
                    its panel opens from (`chatHeaderTrailing`): pinned, as
                    the left one leads it. */
@@ -3164,6 +3174,9 @@ export default function ChatView({ workspace }: AgentViewProps): JSX.Element {
                     />
                   ),
                 },
+                /* And the bar's trailing end (`AgentSlots.chatHeaderEnd`):
+                   after full screen, pinned — the agent chooser. */
+                ...headerSlotItems(chatHeaderEndItems, workspace, 'end'),
               ]}
               // This view owns the prompt, below, so the chat does not draw a
               // second one: two input boxes on one screen is one too many.
