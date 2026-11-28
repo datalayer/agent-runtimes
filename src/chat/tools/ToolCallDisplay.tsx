@@ -31,12 +31,7 @@ import { SpecMark, hasMark, type Marks } from '../marks';
 import { poppyToolOf } from './poppy';
 
 export { poppyToolOf } from './poppy';
-import {
-  OrderCard,
-  PRODUCT_CARDS_WORDS,
-  ProductGrid,
-  readProductCards,
-} from '../../apps/plugins/product-cards';
+import { ToolResultView } from './ToolResultView';
 import { useChatWords } from '../ChatLanguage';
 import type { ChatWords } from '../words';
 
@@ -205,44 +200,6 @@ export function poppyBodyOf(result: unknown): Record<string, unknown> | null {
   return body && typeof body === 'object'
     ? (body as Record<string, unknown>)
     : (value as Record<string, unknown>);
-}
-
-/** A Poppy tool's answer drawn: products as cards, a quote or a test order with its total. */
-function PoppyResult({
-  result,
-}: {
-  result: unknown;
-}): React.ReactElement | null {
-  const body = poppyBodyOf(result);
-  if (!body) {
-    return null;
-  }
-  const cards = readProductCards(body);
-  if (cards.kind === 'products') {
-    return <ProductGrid products={cards.products} count={cards.count} />;
-  }
-  if (cards.kind === 'quote' || cards.kind === 'test_order') {
-    const test = cards.kind === 'test_order';
-    return (
-      <OrderCard
-        title={
-          test
-            ? PRODUCT_CARDS_WORDS.testOrder(cards.orderId)
-            : PRODUCT_CARDS_WORDS.quote
-        }
-        note={
-          test
-            ? PRODUCT_CARDS_WORDS.testOrderNote
-            : PRODUCT_CARDS_WORDS.quoteNote
-        }
-        lines={cards.lines}
-        currency={cards.currency}
-        total={cards.total}
-        test={test}
-      />
-    );
-  }
-  return null;
 }
 
 /**
@@ -463,12 +420,14 @@ export function ToolCallDisplay({
         )}
       </Box>
 
-      {/* A Poppy tool's answer, drawn without opening the row (the user, 27 November 2026). */}
-      {status === 'complete' &&
-      result !== undefined &&
-      poppyToolOf(toolName) ? (
-        <Box px={compact ? 1 : 2} data-poppy-result="">
-          <PoppyResult result={result} />
+      {/* What every tool answered, drawn without opening the row (the user, 28 November 2026; Poppy's since 27 November): its JSON in the row, opened. */}
+      {status === 'complete' && result !== undefined && !error ? (
+        <Box
+          px={compact ? 1 : 2}
+          data-tool-result-view=""
+          {...(poppyToolOf(toolName) ? { 'data-poppy-result': '' } : {})}
+        >
+          <ToolResultView toolName={toolName} result={result} />
         </Box>
       ) : null}
 

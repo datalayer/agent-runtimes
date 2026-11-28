@@ -87,7 +87,7 @@ describe('Poppy tools', () => {
     expect(poppyBodyOf(JSON.stringify(PRODUCTS))?.count).toBe(1);
   });
 
-  it('draws nothing for another tool, nor for an answer with no products or lines', () => {
+  it('draws no cards for another tool, and a Poppy answer with no products or lines as its fields', () => {
     expect(
       draw({
         toolName: 'list_invoices',
@@ -100,8 +100,10 @@ describe('Poppy tools', () => {
       status: 'complete',
       result: { status: 200, body: { ok: true } },
     });
-    expect(plain.querySelector('[data-poppy-result]')?.textContent ?? '').toBe(
-      '',
-    );
+    // Drawn as any tool's answer since 28 November 2026: its body's fields.
+    expect(
+      plain.querySelector('[data-poppy-result] [data-tool-result-fields]')
+        ?.textContent,
+    ).toContain('ok');
   });
 });
