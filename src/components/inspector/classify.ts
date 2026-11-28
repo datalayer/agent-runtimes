@@ -45,7 +45,10 @@ export function classifyToolCall(
   const kind: AgentToolKind = options.frontendTools?.includes(name)
     ? 'frontend'
     : marks?.kind
-      ? marks.kind
+      ? // A Poppy tool reaches the agent through the gateway's MCP server: filtered as one, its own icon kept.
+        marks.kind === 'poppy'
+        ? 'mcp'
+        : marks.kind
       : CODEMODE_TOOLS.has(name)
         ? 'codemode'
         : (options.fallback ?? 'runtime');
